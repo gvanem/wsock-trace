@@ -3,18 +3,18 @@
  A small and simple drop-in tracer for most normal Winsock calls.
  Works best for MSVC since the stack-walking code requires the program's
  **PDB** symbol-file to be present. And unfortunately MingW/CygWin doesn't
- produce PDB-symbols. This project is hosted at Github [3] (previously it
- was at Google-Code. But that is closing down).
+ produce PDB-symbols. This project is hosted at [Github](https://github.com/gvanem/wsock-trace)
+ `[3]` (previously it was at Google-Code. But that is closing down).
 
 
- ## Installation (MSVC):
+## Installation (MSVC):
 
    Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
    This produces a `wsock_trace.lib` that you'll need to use to
    link your project(s) with. This lib would then trace the normal
    Winsock calls. Example below.
 
- ## Usage (MSVC):
+## Usage (MSVC):
 
    link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
    most normal Winsock calls are traced on entry and exit. Remember to
@@ -22,22 +22,22 @@
    when linking your program. See `src/Makefile.vc6` for an example.
 
 
- ## Installation (MingW/CygWin):
+## Installation (MingW/CygWin):
 
   to-do
 
- ## Usage (MingW/CygWin):
+## Usage (MingW/CygWin):
 
    link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e. `-lws32_2').
    So copy this library to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
    to link. The `Makefile.MingW` already does the copying to `$(MINGW32)/lib`.
 
 
- ## Configuration
+## Configuration
 
    The trace-level and other settings are controlled by a config-file
    `wsock_trace`. This file is searched in these places:
-     * The file pointed to by %WSOCK_TRACE.
+     * The file pointed to by `%WSOCK_TRACE`.
      * The current directory.
      * The '%HOME' directory.
      * Then finally the '%APPDATA' directory.
@@ -52,8 +52,7 @@
     * `<drive>:\Users\<User Name>\AppData`.                       (Win-Vista+)
 
 
- Running samples
- ---------------
+## Running samples
 
  Example output from src/test.exe (built with MSVC):
  ```
@@ -167,46 +166,46 @@
 
 
  By default, the tracing of these calls:
-  'htons()'
-  'htonl()'
-  'ntohs()'
-  'ntohl()'
-
- are excluded from the trace. You can edit the '%HOME/wsock_trace' file and exclude
+ ```
+  htons()
+  htonl()
+  ntohs()
+  ntohl()
+ ```
+ are excluded from the trace. You can edit the `%HOME/wsock_trace` file and exclude
  whatever calls you like.
 
 
- Implementation notes
- --------------------
+## Implementation notes
 
- The library 'wsock_trace.lib' is an import library for 'wsock_trace.dll'.
- This DLL off-course needs to be in current directory or on %PATH. The reason
+
+ The library `wsock_trace.lib` is an import library for `wsock_trace.dll`.
+ This DLL off-course needs to be in current directory or on `%PATH`. The reason
  I've chosen to make it a DLL and not a static-lib is that applications
- using 'wsock_trace.lib' needs not to be re-linked when I do change the inner
- workings of the 'wsock_trace' source code (I've done that a lot lately).
- As long as the ABI is stable (e.g. not adding functions to the wsock_trace.def
- file), the application using 'wsock_trace.dll' should work the same. Only the
+ using `wsock_trace.lib` needs not to be re-linked when I do change the inner
+ workings of the `wsock_trace` source code (I've done that a lot lately).
+ As long as the ABI is stable (e.g. not adding functions to the `wsock_trace.def`
+ file), the application using `wsock_trace.dll` should work the same. Only the
  trace should change.
 
  Note that some virus scanners may find the behaviour of programs linked to
- 'wsock_trace.lib' suspicious.
+ `wsock_trace.lib` suspicious.
 
- Future plans:
- -------------
+## Future plans:
 
    1. Get the MingW/CygWin ports working.
 
-   2. Python integration; use a .py-file to exclude/include processes and/or
+   2. Python integration; use a *.py*-file to exclude/include processes and/or
       functions to trace.
 
-   3. Injecting wsock_trace.dll into a remote process. Ref:
+   3. Injecting `wsock_trace.dll` into a remote process. Ref:
       http://www.viksoe.dk/code/wepmetering.htm
 
-   4. Optionally load Wireshark's libwireshark.dll to dissect transport and
+   4. Optionally load [Wireshark's](https://www.wireshark.org) `libwireshark.dll` to dissect transport and
       application protocols. Do it for selected processes only.
 
    5. Add a Json type config feature to support the above features. E.g.:
-
+      ```
       wireshark_dissect {
         wget.exe : 1    # Wirewshark dissection in wget and curl only.
         curl.exe : 1
@@ -216,6 +215,7 @@
         select : curl.exe    # Exclude trace of 'select()' and 'inet_ntoa()' in curl.exe.
         inet_ntoa : curl.exe
       }
+      ```
 
    6. Make a GUI trace viewer for it. Ref:
       http://www.viksoe.dk/code/windowless1.htm
@@ -223,6 +223,8 @@
  -------------
 
  G. Vanem <gvanem@yahoo.no> 2013.
+
+ Footnotes:
 
    [1] Nmap; "Network Mapper" is a free and open source (license) utility for network discovery and
        security auditing.
