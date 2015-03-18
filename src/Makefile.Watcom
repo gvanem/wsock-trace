@@ -1,0 +1,90 @@
+#
+# Wsock-trace makefile for Open Watcom.
+# G. Vanem <gvanem@yahoo.no> 2011.
+#
+LIB_TARGET = $(%WATCOM)\lib386\nt
+BIN_TARGET = $(%WINDIR)\system32
+
+STACK_OR_REG = r
+
+CC = wcc386
+
+CFLAGS = -bt=nt -mf -w6 -d2 -zq -zc -zm -wx -3$(STACK_OR_REG) -fpi -fr=nul -I. &
+         -of+ -s -d2 -hc -DWIN32_LEAN_AND_MEAN=1 -D_WIN32_WINNT=0x0501
+
+LDFLAGS = option quiet, map, eliminate, caseexact &
+          system nt debug all sort global library $(WSOCK_LIB)
+
+OBJ_DIR = Watcom_obj
+
+SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c
+
+LINK_ARG = $(OBJ_DIR)\wlink.arg
+
+OBJS = $(OBJ_DIR)\wsock_trace.obj $(OBJ_DIR)\init.obj  &
+       $(OBJ_DIR)\common.obj      $(OBJ_DIR)\dump.obj  &
+       $(OBJ_DIR)\in_addr.obj     $(OBJ_DIR)\stkwalk.obj
+
+#
+# The 'wsock_trace.lib' is an import-lib for 'wsock_trace.dll'.
+# Since the SDK header <ws2ipdef.h> declares some data with no export
+# declaration ('in6addr_any' etc.), the data.obj is simply added to this
+# imp-lib.
+#
+WSOCK_LIB = wsock_trace_ow.lib
+WSOCK_DLL = wsock_trace_ow.dll
+
+CFLAGS = $(CFLAGS) -DWSOCK_TRACE_DLL="$(WSOCK_DLL)"
+
+TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe # dump.exe
+
+all: $(OBJ_DIR) $(TARGETS) run_test install .SYMBOLIC
+	@echo Welcome to Wsock_trace library and example.
+
+$(OBJ_DIR):
+	md $(OBJ_DIR)
+
+clean: .SYMBOLIC
+	- rm -f $(OBJ_DIR)/*.*
+
+vclean realclean: clean .SYMBOLIC
+	- rm -f $(TARGETS)
+	- rmdir $(OBJ_DIR)
+
+.ERASE
+.c{$(OBJ_DIR)}.obj:
+	$(CC) $(CFLAGS) -fo=$@ $[@
+	@echo
+
+$(WSOCK_DLL) $(WSOCK_LIB): $(OBJS) $(OBJ_DIR)\wsock_trace.res $(LINK_ARG)
+	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
+
+$(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
+	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@
+	@echo
+
+install:
+	copy $(WSOCK_LIB) $(LIB_TARGET)
+	copy $(WSOCK_DLL) $(BIN_TARGET)
+
+uninstall:
+	-del $(LIB_TARGET)\\$(WSOCK_LIB)
+	-del $(BIN_TARGET)\\$(WSOCK_DLL)
+
+test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
+	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj
+	@echo
+
+run_test: test.exe .SYMBOLIC
+	test.exe
+
+$(LINK_ARG): $(__MAKEFILES__)
+	%create $^@
+	@%append $^@ option implib=$(WSOCK_LIB), map, verbose,
+	@%append $^@ caseexact, map=$(WSOCK_DLL:.dll=.map), res=$(OBJ_DIR)\wsock_trace.res
+	@%append $^@ file { $(OBJS) } library clib3$(STACK_OR_REG).lib
+
+
+#
+# Dependencies based on "gcc -MM .."
+#

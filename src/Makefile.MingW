@@ -1,0 +1,120 @@
+#
+# Wsock-trace makefile for MingW.
+# This requires GNU make v4 or later.
+#
+# G. Vanem <gvanem@yahoo.no> 2011.
+#
+
+USE_DEBUG    = 1
+USE_BFD      = 0
+USE_DEF_FILE = 0
+USE_MSVCRT10 = 0
+
+BIN_TARGET = $(realpath $(windir))/System32
+LIB_TARGET = $(realpath $(MINGW32))/lib
+
+CC     = gcc
+CFLAGS = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
+
+ifeq ($(USE_MSVCRT10),1)
+  CFLAGS += -D__MSVCRT_VERSION__=0x0A00
+endif
+
+LDFLAGS = -Wl,--print-map,--sort-common -t
+
+ifeq ($(USE_DEBUG),1)
+  CFLAGS += -O2 -g -D_DEBUG
+else
+  CFLAGS  += -O3 -fomit-frame-pointer
+  LDFLAGS += # -s
+endif
+
+ifeq ($(USE_BFD),1)
+  CFLAGS  += -DUSE_BFD
+  EX_LIBS += -lbfd -liberty -lintl -lz
+
+  ifeq ($(CPU),i386)
+    CFLAGS += -DBFD_ARCH_SIZE=32
+  else ifeq ($(CPU),x64)
+    CFLAGS += -DBFD_ARCH_SIZE=64
+  else
+    $(error "Unknown CPU")
+  endif
+endif
+
+ifeq ($(USE_DEF_FILE),1)
+  CFLAGS += -DUSE_DEF_FILE
+endif
+
+EX_LIBS += -lole32
+
+ifeq ($(USE_MSVCRT10),1)
+  EX_LIBS += -lmsvcr100
+endif
+
+CFLAGS  += -Wno-missing-braces -DWSOCK_TRACE_DLL=\"wsock_trace_mw.dll\"
+
+OBJ_DIR = MingW_obj
+
+SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c bfd_gcc.c
+
+OBJECTS  = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
+DATA_OBJ = $(OBJ_DIR)/data.o
+
+all: message $(OBJ_DIR) libwsock_trace.a test.exe run_test
+	@echo 'Welcome to Wsock_trace library and example.'
+
+message:
+	@echo 'Building MingW version.'
+
+$(OBJ_DIR):
+	- mkdir $(OBJ_DIR)
+
+libwsock_trace.a: wsock_trace_mw.dll
+
+wsock_trace_mw.dll: LDFLAGS += -shared \
+                               -Wl,--output-def,wsock_trace_mw.def \
+                               -Wl,--out-implib,libwsock_trace.a
+
+WSOCK_DEPS = $(OBJECTS) $(DATA_OBJ)
+
+ifeq ($(USE_DEF_FILE),1)
+  DEF_FILE    = wsock_trace.def
+  WSOCK_DEPS += $(DEF_FILE)
+endif
+
+wsock_trace_mw.dll: $(WSOCK_DEPS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw.map
+	ar rs libwsock_trace.a $(DATA_OBJ)
+	cp --update libwsock_trace.a   $(LIB_TARGET)
+	cp --update wsock_trace_mw.dll $(BIN_TARGET)
+
+test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
+	$(CC) $(LDFLAGS) -o $@ $^ > test.map
+
+dump.exe: dump.c common.c in_addr.c processes.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_DUMP_DATA $^ -o $@ -lws2_32 -lole32 > dump.map
+
+run_test: test.exe
+	test.exe -dd
+
+clean:
+	- rm -f $(OBJ_DIR)/*.o
+
+vclean realclean: clean
+	rm -f libwsock_trace.a wsock_trace_mw.dll wsock_trace_mw.map test.exe test.map .depend.MingW
+	- rmdir $(OBJ_DIR)
+
+$(OBJ_DIR)/%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+	@echo
+
+$(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
+	windres -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__ -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+
+REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
+
+depend:
+	$(CC) -MM $(CFLAGS) $(SOURCES) data.c test.c | $(REPLACE) > .depend.MingW
+
+-include .depend.MingW

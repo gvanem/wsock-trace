@@ -1,0 +1,80 @@
+#
+# Wsock-trace makefile for Cygwin.
+# G. Vanem <gvanem@yahoo.no> 2011.
+#
+
+USE_DEBUG = 1
+USE_BFD   = 0
+
+BIN_TARGET = /usr/bin
+LIB_TARGET = /usr/lib
+
+CC      = gcc-4
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS \
+          -DWSOCK_TRACE_DLL=\"wsock_trace_cyg.dll\"
+LDFLAGS = -Wl,--print-map,--sort-common -t # -v
+
+ifeq ($(USE_DEBUG),1)
+  CFLAGS += -O2 -g
+else
+  CFLAGS  += -O3 -fomit-frame-pointer
+  LDFLAGS += # -s
+endif
+
+ifeq ($(USE_BFD),1)
+  CFLAGS  += -DUSE_BFD
+  EX_LIBS += -lbfd -liberty -lintl -lz
+endif
+
+EX_LIBS += -lole32
+OBJ_DIR = Cygwin_obj
+
+SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c bfd_gcc.c
+
+OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
+
+all: message $(OBJ_DIR) libwsock_trace.a test.exe run_test
+	@echo 'Welcome to Wsock_trace library and example.'
+
+message:
+	@echo 'Building CygWin version.'
+
+$(OBJ_DIR):
+	- mkdir $(OBJ_DIR)
+
+libwsock_trace.a wsock_trace_cyg.dll: $(OBJECTS)
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o wsock_trace_cyg.dll $^ $(EX_LIBS) > wsock_trace_cyg.map
+	cp --update libwsock_trace.a    $(LIB_TARGET)
+	cp --update wsock_trace_cyg.dll $(BIN_TARGET)
+
+test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(EX_LIBS) > test.map
+
+run_test: test.exe
+	test.exe
+
+clean:
+	- rm -f $(OBJ_DIR)/*.o
+
+vclean realclean: clean
+	rm -f libwsock_trace.a wsock_trace_cyg.dll wsock_trace_cyg.map test.exe test.map .depend.CygWin
+	- rmdir $(OBJ_DIR)
+
+#
+# <tchar.h> is not in the normal place!
+#
+$(OBJ_DIR)/test.o: CFLAGS += -I/usr/i686-pc-mingw32/sys-root/mingw/include
+
+$(OBJ_DIR)/%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+	@echo
+
+$(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
+	windres -O COFF -DDEBUG=$(USE_DEBUG) -D__CYGWIN__ -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+
+REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
+
+depend:
+	$(CC) -M $(CFLAGS) $(SOURCES) data.c | $(REPLACE) > .depend.CygWin
+
+-include .depend.CygWin

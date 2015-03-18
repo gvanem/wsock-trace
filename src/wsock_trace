@@ -1,0 +1,91 @@
+#
+# WSock_trace config file.
+#
+# When wsock_trace.dll starts, it will try to open and read the
+# 'Wsock_trace' file from these places in this order:
+#  - The file pointed to by %WSOCK_TRACE%.
+#  - The current directory.
+#  - The '%HOME' directory.
+#  - Then finally the '%APPDATA' directory.
+#
+# The keyword here are not case sensitive.
+# All values can contain an environment variable (at most one).
+#   E.g. 'trace_level = %TRACE_LEVEL%'.
+#
+
+trace_level   = 2                  # The level of trace to give; higher value gives more details
+trace_indent  = 2                  # The number of spaces to indent e.g. '  * test.c(45)'.
+trace_caller  = 1                  ; ditto comment
+trace_report  = 1                  # print a final trace report at program exit.
+# trace_max_len = 100              # wrap lines at column 100 when printing to file or when stdout is redirected.
+#                                  # When printing to the console, we wrap and indent text according to screen width.
+
+trace_binmode = 1                  # Write output-file in binary mode.
+
+# trace_file = %TEMP%\wstrace.txt  # file to trace to. If left unused, print to 'stdout'.
+                                   # Use "stderr" for stderr.
+                                   # Use "$ODS" to print using 'OutputDebugString()' and
+                                   # use dbgview to see the traces (no colours).
+
+trace_time = relative              # Print timestamps at each trace-line. One of these:
+                                   #   "absolute" for current-time.
+                                   #   "relative" for msec since program started.
+                                   #   "delta"    for msec since previous trace-line.
+                                   #   "none"     for no timestamps
+
+pcap_enable = 0
+pcap_dump   = %TEMP%\wstrace.pcap
+
+callee_level   = 1                 # How many stack-frames to show for caller (not yet)
+cpp_demangle   = 1
+short_errors   = 1
+use_full_path  = 1                 # Report with full file-names in traces.
+use_toolhlp32  = 1
+use_ole32      = 1
+start_new_line = 0                 # Always start tracing on column 1.
+show_caller    = 0                 # Internal: show file/line where TRACE() was called.
+
+compact       = 0                  # Compact or detailed dump (not yet).
+dump_select   = 1                  # Dump the 'fd_set's in select(). Do it before and after select() modifies them.
+dump_hostent  = 1                  # Dump the 'hostent' structure returned in gethostbyname() and gethostbyaddr().
+dump_protoent = 1                  # Dump the 'protoent' structure returned in getprotobynumber() and getprotobyname().
+dump_servent  = 1                  # Dump the 'servent' structure returned in getservbyport() and getservbyname().
+dump_nameinfo = 1                  # Dump the data returned from getnameinfo().
+
+dump_wsaprotocol_info  = 1         # Dump the WSAPROTOCOL_INFO[A|W] structure in e.g. WSASocketA() and WSADuplicateSocketA().
+dump_wsanetwork_events = 1         # Dump the WSAEVENT array from WSAEnumNetworkEvents().
+
+dump_data   = 1                    # Dump data in recv(), recvfrom(), send() and sendto().
+max_data    = 1000                 # but not more than 'max_data'.
+
+msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
+mingw_only  = 0                    # Trace only MingW programs using the wsock_trace.dll
+
+color_time  = bright red           # Color of time-stamp. E.g. '* 125.654 msec:'
+color_file  = bright white         # Color of first trace line. E.g.: ' sendf.c(319) (Curl_recv_plain+37):'
+color_func  = bright red           # Not effective yet
+color_trace = bright yellow        # Color of traced function. E.g.: 'recv (1492, 0x00B74604, 16384, 0) --> 11533 bytes.'
+color_data  = bright green         # Color of extra traced stuff.
+
+#
+# Don't trace these functions:
+#
+exclude = htons
+exclude = htonl
+exclude = ntohs
+exclude = ntohl
+# exclude = WSASetLastError
+# exclude = WSAGetLastError
+
+exclude = inet_addr
+exclude = FD_ISSET
+# exclude = __WSAFDIsSet
+
+#
+# Or don't trace these functions in these programs (not effective yet):
+#
+# exclude = libcurl*.dll!select
+# exclude = curl.exe!inet_addr
+# exclude = wget!WSAStartup
+# exclude = nmap!getaddrinfo
+
