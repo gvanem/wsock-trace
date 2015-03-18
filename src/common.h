@@ -177,7 +177,7 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #if 0
     #define FILE_EXISTS(f)  (_access(f,0) == 0)
   #else
-    static inline int FILE_EXISTS (const char *f)
+    static __inline int FILE_EXISTS (const char *f)
     {
       return (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES);
     }
