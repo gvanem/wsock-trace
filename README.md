@@ -1,59 +1,55 @@
- Wsock-trace v0.3.5:
- ===================
+# Wsock-trace v0.3.5:
 
  A small and simple drop-in tracer for most normal Winsock calls.
  Works best for MSVC since the stack-walking code requires the program's
- PDB symbol-file to be present. And unfortunately MingW/CygWin doesn't
- produce PDB-symbols. This project is hosted at Google-Code [3].
+ **PDB** symbol-file to be present. And unfortunately MingW/CygWin doesn't
+ produce PDB-symbols. This project is hosted at Github [3] (previously it
+ was at Google-Code. But that is closing down).
 
 
- Installation (MSVC):
- --------------------
+ ## Installation (MSVC):
 
-   Enter the 'src' sub-directory and do a "nmake -f Makefile.vc6".
-   This produces a 'wsock_trace.lib' that you'll need to use to
+   Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
+   This produces a `wsock_trace.lib` that you'll need to use to
    link your project(s) with. This lib would then trace the normal
    Winsock calls. Example below.
 
- Usage (MSVC):
- -------------
+ ## Usage (MSVC):
 
-   link with wsock_trace.lib instead of the system's ws32_2.lib. Thus
+   link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
    most normal Winsock calls are traced on entry and exit. Remember to
-   compile using '-Zi' to produce debug-symbols. And to use '-debug'
-   when linking your program. See 'src/Makefile.vc6' for an example.
+   compile using `-Zi` to produce debug-symbols. And to use `-debug`
+   when linking your program. See `src/Makefile.vc6` for an example.
 
 
- Installation (MingW/CygWin):
- ----------------------------
+ ## Installation (MingW/CygWin):
+
+  to-do
+
+ ## Usage (MingW/CygWin):
+
+   link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e. `-lws32_2').
+   So copy this library to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
+   to link. The `Makefile.MingW` already does the copying to `$(MINGW32)/lib`.
 
 
- Usage (MingW/CygWin):
- ---------------------
-
-   link with libwsock_trace.a instead of the system's libws32_2.a ('-lws32_2').
-   I.e. copy it to a directory in $(LIBRARY_PATH) and use '-lwsock_trace'
-   to link. The Makefile.MingW already does the copying to $(MINGW32)/lib.
-
-
- Configuration
- -------------
+ ## Configuration
 
    The trace-level and other settings are controlled by a config-file
-   'wsock_trace'. This file is searched in these places:
-     *) The file pointed to by %WSOCK_TRACE.
-     *) The current directory.
-     *) The '%HOME' directory.
-     *) Then finally the '%APPDATA' directory.
+   `wsock_trace`. This file is searched in these places:
+     * The file pointed to by %WSOCK_TRACE.
+     * The current directory.
+     * The '%HOME' directory.
+     * Then finally the '%APPDATA' directory.
 
-   'wsock_trace' is read in init.c at startup. Read it's contents; the comments
-   therein should be self-explanatory. If 'wsock_trace' is no found in one of
-   the above directories, the default 'trace_level' is set to 1.
+   `wsock_trace` is read in init.c at startup. Read it's contents; the comments
+   therein should be self-explanatory. If `wsock_trace` is no found in one of
+   the above directories, the default `trace_level` is set to 1.
 
-   You should copy the contained 'wsock_trace' in the .zip-file to your %HOME or
-   %APPDATA directory. This is on the form:
-     "<drive>:\Documents and Settings\<User Name>\ProgramData".  (Win-XP)
-     "<drive>:\Users\<User Name>\AppData".                       (Win-Vista+)
+   You should copy the contained 'wsock_trace' in the .zip-file to your `%HOME` or
+   `%APPDATA` directory. This is on the form:
+    * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
+    * `<drive>:\Users\<User Name>\AppData`.                       (Win-Vista+)
 
 
  Running samples
@@ -235,4 +231,4 @@
    [2] A C library for asynchronous DNS requests (including name resolves)
        Ref. http://c-ares.haxx.se/
 
-   [3] https://code.google.com/p/wsock-trace/
+   [3] https://github.com/gvanem/wsock-trace
