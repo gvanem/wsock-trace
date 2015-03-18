@@ -60,6 +60,7 @@
  ---------------
 
  Example output from src/test.exe (built with MSVC):
+ ```
 
    * ws_trace/test.c(45) (main+50):              WSAStartup (2.2) --> No error.
    * ws_trace/test.c(24) (do_wsock_tests+125):   gethostbyaddr (127.0.0.1, 4, AF_INET) --> 0x003C8780.
@@ -80,9 +81,10 @@
      |
      |____ Source-file relative of the application.
 
-
+  ```
 
   Here is a more realistic and useful example with wsock_trace.lib linked to Nmap [1]:
+  ```
 
     > nmap -sT -P0 -p23,80 10.0.0.1
 
@@ -129,6 +131,7 @@
     Nmap done: 1 IP address (1 host up) scanned in 7.61 seconds
       * mswin32/winfix.cc(290) (win_cleanup+12):   WSACleanup() --> No error.
 
+  ```
 
   Notes:
     * Nmap uses wrong arguments to 'setsockopt()'; a 'TTL' of 'ULONG_MAX'.
