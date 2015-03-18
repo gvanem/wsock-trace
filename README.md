@@ -1,4 +1,4 @@
-# Wsock-trace v0.3.5:
+## Wsock-trace v0.3.5:
 
  A small and simple drop-in tracer for most normal Winsock calls.
  Works best for MSVC since the stack-walking code requires the program's
@@ -7,52 +7,50 @@
  `[3]` (previously it was at Google-Code. But that is closing down).
 
 
-## Installation (MSVC):
+### Installation (MSVC):
 
-   Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
-   This produces a `wsock_trace.lib` that you'll need to use to
-   link your project(s) with. This lib would then trace the normal
-   Winsock calls. Example below.
+ Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
+ This produces a `wsock_trace.lib` that you'll need to use to
+ link your project(s) with. This lib would then trace the normal
+ Winsock calls. Example below.
 
-## Usage (MSVC):
+### Usage (MSVC):
 
-   link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
-   most normal Winsock calls are traced on entry and exit. Remember to
-   compile using `-Zi` to produce debug-symbols. And to use `-debug`
-   when linking your program. See `src/Makefile.vc6` for an example.
+ Link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
+ most normal Winsock calls are traced on entry and exit. Remember to
+ compile using `-Zi` to produce debug-symbols. And remember to use `-debug`
+ when linking your program. See `src/Makefile.vc6` for an example.
 
+### Installation (MingW/CygWin):
 
-## Installation (MingW/CygWin):
+ to-do
 
-  to-do
+### Usage (MingW/CygWin):
 
-## Usage (MingW/CygWin):
+ Link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e. `-lws32_2`).
+ So copy this library to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
+ to link. The `Makefile.MingW` already does the copying to `$(MINGW32)/lib`.
 
-   link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e. `-lws32_2').
-   So copy this library to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
-   to link. The `Makefile.MingW` already does the copying to `$(MINGW32)/lib`.
+### Configuration
 
-
-## Configuration
-
-   The trace-level and other settings are controlled by a config-file
-   `wsock_trace`. This file is searched in these places:
-     * The file pointed to by `%WSOCK_TRACE`.
-     * The current directory.
-     * The '%HOME' directory.
-     * Then finally the '%APPDATA' directory.
+ The trace-level and other settings are controlled by a config-file
+ `wsock_trace`. This file is searched in these places:
+*    The file pointed to by `%WSOCK_TRACE`.
+*    The current directory.
+*    The `%HOME` directory.
+*    Then finally the `%APPDATA` directory.
 
    `wsock_trace` is read in init.c at startup. Read it's contents; the comments
    therein should be self-explanatory. If `wsock_trace` is no found in one of
    the above directories, the default `trace_level` is set to 1.
 
-   You should copy the contained 'wsock_trace' in the .zip-file to your `%HOME` or
+   You should copy the contained `wsock_trace` in the .zip-file to your `%HOME` or
    `%APPDATA` directory. This is on the form:
-    * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
-    * `<drive>:\Users\<User Name>\AppData`.                       (Win-Vista+)
+*   `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
+*   `<drive>:\Users\<User Name>\AppData`.                       (Win-Vista+)
 
 
-## Running samples
+### Running samples
 
  Example output from src/test.exe (built with MSVC):
  ```
@@ -126,19 +124,19 @@
     Nmap done: 1 IP address (1 host up) scanned in 7.61 seconds
       * mswin32/winfix.cc(290) (win_cleanup+12):   WSACleanup() --> No error.
 
-  ```
+```
 
-  Notes:
-    * Nmap uses wrong arguments to 'setsockopt()'; a 'TTL' of 'ULONG_MAX'.
-    * Nmap also calls 'WSAStartup()' before the startup message.
-    * Last but not least, notice how wsock_trace handles (demangles) C++ symbols just
-      fine  thanks to 'dbghelp.dll' and 'UnDecorateSymbolName()'. I.e. the destructor
-      'ConnectProbe::~ConnectProbe' above is calling 'closesocket()' at offset 37.
-      (you can turn off C++ demangling by 'cpp_demangle = 0' in the config-file).
+Notes:
+* Nmap uses wrong arguments to `setsockopt()`; a *TTL* of *ULONG_MAX*.
+* Nmap also calls `WSAStartup()` before the startup message.
+* Last but not least, notice how `wsock_trace` handles (demangles) C++ symbols just
+  fine  thanks to `dbghelp.dll` and `UnDecorateSymbolName()`. I.e. the destructor
+  `ConnectProbe::~ConnectProbe` above is calling `closesocket()` at offset 37.
+  (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
 
 
-  And another example from C-ares' adig [2]:
-
+And another example from C-ares' adig [2]:
+```
     > adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
       * ares_process.c(1065) (open_udp_socket+248):   socket (AF_INET, SOCK_DGRAM, 0) --> 1604.
@@ -163,7 +161,7 @@
     Additional records:
       * ares__close_sockets.c(63) (ares__close_sockets+408):   closesocket (1604) --> No error.
       * adig.c(411) (main+1894):   WSACleanup() --> No error.
-
+```
 
  By default, the tracing of these calls:
  ```
@@ -172,11 +170,11 @@
   ntohs()
   ntohl()
  ```
- are excluded from the trace. You can edit the `%HOME/wsock_trace` file and exclude
- whatever calls you like.
+are excluded from the trace. You can edit the `%HOME/wsock_trace` file and exclude
+whatever calls you like.
 
 
-## Implementation notes
+### Implementation notes
 
 
  The library `wsock_trace.lib` is an import library for `wsock_trace.dll`.
@@ -191,7 +189,7 @@
  Note that some virus scanners may find the behaviour of programs linked to
  `wsock_trace.lib` suspicious.
 
-## Future plans:
+### Future plans:
 
    1. Get the MingW/CygWin ports working.
 
@@ -212,7 +210,7 @@
       }
 
       exclude_trace {
-        select : curl.exe    # Exclude trace of 'select()' and 'inet_ntoa()' in curl.exe.
+        select : curl.exe    # Exclude trace of `select()` and `inet_ntoa()` in curl.exe.
         inet_ntoa : curl.exe
       }
       ```
