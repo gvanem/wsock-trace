@@ -3,7 +3,7 @@
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 LIB_TARGET = $(%WATCOM)\lib386\nt
-BIN_TARGET = $(%WINDIR)\system32
+BIN_TARGET = $(%WATCOM)\binnt
 
 STACK_OR_REG = r
 
