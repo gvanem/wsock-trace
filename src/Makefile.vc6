@@ -22,12 +22,12 @@ MACHINE = x86
 
 #
 # Configurations:
-#  -MD   - msvcrt.dll,  threads, release (normal)
-#  -MDd  - msvcrtd.dll, threads, debug
-#  -ML   - libc, no threads,     release (not available on VC-2008+)
-#  -MLd  - libc, no threads,     debug   (not available on VC-2008+)
-#  -MT   - libc, threads,        release
-#  -MTd  - libc, threads,        debug
+#  -MD   - msvcrt1*.dll,  threads, release (normal)
+#  -MDd  - msvcrt1*d.dll, threads, debug
+#  -ML   - libc, no threads,  release (not available on VC-2008+)
+#  -MLd  - libc, no threads,  debug   (not available on VC-2008+)
+#  -MT   - libc, threads,     release
+#  -MTd  - libc, threads,     debug
 
 CC      = cl
 CFLAGS  = -nologo -I. -W3 -Zi -DWIN32 -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
@@ -37,9 +37,9 @@ LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
 !if "$(USE_DEBUG)" == "1"
-CFLAGS = $(CFLAGS) -MDd -Zi -Os -D_DEBUG
+CFLAGS  = $(CFLAGS) -MTd -Zi -Os -D_DEBUG
 !else
-CFLAGS = $(CFLAGS) -MD -Ot -Gs -DNDEBUG
+CFLAGS  = $(CFLAGS) -MT -Ot -Gs -DNDEBUG
 !endif
 
 #
@@ -54,8 +54,7 @@ CFLAGS = $(CFLAGS) -DNO_STACK_WALK
 CFLAGS = $(CFLAGS) -DUSE_DEF_FILE
 !endif
 
-
-EX_LIBS = ole32.lib
+EX_LIBS = $(EX_LIBS) ole32.lib
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
