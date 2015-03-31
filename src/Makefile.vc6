@@ -7,7 +7,7 @@ USE_DEBUG    = 0
 USE_DEF_FILE = 1
 
 LIB_TARGET = $(VC_BASE)\lib
-BIN_TARGET = $(WINDIR)\system32
+BIN_TARGET = $(VC_BASE)\bin
 
 #
 # Set '%WANT_64_BITS%=1' to build a 64-bit version. Adds a '_x64' suffix to
