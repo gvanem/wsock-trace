@@ -240,4 +240,3 @@ whatever calls you like.
    [2] A C library for asynchronous DNS requests (including name resolves)
        Ref. http://c-ares.haxx.se/
 
-   [3] https://github.com/gvanem/wsock-trace
