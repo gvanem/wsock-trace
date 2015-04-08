@@ -3,8 +3,9 @@
  A small and simple drop-in tracer for most normal Winsock calls.
  Works best for MSVC since the stack-walking code requires the program's
  **PDB** symbol-file to be present. And unfortunately MingW/CygWin doesn't
- produce PDB-symbols. This project is hosted at [Github](https://github.com/gvanem/wsock-trace)
- `[3]` (previously it was at Google-Code. But that is closing down).
+ produce PDB-symbols. This project was previosly hosted at [GoogleCode]
+ (https://code.google.com/p/wsock-trace/). But Google desided that this will be
+ closing down.
 
 
 ### Installation (MSVC):
@@ -217,6 +218,14 @@ whatever calls you like.
 
    6. Make a GUI trace viewer for it. Ref:
       http://www.viksoe.dk/code/windowless1.htm
+
+   7. Make it possible to switch network stacks at run-time (select amongst Winsock2,
+      [lwIP](http://savannah.nongnu.org/projects/lwip/),
+      [SwsSock](http://www.softsystem.co.uk/products/swssock.htm) and/or
+      [Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html) (ported to Win32).
+
+      Switch between TCP/UDP and [SCTP](http://en.wikipedia.org/wiki/Stream_Control_Transmission_Protocol)
+      for selected destinations (?)
 
  -------------
 
