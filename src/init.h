@@ -7,8 +7,8 @@ typedef unsigned __int64 uint64;
 typedef          __int64 int64;
 
 struct exclude {
-       char    *name;          /* name of function to exclude from the trace */
-       unsigned num_excludes;  /* # of times this function was excluded */
+       char   *name;          /* name of function to exclude from the trace */
+       uint64  num_excludes;  /* # of times this function was excluded */
      };
 
 struct excludes {
@@ -17,11 +17,16 @@ struct excludes {
      };
 
 struct statistics {
+       uint64  send_bytes;
+       uint64  send_errors;
+
        uint64  recv_bytes;
        uint64  recv_peeked;
-       uint64  send_bytes;
        uint64  recv_errors;
-       uint64  send_errors;
+       uint64  recv_EWOULDBLOCK;
+
+       uint64  connects;
+       uint64  connect_EWOULDBLOCK;
        uint64  dll_attach;
        uint64  dll_detach;
      };
