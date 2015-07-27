@@ -6,8 +6,8 @@
 USE_DEBUG    = 0
 USE_DEF_FILE = 1
 
-LIB_TARGET = $(VC_BASE)\lib
-BIN_TARGET = $(VC_BASE)\bin
+LIB_TARGET = $(VCINSTALLDIR)\lib
+BIN_TARGET = $(VCINSTALLDIR)\bin
 
 #
 # Set '%WANT_64_BITS%=1' to build a 64-bit version. Adds a '_x64' suffix to
@@ -142,7 +142,7 @@ $(OBJ_DIR)\getopt.obj: getopt.c
 	$(CC) $(CFLAGS) -Fo$*.obj -c $<
 
 #
-# Make a .def file for X64; remove the leading '_' and the
+# Make a .def file for x64; remove the leading '_' and the
 # '@x' suffixes.
 #
 wsock_trace_x64.def: wsock_trace.def Makefile.VC6
