@@ -200,26 +200,36 @@ whatever calls you like.
    3. Injecting `wsock_trace.dll` into a remote process. Ref:
       http://www.viksoe.dk/code/wepmetering.htm
 
-   4. Optionally load [Wireshark's](https://www.wireshark.org) `libwireshark.dll` to dissect transport and
-      application protocols. Do it for selected processes only.
+   4. Optionally load [Wireshark's](https://www.wireshark.org) `libwireshark.dll` to dissect
+      transport and application protocols. Do it for selected processes only.
 
-   5. Add a Json type config feature to support the above features. E.g.:
+   5. Deny certain applications to use `AF_INET6` protocols (return `-1` on
+      `socket(AF_INET6,...)`.
+
+   6. Add a Json type config feature to support the above features. E.g.:
       ```
       wireshark_dissect {
-        wget.exe : 1    # Wirewshark dissection in wget and curl only.
+        wget.exe : 1    # Wireshark dissection in wget and curl only.
         curl.exe : 1
       }
 
       exclude_trace {
-        select : curl.exe    # Exclude trace of `select()` and `inet_ntoa()` in curl.exe.
-        inet_ntoa : curl.exe
+        curl.exe, wget.exe: select   # Exclude trace of `select()` and `inet_ntoa()` in curl/wget.
+        curl.exe, wget.exe: inet_ntoa
+        *                 : htons    # Exclude trace of `htons` globally.
+      }
+
+      deny_ipv6 {
+        pycurl.pyd : 1      # Deny AF_INET6 sockets in scripts using the PyCurl module.
+        python27.dll : 1    # And in other Python scripts too.
+
       }
       ```
 
-   6. Make a GUI trace viewer for it. Ref:
+   7. Make a GUI trace viewer for it. Ref:
       http://www.viksoe.dk/code/windowless1.htm
 
-   7. Make it possible to switch network stacks at run-time (select amongst Winsock2,
+   8. Make it possible to switch network stacks at run-time (select amongst Winsock2,
       [lwIP](http://savannah.nongnu.org/projects/lwip/),
       [SwsSock](http://www.softsystem.co.uk/products/swssock.htm) and/or
       [Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html) (ported to Win32).
@@ -227,11 +237,11 @@ whatever calls you like.
       Switch between TCP/UDP and [SCTP](http://en.wikipedia.org/wiki/Stream_Control_Transmission_Protocol)
       for selected destinations (?)
 
- -------------
+-------------
 
- G. Vanem <gvanem@yahoo.no> 2013.
+G. Vanem <gvanem@yahoo.no> 2013.
 
- Footnotes:
+Footnotes:
 
    [1] Nmap; "Network Mapper" is a free and open source (license) utility for network discovery and
        security auditing.
