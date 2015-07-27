@@ -307,30 +307,35 @@
  * Missing sio_codes[]
  */
 #if !defined(_MSC_VER)
-  #define SIO_RCVALL                        _WSAIOW  (IOC_VENDOR,1)
-  #define SIO_RCVALL_MCAST                  _WSAIOW  (IOC_VENDOR,2)
-  #define SIO_RCVALL_IGMPMCAST              _WSAIOW  (IOC_VENDOR,3)
-  #define SIO_KEEPALIVE_VALS                _WSAIOW  (IOC_VENDOR,4)
-  #define SIO_ABSORB_RTRALERT               _WSAIOW  (IOC_VENDOR,5)
-  #define SIO_UCAST_IF                      _WSAIOW  (IOC_VENDOR,6)
-  #define SIO_LIMIT_BROADCASTS              _WSAIOW  (IOC_VENDOR,7)
-  #define SIO_INDEX_BIND                    _WSAIOW  (IOC_VENDOR,8)
-  #define SIO_INDEX_MCASTIF                 _WSAIOW  (IOC_VENDOR,9)
-  #define SIO_INDEX_ADD_MCAST               _WSAIOW  (IOC_VENDOR,10)
-  #define SIO_INDEX_DEL_MCAST               _WSAIOW  (IOC_VENDOR,11)
+  #if !defined(__MINGW64_VERSION_MAJOR)
+    #define SIO_RCVALL                      _WSAIOW  (IOC_VENDOR,1)
+    #define SIO_RCVALL_MCAST                _WSAIOW  (IOC_VENDOR,2)
+    #define SIO_RCVALL_IGMPMCAST            _WSAIOW  (IOC_VENDOR,3)
+    #define SIO_KEEPALIVE_VALS              _WSAIOW  (IOC_VENDOR,4)
+    #define SIO_ABSORB_RTRALERT             _WSAIOW  (IOC_VENDOR,5)
+    #define SIO_UCAST_IF                    _WSAIOW  (IOC_VENDOR,6)
+    #define SIO_LIMIT_BROADCASTS            _WSAIOW  (IOC_VENDOR,7)
+    #define SIO_INDEX_BIND                  _WSAIOW  (IOC_VENDOR,8)
+    #define SIO_INDEX_MCASTIF               _WSAIOW  (IOC_VENDOR,9)
+    #define SIO_INDEX_ADD_MCAST             _WSAIOW  (IOC_VENDOR,10)
+    #define SIO_INDEX_DEL_MCAST             _WSAIOW  (IOC_VENDOR,11)
+  #endif
+
   #undef  SIO_UDP_CONNRESET
   #define SIO_UDP_CONNRESET                 _WSAIOW  (IOC_VENDOR,12)
   #define SIO_RCVALL_MCAST_IF               _WSAIOW  (IOC_VENDOR,13)
   #define SIO_RCVALL_IF                     _WSAIOW  (IOC_VENDOR,14)
   #define SIO_UDP_NETRESET                  _WSAIOW  (IOC_VENDOR,15)
 
-  #define SIO_BSP_HANDLE                    _WSAIOR  (IOC_WS2,27)
-  #define SIO_BSP_HANDLE_SELECT             _WSAIOR  (IOC_WS2,28)
-  #define SIO_BSP_HANDLE_POLL               _WSAIOR  (IOC_WS2,29)
-  #define SIO_EXT_SELECT                    _WSAIORW (IOC_WS2,30)
-  #define SIO_EXT_POLL                      _WSAIORW (IOC_WS2,31)
-  #define SIO_EXT_SENDMSG                   _WSAIORW (IOC_WS2,32)
-  #define SIO_BASE_HANDLE                   _WSAIOR  (IOC_WS2,34)
+  #if !defined(__MINGW64_VERSION_MAJOR)
+    #define SIO_BSP_HANDLE                  _WSAIOR  (IOC_WS2,27)
+    #define SIO_BSP_HANDLE_SELECT           _WSAIOR  (IOC_WS2,28)
+    #define SIO_BSP_HANDLE_POLL             _WSAIOR  (IOC_WS2,29)
+    #define SIO_EXT_SELECT                  _WSAIORW (IOC_WS2,30)
+    #define SIO_EXT_POLL                    _WSAIORW (IOC_WS2,31)
+    #define SIO_EXT_SENDMSG                 _WSAIORW (IOC_WS2,32)
+    #define SIO_BASE_HANDLE                 _WSAIOR  (IOC_WS2,34)
+  #endif
 
   #define SIO_ACQUIRE_PORT_RESERVATION      _WSAIOW  (IOC_VENDOR, 100)
   #define SIO_RELEASE_PORT_RESERVATION      _WSAIOW  (IOC_VENDOR, 101)
@@ -1090,6 +1095,14 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
 
   trace_puts ("~0");
 }
+
+#if defined(__GNUC__)
+  /*
+   * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
+   *                  addr = "<??>";
+   */
+  #pragma GCC diagnostic ignored "-Wtrigraphs"
+#endif
 
 static const char *dump_addr_list (int type, const char **addresses)
 {
