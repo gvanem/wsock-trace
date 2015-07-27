@@ -1,11 +1,11 @@
 #
-# Wsock-trace makefile for MingW.
+# Wsock-trace makefile for MinGW, MinGW64-w64 or TDM-gcc.
 # This requires GNU make v4 or later.
 #
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 
-USE_DEBUG    = 1
+USE_DEBUG    = 0
 USE_BFD      = 0
 USE_DEF_FILE = 0
 USE_MSVCRT10 = 0
@@ -13,14 +13,40 @@ USE_MSVCRT10 = 0
 BIN_TARGET = $(realpath $(MINGW32))/bin
 LIB_TARGET = $(realpath $(MINGW32))/lib
 
-CC     = gcc
-CFLAGS = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
-
-ifeq ($(USE_MSVCRT10),1)
-  CFLAGS += -D__MSVCRT_VERSION__=0x0A00
+#
+# If '$(CPU)=x64', build 64-bit version. Assuming your MinGW
+# is dual-target capable and supports the '-mxx' option.
+# Otherwise 32-bit programs.
+#
+ifeq ($(CPU),)
+  CPU = x86
 endif
 
-LDFLAGS = -Wl,--print-map,--sort-common -t
+ifeq ($(CPU),X64)
+  CPU = x64
+endif
+
+CC      = gcc
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
+RCFLAGS = -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__
+
+ifeq ($(CPU),x64)
+  CFLAGS  += -m64 -DNO_STACK_WALK  # stkwalk.c is only for x86 ATM.
+  LDFLAGS  = -m64
+  RCFLAGS  += -DBITNESS=64 --target=pe-x86-64
+  X_SUFFIX = _x64
+else
+  CFLAGS  += -m32
+  LDFLAGS  = -m32
+  RCFLAGS  += -DBITNESS=32 --target=pe-i386
+  X_SUFFIX =
+endif
+
+ifeq ($(USE_MSVCRT10),1)
+  CFLAGS += -D__MSVCRT_VERSION__=0x0A00 -DMINGW_USE_MSVCR_100
+endif
+
+LDFLAGS += -Wl,--print-map,--sort-common -t
 
 ifeq ($(USE_DEBUG),1)
   CFLAGS += -O2 -g -D_DEBUG
@@ -33,7 +59,7 @@ ifeq ($(USE_BFD),1)
   CFLAGS  += -DUSE_BFD
   EX_LIBS += -lbfd -liberty -lintl -lz
 
-  ifeq ($(CPU),i386)
+  ifeq ($(CPU),x86)
     CFLAGS += -DBFD_ARCH_SIZE=32
   else ifeq ($(CPU),x64)
     CFLAGS += -DBFD_ARCH_SIZE=64
@@ -52,9 +78,9 @@ ifeq ($(USE_MSVCRT10),1)
   EX_LIBS += -lmsvcr100
 endif
 
-CFLAGS  += -Wno-missing-braces -DWSOCK_TRACE_DLL=\"wsock_trace_mw.dll\"
+CFLAGS += -Wno-missing-braces -DWSOCK_TRACE_DLL=\"wsock_trace_mw$(X_SUFFIX).dll\"
 
-OBJ_DIR = MingW_obj
+OBJ_DIR = MinGW_obj
 
 SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c bfd_gcc.c
 
@@ -65,29 +91,31 @@ all: message $(OBJ_DIR) libwsock_trace.a test.exe run_test
 	@echo 'Welcome to Wsock_trace library and example.'
 
 message:
-	@echo 'Building MingW version.'
+	@echo 'Building MinGW version. CPU=$(CPU).'
 
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
 
-libwsock_trace.a: wsock_trace_mw.dll
+libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
 
-wsock_trace_mw.dll: LDFLAGS += -shared \
-                               -Wl,--output-def,wsock_trace_mw.def \
-                               -Wl,--out-implib,libwsock_trace.a
+wsock_trace_mw$(X_SUFFIX).dll: LDFLAGS += -shared \
+                                          -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
+                                          -Wl,--out-implib,libwsock_trace.a
 
 WSOCK_DEPS = $(OBJECTS) $(DATA_OBJ)
 
 ifeq ($(USE_DEF_FILE),1)
-  DEF_FILE    = wsock_trace.def
+  DEF_FILE    = wsock_trace$(X_SUFFIX).def
   WSOCK_DEPS += $(DEF_FILE)
 endif
 
-wsock_trace_mw.dll: $(WSOCK_DEPS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw.map
+wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) # install
+	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
 	ar rs libwsock_trace.a $(DATA_OBJ)
-	cp --update libwsock_trace.a   $(LIB_TARGET)
-	cp --update wsock_trace_mw.dll $(BIN_TARGET)
+
+install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
+	cp --update libwsock_trace.a             $(LIB_TARGET)
+	cp --update wsock_trace_mw$(X_SUFFIX).dll $(BIN_TARGET)
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) $(LDFLAGS) -o $@ $^ > test.map
@@ -99,10 +127,11 @@ run_test: test.exe
 	test.exe -dd
 
 clean:
-	- rm -f $(OBJ_DIR)/*.o
+	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 
 vclean realclean: clean
-	rm -f libwsock_trace.a wsock_trace_mw.dll wsock_trace_mw.map test.exe test.map .depend.MingW
+	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
+	      test.exe test.map .depend.MinGW
 	- rmdir $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o: %.c
@@ -110,11 +139,11 @@ $(OBJ_DIR)/%.o: %.c
 	@echo
 
 $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
-	windres -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__ -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
 
 REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
 depend:
-	$(CC) -MM $(CFLAGS) $(SOURCES) data.c test.c | $(REPLACE) > .depend.MingW
+	$(CC) -MM $(CFLAGS) $(SOURCES) data.c test.c | $(REPLACE) > .depend.MinGW
 
--include .depend.MingW
+-include .depend.MinGW
