@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <limits.h>
 #include <time.h>
@@ -173,6 +174,7 @@ BOOL exclude_list_free (void)
     free (excl->name);
   }
   g_cfg.excl.list_max = 0;
+
   return (TRUE);
 }
 
@@ -407,8 +409,8 @@ static void trace_report (void)
       indent = (i == 0) ? " " : "              ";
       ex = &g_cfg.excl.func[i];
       len = strlen (ex->name);
-      trace_printf ("%s%s():%*s %3d times.\n",
-                    indent, ex->name, max_len-len, "", ex->num_excludes);
+      trace_printf ("%s%s():%*s %s times.\n",
+                    indent, ex->name, (int)(max_len-len), "", qword_str(ex->num_excludes));
     }
   }
 
@@ -462,10 +464,14 @@ void wsock_trace_exit (void)
   if (g_cfg.trace_report)
      trace_report();
 
+  /* Crashes inside free() when mixing MingW + MSVC100 :-(
+   */
+#if !defined(MINGW_USE_MSVCR_100)
   exclude_list_free();
 
 #if !defined(NO_STACK_WALK)
   StackWalkExit();
+#endif
 #endif
 
   common_exit();
@@ -503,7 +509,7 @@ void wsock_trace_init (void)
 
   /* Set default values.
    */
-  memset (&g_cfg, sizeof(g_cfg), 0);
+  memset (&g_cfg, 0, sizeof(g_cfg));
   g_cfg.trace_level   = 1;
   g_cfg.trace_max_len = 9999;      /* Infinite */
   g_cfg.screen_width  = g_cfg.trace_max_len;
@@ -860,16 +866,26 @@ struct pcap_file_header {
        DWORD  linktype;        /* data link type (DLT_*) */
      };
 
+/* The 'struct timeval' layout in a 32-bit NPF.SYS driver
+ * uses 'long'. In CygWin64, a 'struct timeval' has 'long' which
+ * are 64-bits. Hence our 'struct timeval' must be unique.
+ * So use this:
+ */
+struct pcap_timeval {
+       uint32_t  tv_sec;
+       uint32_t  tv_usec;
+     };
+
 /*
  * Each packet in the dump file is prepended with this generic header.
  * This gets around the problem of different headers for different
  * packet interfaces.
  */
 struct pcap_pkt_header {
-       struct timeval ts;      /* time stamp */
-       DWORD          caplen;  /* length of portion present */
-       DWORD          len;     /* length of this packet (off wire) */
-       DWORD          family;  /* protocol family value (for DLT_NULL) */
+       struct pcap_timeval ts;      /* time stamp */
+       DWORD               caplen;  /* length of portion present */
+       DWORD               len;     /* length of this packet (off wire) */
+       DWORD               family;  /* protocol family value (for DLT_NULL) */
      };
 
 struct ip_header {
@@ -940,15 +956,15 @@ static __inline uint64 FileTimeToUnixEpoch (const FILETIME *ft)
   return (res);
 }
 
-static void _gettimeofday (struct timeval *tv)
+static void _gettimeofday (struct pcap_timeval *tv)
 {
   FILETIME ft;
   uint64   tim;
 
   GetSystemTimeAsFileTime (&ft);
   tim = FileTimeToUnixEpoch (&ft);
-  tv->tv_sec  = (long) (tim / 1000000L);
-  tv->tv_usec = (long) (tim % 1000000L);
+  tv->tv_sec  = (uint32_t) (tim / 1000000L);
+  tv->tv_usec = (uint32_t) (tim % 1000000L);
 }
 
 #if defined(__WATCOMC__)
@@ -1000,6 +1016,49 @@ size_t write_pcap_packet (const void *pkt, size_t len, BOOL out)
   return (rc == 0 ? -1 : pcap_len);
 }
 
+#if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
+/*
+ * Ripped from Gnulib:
+ */
+#include <excpt.h>
+
+/* Gnulib can define its own status codes, as described in the page
+   "Raising Software Exceptions" on microsoft.com
+   <http://msdn.microsoft.com/en-us/library/het71c37.aspx>.
+   Our status codes are composed of
+     - 0xE0000000, mandatory for all user-defined status codes,
+     - 0x474E550, a API identifier ("GNU"),
+     - 0, 1, 2, ..., used to distinguish different status codes from the
+       same API.
+ */
+
+#define STATUS_GNULIB_INVALID_PARAMETER (0xE0000000 + 0x474E550 + 0)
+
+static void __cdecl invalid_parameter_handler (const wchar_t *expression,
+                                               const wchar_t *function,
+                                               const wchar_t *file,
+                                               unsigned int   line,
+                                               uintptr_t      dummy)
+{
+  TRACE (2, "%s (%ws, %ws, %ws, %u, %p)\n",
+         __FUNCTION__, expression, function, file, line, (void*)dummy);
+  RaiseException (STATUS_GNULIB_INVALID_PARAMETER, 0, 0, NULL);
+}
+#endif
+
+static void set_invalid_handler (void)
+{
+#if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
+  static int init = 0;
+
+  if (!init)
+  {
+    _set_invalid_parameter_handler (invalid_parameter_handler);
+    init = 1;
+  }
+#endif
+}
+
 #if defined(_MSC_VER) && defined(_DEBUG)
 static _CrtMemState last_state;
 
@@ -1011,6 +1070,7 @@ void crtdbg_init (void)
               _CRTDBG_CHECK_ALWAYS_DF |
               _CRTDBG_ALLOC_MEM_DF;
 
+  set_invalid_handler();
   _CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
   _CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
   _CrtSetDbgFlag (flags | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
@@ -1026,6 +1086,11 @@ void crtdbg_exit (void)
 }
 
 #else
-  void crtdbg_init (void) {}
-  void crtdbg_exit (void) {}
+  void crtdbg_init (void)
+  {
+    set_invalid_handler();
+  }
+  void crtdbg_exit (void)
+  {
+  }
 #endif
