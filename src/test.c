@@ -20,6 +20,11 @@
 
 #include "getopt.h"
 
+#if defined(__GNUC__)
+  #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+  #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
+#endif
+
 /* Prevent MingW globbing the cmd-line if we do 'test *'.
  */
 int _CRT_glob = 0;
