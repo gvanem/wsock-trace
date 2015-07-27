@@ -1,43 +1,50 @@
-# Windows image file caches
-Thumbs.db
-ehthumbs.db
+*.cbp
+*.layout
+*.info
+*.prj
+*.map
+*.a
+*.tmp
+*.log
+*.exe
+*.idb
+*.pdb
+*.cbp
+*.aps
+*.dep
+*.dll
+*.dsp
+*.dsw
+*.exp
+*.lib
+*.mak
+*.ncb
+*.opt
+*.plg
+src/Cygwin_obj/*
+src/Debug/*
+src/MSVC_obj/*
+src/MSVC_obj_x64/*
+src/MinGW_obj/*
+src/MingW-utils/*
+src/UpgradeLog.htm
+src/VC6_obj/*
+src/Watcom_obj/*
+src/Wsock-trace.vcxproj
+src/boost_stack.cpp
+src/boost_stack.hpp
+src/dll-info-viewer.html
+src/mhook.cpp
+src/mhook.h
+src/nm.c
+src/prnpinfo.c
+src/processes.c
+src/rcp/
+src/stkwalk-orig.cpp
+src/stkwalk-orig.h
+src/syms.c
+src/wsock_trace_mw.def
+src/wsock_trace_mw_x64.def
+src/wsock_trace_x64.def
 
-# Folder config file
-Desktop.ini
 
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows Installer files
-*.cab
-*.msi
-*.msm
-*.msp
-
-# Windows shortcuts
-*.lnk
-
-# =========================
-# Operating System Files
-# =========================
-
-# OSX
-# =========================
-
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Thumbnails
-._*
-
-# Files that might appear on external disk
-.Spotlight-V100
-.Trashes
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
