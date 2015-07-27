@@ -166,9 +166,17 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #else
     #error Help me!
   #endif
+
+  /*
+   * A 'SOCKET' is defined as 'unsigned long long' on Win64.
+   * But we hardly ever need to print all bits. Just cast to
+   * silence MinGW-w64.
+   */
+  #define SOCKET_CAST(s)  ((unsigned int)(s))
 #else    /* WIN32 */
-  #define ADDR_FMT      "08lX"
-  #define ADDR_CAST(x)  ((DWORD_PTR)(x))   /* "cl -Wp64" warns here. Ignore it. */
+  #define ADDR_FMT        "08lX"
+  #define ADDR_CAST(x)    ((DWORD_PTR)(x))   /* "cl -Wp64" warns here. Ignore it. */
+  #define SOCKET_CAST(s)  s
 #endif
 
 #if defined(__CYGWIN__)

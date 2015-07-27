@@ -778,7 +778,7 @@ int trace_printf (const char *fmt, ...)
 
   if (l1 < l2)
     FATAL ("l1: %d, l2: %d. trace_buf: '%.*s',\nbuf: '%s'\n",
-           l1, l2, trace_ptr - trace_buf, trace_buf, buf);
+           l1, l2, (int)(trace_ptr - trace_buf), trace_buf, buf);
 
   va_end (args);
   return (l2);
@@ -792,7 +792,7 @@ int trace_vprintf (const char *fmt, va_list args)
   l1 = trace_puts (buf);
   if (l1 < l2)
     FATAL ("l1: %d, l2: %d. trace_buf: '%.*s',\nbuf: '%s'\n",
-           l1, l2, trace_ptr - trace_buf, trace_buf, buf);
+           l1, l2, (int)(trace_ptr - trace_buf), trace_buf, buf);
 
   return (l2);
 }
@@ -836,7 +836,7 @@ int trace_putc (int ch)
                goto put_it;
 #endif
       default: FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
-                      ch - '0', ch, ch, trace_ptr - trace_buf, trace_buf);
+                      ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
                break;
     }
     _trace_flush();
