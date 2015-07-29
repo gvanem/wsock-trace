@@ -5,8 +5,8 @@
  **PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't
  produce PDB-symbols (GNU-debugger instead relies on the archaic **BFD**
  library). This project was previosly hosted at [GoogleCode]
- (https://code.google.com/p/wsock-trace/). But Google desided that this will be
- closing down. Example output from `c:\> ahost msdn.com` (ahost is part of
+ (https://code.google.com/p/wsock-trace/) which will soon be gone.
+ Example output from `c:\> ahost msdn.com` (ahost is part of
  [C-ares](http://c-ares.haxx.se/)):
 
 [![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
