@@ -2,10 +2,11 @@
 
  A small and simple drop-in tracer for most normal Winsock calls.
  Works best for MSVC since the stack-walking code requires the program's
- **PDB** symbol-file to be present. And unfortunately MingW/CygWin doesn't
- produce PDB-symbols. This project was previosly hosted at [GoogleCode]
+ **PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't
+ produce PDB-symbols (GNU-debugger instead relies on the archaic **BFD**
+ library). This project was previosly hosted at [GoogleCode]
  (https://code.google.com/p/wsock-trace/). But Google desided that this will be
- closing down. Example output from `c:\> ahost msdn.com` (`ahost` is part of
+ closing down. Example output from `c:\> ahost msdn.com` (ahost is part of
  [C-ares](http://c-ares.haxx.se/)):
 
 [![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
@@ -15,7 +16,7 @@
  Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
  This produces a `wsock_trace.lib` that you'll need to use to
  link your project(s) with. This lib would then trace the normal
- Winsock calls. Example below.
+ Winsock calls. Example above below.
 
 ### Usage (MSVC):
 
@@ -24,34 +25,36 @@
  compile using `-Zi` to produce debug-symbols. And remember to use `-debug`
  when linking your program. See `src/Makefile.vc6` for an example.
 
-### Installation (MingW/CygWin):
+### Installation (MinGW/CygWin):
 
  to-do
 
-### Usage (MingW/CygWin):
+### Usage (MinGW/CygWin):
 
  Link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e. `-lws32_2`).
  So copy this library to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
- to link. The `Makefile.MingW` already does the copying to `$(MINGW32)/lib`.
+ to link. The `Makefile.MinGW` already does the copying to `$(MINGW32)/lib`.
 
 ### Configuration
 
  The trace-level and other settings are controlled by a config-file
- `wsock_trace`. This file is searched in these places:
+ `wsock_trace`. This file is searched along these places until found:
 *    The file pointed to by `%WSOCK_TRACE`.
 *    The current directory.
 *    The `%HOME` directory.
 *    Then finally the `%APPDATA` directory.
 
-   `wsock_trace` is read in init.c at startup. Read it's contents; the comments
-   therein should be self-explanatory. If `wsock_trace` is no found in one of
+   `wsock_trace` is read in *init.c* at startup. Read it's contents; the comments
+   therein should be self-explanatory. If `wsock_trace` is not found in one of
    the above directories, the default `trace_level` is set to 1.
 
-   You should copy the contained `wsock_trace` in the .zip-file to your `%HOME` or
-   `%APPDATA` directory. This is on the form:
+   You should copy the containing `wsock_trace` here at GitHub (or in the .zip-file)
+    to your `%HOME` or `%APPDATA` directory. This is on the form:
 *   `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
-*   `<drive>:\Users\<User Name>\AppData`.                       (Win-Vista+)
+*   `<drive>:\Users\<User Name>\AppData\Roaming`.               (Win-Vista+)
 
+    (Since it's a confusing subject what a program's configuration directory should be,
+    it's best to define a `%HOME%` to point to the excact place for such config-files).
 
 ### Running samples
 
@@ -194,7 +197,7 @@ whatever calls you like.
 
 ### Future plans:
 
-   1. Get the MingW/CygWin ports working.
+   1. Get the MinGW/CygWin ports working.
 
    2. Python integration; use a *.py*-file to exclude/include processes and/or
       functions to trace.
@@ -241,7 +244,7 @@ whatever calls you like.
 
 -------------
 
-G. Vanem <gvanem@yahoo.no> 2013.
+G. Vanem <gvanem@yahoo.no> 2013 - 2015.
 
 Footnotes:
 
@@ -251,4 +254,3 @@ Footnotes:
 
    [2] A C library for asynchronous DNS requests (including name resolves)
        Ref. http://c-ares.haxx.se/
-
