@@ -1,3 +1,4 @@
+t
 *.cbp
 *.layout
 *.info
@@ -46,5 +47,5 @@ src/syms.c
 src/wsock_trace_mw.def
 src/wsock_trace_mw_x64.def
 src/wsock_trace_x64.def
-
+src/test/*
 
