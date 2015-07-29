@@ -16,7 +16,8 @@
  Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
  This produces a `wsock_trace.lib` that you'll need to use to
  link your project(s) with. This lib would then trace the normal
- Winsock calls. Example above below.
+ Winsock calls. Example screen-short above or details in
+ **Running samples** below.
 
 ### Usage (MSVC):
 
@@ -27,7 +28,7 @@
 
 ### Installation (MinGW/CygWin):
 
- to-do
+ to-do :soon: ?
 
 ### Usage (MinGW/CygWin):
 
@@ -41,7 +42,7 @@
  `wsock_trace`. This file is searched along these places until found:
 *    The file pointed to by `%WSOCK_TRACE`.
 *    The current directory.
-*    The `%HOME` directory.
+*    The `%HOME` directory.   &nbsp;&nbsp; :home:
 *    Then finally the `%APPDATA` directory.
 
    `wsock_trace` is read in *init.c* at startup. Read it's contents; the comments
