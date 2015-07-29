@@ -42,7 +42,7 @@
  `wsock_trace`. This file is searched along these places until found:
 *    The file pointed to by `%WSOCK_TRACE`.
 *    The current directory.
-*    The `%HOME` directory.   &nbsp;&nbsp; :home:
+*    The `%HOME` directory.
 *    Then finally the `%APPDATA` directory.
 
    `wsock_trace` is read in *init.c* at startup. Read it's contents; the comments
