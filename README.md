@@ -7,6 +7,7 @@
  (https://code.google.com/p/wsock-trace/). But Google desided that this will be
  closing down.
 
+[![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
 
 ### Installation (MSVC):
 
