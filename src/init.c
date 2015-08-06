@@ -780,7 +780,7 @@ void get_color (const char *val, WORD *col)
   *col = fg + (bg << 8);
 
   if (!g_cfg.trace_use_ods && g_cfg.trace_file_device)
-     TRACE (4, "orig '%s' -> fg: %d, bg: %d, *col: %u\n", orig, (int)fg, (int)bg, *col);
+     TRACE (4, "orig '%s' -> fg: %d, bg: %d, *col: 0x%04X\n", orig, (int)fg, (int)bg, *col);
 }
 
 /*
@@ -808,7 +808,10 @@ void set_color (const WORD *col)
     bg   = hiBYTE (attr);
 
     if (bg == (BYTE)-1)
-         attr = console_info.wAttributes & ~7;
+    {
+      attr = console_info.wAttributes & ~7;
+      attr &= ~8;  /* Since 'wAttributes' could have been hi-intensity at startup. */
+    }
     else attr = bg << 4;
 
     attr |= fg;
