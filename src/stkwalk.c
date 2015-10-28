@@ -763,7 +763,7 @@ static DWORD decode_one_stack_frame (HANDLE hThread, DWORD image_type,
   DWORD   ofs_from_line   = 0;                  /* How far from the line we were */
   size_t  left            = sizeof(ret_buf);
   char   *str             = ret_buf;
-  char   *end             = str + left;
+  char   *p, *end         = str + left;
 
   if (g_cfg.cpp_demangle)
      flags = UNDNAME_COMPLETE;
@@ -821,6 +821,18 @@ static DWORD decode_one_stack_frame (HANDLE hThread, DWORD image_type,
    */
   if (temp_disp < max_displ && temp_disp != 0)
      displacement = temp_disp;
+
+  /*
+   * If UnDecorateSymbolName() returns a name with a "~" in it (a C++ destructor),
+   * this must be replaced with "~~" since trace_putc() gets confused otherwise.
+   */
+  p = strchr (undec_name, '~');
+  while (p)
+  {
+    memmove (p+2, p+1, strlen(p)-1);
+    p[1] = '~';
+    p = strchr (p+2, '~');
+  }
 
   str += snprintf (str, left, "~2%s(%lu)~1 (%s",
                    shorten_path(Line.FileName),
