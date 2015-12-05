@@ -9,7 +9,7 @@
  Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
  [C-ares](http://c-ares.haxx.se/)):
 
-[![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
+[![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
 
 ### Installation (MSVC):
 
