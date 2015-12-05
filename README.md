@@ -6,7 +6,7 @@
  produce PDB-symbols (GNU-debugger instead relies on the archaic **BFD**
  library). This project was previosly hosted at [GoogleCode]
  (https://code.google.com/p/wsock-trace/) which will soon be gone.
- Example output from `c:\> ahost msdn.com` (ahost is part of
+ Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
  [C-ares](http://c-ares.haxx.se/)):
 
 [![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
@@ -238,10 +238,7 @@ whatever calls you like.
    8. Make it possible to switch network stacks at run-time (select amongst Winsock2,
       [lwIP](http://savannah.nongnu.org/projects/lwip/),
       [SwsSock](http://www.softsystem.co.uk/products/swssock.htm) and/or
-      [Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html) (ported to Win32).
-
-      Switch between TCP/UDP and [SCTP](http://en.wikipedia.org/wiki/Stream_Control_Transmission_Protocol)
-      for selected destinations (?)
+      [Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html) (ported to Win32)).
 
 -------------
 
