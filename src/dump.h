@@ -13,6 +13,7 @@ extern void dump_select   (const fd_set *rd, const fd_set *wr, const fd_set *ex,
                            int indent, char *buf, size_t buf_sz);
 
 extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info);
+extern void dump_events (const WSANETWORKEVENTS *events);
 
 extern const char *socket_family (int family);
 extern const char *socket_type (int type);

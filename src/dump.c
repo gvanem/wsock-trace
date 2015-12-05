@@ -1200,6 +1200,26 @@ void dump_protoent (const struct protoent *proto)
   trace_printf ("aliases: %s\n~0", dump_aliases(proto->p_aliases));
 }
 
+void dump_events (const WSANETWORKEVENTS *events)
+{
+  int i;
+
+  trace_indent (g_cfg.trace_indent+2);
+  trace_puts ("~4events: ");
+  if (!events)
+  {
+    trace_puts ("NULL~0");
+    return;
+  }
+  trace_printf ("lNetworkEvents: %s\n", event_bits_decode(events->lNetworkEvents));
+  for (i = 0; i < DIM(events->iErrorCode); i++)
+  {
+    trace_indent (g_cfg.trace_indent+4);
+    trace_printf ("iErrorCode[%d]: %08X\n", i, events->iErrorCode[i]);
+  }
+  trace_puts ("~0");
+}
+
 static const struct search_list test_list_1[] = {
                               { 0, "foo"    },
                               { 1, "bar"    },
