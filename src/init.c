@@ -138,7 +138,7 @@ static int config_get_line (FILE *fil, unsigned *line,
 /*
  * Given a C-format, extract the 1st word from it and check
  * if it should be excluded from tracing. We always assume
- * that 'fmt' starts with a function-name. Using 'strncmp'
+ * that 'fmt' starts with a function-name. Using 'strnicmp()'
  * avoids copying 'fmt' into a local buffer first.
  */
 BOOL exclude_list_get (const char *fmt)
@@ -180,7 +180,7 @@ BOOL exclude_list_free (void)
 
 /*
  * to-do: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
- *        pPrint a warning when trying to exclude an unknown Winsock function.
+ *        Print a warning when trying to exclude an unknown Winsock function.
  */
 BOOL exclude_list_add (const char *name)
 {
@@ -201,17 +201,18 @@ BOOL exclude_list_add (const char *name)
 }
 
 /*
- * Open and parse config-file.
+ * Open the config-file given by 'base_name'.
  *
  * First try file pointed to by %WSOCK_TRACE,
  * then in current_dir.
  * then in %HOME or %APPDATA.
  */
-static void parse_config_file (const char *base_name)
+static char fname [MAX_PATH];
+
+static FILE *open_config_file (const char *base_name)
 {
+  char *home, *env = getenv_expand ("WSOCK_TRACE", fname, sizeof(fname));
   FILE *fil;
-  char *home, fname [MAX_PATH];
-  char *env = getenv_expand ("WSOCK_TRACE", fname, sizeof(fname));
 
   TRACE (2, "%%WSOCK_TRACE%%=%s.\n", env);
 
@@ -220,7 +221,7 @@ static void parse_config_file (const char *base_name)
     if (!FILE_EXISTS(fname))
     {
       WARNING ("%%WSOCK_TRACE=\"%s\" does not exist.\nRunning with default values.\n", env);
-      return;
+      return (NULL);
     }
   }
   else
@@ -238,147 +239,149 @@ static void parse_config_file (const char *base_name)
       fil = fopen (fname, "r");
     }
   }
-
   TRACE (2, "config-file: \"%s\". %sfound.\n", fname, fil ? "" : "not ");
+  return (fil);
+}
 
-  if (fil)
+/*
+ * Parse the config-file give in 'fil'.
+ */
+static void parse_config_file (FILE *file)
+{
+  const char *key, *val;
+  unsigned line = 0;
+
+  str_replace ('\\', '/', fname);
+
+  while (config_get_line(file,&line,&key,&val))
   {
-    const char *key, *val;
-    unsigned line = 0;
+    TRACE (4, "%s (%u): '%s' = '%s'\n", fname, line, key, val);
 
-    str_replace ('\\', '/', fname);
+    if (!*val)      /* foo = <empty value> */
+       continue;
 
-    while (config_get_line(fil,&line,&key,&val))
+    if (!stricmp(key,"trace_level"))
+       g_cfg.trace_level = atoi (val);
+
+    else if (!stricmp(key,"trace_file") && *val)
+       g_cfg.trace_file = strdup (val);
+
+    else if (!stricmp(key,"trace_binmode"))
+       g_cfg.trace_binmode = atoi (val);
+
+    else if (!stricmp(key,"trace_caller"))
+       g_cfg.trace_caller = atoi (val);
+
+    else if (!stricmp(key,"trace_indent"))
     {
-      TRACE (4, "%s (%u): '%s' = '%s'\n", fname, line, key, val);
-
-      if (!*val)      /* foo = <empty value> */
-         continue;
-
-      if (!stricmp(key,"trace_level"))
-         g_cfg.trace_level = atoi (val);
-
-      else if (!stricmp(key,"trace_file") && *val)
-         g_cfg.trace_file = strdup (val);
-
-      else if (!stricmp(key,"trace_binmode"))
-         g_cfg.trace_binmode = atoi (val);
-
-      else if (!stricmp(key,"trace_caller"))
-         g_cfg.trace_caller = atoi (val);
-
-      else if (!stricmp(key,"trace_indent"))
-      {
-        g_cfg.trace_indent = atoi (val);
-        g_cfg.trace_indent = max (0, g_cfg.trace_indent);
-      }
-
-      else if (!stricmp(key,"trace_report"))
-         g_cfg.trace_report = atoi (val);
-
-      else if (!stricmp(key,"trace_max_len"))
-         g_cfg.trace_max_len = atoi (val);
-
-      else if (!stricmp(key,"trace_time"))
-         set_time_format (&g_cfg.trace_time_format, val);
-
-      else if (!stricmp(key,"pcap_enable"))
-         g_cfg.pcap.enable = atoi (val);
-
-      else if (!stricmp(key,"pcap_dump"))
-        g_cfg.pcap.dump_fname = strdup (val);
-
-      else if (!stricmp(key,"show_caller"))
-         g_cfg.show_caller = atoi (val);
-
-      else if (!stricmp(key,"demangle") || !stricmp(key,"cpp_demangle"))
-         g_cfg.cpp_demangle = atoi (val);
-
-      else if (!stricmp(key,"callee_level"))
-         g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
-
-      else if (!stricmp(key,"exclude"))
-         exclude_list_add (val);
-
-      else if (!stricmp(key,"short_errors"))
-         g_cfg.short_errors = atoi (val);
-
-      else if (!stricmp(key,"use_toolhlp32"))
-         g_cfg.use_toolhlp32 = atoi (val);
-
-      else if (!stricmp(key,"use_ole32"))
-         g_cfg.use_ole32 = atoi (val);
-
-      else if (!stricmp(key,"use_full_path"))
-         g_cfg.use_full_path = atoi (val);
-
-      else if (!stricmp(key,"color_file"))
-         get_color (val, &g_cfg.color_file);
-
-      else if (!stricmp(key,"color_time"))
-         get_color (val, &g_cfg.color_time);
-
-      else if (!stricmp(key,"color_func"))
-         get_color (val, &g_cfg.color_func);
-
-      else if (!stricmp(key,"color_trace"))
-         get_color (val, &g_cfg.color_trace);
-
-      else if (!stricmp(key,"color_data"))
-         get_color (val, &g_cfg.color_data);
-
-      else if (!stricmp(key,"compact"))
-         g_cfg.compact = atoi (val);
-
-      else if (!stricmp(key,"dump_select"))
-         g_cfg.dump_select = atoi (val);
-
-      else if (!stricmp(key,"dump_nameinfo"))
-         g_cfg.dump_nameinfo = atoi (val);
-
-      else if (!stricmp(key,"dump_protoent"))
-         g_cfg.dump_protoent = atoi (val);
-
-      else if (!stricmp(key,"dump_hostent"))
-         g_cfg.dump_hostent = atoi (val);
-
-      else if (!stricmp(key,"dump_servent"))
-         g_cfg.dump_servent = atoi (val);
-
-      else if (!stricmp(key,"dump_data"))
-         g_cfg.dump_data = atoi (val);
-
-      else if (!stricmp(key,"dump_wsaprotocol_info"))
-         g_cfg.dump_wsaprotocol_info = atoi (val);
-
-      else if (!stricmp(key,"dump_wsanetwork_events"))
-         g_cfg.dump_wsanetwork_events = atoi (val);
-
-      else if (!stricmp(key,"max_data"))
-         g_cfg.max_data = atoi (val);
-
-      else if (!stricmp(key,"start_new_line"))
-         g_cfg.start_new_line = atoi (val);
-
-      else if (!stricmp(key,"test_trace"))
-         g_cfg.test_trace = atoi (val);
-
-      else if (!stricmp(key,"msvc_only"))
-         g_cfg.msvc_only = atoi (val);
-
-      else if (!stricmp(key,"mingw_only"))
-         g_cfg.mingw_only = atoi (val);
-
-      else if (!stricmp(key,"no_buffering"))
-         g_cfg.no_buffering = atoi (val);
-
-      else
-         TRACE (0, "%s (%u):\nUnknown keyword '%s' = '%s'\n",
-                fname, line, key, val);
-
-      /* to-do: handle more 'key' / 'val' here */
+      g_cfg.trace_indent = atoi (val);
+      g_cfg.trace_indent = max (0, g_cfg.trace_indent);
     }
-    fclose (fil);
+
+    else if (!stricmp(key,"trace_report"))
+       g_cfg.trace_report = atoi (val);
+
+    else if (!stricmp(key,"trace_max_len"))
+       g_cfg.trace_max_len = atoi (val);
+
+    else if (!stricmp(key,"trace_time"))
+       set_time_format (&g_cfg.trace_time_format, val);
+
+    else if (!stricmp(key,"pcap_enable"))
+       g_cfg.pcap.enable = atoi (val);
+
+    else if (!stricmp(key,"pcap_dump"))
+      g_cfg.pcap.dump_fname = strdup (val);
+
+    else if (!stricmp(key,"show_caller"))
+       g_cfg.show_caller = atoi (val);
+
+    else if (!stricmp(key,"demangle") || !stricmp(key,"cpp_demangle"))
+       g_cfg.cpp_demangle = atoi (val);
+
+    else if (!stricmp(key,"callee_level"))
+       g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
+
+    else if (!stricmp(key,"exclude"))
+       exclude_list_add (val);
+
+    else if (!stricmp(key,"short_errors"))
+       g_cfg.short_errors = atoi (val);
+
+    else if (!stricmp(key,"use_toolhlp32"))
+       g_cfg.use_toolhlp32 = atoi (val);
+
+    else if (!stricmp(key,"use_ole32"))
+       g_cfg.use_ole32 = atoi (val);
+
+    else if (!stricmp(key,"use_full_path"))
+       g_cfg.use_full_path = atoi (val);
+
+    else if (!stricmp(key,"color_file"))
+       get_color (val, &g_cfg.color_file);
+
+    else if (!stricmp(key,"color_time"))
+       get_color (val, &g_cfg.color_time);
+
+    else if (!stricmp(key,"color_func"))
+       get_color (val, &g_cfg.color_func);
+
+    else if (!stricmp(key,"color_trace"))
+       get_color (val, &g_cfg.color_trace);
+
+    else if (!stricmp(key,"color_data"))
+       get_color (val, &g_cfg.color_data);
+
+    else if (!stricmp(key,"compact"))
+       g_cfg.compact = atoi (val);
+
+    else if (!stricmp(key,"dump_select"))
+       g_cfg.dump_select = atoi (val);
+
+    else if (!stricmp(key,"dump_nameinfo"))
+       g_cfg.dump_nameinfo = atoi (val);
+
+    else if (!stricmp(key,"dump_protoent"))
+       g_cfg.dump_protoent = atoi (val);
+
+    else if (!stricmp(key,"dump_hostent"))
+       g_cfg.dump_hostent = atoi (val);
+
+    else if (!stricmp(key,"dump_servent"))
+       g_cfg.dump_servent = atoi (val);
+
+    else if (!stricmp(key,"dump_data"))
+       g_cfg.dump_data = atoi (val);
+
+    else if (!stricmp(key,"dump_wsaprotocol_info"))
+       g_cfg.dump_wsaprotocol_info = atoi (val);
+
+    else if (!stricmp(key,"dump_wsanetwork_events"))
+       g_cfg.dump_wsanetwork_events = atoi (val);
+
+    else if (!stricmp(key,"max_data"))
+       g_cfg.max_data = atoi (val);
+
+    else if (!stricmp(key,"start_new_line"))
+       g_cfg.start_new_line = atoi (val);
+
+    else if (!stricmp(key,"test_trace"))
+       g_cfg.test_trace = atoi (val);
+
+    else if (!stricmp(key,"msvc_only"))
+       g_cfg.msvc_only = atoi (val);
+
+    else if (!stricmp(key,"mingw_only"))
+       g_cfg.mingw_only = atoi (val);
+
+    else if (!stricmp(key,"no_buffering"))
+       g_cfg.no_buffering = atoi (val);
+
+    else
+       TRACE (0, "%s (%u):\nUnknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+
+    /* to-do: handle more 'key' / 'val' here */
   }
 }
 
@@ -496,6 +499,7 @@ void wsock_trace_exit (void)
  */
 void wsock_trace_init (void)
 {
+  FILE       *file;
   char       *end;
   const char *now;
   BOOL        okay;
@@ -531,7 +535,12 @@ void wsock_trace_init (void)
   else
     _strlcpy (curr_prog, "??", sizeof(curr_prog));
 
-  parse_config_file ("wsock_trace");
+  file = open_config_file ("wsock_trace");
+  if (file)
+  {
+    parse_config_file (file);
+    fclose (file);
+  }
 
   is_msvc  = image_opt_header_is_msvc (mod);
   is_mingw = image_opt_header_is_mingw (mod);
@@ -721,7 +730,7 @@ static const struct search_list colors[] = {
                             };
 /*
  * Parse a color specifier like:
- *   [bright] fg [on bg]
+ *   [bright | bold] fg [on bg]
  *
  * Returns foreground in lower 8 bits of '*col'.
  *     and background in upper 8 bits of '*col'.
@@ -742,6 +751,11 @@ void get_color (const char *val, WORD *col)
   {
     fg |= FOREGROUND_INTENSITY;
     val += 7;
+  }
+  else if (!strnicmp(val,"bold ",5))
+  {
+    fg |= FOREGROUND_INTENSITY;
+    val += 5;
   }
 
   num1 = sscanf (val, "%20s", fg_str);
