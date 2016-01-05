@@ -40,10 +40,10 @@
 
  The trace-level and other settings are controlled by a config-file
  `wsock_trace`. This file is searched along these places until found:
-*    The file pointed to by `%WSOCK_TRACE`.
-*    The current directory.
-*    The `%HOME` directory.
-*    Then finally the `%APPDATA` directory.
+  *  The file pointed to by `%WSOCK_TRACE`.
+  *  The current directory.
+  *  The `%HOME` directory.
+  *  Then finally the `%APPDATA` directory.
 
    `wsock_trace` is read in *init.c* at startup. Read it's contents; the comments
    therein should be self-explanatory. If `wsock_trace` is not found in one of
@@ -51,8 +51,8 @@
 
    You should copy the containing `wsock_trace` here at GitHub (or in the .zip-file)
     to your `%HOME` or `%APPDATA` directory. This is on the form:
-*   `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
-*   `<drive>:\Users\<User Name>\AppData\Roaming`.               (Win-Vista+)
+  * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
+  * `<drive>:\Users\<User Name>\AppData\Roaming`.               (Win-Vista+)
 
     (Since it's a confusing subject what a program's configuration directory should be,
     it's best to define a `%HOME%` to point to the excact place for such config-files).
@@ -184,10 +184,9 @@ whatever calls you like.
 ### Implementation notes
 
  The names of the import libraries and the names of the .DLLs are:
-
-* For MSVC:    `wsock_trace.lib` and `wsock_trace.dll` .
-* For MinGW:   `libwsock_trace.a` and `wsock_trace_mw.dll` .
-* For CygWin:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
+  * For MSVC:    `wsock_trace.lib` and `wsock_trace.dll` .
+  * For MinGW:   `libwsock_trace.a` and `wsock_trace_mw.dll` .
+  * For CygWin:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
 
  These DLLs off-course needs to be in current directory or on `%PATH`. The reason
  I've chosen to make it a DLL and not a static-lib is that applications
