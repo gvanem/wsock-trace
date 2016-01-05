@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "common.h"
 #include "bfd_gcc.h"
@@ -73,15 +74,22 @@ static const char *get_timestamp (void);
   #define INIT_PTR(ptr) init_ptr ((const void**)&ptr, #ptr)
 #endif
 
-#if defined(__MINGW32__) && __MINGW_GNUC_PREREQ(4, 4) && 0
-  #define NO_WARN_FORMAT()                 \
-          _Pragma ("GCC diagnostic push"); \
-          _Pragma ("GCC diagnostic ignored -Wformat")
-  #define POP_WARN_FORMAT() \
-          _Pragma ("GCC diagnostic pop")
-#else
-  #define NO_WARN_FORMAT()   ((void)0)
-  #define POP_WARN_FORMAT()  ((void)0)
+#if defined(__MINGW_GNUC_PREREQ)
+  #if __MINGW_GNUC_PREREQ(4, 4) && 0
+    #define NO_WARN_FORMAT()                 \
+           _Pragma ("GCC diagnostic push"); \
+           _Pragma ("GCC diagnostic ignored -Wformat")
+    #define POP_WARN_FORMAT() \
+            _Pragma ("GCC diagnostic pop")
+  #endif
+#endif
+
+#ifndef NO_WARN_FORMAT
+#define NO_WARN_FORMAT()   ((void)0)
+#endif
+
+#ifndef POP_WARN_FORMAT
+#define POP_WARN_FORMAT()  ((void)0)
 #endif
 
 
@@ -269,6 +277,12 @@ typedef DWORD (WINAPI *func_WSAWaitForMultipleEvents) (DWORD           num_ev,
                                                        DWORD           timeout,
                                                        BOOL            alertable);
 
+typedef DWORD (WINAPI *func_WaitForMultipleObjectsEx) (DWORD         num_ev,
+                                                       const HANDLE *hnd,
+                                                       BOOL          waitAll,
+                                                       DWORD         timeout,
+                                                       BOOL          alertable);
+
 typedef int (WINAPI *func_WSACancelBlockingCall) (void);
 
 /*
@@ -354,6 +368,7 @@ static func_WSAGetOverlappedResult   p_WSAGetOverlappedResult = NULL;
 static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
 static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
 static func_WSACancelBlockingCall    p_WSACancelBlockingCall = NULL;
+// static func_WaitForMultipleObjectsEx p_WaitForMultipleObjectsEx = NULL;
 
 static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
 
@@ -423,7 +438,8 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "ws2_32.dll", inet_pton),
               ADD_VALUE (1, "ws2_32.dll", inet_ntop),
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
-#if 0
+           // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
+#if defined(__MINGW32__)
               ADD_VALUE (1, "ws2_32.dll", gai_strerrorA),
               ADD_VALUE (1, "ws2_32.dll", gai_strerrorW),
 #endif
@@ -809,7 +825,7 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
   ENTER_CRIT();
 
   if (rc == 0)
-       WSTRACE ("WSAAddressToStringW(). --> %ws.\n", result_string);
+       WSTRACE ("WSAAddressToStringW(). --> %" WCHAR_FMT ".\n", result_string);
   else WSTRACE ("WSAAddressToStringW(). --> %s.\n", get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
@@ -1540,10 +1556,9 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
 
   WSTRACE ("WSAEnumNetworkEvents (%u, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s.\n",
             SOCKET_CAST(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc));
-#if 0
+
     if (rc == 0 && !exclude_this && g_cfg.dump_wsanetwork_events)
-       dump_events (events);  // to-do
-#endif
+       dump_events (events);
 
   LEAVE_CRIT();
   return (rc);
@@ -1574,12 +1589,18 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
 {
   int rc;
 
-  INIT_PTR (p_WSAWaitForMultipleEvents);
-  rc = (*p_WSAWaitForMultipleEvents) (num_ev, ev, wait_all, timeout, alertable);
+  if (p_WSAWaitForMultipleEvents == NULL)
+     rc = WaitForMultipleObjectsEx (num_ev, (const HANDLE*)ev, wait_all, timeout, alertable);
+  else
+  {
+    INIT_PTR (p_WSAWaitForMultipleEvents);
+    rc = (*p_WSAWaitForMultipleEvents) (num_ev, ev, wait_all, timeout, alertable);
+  }
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAWaitForMultipleEvents() --> %s.\n", get_error(rc));
+  WSTRACE ("WSAWaitForMultipleEvents (%lu, %p, %d, %lu, %d) --> %s.\n",
+           num_ev, ev, wait_all,timeout, alertable, get_error(rc));
 
   LEAVE_CRIT();
   return (rc);
@@ -1798,7 +1819,7 @@ EXPORT u_long WINAPI inet_addr (const char *addr)
   rc = (*p_inet_addr) (addr);
 
   ENTER_CRIT();
-  WSTRACE ("inet_addr (%s).\n", addr);
+  WSTRACE ("inet_addr (\"%s\").\n", addr);
   LEAVE_CRIT();
   return (rc);
 }
@@ -1945,8 +1966,8 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
   LEAVE_CRIT();
 }
 
-#if 0
-EXPORT char * WINAPI gai_strerrorA (int err)
+#if defined(__MINGW32__)
+char * gai_strerrorA (int err)
 {
   char *rc;
 
@@ -1954,12 +1975,12 @@ EXPORT char * WINAPI gai_strerrorA (int err)
   rc = (*p_gai_strerrorA) (err);
 
   ENTER_CRIT();
-  WSTRACE ("gai_strerrorA (%d) -> %s.\n", rc);
+  WSTRACE ("gai_strerrorA (%d) -> %s.\n", err, rc);
   LEAVE_CRIT();
   return (rc);
 }
 
-EXPORT char * WINAPI gai_strerrorW (int err)
+wchar_t * gai_strerrorW (int err)
 {
   wchar_t *rc;
 
@@ -1967,11 +1988,11 @@ EXPORT char * WINAPI gai_strerrorW (int err)
   rc = (*p_gai_strerrorW) (err);
 
   ENTER_CRIT();
-  WSTRACE ("gai_strerrorW (%d) -> %S.\n", rc);
+  WSTRACE ("gai_strerrorW (%d) -> %" WCHAR_FMT ".\n", err, rc);
   LEAVE_CRIT();
   return (rc);
 }
-#endif
+#endif  /* __MINGW32__ */
 
 #if (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)) || defined(__WATCOMC__) || defined(__CYGWIN__)
   #define ADDRINFOW  void *
@@ -2012,7 +2033,8 @@ EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
 static const char *get_timestamp (void)
 {
   static LARGE_INTEGER last = { 0ULL };
-  static char  buf [30];
+  static char          buf [40];
+
   SYSTEMTIME           now;
   LARGE_INTEGER        ticks;
   int64                clocks;
@@ -2032,7 +2054,16 @@ static const char *get_timestamp (void)
 
          last = ticks;
          msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
+#if 0
          sprintf (buf, "%.3f msec: ", msec);
+#else
+         {
+           int         dec = (int) fmodl (msec, 1000.0);
+           const char *s = qword_str ((unsigned __int64) (msec/1000.0));
+
+           sprintf (buf, "%s.%03d msec: ", s, dec);
+         }
+#endif
          return (buf);
 
     case TS_ABSOLUTE:
