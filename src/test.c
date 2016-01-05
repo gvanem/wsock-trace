@@ -217,7 +217,7 @@ static void test_getnameinfo (void)
 
   memset (&sa4, 0, sizeof(sa4));
   sa4.sin_family = AF_INET;
-  sa4.sin_addr.s_addr = inet_addr ("10.0.0.6");
+  sa4.sin_addr.s_addr = inet_addr ("10.0.0.10");
   sa4.sin_port = htons (80);
   sa = (const struct sockaddr*)&sa4;
   flags = NI_NUMERICSERV | NI_NOFQDN;
