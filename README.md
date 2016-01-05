@@ -183,9 +183,13 @@ whatever calls you like.
 
 ### Implementation notes
 
+ The names of the import libraries and the names of the .DLLs are:
 
- The library `wsock_trace.lib` is an import library for `wsock_trace.dll`.
- This DLL off-course needs to be in current directory or on `%PATH`. The reason
+* For MSVC:    `wsock_trace.lib` and `wsock_trace.dll` .
+* For MinGW:   `libwsock_trace.a` and `wsock_trace_mw.dll` .
+* For CygWin:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
+
+ These DLLs off-course needs to be in current directory or on `%PATH`. The reason
  I've chosen to make it a DLL and not a static-lib is that applications
  using `wsock_trace.lib` needs not to be re-linked when I do change the inner
  workings of the `wsock_trace` source code (I've done that a lot lately).
