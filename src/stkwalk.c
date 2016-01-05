@@ -36,7 +36,7 @@
  */
 
 /*
- * Aug 2011   Adapted for Wsock_tracer - G. Vanem (gvanem@yahoo.no)
+ * Aug 2011   Adapted for Wsock_trace - G. Vanem (gvanem@yahoo.no)
  *            No longer Unicode aware. Simplified and rewritten from C++ to pure C.
  */
 
@@ -66,8 +66,8 @@ static DWORD  g_proc_id;
 
 #define USE_SYMFROMADDR 1
 
-#define MAX_NAMELEN 1024         /* max name length for found symbols */
-#define TTBUFLEN    8096         /* for a temp buffer (2^13) */
+#define MAX_NAMELEN  1024        /* max name length for found symbols */
+#define TTBUFLEN     8096        /* for a temp buffer (2^13) */
 
 /*
  * 'API_VERSION_NUMBER' defined in <imagehlp.h>
@@ -126,7 +126,7 @@ typedef struct _IMAGEHLP_SYMBOL64 {
     CHAR        Name[1];                /* symbol name (null terminated string) */
   } IMAGEHLP_SYMBOL64;
 
-typedef struct _tagADDRESS64 {
+typedef struct _ADDRESS64 {
     DWORD64      Offset;
     WORD         Segment;
     ADDRESS_MODE Mode;
@@ -211,6 +211,7 @@ typedef DWORD64 (__stdcall *PGET_MODULE_BASE_ROUTINE64) (
 
 typedef DWORD64 (__stdcall *PTRANSLATE_ADDRESS_ROUTINE64) (
                             HANDLE hProcess, HANDLE hThread, ADDRESS64 *lpaddr);
+
 #endif  /* API_VERSION_NUMBER < 9 */
 
 
@@ -306,23 +307,22 @@ static size_t              me_list_size = 0;
 #define ADD_VALUE(v)  { v, #v }
 
 #if defined(__MINGW32__) || defined(__CYGWIN__)
-  #define SYMFLAG_CLR_TOKEN    0x00040000
-  #define SYMFLAG_CONSTANT     0x00000100
-  #define SYMFLAG_EXPORT       0x00000200
-  #define SYMFLAG_FORWARDER    0x00000400
-  #define SYMFLAG_FRAMEREL     0x00000020
-  #define SYMFLAG_FUNCTION     0x00000800
-  #define SYMFLAG_ILREL        0x00010000
-  #define SYMFLAG_LOCAL        0x00000080
-  #define SYMFLAG_METADATA     0x00020000
-  #define SYMFLAG_PARAMETER    0x00000040
+  #define SYMFLAG_VALUEPRESENT 0x00000001
   #define SYMFLAG_REGISTER     0x00000008
   #define SYMFLAG_REGREL       0x00000010
-  #define SYMFLAG_SLOT         0x00008000
+  #define SYMFLAG_FRAMEREL     0x00000020
+  #define SYMFLAG_PARAMETER    0x00000040
+  #define SYMFLAG_LOCAL        0x00000080
+  #define SYMFLAG_CONSTANT     0x00000100
+  #define SYMFLAG_EXPORT       0x00000200
+  #define SYMFLAG_FUNCTION     0x00000800
+  #define SYMFLAG_VIRTUAL      0x00001000
   #define SYMFLAG_THUNK        0x00002000
   #define SYMFLAG_TLSREL       0x00004000
-  #define SYMFLAG_VALUEPRESENT 0x00000001
-  #define SYMFLAG_VIRTUAL      0x00001000
+  #define SYMFLAG_SLOT         0x00008000
+  #define SYMFLAG_ILREL        0x00010000
+  #define SYMFLAG_METADATA     0x00020000
+  #define SYMFLAG_CLR_TOKEN    0x00040000
 #endif
 
 const struct search_list symbol_info_flags[] = {
@@ -547,7 +547,7 @@ static int GetModuleListPSAPI (void)
     me.size = mi.SizeOfImage;
 
     /*
-     * May have to use  QueryFullProcessImageName (Vista+) or GetProcessImageFileName (Win-XP)
+     * May have to use QueryFullProcessImageName (Vista+) or GetProcessImageFileName (Win-XP)
      * Ref. comments at:
      *   http://msdn.microsoft.com/en-us/library/windows/desktop/ms683198(v=vs.85).aspx
      */
@@ -586,8 +586,8 @@ static int EnumAndLoadModuleSymbols (void)
   }
 
   TRACE (2, "  %-60s Baseaddr       Size\n"
-            "    ----------------------------------------"
-            "-------------------------------------------\n",
+            "    ------------------------------------------------"
+            "----------------------------------------------------\n",
             "Module");
 
   for (num = 0, me = me_list; num < me_list_top; me++, num++)
@@ -622,9 +622,9 @@ static BOOL SetSymbolSearchPath (void)
   DWORD symOptions;
   char  tmp [TTBUFLEN];
   char  path [TTBUFLEN];
-  char *p = path;
-  char *end = path + sizeof(path) - 1;
-  char *dir = NULL;
+  char *p    = path;
+  char *end  = path + sizeof(path) - 1;
+  char *dir  = NULL;
   int   left = end - path;
 
   if (curr_dir[0])  /* set in wsock_trace_init() */
@@ -637,24 +637,24 @@ static BOOL SetSymbolSearchPath (void)
   {
     if (strcmp(dir,curr_dir))
     {
-      p += snprintf (p, left, "%s;", dir);
+      p   += snprintf (p, left, "%s;", dir);
       left = end - p;
     }
     free (dir);
   }
   if (GetEnvironmentVariable("_NT_SYMBOL_PATH", tmp, sizeof(tmp)))
   {
-    p += snprintf (p, left, "%s;", tmp);
+    p   += snprintf (p, left, "%s;", tmp);
     left = end - p;
   }
   if (GetEnvironmentVariable("_NT_ALTERNATE_SYMBOL_PATH", tmp, sizeof(tmp)))
   {
-    p += snprintf (p, left, "%s;", tmp);
+    p   += snprintf (p, left, "%s;", tmp);
     left = end - p;
   }
   if (GetEnvironmentVariable("SYSTEMROOT", tmp, sizeof(tmp)))
   {
-    p += snprintf (p, left, "%s;", tmp);
+    p   += snprintf (p, left, "%s;", tmp);
     left = end - p;
   }
 
@@ -664,7 +664,8 @@ static BOOL SetSymbolSearchPath (void)
 
   TRACE (2, "symbolSearchPath = \"%s\".\n", path);
 
-  /* init symbol handler stuff */
+  /* init symbol handler stuff
+   */
   if (!(*p_SymInitialize)(g_proc, path, FALSE))
   {
     TRACE (1, "SymInitialize(): %s.\n", get_error());
@@ -887,6 +888,11 @@ char *StackWalkShow (HANDLE hThread, CONTEXT *ctx)
   left = end - str;
 
 #ifdef _MSC_VER
+  /*
+   * In this case figure out the module-name (from the base-addresses in
+   * EnumAndLoadModuleSymbols()) and print which module (i.e. DLL) that is
+   * missing a .PDB file.
+   */
   snprintf (str, left, " (no PDB, err: %lu)", err);
 #endif
 
