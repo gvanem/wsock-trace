@@ -56,6 +56,7 @@ static void        fname_cache_dump (void);
 static void  crc_init  (void);
 static void  crc_exit (void);
 static DWORD crc_bytes (const char *buf, size_t len);
+static void _trace_flush (void);
 
 #define TRACE_BUF_SIZE (2*1024)
 
@@ -715,11 +716,10 @@ static void fname_cache_free (void)
  */
 void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 {
+  int     save = g_cfg.test_trace;
   va_list args;
-  int save = g_cfg.test_trace;
 
   g_cfg.test_trace = 1;
-
   trace_indent (g_cfg.trace_indent);
 
   if (g_cfg.show_caller && file)
@@ -746,10 +746,8 @@ int trace_indent (int indent)
 /*
  * Write out the trace-buffer.
  */
-static unsigned int _trace_flush (void)
+static void _trace_flush (void)
 {
-  unsigned int len = (unsigned int) (trace_ptr - trace_buf);
-
   if (g_cfg.trace_use_ods)
   {
     *trace_ptr = '\0';
@@ -758,12 +756,12 @@ static unsigned int _trace_flush (void)
   else
   {
     int hnd = _fileno (g_cfg.trace_stream);
+    unsigned int len = (unsigned int) (trace_ptr - trace_buf);
 
     assert (hnd >= 1);
-    len = _write (hnd, trace_buf, len);
+    _write (hnd, trace_buf, len);
   }
   trace_ptr = trace_buf;   /* restart buffer */
-  return (len);
 }
 
 int trace_printf (const char *fmt, ...)
