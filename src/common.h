@@ -134,18 +134,21 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
 #endif
 
 #if defined(__GNUC__) && defined(__MINGW32__)
+  #define WCHAR_FMT      "S"
   #define S64_FMT        "I64d"
   #define U64_FMT        "I64u"
   #define X64_FMT        "I64X"
   #define U64_SUFFIX(x)  (x##ULL)
 
 #elif defined(_MSC_VER) || defined(_MSC_EXTENSIONS) || defined(__WATCOMC__)
+  #define WCHAR_FMT      "ws"
   #define S64_FMT        "I64d"
   #define U64_FMT        "I64u"
   #define X64_FMT        "I64X"
   #define U64_SUFFIX(x)  (x##Ui64)
 
 #else
+  #define WCHAR_FMT      "ws"
   #define S64_FMT        "Ld"
   #define U64_FMT        "Lu"
   #define X64_FMT        "Lx"
