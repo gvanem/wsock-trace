@@ -37,7 +37,9 @@
 
 /*
  * Aug 2011   Adapted for Wsock_trace - G. Vanem (gvanem@yahoo.no)
- *            No longer Unicode aware. Simplified and rewritten from C++ to pure C.
+ *            No longer Unicode aware.
+ *            Simplified and rewritten from C++ to pure C.
+ *            Removed the IMHO awful Hungarian notation.
  */
 
 #if defined(UNICODE) || defined(_UNICODE)
@@ -90,7 +92,7 @@ typedef struct _MODLOAD_DATA {
   } MODLOAD_DATA;
 
 typedef BOOL (__stdcall *PREAD_PROCESS_MEMORY_ROUTINE64)(
-    HANDLE      hProcess,
+    HANDLE      process,
     DWORD64     qwBaseAddress,
     PVOID       lpBuffer,
     DWORD       nSize,
@@ -204,64 +206,64 @@ typedef struct _STACKFRAME64 {
 #endif
 
 typedef PVOID (__stdcall   *PFUNCTION_TABLE_ACCESS_ROUTINE64) (
-                            HANDLE hProcess, DWORD64 AddrBase);
+                            HANDLE process, DWORD64 AddrBase);
 
 typedef DWORD64 (__stdcall *PGET_MODULE_BASE_ROUTINE64) (
-                            HANDLE hProcess, DWORD64 Address);
+                            HANDLE process, DWORD64 Address);
 
 typedef DWORD64 (__stdcall *PTRANSLATE_ADDRESS_ROUTINE64) (
-                            HANDLE hProcess, HANDLE hThread, ADDRESS64 *lpaddr);
+                            HANDLE process, HANDLE thread, ADDRESS64 *addr);
 
 #endif  /* API_VERSION_NUMBER < 9 */
 
 
-typedef BOOL (__stdcall *func_SymCleanup) (IN HANDLE hProcess);
+typedef BOOL (__stdcall *func_SymCleanup) (IN HANDLE process);
 
 typedef DWORD (__stdcall *func_SymGetOptions) (VOID);
 
 typedef DWORD (__stdcall *func_SymSetOptions) (IN DWORD SymOptions);
 
-typedef PVOID (__stdcall *func_SymFunctionTableAccess64) (IN HANDLE  hProcess,
+typedef PVOID (__stdcall *func_SymFunctionTableAccess64) (IN HANDLE  process,
                                                           IN DWORD64 AddrBase);
 
-typedef BOOL (__stdcall *func_SymGetLineFromAddr64) (IN  HANDLE           hProcess,
-                                                     IN  DWORD64          dwAddr,
-                                                     OUT DWORD           *dwDisplacement,
+typedef BOOL (__stdcall *func_SymGetLineFromAddr64) (IN  HANDLE           process,
+                                                     IN  DWORD64          addr,
+                                                     OUT DWORD           *displacement,
                                                      OUT IMAGEHLP_LINE64 *Line);
 
-typedef DWORD64 (__stdcall *func_SymGetModuleBase64) (IN HANDLE  hProcess,
-                                                      IN DWORD64 dwAddr);
+typedef DWORD64 (__stdcall *func_SymGetModuleBase64) (IN HANDLE  process,
+                                                      IN DWORD64 addr);
 
-typedef BOOL (__stdcall *func_SymGetModuleInfo64) (IN  HANDLE             hProcess,
-                                                   IN  DWORD64            dwAddr,
+typedef BOOL (__stdcall *func_SymGetModuleInfo64) (IN  HANDLE             process,
+                                                   IN  DWORD64            addr,
                                                    OUT IMAGEHLP_MODULE64 *ModuleInfo);
 
-typedef BOOL (__stdcall *func_SymGetSymFromAddr64) (IN  HANDLE             hProcess,
-                                                    IN  DWORD64            dwAddr,
-                                                    OUT DWORD64           *dwDisplacement,
+typedef BOOL (__stdcall *func_SymGetSymFromAddr64) (IN  HANDLE             process,
+                                                    IN  DWORD64            addr,
+                                                    OUT DWORD64           *displacement,
                                                     OUT IMAGEHLP_SYMBOL64 *Symbol);
 
-typedef BOOL (__stdcall *func_SymFromAddr) (IN     HANDLE       hProcess,
-                                            IN     DWORD64      dwAddr,
-                                            OUT    DWORD64     *dwDisplacement,
+typedef BOOL (__stdcall *func_SymFromAddr) (IN     HANDLE       process,
+                                            IN     DWORD64      addr,
+                                            OUT    DWORD64     *displacement,
                                             IN OUT SYMBOL_INFO *Symbol);
 
-typedef BOOL (__stdcall *func_SymInitialize) (IN HANDLE hProcess,
+typedef BOOL (__stdcall *func_SymInitialize) (IN HANDLE process,
                                               IN PCSTR  UserSearchPath,
-                                              IN BOOL   fInvadeProcess);
+                                              IN BOOL   invadeProcess);
 
-typedef DWORD (__stdcall *func_SymLoadModule64) (IN HANDLE  hProcess,
-                                                 IN HANDLE  hFile,
+typedef DWORD (__stdcall *func_SymLoadModule64) (IN HANDLE  process,
+                                                 IN HANDLE  file,
                                                  IN PCSTR   ImageName,
                                                  IN PCSTR   ModuleName,
                                                  IN DWORD64 BaseOfDll,
                                                  IN DWORD   SizeOfDll);
 
-typedef BOOL (__stdcall *func_StackWalk64) (IN DWORD      MachineType,
-                                            IN HANDLE     hProcess,
-                                            IN HANDLE     hThread,
-                                            STACKFRAME64 *StackFrame,
-                                            VOID         *ContextRecord,
+typedef BOOL (__stdcall *func_StackWalk64) (IN DWORD                         MachineType,
+                                            IN HANDLE                        process,
+                                            IN HANDLE                        thread,
+                                            STACKFRAME64                    *StackFrame,
+                                            VOID                            *ContextRecord,
                                             PREAD_PROCESS_MEMORY_ROUTINE64   ReadMemoryRoutine,
                                             PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine,
                                             PGET_MODULE_BASE_ROUTINE64       GetModuleBaseRoutine,
@@ -397,10 +399,10 @@ static const char *get_error (void)
 /**************************************** ToolHelp32 *************************/
 
 typedef HANDLE (__stdcall *func_CreateToolhelp32Snapshot) (DWORD dwFlags, DWORD PID);
-typedef BOOL   (__stdcall *func_Module32First) (HANDLE hSnap, MODULEENTRY32 *me);
-typedef BOOL   (__stdcall *func_Module32Next) (HANDLE hSnap, MODULEENTRY32 *me);
-typedef BOOL   (__stdcall *func_Thread32First) (HANDLE hSnap, THREADENTRY32 *te);
-typedef BOOL   (__stdcall *func_Thread32Next) (HANDLE hSnap, THREADENTRY32 *te);
+typedef BOOL   (__stdcall *func_Module32First) (HANDLE snap, MODULEENTRY32 *me);
+typedef BOOL   (__stdcall *func_Module32Next) (HANDLE snap, MODULEENTRY32 *me);
+typedef BOOL   (__stdcall *func_Thread32First) (HANDLE snap, THREADENTRY32 *te);
+typedef BOOL   (__stdcall *func_Thread32Next) (HANDLE snap, THREADENTRY32 *te);
 
 static func_CreateToolhelp32Snapshot p_CreateToolhelp32Snapshot = NULL;
 static func_Module32First            p_Module32First = NULL;
@@ -427,23 +429,23 @@ static struct LoadTable th32_funcs[] = {
 
 static int GetModuleListTH32 (void)
 {
-  HANDLE        hSnap = INVALID_HANDLE_VALUE;
+  HANDLE        snap = INVALID_HANDLE_VALUE;
   MODULEENTRY32 me;
-  int           i;
   BOOL          okay = (load_dynamic_table(th32_funcs, DIM(th32_funcs)) >= 3);
+  int           i;
 
   if (!okay)
      goto cleanup;
 
-  hSnap = (*p_CreateToolhelp32Snapshot) (TH32CS_SNAPMODULE, g_proc_id);
-  if (hSnap == (HANDLE)-1)
+  snap = (*p_CreateToolhelp32Snapshot) (TH32CS_SNAPMODULE, g_proc_id);
+  if (snap == (HANDLE)-1)
      goto cleanup;
 
   AllocateModuleList (TTBUFLEN / sizeof(*me_list));
 
   me.dwSize = sizeof(me);
 
-  for (i = 0, (*p_Module32First)(hSnap,&me);; i++)
+  for (i = 0, (*p_Module32First)(snap,&me);; i++)
   {
     struct ModuleEntry e;
 
@@ -454,7 +456,7 @@ static int GetModuleListTH32 (void)
 
     if (i == (me_list_size/sizeof(e))-1)
        break;
-    if (!(*p_Module32Next)(hSnap,&me))
+    if (!(*p_Module32Next)(snap,&me))
        break;
   }
 
@@ -483,8 +485,8 @@ static int GetModuleListTH32 (void)
 #endif
 
 cleanup:
-  if (hSnap != INVALID_HANDLE_VALUE)
-     CloseHandle (hSnap);
+  if (snap != INVALID_HANDLE_VALUE)
+     CloseHandle (snap);
 
   unload_dynamic_table (th32_funcs, DIM(th32_funcs));
 
@@ -493,9 +495,9 @@ cleanup:
 
 /**************************************** PSAPI ************************/
 
-typedef BOOL  (__stdcall *func_EnumProcessModules) (HANDLE hProcess, HMODULE *lphModule, DWORD cb, DWORD *cbNeeded);
-typedef DWORD (__stdcall *func_GetModuleFileNameExA) (HANDLE hProcess, HMODULE hModule, LPSTR lpFilename, DWORD nSize);
-typedef BOOL  (__stdcall *func_GetModuleInformation) (HANDLE hProcess, HMODULE hModule, MODULEINFO *pmi, DWORD nSize);
+typedef BOOL  (__stdcall *func_EnumProcessModules) (HANDLE process, HMODULE *module, DWORD cb, DWORD *needed);
+typedef DWORD (__stdcall *func_GetModuleFileNameExA) (HANDLE process, HMODULE module, LPSTR lpFilename, DWORD nSize);
+typedef BOOL  (__stdcall *func_GetModuleInformation) (HANDLE process, HMODULE module, MODULEINFO *pmi, DWORD nSize);
 
 static func_EnumProcessModules   p_EnumProcessModules;
 static func_GetModuleFileNameExA p_GetModuleFileNameExA;
@@ -514,21 +516,21 @@ static struct LoadTable psapi_funcs[] = {
 
 static int GetModuleListPSAPI (void)
 {
-  DWORD    i, cbNeeded, num_modules;
+  DWORD    i, needed, num_modules;
   HMODULE *hMods = alloca (TTBUFLEN);
   BOOL     okay = (load_dynamic_table(psapi_funcs, DIM(psapi_funcs)) >= 3);
 
   if (!okay)
      goto cleanup;
 
-  if (!(*p_EnumProcessModules)(g_proc, hMods, TTBUFLEN, &cbNeeded))
+  if (!(*p_EnumProcessModules)(g_proc, hMods, TTBUFLEN, &needed))
   {
     TRACE (1, "EnumProcessModules() failed: %s.\n", get_error());
     goto cleanup;
   }
 
-  num_modules = cbNeeded / sizeof(HMODULE);
-  if (cbNeeded > TTBUFLEN)
+  num_modules = needed / sizeof(HMODULE);
+  if (needed > TTBUFLEN)
   {
     TRACE (1, "More than %lu module handles. Huh?\n", num_modules);
     goto cleanup;
@@ -586,8 +588,8 @@ static int EnumAndLoadModuleSymbols (void)
   }
 
   TRACE (2, "  %-60s Baseaddr       Size\n"
-            "    ------------------------------------------------"
-            "----------------------------------------------------\n",
+            "  -------------------------------------------------"
+            "---------------------------------------------------\n",
             "Module");
 
   for (num = 0, me = me_list; num < me_list_top; me++, num++)
@@ -711,9 +713,10 @@ BOOL StackWalkInit (void)
 
   if (ok && SetSymbolSearchPath())
   {
-    /* Enumerate modules and tell dbghlp.dll about them.
+    /* Enumerate modules and tell dbghelp.dll about them.
      */
     EnumAndLoadModuleSymbols();
+
 #if 0  /* \todo */
     if (num_in_shared_list() > 1)
     {
@@ -732,7 +735,7 @@ BOOL StackWalkInit (void)
 
 static char ret_buf [MAX_NAMELEN+100];
 
-static DWORD decode_one_stack_frame (HANDLE hThread, DWORD image_type,
+static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
                                      STACKFRAME64 *stk, CONTEXT *ctx)
 {
 #if USE_SYMFROMADDR
@@ -777,7 +780,7 @@ static DWORD decode_one_stack_frame (HANDLE hThread, DWORD image_type,
    * deeper frame could not be found.
    * CONTEXT need not to be supplied if image_type is IMAGE_FILE_MACHINE_I386!
    */
-  if (!(*p_StackWalk64)(image_type, g_proc, hThread, stk, ctx, NULL,
+  if (!(*p_StackWalk64)(image_type, g_proc, thread, stk, ctx, NULL,
                         p_SymFunctionTableAccess64, p_SymGetModuleBase64, NULL))
      return (1);
 
@@ -856,10 +859,10 @@ static DWORD decode_one_stack_frame (HANDLE hThread, DWORD image_type,
   return (0);   /* Okay */
 }
 
-char *StackWalkShow (HANDLE hThread, CONTEXT *ctx)
+char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
 {
-  /* Normally, call ImageNtHeader() and use machine-info from PE header
-   * but we assume that it is an I386 image...
+  /* \todo: Normally, call ImageNtHeader() and use machine-info from PE header
+   * but we assume that it is an I386 image.
    */
   DWORD        image_type = IMAGE_FILE_MACHINE_I386;
   DWORD        err  = 0;
@@ -880,7 +883,7 @@ char *StackWalkShow (HANDLE hThread, CONTEXT *ctx)
   stk.AddrFrame.Mode   = AddrModeFlat;
   stk.AddrStack.Mode   = AddrModeFlat;
 
-  err = decode_one_stack_frame (hThread, image_type, &stk, ctx);
+  err = decode_one_stack_frame (thread, image_type, &stk, ctx);
   if (err == 0)
      return (ret_buf);
 
