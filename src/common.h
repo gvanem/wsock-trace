@@ -270,6 +270,7 @@ extern int trace_puts    (const char *str);
 extern int trace_putc    (int ch);
 extern int trace_putc_raw(int ch);
 extern int trace_indent  (int indent);
+extern int trace_flush   (void);
 
 /* Init/exit functions for stuff in common.c.
  */
