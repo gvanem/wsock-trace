@@ -114,7 +114,7 @@ wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) # install
 	ar rs libwsock_trace.a $(DATA_OBJ)
 
 install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
-	cp --update libwsock_trace.a             $(LIB_TARGET)
+	cp --update libwsock_trace.a              $(LIB_TARGET)
 	cp --update wsock_trace_mw$(X_SUFFIX).dll $(BIN_TARGET)
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
