@@ -244,7 +244,7 @@ static FILE *open_config_file (const char *base_name)
 }
 
 /*
- * Parse the config-file give in 'fil'.
+ * Parse the config-file give in 'file'.
  */
 static void parse_config_file (FILE *file)
 {
