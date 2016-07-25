@@ -23,9 +23,25 @@
 #if defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
   #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
+
+  /* Because of warning:
+   *   test.c:46:14: warning: 'inet_pton' redeclared without dllimport attribute:
+   *                          previous dllimport ignored [-Wattributes]
+   */
+  #pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
-/* Prevent MingW globbing the cmd-line if we do 'test *'.
+/* Because of:
+ *   warning C4007: 'main': must be '__cdecl'
+ * whe using 'cl -Gr'.
+ */
+#if defined(_MSC_VER)
+  #define MS_CDECL __cdecl
+#else
+  #define MS_CDECL
+#endif
+
+/* Prevent MinGW globbing the cmd-line if we do 'test *'.
  */
 int _CRT_glob = 0;
 
@@ -116,10 +132,10 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSACleanup)
                   };
 
-static void run_test (const char *wildcard)
+static int run_test (const char *wildcard)
 {
   const struct test_struct *t = tests;
-  int   i = DIM(tests) - 1;
+  int   rc = 0, i = DIM(tests) - 1;
 
   assert ((t+i)->func == test_WSACleanup);
 
@@ -131,22 +147,24 @@ static void run_test (const char *wildcard)
          printf ("Skipping test %s().\n", t->name);
       continue;
     }
+    rc++;
     if (chatty > 0)
        printf ("\nTesting %s().\n", t->name);
     (*t->func)();
   }
+  return (rc);
 }
 
 static void test_WSAStartup (void)
 {
   WORD    version = MAKEWORD (2,2);
   WSADATA wsaData;
-  TEST_CONDITION (==0, WSAStartup (version, &wsaData));
+  TEST_CONDITION (== 0, WSAStartup (version, &wsaData));
 }
 
 static void test_WSACleanup (void)
 {
-  TEST_CONDITION (==0, WSACleanup());
+  TEST_CONDITION (== 0, WSACleanup());
 }
 
 static void test_gethostbyaddr (void)
@@ -276,23 +294,23 @@ static void test_connect (void)
   TEST_CONDITION (== WSAEWOULDBLOCK, WSAGetLastError());
 }
 
-static fd_set fd, fd2;
+static fd_set fd1, fd2;
 
 static void test_select (void)
 {
   struct timeval  tv = { 1, 1 };
   int    i;
 
-  FD_ZERO (&fd);
+  FD_ZERO (&fd1);
   FD_ZERO (&fd2);
 
-  FD_SET (s1, &fd);
+  FD_SET (s1, &fd1);
   FD_SET (s2, &fd2);
 
   for (i = 0; i < 30; i++)
      FD_SET (i, &fd2);
 
-  TEST_CONDITION (== -1, select (0, &fd, &fd2, &fd2, &tv));
+  TEST_CONDITION (== -1, select (0, &fd1, &fd2, &fd2, &tv));
 }
 
 static void test_send (void)
@@ -308,8 +326,8 @@ static void test_send (void)
 
 static void test_WSAFDIsSet (void)
 {
-  TEST_CONDITION (== 1, FD_ISSET (s1, &fd));
-  TEST_CONDITION (== 0, FD_ISSET (s2, &fd));  /* Because it is SOCK_DGRAM */
+  TEST_CONDITION (== 1, FD_ISSET (s1, &fd1));
+  TEST_CONDITION (== 0, FD_ISSET (s2, &fd1));  /* Because it is SOCK_DGRAM */
 }
 
 static void test_WSAAddressToStringA (void)
@@ -382,9 +400,9 @@ static int list_tests (void)
   return (0);
 }
 
-int main (int argc, char **argv)
+int MS_CDECL main (int argc, char **argv)
 {
-  int i, c;
+  int i, c, num = 0;
 
   while ((c = getopt (argc, argv, "h?dl")) != EOF)
     switch (c)
@@ -411,11 +429,13 @@ int main (int argc, char **argv)
   if (argc >= 1)
   {
     for (i = 0; i < argc; i++)
-       run_test (argv[i]);
+       num += run_test (argv[i]);
+    if (num == 0)
+       printf ("  No tests matched '%s'\n", argv[0]);
   }
   else
     run_test ("*");
-  return 0;
+  return (0);
 }
 
 /*
