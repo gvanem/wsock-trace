@@ -56,7 +56,6 @@ static void        fname_cache_dump (void);
 static void  crc_init  (void);
 static void  crc_exit (void);
 static DWORD crc_bytes (const char *buf, size_t len);
-static void _trace_flush (void);
 
 #define TRACE_BUF_SIZE (2*1024)
 
@@ -746,8 +745,10 @@ int trace_indent (int indent)
 /*
  * Write out the trace-buffer.
  */
-static void _trace_flush (void)
+int trace_flush (void)
 {
+  int hnd, len = trace_ptr - trace_buf;
+
   if (g_cfg.trace_use_ods)
   {
     *trace_ptr = '\0';
@@ -755,13 +756,12 @@ static void _trace_flush (void)
   }
   else
   {
-    int hnd = _fileno (g_cfg.trace_stream);
-    unsigned int len = (unsigned int) (trace_ptr - trace_buf);
-
+    hnd = _fileno (g_cfg.trace_stream);
     assert (hnd >= 1);
-    _write (hnd, trace_buf, len);
+    _write (hnd, trace_buf, (unsigned int)len);
   }
   trace_ptr = trace_buf;   /* restart buffer */
+  return (len);
 }
 
 int trace_printf (const char *fmt, ...)
@@ -837,7 +837,7 @@ int trace_putc (int ch)
                       ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
                break;
     }
-    _trace_flush();
+    trace_flush();
     set_color (color);
     return (1);
   }
@@ -863,7 +863,7 @@ put_it:
   rc++;
 
   if (ch == '\n' || trace_ptr >= trace_end)
-    _trace_flush();
+     trace_flush();
   return (rc);
 }
 
