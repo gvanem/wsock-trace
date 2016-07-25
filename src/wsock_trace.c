@@ -2059,9 +2059,9 @@ static const char *get_timestamp (void)
 #else
          {
            int         dec = (int) fmodl (msec, 1000.0);
-           const char *s = qword_str ((unsigned __int64) (msec/1000.0));
+           const char *sec = qword_str ((unsigned __int64) (msec/1000.0));
 
-           sprintf (buf, "%s.%03d msec: ", s, dec);
+           sprintf (buf, "%s.%03d sec: ", sec, dec);
          }
 #endif
          return (buf);
@@ -2210,27 +2210,29 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
   if (ws_trace_base && hinstDLL == ws_trace_base)
      note = " (" WSOCK_TRACE_DLL ")";
 
-  if (dwReason == DLL_PROCESS_ATTACH)
+  switch (dwReason)
   {
-    crtdbg_init();
-    wsock_trace_init();
-  }
-  else if (dwReason == DLL_PROCESS_DETACH)
-  {
-    wsock_trace_exit();
-    crtdbg_exit();
-  }
-  else if (dwReason == DLL_THREAD_ATTACH)
-  {
-    g_cfg.counts.dll_attach++;
-    TRACE (3, "  DLL_THREAD_ATTACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-           ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
-  }
-  else if (dwReason == DLL_THREAD_DETACH)
-  {
-    g_cfg.counts.dll_detach++;
-    TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-          ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
+    case DLL_PROCESS_ATTACH:
+         crtdbg_init();
+         wsock_trace_init();
+         break;
+
+    case DLL_PROCESS_DETACH:
+         wsock_trace_exit();
+         crtdbg_exit();
+         break;
+
+    case DLL_THREAD_ATTACH:
+         g_cfg.counts.dll_attach++;
+         TRACE (3, "  DLL_THREAD_ATTACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
+                ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
+         break;
+
+    case DLL_THREAD_DETACH:
+         g_cfg.counts.dll_detach++;
+         TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
+               ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
+         break;
   }
 
   ARGSUSED (lpvReserved);
