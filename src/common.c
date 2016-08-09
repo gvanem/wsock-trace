@@ -32,7 +32,7 @@ char prog_dir  [MAX_PATH] = { '\0' };
 
 HINSTANCE ws_trace_base;        /* Our base-address */
 
-int  trace_binmode = 0;
+int trace_binmode = 0;
 
 /*
  * A cache of file-names with true casing as returned from
@@ -224,9 +224,9 @@ int load_dynamic_table (struct LoadTable *tab, int tab_size)
       if (!tab->optional)
       {
         if (!func_addr)
-          TRACE (2, "Function \"%s\" not found in %s.\n", tab->func_name, tab->mod_name);
-        *tab->func_addr = func_addr;
+           TRACE (2, "Function \"%s\" not found in %s.\n", tab->func_name, tab->mod_name);
       }
+      *tab->func_addr = func_addr;
     }
     is_opt = (tab->optional ? " (optional)" : "");
     tab->mod_handle = mod_handle;
@@ -327,14 +327,14 @@ const char *flags_decode (DWORD flags, const struct search_list *list, int num)
   for (i = 0; i < num; i++, list++)
       if (flags & list->value)
       {
-        ret += snprintf (ret, left, "%s+", list->name);
+        ret += snprintf (ret, left, "%s|", list->name);
         left = end - ret;
         flags &= ~list->value;
       }
   if (flags)           /* print unknown flag-bits */
-     ret += snprintf (ret, left, "0x%08lX+", flags);
+     ret += snprintf (ret, left, "0x%08lX|", flags);
   if (ret > buf)
-     *(--ret) = '\0';   /* remove '+' */
+     *(--ret) = '\0';   /* remove '|' */
   return (buf);
 }
 
