@@ -285,6 +285,10 @@ typedef DWORD (WINAPI *func_WaitForMultipleObjectsEx) (DWORD         num_ev,
 
 typedef int (WINAPI *func_WSACancelBlockingCall) (void);
 
+typedef int (WINAPI *func_WSCGetProviderPath) (GUID    *provider_id,
+                                               wchar_t *provider_dll_path,
+                                               int     *provider_dll_path_len,
+                                               int     *error);
 /*
  * Windows-Vista functions.
  */
@@ -368,6 +372,7 @@ static func_WSAGetOverlappedResult   p_WSAGetOverlappedResult = NULL;
 static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
 static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
 static func_WSACancelBlockingCall    p_WSACancelBlockingCall = NULL;
+static func_WSCGetProviderPath       p_WSCGetProviderPath = NULL;
 // static func_WaitForMultipleObjectsEx p_WaitForMultipleObjectsEx = NULL;
 
 static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
@@ -402,6 +407,7 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSAEnumNetworkEvents),
               ADD_VALUE (0, "ws2_32.dll", WSACancelBlockingCall),
               ADD_VALUE (1, "ws2_32.dll", WSAWaitForMultipleEvents),
+              ADD_VALUE (1, "ws2_32.dll", WSCGetProviderPath),
               ADD_VALUE (0, "ws2_32.dll", accept),
               ADD_VALUE (0, "ws2_32.dll", bind),
               ADD_VALUE (0, "ws2_32.dll", closesocket),
@@ -641,6 +647,22 @@ static const char *socket_or_error (SOCK_RC_TYPE rc)
   return _itoa ((int)rc, buf, 10);
 }
 
+static void dump_provider_path (GUID *guid)
+{
+  int     error;
+  wchar_t path[MAX_PATH] = L"??";
+  int     path_len = DIM(path);
+
+  if (p_WSCGetProviderPath &&
+      (*p_WSCGetProviderPath)(guid, path, &path_len, &error) == 0)
+  {
+    char buf [100+MAX_PATH];
+
+    snprintf (buf, sizeof(buf), "~4Provider Path:      \"%" WCHAR_FMT "\"~0", path);
+    dump_one_proto_info (NULL, buf);
+  }
+}
+
 /*
  * The actual Winsock functions we trace.
  */
@@ -723,7 +745,10 @@ EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
            socket_or_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-     dump_wsaprotocol_info ('A', proto_info);
+  {
+    dump_wsaprotocol_info ('A', proto_info);
+    dump_provider_path (&proto_info->ProviderId);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -745,7 +770,10 @@ EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol, WSAPROTOCOL_INF
            socket_or_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-     dump_wsaprotocol_info ('W', proto_info);
+  {
+    dump_wsaprotocol_info ('W', proto_info);
+    dump_provider_path (&proto_info->ProviderId);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -764,7 +792,10 @@ EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_I
            SOCKET_CAST(s), process_id, get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-     dump_wsaprotocol_info ('A', proto_info);
+  {
+    dump_wsaprotocol_info ('A', proto_info);
+    dump_provider_path (&proto_info->ProviderId);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -783,7 +814,10 @@ EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_I
             SOCKET_CAST(s), process_id, get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-     dump_wsaprotocol_info ('W', proto_info);
+  {
+    dump_wsaprotocol_info ('W', proto_info);
+    dump_provider_path (&proto_info->ProviderId);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -805,7 +839,10 @@ EXPORT INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
   WSTRACE ("WSAAddressToStringA(). --> %s.\n", rc == 0 ? result_string : get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-     dump_wsaprotocol_info ('A', proto_info);
+  {
+    dump_wsaprotocol_info ('A', proto_info);
+    dump_provider_path (&proto_info->ProviderId);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -829,7 +866,10 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
   else WSTRACE ("WSAAddressToStringW(). --> %s.\n", get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-     dump_wsaprotocol_info ('W', proto_info);
+  {
+    dump_wsaprotocol_info ('W', proto_info);
+    dump_provider_path (&proto_info->ProviderId);
+  }
 
   LEAVE_CRIT();
   return (rc);
