@@ -203,7 +203,7 @@ whatever calls you like.
 
    1. Get the MinGW/CygWin ports working.
 
-   2. Python integration; use a *.py*-file to exclude/include processes and/or
+   2. Lua-script integration; use a *.lua file to exclude/include processes and/or
       functions to trace.
 
    3. Injecting `wsock_trace.dll` into a remote process. Ref:
