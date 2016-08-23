@@ -126,10 +126,6 @@ run_test: test.exe
 compile_juajit_0:
 	@echo
 
-build_module: example.i example.c embed.c
-	swig -lua -module example example.i
-	$(CC) $(CFLAGS) example_wrap.c example.c embed.c -Feembed.exe -link $(LDFLAGS) example_wrap.c example.c embed.c
-
 #
 # You may have to add a "call vcvarsall.bat $(MACHINE)" here.
 #
