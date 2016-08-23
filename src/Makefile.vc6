@@ -6,6 +6,12 @@
 USE_DEBUG    = 0
 USE_DEF_FILE = 1
 
+#
+# If you want Lua-script support, change these:
+#
+USE_LUA     = 1
+LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
+
 LIB_TARGET = $(VCINSTALLDIR)\lib
 BIN_TARGET = $(VCINSTALLDIR)\bin
 
@@ -45,16 +51,23 @@ CFLAGS  = $(CFLAGS) -MT -Ot -Gs -DNDEBUG
 #
 # stkwalk.c is not 64-bit ready.
 #
-
 !if "$(MACHINE)" == "x64"
 CFLAGS = $(CFLAGS) -DNO_STACK_WALK
 !endif
 
 !if "$(USE_DEF_FILE)" == "1"
-CFLAGS = $(CFLAGS) -DUSE_DEF_FILE
+CFLAGS      = $(CFLAGS) -DUSE_DEF_FILE
+WSOCK_DEF   = wsock_trace$(X_SUFFIX).def
+LDFLAGS_DEF = -def:$(WSOCK_DEF)
+!endif
+
+!if "$(USE_LUA)" == "1"
+CFLAGS = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
+EX_LIBS = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib
+
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
@@ -65,16 +78,16 @@ EX_LIBS = $(EX_LIBS) ole32.lib
 WSOCK_LIB = wsock_trace$(X_SUFFIX).lib
 WSOCK_DLL = wsock_trace$(X_SUFFIX).dll
 WSOCK_MAP = wsock_trace$(X_SUFFIX).map
-WSOCK_DEF = wsock_trace$(X_SUFFIX).def
 
 CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS -DWSOCK_TRACE_DLL=\"$(WSOCK_DLL)\"
 
-OBJECTS = $(OBJ_DIR)\common.obj      \
-          $(OBJ_DIR)\dump.obj        \
-          $(OBJ_DIR)\init.obj        \
-          $(OBJ_DIR)\in_addr.obj     \
-          $(OBJ_DIR)\stkwalk.obj     \
-          $(OBJ_DIR)\wsock_trace.obj \
+OBJECTS = $(OBJ_DIR)\common.obj          \
+          $(OBJ_DIR)\dump.obj            \
+          $(OBJ_DIR)\init.obj            \
+          $(OBJ_DIR)\in_addr.obj         \
+          $(OBJ_DIR)\stkwalk.obj         \
+          $(OBJ_DIR)\wsock_trace_lua.obj \
+          $(OBJ_DIR)\wsock_trace.obj     \
           $(OBJ_DIR)\wsock_trace.res
 
 
@@ -86,13 +99,8 @@ all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe run_test install
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-!if "$(USE_DEF_FILE)" == "1"
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ)
-	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) -def:$(WSOCK_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
-!else
-$(WSOCK_DLL) $(WSOCK_LIB): $(OBJECTS) $(DATA_OBJ)
-	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(OBJECTS) $(EX_LIBS) > link.tmp
-!endif
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(USE_LUA)
+	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(DATA_OBJ)
 	copy $(WSOCK_MAP) + link.tmp $(WSOCK_MAP)
 
@@ -110,10 +118,26 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_LIB)
 	copy test.map + link.tmp test.map
 
 dump.exe: dump.c common.c in_addr.c processes.c
-	$(CC) $(CFLAGS) -DTEST_DUMP_DATA $** -Fe$@ -link -incremental:no ws2_32.lib ole32.lib
+	$(CC) $(CFLAGS) -DTEST_DUMP_DATA $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib
 
 run_test: test.exe
 	test.exe -dd
+
+compile_juajit_0:
+	@echo
+
+build_module: example.i example.c embed.c
+	swig -lua -module example example.i
+	$(CC) $(CFLAGS) example_wrap.c example.c embed.c -Feembed.exe -link $(LDFLAGS) example_wrap.c example.c embed.c
+
+#
+# You may have to add a "call vcvarsall.bat $(MACHINE)" here.
+#
+compile_juajit_1:
+	pushd $(LUAJIT_ROOT)\src & \
+	if not exist lua51_static.lib (    \
+	   msvcbuild.bat debug static &    \
+	   copy lua51.lib lua51_static.lib )
 
 clean:
 	-del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res \
@@ -152,13 +176,23 @@ wsock_trace_x64.def: wsock_trace.def Makefile.VC6
 	    -e "s/_\(.*\)@.*/\1/g" < wsock_trace.def                     >> wsock_trace_x64.def
 
 
-$(OBJ_DIR)\common.obj:      common.c common.h init.h
+$(OBJ_DIR)\common.obj:      common.c common.h init.h dump.h
 $(OBJ_DIR)\data.obj:        data.c common.h in_addr.h
 $(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h wsock_trace.h
-$(OBJ_DIR)\init.obj:        init.c common.h stkwalk.h bfd_gcc.h init.h wsock_trace.h
+$(OBJ_DIR)\init.obj:        init.c common.h stkwalk.h bfd_gcc.h init.h wsock_trace_lua.h wsock_trace.h
 $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
+$(OBJ_DIR)\test.obj:        test.c getopt.h
+
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h stkwalk.h in_addr.h \
-                            init.h dump.h wsock_trace.h
+                            init.h dump.h wsock_trace_lua.h wsock_trace.h
+
+$(OBJ_DIR)\wsock_trace_lua.obj: wsock_trace_lua.c common.h init.h wsock_trace_lua.h
+
+wsock_trace_lua.h:          $(LUAJIT_ROOT)/src/lua.h     \
+                            $(LUAJIT_ROOT)/src/luaconf.h \
+                            $(LUAJIT_ROOT)/src/lualib.h  \
+                            $(LUAJIT_ROOT)/src/lua.h     \
+                            $(LUAJIT_ROOT)/src/lauxlib.h
 
 
