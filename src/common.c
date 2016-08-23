@@ -747,7 +747,7 @@ int trace_indent (int indent)
  */
 int trace_flush (void)
 {
-  int hnd, len = trace_ptr - trace_buf;
+  int len = trace_ptr - trace_buf;
 
   if (g_cfg.trace_use_ods)
   {
@@ -756,9 +756,18 @@ int trace_flush (void)
   }
   else
   {
-    hnd = _fileno (g_cfg.trace_stream);
+#if defined(USE_LUA)
+    /*
+     * Use 'fwrite()' (a bit slower?) so the Lua-output
+     * written using 'io.write()' is in sync with our trace-output.
+     */
+    fwrite (trace_buf, (size_t)len, 1, g_cfg.trace_stream);
+#else
+    int hnd = _fileno (g_cfg.trace_stream);
+
     assert (hnd >= 1);
     _write (hnd, trace_buf, (unsigned int)len);
+#endif
   }
   trace_ptr = trace_buf;   /* restart buffer */
   return (len);
@@ -815,27 +824,34 @@ int trace_putc (int ch)
 
     switch (ch - '0')
     {
-      case 0:  color = NULL;     /* restore to default colour */
-               break;
-      case 1:  color = &g_cfg.color_trace;
-               break;
-      case 2:  color = &g_cfg.color_file;
-               break;
-      case 3:  color = &g_cfg.color_time;
-               break;
-      case 4:  color = &g_cfg.color_data;
-               break;
-      case 5:  color = &g_cfg.color_func;
-               break;
+      case 0:
+           color = NULL;     /* restore to default colour */
+           break;
+      case 1:
+           color = &g_cfg.color_trace;
+           break;
+      case 2:
+           color = &g_cfg.color_file;
+           break;
+      case 3:
+           color = &g_cfg.color_time;
+           break;
+      case 4:
+           color = &g_cfg.color_data;
+           break;
+      case 5:
+           color = &g_cfg.color_func;
+           break;
 #if defined(__MINGW32__) && 1
       case -16:
       case -38:
-               ch = '!';
-               goto put_it;
+           ch = '!';
+           goto put_it;
 #endif
-      default: FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
-                      ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
-               break;
+      default:
+           FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
+                  ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
+           break;
     }
     trace_flush();
     set_color (color);
