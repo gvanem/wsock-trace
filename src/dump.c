@@ -922,50 +922,57 @@ void dump_addrinfo (const struct addrinfo *ai)
   trace_puts ("~0");
 }
 
-static char *dump_one_fd (const fd_set *fd, int indent, char *buf, size_t max)
+fd_set *copy_fd_set (const fd_set *fd)
 {
-  char *p = buf;
-  char *p_max = p + max - 7;
-  u_int i;
+  size_t  size;
+  fd_set *copy;
+  u_int   i;
 
-  for (i = 0; i < fd->fd_count && p < p_max; i++)
-  {
-    SOCKET sk = fd->fd_array[i];  /* An UINT_PTR (unsigned __int64) */
+  if (!fd)
+     return (NULL);
 
-    p = maybe_wrap_line (indent, 5, buf, p);
-    _itoa ((int)sk, p, 10);
-    p = strchr (p, '\0');
-    *p++ = ',';
-  }
-  if (i == 0)
-  {
-    strcpy (p, "<no fds>");
-    p += 8;
-  }
-  else if (p >= p_max)
-  {
-    strcpy (p, "...");
-    p += 3;
-  }
-  else
-    --p;           /* Remove last "," */
-  return (p);
+  /*
+   * From <winsock.h>:
+   *
+   * typedef struct fd_set {
+   *         u_int  fd_count;
+   *         SOCKET fd_array[FD_SETSIZE];
+   *      } fd_set;
+   *
+   * But we cannot assume a certain 'FD_SETSIZE'.
+   * Just allocate according to 'fd_count'.
+   */
+  size = fd->fd_count * sizeof(SOCKET) + sizeof(u_int);
+  copy = malloc (size);
+
+  copy->fd_count = fd->fd_count;
+  for (i = 0; i < fd->fd_count; i++)
+      copy->fd_array[i] = fd->fd_array[i];
+  return (copy);
 }
 
-void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex,
-                  int indent, char *buf, size_t buf_sz)
+static void dump_one_fd (const fd_set *fd, int indent)
 {
-  char *p = buf;
-  char *p_max = p + buf_sz - 4;
-  int   i, j;
+  u_int i;
+
+  for (i = 0; i < fd->fd_count; i++)
+     trace_printf ("%u%c", fd->fd_array[i], i < fd->fd_count-1 ? ',' : ' ');
+
+  if (i == 0)
+     trace_puts ("<no fds>");
+}
+
+void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent)
+{
+  int i;
 
   struct sel_info {
          const char   *which;
          const fd_set *fd;
        } info[3] = {
-         { "rd: ", NULL },
-         { "wr: ", NULL },
-         { "ex: ", NULL }
+         { " rd: ", NULL },
+         { " wr: ", NULL },
+         { " ex: ", NULL }
        };
 
   info[0].fd = rd;
@@ -974,26 +981,15 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex,
 
   for (i = 0; i < DIM(info); i++)
   {
-    strcpy (p, info[i].which);
-    p += 4;
-    if (p > p_max)
-       break;
+    trace_puts (info[i].which);
 
     if (info[i].fd)
-       p = dump_one_fd (info[i].fd, indent+4, p, buf_sz - (p - buf));
-    else
-    {
-      strcpy (p, "<not set>");
-      p += 9;
-    }
+         dump_one_fd (info[i].fd, indent+4);
+    else trace_puts ( "<not set>");
     if (i < DIM(info)-1)
-    {
-      *p++ = '\n';
-      for (j = 0; j < indent && p < p_max; j++)
-         *p++ = ' ';
-    }
+         trace_printf ("\n%*s", indent, "");
+    else trace_putc ('\n');
   }
-  *p = '\0';
 }
 
 static const char *wsapollfd_event_decode (SHORT ev, char *buf)

@@ -9,8 +9,9 @@ extern void dump_hostent  (const struct hostent *h);
 extern void dump_servent  (const struct servent *s);
 extern void dump_protoent (const struct protoent *p);
 extern void dump_nameinfo (char *host, char *serv, DWORD flags);
-extern void dump_select   (const fd_set *rd, const fd_set *wr, const fd_set *ex,
-                           int indent, char *buf, size_t buf_sz);
+
+extern fd_set *copy_fd_set (const fd_set *fd);
+extern void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent);
 
 extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent);
 
