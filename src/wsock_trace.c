@@ -1,17 +1,17 @@
 /*
  * A small and simple drop-in tracer for most normal Winsock calls.
  * Works best for MSVC since the stack-walking code requires the program's
- * PDB symbol-file to be present. And unfortunately MingW/CygWin doesn't
+ * PDB symbol-file to be present. And unfortunately MinGW/CygWin doesn't
  * produce PDB-symbols.
  *
  * Usage (MSVC):
  *   link with wsock_trace.lib instead of the system's ws32_2.lib. Thus
  *   most normal Winsock calls are traced on entry and exit.
  *
- * Usage (MingW/CygWin):
+ * Usage (MinGW/CygWin):
  *   link with libwsock_trace.a instead of the system's libws32_2.a.
  *   I.e. copy it to a directory in $(LIBRARY_PATH) and use '-lwsock_trace'
- *   to link. The Makefile.MingW already does the copying to $(MINGW32)/lib.
+ *   to link. The Makefile.MinGW already does the copying to $(MINGW32)/lib.
  *
  * Ignore warnings like:
  *   foo.obj : warning LNK4049: locally defined symbol _closesocket@4
@@ -33,14 +33,17 @@
 #include "in_addr.h"
 #include "init.h"
 #include "dump.h"
+#include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
 #if !defined(NO_STACK_WALK)
   #include "stkwalk.h"
 #endif
 
-#if defined(__MINGW64__)
-#endif
+/* This used to be set in the Makefiles to '-DWSOCK_TRACE_DLL="..."'.
+ * It was not so reliable. Hence hardcode it in DllMain() below.
+ */
+const char *wsock_trace_dll_name = NULL;
 
 /* Keep track of number of calls to WSAStartup() and WSACleanup().
  */
@@ -76,7 +79,7 @@ static const char *get_timestamp (void);
 
 #if defined(__MINGW_GNUC_PREREQ)
   #if __MINGW_GNUC_PREREQ(4, 4) && 0
-    #define NO_WARN_FORMAT()                 \
+    #define NO_WARN_FORMAT()                \
            _Pragma ("GCC diagnostic push"); \
            _Pragma ("GCC diagnostic ignored -Wformat")
     #define POP_WARN_FORMAT() \
@@ -152,7 +155,6 @@ static const char *get_timestamp (void);
 #else
   #error "Unsupported compiler."
 #endif
-
 
 static fd_set *last_rd_fd = NULL;
 static fd_set *last_wr_fd = NULL;
@@ -238,7 +240,7 @@ typedef int      (WINAPI *func_WSASendTo) (SOCKET s, WSABUF *bufs, DWORD num_buf
                                            DWORD flags, const struct sockaddr *to, int to_len,
                                            WSAOVERLAPPED *ow, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
 
-typedef int (WINAPI *func___WSAFDIsSet) (SOCKET s, fd_set *);
+typedef int    (WINAPI *func___WSAFDIsSet) (SOCKET s, fd_set *);
 
 typedef SOCKET (WINAPI *func_WSASocketA) (int af, int type, int protocol,
                                           WSAPROTOCOL_INFOA *protocol_info,
@@ -294,6 +296,7 @@ typedef int (WINAPI *func_WSCGetProviderPath) (GUID    *provider_id,
  */
 typedef INT   (WINAPI *func_inet_pton) (int family, const char *string, void *res);
 typedef PCSTR (WINAPI *func_inet_ntop) (int family, void *addr, char *string, size_t string_size);
+typedef int   (WINAPI *func_WSAPoll) (WSAPOLLFD *fd_array, ULONG fds, int timeout);
 
 /*
  * In ntdll.dll
@@ -323,6 +326,7 @@ static func_WSAEventSelect           p_WSAEventSelect = NULL;
 static func_WSAAsyncSelect           p_WSAAsyncSelect = NULL;
 static func_WSAAddressToStringA      p_WSAAddressToStringA = NULL;
 static func_WSAAddressToStringW      p_WSAAddressToStringW = NULL;
+static func_WSAPoll                  p_WSAPoll = NULL;
 static func___WSAFDIsSet             p___WSAFDIsSet = NULL;
 static func_accept                   p_accept = NULL;
 static func_bind                     p_bind = NULL;
@@ -403,6 +407,7 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "Mswsock.dll",WSARecvEx),
               ADD_VALUE (0, "ws2_32.dll", WSASend),
               ADD_VALUE (0, "ws2_32.dll", WSASendTo),
+              ADD_VALUE (1, "ws2_32.dll", WSAPoll),
               ADD_VALUE (0, "ws2_32.dll", WSAGetOverlappedResult),
               ADD_VALUE (0, "ws2_32.dll", WSAEnumNetworkEvents),
               ADD_VALUE (0, "ws2_32.dll", WSACancelBlockingCall),
@@ -516,9 +521,9 @@ static const char *get_error (SOCK_RC_TYPE rc)
   if (rc != 0)
   {
     /* Longest result:
-     *   "WSANO_RECOVERY: Unrecoverable error in call to nameserver (11003)" = 68 chars.
+     *   "WSAECANCELLED: A call to WSALookupServiceEnd was made while this call was still processing. The call has been canceled (10103)" = 127 chars.
      */
-    static char buf[100];
+    static char buf[150];
     int         err = (*p_WSAGetLastError)(); /* save WSAGetLastError() */
     const char *ret = ws_strerror (err, buf, sizeof(buf));
 
@@ -680,6 +685,8 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   ENTER_CRIT();
   WSTRACE ("WSAStartup (%u.%u) --> %s.\n",
            loBYTE(data->wVersion), hiBYTE(data->wVersion), get_error(rc));
+
+  LUA_HOOK (rc, WSAStartup(ver,data));
   LEAVE_CRIT();
   return (rc);
 }
@@ -962,7 +969,7 @@ EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
   ENTER_CRIT();
 
   WSTRACE ("WSAEventSelect (%u, 0x%" ADDR_FMT ", %s).\n",
-            SOCKET_CAST(s), ADDR_CAST(ev), event_bits_decode(net_ev));
+           SOCKET_CAST(s), ADDR_CAST(ev), event_bits_decode(net_ev));
 
   LEAVE_CRIT();
 
@@ -1002,11 +1009,11 @@ int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
   ENTER_CRIT();
 
   if (fd == last_rd_fd)
-       WSTRACE ("FD_ISSET (%u, \"rd fd_set\") --> %d.\n",  _s, rc);
+       WSTRACE ("FD_ISSET (%u, \"rd fd_set\") --> %d.\n", _s, rc);
   else if (fd == last_wr_fd)
-       WSTRACE ("FD_ISSET (%u, \"wr fd_set\") --> %d.\n",  _s, rc);
+       WSTRACE ("FD_ISSET (%u, \"wr fd_set\") --> %d.\n", _s, rc);
   else if (fd == last_ex_fd)
-       WSTRACE ("FD_ISSET (%u, \"ex fd_set\") --> %d.\n",  _s, rc);
+       WSTRACE ("FD_ISSET (%u, \"ex fd_set\") --> %d.\n", _s, rc);
   else WSTRACE ("FD_ISSET (%u, %p) --> %d.\n", _s, fd, rc);
 
   LEAVE_CRIT();
@@ -1047,7 +1054,7 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
 
   ENTER_CRIT();
 
-  WSTRACE ("bind (%u, %s) --> %s.\n",  SOCKET_CAST(s), sockaddr_str2(addr,&addr_len), get_error(rc));
+  WSTRACE ("bind (%u, %s) --> %s.\n", SOCKET_CAST(s), sockaddr_str2(addr,&addr_len), get_error(rc));
 
   LEAVE_CRIT();
   return (rc);
@@ -1389,12 +1396,12 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   if (g_cfg.trace_level > 0)
   {
-    char res[100];
+    char        res[100];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
 
     if (rc != 0)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING");
+    else strcpy (res, "WSA_IO_PENDING (997)");
 
     WSTRACE ("WSARecv (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg, ov, func, res);
@@ -1425,15 +1432,20 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
   if (g_cfg.trace_level > 0)
   {
-    char res[100];
+    char        res[100];
+    char        nbytes[20];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
+
+    if (num_bytes)
+         _itoa (*num_bytes, nbytes, 10);
+    else strcpy (nbytes, "??");
 
     if (rc != 0)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING");
+    else strcpy (res, "WSA_IO_PENDING (997)");
 
-    WSTRACE ("WSARecvFrom (%u, 0x%p, %lu, %lu, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
-              SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg,
+    WSTRACE ("WSARecvFrom (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
+              SOCKET_CAST(s), bufs, num_bufs, nbytes, flg,
               sockaddr_str2(from,from_len), ov, func, res);
 #if 0
     if (rc == 0 && !exclude_this && g_cfg.dump_data)
@@ -1511,13 +1523,18 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   if (g_cfg.trace_level > 0)
   {
     char res[100];
+    char nbytes[20];
+
+    if (num_bytes)
+         _itoa (*num_bytes, nbytes, 10);
+    else strcpy (nbytes, "??");
 
     if (rc != 0)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING");
+    else strcpy (res, "WSA_IO_PENDING (997)");
 
-    WSTRACE ("WSASend (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s.\n",
-              SOCKET_CAST(s), bufs, num_bufs, *num_bytes,
+    WSTRACE ("WSASend (%u, 0x%p, %lu, %s, <%s>, 0x%p, 0x%p) --> %s.\n",
+              SOCKET_CAST(s), bufs, num_bufs, nbytes,
               socket_flags(flags), ov, func, res);
 #if 0
     if (rc == 0 && !exclude_this && g_cfg.dump_data)
@@ -1543,13 +1560,18 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
   if (g_cfg.trace_level > 0)
   {
     char res[100];
+    char nbytes[20];
+
+    if (num_bytes)
+         _itoa (*num_bytes, nbytes, 10);
+    else strcpy (nbytes, "??");
 
     if (rc != 0)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING");
+    else strcpy (res, "WSA_IO_PENDING (997)");
 
-    WSTRACE ("WSASendTo (%u, 0x%p, %lu, %lu, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
-              SOCKET_CAST(s), bufs, num_bufs, *num_bytes, socket_flags(flags),
+    WSTRACE ("WSASendTo (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
+              SOCKET_CAST(s), bufs, num_bufs, nbytes, socket_flags(flags),
               sockaddr_str2(to,&to_len), ov, func, res);
 #if 0
     if (rc == 0 && !exclude_this && g_cfg.dump_data)
@@ -1616,6 +1638,62 @@ EXPORT int WINAPI WSACancelBlockingCall (void)
   WSTRACE ("WSACancelBlockingCall() --> %s.\n", get_error(rc));
 
   LEAVE_CRIT();
+  return (rc);
+}
+
+EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
+{
+  int        rc;
+  WSAPOLLFD *fd_in = NULL;
+
+  INIT_PTR (p_WSAPoll);
+
+  if (!p_WSAPoll)
+     return (0);
+
+  ENTER_CRIT();
+
+  exclude_this = exclude_list_get ("WSAPoll");
+
+  if (fd_array && !exclude_this && g_cfg.trace_level > 0)
+  {
+    size_t size = fds * sizeof(*fd_in);
+
+    fd_in = alloca (size);
+    memcpy (fd_in, fd_array, size);
+  }
+
+  rc = (*p_WSAPoll) (fd_array, fds, timeout);
+
+  if (!exclude_this && g_cfg.trace_level > 0)
+  {
+    char tbuf[20];
+
+    if (timeout > 0)
+         snprintf (tbuf, sizeof(tbuf), "%d ms", timeout);
+    else if (timeout == 0)
+         strcpy (tbuf, "return imm.");
+    else strcpy (tbuf, "wait indef.");
+
+    WSTRACE ("WSAPoll (0x%" ADDR_FMT ", %lu, %s) -> %s.\n",
+             ADDR_CAST(fd_array), fds, tbuf, socket_or_error(rc));
+
+    trace_indent (g_cfg.trace_indent+2);
+    trace_puts ("~4" FD_INPUT " ");
+    if (fd_in)
+         dump_wsapollfd (fd_in, fds, g_cfg.trace_indent + 2 + sizeof(FD_INPUT));
+    else trace_puts ("None!\n");
+
+    trace_indent (g_cfg.trace_indent+2);
+    trace_puts (FD_OUTPUT " ");
+    if (fd_array)
+         dump_wsapollfd (fd_array, fds, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT));
+    else trace_puts ("None!\n");
+    trace_puts ("~0");
+  }
+
+  LEAVE_CRIT();
+
   return (rc);
 }
 
@@ -1707,8 +1785,8 @@ EXPORT SOCKET WINAPI socket (int family, int type, int protocol)
 
   ENTER_CRIT();
 
-  WSTRACE ("socket (%s, %s, %d) --> %s.\n",
-           socket_family(family), socket_type(type), protocol,
+  WSTRACE ("socket (%s, %s, %s) --> %s.\n",
+           socket_family(family), socket_type(type), protocol_name(protocol),
            socket_or_error(rc));
 
   LEAVE_CRIT();
@@ -2159,6 +2237,8 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
      * always 0. We have to get it from 'frames[2]'.
      */
     ret_addr = (ULONG_PTR) frames [2];
+#else
+    err = (*p_WSAGetLastError)();
 #endif
 
     /* We don't need a CONTEXT_FULL; only EIP+EBP. We want the caller's address of
@@ -2194,7 +2274,7 @@ quit:
 }
 #endif  /* NO_STACK_WALK */
 
-#if defined(USE_BFD)  /* MingW implied */
+#if defined(USE_BFD)  /* MinGW implied */
 
 extern ULONG_PTR _image_base__;
 
@@ -2203,11 +2283,10 @@ extern ULONG_PTR _image_base__;
 
 static void test_get_caller (const void *from)
 {
-  ULONG_PTR   stack_addr [3];
-  void       *frames [5];
-  const char *ret;
-  int         i, num;
-  char        buf[100];
+  ULONG_PTR stack_addr [3];
+  void     *frames [5];
+  int       i, num;
+  char      buf[100];
 
   memset (frames, '\0', sizeof(frames));
   num = (*p_RtlCaptureStackBackTrace) (0, DIM(frames), frames, NULL);
@@ -2243,12 +2322,36 @@ static void test_get_caller (const void *from)
 }
 #endif  /* USE_BFD */
 
+static const char *set_dll_name (void)
+{
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
+  #define X_SUFFIX "_x64"
+#else
+  #define X_SUFFIX ""
+#endif
+
+#if defined(__MINGW32__)
+  return ("wsock_trace_mw" X_SUFFIX ".dll");
+#elif defined(__CYGWIN__)
+  return ("wsock_trace_cyg" X_SUFFIX ".dll");
+#elif defined(_MSC_VER)
+  return ("wsock_trace.dll" X_SUFFIX ".dll");
+#elif defined(__WATCOMC__)
+  return ("wsock_trace_ow" X_SUFFIX ".dll");
+#else
+  return (NULL);
+#endif
+}
+
 BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
-  const char *note = "";
+  char note[30] = "";
+
+  if (dwReason == DLL_PROCESS_ATTACH)
+     wsock_trace_dll_name = set_dll_name();
 
   if (ws_trace_base && hinstDLL == ws_trace_base)
-     note = " (" WSOCK_TRACE_DLL ")";
+     snprintf (note, sizeof(note), " (%s)", wsock_trace_dll_name);
 
   switch (dwReason)
   {
