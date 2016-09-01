@@ -597,7 +597,7 @@ static int EnumAndLoadModuleSymbols (void)
     DWORD64 rc = (*p_SymLoadModule64) (g_proc, 0, me->moduleName, me->moduleName,
                                        me->baseAddress, me->size);
 
-    if (!stricmp(WSOCK_TRACE_DLL,basename(me->moduleName)))
+    if (!stricmp(wsock_trace_dll_name,basename(me->moduleName)))
     {
    // add_to_shared_list (base);   /* \todo */
       ws_trace_base = (HINSTANCE) me->baseAddress;
@@ -720,7 +720,7 @@ BOOL StackWalkInit (void)
 #if 0  /* \todo */
     if (num_in_shared_list() > 1)
     {
-      WARN ("PROBLEM: Multiple %s in the same process.\n", WSOCK_TRACE_DLL);
+      WARN ("PROBLEM: Multiple %s in the same process.\n", wsock_trace_dll_name);
     }
 #endif
   }
@@ -892,9 +892,9 @@ char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
 
 #ifdef _MSC_VER
   /*
-   * In this case figure out the module-name (from the base-addresses in
-   * EnumAndLoadModuleSymbols()) and print which module (i.e. DLL) that is
-   * missing a .PDB file.
+   * \todo: In this case figure out the module-name (from the base-addresses in
+   *        EnumAndLoadModuleSymbols()) and print which module (i.e. DLL) that is
+   *        missing a .PDB file.
    */
   snprintf (str, left, " (no PDB, err: %lu)", err);
 #endif
