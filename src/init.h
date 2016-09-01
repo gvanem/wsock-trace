@@ -84,11 +84,18 @@ struct config_table {
 
        BOOL    msvc_only;
        BOOL    mingw_only;
+       BOOL    cygwin_only;
        BOOL    stealth_mode;
        BOOL    no_buffering;
        BOOL    stdout_redirected;
        WORD    screen_width;
        WORD    screen_heigth;
+
+       /* Path-names for the Lua init/exit script-files.
+        * These are effective only if built with 'USE_LUA'.
+        */
+       char   *lua_init_script;
+       char   *lua_exit_script;
 
        struct pcap_cfg    pcap;
        struct excludes    excl;
@@ -102,7 +109,8 @@ struct config_table {
      };
 
 extern struct config_table g_cfg;
-extern int    fatal_error;
+extern int                 fatal_error;
+extern const char         *wsock_trace_dll_name;
 
 extern CONSOLE_SCREEN_BUFFER_INFO console_info;
 

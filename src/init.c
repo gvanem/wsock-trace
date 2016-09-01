@@ -12,6 +12,7 @@
 #include "wsock_trace.h"
 #include "bfd_gcc.h"
 #include "dump.h"
+#include "wsock_trace_lua.h"
 #include "init.h"
 
 #if !defined(NO_STACK_WALK)
@@ -85,7 +86,30 @@ static BOOL image_opt_header_is_mingw (HMODULE mod)
 
   TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u\n",
          opt->MajorLinkerVersion, opt->MinorLinkerVersion);
-  return (opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 10);
+  return (opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30);
+}
+
+static BOOL image_opt_header_is_cygwin (HMODULE mod)
+{
+  const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
+  const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
+  const IMAGE_OPTIONAL_HEADER *opt = (const IMAGE_OPTIONAL_HEADER*) &nt->OptionalHeader;
+  const IMAGE_FILE_HEADER     *fh  = (const IMAGE_FILE_HEADER*) &nt->FileHeader;
+  BOOL  wild_tstamp = FALSE;
+
+  /*
+   * File-headers in CygWin32's .EXEs often seems to contain junk:
+   *
+   *   TimeDateStamp:     20202020 -> Fri Jan 30 03:38:08 1987
+   *
+   * or some time in the future.
+   */
+  if (fh->TimeDateStamp == 0x20202020 || fh->TimeDateStamp > (DWORD)time(NULL))
+     wild_tstamp = TRUE;
+
+  TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u, wild_tstamp: %d\n",
+         opt->MajorLinkerVersion, opt->MinorLinkerVersion, wild_tstamp);
+  return ((opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30) || wild_tstamp);
 }
 
 static int config_get_line (FILE *fil, unsigned *line,
@@ -374,8 +398,17 @@ static void parse_config_file (FILE *file)
     else if (!stricmp(key,"mingw_only"))
        g_cfg.mingw_only = atoi (val);
 
+    else if (!stricmp(key,"cygwin_only"))
+       g_cfg.cygwin_only = atoi (val);
+
     else if (!stricmp(key,"no_buffering"))
        g_cfg.no_buffering = atoi (val);
+
+    else if (!stricmp(key,"lua_init"))
+       g_cfg.lua_init_script = strdup (val);
+
+    else if (!stricmp(key,"lua_exit"))
+       g_cfg.lua_exit_script = strdup (val);
 
     else
        TRACE (0, "%s (%u):\nUnknown keyword '%s' = '%s'\n",
@@ -471,10 +504,14 @@ void wsock_trace_exit (void)
    */
 #if !defined(MINGW_USE_MSVCR_100)
   exclude_list_free();
+#endif
 
 #if !defined(NO_STACK_WALK)
   StackWalkExit();
 #endif
+
+#if defined(USE_LUA)
+  wstrace_exit_lua (g_cfg.lua_exit_script);
 #endif
 
   common_exit();
@@ -491,6 +528,12 @@ void wsock_trace_exit (void)
   if (g_cfg.pcap.dump_fname)
      free (g_cfg.pcap.dump_fname);
 
+  if (g_cfg.lua_init_script)
+     free (g_cfg.lua_init_script);
+
+  if (g_cfg.lua_exit_script)
+     free (g_cfg.lua_exit_script);
+
   DeleteCriticalSection (&crit_sect);
 }
 
@@ -504,12 +547,9 @@ void wsock_trace_init (void)
   const char *now;
   BOOL        okay;
   HMODULE     mod;
-  BOOL        is_msvc, is_mingw;
-//static char buf [256];
+  BOOL        is_msvc, is_mingw, is_cygwin;
 
   InitializeCriticalSection (&crit_sect);
-
-//QueryPerformanceCounter (&g_cfg.self_ticks);
 
   /* Set default values.
    */
@@ -542,13 +582,15 @@ void wsock_trace_init (void)
     fclose (file);
   }
 
-  is_msvc  = image_opt_header_is_msvc (mod);
-  is_mingw = image_opt_header_is_mingw (mod);
+  is_msvc   = image_opt_header_is_msvc (mod);
+  is_mingw  = image_opt_header_is_mingw (mod);
+  is_cygwin = image_opt_header_is_cygwin (mod);
 
-  /* Should test on WSOCK_TRACE_DLL name too.
+  /* Should test on 'wsock_trace_dll_name' too.
    */
-  if ((g_cfg.msvc_only  && !is_msvc) ||
-      (g_cfg.mingw_only && !is_mingw) )
+  if ((g_cfg.msvc_only   && !is_msvc)  ||
+      (g_cfg.mingw_only  && !is_mingw) ||
+      (g_cfg.cygwin_only && !is_cygwin) )
   {
  // g_cfg.stealth_mode = 1;
     g_cfg.trace_level = g_cfg.trace_report = 0;
@@ -688,6 +730,10 @@ void wsock_trace_init (void)
 #if !defined(NO_STACK_WALK)
   StackWalkInit();
 #endif
+
+#if defined(USE_LUA)
+  wstrace_init_lua (g_cfg.lua_init_script);
+#endif
 }
 
 /*
@@ -767,7 +813,8 @@ void get_color (const char *val, WORD *col)
     return;
   }
 
-  TRACE (4, "num1: %d, num2: %d, fg_str: '%s', bg_str: '%s'\n", num1, num2, fg_str, bg_str);
+  TRACE (5, "num1: %d, num2: %d, fg_str: '%s', bg_str: '%s'\n",
+         num1, num2, fg_str, bg_str);
 
   x = list_lookup_value (fg_str, colors, DIM(colors));
   if (x == UINT_MAX)
@@ -775,6 +822,7 @@ void get_color (const char *val, WORD *col)
     TRACE (0, "Unknown color '%s'\n", orig);
     return;
   }
+
   fg |= x;
 
   if (bg_str[0])
@@ -794,7 +842,7 @@ void get_color (const char *val, WORD *col)
   *col = fg + (bg << 8);
 
   if (!g_cfg.trace_use_ods && g_cfg.trace_file_device)
-     TRACE (4, "orig '%s' -> fg: %d, bg: %d, *col: 0x%04X\n", orig, (int)fg, (int)bg, *col);
+     TRACE (5, "orig '%s' -> fg: %d, bg: %d, *col: 0x%04X\n", orig, (int)fg, (int)bg, *col);
 }
 
 /*
@@ -919,13 +967,11 @@ struct ip_header {
        DWORD   ip_dst;         /* dest address */
      };
 
-
 #if defined(_MSC_VER) || defined(__CYGWIN__)
   #pragma pack(pop)
 #else
   #pragma pack()
 #endif
-
 
 static const void *make_ip_hdr (size_t data_len)
 {
@@ -1077,30 +1123,30 @@ static void set_invalid_handler (void)
 }
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-static _CrtMemState last_state;
+  static _CrtMemState last_state;
 
-void crtdbg_init (void)
-{
-  int flags = _CRTDBG_LEAK_CHECK_DF |
-              _CRTDBG_DELAY_FREE_MEM_DF |
-           /* _CRTDBG_CHECK_CRT_DF | */   /* Don't report allocs in CRT */
-              _CRTDBG_CHECK_ALWAYS_DF |
-              _CRTDBG_ALLOC_MEM_DF;
+  void crtdbg_init (void)
+  {
+    int flags = _CRTDBG_LEAK_CHECK_DF |
+                _CRTDBG_DELAY_FREE_MEM_DF |
+             /* _CRTDBG_CHECK_CRT_DF | */   /* Don't report allocs in CRT */
+                _CRTDBG_CHECK_ALWAYS_DF |
+                _CRTDBG_ALLOC_MEM_DF;
 
-  set_invalid_handler();
-  _CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
-  _CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
-  _CrtSetDbgFlag (flags | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
-  _CrtMemCheckpoint (&last_state);
-}
+    set_invalid_handler();
+    _CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetDbgFlag (flags | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
+    _CrtMemCheckpoint (&last_state);
+  }
 
-void crtdbg_exit (void)
-{
-  _CrtMemDumpAllObjectsSince (&last_state);
-  _CrtMemDumpStatistics (&last_state);
-  _CrtCheckMemory();
-  _CrtDumpMemoryLeaks();
-}
+  void crtdbg_exit (void)
+  {
+    _CrtMemDumpAllObjectsSince (&last_state);
+    _CrtMemDumpStatistics (&last_state);
+    _CrtCheckMemory();
+    _CrtDumpMemoryLeaks();
+  }
 
 #else
   void crtdbg_init (void)
