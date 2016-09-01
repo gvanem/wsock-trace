@@ -221,6 +221,31 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define vsnprintf _vsnprintf
 #endif
 
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600) || !defined(POLLRDNORM)
+  /*
+   * Ripped from MS's <winsock2.h>:
+   */
+  #define POLLERR     0x0001
+  #define POLLHUP     0x0002
+  #define POLLNVAL    0x0004
+
+  #define POLLWRNORM  0x0010
+  #define POLLOUT     POLLWRNORM
+  #define POLLWRBAND  0x0020
+
+  #define POLLRDNORM  0x0100
+  #define POLLRDBAND  0x0200
+  #define POLLIN      (POLLRDNORM | POLLRDBAND)
+  #define POLLPRI     0x0400
+
+  typedef struct pollfd {
+          SOCKET  fd;
+          SHORT   events;
+          SHORT   revents;
+        } WSAPOLLFD, *LPWSAPOLLFD;
+#endif
+
+
 /*
  * Generic debug and trace macro. Print to 'g_cfg.trace_stream' (default 'stdout')
  * if 'g_cfg.trace_level' is above or equal 'level'.
@@ -254,7 +279,7 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
                                       __FILE__, __LINE__,              \
                                       ## __VA_ARGS__);                 \
                              fatal_error = 1;                          \
-                             if (IsDebuggerPresent())                  \
+                             if (0 && IsDebuggerPresent())             \
                                   abort();                             \
                              else ExitProcess (GetCurrentProcessId()); \
                            } while (0)
