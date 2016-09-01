@@ -11,13 +11,13 @@
 #include "init.h"
 #include "wsock_trace_lua.h"
 
-#define LUA_TRACE(level, fmt, ...)                 \
-        do {                                       \
-          if (g_cfg.trace_level >= level)          \
-            trace_printf ("~2%s(%u): ~4" fmt "~0", \
-                          __FILE__, __LINE__,      \
-                          ## __VA_ARGS__);         \
-          } while (0)
+#define LUA_TRACE(level, fmt, ...)                  \
+        do {                                        \
+          if (g_cfg.trace_level >= level)           \
+             trace_printf ("~2%s(%u): ~4" fmt "~0", \
+                           __FILE__, __LINE__,      \
+                           ## __VA_ARGS__);         \
+        } while (0)
 
 /* There is only one Lua-state variable.
  */
@@ -25,7 +25,7 @@ static lua_State *L = NULL;
 
 /* The function-signature of currently hooking function.
  */
-const char *func_sig;
+const char *func_sig = NULL;
 
 /*
  * Inspired from the example in Swig:
@@ -42,7 +42,7 @@ static void run_lua_script (lua_State *l, const char *script)
     return;
   }
   if (lua_pcall(l, 0, LUA_MULTRET, 0))
-     WARNING ("Failure in script: %s\n", lua_tostring(l, -1));
+     WARNING ("Failure in script:\n    %s\n", lua_tostring(l, -1));
 }
 
 static int l_register_hook (lua_State *l)
@@ -128,21 +128,27 @@ static const struct luaL_reg wstrace_lua_table[] = {
   { NULL,            NULL }
 };
 
-
 /*
- * The open() function for normal Lua-5.x
+ * The open() function for normal Lua-5.x.
+ * This function is marked as a DLL-export.
+ *
+ * Note: Is is possible that if a script says:
+ *  local ws = require "wsock_trace"
+ *
+ * and the running program is linked to e.g. "wsock_trace_mw.dll", we
+ * gets re-entered here.
  */
 int luaopen_wsock_trace (lua_State *l)
 {
-  char *dll = WSOCK_TRACE_DLL;
+  char *dll = strdup (wsock_trace_dll_name);
   char *dot = strrchr (dll, '.');
 
-  if (dot)
-     *dot = '\0';
+  *dot = '\0';
   LUA_TRACE (2, "In %s()\n", __FUNCTION__);
   luaL_register (l, dll, wstrace_lua_table);
 
 //wstrace_lua_print_stack(); // test!
+  free (dll);
   return (1);
 }
 
@@ -151,13 +157,13 @@ int luaopen_wsock_trace (lua_State *l)
  */
 int luaJIT_BC_wsock_trace (lua_State *l)
 {
-  char *dll = WSOCK_TRACE_DLL;
+  char *dll = strdup (wsock_trace_dll_name);
   char *dot = strrchr (dll, '.');
 
-  if (dot)
-     *dot = '\0';
+  *dot = '\0';
   LUA_TRACE (2, "In %s()\n", __FUNCTION__);
   luaL_register (l, dll, wstrace_lua_table);
+  free (dll);
   return (1);
 }
 
