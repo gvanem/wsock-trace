@@ -1130,10 +1130,11 @@ EXPORT int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
 
 EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, SELECT_LAST_TYPE tv)
 {
-  char tv_buf [50];
-  char buf_in [400];
-  char buf_out[400];
-  int  rc;
+  fd_set *rd_copy;
+  fd_set *wr_copy;
+  fd_set *ex_copy;
+  char    tv_buf [50];
+  int     rc;
 
   INIT_PTR (p_select);
   ENTER_CRIT();
@@ -1147,13 +1148,16 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
     else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
 
     if (g_cfg.dump_select)
-       dump_select (rd_fd, wr_fd, ex_fd, g_cfg.trace_indent + 2 + sizeof(FD_INPUT),
-                    buf_in, sizeof(buf_in));
+    {
+      rd_copy = copy_fd_set (rd_fd);
+      wr_copy = copy_fd_set (wr_fd);
+      ex_copy = copy_fd_set (ex_fd);
+    }
   }
 
   rc = (*p_select) (nfds, rd_fd, wr_fd, ex_fd, tv);
 
-  /*  Remember last 'fd_set' for printing their types in FD_ISSET().
+  /* Remember last 'fd_set' for printing their types in FD_ISSET().
    */
   last_rd_fd = rd_fd;
   last_wr_fd = wr_fd;
@@ -1172,21 +1176,23 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
     if (g_cfg.dump_select)
     {
-      dump_select (rd_fd, wr_fd, ex_fd, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT),
-                   buf_out, sizeof(buf_out));
+      trace_indent (g_cfg.trace_indent+2);
+      trace_puts ("~4" FD_INPUT);
+      dump_select (rd_copy, wr_copy, ex_copy, g_cfg.trace_indent + 1 + sizeof(FD_OUTPUT));
+
+      if (rd_copy)
+         free (rd_copy);
+      if (wr_copy)
+         free (wr_copy);
+      if (ex_copy)
+         free (ex_copy);
 
       trace_indent (g_cfg.trace_indent+2);
-      trace_puts ("~4");
-      trace_printf (FD_INPUT  " %s\n", buf_in);
-      trace_indent (g_cfg.trace_indent+2);
-      trace_printf (FD_OUTPUT " %s~0\n", buf_out);
+      trace_puts (FD_OUTPUT);
+      dump_select (rd_fd, wr_fd, ex_fd, g_cfg.trace_indent + 1 + sizeof(FD_OUTPUT));
+      trace_puts ("~0");
     }
   }
-
-#if 0
-  if (!exclude_this && g_cfg.trace_level > 0)
-     trace_puts ("~0");
-#endif
 
   LEAVE_CRIT();
   return (rc);
