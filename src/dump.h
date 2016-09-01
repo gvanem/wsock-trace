@@ -12,6 +12,9 @@ extern void dump_nameinfo (char *host, char *serv, DWORD flags);
 extern void dump_select   (const fd_set *rd, const fd_set *wr, const fd_set *ex,
                            int indent, char *buf, size_t buf_sz);
 
+extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent);
+
+extern void dump_one_proto_info (const char *prefix, const char *buf);
 extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info);
 extern void dump_events (const WSANETWORKEVENTS *events);
 

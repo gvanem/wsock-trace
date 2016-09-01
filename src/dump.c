@@ -634,6 +634,18 @@ static const struct search_list sio_codes[] = {
                     ADD_VALUE (SIO_SOCKET_CLOSE_NOTIFY),
                   };
 
+static const struct search_list wsapollfd_flgs[] = {
+                    ADD_VALUE (POLLERR),
+                    ADD_VALUE (POLLHUP),
+                    ADD_VALUE (POLLNVAL),
+                    ADD_VALUE (POLLOUT),
+                    ADD_VALUE (POLLWRBAND),
+                    ADD_VALUE (POLLRDNORM),
+                    ADD_VALUE (POLLRDBAND),
+                    ADD_VALUE (POLLIN),
+                    ADD_VALUE (POLLPRI)
+                  };
+
 const char *socket_family (int family)
 {
   return list_lookup_name (family, families, DIM(families));
@@ -680,28 +692,28 @@ const char *socket_flags (int flags)
 const char *wsasocket_flags_decode (int flags)
 {
   if (flags == 0)
-       return ("0");
+     return ("0");
   return flags_decode (flags, wsasocket_flags, DIM(wsasocket_flags));
 }
 
 const char *ai_flags_decode (int flags)
 {
   if (flags == 0)
-    return ("0");
+     return ("0");
   return flags_decode (flags, ai_flgs, DIM(ai_flgs));
 }
 
 const char *getnameinfo_flags_decode (int flags)
 {
   if (flags == 0)
-    return ("0");
+     return ("0");
   return flags_decode (flags, getnameinfo_flgs, DIM(getnameinfo_flgs));
 }
 
 const char *event_bits_decode (long flag)
 {
   if (flag == 0)
-    return ("0");
+     return ("0");
   return flags_decode (flag, wsa_events_flgs, DIM(wsa_events_flgs));
 }
 
@@ -984,7 +996,43 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex,
   *p = '\0';
 }
 
-static void dump_one_proto_info (const char *prefix, const char *buf)
+static const char *wsapollfd_event_decode (SHORT ev, char *buf)
+{
+  if (ev == 0)
+     return ("0x0000");
+
+  if (ev == (POLLRDNORM | POLLRDBAND))
+     return ("POLLIN");
+
+  if (ev == (POLLOUT | POLLRDNORM | POLLRDBAND))
+     return ("POLLOUT|POLLIN");
+
+  strcpy (buf, flags_decode(ev, wsapollfd_flgs, DIM(wsapollfd_flgs)));
+  return (buf);
+}
+
+void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
+{
+  const WSAPOLLFD *fd = fd_array;
+  int   line = 0;
+  char  ev_buf1[30];
+  char  ev_buf2[30];
+  ULONG i;
+
+  for (i = 0; i < fds; i++, fd++)
+  {
+    if (fd->fd == INVALID_SOCKET)
+       continue;
+
+    trace_printf ("%*sfd: %4u, fd->events: %s, fd->revents: %s\n",
+                  line > 0 ? indent : 0, "", fd->fd,
+                  wsapollfd_event_decode(fd->events,ev_buf1),
+                  wsapollfd_event_decode(fd->revents,ev_buf2));
+    line++;
+  }
+}
+
+void dump_one_proto_info (const char *prefix, const char *buf)
 {
   static const char *padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
 
@@ -1045,9 +1093,6 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
   snprintf (buf2, sizeof(buf2), "dwProviderFlags:    %s", flags_str);
   dump_one_proto_info (NULL, buf2);
 
-  snprintf (buf2, sizeof(buf2), "ProviderId:         %s", get_guid_string(&pi_a->ProviderId));
-  dump_one_proto_info (NULL, buf2);
-
   snprintf (buf2, sizeof(buf2), "dwCatalogEntryId:   %lu", pi_a->dwCatalogEntryId);
   dump_one_proto_info (NULL, buf2);
 
@@ -1091,6 +1136,9 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
   if (ascii_or_wide == 'A')
        snprintf (buf2, sizeof(buf2), "szProtocol:         \"%.*s\"", WSAPROTOCOL_LEN, pi_a->szProtocol);
   else snprintf (buf2, sizeof(buf2), "szProtocol:         \"%.*S\"", WSAPROTOCOL_LEN, pi_w->szProtocol);
+  dump_one_proto_info (NULL, buf2);
+
+  snprintf (buf2, sizeof(buf2), "ProviderId:         %s", get_guid_string(&pi_a->ProviderId));
   dump_one_proto_info (NULL, buf2);
 
   trace_puts ("~0");
@@ -1281,6 +1329,7 @@ void check_all_search_lists (void)
 #if defined(TEST_DUMP_DATA)
 
 struct config_table g_cfg;
+int    fatal_error;
 
 /*
     Something in these buffers causes beeps at the console:
@@ -1337,6 +1386,8 @@ int main (void)
 {
   int i;
 
+  common_init();
+
   g_cfg.trace_stream = stdout;
   g_cfg.max_data = 50;
 
@@ -1370,11 +1421,9 @@ int main (void)
   return (0);
 }
 
-#if 0
-void set_color (WORD *col)
+void set_color (const WORD *col)
 {
 }
-#endif
 
 const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
 {
