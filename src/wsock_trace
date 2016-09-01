@@ -89,3 +89,9 @@ exclude = FD_ISSET
 # exclude = wget!WSAStartup
 # exclude = nmap!getaddrinfo
 
+#
+# Experimental:
+#   Lua-scripts for init and exit.
+#
+lua_init = %HOME%\wsock_trace_init.lua
+lua_exit = %HOME%\wsock_trace_exit.lua
