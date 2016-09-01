@@ -1,4 +1,7 @@
-/* basename() and dirname():
+/*
+ * common.c - Part of Wsock-Trace.
+ *
+ * basename() and dirname():
  *   Copyright (C) 1998 DJ Delorie, see COPYING.DJ for details
  *   Copyright (C) 1997 DJ Delorie, see COPYING.DJ for details
  */
@@ -66,6 +69,7 @@ static BOOL tilde_escape = TRUE;
 
 void common_init (void)
 {
+  tilde_escape = TRUE;
   trace_buf = malloc (TRACE_BUF_SIZE);
   trace_ptr = trace_buf;
   trace_end = trace_ptr + TRACE_BUF_SIZE - 1;
@@ -177,6 +181,11 @@ static const struct WSAE_search_list err_list[] = {
   ADD_VALUE (WSA_QOS_ESDMODEOBJ,        "An invalid shape discard mode object was found in the QOS provider-specific buffer"),
   ADD_VALUE (WSA_QOS_ESHAPERATEOBJ,     "An invalid shaping rate object was found in the QOS provider-specific buffer"),
   ADD_VALUE (WSA_QOS_RESERVED_PETYPE,   "A reserved policy element was found in the QOS provider-specific buffer"),
+
+  /* WSAx overlapped errors */
+  ADD_VALUE (WSA_IO_PENDING,            "Overlapped I/O operation in progress"),
+  ADD_VALUE (WSA_IO_INCOMPLETE,         "Overlapped I/O operation not in signalled status"),
+  ADD_VALUE (WSA_INVALID_HANDLE,        "Invalid handle")
 };
 
 /*
