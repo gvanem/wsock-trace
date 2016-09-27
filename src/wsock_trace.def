@@ -27,6 +27,7 @@ EXPORTS
  _WSASend@28
  _WSASendTo@36
 ;_WSASendDisconnect
+ _WSAConnect@28
  _WSAGetOverlappedResult@20
  _WSAEnumNetworkEvents@12
  _WSACancelBlockingCall@0
