@@ -4,12 +4,13 @@
  Works best for MSVC since the stack-walking code requires the program's
  **PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't
  produce PDB-symbols (GNU-debugger instead relies on the archaic **BFD**
- library). This project was previosly hosted at [GoogleCode]
- (https://code.google.com/p/wsock-trace/) which will soon be gone.
- Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
+ library). Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
  [C-ares](http://c-ares.haxx.se/)):
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
+
+*Note*: As an added bonus, Geo-IP information is also added. Thanks to the Tor-project for
+a simplified version of the MaxMind GeiIP-databases.
 
 ### Installation (MSVC):
 
