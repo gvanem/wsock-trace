@@ -757,6 +757,7 @@ int trace_indent (int indent)
 int trace_flush (void)
 {
   int len = trace_ptr - trace_buf;
+  int written = len;
 
   if (g_cfg.trace_use_ods)
   {
@@ -765,21 +766,21 @@ int trace_flush (void)
   }
   else
   {
-#if defined(USE_LUA)
+#if defined(USE_LUA) || defined(USE_FWRITE)
     /*
      * Use 'fwrite()' (a bit slower?) so the Lua-output
      * written using 'io.write()' is in sync with our trace-output.
      */
-    fwrite (trace_buf, (size_t)len, 1, g_cfg.trace_stream);
+    written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
 #else
     int hnd = _fileno (g_cfg.trace_stream);
 
     assert (hnd >= 1);
-    _write (hnd, trace_buf, (unsigned int)len);
+    written = _write (hnd, trace_buf, (unsigned int)len);
 #endif
   }
   trace_ptr = trace_buf;   /* restart buffer */
-  return (len);
+  return (written);
 }
 
 int trace_printf (const char *fmt, ...)
@@ -985,6 +986,49 @@ char *_strlcpy (char *dst, const char *src, size_t len)
   memcpy (dst, src, len);
   dst [len-1] = '\0';
   return (dst);
+}
+
+/*
+ * A strtok_r() function taken from libcurl:
+ *
+ * Copyright (C) 1998 - 2007, Daniel Stenberg, <daniel@haxx.se>, et al.
+  */
+char *_strtok_r (char *ptr, const char *sep, char **end)
+{
+  if (!ptr)
+  {
+    /* we got NULL input so then we get our last position instead */
+    ptr = *end;
+  }
+
+  /* pass all letters that are including in the separator string */
+  while (*ptr && strchr(sep, *ptr))
+    ++ptr;
+
+  if (*ptr)
+  {
+    /* so this is where the next piece of string starts */
+    char *start = ptr;
+
+    /* set the end pointer to the first byte after the start */
+    *end = start + 1;
+
+    /* scan through the string to find where it ends, it ends on a
+     *  null byte or a character that exists in the separator string.
+     */
+    while (**end && !strchr(sep, **end))
+      ++*end;
+
+    if (**end)
+    {
+      /* the end is not a null byte */
+      **end = '\0';  /* zero terminate it! */
+      ++*end;        /* advance the last pointer to beyond the null byte */
+    }
+    return (start);  /* return the position where the string starts */
+  }
+  /* we ended up on a null byte, there are no more strings to find! */
+  return (NULL);
 }
 
 /*

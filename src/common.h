@@ -86,13 +86,13 @@
         } SOCKADDR_IN;
 
   typedef struct sockaddr_in6 {
-          short  sin6_family;
+          short           sin6_family;
           USHORT          sin6_port;
           ULONG           sin6_flowinfo;
           IN6_ADDR        sin6_addr;
           union {
-            ULONG       sin6_scope_id;
-            SCOPE_ID    sin6_scope_struct;
+            ULONG         sin6_scope_id;
+            SCOPE_ID      sin6_scope_struct;
           };
        } SOCKADDR_IN6;
 
@@ -110,6 +110,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <io.h>
+#include <time.h>
 #include <string.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -212,11 +213,12 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define snprintf  _snprintf
   #define vsnprintf _vsnprintf
   #define fdopen    _fdopen
+  #define tzset()   _tzset()
 
 #elif defined(__MINGW32__)
   /*
    * I want the MSVC version of vsnprintf() since there is some trouble
-   * with MingW's version in trace_printf(). No idea what.
+   * with MinGW's version in trace_printf(). No idea what.
    */
   #define vsnprintf _vsnprintf
 #endif
@@ -284,12 +286,19 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
                              else ExitProcess (GetCurrentProcessId()); \
                            } while (0)
 
+/*
+ * Defined in newer <sal.h> for MSVC.
+ */
+#ifndef _Printf_format_string_
+#define _Printf_format_string_
+#endif
 
-extern void debug_printf (const char *file, unsigned line, const char *fmt, ...) ATTR_PRINTF (3,4);
+extern void debug_printf (const char *file, unsigned line,
+                          _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (3,4);
 
 extern int trace_binmode;
 
-extern int trace_printf  (const char *fmt, ...) ATTR_PRINTF (1,2);
+extern int trace_printf  (_Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (1,2);
 extern int trace_vprintf (const char *fmt, va_list args);
 extern int trace_puts    (const char *str);
 extern int trace_putc    (int ch);
@@ -360,6 +369,7 @@ extern const char    *dword_str (DWORD val);
 extern const char    *qword_str (unsigned __int64 val);
 
 extern char * _strlcpy (char *dst, const char *src, size_t len);
+extern char * _strtok_r (char *ptr, const char *sep, char **end);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
 
