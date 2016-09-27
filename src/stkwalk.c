@@ -738,18 +738,14 @@ static char ret_buf [MAX_NAMELEN+100];
 static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
                                      STACKFRAME64 *stk, CONTEXT *ctx)
 {
+  struct {
 #if USE_SYMFROMADDR
-  struct {
     SYMBOL_INFO  hdr;
-    char name [MAX_NAMELEN];
-  } sym;
-
 #else
-  struct {
-    IMAGEHLP_SYMBOL64 hdr;
+    IMAGEHLP_SYMBOL64  hdr;
+#endif
     char name [MAX_NAMELEN];
   } sym;
-#endif
 
   IMAGEHLP_LINE64 Line;
 
@@ -826,22 +822,25 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   if (temp_disp < max_displ && temp_disp != 0)
      displacement = temp_disp;
 
-  /*
-   * If UnDecorateSymbolName() returns a name with a "~" in it (a C++ destructor),
-   * this must be replaced with "~~" since trace_putc() gets confused otherwise.
-   */
-  p = strchr (undec_name, '~');
-  while (p)
-  {
-    memmove (p+2, p+1, strlen(p)-1);
-    p[1] = '~';
-    p = strchr (p+2, '~');
-  }
-
-  str += snprintf (str, left, "~2%s(%lu)~1 (%s",
+  str += snprintf (str, left, "~2%s(%lu)~1 (",
                    shorten_path(Line.FileName),
-                   Line.LineNumber, undec_name);
+                   Line.LineNumber);
   left = end - str;
+
+  /* If 'undec_name[]' contains a "~" (a C++ destructor),
+   * replace that with "~~" since 'trace_putc()' gets confused otherwise.
+   */
+  for (p = undec_name; *p && left > 2; p++)
+  {
+    *str++ = *p;
+    left--;
+    if (*p == '~')
+    {
+      *str++ = '~';
+      left--;
+    }
+  }
+  *str = '\0';
 
   if (displacement)
      snprintf (str, left, "+%lu)", displacement);
