@@ -1667,13 +1667,25 @@ int main (int argc, char **argv)
   if (!do_4 && !do_6)
      show_help();
 
-  if (!g_cfg.geoip_enable)
+  if (!do_update)
   {
-    printf ("'g_cfg.geoip_enable=1' in %s is needed for these tests.\n", config_file_name());
-    return (0);
+    if (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file))
+    {
+      printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip4_file);
+      return (0);
+    }
+    if (!g_cfg.geoip6_file || !FILE_EXISTS(g_cfg.geoip6_file))
+    {
+      printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip6_file);
+      return (0);
+    }
+    if (!g_cfg.geoip_enable)
+    {
+      printf ("'[geoip]' section must have 'enable=1' in %s is needed for these tests.\n", config_file_name());
+      return (0);
+    }
   }
-
-  if (do_update)
+  else
   {
     if (do_4)
        geoip_update_file (AF_INET, FALSE);

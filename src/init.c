@@ -808,8 +808,10 @@ void wsock_trace_init (void)
     DWORD num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
     DWORD num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
 
+#if !defined(TEST_GEOIP)
     if (num4 == 0 && num6 == 0)
        g_cfg.geoip_enable = FALSE;
+#endif
   }
 
   now = get_time_now();
