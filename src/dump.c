@@ -10,6 +10,7 @@
 #include "common.h"
 #include "in_addr.h"
 #include "init.h"
+#include "geoip.h"
 #include "wsock_trace.h"
 
 #if defined(_MSC_VER)
@@ -299,12 +300,23 @@
 #define WSA_FLAG_NO_HANDLE_INHERIT      0x80
 #endif
 
+/*
+ * Missing 'SIO_x' codes.
+ */
 #ifndef SIO_SOCKET_CLOSE_NOTIFY
 #define SIO_SOCKET_CLOSE_NOTIFY             _WSAIOW (IOC_VENDOR,13)
 #endif
 
+#ifndef SIO_GET_EXTENSION_FUNCTION_POINTER
+#define SIO_GET_EXTENSION_FUNCTION_POINTER  _WSAIORW (IOC_WS2,6)
+#endif
+
+#ifndef SIO_GET_QOS
+#define SIO_GET_QOS                         _WSAIORW (IOC_WS2,7)
+#endif
+
 /*
- * Missing sio_codes[]
+ * More missing 'SIO_x' codes.
  */
 #if !defined(_MSC_VER)
   #if !defined(__MINGW64_VERSION_MAJOR)
@@ -632,6 +644,8 @@ static const struct search_list sio_codes[] = {
                     ADD_VALUE (SIO_EXT_POLL),
                     ADD_VALUE (SIO_EXT_SENDMSG),
                     ADD_VALUE (SIO_SOCKET_CLOSE_NOTIFY),
+                    ADD_VALUE (SIO_GET_EXTENSION_FUNCTION_POINTER),
+                    ADD_VALUE (SIO_GET_QOS)
                   };
 
 static const struct search_list wsapollfd_flgs[] = {
@@ -917,15 +931,15 @@ void dump_addrinfo (const struct addrinfo *ai)
     trace_indent (g_cfg.trace_indent+4);
     addr_len = (const int*)&ai->ai_addrlen;
     trace_printf ("ai_canonname: %s, ai_addr: %s\n",
-                  ai->ai_canonname, sockaddr_str(ai->ai_addr,addr_len));
+                  ai->ai_canonname, sockaddr_str2(ai->ai_addr,addr_len));
   }
   trace_puts ("~0");
 }
 
 fd_set *copy_fd_set (const fd_set *fd)
 {
-  size_t  size;
   fd_set *copy;
+  size_t  size;
   u_int   i;
 
   if (!fd)
@@ -953,13 +967,38 @@ fd_set *copy_fd_set (const fd_set *fd)
 
 static void dump_one_fd (const fd_set *fd, int indent)
 {
-  u_int i;
+  u_int i, max_len, len = indent;
+  int   j;
 
   for (i = 0; i < fd->fd_count; i++)
-     trace_printf ("%u%c", fd->fd_array[i], i < fd->fd_count-1 ? ',' : ' ');
+  {
+    char buf[10];
 
+    _itoa (fd->fd_array[i], buf, 10);
+    max_len = g_cfg.screen_width - strlen(buf) - 1;
+    trace_puts (buf);
+
+    if (i < fd->fd_count-1)
+    {
+      trace_putc (',');
+      len += strlen(buf) + 1;
+    }
+    else
+    {
+      trace_putc ('\n');
+      len = indent;
+    }
+
+    if (len >= max_len)
+    {
+      trace_putc ('\n');
+      for (j = 0; j < indent; j++)
+          trace_putc (' ');
+      len = indent;
+    }
+  }
   if (i == 0)
-     trace_puts ("<no fds>");
+     trace_puts ("<no fds>\n");
 }
 
 void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent)
@@ -984,11 +1023,11 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
     trace_puts (info[i].which);
 
     if (info[i].fd)
-         dump_one_fd (info[i].fd, indent+4);
-    else trace_puts ( "<not set>");
+         dump_one_fd (info[i].fd, indent+5);
+    else trace_puts ( "<not set>\n");
+
     if (i < DIM(info)-1)
-         trace_printf ("\n%*s", indent, "");
-    else trace_putc ('\n');
+       trace_indent (indent);
   }
 }
 
@@ -1207,7 +1246,141 @@ static const char *dump_aliases (char **aliases)
   return (result);
 }
 
-void dump_nameinfo (char *host, char *serv, DWORD flags)
+static void trace_printf_cc (const char            *cc,
+                             const struct in_addr  *a4,
+                             const struct in6_addr *a6,
+                             const void            *next_addr)
+{
+  if (cc)
+       trace_printf ("%s - %s", cc, geoip_get_long_name_by_A2(cc));
+  else if (geoip_addr_is_zero(a4,a6))
+       trace_puts ("NULL-addr");
+  else if (geoip_addr_is_multicast(a4,a6))
+       trace_puts ("Multicast");
+  else if (geoip_addr_is_special(a4,a6))
+       trace_puts ("Special");
+  else if (!geoip_addr_is_global(a4,a6))
+       trace_puts ("Not global");
+  else trace_puts ("None");
+
+  if (next_addr)
+       trace_puts (", ");
+  else trace_putc ('.');
+}
+
+void dump_countries (int type, const char **addresses)
+{
+  int i;
+
+  WSAError_save_restore (0);
+
+  trace_indent (g_cfg.trace_indent+2);
+  trace_printf ("~4geo-IP: ");
+
+  for (i = 0; addresses && addresses[i]; i++)
+  {
+    const struct in_addr  *a4 = NULL;
+    const struct in6_addr *a6 = NULL;
+    const char            *cc = NULL;
+
+    if (type == AF_INET)
+    {
+      a4 = (const struct in_addr*) addresses[i];
+      cc = geoip_get_country_by_ipv4 (a4);
+    }
+    else if (type == AF_INET6)
+    {
+      a6 = (const struct in6_addr*) addresses[i];
+      cc = geoip_get_country_by_ipv6 (a6);
+    }
+    else
+    {
+      trace_printf ("Unknown family: %d.", type);
+      break;
+    }
+    trace_printf_cc (cc, a4, a6, addresses[i+1]);
+  }
+  if (i == 0)
+       trace_puts ("None!?\n~0");
+  else trace_puts ("\n~0");
+
+  WSAError_save_restore (1);
+}
+
+/*
+ * Can only be 1 address in a 'sockaddr', but use the plural
+ * 'countries' here anyway.
+ */
+void dump_countries_sockaddr (const struct sockaddr *sa)
+{
+  const char                *addr[2] = { NULL, NULL };
+  const struct sockaddr_in  *sa4;
+  const struct sockaddr_in6 *sa6;
+
+  if (!sa)
+     return;
+
+  if (sa->sa_family == AF_INET)
+  {
+    sa4 = (const struct sockaddr_in*) sa;
+    addr[0] = (const char*) &sa4->sin_addr;
+    dump_countries (AF_INET, addr);
+  }
+  else if (sa->sa_family == AF_INET6)
+  {
+    sa6 = (const struct sockaddr_in6*) sa;
+    addr[0] = (const char*) &sa6->sin6_addr;
+    dump_countries (AF_INET6, addr);
+  }
+}
+
+/*
+ * There can be a mix of 'AF_INET/AF_INET6' types in a single 'addrinfo'
+ * structure.
+ */
+void dump_countries_addrinfo (const struct addrinfo *ai)
+{
+  int num;
+
+  WSAError_save_restore (0);
+
+  trace_indent (g_cfg.trace_indent+2);
+  trace_printf ("~4geo-IP: ");
+
+  for (num = 0; ai; ai = ai->ai_next, num++)
+  {
+    const struct sockaddr_in  *sa4 = NULL;
+    const struct sockaddr_in6 *sa6 = NULL;
+    const char                *cc  = NULL;
+
+    if (ai->ai_family == AF_INET)
+    {
+      sa4 = (const struct sockaddr_in*) &ai->ai_addr;
+      cc  = geoip_get_country_by_ipv4 (&sa4->sin_addr);
+    }
+    else if (ai->ai_family == AF_INET6)
+    {
+      sa6 = (const struct sockaddr_in6*) &ai->ai_addr;
+      cc  = geoip_get_country_by_ipv6 (&sa6->sin6_addr);
+    }
+    else
+    {
+      trace_printf ("Unknown family: %d.", ai->ai_family);
+      break;
+    }
+    trace_printf_cc (cc,
+                     sa4 ? &sa4->sin_addr : NULL,
+                     sa6 ? &sa6->sin6_addr : NULL,
+                     ai->ai_next);
+  }
+  if (num == 0)
+       trace_puts ("None!?\n~0");
+  else trace_puts ("\n~0");
+
+  WSAError_save_restore (1);
+}
+
+void dump_nameinfo (const char *host, const char *serv, DWORD flags)
 {
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4name: %s, serv: %s\n~0",
