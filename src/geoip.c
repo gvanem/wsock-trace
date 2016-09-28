@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/utime.h>
+#include <limits.h>
 
 #include "common.h"
 #include <wininet.h>
@@ -1148,6 +1149,18 @@ typedef BOOL (WINAPI *func_InternetReadFile) (HINTERNET hFile,
 
 typedef BOOL (WINAPI *func_InternetCloseHandle) (HINTERNET handle);
 
+static func_InternetOpenA        p_InternetOpenA;
+static func_InternetOpenUrlA     p_InternetOpenUrlA;
+static func_InternetReadFile     p_InternetReadFile;
+static func_InternetCloseHandle  p_InternetCloseHandle;
+
+static struct LoadTable funcs [] = {
+                 { 0, NULL, "wininet.dll", "InternetOpenA",       (void**)&p_InternetOpenA },
+                 { 0, NULL, "wininet.dll", "InternetOpenUrlA",    (void**)&p_InternetOpenUrlA },
+                 { 0, NULL, "wininet.dll", "InternetReadFile",    (void**)&p_InternetReadFile },
+                 { 0, NULL, "wininet.dll", "InternetCloseHandle", (void**)&p_InternetCloseHandle }
+               };
+
 static DWORD download_file (const char *file, const char *url)
 {
   DWORD rc = 0;
@@ -1156,18 +1169,6 @@ static DWORD download_file (const char *file, const char *url)
                 INTERNET_FLAG_NO_UI;
   HINTERNET h1, h2;
   FILE     *fil;
-
-  func_InternetOpenA        p_InternetOpenA;
-  func_InternetOpenUrlA     p_InternetOpenUrlA;
-  func_InternetReadFile     p_InternetReadFile;
-  func_InternetCloseHandle  p_InternetCloseHandle;
-
-  struct LoadTable funcs [] = {
-                   { 0, NULL, "wininet.dll", "InternetOpenA",       (void**)&p_InternetOpenA },
-                   { 0, NULL, "wininet.dll", "InternetOpenUrlA",    (void**)&p_InternetOpenUrlA },
-                   { 0, NULL, "wininet.dll", "InternetReadFile",    (void**)&p_InternetReadFile },
-                   { 0, NULL, "wininet.dll", "InternetCloseHandle", (void**)&p_InternetCloseHandle }
-                 };
 
   if (load_dynamic_table(funcs, DIM(funcs)) != DIM(funcs))
   {
