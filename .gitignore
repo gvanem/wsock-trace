@@ -22,6 +22,9 @@ t
 *.ncb
 *.opt
 *.plg
+*.obj
+*.bat
+.depend.*
 src/Cygwin_obj/*
 src/Debug/*
 src/MSVC_obj/*
@@ -39,7 +42,6 @@ src/mhook.cpp
 src/mhook.h
 src/nm.c
 src/prnpinfo.c
-src/processes.c
 src/rcp/
 src/stkwalk-orig.cpp
 src/stkwalk-orig.h
