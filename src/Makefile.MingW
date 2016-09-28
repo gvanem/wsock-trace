@@ -10,8 +10,15 @@ USE_BFD      = 0
 USE_DEF_FILE = 0
 USE_MSVCRT10 = 0
 
-BIN_TARGET = $(realpath $(MINGW32))/bin
-LIB_TARGET = $(realpath $(MINGW32))/lib
+#
+# If you want Lua-script support, change these:
+#
+USE_LUA      = 0
+LUAJIT_ROOT ?= f:/MinGW32/src/Parsers/LuaJIT
+
+BIN_TARGET  = $(realpath $(MINGW32))/bin
+LIB_TARGET  = $(realpath $(MINGW32))/lib
+
 
 #
 # If '$(CPU)=x64', build 64-bit version. Assuming your MinGW
@@ -22,12 +29,16 @@ ifeq ($(CPU),)
   CPU = x86
 endif
 
+ifeq ($(CPU),X86)
+  CPU = x86
+endif
+
 ifeq ($(CPU),X64)
   CPU = x64
 endif
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces
 RCFLAGS = -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__
 
 ifeq ($(CPU),x64)
@@ -44,6 +55,11 @@ endif
 
 ifeq ($(USE_MSVCRT10),1)
   CFLAGS += -D__MSVCRT_VERSION__=0x0A00 -DMINGW_USE_MSVCR_100
+endif
+
+ifeq ($(USE_LUA),1)
+  CFLAGS  += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+  EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
 endif
 
 LDFLAGS += -Wl,--print-map,--sort-common -t
@@ -78,16 +94,15 @@ ifeq ($(USE_MSVCRT10),1)
   EX_LIBS += -lmsvcr100
 endif
 
-CFLAGS += -Wno-missing-braces -DWSOCK_TRACE_DLL=\"wsock_trace_mw$(X_SUFFIX).dll\"
-
 OBJ_DIR = MinGW_obj
 
-SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c bfd_gcc.c
+SOURCES = wsock_trace.c wsock_trace_lua.c init.c common.c cpu.c dump.c \
+          geoip.c in_addr.c stkwalk.c bfd_gcc.c
 
 OBJECTS  = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 DATA_OBJ = $(OBJ_DIR)/data.o
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe run_test
+all: message $(OBJ_DIR) libwsock_trace.a test.exe install
 	@echo 'Welcome to Wsock_trace library and example.'
 
 message:
@@ -109,7 +124,7 @@ ifeq ($(USE_DEF_FILE),1)
   WSOCK_DEPS += $(DEF_FILE)
 endif
 
-wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) # install
+wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_juajit_$(USE_LUA)
 	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
 	ar rs libwsock_trace.a $(DATA_OBJ)
 
@@ -123,15 +138,30 @@ test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 dump.exe: dump.c common.c in_addr.c processes.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_DUMP_DATA $^ -o $@ -lws2_32 -lole32 > dump.map
 
+geoip.exe: geoip.c common.c init.c in_addr.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE $^ -o $@ -lws2_32 -lole32 > geoip.map
+
 run_test: test.exe
 	test.exe -dd
+
+compile_juajit_0:
+	@echo
+
+#
+# Make sure the '$(LUAJIT_ROOT)/src/Makefile' specifies the same
+# '-m[32|64]' as above. I.e. 'CC = gcc -m32'
+#
+# and that 'BUILDMODE = static'.
+#
+compile_juajit_1:
+	$(MAKE) -C $(LUAJIT_ROOT)/src all
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
-	      test.exe test.map .depend.MinGW
+	      dump.exe dump.map geoip.exe geoip.map test.exe test.map .depend.MinGW
 	- rmdir $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o: %.c
