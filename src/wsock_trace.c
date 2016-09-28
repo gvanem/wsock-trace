@@ -677,6 +677,7 @@ static const char *socket_or_error (SOCK_RC_TYPE rc)
   return _itoa ((int)rc, buf, 10);
 }
 
+#if !defined(__WATCOMC__)
 static void dump_provider_path (GUID *guid)
 {
   int     error;
@@ -692,6 +693,7 @@ static void dump_provider_path (GUID *guid)
     dump_one_proto_info (NULL, buf);
   }
 }
+#endif
 
 /*
  * The actual Winsock functions we trace.
@@ -776,11 +778,13 @@ EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
            proto_info, group, wsasocket_flags_decode(flags),
            socket_or_error(rc));
 
+#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
   {
     dump_wsaprotocol_info ('A', proto_info);
     dump_provider_path (&proto_info->ProviderId);
   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -801,11 +805,13 @@ EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol, WSAPROTOCOL_INF
            proto_info, group, wsasocket_flags_decode(flags),
            socket_or_error(rc));
 
+#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
   {
     dump_wsaprotocol_info ('W', proto_info);
     dump_provider_path (&proto_info->ProviderId);
   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -823,11 +829,13 @@ EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   WSTRACE ("WSADuplicateSocketA (%u, proc-ID %lu, ...) --> %s.\n",
            SOCKET_CAST(s), process_id, get_error(rc));
 
+#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
   {
     dump_wsaprotocol_info ('A', proto_info);
     dump_provider_path (&proto_info->ProviderId);
   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -845,11 +853,13 @@ EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   WSTRACE ("WSADuplicateSocketW (%u, proc-ID %lu, ...) --> %s.\n",
             SOCKET_CAST(s), process_id, get_error(rc));
 
+#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
   {
     dump_wsaprotocol_info ('W', proto_info);
     dump_provider_path (&proto_info->ProviderId);
   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -870,11 +880,13 @@ EXPORT INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
 
   WSTRACE ("WSAAddressToStringA(). --> %s.\n", rc == 0 ? result_string : get_error(rc));
 
+#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
   {
     dump_wsaprotocol_info ('A', proto_info);
     dump_provider_path (&proto_info->ProviderId);
   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -897,11 +909,13 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
        WSTRACE ("WSAAddressToStringW(). --> %" WCHAR_FMT ".\n", result_string);
   else WSTRACE ("WSAAddressToStringW(). --> %s.\n", get_error(rc));
 
+#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
   {
     dump_wsaprotocol_info ('W', proto_info);
     dump_provider_path (&proto_info->ProviderId);
   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -1987,7 +2001,10 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
        dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
     else
     {
-      const char *a[2] = { addr, NULL };
+      const char *a[2];
+
+      a[0] = addr;
+      a[1] = NULL;
       dump_countries (type, a);
     }
   }
@@ -2246,7 +2263,7 @@ wchar_t * gai_strerrorW (int err)
 }
 #endif  /* __MINGW32__ */
 
-#if (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)) || defined(__WATCOMC__) || defined(__CYGWIN__)
+#if (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)) || defined(__WATCOMC__)
   #define ADDRINFOW  void *
   #define PADDRINFOW void *
 #endif
@@ -2284,7 +2301,7 @@ EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
 
 static const char *get_timestamp (void)
 {
-  static LARGE_INTEGER last = { 0ULL };
+  static LARGE_INTEGER last = { S64_SUFFIX(0) };
   static char          buf [40];
   SYSTEMTIME           now;
   LARGE_INTEGER        ticks;
@@ -2305,7 +2322,8 @@ static const char *get_timestamp (void)
 
          last = ticks;
          msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
-#if 0
+
+#if defined(__CYGWIN__) || defined(__WATCOMC__)  /* Doesn't seems to have 'fmodl()' */
          sprintf (buf, "%.3f msec: ", msec);
 #else
          {
