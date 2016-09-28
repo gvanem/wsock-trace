@@ -136,7 +136,7 @@ static const char *get_timestamp (void);
 #elif defined(_MSC_VER) && defined(_M_X64)
   static __inline ULONG_PTR get_EBP (void)
   {
-    return (0); /* to-do */
+    return (0); /* \todo */
   }
 
 #elif defined(__WATCOMC__)
@@ -239,6 +239,10 @@ typedef int      (WINAPI *func_WSASend) (SOCKET s, WSABUF *bufs, DWORD num_bufs,
 typedef int      (WINAPI *func_WSASendTo) (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                                            DWORD flags, const struct sockaddr *to, int to_len,
                                            WSAOVERLAPPED *ow, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
+
+typedef int      (WINAPI *func_WSAConnect) (SOCKET s, const struct sockaddr *name, int namelen,
+                                            WSABUF *lpCallerData, WSABUF *lpCalleeData, QOS *lpSQOS,
+                                            QOS *lpGQOS);
 
 typedef int    (WINAPI *func___WSAFDIsSet) (SOCKET s, fd_set *);
 
@@ -372,6 +376,7 @@ static func_WSARecvFrom              p_WSARecvFrom = NULL;
 static func_WSARecvDisconnect        p_WSARecvDisconnect = NULL;
 static func_WSASend                  p_WSASend = NULL;
 static func_WSASendTo                p_WSASendTo = NULL;
+static func_WSAConnect               p_WSAConnect = NULL;
 static func_WSAGetOverlappedResult   p_WSAGetOverlappedResult = NULL;
 static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
 static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
@@ -407,6 +412,7 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "Mswsock.dll",WSARecvEx),
               ADD_VALUE (0, "ws2_32.dll", WSASend),
               ADD_VALUE (0, "ws2_32.dll", WSASendTo),
+              ADD_VALUE (0, "ws2_32.dll", WSAConnect),
               ADD_VALUE (1, "ws2_32.dll", WSAPoll),
               ADD_VALUE (0, "ws2_32.dll", WSAGetOverlappedResult),
               ADD_VALUE (0, "ws2_32.dll", WSAEnumNetworkEvents),
@@ -516,6 +522,21 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
   va_end (args);
 }
 
+/*
+ * Save and restore WSA error-state:
+ *   push: WSAGetLastError()
+ *   pop:  WSASetLastError()
+ */
+int WSAError_save_restore (int pop)
+{
+  static int err = 0;
+
+  if (pop)
+       (*p_WSASetLastError) (err);
+  else err = (*p_WSAGetLastError)();
+  return (err);
+}
+
 static const char *get_error (SOCK_RC_TYPE rc)
 {
   if (rc != 0)
@@ -524,10 +545,11 @@ static const char *get_error (SOCK_RC_TYPE rc)
      *   "WSAECANCELLED: A call to WSALookupServiceEnd was made while this call was still processing. The call has been canceled (10103)" = 127 chars.
      */
     static char buf[150];
-    int         err = (*p_WSAGetLastError)(); /* save WSAGetLastError() */
-    const char *ret = ws_strerror (err, buf, sizeof(buf));
+    const char *ret;
+    int   err = WSAError_save_restore (0);
 
-    (*p_WSASetLastError) (err);               /* restore WSAGetLastError() */
+    ret = ws_strerror (err, buf, sizeof(buf));
+    WSAError_save_restore (1);
     return (ret);
   }
   return ("No error");
@@ -542,11 +564,11 @@ const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
   static char buf [MAX_IP6_SZ+MAX_PORT_SZ+1];
   DWORD  size = sizeof(buf);
   DWORD  len  = sa_len ? *(DWORD*)sa_len : (DWORD)sizeof(*sa);
-  int    err  = (*p_WSAGetLastError)();  /* push WSAGetLastError() */
 
+  WSAError_save_restore (0);
   if ((*p_WSAAddressToStringA)((SOCKADDR*)sa, len, NULL, buf, &size))
      strcpy (buf, "??");
-  (*p_WSASetLastError) (err);
+  WSAError_save_restore (1);
   return (buf);
 }
 
@@ -554,7 +576,7 @@ const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
  * Don't call the above 'WSAAddressToStringA()' for AF_INET/AF_INET6 addresses.
  * We do it ourself using the below sockaddr_str_port().
  */
-static const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
+const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
 {
   char *p, *q = (char*) sockaddr_str_port (sa, sa_len);
 
@@ -605,12 +627,15 @@ const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
 static const char *inet_ntop2 (const char *addr, int family)
 {
   static char buf [MAX_IP6_SZ+1];
-  int    err = (*p_WSAGetLastError)(); /* push WSAGetLastError() */
-  PCSTR  rc  = (*p_inet_ntop) (family, (void*)addr, buf, sizeof(buf));
+  PCSTR  rc;
+
+  WSAError_save_restore (0);
+  rc  = (*p_inet_ntop) (family, (void*)addr, buf, sizeof(buf));
 
   if (!rc)
      strcpy (buf, "??");
-  (*p_WSASetLastError) (err);    /* pop it. */
+
+  WSAError_save_restore (1);
   return (buf);
 }
 
@@ -900,6 +925,26 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
   return (rc);
 }
 
+EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen,
+                              WSABUF *lpCallerData, WSABUF *lpCalleeData, QOS *lpSQOS,
+                              QOS *lpGQOS)
+{
+  int rc;
+
+  INIT_PTR (p_WSAConnect);
+  rc = (*p_WSAConnect) (s, name, namelen, lpCallerData, lpCalleeData,
+                        lpSQOS, lpGQOS);
+
+  ENTER_CRIT();
+
+  WSTRACE ("WSAConnect (%u, %s, ...) --> %s.\n",
+            SOCKET_CAST(s), sockaddr_str2(name,&namelen), socket_or_error(rc));
+
+  LEAVE_CRIT();
+  return (rc);
+}
+
+
 EXPORT WSAEVENT WINAPI WSACreateEvent (void)
 {
   WSAEVENT ev;
@@ -1041,6 +1086,9 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
   WSTRACE ("accept (%u, %s) --> %s.\n",
             SOCKET_CAST(s), sockaddr_str2(addr,addr_len), socket_or_error(rc));
 
+  if (!exclude_this && g_cfg.geoip_enable)
+     dump_countries_sockaddr (addr);
+
   LEAVE_CRIT();
   return (rc);
 }
@@ -1055,6 +1103,9 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   ENTER_CRIT();
 
   WSTRACE ("bind (%u, %s) --> %s.\n", SOCKET_CAST(s), sockaddr_str2(addr,&addr_len), get_error(rc));
+
+  if (!exclude_this && g_cfg.geoip_enable)
+     dump_countries_sockaddr (addr);
 
   LEAVE_CRIT();
   return (rc);
@@ -1082,18 +1133,19 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
    *       It seems the WSAGetLastError() is not reliably returned on a non-blocking socket.
    */
   const struct sockaddr_in *sa = (const struct sockaddr_in*)addr;
-  const char               *sa_str;
   int   rc;
 
   INIT_PTR (p_connect);
   ENTER_CRIT();
 
-  sa_str = sockaddr_str2 (addr, &addr_len);
-
   rc = (*p_connect) (s, addr, addr_len);
 
   WSTRACE ("connect (%u, %s, fam %s) --> %s.\n",
-            SOCKET_CAST(s), sa_str, socket_family(sa->sin_family), get_error(rc));
+            SOCKET_CAST(s), sockaddr_str2(addr, &addr_len),
+            socket_family(sa->sin_family), get_error(rc));
+
+  if (!exclude_this && g_cfg.geoip_enable)
+     dump_countries_sockaddr (addr);
 
   LEAVE_CRIT();
   return (rc);
@@ -1130,18 +1182,18 @@ EXPORT int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
 
 EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, SELECT_LAST_TYPE tv)
 {
-  fd_set *rd_copy;
-  fd_set *wr_copy;
-  fd_set *ex_copy;
+  fd_set *rd_copy = NULL;
+  fd_set *wr_copy = NULL;
+  fd_set *ex_copy = NULL;
   char    tv_buf [50];
   int     rc;
 
   INIT_PTR (p_select);
   ENTER_CRIT();
 
-  exclude_this = exclude_list_get ("select");
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("select"));
 
-  if (!exclude_this && g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     if (!tv)
          strcpy (tv_buf, "unspec");
@@ -1163,7 +1215,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   last_wr_fd = wr_fd;
   last_ex_fd = ex_fd;
 
-  if (!exclude_this && g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char buf [20];
 
@@ -1237,6 +1289,8 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("recv"));
+
   if (rc >= 0)
   {
     if (flags & MSG_PEEK)
@@ -1246,7 +1300,7 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
   else
     g_cfg.counts.recv_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char res[100];
 
@@ -1257,12 +1311,12 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
     WSTRACE ("recv (%u, 0x%p, %d, %s) --> %s.\n",
              SOCKET_CAST(s), buf, buf_len, socket_flags(flags), res);
 
-    if (rc > 0 && !exclude_this && g_cfg.dump_data)
+    if (rc > 0 && g_cfg.dump_data)
        dump_data (buf, rc);
-
-    if (g_cfg.pcap.enable)
-       write_pcap_packet (buf, buf_len, FALSE);
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1277,6 +1331,8 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("recvfrom"));
+
   if (rc >= 0)
   {
     if (flags & MSG_PEEK)
@@ -1286,7 +1342,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
   else
     g_cfg.counts.recv_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char res[100];
 
@@ -1303,12 +1359,15 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
               SOCKET_CAST(s), buf, buf_len, socket_flags(flags),
               sockaddr_str2(from,from_len), res);
 
-    if (rc > 0 && !exclude_this && g_cfg.dump_data)
+    if (rc > 0 && g_cfg.dump_data)
        dump_data (buf, rc);
 
-    if (g_cfg.pcap.enable)
-       write_pcap_packet (buf, buf_len, FALSE);
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (from);
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1323,11 +1382,13 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("send"));
+
   if (rc >= 0)
        g_cfg.counts.send_bytes += rc;
   else g_cfg.counts.send_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char res[100];
 
@@ -1338,12 +1399,12 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
     WSTRACE ("send (%u, 0x%p, %d, %s) --> %s.\n",
              SOCKET_CAST(s), buf, buf_len, socket_flags(flags), res);
 
-    if (!exclude_this && g_cfg.dump_data)
+    if (g_cfg.dump_data)
        dump_data (buf, buf_len);
-
-    if (g_cfg.pcap.enable)
-       write_pcap_packet (buf, buf_len, TRUE);
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packet (s, buf, buf_len, TRUE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1358,11 +1419,13 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("sendto"));
+
   if (rc >= 0)
        g_cfg.counts.send_bytes += rc;
   else g_cfg.counts.send_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char res[100];
 
@@ -1374,12 +1437,15 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
               SOCKET_CAST(s), buf, buf_len, socket_flags(flags),
               sockaddr_str2(to,&to_len), res);
 
-    if (!exclude_this && g_cfg.dump_data)
+    if (g_cfg.dump_data)
        dump_data (buf, buf_len);
 
-    if (g_cfg.pcap.enable)
-       write_pcap_packet (buf, buf_len, TRUE);
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (to);
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packet (s, buf, buf_len, TRUE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1396,11 +1462,13 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecv"));
+
   if (rc == 0)
        g_cfg.counts.recv_bytes += bufs->len * num_bufs;
   else g_cfg.counts.recv_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char        res[100];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
@@ -1412,10 +1480,13 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     WSTRACE ("WSARecv (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg, ov, func, res);
 #if 0
-    if (rc > 0 && !exclude_this && g_cfg.dump_data)
+    if (rc > 0 && g_cfg.dump_data)
        dump_data (bufs->bufs, bufs->len);
 #endif
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1432,11 +1503,13 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvFrom"));
+
   if (rc >= 0)
        g_cfg.counts.recv_bytes += rc;
   else g_cfg.counts.recv_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char        res[100];
     char        nbytes[20];
@@ -1454,10 +1527,16 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
               SOCKET_CAST(s), bufs, num_bufs, nbytes, flg,
               sockaddr_str2(from,from_len), ov, func, res);
 #if 0
-    if (rc == 0 && !exclude_this && g_cfg.dump_data)
+    if (rc == 0 && g_cfg.dump_data)
        dump_data (bufs->bufs, bufs->len);
 #endif
+
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (from);
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1472,11 +1551,13 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvEx"));
+
   if (rc >= 0)
        g_cfg.counts.recv_bytes += rc;
   else g_cfg.counts.recv_errors++;
 
-  if (g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char res[100];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
@@ -1491,6 +1572,9 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
        dump_data (buf, rc);
   }
 
+  if (g_cfg.pcap.enable)
+     write_pcap_packet (s, buf, buf_len, FALSE);
+
   LEAVE_CRIT();
   return (rc);
 }
@@ -1504,11 +1588,13 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 
   ENTER_CRIT();
 
-  if (g_cfg.trace_level > 0)
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvDisconnect"));
+
+  if (!exclude_this)
   {
     WSTRACE ("WSARecvDisconnect (%u, 0x%p) --> %s.\n",
              SOCKET_CAST(s), disconnect_data, get_error(rc));
-    if (rc == 0 && !exclude_this && g_cfg.dump_data)
+    if (rc == 0 && g_cfg.dump_data)
        dump_data (disconnect_data->buf, disconnect_data->len);
   }
 
@@ -1526,7 +1612,9 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   ENTER_CRIT();
 
-  if (g_cfg.trace_level > 0)
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASend"));
+
+  if (!exclude_this)
   {
     char res[100];
     char nbytes[20];
@@ -1543,10 +1631,13 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
               SOCKET_CAST(s), bufs, num_bufs, nbytes,
               socket_flags(flags), ov, func, res);
 #if 0
-    if (rc == 0 && !exclude_this && g_cfg.dump_data)
+    if (rc == 0 && g_cfg.dump_data)
        dump_data (bufs->bufs, bufs->len);
 #endif
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1563,7 +1654,9 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
   ENTER_CRIT();
 
-  if (g_cfg.trace_level > 0)
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendTo"));
+
+  if (!exclude_this)
   {
     char res[100];
     char nbytes[20];
@@ -1580,10 +1673,16 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
               SOCKET_CAST(s), bufs, num_bufs, nbytes, socket_flags(flags),
               sockaddr_str2(to,&to_len), ov, func, res);
 #if 0
-    if (rc == 0 && !exclude_this && g_cfg.dump_data)
+    if (rc == 0 && g_cfg.dump_data)
        dump_data (bufs->bufs, bufs->len);
 #endif
+
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (to);
   }
+
+  if (g_cfg.pcap.enable)
+     write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1625,7 +1724,7 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
   WSTRACE ("WSAEnumNetworkEvents (%u, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s.\n",
             SOCKET_CAST(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc));
 
-    if (rc == 0 && !exclude_this && g_cfg.dump_wsanetwork_events)
+    if (rc == 0 && !exclude_this && g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events)
        dump_events (events);
 
   LEAVE_CRIT();
@@ -1659,9 +1758,9 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
 
   ENTER_CRIT();
 
-  exclude_this = exclude_list_get ("WSAPoll");
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAPoll"));
 
-  if (fd_array && !exclude_this && g_cfg.trace_level > 0)
+  if (!exclude_this && fd_array)
   {
     size_t size = fds * sizeof(*fd_in);
 
@@ -1671,7 +1770,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
 
   rc = (*p_WSAPoll) (fd_array, fds, timeout);
 
-  if (!exclude_this && g_cfg.trace_level > 0)
+  if (!exclude_this)
   {
     char tbuf[20];
 
@@ -1703,7 +1802,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
   return (rc);
 }
 
-/* to-do:
+/* \todo:
  */
 EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
                                               const WSAEVENT *ev,
@@ -1852,9 +1951,12 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
   {
     dump_hostent (rc);
 
-    /* to-do: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
+    /* \todo: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
      */
   }
+
+  if (rc && !exclude_this && g_cfg.geoip_enable)
+     dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
 
   LEAVE_CRIT();
   return (rc);
@@ -1878,6 +1980,17 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
 
   if (rc && !exclude_this && g_cfg.dump_hostent)
      dump_hostent (rc);
+
+  if (!exclude_this && g_cfg.geoip_enable)
+  {
+    if (rc)
+       dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
+    else
+    {
+      const char *a[2] = { addr, NULL };
+      dump_countries (type, a);
+    }
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -1978,6 +2091,9 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
   WSTRACE ("getpeername (%u, %s) --> %s.\n",
             SOCKET_CAST(s), sockaddr_str2(name,name_len), get_error(rc));
 
+  if (!exclude_this && g_cfg.geoip_enable)
+     dump_countries_sockaddr (name);
+
   LEAVE_CRIT();
   return (rc);
 }
@@ -1993,6 +2109,9 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
 
   WSTRACE ("getsockname (%u, %s) --> %s.\n",
             SOCKET_CAST(s), sockaddr_str2(name,name_len), get_error(rc));
+
+  if (!exclude_this && g_cfg.geoip_enable)
+     dump_countries_sockaddr (name);
 
   LEAVE_CRIT();
   return (rc);
@@ -2052,9 +2171,12 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   {
     dump_nameinfo (host, serv_buf, flags);
 
-    /* to-do: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
+    /* \todo: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
      */
   }
+
+  if (!exclude_this && g_cfg.geoip_enable)
+     dump_countries_sockaddr (sa);
 
   LEAVE_CRIT();
   return (rc);
@@ -2073,8 +2195,14 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
   WSTRACE ("getaddrinfo (%s, %s, ...) --> %s.\n",
            host_name, serv_name, get_error(rc));
 
-  if (rc == 0 && *res && !exclude_this && g_cfg.dump_data)
-     dump_addrinfo (*res);
+  if (rc == 0 && *res && !exclude_this)
+  {
+    if (g_cfg.dump_data)
+       dump_addrinfo (*res);
+
+    if (g_cfg.geoip_enable)
+       dump_countries_addrinfo (*res);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -2158,7 +2286,6 @@ static const char *get_timestamp (void)
 {
   static LARGE_INTEGER last = { 0ULL };
   static char          buf [40];
-
   SYSTEMTIME           now;
   LARGE_INTEGER        ticks;
   int64                clocks;
@@ -2212,8 +2339,8 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 #else
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 {
-  static int   reentry = 0;
-  char *ret = NULL;
+  static int reentry = 0;
+  char  *ret = NULL;
 
   if (reentry++)
   {
@@ -2223,14 +2350,13 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
   else
   {
     CONTEXT ctx;
-    int     err;
     HANDLE  thr = GetCurrentThread();
 
 #if !defined(USE_BFD)       /* I.e. MSVC/Watcom, not gcc */
     void   *frames [10];
     USHORT  num_frames;
 
-    err = (*p_WSAGetLastError)();
+    WSAError_save_restore (0);
     memset (frames, '\0', sizeof(frames));
     num_frames = (*p_RtlCaptureStackBackTrace) (0, DIM(frames), frames, NULL);
     if (num_frames <= 2)
@@ -2244,7 +2370,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
      */
     ret_addr = (ULONG_PTR) frames [2];
 #else
-    err = (*p_WSAGetLastError)();
+    WSAError_save_restore (0);
 #endif
 
     /* We don't need a CONTEXT_FULL; only EIP+EBP. We want the caller's address of
@@ -2271,7 +2397,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     }
 #endif
 
-    (*p_WSASetLastError) (err);
+    WSAError_save_restore (1);
   }
 
 quit:
@@ -2351,6 +2477,7 @@ static const char *set_dll_name (void)
 
 BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
+  extern void print_thread_times (HANDLE thread);
   char note[30] = "";
 
   if (dwReason == DLL_PROCESS_ATTACH)
@@ -2378,6 +2505,8 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
          break;
 
     case DLL_THREAD_DETACH:
+         if (g_cfg.trace_level >= 3)
+            print_thread_times (OpenThread(0,FALSE,GetCurrentThreadId()));
          g_cfg.counts.dll_detach++;
          TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
                ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
