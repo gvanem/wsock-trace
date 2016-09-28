@@ -11,6 +11,8 @@ struct exclude {
        uint64  num_excludes;  /* # of times this function was excluded */
      };
 
+/* \todo: rewrite this into a 'smartlist_t'.
+ */
 struct excludes {
        unsigned       list_max;
        struct exclude func [MAX_EXCLUDES];
@@ -82,6 +84,13 @@ struct config_table {
        WORD    color_trace;
        WORD    color_data;
 
+       BOOL    geoip_enable;
+       int     geoip_max_days;
+       char   *geoip4_file;
+       char   *geoip6_file;
+       char   *geoip4_url;
+       char   *geoip6_url;
+
        BOOL    msvc_only;
        BOOL    mingw_only;
        BOOL    cygwin_only;
@@ -129,8 +138,12 @@ extern BOOL exclude_list_add (const char *name);
 extern BOOL exclude_list_get (const char *fmt);
 extern BOOL exclude_list_free (void);
 
-extern size_t write_pcap_header (void);
-extern size_t write_pcap_packet (const void *pkt, size_t len, BOOL out);
+extern const char *config_file_name (void);
+extern uint64 FileTimeToUnixEpoch (const FILETIME *ft);
+
+extern size_t write_pcap_header  (void);
+extern size_t write_pcap_packet  (SOCKET s, const void *pkt, size_t len, BOOL out);
+extern size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, BOOL out);
 
 extern CRITICAL_SECTION crit_sect;
 

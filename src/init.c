@@ -13,6 +13,7 @@
 #include "bfd_gcc.h"
 #include "dump.h"
 #include "wsock_trace_lua.h"
+#include "geoip.h"
 #include "init.h"
 
 #if !defined(NO_STACK_WALK)
@@ -112,31 +113,59 @@ static BOOL image_opt_header_is_cygwin (HMODULE mod)
   return ((opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30) || wild_tstamp);
 }
 
-static int config_get_line (FILE *fil, unsigned *line,
-                            const char **key_p, const char **val_p)
+/*
+ * Return the next line from the config-file with key, value and
+ * section. Increment line of config-file.
+ */
+static int config_get_line (FILE        *fil,
+                            unsigned    *line,
+                            const char **key_p,
+                            const char **val_p,
+                            const char **section_p)
 {
-  static char key[256], val[512], val2[512];
+  static char key[256], val[512], val2[512], section[40];
+  static BOOL seen_a_section = FALSE;
   char   *p, *q;
   size_t  len;
 
   while (1)
   {
-    char buf[513];
+    char buf[500];
 
     if (!fgets(buf,sizeof(buf)-1,fil))   /* EOF */
        return (0);
 
     for (p = buf; *p && isspace(*p); )
         p++;
-    if (*p == '#' || *p == ';' ||
-        sscanf(p,"%[^= ] = %[^\r\n]", key, val) != 2)
+
+    if (*p == '#' || *p == ';')
+    {
+      (*line)++;
+      continue;
+    }
+
+    if (!seen_a_section)
+       *section = '\0';
+
+    /*
+     * Hit a '[section]' line. Let the caller switch to another config-table.
+     */
+    if (sscanf(p,"[%[^]\r\n]", section) == 1)
+    {
+      (*line)++;
+      *section_p = section;
+      seen_a_section = TRUE;
+      continue;
+    }
+
+    if (sscanf(p,"%[^= ] = %[^\r\n]", key, val) != 2)
     {
       (*line)++;
       continue;
     }
 
     q = strrchr (val, '\"');
-    p = strchr (val,';');
+    p = strchr (val, ';');
 
     /* Remove trailing comments
      */
@@ -203,7 +232,7 @@ BOOL exclude_list_free (void)
 }
 
 /*
- * to-do: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
+ * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
 BOOL exclude_list_add (const char *name)
@@ -267,154 +296,245 @@ static FILE *open_config_file (const char *base_name)
   return (fil);
 }
 
+const char *config_file_name (void)
+{
+  return (fname);
+}
+
+/*
+ * Handler for default section or '[core]' section.
+ */
+static void parse_core_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key,"trace_level"))
+     g_cfg.trace_level = atoi (val);
+
+  else if (!stricmp(key,"trace_file"))
+     g_cfg.trace_file = strdup (val);
+
+  else if (!stricmp(key,"trace_binmode"))
+     g_cfg.trace_binmode = atoi (val);
+
+  else if (!stricmp(key,"trace_caller"))
+     g_cfg.trace_caller = atoi (val);
+
+  else if (!stricmp(key,"trace_indent"))
+  {
+    g_cfg.trace_indent = atoi (val);
+    g_cfg.trace_indent = max (0, g_cfg.trace_indent);
+  }
+
+  else if (!stricmp(key,"trace_report"))
+     g_cfg.trace_report = atoi (val);
+
+  else if (!stricmp(key,"trace_max_len"))
+     g_cfg.trace_max_len = atoi (val);
+
+  else if (!stricmp(key,"trace_time"))
+     set_time_format (&g_cfg.trace_time_format, val);
+
+  else if (!stricmp(key,"pcap_enable"))
+     g_cfg.pcap.enable = atoi (val);
+
+  else if (!stricmp(key,"pcap_dump"))
+    g_cfg.pcap.dump_fname = strdup (val);
+
+  else if (!stricmp(key,"show_caller"))
+     g_cfg.show_caller = atoi (val);
+
+  else if (!stricmp(key,"demangle") || !stricmp(key,"cpp_demangle"))
+     g_cfg.cpp_demangle = atoi (val);
+
+  else if (!stricmp(key,"callee_level"))
+     g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
+
+  else if (!stricmp(key,"exclude"))
+     exclude_list_add (val);
+
+  else if (!stricmp(key,"short_errors"))
+     g_cfg.short_errors = atoi (val);
+
+  else if (!stricmp(key,"use_toolhlp32"))
+     g_cfg.use_toolhlp32 = atoi (val);
+
+  else if (!stricmp(key,"use_ole32"))
+     g_cfg.use_ole32 = atoi (val);
+
+  else if (!stricmp(key,"use_full_path"))
+     g_cfg.use_full_path = atoi (val);
+
+  else if (!stricmp(key,"color_file"))
+     get_color (val, &g_cfg.color_file);
+
+  else if (!stricmp(key,"color_time"))
+     get_color (val, &g_cfg.color_time);
+
+  else if (!stricmp(key,"color_func"))
+     get_color (val, &g_cfg.color_func);
+
+  else if (!stricmp(key,"color_trace"))
+     get_color (val, &g_cfg.color_trace);
+
+  else if (!stricmp(key,"color_data"))
+     get_color (val, &g_cfg.color_data);
+
+  else if (!stricmp(key,"compact"))
+     g_cfg.compact = atoi (val);
+
+  else if (!stricmp(key,"dump_select"))
+     g_cfg.dump_select = atoi (val);
+
+  else if (!stricmp(key,"dump_nameinfo"))
+     g_cfg.dump_nameinfo = atoi (val);
+
+  else if (!stricmp(key,"dump_protoent"))
+     g_cfg.dump_protoent = atoi (val);
+
+  else if (!stricmp(key,"dump_hostent"))
+     g_cfg.dump_hostent = atoi (val);
+
+  else if (!stricmp(key,"dump_servent"))
+     g_cfg.dump_servent = atoi (val);
+
+  else if (!stricmp(key,"dump_data"))
+     g_cfg.dump_data = atoi (val);
+
+  else if (!stricmp(key,"dump_wsaprotocol_info"))
+     g_cfg.dump_wsaprotocol_info = atoi (val);
+
+  else if (!stricmp(key,"dump_wsanetwork_events"))
+     g_cfg.dump_wsanetwork_events = atoi (val);
+
+  else if (!stricmp(key,"max_data"))
+     g_cfg.max_data = atoi (val);
+
+  else if (!stricmp(key,"start_new_line"))
+     g_cfg.start_new_line = atoi (val);
+
+  else if (!stricmp(key,"test_trace"))
+     g_cfg.test_trace = atoi (val);
+
+  else if (!stricmp(key,"msvc_only"))
+     g_cfg.msvc_only = atoi (val);
+
+  else if (!stricmp(key,"mingw_only"))
+     g_cfg.mingw_only = atoi (val);
+
+  else if (!stricmp(key,"cygwin_only"))
+     g_cfg.cygwin_only = atoi (val);
+
+  else if (!stricmp(key,"no_buffering"))
+     g_cfg.no_buffering = atoi (val);
+
+  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
+/*
+ * Handler for '[lua]' section.
+ */
+static void parse_lua_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key,"lua_init"))
+       g_cfg.lua_init_script = strdup (val);
+
+  else if (!stricmp(key,"lua_exit"))
+       g_cfg.lua_exit_script = strdup (val);
+
+  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
+/*
+ * Handler for '[geoip]' section.
+ */
+static void parse_geoip_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key,"enable"))
+       g_cfg.geoip_enable = (*val > '0') ? 1 : 0;
+
+  else if (!stricmp(key,"geoip4_file"))
+       g_cfg.geoip4_file = strdup (val);
+
+  else if (!stricmp(key,"geoip6_file"))
+       g_cfg.geoip6_file = strdup (val);
+
+  else if (!stricmp(key,"geoip4_url"))
+       g_cfg.geoip4_url = strdup (val);
+
+  else if (!stricmp(key,"geoip6_url"))
+       g_cfg.geoip6_url = strdup (val);
+
+  else if (!stricmp(key,"max_days"))
+       g_cfg.geoip_max_days = atoi (val);
+
+  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
+enum cfg_sections {
+     CFG_NONE = 0,
+     CFG_CORE,
+     CFG_LUA,
+     CFG_GEOIP
+   };
+
+static enum cfg_sections lookup_section (const char *section)
+{
+  if (!section || !stricmp(section,"core"))
+     return (CFG_CORE);
+  if (section && !stricmp(section,"lua"))
+     return (CFG_LUA);
+  if (section && !stricmp(section,"geoip"))
+     return (CFG_GEOIP);
+  return (CFG_NONE);
+}
+
 /*
  * Parse the config-file give in 'file'.
  */
 static void parse_config_file (FILE *file)
 {
-  const char *key, *val;
-  unsigned line = 0;
+  const char *key, *val, *section;
+  char        last_section[40];
+  unsigned    line = 0;
 
   str_replace ('\\', '/', fname);
+  TRACE (4, "file: %s.\n", fname);
 
-  while (config_get_line(file,&line,&key,&val))
+  while (config_get_line(file,&line,&key,&val,&section))
   {
-    TRACE (4, "%s (%u): '%s' = '%s'\n", fname, line, key, val);
+    TRACE (4, "line %u: '%s' = '%s' (section: '%s')\n", line, key, val, section);
 
     if (!*val)      /* foo = <empty value> */
        continue;
 
-    if (!stricmp(key,"trace_level"))
-       g_cfg.trace_level = atoi (val);
-
-    else if (!stricmp(key,"trace_file") && *val)
-       g_cfg.trace_file = strdup (val);
-
-    else if (!stricmp(key,"trace_binmode"))
-       g_cfg.trace_binmode = atoi (val);
-
-    else if (!stricmp(key,"trace_caller"))
-       g_cfg.trace_caller = atoi (val);
-
-    else if (!stricmp(key,"trace_indent"))
+    switch (lookup_section(section))
     {
-      g_cfg.trace_indent = atoi (val);
-      g_cfg.trace_indent = max (0, g_cfg.trace_indent);
+      case CFG_CORE:
+           parse_core_settings (key, val, line);
+           strcpy (last_section,"core");
+           break;
+      case CFG_LUA:
+           parse_lua_settings (key, val, line);
+           strcpy (last_section,"lua");
+           break;
+      case CFG_GEOIP:
+           parse_geoip_settings (key, val, line);
+           strcpy (last_section,"geoip");
+           break;
+
+      /* \todo: handle more 'key' / 'val' here by extending lookup_section(). */
+
+      default:
+           if (section[0] && stricmp(section,last_section))
+           {
+             TRACE (0, "%s (%u):\nKeyword '%s' = '%s' in unknown section '%s'.\n",
+                    fname, line, key, val, section);
+             _strlcpy (last_section, section, sizeof(last_section));
+           }
+           break;
     }
-
-    else if (!stricmp(key,"trace_report"))
-       g_cfg.trace_report = atoi (val);
-
-    else if (!stricmp(key,"trace_max_len"))
-       g_cfg.trace_max_len = atoi (val);
-
-    else if (!stricmp(key,"trace_time"))
-       set_time_format (&g_cfg.trace_time_format, val);
-
-    else if (!stricmp(key,"pcap_enable"))
-       g_cfg.pcap.enable = atoi (val);
-
-    else if (!stricmp(key,"pcap_dump"))
-      g_cfg.pcap.dump_fname = strdup (val);
-
-    else if (!stricmp(key,"show_caller"))
-       g_cfg.show_caller = atoi (val);
-
-    else if (!stricmp(key,"demangle") || !stricmp(key,"cpp_demangle"))
-       g_cfg.cpp_demangle = atoi (val);
-
-    else if (!stricmp(key,"callee_level"))
-       g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
-
-    else if (!stricmp(key,"exclude"))
-       exclude_list_add (val);
-
-    else if (!stricmp(key,"short_errors"))
-       g_cfg.short_errors = atoi (val);
-
-    else if (!stricmp(key,"use_toolhlp32"))
-       g_cfg.use_toolhlp32 = atoi (val);
-
-    else if (!stricmp(key,"use_ole32"))
-       g_cfg.use_ole32 = atoi (val);
-
-    else if (!stricmp(key,"use_full_path"))
-       g_cfg.use_full_path = atoi (val);
-
-    else if (!stricmp(key,"color_file"))
-       get_color (val, &g_cfg.color_file);
-
-    else if (!stricmp(key,"color_time"))
-       get_color (val, &g_cfg.color_time);
-
-    else if (!stricmp(key,"color_func"))
-       get_color (val, &g_cfg.color_func);
-
-    else if (!stricmp(key,"color_trace"))
-       get_color (val, &g_cfg.color_trace);
-
-    else if (!stricmp(key,"color_data"))
-       get_color (val, &g_cfg.color_data);
-
-    else if (!stricmp(key,"compact"))
-       g_cfg.compact = atoi (val);
-
-    else if (!stricmp(key,"dump_select"))
-       g_cfg.dump_select = atoi (val);
-
-    else if (!stricmp(key,"dump_nameinfo"))
-       g_cfg.dump_nameinfo = atoi (val);
-
-    else if (!stricmp(key,"dump_protoent"))
-       g_cfg.dump_protoent = atoi (val);
-
-    else if (!stricmp(key,"dump_hostent"))
-       g_cfg.dump_hostent = atoi (val);
-
-    else if (!stricmp(key,"dump_servent"))
-       g_cfg.dump_servent = atoi (val);
-
-    else if (!stricmp(key,"dump_data"))
-       g_cfg.dump_data = atoi (val);
-
-    else if (!stricmp(key,"dump_wsaprotocol_info"))
-       g_cfg.dump_wsaprotocol_info = atoi (val);
-
-    else if (!stricmp(key,"dump_wsanetwork_events"))
-       g_cfg.dump_wsanetwork_events = atoi (val);
-
-    else if (!stricmp(key,"max_data"))
-       g_cfg.max_data = atoi (val);
-
-    else if (!stricmp(key,"start_new_line"))
-       g_cfg.start_new_line = atoi (val);
-
-    else if (!stricmp(key,"test_trace"))
-       g_cfg.test_trace = atoi (val);
-
-    else if (!stricmp(key,"msvc_only"))
-       g_cfg.msvc_only = atoi (val);
-
-    else if (!stricmp(key,"mingw_only"))
-       g_cfg.mingw_only = atoi (val);
-
-    else if (!stricmp(key,"cygwin_only"))
-       g_cfg.cygwin_only = atoi (val);
-
-    else if (!stricmp(key,"no_buffering"))
-       g_cfg.no_buffering = atoi (val);
-
-    else if (!stricmp(key,"lua_init"))
-       g_cfg.lua_init_script = strdup (val);
-
-    else if (!stricmp(key,"lua_exit"))
-       g_cfg.lua_exit_script = strdup (val);
-
-    else
-       TRACE (0, "%s (%u):\nUnknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
-
-    /* to-do: handle more 'key' / 'val' here */
   }
 }
 
@@ -492,6 +612,8 @@ void wsock_trace_exit (void)
   if (fatal_error)
      g_cfg.trace_report = FALSE;
 
+#if !defined(TEST_GEOIP)
+
 #if 0
   if (!cleaned_up || startup_count > 0)
      g_cfg.trace_report = FALSE;
@@ -514,6 +636,18 @@ void wsock_trace_exit (void)
   wstrace_exit_lua (g_cfg.lua_exit_script);
 #endif
 
+#if 1
+  if (g_cfg.trace_level >= 3)
+  {
+    extern void print_perf_times (void);
+    extern void print_process_times (void);
+
+    print_perf_times();
+    print_process_times();
+  }
+#endif
+#endif  /* TEST_GEOIP */
+
   common_exit();
 
   if (g_cfg.trace_stream)
@@ -534,6 +668,20 @@ void wsock_trace_exit (void)
   if (g_cfg.lua_exit_script)
      free (g_cfg.lua_exit_script);
 
+  if (g_cfg.geoip4_file)
+     free (g_cfg.geoip4_file);
+
+  if (g_cfg.geoip6_file)
+     free (g_cfg.geoip6_file);
+
+  if (g_cfg.geoip4_url)
+     free (g_cfg.geoip4_url);
+
+  if (g_cfg.geoip6_url)
+     free (g_cfg.geoip6_url);
+
+  geoip_exit();
+
   DeleteCriticalSection (&crit_sect);
 }
 
@@ -543,18 +691,28 @@ void wsock_trace_exit (void)
 void wsock_trace_init (void)
 {
   FILE       *file;
-  char       *end;
+  char       *end, *env = getenv ("WSOCK_TRACE_LEVEL");
   const char *now;
   BOOL        okay;
   HMODULE     mod;
-  BOOL        is_msvc, is_mingw, is_cygwin;
+  BOOL        is_msvc, is_mingw, is_cygwin, open_geoip = FALSE;
 
   InitializeCriticalSection (&crit_sect);
 
   /* Set default values.
    */
   memset (&g_cfg, 0, sizeof(g_cfg));
-  g_cfg.trace_level   = 1;
+
+  /* Set trace-level before config-file could reset it.
+   */
+  if (env && isdigit(*env))
+  {
+    g_cfg.trace_level = (*env - '0');
+    g_cfg.show_caller = 1;
+  }
+  else
+    g_cfg.trace_level = 1;
+
   g_cfg.trace_max_len = 9999;      /* Infinite */
   g_cfg.screen_width  = g_cfg.trace_max_len;
   g_cfg.trace_stream  = stdout;
@@ -641,6 +799,19 @@ void wsock_trace_init (void)
     write_pcap_header();
   }
 
+#if defined(TEST_GEOIP)
+  open_geoip = TRUE;
+#endif
+
+  if (g_cfg.geoip_enable && (g_cfg.trace_level > 0 || open_geoip))
+  {
+    DWORD num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
+    DWORD num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
+
+    if (num4 == 0 && num6 == 0)
+       g_cfg.geoip_enable = FALSE;
+  }
+
   now = get_time_now();
 
   if (g_cfg.trace_level > 0 &&
@@ -718,6 +889,7 @@ void wsock_trace_init (void)
   TRACE (3, "curr_prog: '%s', curr_dir: '%s'\n"
             "  prog_dir: '%s'\n", curr_prog, curr_dir, prog_dir);
 
+#if !defined(TEST_GEOIP)
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
@@ -734,7 +906,10 @@ void wsock_trace_init (void)
 #if defined(USE_LUA)
   wstrace_init_lua (g_cfg.lua_init_script);
 #endif
+#endif  /* TEST_GEOIP */
 }
+
+#if !defined(TEST_GEOIP)
 
 /*
  * Used as e.g. 'INIT_PTR (p_WSAStartup)' which expands to
@@ -763,6 +938,7 @@ void init_ptr (const void **ptr, const char *ptr_name)
 //  exit (-1);
   }
 }
+#endif  /* TEST_GEOIP */
 
 static const struct search_list colors[] = {
                               { 0, "black"   },
@@ -908,8 +1084,7 @@ int get_column (void)
 #define TCPDUMP_MAGIC       0xA1B2C3D4
 #define PCAP_VERSION_MAJOR  2
 #define PCAP_VERSION_MINOR  4
-#define DLT_NULL            0     /* BSD loopback encapsulation */
-#define DLT_RAW             14    /* raw IP */
+#define DLT_RAW             12    /* raw IP */
 #define DLT_IPV4            228
 #define DLT_IPV6            229
 #define PROTO_TCP           6     /* on network order */
@@ -937,8 +1112,8 @@ struct pcap_file_header {
  * So use this:
  */
 struct pcap_timeval {
-       uint32_t  tv_sec;
-       uint32_t  tv_usec;
+       DWORD  tv_sec;
+       DWORD  tv_usec;
      };
 
 /*
@@ -950,12 +1125,11 @@ struct pcap_pkt_header {
        struct pcap_timeval ts;      /* time stamp */
        DWORD               caplen;  /* length of portion present */
        DWORD               len;     /* length of this packet (off wire) */
-       DWORD               family;  /* protocol family value (for DLT_NULL) */
      };
 
 struct ip_header {
        BYTE    ip_hlen : 4;    /* header length */
-       BYTE    ip_ver  : 4;    /* version 4 */
+       BYTE    ip_ver  : 4;    /* version */
        BYTE    ip_tos;         /* type of service */
        WORD    ip_len;         /* total length */
        WORD    ip_id;          /* identification */
@@ -965,6 +1139,33 @@ struct ip_header {
        WORD    ip_sum;         /* checksum */
        DWORD   ip_src;         /* source address */
        DWORD   ip_dst;         /* dest address */
+     };
+
+/*
+ * TCP header.
+ * Per RFC 793, September, 1981.
+ */
+struct tcp_header {
+       WORD    th_sport;       /* source port */
+       WORD    th_dport;       /* destination port */
+       DWORD   th_seq;         /* sequence number */
+       DWORD   th_ack;         /* acknowledgement number */
+       BYTE    th_offx2;       /* data offset, rsvd */
+       BYTE    th_flags;
+       WORD    th_win;         /* window */
+       WORD    th_sum;         /* checksum */
+       WORD    th_urp;         /* urgent pointer */
+     };
+
+/*
+ * Udp protocol header.
+ * Per RFC 768, September, 1981.
+ */
+struct udp_header {
+       WORD   uh_sport;        /* source port */
+       WORD   uh_dport;        /* destination port */
+       WORD   uh_ulen;         /* udp length */
+       WORD   uh_sum;          /* udp checksum */
      };
 
 #if defined(_MSC_VER) || defined(__CYGWIN__)
@@ -978,26 +1179,35 @@ static const void *make_ip_hdr (size_t data_len)
   static struct ip_header ip;
   static WORD   ip_id = 1;
 
+  data_len += sizeof(ip);
   memset (&ip, 0, sizeof(ip));
+  ip.ip_ver  = 4;
   ip.ip_hlen = sizeof(ip) / 4;
-  ip.ip_ver = 4;
-  ip.ip_len = swap16 ((WORD)data_len);
-  ip.ip_ttl = (BYTE) 256;
-  ip.ip_id  = ip_id++;
-  ip.ip_p   = PROTO_TCP;
+  ip.ip_len  = swap16 ((WORD)data_len);
+  ip.ip_ttl  = 255;
+  ip.ip_id   = ip_id++;
+  ip.ip_p    = PROTO_TCP;
+  ip.ip_src  = 0x10203040;
+  ip.ip_dst  = 0x50607080;
   return (&ip);
 }
 
-// to-do
-
 static const void *make_udp_hdr (int data_len)
 {
-  return (NULL);
+  static struct udp_header uh;
+
+  memset (&uh, 0xff, sizeof(uh));  /* \todo */
+  return (&uh);
 }
 
 static const void *make_tcp_hdr (int data_len)
 {
-  return (NULL);
+  static struct tcp_header th;
+
+  memset (&th, 0xff, sizeof(th));  /* \todo */
+  th.th_flags = 0;
+  th.th_offx2 = 16 * (sizeof(th)/4);
+  return (&th);
 }
 
 /*
@@ -1009,7 +1219,7 @@ static const void *make_tcp_hdr (int data_len)
  */
 #define DELTA_EPOCH_IN_USEC  U64_SUFFIX (11644473600000000)
 
-static __inline uint64 FileTimeToUnixEpoch (const FILETIME *ft)
+uint64 FileTimeToUnixEpoch (const FILETIME *ft)
 {
   uint64 res = (uint64) ft->dwHighDateTime << 32;
 
@@ -1026,8 +1236,8 @@ static void _gettimeofday (struct pcap_timeval *tv)
 
   GetSystemTimeAsFileTime (&ft);
   tim = FileTimeToUnixEpoch (&ft);
-  tv->tv_sec  = (uint32_t) (tim / 1000000L);
-  tv->tv_usec = (uint32_t) (tim % 1000000L);
+  tv->tv_sec  = (DWORD) (tim / 1000000L);
+  tv->tv_usec = (DWORD) (tim % 1000000L);
 }
 
 #if defined(__WATCOMC__)
@@ -1050,13 +1260,13 @@ size_t write_pcap_header (void)
   pf_hdr.thiszone      = 60 * _timezone;
   pf_hdr.sigfigs       = 0;
   pf_hdr.snap_len      = 64*1024;
-  pf_hdr.linktype      = DLT_RAW;
+  pf_hdr.linktype      = DLT_IPV4;
 
   rc = fwrite (&pf_hdr, 1, sizeof(pf_hdr), g_cfg.pcap.dump_stream);
   return (rc == 0 ? -1 : rc);
 }
 
-size_t write_pcap_packet (const void *pkt, size_t len, BOOL out)
+size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
 {
   struct pcap_pkt_header pc_hdr;
   size_t rc, pcap_len;
@@ -1064,19 +1274,45 @@ size_t write_pcap_packet (const void *pkt, size_t len, BOOL out)
   if (!g_cfg.pcap.dump_stream)
      return (-1);
 
-  pcap_len = len + sizeof(struct ip_header) /* + sizeof(struct tcp_header) */ ;
+  pcap_len = len + sizeof(struct ip_header) + sizeof(struct tcp_header);
   _gettimeofday (&pc_hdr.ts);
 
-  pc_hdr.len    = (DWORD) pcap_len + sizeof(pc_hdr.family);
+  pc_hdr.len    = (DWORD) pcap_len;
   pc_hdr.caplen = (DWORD) pcap_len;
-  pc_hdr.family = swap32 (AF_INET);
 
   fwrite (&pc_hdr, sizeof(pc_hdr), 1, g_cfg.pcap.dump_stream);
-  fwrite (make_ip_hdr(len), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
-//fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.pcap.dump_stream);
+
+#if 0
+  switch (lookup_sk_proto(s))
+  {
+    case IPPROTO_TCP:
+         fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
+         fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.pcap.dump_stream);
+         break;
+    case IPPROTO_UDP:
+         fwrite (make_ip_hdr(len + sizeof(struct udp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
+         fwrite (make_udp_hdr(len), sizeof(struct udp_header), 1, g_cfg.pcap.dump_stream);
+         break;
+    default:
+         return (0);
+  }
+
+#else
+  fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
+  fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.pcap.dump_stream);
+#endif
 
   rc = fwrite (pkt, 1, len, g_cfg.pcap.dump_stream);
   return (rc == 0 ? -1 : pcap_len);
+}
+
+/*
+ * As above, but an array of packets.
+ * \todo.
+ */
+size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, BOOL out)
+{
+  return (0);
 }
 
 #if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
