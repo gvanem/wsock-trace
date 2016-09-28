@@ -1,5 +1,7 @@
 #
-# Wsock-trace makefile for Cygwin.
+# Wsock-trace makefile for Cygwin32.
+# Note: CygWin64 is NOT supported.
+#
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 
@@ -9,9 +11,8 @@ USE_BFD   = 0
 BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
 
-CC      = gcc-4
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS \
-          -DWSOCK_TRACE_DLL=\"wsock_trace_cyg.dll\"
+CC      = gcc
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS
 LDFLAGS = -Wl,--print-map,--sort-common -t # -v
 
 ifeq ($(USE_DEBUG),1)
@@ -29,11 +30,12 @@ endif
 EX_LIBS += -lole32
 OBJ_DIR = Cygwin_obj
 
-SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c bfd_gcc.c
+SOURCES = wsock_trace.c init.c common.c cpu.c dump.c geoip.c \
+          in_addr.c stkwalk.c bfd_gcc.c
 
 OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe run_test
+all: message $(OBJ_DIR) libwsock_trace.a test.exe
 	@echo 'Welcome to Wsock_trace library and example.'
 
 message:
@@ -50,14 +52,21 @@ libwsock_trace.a wsock_trace_cyg.dll: $(OBJECTS)
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) $(LDFLAGS) -o $@ $^ $(EX_LIBS) > test.map
 
+dump.exe: dump.c common.c in_addr.c processes.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_DUMP_DATA $^ -o $@ -lws2_32 -lole32 > dump.map
+
+geoip.exe: geoip.c common.c init.c in_addr.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE $^ -o $@ -lws2_32 -lole32 > geoip.map
+
 run_test: test.exe
 	test.exe
 
 clean:
-	- rm -f $(OBJ_DIR)/*.o
+	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 
 vclean realclean: clean
-	rm -f libwsock_trace.a wsock_trace_cyg.dll wsock_trace_cyg.map test.exe test.map .depend.CygWin
+	rm -f libwsock_trace.a wsock_trace_cyg.dll wsock_trace_cyg.map \
+	      dump.exe dump.map geoip.exe geoip.map test.exe test.map .depend.CygWin
 	- rmdir $(OBJ_DIR)
 
 #
