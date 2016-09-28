@@ -9,7 +9,7 @@ USE_DEF_FILE = 1
 #
 # If you want Lua-script support, change these:
 #
-USE_LUA     = 1
+USE_LUA     = 0
 LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
 
 LIB_TARGET = $(VCINSTALLDIR)\lib
@@ -43,9 +43,9 @@ LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
 !if "$(USE_DEBUG)" == "1"
-CFLAGS  = $(CFLAGS) -MTd -Zi -Os -D_DEBUG
+CFLAGS  = $(CFLAGS) -MDd -Zi -Os -D_DEBUG
 !else
-CFLAGS  = $(CFLAGS) -MT -Ot -Gs -DNDEBUG
+CFLAGS  = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
 !endif
 
 #
@@ -79,10 +79,12 @@ WSOCK_LIB = wsock_trace$(X_SUFFIX).lib
 WSOCK_DLL = wsock_trace$(X_SUFFIX).dll
 WSOCK_MAP = wsock_trace$(X_SUFFIX).map
 
-CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS -DWSOCK_TRACE_DLL=\"$(WSOCK_DLL)\"
+CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
 
 OBJECTS = $(OBJ_DIR)\common.obj          \
+          $(OBJ_DIR)\cpu.obj             \
           $(OBJ_DIR)\dump.obj            \
+          $(OBJ_DIR)\geoip.obj           \
           $(OBJ_DIR)\init.obj            \
           $(OBJ_DIR)\in_addr.obj         \
           $(OBJ_DIR)\stkwalk.obj         \
@@ -93,7 +95,7 @@ OBJECTS = $(OBJ_DIR)\common.obj          \
 
 DATA_OBJ = $(OBJ_DIR)\data.obj
 
-all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe run_test install
+all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe install
 	@echo Welcome to Wsock_trace library and example.
 
 $(OBJ_DIR):
@@ -119,6 +121,10 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_LIB)
 
 dump.exe: dump.c common.c in_addr.c processes.c
 	$(CC) $(CFLAGS) -DTEST_DUMP_DATA $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib
+
+geoip.exe: geoip.c common.c in_addr.c init.c getopt.c
+	$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib > link.tmp
+	copy geoip.map + link.tmp geoip.map
 
 run_test: test.exe
 	test.exe -dd
