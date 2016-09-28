@@ -21,9 +21,11 @@ SOURCES = wsock_trace.c init.c common.c dump.c in_addr.c stkwalk.c
 
 LINK_ARG = $(OBJ_DIR)\wlink.arg
 
-OBJS = $(OBJ_DIR)\wsock_trace.obj $(OBJ_DIR)\init.obj  &
-       $(OBJ_DIR)\common.obj      $(OBJ_DIR)\dump.obj  &
-       $(OBJ_DIR)\in_addr.obj     $(OBJ_DIR)\stkwalk.obj
+OBJS = $(OBJ_DIR)\wsock_trace.obj $(OBJ_DIR)\wsock_trace_lua.obj &
+       $(OBJ_DIR)\init.obj        $(OBJ_DIR)\common.obj          &
+       $(OBJ_DIR)\cpu.obj         $(OBJ_DIR)\dump.obj            &
+       $(OBJ_DIR)\in_addr.obj     $(OBJ_DIR)\geoip.obj           &
+       $(OBJ_DIR)\stkwalk.obj
 
 #
 # The 'wsock_trace.lib' is an import-lib for 'wsock_trace.dll'.
@@ -34,11 +36,9 @@ OBJS = $(OBJ_DIR)\wsock_trace.obj $(OBJ_DIR)\init.obj  &
 WSOCK_LIB = wsock_trace_ow.lib
 WSOCK_DLL = wsock_trace_ow.dll
 
-CFLAGS = $(CFLAGS) -DWSOCK_TRACE_DLL="$(WSOCK_DLL)"
-
 TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe # dump.exe
 
-all: $(OBJ_DIR) $(TARGETS) run_test install .SYMBOLIC
+all: $(OBJ_DIR) $(TARGETS) .SYMBOLIC
 	@echo Welcome to Wsock_trace library and example.
 
 $(OBJ_DIR):
@@ -63,16 +63,25 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@
 	@echo
 
-install:
+install: .SYMBOLIC
 	copy $(WSOCK_LIB) $(LIB_TARGET)
 	copy $(WSOCK_DLL) $(BIN_TARGET)
 
-uninstall:
+uninstall: .SYMBOLIC
 	-del $(LIB_TARGET)\\$(WSOCK_LIB)
 	-del $(BIN_TARGET)\\$(WSOCK_DLL)
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj
+	@echo
+
+geoip.exe: geoip.c init.c $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR)\getopt.obj
+	$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE -fo=$(OBJ_DIR)\geoip.obj geoip.c
+	$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE -fo=$(OBJ_DIR)\init.obj init.c
+	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\geoip.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj &
+	                                $(OBJ_DIR)\init.obj  $(OBJ_DIR)\getopt.obj                      } &
+	                         library clib3$(STACK_OR_REG).lib
+	rm -f $(OBJ_DIR)\init.obj $(OBJ_DIR)\geoip.obj
 	@echo
 
 run_test: test.exe .SYMBOLIC
