@@ -1,23 +1,25 @@
 #ifndef _DUMP_H
 #define _DUMP_H
 
-extern void  check_all_search_lists (void);
-
-extern void dump_addrinfo (const struct addrinfo *ai);
-extern void dump_data     (const void *data_p, unsigned data_len);
-extern void dump_hostent  (const struct hostent *h);
-extern void dump_servent  (const struct servent *s);
-extern void dump_protoent (const struct protoent *p);
-extern void dump_nameinfo (char *host, char *serv, DWORD flags);
-
+extern void    check_all_search_lists (void);
 extern fd_set *copy_fd_set (const fd_set *fd);
-extern void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent);
 
+extern void dump_addrinfo  (const struct addrinfo *ai);
+extern void dump_data      (const void *data_p, unsigned data_len);
+extern void dump_hostent   (const struct hostent *h);
+extern void dump_servent   (const struct servent *s);
+extern void dump_protoent  (const struct protoent *p);
+extern void dump_nameinfo  (const char *host, const char *serv, DWORD flags);
+extern void dump_select    (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent);
 extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent);
 
 extern void dump_one_proto_info (const char *prefix, const char *buf);
 extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info);
 extern void dump_events (const WSANETWORKEVENTS *events);
+
+extern void dump_countries          (int type, const char **addresses);
+extern void dump_countries_sockaddr (const struct sockaddr *sa);
+extern void dump_countries_addrinfo (const struct addrinfo *ai);
 
 extern const char *socket_family (int family);
 extern const char *socket_type (int type);
