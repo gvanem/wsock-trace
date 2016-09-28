@@ -20,8 +20,8 @@
   EXPORT INT   WSAAPI inet_pton (INT Family, PCSTR pszAddrString, PVOID pAddrBuf);
 #endif
 
-extern char *wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
-extern int   wsock_trace_inet_pton (int family, const char *addr, void *dst);
+extern char       *wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
+extern int         wsock_trace_inet_pton (int family, const char *addr, void *dst);
 
 extern const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size);
 extern const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size);

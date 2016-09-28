@@ -26,8 +26,6 @@
 #include "common.h"
 #include "in_addr.h"
 
-/* .... and some more inaddr_x stuff */
-
 static const char hex_chars[] = "0123456789abcdef";
 
 /**
@@ -143,6 +141,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
   best.len  = 0;
   cur.base  = -1;
   cur.len   = 0;
+
   for (i = 0; i < (IN6ADDRSZ / INT16SZ); i++)
   {
     if (words[i] == 0)
@@ -189,10 +188,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
         (best.len == 6 || (best.len == 5 && words[5] == 0xffff)))
     {
       if (!wsock_trace_inet_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp)))
-      {
-        WSASetLastError (WSAEINVAL);
-        return (NULL);
-      }
+         goto inval;
       tp += strlen (tp);
       break;
     }
@@ -207,14 +203,13 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
 
   /* Check for overflow, copy, and we're done.
    */
-  if ((size_t)(tp - tmp) > size)
-  {
-    WSASetLastError (WSAEINVAL);
-    return (NULL);
-  }
-  return strcpy (dst, tmp);
-}
+  if ((size_t)(tp - tmp) <= size)
+     return strcpy (dst, tmp);
 
+inval:
+  WSASetLastError (WSAEINVAL);
+  return (NULL);
+}
 
 /**
  * Like inet_aton() but without all the hexadecimal and shorthand.
@@ -235,6 +230,7 @@ int wsock_trace_inet_pton4 (const char *src, u_char *dst)
   saw_digit = 0;
   octets = 0;
   *(tp = tmp) = '\0';
+
   while ((ch = *src++) != '\0')
   {
     const char *pch = strchr (digits, ch);
@@ -244,30 +240,35 @@ int wsock_trace_inet_pton4 (const char *src, u_char *dst)
       u_int New = (u_int) ((*tp * 10) + (pch - digits));
 
       if (New > 255)
-         return (0);
+         goto inval;
       *tp = New;
       if (! saw_digit)
       {
         if (++octets > 4)
-           return (0);
+           goto inval;
         saw_digit = 1;
       }
     }
     else if (ch == '.' && saw_digit)
     {
       if (octets == 4)
-         return (0);
+         goto inval;
       *++tp = '\0';
       saw_digit = 0;
     }
     else
-      return (0);
+     goto inval;
   }
-  if (octets < 4)
-     return (0);
 
-  memcpy (dst, tmp, INADDRSZ);
-  return (1);
+  if (octets >= 4)
+  {
+    memcpy (dst, tmp, INADDRSZ);
+    return (1);
+  }
+
+inval:
+  WSASetLastError (WSAEINVAL);
+  return (0);
 }
 
 /**
@@ -297,7 +298,7 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
   /* Leading :: requires some special handling.
    */
   if (*src == ':' && *++src != ':')
-     return (0);
+     goto inval;
 
   curtok = src;
   saw_xdigit = 0;
@@ -314,7 +315,7 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
       val <<= 4;
       val |= (pch - hex_chars);
       if (val > 0xffff)
-         return (0);
+         goto inval;
       saw_xdigit = 1;
       continue;
     }
@@ -324,12 +325,12 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
       if (!saw_xdigit)
       {
         if (colonp)
-           return (0);
+           goto inval;
         colonp = tp;
         continue;
       }
       if (tp + INT16SZ > endp)
-         return (0);
+         goto toolong;
 
       *tp++ = (u_char) (val >> 8) & 0xff;
       *tp++ = (u_char) (val & 0xff);
@@ -342,17 +343,19 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
     {
       tp += INADDRSZ;
       saw_xdigit = 0;
-      break;  /* '\0' was seen by inet_pton4(). */
+      break;     /* '\0' was seen by inet_pton4(). */
     }
-    return (0);
+    goto inval;
   }
+
   if (saw_xdigit)
   {
     if (tp + INT16SZ > endp)
-       return (0);
+       goto toolong;
     *tp++ = (u_char) (val >> 8) & 0xff;
     *tp++ = (u_char) val & 0xff;
   }
+
   if (colonp)
   {
     /*
@@ -369,9 +372,18 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
     }
     tp = endp;
   }
+
   if (tp != endp)
-     return (0);
+     goto toolong;
 
   memcpy (dst, tmp, IN6ADDRSZ);
   return (1);
+
+inval:
+  WSASetLastError (WSAEINVAL);
+  return (0);
+
+toolong:
+  WSASetLastError (WSAENAMETOOLONG);
+  return (0);
 }
