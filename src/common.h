@@ -101,6 +101,23 @@
          long   tv_usec;
        };
 
+  struct hostent {
+         char   *h_name;
+         char  **h_aliases;
+         short   h_addrtype;
+         short   h_length;
+         char  **h_addr_list;
+       };
+
+  /* Quality of Service */
+  #include <qos.h>
+
+  typedef struct _QualityOfService {
+          FLOWSPEC    SendingFlowspec;
+          FLOWSPEC    ReceivingFlowspec;
+          WSABUF      ProviderSpecific;
+        } QOS;
+
   typedef void (__stdcall *LPWSAOVERLAPPED_COMPLETION_ROUTINE) (DWORD, DWORD, void*, DWORD);
 
 #elif !defined(__WATCOMC__)
@@ -139,6 +156,7 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define S64_FMT        "I64d"
   #define U64_FMT        "I64u"
   #define X64_FMT        "I64X"
+  #define S64_SUFFIX(x)  (x##LL)
   #define U64_SUFFIX(x)  (x##ULL)
 
 #elif defined(_MSC_VER) || defined(_MSC_EXTENSIONS) || defined(__WATCOMC__)
@@ -146,13 +164,19 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define S64_FMT        "I64d"
   #define U64_FMT        "I64u"
   #define X64_FMT        "I64X"
+  #define S64_SUFFIX(x)  (x##i64)
   #define U64_SUFFIX(x)  (x##Ui64)
 
 #else
-  #define WCHAR_FMT      "ws"
+  #if defined(__CYGWIN__)
+    #define WCHAR_FMT    "S"
+  #else
+    #define WCHAR_FMT    "ws"
+  #endif
   #define S64_FMT        "Ld"
   #define U64_FMT        "Lu"
   #define X64_FMT        "Lx"
+  #define S64_SUFFIX(x)  (x##LL)
   #define U64_SUFFIX(x)  (x##ULL)
 #endif
 
@@ -184,17 +208,18 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
 #endif
 
 #if defined(__CYGWIN__)
-  #define FILE_EXISTS(f)  (chmod(f,0) == -1 ? 0 : 1)
-#else
-  #if 0
-    #define FILE_EXISTS(f)  (_access(f,0) == 0)
-  #else
-    static __inline int FILE_EXISTS (const char *f)
-    {
-      return (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES);
-    }
-  #endif
+  #include <sys/stat.h>
 
+  static inline int FILE_EXISTS (const char *f)
+  {
+    struct stat st;
+    return (stat(f,&st) == 0);
+  }
+#else
+  static __inline int FILE_EXISTS (const char *f)
+  {
+    return (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES);
+  }
 #endif
 
 #define loBYTE(w)       (BYTE)(w)
@@ -375,6 +400,9 @@ extern FILE * fopen_excl (const char *file, const char *mode);
 
 #if defined(__CYGWIN__)
   extern char *_itoa (int value, char *buf, int radix);
+
+  #define stricmp(s1, s2)      strcasecmp (s1, s2)
+  #define strnicmp(s1, s2, n)  strncasecmp (s1, s2, n)
 #endif
 
 #endif  /* _COMMON_H */
