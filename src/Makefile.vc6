@@ -125,6 +125,7 @@ dump.exe: dump.c common.c in_addr.c processes.c
 geoip.exe: geoip.c common.c in_addr.c init.c getopt.c
 	$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib > link.tmp
 	copy geoip.map + link.tmp geoip.map
+	del common.obj geoip.obj getopt.obj init.obj in_addr.obj
 
 run_test: test.exe
 	test.exe -dd
@@ -148,7 +149,7 @@ clean:
 vclean realclean: clean
 	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.exp     wsock_trace.pdb
 	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.exp wsock_trace_x64.pdb
-	-del test.exe test.pdb dump.exe dump.pdb
+	-del geoip.exe geoip.map geoip.pdb test.exe test.pdb dump.exe dump.pdb
 	-rd $(OBJ_DIR)
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
