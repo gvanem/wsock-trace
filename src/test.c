@@ -180,14 +180,16 @@ static void test_gethostbyaddr (void)
   ia4.s_addr = htonl (INADDR_ANY); /* 0.0.0.0 -> hostname of this machine */
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia4), AF_INET));
 
-  ia = (const char*) &ia6;
+  ia = (const char*) &ia6;         /* '::' -> hostname of this machine */
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6));
 
-  /* Some www.google.com IPv6 addresses:
+  /* Some www.google.com IPv6 addresses: Shoud be in Ireland.
    */
   TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:400F:805::1011", &ia6.s6_addr));
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6));
 
+  /* Shoud be in Finland.
+   */
   TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:4010:C07::63", &ia6.s6_addr));
   TEST_CONDITION (== 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6)); /* No reverse */
 }
@@ -228,16 +230,20 @@ static void test_getservbyport (void)
 
 static void test_getnameinfo (void)
 {
-  struct sockaddr_in sa4;
+  struct sockaddr_in  sa4;
+  struct sockaddr_in6 sa6;
+
   const struct sockaddr *sa;
   char  host[80], serv[80];
   int   flags;
 
   memset (&sa4, 0, sizeof(sa4));
+  memset (&sa6, 0, sizeof(sa6));
+
   sa4.sin_family = AF_INET;
   sa4.sin_addr.s_addr = inet_addr ("10.0.0.10");
   sa4.sin_port = htons (80);
-  sa = (const struct sockaddr*)&sa4;
+  sa = (const struct sockaddr*) &sa4;
   flags = NI_NUMERICSERV | NI_NOFQDN;
 
   TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa4), host, sizeof(host), serv, sizeof(serv), 0));
@@ -253,6 +259,15 @@ static void test_getnameinfo (void)
   sa4.sin_port = 0;
   flags = NI_DGRAM;
   TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa4), host, sizeof(host), NULL, 0, flags));
+
+  sa6.sin6_family = AF_INET6;
+  sa6.sin6_addr.s6_bytes[0] = 0x2C; /* Should return 'geo-IP: KE - Kenya'. */
+  sa6.sin6_addr.s6_bytes[1] = 0x0F;
+  sa6.sin6_addr.s6_bytes[2] = 0xF4;
+  sa6.sin6_addr.s6_bytes[3] = 0x08;
+  sa6.sin6_port = htons (80);
+  sa = (const struct sockaddr*) &sa6;
+  TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa6), host, sizeof(host), NULL, 0, flags));
 }
 
 static void test_getaddrinfo (void)
@@ -520,8 +535,8 @@ static void test_ptr_or_error64 (void)
 }
 
 /*
- * to-do: Also test if the output of the tracing is sensible.
- * to-do: print in color (OKAY=green, FAIL=red).
+ * \todo: Also test if the output of the tracing is sensible.
+ * \todo: print in color (OKAY=green, FAIL=red).
  */
 static void test_condition (int okay, const char *function)
 {
