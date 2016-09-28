@@ -10,12 +10,19 @@
 #include <sys/stat.h>
 #include <sys/utime.h>
 #include <limits.h>
+#include <errno.h>
 
 #include "common.h"
+
 #include <wininet.h>
+
 #include "init.h"
 #include "in_addr.h"
 #include "geoip.h"
+
+#if defined(__CYGWIN__)
+  #define _utime(path, buf) utime (path, buf)
+#endif
 
 static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num);
 static int geoip6_parse_entry (char *buf, unsigned *line, DWORD *num);
@@ -501,7 +508,7 @@ DWORD geoip_parse_file (const char *file, int family)
     return (0);
   }
 
-  f = fopen (file, "r");
+  f = fopen (file, "rt");
   if (!f)
   {
     TRACE (2, "Failed to open Geoip-file \"%s\". errno: %d\n", file, errno);
@@ -553,7 +560,7 @@ static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num)
   DWORD low, high;
   int   rc = 0;
 
-  for ( ; *p && isspace(*p); )
+  for ( ; *p && isspace((int)*p); )
       p++;
 
   if (*p == '#' || *p == ';')
@@ -585,7 +592,7 @@ static int geoip6_parse_entry (char *buf, unsigned *line, DWORD *num)
   char           *country, *low_str, *high_str, *strtok_state;
   int             rc = 0;
 
-  for ( ; *p && isspace(*p); )
+  for ( ; *p && isspace((int)*p); )
       p++;
 
   if (*p == '#' || *p == ';')
@@ -1178,7 +1185,7 @@ static DWORD download_file (const char *file, const char *url)
 
   h1  = (*p_InternetOpenA) ("GeoIP-update", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
   h2  = (*p_InternetOpenUrlA) (h1, url, NULL, 0, flags, (DWORD_PTR)0);
-  fil = fopen (file, "w+");
+  fil = fopen (file, "w+t");
 
   while (1)
   {
