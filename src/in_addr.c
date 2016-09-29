@@ -192,7 +192,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
       tp += strlen (tp);
       break;
     }
-    tp += sprintf (tp, "%lX", words[i]);
+    tp += sprintf (tp, "%lx", words[i]);
   }
 
   /* Was it a trailing run of 0x00's?
