@@ -315,6 +315,30 @@
 #define SIO_GET_QOS                         _WSAIORW (IOC_WS2,7)
 #endif
 
+#ifndef SIO_GET_INTERFACE_LIST
+#define SIO_GET_INTERFACE_LIST              _IOR ('t', 127, ULONG)
+#endif
+
+#ifndef SIO_GET_INTERFACE_LIST_EX
+#define SIO_GET_INTERFACE_LIST_EX           _IOR ('t', 126, ULONG)
+#endif
+
+#ifndef SIO_SET_MULTICAST_FILTER
+#define SIO_SET_MULTICAST_FILTER            _IOW ('t', 125, ULONG)
+#endif
+
+#ifndef SIO_GET_MULTICAST_FILTER
+#define SIO_GET_MULTICAST_FILTER            _IOW ('t', 124 | IOC_IN, ULONG)
+#endif
+
+#ifndef SIO_IDEAL_SEND_BACKLOG_QUERY
+#define SIO_IDEAL_SEND_BACKLOG_QUERY        _IOR ('t', 123, ULONG)
+#endif
+
+#ifndef SIO_IDEAL_SEND_BACKLOG_CHANGE
+#define SIO_IDEAL_SEND_BACKLOG_CHANGE       _IO ('t', 122)
+#endif
+
 /*
  * More missing 'SIO_x' codes.
  */
@@ -645,7 +669,13 @@ static const struct search_list sio_codes[] = {
                     ADD_VALUE (SIO_EXT_SENDMSG),
                     ADD_VALUE (SIO_SOCKET_CLOSE_NOTIFY),
                     ADD_VALUE (SIO_GET_EXTENSION_FUNCTION_POINTER),
-                    ADD_VALUE (SIO_GET_QOS)
+                    ADD_VALUE (SIO_GET_QOS),
+                    ADD_VALUE (SIO_GET_INTERFACE_LIST),
+                    ADD_VALUE (SIO_GET_INTERFACE_LIST_EX),
+                    ADD_VALUE (SIO_SET_MULTICAST_FILTER),
+                    ADD_VALUE (SIO_GET_MULTICAST_FILTER),
+                    ADD_VALUE (SIO_IDEAL_SEND_BACKLOG_QUERY),
+                    ADD_VALUE (SIO_IDEAL_SEND_BACKLOG_CHANGE)
                   };
 
 static const struct search_list wsapollfd_flgs[] = {
