@@ -502,6 +502,12 @@ static void parse_config_file (FILE *file)
   str_replace ('\\', '/', fname);
   TRACE (4, "file: %s.\n", fname);
 
+  /* If for some reason the config-file is missing a "[section]", the
+   * default section is "core". This can happen with an old 'wsock_trace'
+   * file.
+   */
+  section = "core";
+
   while (config_get_line(file,&line,&key,&val,&section))
   {
     TRACE (4, "line %u: '%s' = '%s' (section: '%s')\n", line, key, val, section);
@@ -1365,10 +1371,10 @@ static void set_invalid_handler (void)
 
   void crtdbg_init (void)
   {
-    int flags = _CRTDBG_LEAK_CHECK_DF |
+    int flags = _CRTDBG_LEAK_CHECK_DF     |
                 _CRTDBG_DELAY_FREE_MEM_DF |
-             /* _CRTDBG_CHECK_CRT_DF | */   /* Don't report allocs in CRT */
-                _CRTDBG_CHECK_ALWAYS_DF |
+             /* _CRTDBG_CHECK_CRT_DF      | */   /* Don't report allocs in CRT */
+             /* _CRTDBG_CHECK_ALWAYS_DF   | */   /* This flag makes things extremely slow */
                 _CRTDBG_ALLOC_MEM_DF;
 
     set_invalid_handler();
