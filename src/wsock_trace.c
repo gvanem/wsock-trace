@@ -272,6 +272,18 @@ typedef INT (WINAPI *func_WSAAddressToStringW) (SOCKADDR          *address,
                                                 wchar_t           *result_string,
                                                 DWORD             *result_string_len);
 
+typedef INT (WINAPI *func_WSAStringToAddressA) (char             *addressStr,
+                                                INT               addressFamily,
+                                                WSAPROTOCOL_INFOA *protocolInfo,
+                                                SOCKADDR          *address,
+                                                INT               *addressLength);
+
+typedef INT (WINAPI *func_WSAStringToAddressW) (wchar_t          *addressStr,
+                                                INT               addressFamily,
+                                                WSAPROTOCOL_INFOW *protocolInfo,
+                                                SOCKADDR          *address,
+                                                INT               *addressLength);
+
 typedef BOOL (WINAPI *func_WSAGetOverlappedResult) (SOCKET s, WSAOVERLAPPED *ov, DWORD *transfered,
                                                     BOOL wait, DWORD *flags);
 
@@ -330,6 +342,8 @@ static func_WSAEventSelect           p_WSAEventSelect = NULL;
 static func_WSAAsyncSelect           p_WSAAsyncSelect = NULL;
 static func_WSAAddressToStringA      p_WSAAddressToStringA = NULL;
 static func_WSAAddressToStringW      p_WSAAddressToStringW = NULL;
+static func_WSAStringToAddressA      p_WSAStringToAddressA = NULL;
+static func_WSAStringToAddressW      p_WSAStringToAddressW = NULL;
 static func_WSAPoll                  p_WSAPoll = NULL;
 static func___WSAFDIsSet             p___WSAFDIsSet = NULL;
 static func_accept                   p_accept = NULL;
@@ -403,6 +417,8 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSAAsyncSelect),
               ADD_VALUE (0, "ws2_32.dll", WSAAddressToStringA),
               ADD_VALUE (0, "ws2_32.dll", WSAAddressToStringW),
+              ADD_VALUE (0, "ws2_32.dll", WSAStringToAddressA),
+              ADD_VALUE (0, "ws2_32.dll", WSAStringToAddressW),
               ADD_VALUE (0, "ws2_32.dll", WSADuplicateSocketA),
               ADD_VALUE (0, "ws2_32.dll", WSADuplicateSocketW),
               ADD_VALUE (0, "ws2_32.dll", __WSAFDIsSet),
@@ -920,6 +936,47 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
   LEAVE_CRIT();
   return (rc);
 }
+
+EXPORT INT WINAPI WSAStringToAddressA (char              *addressStr,
+                                       INT                addressFamily,
+                                       WSAPROTOCOL_INFOA *protocolInfo,
+                                       SOCKADDR          *address,
+                                       INT               *addressLength)
+{
+  INT rc;
+
+  INIT_PTR (p_WSAStringToAddressA);
+  rc = (*p_WSAStringToAddressA) (addressStr, addressFamily, protocolInfo, address, addressLength);
+  ENTER_CRIT();
+
+  if (rc == 0)
+       WSTRACE ("WSAStringToAddressA(). --> ok.\n");
+  else WSTRACE ("WSAStringToAddressA(). --> %s.\n", get_error(rc));
+
+  LEAVE_CRIT();
+  return (rc);
+}
+
+EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *addressStr,
+                                       INT                addressFamily,
+                                       WSAPROTOCOL_INFOW *protocolInfo,
+                                       SOCKADDR          *address,
+                                       INT               *addressLength)
+{
+  INT rc;
+
+  INIT_PTR (p_WSAStringToAddressW);
+  rc = (*p_WSAStringToAddressW) (addressStr, addressFamily, protocolInfo, address, addressLength);
+  ENTER_CRIT();
+
+  if (rc == 0)
+       WSTRACE ("WSAStringToAddressW(). --> ok.\n");
+  else WSTRACE ("WSAStringToAddressW(). --> %s.\n", get_error(rc));
+
+  LEAVE_CRIT();
+  return (rc);
+}
+
 
 EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
                             VOID *out_buf, DWORD out_size, DWORD *size_ret,

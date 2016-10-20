@@ -110,8 +110,8 @@ EXPORTS
 ;   WSARemoveServiceClass
 ;   WSASetServiceA
 ;   WSASetServiceW
-;   WSAStringToAddressA
-;   WSAStringToAddressW
+    WSAStringToAddressA
+    WSAStringToAddressW
 ;   WSCDeinstallProvider
 ;   WSCEnableNSProvider
 ;   WSCEnumProtocols
