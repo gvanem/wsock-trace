@@ -141,6 +141,16 @@ dump.exe: dump.c common.c in_addr.c processes.c
 geoip.exe: geoip.c common.c init.c in_addr.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE $^ -o $@ -lws2_32 -lole32 > geoip.map
 
+geoip2.exe: geoip.c common.c init.c in_addr.c geoip-gen4.c geoip-gen6.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE -DUSE_GEOIP_GENERATED \
+	      geoip.c common.c init.c in_addr.c -o $@ -lws2_32 -lole32 > geoip2.map
+
+geoip-gen4.c: geoip.exe
+	geoip.exe -g4 > $@
+
+geoip-gen6.c: geoip.exe
+	geoip.exe -g6 > $@
+
 run_test: test.exe
 	test.exe -dd
 
@@ -161,7 +171,8 @@ clean:
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
-	      dump.exe dump.map geoip.exe geoip.map test.exe test.map .depend.MinGW
+	      dump.exe dump.map geoip.exe geoip.map geoip2.exe geoip2.map \
+	      geoip-gen4.c geoip-gen6.c test.exe test.map .depend.MinGW
 	- rmdir $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o: %.c

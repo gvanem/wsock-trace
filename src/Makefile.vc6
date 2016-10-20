@@ -127,6 +127,18 @@ geoip.exe: geoip.c common.c in_addr.c init.c getopt.c
 	copy geoip.map + link.tmp geoip.map
 	del common.obj geoip.obj getopt.obj init.obj in_addr.obj
 
+geoip2.exe: geoip.c common.c in_addr.c init.c getopt.c geoip-gen4.c geoip-gen6.c
+	$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE -DUSE_GEOIP_GENERATED geoip.c common.c in_addr.c init.c getopt.c \
+	      -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib > link.tmp
+	copy geoip2.map + link.tmp geoip2.map
+	del common.obj geoip.obj getopt.obj init.obj in_addr.obj
+
+geoip-gen4.c: geoip.exe
+	geoip.exe -g4 > $@
+
+geoip-gen6.c: geoip.exe
+	geoip.exe -g6 > $@
+
 run_test: test.exe
 	test.exe -dd
 
@@ -149,7 +161,9 @@ clean:
 vclean realclean: clean
 	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.exp     wsock_trace.pdb
 	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.exp wsock_trace_x64.pdb
-	-del geoip.exe geoip.map geoip.pdb test.exe test.pdb dump.exe dump.pdb
+	-del geoip.exe  geoip.map  geoip.pdb
+	-del geoip2.exe geoip2.map geoip2.pdb geoip-gen4.c geoip-gen6.c
+	-del test.exe   test.pdb   dump.exe   dump.pdb
 	-rd $(OBJ_DIR)
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
@@ -182,6 +196,7 @@ wsock_trace_x64.def: wsock_trace.def Makefile.VC6
 $(OBJ_DIR)\common.obj:      common.c common.h init.h dump.h
 $(OBJ_DIR)\data.obj:        data.c common.h in_addr.h
 $(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h wsock_trace.h
+$(OBJ_DIR)\geoip.obj:       geoip.c common.h in_addr.h init.h geoip.h
 $(OBJ_DIR)\init.obj:        init.c common.h stkwalk.h bfd_gcc.h init.h wsock_trace_lua.h wsock_trace.h
 $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
 $(OBJ_DIR)\test.obj:        test.c getopt.h
