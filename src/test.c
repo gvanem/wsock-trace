@@ -260,6 +260,7 @@ static void test_getnameinfo (void)
   flags = NI_DGRAM;
   TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa4), host, sizeof(host), NULL, 0, flags));
 
+#if !defined(__CYGWIN__) /* Doesn't like the '.s6_bytes' */
   sa6.sin6_family = AF_INET6;
   sa6.sin6_addr.s6_bytes[0] = 0x2C; /* Should return 'geo-IP: KE - Kenya'. */
   sa6.sin6_addr.s6_bytes[1] = 0x0F;
@@ -268,6 +269,7 @@ static void test_getnameinfo (void)
   sa6.sin6_port = htons (80);
   sa = (const struct sockaddr*) &sa6;
   TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa6), host, sizeof(host), NULL, 0, flags));
+#endif
 }
 
 static void test_getaddrinfo (void)
