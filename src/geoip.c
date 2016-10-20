@@ -11,11 +11,10 @@
 #include <sys/utime.h>
 #include <limits.h>
 #include <errno.h>
-
-#include "common.h"
-
+#include <windows.h>
 #include <wininet.h>
 
+#include "common.h"
 #include "init.h"
 #include "in_addr.h"
 #include "geoip.h"
@@ -40,6 +39,8 @@ struct ipv6_node {
        struct in6_addr high;
        char            country[3];
      };
+
+static BOOL use_geoip_generated = FALSE;
 
 /*
  * From Tor's src/common/container.h:
@@ -127,14 +128,14 @@ static void smartlist_free (smartlist_t *sl)
  */
 static void smartlist_free_all (smartlist_t *sl)
 {
-  if (sl)
+  if (sl && !use_geoip_generated)
   {
     int i, max = smartlist_len (sl);
 
     for (i = 0; i < max; i++)
         free (smartlist_get(sl, i));
-    smartlist_free (sl);
   }
+  smartlist_free (sl);
 }
 
 /*
@@ -169,6 +170,27 @@ static void smartlist_add (smartlist_t *sl, void *element)
   smartlist_ensure_capacity (sl, 1 + (size_t)sl->num_used);
   sl->list [sl->num_used++] = element;
 }
+
+#if defined(USE_GEOIP_GENERATED)
+/*
+ * Used to make the smartlists for the fixed arrays 'ipv4_gen_array' and 'ipv6_gen_array'.
+ * Since we know their sizes, just allocate the smartlist size once.
+ */
+static smartlist_t *smartlist_new_fixed (void *start, size_t el_size, unsigned num)
+{
+  smartlist_t *sl  = malloc (sizeof(*sl));
+  char        *ofs = (char*) start;
+  size_t       i;
+
+  sl->capacity = num;
+  sl->list     = malloc (sizeof(void*) * sl->capacity);
+  sl->num_used = 0;
+
+  for (i = 0; i < num; i++, ofs += el_size)
+      sl->list [sl->num_used++] = ofs;
+  return (sl);
+}
+#endif
 
 /*
  * Sort the members of 'sl' into an order defined by
@@ -768,6 +790,20 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 }
 
 /*
+ * To compile a version of geoip.c using '-DUSE_GEOIP_GENERATED', is
+ * bit of an "chicken and egg" problem. These 2 commands:
+ *   geoip.exe -g4 > geoip-gen4.c
+ *   geoip.exe -g6 > geoip-gen6.c
+ *
+ * will generate these files. Then geoip.c must be compiled again with
+ * '-DUSE_GEOIP_GENERATED' to make use of this faster feature.
+ */
+#if defined(USE_GEOIP_GENERATED)
+  #include "geoip-gen4.c"
+  #include "geoip-gen6.c"
+#endif
+
+/*
  * Given an IPv4 address on network order, return an ISO-3166 2 letter
  * Country-code representing the country to which that address
  * belongs, or NULL for "No geoip information available".
@@ -777,20 +813,18 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 {
   struct ipv4_node *entry = NULL;
-  DWORD  ip_num = swap32 (addr->s_addr);
+  DWORD    ip_num = swap32 (addr->s_addr);
+  char     buf [25];
+  unsigned num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
+
+  TRACE (4, "Looking for %s (%lu) in %u elements.\n",
+         wsock_trace_inet_ntop4((const u_char*)addr,buf,sizeof(buf)),
+         ip_num, num);
 
   if (geoip_ipv4_entries)
-  {
-    char buf [25];
+     entry = smartlist_bsearch (geoip_ipv4_entries, &ip_num,
+                                geoip_ipv4_compare_key_to_entry);
 
-    TRACE (4, "Looking for %s (%lu) in %u elements.\n",
-           wsock_trace_inet_ntop4((const u_char*)addr,buf,sizeof(buf)),
-           ip_num, smartlist_len(geoip_ipv4_entries));
-
-    entry = smartlist_bsearch (geoip_ipv4_entries,
-                               &ip_num,
-                               geoip_ipv4_compare_key_to_entry);
-  }
   return (entry ? entry->country : NULL);
 }
 
@@ -804,18 +838,16 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
 {
   struct ipv6_node *entry = NULL;
+  char     buf [MAX_IP6_SZ];
+  unsigned num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
 
-  if (geoip_ipv6_entries)
-  {
-    char buf [MAX_IP6_SZ];
+  TRACE (4, "Looking for %s in %u elements.\n",
+         wsock_trace_inet_ntop6((const u_char*)addr,buf,sizeof(buf)), num);
 
-    TRACE (4, "Looking for %s in %u elements.\n",
-           wsock_trace_inet_ntop6((const u_char*)addr,buf,sizeof(buf)),
-           smartlist_len(geoip_ipv6_entries));
+   if (geoip_ipv6_entries)
+      entry = smartlist_bsearch (geoip_ipv6_entries, addr,
+                                 geoip_ipv6_compare_key_to_entry);
 
-    entry = smartlist_bsearch (geoip_ipv6_entries, addr,
-                               geoip_ipv6_compare_key_to_entry);
-  }
   return (entry ? entry->country : NULL);
 }
 
@@ -829,6 +861,7 @@ int geoip_get_n_countries (DWORD *num4, DWORD *num6)
 
   if (!geoip_ipv4_entries && !geoip_ipv6_entries)
      return (0);
+
   return (1);
 }
 
@@ -1352,14 +1385,17 @@ static DWORD network_len128 (const struct in6_addr *a, const struct in6_addr *b)
   return (3*32*v3 + 2*32*v2 + 32*v1 + v0);
 }
 
-static void dump_ipv4_entries (int dump_cidr)
+static void dump_ipv4_entries (int dump_cidr, int raw)
 {
   int i, len, max = smartlist_len (geoip_ipv4_entries);
 
-  trace_puts ("IPv4 entries:\n Index: ");
-  if (dump_cidr)
-       trace_puts ("CIDR                    Country\n");
-  else trace_puts ("  IP-low      IP-high      Diff  Country\n");
+  if (!raw)
+  {
+    fputs ("IPv4 entries:\n Index: ", stdout);
+    if (dump_cidr)
+         puts ("CIDR                    Country");
+    else puts ("  IP-low      IP-high      Diff  Country");
+  }
 
   for (i = 0; i < max; i++)
   {
@@ -1372,35 +1408,46 @@ static void dump_ipv4_entries (int dump_cidr)
       DWORD addr   = swap32 (entry->low);
 
       wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
-      len = trace_printf ("%6d: %s/%d", i, low, nw_len);
+      len = printf ("%6d: %s/%d", i, low, nw_len);
     }
     else
     {
-      trace_printf ("%6d: %10lu  %10lu %8ld",
-                    i, entry->low, entry->high, (long)(entry->high - entry->low));
+      if (raw)
+           printf ("  { %10lu, %10lu, ", entry->low, entry->high);
+      else printf ("%6d: %10lu  %10lu %8ld",
+                   i, entry->low, entry->high, (long)(entry->high - entry->low));
       len = 30;
     }
-    trace_printf (" %*s %.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
+    if (raw)
+         printf (" \"%.2s\" },\n", entry->country);
+    else printf (" %*s %.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
   }
 }
 
-static void dump_ipv6_entries (int dump_cidr, int test)
+static void hex_dump (const void *data_p, size_t datalen)
+{
+  const BYTE *data = (const BYTE*) data_p;
+  UINT  i;
+
+  for (i = 0; i < datalen; i++)
+  {
+    printf ("0x%02X", (unsigned)data[i]);
+    if (i < datalen-1)
+       putchar (',');
+  }
+}
+
+static void dump_ipv6_entries (int dump_cidr, int raw)
 {
   int i, len, max = smartlist_len (geoip_ipv6_entries);
 
-  trace_printf ("IPv6 entries:\nIndex: ");
-
-  if (dump_cidr)
-       trace_printf ("%-*s Country\n", MAX_IP6_SZ-4, "CIDR");
-  else trace_printf ("%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-4, "IP-high");
-
-  if (test)
+  if (!raw)
   {
-    trace_printf ("0x0f    -> %d\n", network_len32_2(0x0f,   0));
-    trace_printf ("0x0ff   -> %d\n", network_len32_2(0x0ff,  0));
-    trace_printf ("0x3fff  -> %d\n", network_len32_2(0x3fff, 0));
-    trace_printf ("0x3ffff -> %d\n", network_len32_2(0x3ffff,0));
-    return;
+    fputs ("IPv6 entries:\nIndex: ", stdout);
+
+    if (dump_cidr)
+         printf ("%-*s Country\n", MAX_IP6_SZ-4, "CIDR");
+    else printf ("%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-4, "IP-high");
   }
 
   for (i = 0; i < max; i++)
@@ -1408,23 +1455,34 @@ static void dump_ipv6_entries (int dump_cidr, int test)
     const struct ipv6_node *entry = smartlist_get (geoip_ipv6_entries, i);
     char low  [MAX_IP6_SZ] = "?";
     char high [MAX_IP6_SZ] = "?";
+    int  nw_len;
 
     wsock_trace_inet_ntop6 ((const u_char*)&entry->low, low, sizeof(low));
+    wsock_trace_inet_ntop6 ((const u_char*)&entry->high, high, sizeof(high));
 
-    if (dump_cidr)
+    if (raw)
     {
-      int nw_len = network_len128 (&entry->high, &entry->low);
-
-      len = trace_printf ("%5d: %s/%d", i, low, nw_len);
+      fputs (" { {", stdout);
+      hex_dump (&entry->low, sizeof(entry->low));
+      fputs ("},\n"
+             "   {", stdout);
+      hex_dump (&entry->high, sizeof(entry->high));
+      fputs ("}, ", stdout);
+    }
+    else if (dump_cidr)
+    {
+      nw_len = network_len128 (&entry->high, &entry->low);
+      len = printf ("%5d: %s/%d", i, low, nw_len);
     }
     else
     {
-      wsock_trace_inet_ntop6 ((const u_char*)&entry->high, high, sizeof(high));
-      trace_printf ("%5d: %-*s %-*s", i, MAX_IP6_SZ-4, low, MAX_IP6_SZ-4, high);
+      printf ("%5d: %-*s %-*s", i, MAX_IP6_SZ-4, low, MAX_IP6_SZ-4, high);
       len = 45;
     }
-    trace_printf (" %*s %.2s - %s\n",
-                  45-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
+
+    if (raw)
+         printf ("\"%s\" },\n", entry->country);
+    else printf (" %*s %.2s - %s\n", 45-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
   }
 }
 
@@ -1438,8 +1496,8 @@ static void dump_num_ip_blocks_by_country (void)
   memset (counts4, 0, sizeof(*counts4) * num_c);
   memset (counts6, 0, sizeof(*counts6) * num_c);
 
-  trace_printf ("IPv4/6 blocks by countries:\n"
-                " Idx: Country                        IPv4  IPv6\n");
+  puts ("IPv4/6 blocks by countries:\n"
+        " Idx: Country                        IPv4  IPv6");
 
   if (geoip_ipv4_entries)
      for (i = 0; i < num_c; i++, list++)
@@ -1468,24 +1526,24 @@ static void dump_num_ip_blocks_by_country (void)
        {
          const struct ipv6_node *entry = smartlist_get (geoip_ipv6_entries, j);
          if (!strnicmp(entry->country, list->short_name, 2))
-           counts6[i]++;
+            counts6[i]++;
        }
      }
 
   list = c_list + 0;
 
   for (i = 0; i < num_c; i++, list++)
-      trace_printf (" %3d: %c%c, %-25.25s %5u  %5u\n",
-                    i, toupper(list->short_name[0]), toupper(list->short_name[1]),
-                    list->long_name, counts4[i], counts6[i]);
-  trace_puts ("\n");
+      printf (" %3d: %c%c, %-25.25s %5u  %5u\n",
+              i, toupper(list->short_name[0]), toupper(list->short_name[1]),
+              list->long_name, counts4[i], counts6[i]);
+  puts ("");
 }
 
 static void test_addr4 (const char *ip4_addr)
 {
   struct in_addr addr;
 
-  trace_printf ("%s(): ", __FUNCTION__);
+  printf ("%s(): ", __FUNCTION__);
 
   if (wsock_trace_inet_pton4((const char*)ip4_addr, (u_char*)&addr) == 1)
   {
@@ -1493,7 +1551,7 @@ static void test_addr4 (const char *ip4_addr)
     const char *cc = geoip_get_country_by_ipv4 (&addr);
 
     if (cc)
-       trace_printf ("cc: %s, %s.\n", cc, geoip_get_long_name_by_A2(cc));
+       printf ("cc: %s, %s.\n", cc, geoip_get_long_name_by_A2(cc));
     else
     {
       if (geoip_addr_is_zero(&addr,NULL))
@@ -1504,18 +1562,18 @@ static void test_addr4 (const char *ip4_addr)
          comment = "Special.";
       else if (!geoip_addr_is_global(&addr,NULL))
          comment = "Not global.";
-      trace_printf ("%s\n", comment);
+      puts (comment);
     }
   }
   else
-    trace_puts ("Invalid address.\n");
+    puts ("Invalid address.");
 }
 
 static void test_addr6 (const char *ip6_addr)
 {
   struct in6_addr addr;
 
-  trace_printf ("%s(): ", __FUNCTION__);
+  printf ("%s(): ", __FUNCTION__);
 
   if (wsock_trace_inet_pton6(ip6_addr,(u_char*)&addr) == 1)
   {
@@ -1523,7 +1581,7 @@ static void test_addr6 (const char *ip6_addr)
     const char *cc = geoip_get_country_by_ipv6 (&addr);
 
     if (cc)
-       trace_printf ("cc: %s, %s.\n", cc, geoip_get_long_name_by_A2(cc));
+       printf ("cc: %s, %s.\n", cc, geoip_get_long_name_by_A2(cc));
     else
     {
       if (geoip_addr_is_zero(NULL,&addr))
@@ -1534,11 +1592,35 @@ static void test_addr6 (const char *ip6_addr)
          comment = "Special.";
       else if (!geoip_addr_is_global(NULL,&addr))
          comment = "Not global.";
-      trace_printf ("%s\n", comment);
+      puts (comment);
     }
   }
   else
-    trace_puts ("Invalid address.\n");
+    puts ("Invalid address.");
+}
+
+static void geoip_generate_array (int family)
+{
+  int len = (family == AF_INET  && geoip_ipv4_entries) ? smartlist_len(geoip_ipv4_entries) :
+            (family == AF_INET6 && geoip_ipv6_entries) ? smartlist_len(geoip_ipv6_entries) : 0;
+  int fam = (family == AF_INET) ? '4' : '6';
+
+  printf ("\n"
+          "/*\n"
+          " * Generated array of IPv%c entries:\n"
+          " */\n"
+          "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, fam, len);
+
+  if (family == AF_INET)
+       dump_ipv4_entries (0, 1);
+  else dump_ipv6_entries (0, 1);
+
+  printf ("};\n"
+          "\n"
+          "static smartlist_t *smartlist_new_fixed_ipv%c (void)\n"
+          "{\n"
+          "  return smartlist_new_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
+          "}\n\n", fam, fam, fam, len);
 }
 
 /*
@@ -1575,19 +1657,29 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 
 static void show_help (void)
 {
-  trace_puts ("Usage: test [-cdhrnu] <-4|-6> address(es)\n"
-              "       -c:    dump addresses on CIDR form.\n"
-              "       -d:    dump address entries for countries and count of blocks.\n"
-              "       -h:    this help.\n"
-              "       -n #:  number of loops for random test.\n"
-              "       -r:    random test for '-n' rounds (default 10).\n"
-              "       -u:    test updating of geoip files.\n"
-              "       -4:    test IPv4 address(es).\n"
-              "       -6:    test IPv6 address(es).\n");
+  const char *G_option = "";
+  const char *G_help   = "";
+
+#if defined(USE_GEOIP_GENERATED)
+  G_option = "G";
+  G_help   = "       -G:    Use generated built-in IPv4/IPv6 arrays.\n";
+#endif
+
+  printf ("Usage: test [-cdg%snruh] <-4|-6> address(es)\n"
+          "       -c:    dump addresses on CIDR form.\n"
+          "       -d:    dump address entries for countries and count of blocks.\n"
+          "       -g:    generate IPv4/IPv6 tables.\n"
+          "%s"
+          "       -n #:  number of loops for random test.\n"
+          "       -r:    random test for '-n' rounds (default 10).\n"
+          "       -u:    test updating of geoip files.\n"
+          "       -4:    test IPv4 address(es).\n"
+          "       -6:    test IPv6 address(es).\n"
+          "       -h:    this help.\n", G_option, G_help);
   exit (0);
 }
 
-static void test_rand_addr4 (int loops)
+static void rand_test_addr4 (int loops)
 {
   int i;
 
@@ -1596,16 +1688,16 @@ static void test_rand_addr4 (int loops)
   for (i = 0; i < loops; i++)
   {
     struct in_addr addr;
-    char buf [20];
+    char   buf [20];
 
     make_random_addr (&addr, NULL);
     wsock_trace_inet_ntop4 ((const u_char*)&addr, buf, sizeof(buf));
-    trace_printf ("%-15s: ", buf);
+    printf ("%-15s: ", buf);
     test_addr4 (buf);
   }
 }
 
-static void test_rand_addr6 (int loops)
+static void rand_test_addr6 (int loops)
 {
   int i;
 
@@ -1614,24 +1706,30 @@ static void test_rand_addr6 (int loops)
   for (i = 0; i < loops; i++)
   {
     struct in6_addr addr;
-    char buf [MAX_IP6_SZ];
+    char   buf [MAX_IP6_SZ];
 
     make_random_addr (NULL, &addr);
     wsock_trace_inet_ntop6 ((const u_char*)&addr, buf, sizeof(buf));
-    trace_printf ("%-40s: ", buf);
+    printf ("%-40s: ", buf);
     test_addr6 (buf);
   }
 }
 
 int main (int argc, char **argv)
 {
-  int  i, c, do_cidr = 0, do_4 = 0, do_6 = 0, do_rand = 0, do_update = 0;
-  int  do_dump = 0, do_test = 0;
+  int  i, c, do_cidr = 0, do_generate = 0, do_4 = 0, do_6 = 0;
+  int  do_update = 0, do_dump = 0, do_rand = 0;
   int  loops = 10;
+
+#if defined(USE_GEOIP_GENERATED)
+  #define G_OPT "G"
+#else
+  #define G_OPT ""
+#endif
 
   wsock_trace_init();
 
-  while ((c = getopt (argc, argv, "th?cdn:ru46")) != EOF)
+  while ((c = getopt (argc, argv, "h?cdg" G_OPT "n:ru46")) != EOF)
     switch (c)
     {
       case '?':
@@ -1644,6 +1742,17 @@ int main (int argc, char **argv)
       case 'd':
            do_dump++;
            break;
+      case 'g':
+           do_generate++;
+           break;
+#if defined(USE_GEOIP_GENERATED)
+      case 'G':
+           use_geoip_generated = TRUE;
+           geoip_exit();
+           geoip_ipv4_entries = smartlist_new_fixed_ipv4();
+           geoip_ipv6_entries = smartlist_new_fixed_ipv6();
+           break;
+#endif
       case 'n':
            loops = atoi (optarg);
            break;
@@ -1659,15 +1768,19 @@ int main (int argc, char **argv)
       case '6':
            do_6 = 1;
            break;
-      case 't':
-           do_test = 1;
-           break;
     }
 
   if (!do_4 && !do_6)
      show_help();
 
-  if (!do_update)
+  if (do_update)
+  {
+    if (do_4)
+       geoip_update_file (AF_INET, FALSE);
+    if (do_6)
+       geoip_update_file (AF_INET6, FALSE);
+  }
+  else if (!use_geoip_generated)
   {
     if (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file))
     {
@@ -1685,12 +1798,14 @@ int main (int argc, char **argv)
       return (0);
     }
   }
-  else
+
+  if (do_generate)
   {
     if (do_4)
-       geoip_update_file (AF_INET, FALSE);
+       geoip_generate_array (AF_INET);
     if (do_6)
-       geoip_update_file (AF_INET6, FALSE);
+       geoip_generate_array (AF_INET6);
+    return (0);
   }
 
   argc -= optind;
@@ -1699,9 +1814,9 @@ int main (int argc, char **argv)
   if (do_dump)
   {
     if (do_4)
-       dump_ipv4_entries (do_cidr);
+       dump_ipv4_entries (do_cidr, 0);
     if (do_6)
-       dump_ipv6_entries (do_cidr, do_test);
+       dump_ipv6_entries (do_cidr, 0);
     if (do_dump >= 2 && (do_4 || do_6))
        dump_num_ip_blocks_by_country();
   }
@@ -1709,9 +1824,9 @@ int main (int argc, char **argv)
   if (do_rand)
   {
     if (do_4)
-       test_rand_addr4 (loops);
+       rand_test_addr4 (loops);
     if (do_6)
-       test_rand_addr6 (loops);
+       rand_test_addr6 (loops);
   }
   else
   {
