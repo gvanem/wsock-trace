@@ -57,7 +57,7 @@ dump_wsaprotocol_info  = 1         # Dump the WSAPROTOCOL_INFO[A|W] structure in
 dump_wsanetwork_events = 1         # Dump the WSAEVENT array from WSAEnumNetworkEvents().
 
 dump_data   = 1                    # Dump data in recv(), recvfrom(), send() and sendto().
-max_data    = 1000                 # but not more than 'max_data'.
+max_data    = 5000                 # but not more than 'max_data'.
 
 msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
 mingw_only  = 0                    # Trace only MingW programs using the wsock_trace.dll
@@ -107,8 +107,8 @@ lua_exit = %HOME%\wsock_trace_exit.lua
 enable   = 1
 max_days = 10   # max allowed days old before forcing an update
 
-geoip4_file = %APPDATA%\geoip
-geoip6_file = %APPDATA%\geoip6
+geoip4_file = %HOME%\geoip
+geoip6_file = %HOME%\geoip6
 
 geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
 geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
