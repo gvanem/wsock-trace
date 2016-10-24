@@ -1601,15 +1601,18 @@ static void test_addr6 (const char *ip6_addr)
 
 static void geoip_generate_array (int family)
 {
-  int len = (family == AF_INET  && geoip_ipv4_entries) ? smartlist_len(geoip_ipv4_entries) :
-            (family == AF_INET6 && geoip_ipv6_entries) ? smartlist_len(geoip_ipv6_entries) : 0;
-  int fam = (family == AF_INET) ? '4' : '6';
+  int    len = (family == AF_INET  && geoip_ipv4_entries) ? smartlist_len(geoip_ipv4_entries) :
+               (family == AF_INET6 && geoip_ipv6_entries) ? smartlist_len(geoip_ipv6_entries) : 0;
+  int    fam = (family == AF_INET) ? '4' : '6';
+  time_t now = time (NULL);
 
   printf ("\n"
           "/*\n"
-          " * Generated array of IPv%c entries:\n"
+          " * This file was generated at %.24s.\n"
+          " * by the Makefile command: \"geoip.exe -g%c > geoip-gen%c.c\"\n"
+          " * DO NOT EDIT!\n"
           " */\n"
-          "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, fam, len);
+          "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", ctime(&now), fam, fam, fam, fam, len);
 
   if (family == AF_INET)
        dump_ipv4_entries (0, 1);
