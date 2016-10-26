@@ -1385,12 +1385,12 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 
     if (ai->ai_family == AF_INET)
     {
-      sa4 = (const struct sockaddr_in*) &ai->ai_addr;
+      sa4 = (const struct sockaddr_in*) ai->ai_addr;
       cc  = geoip_get_country_by_ipv4 (&sa4->sin_addr);
     }
     else if (ai->ai_family == AF_INET6)
     {
-      sa6 = (const struct sockaddr_in6*) &ai->ai_addr;
+      sa6 = (const struct sockaddr_in6*) ai->ai_addr;
       cc  = geoip_get_country_by_ipv6 (&sa6->sin6_addr);
     }
     else
