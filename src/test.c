@@ -274,8 +274,14 @@ static void test_getnameinfo (void)
 
 static void test_getaddrinfo (void)
 {
-  if (chatty >= 2)
-    TEST_CONDITION (== 0, puts ("  Not finished yet."));
+  struct addrinfo hints;
+  struct addrinfo *res = NULL;
+
+  memset (&hints, 0, sizeof(hints));
+  hints.ai_family   = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  TEST_CONDITION (== 0, getaddrinfo ("www.ssllabs.com", "443", &hints, &res));
 }
 
 static SOCKET s1, s2;
