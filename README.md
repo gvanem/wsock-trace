@@ -50,8 +50,11 @@ a simplified version of the MaxMind GeiIP-databases.
    therein should be self-explanatory. If `wsock_trace` is not found in one of
    the above directories, the default `trace_level` is set to 1.
 
-   You should copy the containing `wsock_trace` here at GitHub (or in the .zip-file)
-    to your `%HOME` or `%APPDATA` directory. This is on the form:
+   You should copy the following files (here at GitHub) to your `%HOME` or `%APPDATA`
+   directory:
+    `wsock_trace`, `geoip` and `geoip6`
+
+    These environment variables are on the form:
   * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
   * `<drive>:\Users\<User Name>\AppData\Roaming`.               (Win-Vista+)
 
