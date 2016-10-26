@@ -52,7 +52,11 @@ a simplified version of the MaxMind GeiIP-databases.
 
    You should copy the following files (here at GitHub) to your `%HOME` or `%APPDATA`
    directory:
-    `wsock_trace`, `geoip` and `geoip6`
+    ```
+    wsock_trace
+    geoip
+    geoip6
+    ```
 
     These environment variables are on the form:
   * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
