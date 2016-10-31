@@ -724,6 +724,7 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 
   if (startup_count < INT_MAX)
      startup_count++;
+  cleaned_up = 0;
 
   ENTER_CRIT();
   WSTRACE ("WSAStartup (%u.%u) --> %s.\n",
@@ -743,8 +744,6 @@ EXPORT int WINAPI WSACleanup (void)
 
   ENTER_CRIT();
   WSTRACE ("WSACleanup() --> %s.\n", get_error(rc));
-
-//unload_dynamic_table (dyn_funcs, DIM(dyn_funcs));
 
   if (startup_count > 0)
   {
@@ -1526,7 +1525,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
                            DWORD *flags, WSAOVERLAPPED *ov,
                            LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc;
+  int rc, i;
 
   INIT_PTR (p_WSARecv);
   rc = (*p_WSARecv) (s, bufs, num_bufs, num_bytes, flags, ov, func);
@@ -1544,16 +1543,20 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     char        res[100];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
 
-    if (rc != 0)
+    if (rc == SOCKET_ERROR)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING (997)");
+    else strcpy (res, "<Pending>");
 
     WSTRACE ("WSARecv (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg, ov, func, res);
-#if 0
-    if (rc > 0 && g_cfg.dump_data)
-       dump_data (bufs->bufs, bufs->len);
-#endif
+
+    if (g_cfg.dump_data)
+    {
+      const WSABUF *iov = bufs;
+
+      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
+          dump_datav (iov, i);
+    }
   }
 
   if (g_cfg.pcap.enable)
@@ -1567,7 +1570,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
                                DWORD *flags, struct sockaddr *from, INT *from_len,
                                WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc;
+  int rc, i;
 
   INIT_PTR (p_WSARecvFrom);
   rc = (*p_WSARecvFrom) (s, bufs, num_bufs, num_bytes, flags, from, from_len, ov, func);
@@ -1590,17 +1593,21 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
          _itoa (*num_bytes, nbytes, 10);
     else strcpy (nbytes, "??");
 
-    if (rc != 0)
+    if (rc == SOCKET_ERROR)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING (997)");
+    else strcpy (res, "<Pending>");
 
     WSTRACE ("WSARecvFrom (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, nbytes, flg,
               sockaddr_str2(from,from_len), ov, func, res);
-#if 0
-    if (rc == 0 && g_cfg.dump_data)
-       dump_data (bufs->bufs, bufs->len);
-#endif
+
+    if (rc > 0 && g_cfg.dump_data)
+    {
+      const WSABUF *iov = bufs;
+
+      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
+          dump_datav (iov, i);
+    }
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (from);
@@ -1633,12 +1640,13 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
     char res[100];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
 
-    if (rc >= 0)
-        sprintf (res, "%d bytes", rc);
-    else strcpy (res, get_error(rc));
+    if (rc == SOCKET_ERROR)
+         strcpy (res, get_error(rc));
+    else sprintf (res, "%d bytes", rc);
 
     WSTRACE ("WSARecvEx (%u, 0x%p, %d, <%s>) --> %s.\n",
              SOCKET_CAST(s), buf, buf_len, flg, res);
+
     if (rc > 0 && !exclude_this && g_cfg.dump_data)
        dump_data (buf, rc);
   }
@@ -1665,7 +1673,7 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
   {
     WSTRACE ("WSARecvDisconnect (%u, 0x%p) --> %s.\n",
              SOCKET_CAST(s), disconnect_data, get_error(rc));
-    if (rc == 0 && g_cfg.dump_data)
+    if (rc == NO_ERROR && g_cfg.dump_data)
        dump_data (disconnect_data->buf, disconnect_data->len);
   }
 
@@ -1676,7 +1684,7 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                            DWORD flags, WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc;
+  int rc, i;
 
   INIT_PTR (p_WSASend);
   rc = (*p_WSASend) (s, bufs, num_bufs, num_bytes, flags, ov, func);
@@ -1694,17 +1702,21 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
          _itoa (*num_bytes, nbytes, 10);
     else strcpy (nbytes, "??");
 
-    if (rc != 0)
+    if (rc == SOCKET_ERROR)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING (997)");
+    else strcpy (res, "<Pending>");
 
     WSTRACE ("WSASend (%u, 0x%p, %lu, %s, <%s>, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, nbytes,
               socket_flags(flags), ov, func, res);
-#if 0
-    if (rc == 0 && g_cfg.dump_data)
-       dump_data (bufs->bufs, bufs->len);
-#endif
+
+    if (g_cfg.dump_data)
+    {
+      const WSABUF *iov = bufs;
+
+      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
+          dump_datav (iov, i);
+    }
   }
 
   if (g_cfg.pcap.enable)
@@ -1718,7 +1730,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
                              DWORD flags, const struct sockaddr *to, int to_len,
                              WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc;
+  int rc, i;
 
   INIT_PTR (p_WSASendTo);
   rc = (*p_WSASendTo) (s, bufs, num_bufs, num_bytes, flags, to, to_len, ov, func);
@@ -1736,17 +1748,21 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
          _itoa (*num_bytes, nbytes, 10);
     else strcpy (nbytes, "??");
 
-    if (rc != 0)
+    if (rc == SOCKET_ERROR)
          strcpy (res, get_error(rc));
-    else strcpy (res, "WSA_IO_PENDING (997)");
+    else strcpy (res, "<pending>");
 
     WSTRACE ("WSASendTo (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, nbytes, socket_flags(flags),
               sockaddr_str2(to,&to_len), ov, func, res);
-#if 0
-    if (rc == 0 && g_cfg.dump_data)
-       dump_data (bufs->bufs, bufs->len);
-#endif
+
+    if (g_cfg.dump_data)
+    {
+      const WSABUF *iov = bufs;
+
+      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
+          dump_datav (iov, i);
+    }
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (to);
