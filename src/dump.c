@@ -870,7 +870,7 @@ const char *ioctlsocket_cmd_name (long cmd)
 #define CHECK_MAX_DATA(ofs) \
         (g_cfg.max_data > 0 && (ofs) >= (unsigned)g_cfg.max_data-1)
 
-void dump_data (const void *data_p, unsigned data_len)
+static void dump_data_internal (const void *data_p, unsigned data_len, const char *prefix)
 {
   const BYTE *data = (const BYTE*) data_p;
   UINT  i = 0, j, ofs;
@@ -883,6 +883,14 @@ void dump_data (const void *data_p, unsigned data_len)
   for (ofs = 0; ofs < data_len; ofs += 16)
   {
     trace_indent (g_cfg.trace_indent+2);
+
+    if (prefix)
+    {
+      if (ofs == 0)
+           trace_puts (prefix);
+      else trace_indent (strlen(prefix)-4); /* -4 because of 2*"~x" below */
+    }
+
     trace_puts (str_hex_word(ofs));
     trace_puts (": ");
 
@@ -921,6 +929,19 @@ void dump_data (const void *data_p, unsigned data_len)
     trace_printf ("<%d more bytes...>\n", data_len-1-ofs-i);
   }
   trace_puts ("~0");
+}
+
+void dump_data (const void *data_p, unsigned data_len)
+{
+  dump_data_internal (data_p, data_len, NULL);
+}
+
+void dump_datav (const WSABUF *buf, int iov_num)
+{
+  char iov_buf[30];
+
+  snprintf (iov_buf, sizeof(iov_buf), "~3iov %d:~4 ", iov_num);
+  dump_data_internal (buf->buf, buf->len, iov_buf);
 }
 
 static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out)
