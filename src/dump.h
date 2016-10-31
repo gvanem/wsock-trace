@@ -6,7 +6,8 @@ extern fd_set *copy_fd_set (const fd_set *fd);
 
 extern void dump_addrinfo  (const struct addrinfo *ai);
 extern void dump_data      (const void *data_p, unsigned data_len);
-extern void dump_datav     (const WSABUF *buf, int iov_num);
+extern void dump_wsabuf    (const WSABUF *bufs, DWORD num_bufs);
+
 extern void dump_hostent   (const struct hostent *h);
 extern void dump_servent   (const struct servent *s);
 extern void dump_protoent  (const struct protoent *p);

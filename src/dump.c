@@ -936,12 +936,17 @@ void dump_data (const void *data_p, unsigned data_len)
   dump_data_internal (data_p, data_len, NULL);
 }
 
-void dump_datav (const WSABUF *buf, int iov_num)
+void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
 {
-  char iov_buf[30];
+  int i;
 
-  snprintf (iov_buf, sizeof(iov_buf), "~3iov %d:~4 ", iov_num);
-  dump_data_internal (buf->buf, buf->len, iov_buf);
+  for (i = 0; i < (int)num_bufs && bufs; i++, bufs++)
+  {
+    char prefix[30];
+
+    snprintf (prefix, sizeof(prefix), "~3iov %d:~4 ", i);
+    dump_data_internal (bufs->buf, bufs->len, prefix);
+  }
 }
 
 static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out)

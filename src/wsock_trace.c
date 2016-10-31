@@ -1525,7 +1525,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
                            DWORD *flags, WSAOVERLAPPED *ov,
                            LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc, i;
+  int rc;
 
   INIT_PTR (p_WSARecv);
   rc = (*p_WSARecv) (s, bufs, num_bufs, num_bytes, flags, ov, func);
@@ -1551,12 +1551,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
               SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg, ov, func, res);
 
     if (g_cfg.dump_data)
-    {
-      const WSABUF *iov = bufs;
-
-      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
-          dump_datav (iov, i);
-    }
+       dump_wsabuf (bufs, num_bufs);
   }
 
   if (g_cfg.pcap.enable)
@@ -1570,7 +1565,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
                                DWORD *flags, struct sockaddr *from, INT *from_len,
                                WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc, i;
+  int rc;
 
   INIT_PTR (p_WSARecvFrom);
   rc = (*p_WSARecvFrom) (s, bufs, num_bufs, num_bytes, flags, from, from_len, ov, func);
@@ -1602,12 +1597,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
               sockaddr_str2(from,from_len), ov, func, res);
 
     if (rc > 0 && g_cfg.dump_data)
-    {
-      const WSABUF *iov = bufs;
-
-      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
-          dump_datav (iov, i);
-    }
+       dump_wsabuf (bufs, num_bufs);
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (from);
@@ -1684,7 +1674,7 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                            DWORD flags, WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc, i;
+  int rc;
 
   INIT_PTR (p_WSASend);
   rc = (*p_WSASend) (s, bufs, num_bufs, num_bytes, flags, ov, func);
@@ -1711,12 +1701,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
               socket_flags(flags), ov, func, res);
 
     if (g_cfg.dump_data)
-    {
-      const WSABUF *iov = bufs;
-
-      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
-          dump_datav (iov, i);
-    }
+       dump_wsabuf (bufs, num_bufs);
   }
 
   if (g_cfg.pcap.enable)
@@ -1730,7 +1715,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
                              DWORD flags, const struct sockaddr *to, int to_len,
                              WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc, i;
+  int rc;
 
   INIT_PTR (p_WSASendTo);
   rc = (*p_WSASendTo) (s, bufs, num_bufs, num_bytes, flags, to, to_len, ov, func);
@@ -1757,12 +1742,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
               sockaddr_str2(to,&to_len), ov, func, res);
 
     if (g_cfg.dump_data)
-    {
-      const WSABUF *iov = bufs;
-
-      for (i = 0; i < (int)num_bufs && iov; i++, iov++)
-          dump_datav (iov, i);
-    }
+       dump_wsabuf (bufs, num_bufs);
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (to);
