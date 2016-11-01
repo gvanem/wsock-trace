@@ -282,6 +282,7 @@ static void test_getaddrinfo (void)
   hints.ai_socktype = SOCK_STREAM;
 
   TEST_CONDITION (== 0, getaddrinfo ("www.ssllabs.com", "443", &hints, &res));
+  TEST_CONDITION (== 0, getaddrinfo ("localhost", NULL, &hints, &res));
 }
 
 static SOCKET s1, s2;
