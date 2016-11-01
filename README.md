@@ -253,7 +253,7 @@ whatever calls you like.
 
 -------------
 
-G. Vanem <gvanem@yahoo.no> 2013 - 2015.
+G. Vanem <gvanem@yahoo.no> 2013 - 2016.
 
 Footnotes:
 
