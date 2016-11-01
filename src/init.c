@@ -941,10 +941,7 @@ void init_ptr (const void **ptr, const char *ptr_name)
   }
 
   if (cleaned_up)
-  {
-    TRACE (0, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
-//  exit (-1);
-  }
+     TRACE (0, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
 #endif  /* TEST_GEOIP */
 
