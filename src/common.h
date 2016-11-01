@@ -355,8 +355,8 @@ struct WSAE_search_list {
 /* Search-list type for GUIDs.
  */
 struct GUID_search_list {
-       const char *name;
        GUID        guid;
+       const char *name;
      };
 
 /* Generic table for loading DLLs and functions from them.

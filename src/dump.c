@@ -1505,14 +1505,14 @@ void dump_events (const WSANETWORKEVENTS *events)
  *   https://msdn.microsoft.com/en-us/library/windows/desktop/bb736550(v=vs.85).aspx
  */
 static const struct GUID_search_list extension_guids[] = {
-                 { "WSAID_ACCEPTEX",             WSAID_ACCEPTEX },
-                 { "WSAID_CONNECTEX",            WSAID_CONNECTEX },
-                 { "WSAID_DISCONNECTEX",         WSAID_DISCONNECTEX },
-                 { "WSAID_GETACCEPTEXSOCKADDRS", WSAID_GETACCEPTEXSOCKADDRS },
-                 { "WSAID_TRANSMITFILE",         WSAID_TRANSMITFILE },
-                 { "WSAID_TRANSMITPACKETS",      WSAID_TRANSMITPACKETS },
-                 { "WSAID_WSARECVMSG",           WSAID_WSARECVMSG },
-                 { "WSAID_WSASENDMSG",           WSAID_WSASENDMSG }
+                 ADD_VALUE (WSAID_ACCEPTEX),
+                 ADD_VALUE (WSAID_CONNECTEX),
+                 ADD_VALUE (WSAID_DISCONNECTEX),
+                 ADD_VALUE (WSAID_GETACCEPTEXSOCKADDRS),
+                 ADD_VALUE (WSAID_TRANSMITFILE),
+                 ADD_VALUE (WSAID_TRANSMITPACKETS),
+                 ADD_VALUE (WSAID_WSARECVMSG),
+                 ADD_VALUE (WSAID_WSASENDMSG)
                };
 
 void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
