@@ -1494,6 +1494,45 @@ void dump_events (const WSANETWORKEVENTS *events)
   trace_puts ("~0");
 }
 
+/*
+ * Dump the GUIDs and the address of the assosiated extension-function.
+ * Called from 'WSAIoctl()' when 'code == SIO_GET_EXTENSION_FUNCTION_POINTER'.
+ *
+ * \todo: During init, hook all these extension functions in-case a wsock_trace
+ *        user wants to use them. Thus allowing a trace of these.
+ *
+ * Listed at:
+ *   https://msdn.microsoft.com/en-us/library/windows/desktop/bb736550(v=vs.85).aspx
+ */
+static const struct GUID_search_list extension_guids[] = {
+                 { "WSAID_ACCEPTEX",             WSAID_ACCEPTEX },
+                 { "WSAID_CONNECTEX",            WSAID_CONNECTEX },
+                 { "WSAID_DISCONNECTEX",         WSAID_DISCONNECTEX },
+                 { "WSAID_GETACCEPTEXSOCKADDRS", WSAID_GETACCEPTEXSOCKADDRS },
+                 { "WSAID_TRANSMITFILE",         WSAID_TRANSMITFILE },
+                 { "WSAID_TRANSMITPACKETS",      WSAID_TRANSMITPACKETS },
+                 { "WSAID_WSARECVMSG",           WSAID_WSARECVMSG },
+                 { "WSAID_WSASENDMSG",           WSAID_WSASENDMSG }
+               };
+
+void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
+{
+  const GUID *guid = &extension_guids[0].guid;
+  const char *name = "Unknown extension";
+  int   i;
+
+  for (i = 0; i < DIM(extension_guids); guid = &extension_guids[++i].guid)
+  {
+    if (!memcmp(in_guid,guid,sizeof(*guid)))
+    {
+      name = extension_guids[i].name;
+      break;
+    }
+  }
+  trace_indent (g_cfg.trace_indent+2);
+  trace_printf ("~4GUID %s -> %s (0x%p)~0\n", get_guid_string(in_guid), name, out_buf);
+}
+
 static const struct search_list test_list_1[] = {
                               { 0, "foo"    },
                               { 1, "bar"    },

@@ -18,6 +18,7 @@ extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent);
 extern void dump_one_proto_info (const char *prefix, const char *buf);
 extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info);
 extern void dump_events (const WSANETWORKEVENTS *events);
+extern void dump_extension_funcs (const GUID *guid, const void *out_buf);
 
 extern void dump_countries          (int type, const char **addresses);
 extern void dump_countries_sockaddr (const struct sockaddr *sa);
