@@ -888,7 +888,7 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
     {
       if (ofs == 0)
            trace_puts (prefix);
-      else trace_indent (strlen(prefix)-4); /* -4 because of 2*"~x" below */
+      else trace_indent (strlen(prefix));
     }
 
     trace_puts (str_hex_word(ofs));
@@ -944,7 +944,7 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
   {
     char prefix[30];
 
-    snprintf (prefix, sizeof(prefix), "~3iov %d:~4 ", i);
+    snprintf (prefix, sizeof(prefix), "iov %d: ", i);
     dump_data_internal (bufs->buf, bufs->len, prefix);
   }
 }
