@@ -864,7 +864,7 @@ const char *ioctlsocket_cmd_name (long cmd)
 
 /*
  * One dump-line is like:
- * "  77:    0000: 47 45 54 20 2F 20 48 54 54 50 2F 31 2E 31 0D 0A GET / HTTP/1.1..\n"
+ * "<prefix> 0000: 47 45 54 20 2F 20 48 54 54 50 2F 31 2E 31 0D 0A GET / HTTP/1.1..\n"
  *
  */
 #define CHECK_MAX_DATA(ofs) \
@@ -874,9 +874,6 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
 {
   const BYTE *data = (const BYTE*) data_p;
   UINT  i = 0, j, ofs;
-
-  if (g_cfg.max_data <= 0)
-     return;
 
   trace_puts ("~4");
 
@@ -933,12 +930,16 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
 
 void dump_data (const void *data_p, unsigned data_len)
 {
-  dump_data_internal (data_p, data_len, NULL);
+  if (g_cfg.max_data > 0)
+     dump_data_internal (data_p, data_len, NULL);
 }
 
 void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
 {
   int i;
+
+  if (g_cfg.max_data <= 0)
+     return;
 
   for (i = 0; i < (int)num_bufs && bufs; i++, bufs++)
   {
