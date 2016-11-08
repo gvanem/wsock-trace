@@ -80,6 +80,10 @@
 #define SO_CONDITIONAL_ACCEPT 0x3002
 #endif
 
+#ifndef SO_UPDATE_CONNECT_CONTEXT
+#define SO_UPDATE_CONNECT_CONTEXT 0x7010
+#endif
+
 #ifndef IP_HOPLIMIT
 #define IP_HOPLIMIT 21
 #endif
@@ -409,6 +413,7 @@ static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_MAX_MSG_SIZE),
                     ADD_VALUE (SO_PROTOCOL_INFO),
                     ADD_VALUE (SO_CONDITIONAL_ACCEPT),
+                    ADD_VALUE (SO_UPDATE_CONNECT_CONTEXT),
                     ADD_VALUE (PVD_CONFIG)
                   };
 
