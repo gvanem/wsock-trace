@@ -1303,13 +1303,17 @@ static const char *dump_aliases (char **aliases)
   return (result);
 }
 
-static void trace_printf_cc (const char            *cc,
+/*
+ * \todo: Optionally use MaxMind's Geoip*.mmdb files and print the location (city) too.
+ */
+static void trace_printf_cc (const char            *country_code,
+                             const char            *location,
                              const struct in_addr  *a4,
                              const struct in6_addr *a6,
                              const void            *next_addr)
 {
-  if (cc)
-       trace_printf ("%s - %s", cc, geoip_get_long_name_by_A2(cc));
+  if (country_code)
+       trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
   else if (geoip_addr_is_zero(a4,a6))
        trace_puts ("NULL-addr");
   else if (geoip_addr_is_multicast(a4,a6))
@@ -1323,6 +1327,8 @@ static void trace_printf_cc (const char            *cc,
   if (next_addr)
        trace_puts (", ");
   else trace_putc ('.');
+
+  ARGSUSED (location);
 }
 
 void dump_countries (int type, const char **addresses)
@@ -1336,26 +1342,29 @@ void dump_countries (int type, const char **addresses)
 
   for (i = 0; addresses && addresses[i]; i++)
   {
-    const struct in_addr  *a4 = NULL;
-    const struct in6_addr *a6 = NULL;
-    const char            *cc = NULL;
+    const struct in_addr  *a4  = NULL;
+    const struct in6_addr *a6  = NULL;
+    const char            *cc  = NULL;
+    const char            *loc = NULL;
 
     if (type == AF_INET)
     {
       a4 = (const struct in_addr*) addresses[i];
       cc = geoip_get_country_by_ipv4 (a4);
+  //  loc = geoip_get_location_by_ipv4 (a4);
     }
     else if (type == AF_INET6)
     {
       a6 = (const struct in6_addr*) addresses[i];
       cc = geoip_get_country_by_ipv6 (a6);
+  //  loc = geoip_get_location_by_ipv6 (a6);
     }
     else
     {
       trace_printf ("Unknown family: %d.", type);
       break;
     }
-    trace_printf_cc (cc, a4, a6, addresses[i+1]);
+    trace_printf_cc (cc, loc, a4, a6, addresses[i+1]);
   }
   if (i == 0)
        trace_puts ("None!?\n~0");
@@ -1409,6 +1418,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
     const struct sockaddr_in  *sa4 = NULL;
     const struct sockaddr_in6 *sa6 = NULL;
     const char                *cc  = NULL;
+    const char                *loc = NULL;
 
     if (ai->ai_family == AF_INET)
     {
@@ -1425,7 +1435,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
       trace_printf ("Unknown family: %d.", ai->ai_family);
       break;
     }
-    trace_printf_cc (cc,
+    trace_printf_cc (cc, loc,
                      sa4 ? &sa4->sin_addr : NULL,
                      sa6 ? &sa6->sin6_addr : NULL,
                      ai->ai_next);
@@ -1505,15 +1515,15 @@ void dump_events (const WSANETWORKEVENTS *events)
  *   https://msdn.microsoft.com/en-us/library/windows/desktop/bb736550(v=vs.85).aspx
  */
 static const struct GUID_search_list extension_guids[] = {
-                 ADD_VALUE (WSAID_ACCEPTEX),
-                 ADD_VALUE (WSAID_CONNECTEX),
-                 ADD_VALUE (WSAID_DISCONNECTEX),
-                 ADD_VALUE (WSAID_GETACCEPTEXSOCKADDRS),
-                 ADD_VALUE (WSAID_TRANSMITFILE),
-                 ADD_VALUE (WSAID_TRANSMITPACKETS),
-                 ADD_VALUE (WSAID_WSARECVMSG),
-                 ADD_VALUE (WSAID_WSASENDMSG)
-               };
+                    ADD_VALUE (WSAID_ACCEPTEX),
+                    ADD_VALUE (WSAID_CONNECTEX),
+                    ADD_VALUE (WSAID_DISCONNECTEX),
+                    ADD_VALUE (WSAID_GETACCEPTEXSOCKADDRS),
+                    ADD_VALUE (WSAID_TRANSMITFILE),
+                    ADD_VALUE (WSAID_TRANSMITPACKETS),
+                    ADD_VALUE (WSAID_WSARECVMSG),
+                    ADD_VALUE (WSAID_WSASENDMSG)
+                  };
 
 void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
 {
