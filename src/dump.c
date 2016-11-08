@@ -76,8 +76,35 @@
 #define TCP_DELAY_FIN_ACK 13
 #endif
 
+/*
+ * Missing 'SO_x' codes.
+ */
+#ifndef SO_BSP_STATE
+#define SO_BSP_STATE              0x1009
+#endif
+
 #ifndef SO_CONDITIONAL_ACCEPT
-#define SO_CONDITIONAL_ACCEPT 0x3002
+#define SO_CONDITIONAL_ACCEPT     0x3002
+#endif
+
+#ifndef SO_PAUSE_ACCEPT
+#define SO_PAUSE_ACCEPT           0x3003
+#endif
+
+#ifndef SO_RANDOMIZE_PORT
+#define SO_RANDOMIZE_PORT         0x3005
+#endif
+
+#ifndef SO_PORT_SCALABILITY
+#define SO_PORT_SCALABILITY       0x3006
+#endif
+
+#ifndef SO_REUSE_UNICASTPORT
+#define SO_REUSE_UNICASTPORT      0x3007
+#endif
+
+#ifndef SO_REUSE_MULTICASTPORT
+#define SO_REUSE_MULTICASTPORT    0x3008
 #endif
 
 #ifndef SO_UPDATE_CONNECT_CONTEXT
@@ -390,6 +417,8 @@
   #define SIO_QUERY_RSS_SCALABILITY_INFO    _WSAIOR  (IOC_VENDOR, 210)
 #endif
 
+
+
 static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_DEBUG),
                     ADD_VALUE (SO_ACCEPTCONN),
@@ -414,6 +443,29 @@ static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_PROTOCOL_INFO),
                     ADD_VALUE (SO_CONDITIONAL_ACCEPT),
                     ADD_VALUE (SO_UPDATE_CONNECT_CONTEXT),
+                    ADD_VALUE (SO_BSP_STATE),
+                    ADD_VALUE (SO_CONNDATA),
+                    ADD_VALUE (SO_CONNDATALEN),
+                    ADD_VALUE (SO_CONNECT_TIME),
+                    ADD_VALUE (SO_CONNOPT),
+                    ADD_VALUE (SO_CONNOPTLEN),
+                    ADD_VALUE (SO_DISCDATA),
+                    ADD_VALUE (SO_DISCDATALEN),
+                    ADD_VALUE (SO_DISCOPT),
+                    ADD_VALUE (SO_DISCOPTLEN),
+                    ADD_VALUE (SO_DONTLINGER),
+                    ADD_VALUE (SO_EXCLUSIVEADDRUSE),
+                    ADD_VALUE (SO_MAXDG),
+                    ADD_VALUE (SO_MAXPATHDG),
+                    ADD_VALUE (SO_OPENTYPE),
+                    ADD_VALUE (SO_PAUSE_ACCEPT),
+                    ADD_VALUE (SO_PORT_SCALABILITY),
+                    ADD_VALUE (SO_PROTOCOL_INFOA),
+                    ADD_VALUE (SO_PROTOCOL_INFOW),
+                    ADD_VALUE (SO_RANDOMIZE_PORT),
+                    ADD_VALUE (SO_REUSE_UNICASTPORT),
+                    ADD_VALUE (SO_REUSE_MULTICASTPORT),
+                    ADD_VALUE (SO_UPDATE_ACCEPT_CONTEXT),
                     ADD_VALUE (PVD_CONFIG)
                   };
 
