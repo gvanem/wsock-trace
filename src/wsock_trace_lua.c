@@ -71,22 +71,19 @@ static void wstrace_lua_print_stack (void)
     printf ("\t%s:", ar.short_src);
     if (ar.currentline > 0)
        printf ("%d:", ar.currentline);
-    if (*ar.namewhat != '\0') {  /* is there a name? */
+    if (*ar.namewhat != '\0')    /* is there a name? */
        printf (" in function " LUA_QS, ar.name);
-    }
     else
     {
       if (*ar.what == 'm')  /* main? */
-        printf (" in main chunk");
+           printf (" in main chunk");
       else if (*ar.what == 'C' || *ar.what == 't')
-        printf (" ?");  /* C function or tail call */
-      else
-        printf (" in function <%s:%d>",
-                ar.short_src, ar.linedefined);
+           printf (" ?");   /* C function or tail call */
+      else printf (" in function <%s:%d>", ar.short_src, ar.linedefined);
     }
-    printf("\n");
+    printf ("\n");
   }
-  printf( "Lua stack depth: %d\n", level-1);
+  printf ("Lua stack depth: %d\n", level-1);
 }
 
 static int wstrace_lua_panic (lua_State *l)
@@ -107,7 +104,7 @@ void wstrace_init_lua (const char *script)
   luaL_openlibs (L);    /* Load Lua libraries */
 
   /* Set up the 'panic' handler, which let's us control.
-  */
+   */
   lua_atpanic (L, wstrace_lua_panic);
 
   luaopen_wsock_trace (L);
@@ -132,7 +129,7 @@ static const struct luaL_reg wstrace_lua_table[] = {
  * The open() function for normal Lua-5.x.
  * This function is marked as a DLL-export.
  *
- * Note: Is is possible that if a script says:
+ * Note: It is possible that if a script says:
  *  local ws = require "wsock_trace"
  *
  * and the running program is linked to e.g. "wsock_trace_mw.dll", we
@@ -172,6 +169,5 @@ int l_WSAStartup (WORD ver, WSADATA *data)
   LUA_TRACE (1, "func_sig: ~5'%s'\n", func_sig);
   return (0);
 }
-
 #endif /* USE_LUA */
 
