@@ -1,0 +1,80 @@
+Bundled Lua 5.3.3 README for wsock-trace
+
+
+If you like to compile wsock-trace with (experimental) LUA scripting capabilities, and for all of us to be on the same page, you should be using this or any later version of LUA.
+
+The steps to manually build LUA from source using MSVC, and to create this directory structure are as follows (skip step 1 & 2 if you're using the bundled version):
+
+Note: replace "5.3" with your version of LUA
+
+1. Get the latest release
+
+2. Unpack
+
+3. Open a MSVC Developer Command Prompt and navigate to the src folder
+
+4. Compile all the .c code (this will create a lot of .obj files): 
+	
+	cl /MD /O2 /c /DLUA_BUILD_AS_DLL *.c
+
+5. Rename "lua.obj" and "luac.obj" to "lua.o" and "luac.o" respectively
+
+6. Link all other .obj files: 
+
+	link /DLL /IMPLIB:lua5.3.lib /OUT:lua5.3.dll *.obj
+	
+7. Create lua5.3-static.lib from all other.obj files:
+
+	lib /OUT:lua5.3-static.lib *.obj
+	
+8. Create the interpreter:
+
+	link /OUT:lua.exe lua.o lua5.3.lib
+	
+9. Create the compiler:
+
+	link /OUT:luac.exe luac.o lua5.3-static.lib
+	
+10. Organize the files to the following tree:
+
+\Lua
+  \5.3
+    \doc (documentation)
+    \src (source code)
+    \lua (lua libraries - empty)
+    \lib (static libraries)
+	  \lua5.3.exp
+	  \lua5.3.lib
+	  \lua5.3-static.lib
+	  \luac.exp
+	  \luac.lib
+    \include (relevant header files from the src folder)
+      \lauxlib.h
+      \lua.h
+      \lua.hpp
+      \luaconf.h
+      \lualib.h
+    \lua.exe
+    \lua5.3.dll
+    \luac.exe
+	
+11. Set environment variables:
+
+	LUA_DIR = [absolute path to Lua\5.3 folder]
+	
+	LUA_CPATH = ?.dll;%LUA_DIR%\?.dll
+	
+	LUA_PATH = ?.lua;%LUA_DIR%\lua\?.lua
+
+12. Add the Lua\5.3 folder to your path (optional)
+
+13. To get the C API in Visual Studio working (optional):
+
+	1. Open your project
+	2. Open your project's Properties (Alt + Enter)
+	3. Add "$(LUA_DIR)/include" to C++/General/Additional Include Directories
+	4. Add "$(LUA_DIR)/lib" to Linker/General/Additional Library Directories
+	4. Add "lua5.3.lib" to Linker/Input/Additional Dependencies
+
+
+print('That\'s it!')
