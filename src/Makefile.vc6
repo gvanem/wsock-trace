@@ -12,8 +12,8 @@ USE_DEF_FILE = 1
 USE_LUA     = 0
 LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
 
-LIB_TARGET = $(VCINSTALLDIR)\lib
-BIN_TARGET = $(VCINSTALLDIR)\bin
+LIB_TARGET = $(VCINSTALLDIR)lib
+BIN_TARGET = $(VCINSTALLDIR)bin
 
 #
 # Set '%WANT_64_BITS%=1' to build a 64-bit version. Adds a '_x64' suffix to
@@ -107,13 +107,13 @@ $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(
 	copy $(WSOCK_MAP) + link.tmp $(WSOCK_MAP)
 
 install:
-	copy $(WSOCK_LIB)               $(LIB_TARGET)
-	copy $(WSOCK_DLL)               $(BIN_TARGET)
-	copy wsock_trace$(X_SUFFIX).pdb $(BIN_TARGET)
+	copy $(WSOCK_LIB)               "$(LIB_TARGET)"
+	copy $(WSOCK_DLL)               "$(BIN_TARGET)"
+	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
 
 uninstall:
-	-del $(LIB_TARGET)\\$(WSOCK_LIB)
-	-del $(BIN_TARGET)\\$(WSOCK_DLL)
+	-del $(LIB_TARGET)\$(WSOCK_LIB)
+	-del $(BIN_TARGET)\$(WSOCK_DLL)
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_LIB)
 	link $(LDFLAGS) -out:$@ -pdb:$*.pdb $** $(WSOCK_LIB) > link.tmp
