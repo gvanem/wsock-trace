@@ -95,6 +95,33 @@ static const char *get_timestamp (void);
 #define POP_WARN_FORMAT()  ((void)0)
 #endif
 
+/*
+ * There is some difference between some Winsock prototypes in MS-SDK's
+ * versuses MinGW-TDM/MinGW-w64 headers. This is to fit the
+ * 'const struct timeval*' parameter in 'select()' etc.
+ */
+#if defined(__MINGW64_VERSION_MAJOR)
+  #define CONST_PTIMEVAL   const PTIMEVAL
+#else
+  #define CONST_PTIMEVAL   const struct timeval *
+#endif
+
+/*
+ * More hacks for string parameters to 'WSAConnectByNameA()'. According to
+ * MSDN:
+ *   https://msdn.microsoft.com/en-us/library/windows/desktop/ms741557(v=vs.85).aspx
+ *
+ * they want an 'LPSTR' for 'node_name' and 'service_name'. Hence so does MinGW.
+ * But the <winsockk2.h> in the WindowsKit wants an 'LPCSTR'.
+ *
+ * Funny enough, 'WSAConnectByNameW()' doesn't want a 'const wide-string'.
+ */
+#if defined(_MSC_VER) && defined(_CRT_BEGIN_C_HEADER)
+  #define CONST_LPSTR  LPCSTR
+#else
+  #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
+#endif
+
 
 /*
  * A WSTRACE() macro for the WinSock calls we support.
@@ -169,7 +196,7 @@ typedef int     (WINAPI *func_shutdown) (SOCKET s, int how);
 typedef int     (WINAPI *func_closesocket) (SOCKET s);
 typedef int     (WINAPI *func_connect) (SOCKET s, const struct sockaddr *addr, int addr_len);
 typedef int     (WINAPI *func_ioctlsocket) (SOCKET s, long opt, u_long *arg);
-typedef int     (WINAPI *func_select) (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, const struct timeval *timeout);
+typedef int     (WINAPI *func_select) (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, CONST_PTIMEVAL timeout);
 typedef int     (WINAPI *func_listen) (SOCKET s, int backlog);
 typedef int     (WINAPI *func_recv) (SOCKET s, char *buf, int buf_len, int flags);
 typedef int     (WINAPI *func_recvfrom) (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len);
@@ -241,8 +268,38 @@ typedef int      (WINAPI *func_WSASendTo) (SOCKET s, WSABUF *bufs, DWORD num_buf
                                            WSAOVERLAPPED *ow, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
 
 typedef int      (WINAPI *func_WSAConnect) (SOCKET s, const struct sockaddr *name, int namelen,
-                                            WSABUF *lpCallerData, WSABUF *lpCalleeData, QOS *lpSQOS,
-                                            QOS *lpGQOS);
+                                            WSABUF *caller_data, WSABUF *callee_data, QOS *SQOS,
+                                            QOS *GQOS);
+
+
+typedef BOOL   (WINAPI *func_WSAConnectByList) (SOCKET               s,
+                                                SOCKET_ADDRESS_LIST *socket_addr_list,
+                                                DWORD               *local_addr_len,
+                                                SOCKADDR            *local_addr,
+                                                DWORD               *remote_addr_len,
+                                                SOCKADDR            *remote_addr,
+                                                CONST_PTIMEVAL       timeout,
+                                                WSAOVERLAPPED       *reserved);
+
+typedef BOOL   (WINAPI *func_WSAConnectByNameA) (SOCKET              s,
+                                                 CONST_LPSTR         node_name,
+                                                 CONST_LPSTR         service_name,
+                                                 DWORD              *local_addr_len,
+                                                 SOCKADDR           *local_addr,
+                                                 DWORD              *remote_addr_len,
+                                                 SOCKADDR           *remote_addr,
+                                                 CONST_PTIMEVAL      timeout,
+                                                 WSAOVERLAPPED      *reserved);
+
+typedef BOOL   (WINAPI *func_WSAConnectByNameW) (SOCKET              s,
+                                                 LPWSTR              node_name,
+                                                 LPWSTR              service_name,
+                                                 DWORD              *local_addr_len,
+                                                 SOCKADDR           *local_addr,
+                                                 DWORD              *remote_addr_len,
+                                                 SOCKADDR           *remote_addr,
+                                                 CONST_PTIMEVAL      timeout,
+                                                 WSAOVERLAPPED      *reserved);
 
 typedef int    (WINAPI *func___WSAFDIsSet) (SOCKET s, fd_set *);
 
@@ -391,6 +448,9 @@ static func_WSARecvDisconnect        p_WSARecvDisconnect = NULL;
 static func_WSASend                  p_WSASend = NULL;
 static func_WSASendTo                p_WSASendTo = NULL;
 static func_WSAConnect               p_WSAConnect = NULL;
+static func_WSAConnectByNameA        p_WSAConnectByNameA = NULL;
+static func_WSAConnectByNameW        p_WSAConnectByNameW = NULL;
+static func_WSAConnectByList         p_WSAConnectByList = NULL;
 static func_WSAGetOverlappedResult   p_WSAGetOverlappedResult = NULL;
 static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
 static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
@@ -429,6 +489,9 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSASend),
               ADD_VALUE (0, "ws2_32.dll", WSASendTo),
               ADD_VALUE (0, "ws2_32.dll", WSAConnect),
+              ADD_VALUE (1, "ws2_32.dll", WSAConnectByList),   /* Windows Vista+ */
+              ADD_VALUE (1, "ws2_32.dll", WSAConnectByNameA),  /* Windows Vista+ */
+              ADD_VALUE (1, "ws2_32.dll", WSAConnectByNameW),  /* Windows Vista+ */
               ADD_VALUE (1, "ws2_32.dll", WSAPoll),
               ADD_VALUE (0, "ws2_32.dll", WSAGetOverlappedResult),
               ADD_VALUE (0, "ws2_32.dll", WSAEnumNetworkEvents),
@@ -981,39 +1044,158 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
                             VOID *out_buf, DWORD out_size, DWORD *size_ret,
                             WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
-  int rc;
+  const char *in_out = "";
+  int   rc;
 
   INIT_PTR (p_WSAIoctl);
   rc = (*p_WSAIoctl) (s, code, vals, size_in, out_buf, out_size, size_ret, ov, func);
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAIoctl (%u, %s, ...) --> %s.\n",
-            SOCKET_CAST(s), get_sio_name(code), socket_or_error(rc));
+  if (code & IOC_INOUT)
+    in_out = " (RW)";
+  else if (code & IOC_OUT)
+    in_out = " (R)";
+  else if (code & IOC_IN)
+    in_out = " (W)";
+  else if (code & IOC_VOID)
+    in_out = " (N)";
+
+  WSTRACE ("WSAIoctl (%u, %s%s, ...) --> %s.\n",
+            SOCKET_CAST(s), get_sio_name(code), in_out, socket_or_error(rc));
+
+  /* Dump known extension functions by GUID.
+   */
+  if (g_cfg.trace_level > 0 && code == SIO_GET_EXTENSION_FUNCTION_POINTER &&
+      size_in == sizeof(GUID) && out_size == sizeof(void*))
+     dump_extension_funcs (vals, out_buf);
 
   LEAVE_CRIT();
   return (rc);
 }
 
 EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen,
-                              WSABUF *lpCallerData, WSABUF *lpCalleeData, QOS *lpSQOS,
-                              QOS *lpGQOS)
+                              WSABUF *caller_data, WSABUF *callee_data, QOS *SQOS, QOS *GQOS)
 {
   int rc;
 
   INIT_PTR (p_WSAConnect);
-  rc = (*p_WSAConnect) (s, name, namelen, lpCallerData, lpCalleeData,
-                        lpSQOS, lpGQOS);
+  rc = (*p_WSAConnect) (s, name, namelen, caller_data, callee_data, SQOS, GQOS);
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAConnect (%u, %s, ...) --> %s.\n",
-            SOCKET_CAST(s), sockaddr_str2(name,&namelen), socket_or_error(rc));
+  WSTRACE ("WSAConnect (%u, %s, %p, %p, ...) --> %s.\n",
+            SOCKET_CAST(s), sockaddr_str2(name,&namelen),
+            caller_data, callee_data, socket_or_error(rc));
+
+#if 0
+  if (!exclude_this && g_cfg.dump_data)
+   {
+     dump_wsabuf (caller_data, 1);
+     dump_wsabuf (callee_data, 1);
+   }
+#endif
 
   LEAVE_CRIT();
   return (rc);
 }
 
+EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
+                                      CONST_LPSTR    node_name,
+                                      CONST_LPSTR    service_name,
+                                      DWORD         *local_addr_len,
+                                      SOCKADDR      *local_addr,
+                                      DWORD         *remote_addr_len,
+                                      SOCKADDR      *remote_addr,
+                                      CONST_PTIMEVAL tv,
+                                      WSAOVERLAPPED *reserved)
+{
+  BOOL rc;
+  char tv_buf[30];
+
+  INIT_PTR (p_WSAConnectByNameA);
+  rc = (*p_WSAConnectByNameA) (s, node_name, service_name, local_addr_len, local_addr,
+                               remote_addr_len, remote_addr, tv, reserved);
+
+  ENTER_CRIT();
+
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByNameA"));
+  if (!exclude_this)
+  {
+    if (!tv)
+         strcpy (tv_buf, "unspec");
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+
+    WSTRACE ("WSAConnectByNameA (%u, %s, %s, %s, ...) --> %s.\n",
+              SOCKET_CAST(s), node_name, service_name, tv_buf, get_error(rc));
+  }
+  LEAVE_CRIT();
+  return (rc);
+}
+
+EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
+                                      LPWSTR        node_name,
+                                      LPWSTR        service_name,
+                                      DWORD         *local_addr_len,
+                                      SOCKADDR      *local_addr,
+                                      DWORD         *remote_addr_len,
+                                      SOCKADDR      *remote_addr,
+                                      CONST_PTIMEVAL tv,
+                                      WSAOVERLAPPED *reserved)
+{
+  BOOL rc;
+  char tv_buf[30];
+
+  INIT_PTR (p_WSAConnectByNameW);
+  rc = (*p_WSAConnectByNameW) (s, node_name, service_name, local_addr_len, local_addr,
+                               remote_addr_len, remote_addr, tv, reserved);
+
+  ENTER_CRIT();
+
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByNameW"));
+  if (!exclude_this)
+  {
+    if (!tv)
+         strcpy (tv_buf, "unspec");
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+
+    WSTRACE ("WSAConnectByNameW (%u, %" WCHAR_FMT ", %" WCHAR_FMT ", %s, ...) --> %s.\n",
+              SOCKET_CAST(s), node_name, service_name, tv_buf, get_error(rc));
+  }
+  LEAVE_CRIT();
+  return (rc);
+}
+
+EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
+                                     SOCKET_ADDRESS_LIST *socket_addr_list,
+                                     DWORD               *local_addr_len,
+                                     SOCKADDR            *local_addr,
+                                     DWORD               *remote_addr_len,
+                                     SOCKADDR            *remote_addr,
+                                     CONST_PTIMEVAL       tv,
+                                     WSAOVERLAPPED       *reserved)
+{
+  BOOL rc;
+  char tv_buf[30];
+
+  INIT_PTR (p_WSAConnectByList);
+  rc = (*p_WSAConnectByList) (s, socket_addr_list, local_addr_len, local_addr,
+                              remote_addr_len, remote_addr, tv, reserved);
+
+  ENTER_CRIT();
+
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByList"));
+  if (!exclude_this)
+  {
+    if (!tv)
+         strcpy (tv_buf, "unspec");
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+
+    WSTRACE ("WSAConnectByList (%u, %s, ...) --> %s.\n", SOCKET_CAST(s), tv_buf, get_error(rc));
+  }
+  LEAVE_CRIT();
+  return (rc);
+}
 
 EXPORT WSAEVENT WINAPI WSACreateEvent (void)
 {
@@ -1241,16 +1423,10 @@ EXPORT int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
   return (rc);
 }
 
-#if defined(__MINGW64_VERSION_MAJOR)
-  #define SELECT_LAST_TYPE const PTIMEVAL
-#else
-  #define SELECT_LAST_TYPE const struct timeval *
-#endif
-
 #define FD_INPUT   "fd_input  ->"
 #define FD_OUTPUT  "fd_output ->"
 
-EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, SELECT_LAST_TYPE tv)
+EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, CONST_PTIMEVAL tv)
 {
   fd_set *rd_copy = NULL;
   fd_set *wr_copy = NULL;
@@ -1534,7 +1710,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecv"));
 
-  if (rc == 0)
+  if (rc == NO_ERROR)
        g_cfg.counts.recv_bytes += bufs->len * num_bufs;
   else g_cfg.counts.recv_errors++;
 
@@ -1637,7 +1813,7 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
     WSTRACE ("WSARecvEx (%u, 0x%p, %d, <%s>) --> %s.\n",
              SOCKET_CAST(s), buf, buf_len, flg, res);
 
-    if (rc > 0 && !exclude_this && g_cfg.dump_data)
+    if (rc > 0 && g_cfg.dump_data)
        dump_data (buf, rc);
   }
 
@@ -1657,17 +1833,25 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvDisconnect"));
+  WSTRACE ("WSARecvDisconnect (%u, 0x%p) --> %s.\n",
+           SOCKET_CAST(s), disconnect_data, get_error(rc));
 
-  if (!exclude_this)
-  {
-    WSTRACE ("WSARecvDisconnect (%u, 0x%p) --> %s.\n",
-             SOCKET_CAST(s), disconnect_data, get_error(rc));
-    if (rc == NO_ERROR && g_cfg.dump_data)
-       dump_data (disconnect_data->buf, disconnect_data->len);
-  }
+  if (!exclude_this && rc == NO_ERROR && g_cfg.dump_data)
+     dump_data (disconnect_data->buf, disconnect_data->len);
 
   LEAVE_CRIT();
+  return (rc);
+}
+
+/*
+ * Count the number of bytes in an array of 'WSABUF' structures.
+ */
+static int count_wsabuf (const WSABUF *bufs, DWORD num_bufs)
+{
+  int i, rc = 0;
+
+  for (i = 0; i < (int)num_bufs && bufs; i++, bufs++)
+      rc += bufs->len;
   return (rc);
 }
 
@@ -1680,6 +1864,10 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   rc = (*p_WSASend) (s, bufs, num_bufs, num_bytes, flags, ov, func);
 
   ENTER_CRIT();
+
+  if (rc == SOCKET_ERROR)
+       g_cfg.counts.send_errors++;
+  else g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASend"));
 
@@ -1711,6 +1899,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   return (rc);
 }
 
+
 EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                              DWORD flags, const struct sockaddr *to, int to_len,
                              WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
@@ -1721,6 +1910,10 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
   rc = (*p_WSASendTo) (s, bufs, num_bufs, num_bytes, flags, to, to_len, ov, func);
 
   ENTER_CRIT();
+
+  if (rc == SOCKET_ERROR)
+       g_cfg.counts.send_errors++;
+  else g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendTo"));
 
@@ -1735,7 +1928,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
     if (rc == SOCKET_ERROR)
          strcpy (res, get_error(rc));
-    else strcpy (res, "<pending>");
+    else strcpy (res, "<Pending>");
 
     WSTRACE ("WSASendTo (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s.\n",
               SOCKET_CAST(s), bufs, num_bufs, nbytes, socket_flags(flags),
@@ -2045,20 +2238,23 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
   WSTRACE ("gethostbyaddr (%s, %d, %s) --> %s.\n",
            inet_ntop2(addr,type), len, socket_family(type), ptr_or_error(rc));
 
-  if (rc && !exclude_this && g_cfg.dump_hostent)
-     dump_hostent (rc);
-
-  if (!exclude_this && g_cfg.geoip_enable)
+  if (!exclude_this)
   {
-    if (rc)
-       dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
-    else
-    {
-      const char *a[2];
+    if (rc && g_cfg.dump_hostent)
+       dump_hostent (rc);
 
-      a[0] = addr;
-      a[1] = NULL;
-      dump_countries (type, a);
+    if (g_cfg.geoip_enable)
+    {
+      if (rc)
+         dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
+      else
+      {
+        const char *a[2];
+
+        a[0] = addr;
+        a[1] = NULL;
+        dump_countries (type, a);
+      }
     }
   }
 
@@ -2237,16 +2433,19 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   WSTRACE ("getnameinfo (%s, ..., %s) --> %s.\n",
            sockaddr_str2(sa,&sa_len), getnameinfo_flags_decode(flags), get_error(rc));
 
-  if (rc == 0 && !exclude_this && g_cfg.dump_nameinfo)
+  if (!exclude_this)
   {
-    dump_nameinfo (host, serv_buf, flags);
+    if (rc == 0 && g_cfg.dump_nameinfo)
+    {
+      dump_nameinfo (host, serv_buf, flags);
 
-    /* \todo: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
-     */
+      /* \todo: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
+       */
+    }
+
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (sa);
   }
-
-  if (!exclude_this && g_cfg.geoip_enable)
-     dump_countries_sockaddr (sa);
 
   LEAVE_CRIT();
   return (rc);

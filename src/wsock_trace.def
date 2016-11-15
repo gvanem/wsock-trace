@@ -28,6 +28,9 @@ EXPORTS
  _WSASendTo@36
 ;_WSASendDisconnect
  _WSAConnect@28
+ _WSAConnectByList@32
+ _WSAConnectByNameA@36
+ _WSAConnectByNameW@36
  _WSAGetOverlappedResult@20
  _WSAEnumNetworkEvents@12
  _WSACancelBlockingCall@0
@@ -83,7 +86,6 @@ EXPORTS
 ;   WPUCompleteOverlappedRequest
 ;   WSApSetPostRoutine
 ;   WSAAccept
-;   WSAConnect
 ;   WSAEnumNameSpaceProvidersA
 ;   WSAEnumNameSpaceProvidersW
 ;   WSAEnumProtocolsA
