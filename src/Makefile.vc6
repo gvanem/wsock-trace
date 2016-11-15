@@ -207,4 +207,10 @@ $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h stkwalk.h in_addr.h \
 
 $(OBJ_DIR)\wsock_trace_lua.obj: wsock_trace_lua.c common.h init.h wsock_trace_lua.h
 
-
+!if "$(USE_LUA)" == "1"
+wsock_trace_lua.h: $(LUAJIT_ROOT)/src/lua.h     \
+                   $(LUAJIT_ROOT)/src/luaconf.h \
+                   $(LUAJIT_ROOT)/src/lualib.h  \
+                   $(LUAJIT_ROOT)/src/lua.h     \
+                   $(LUAJIT_ROOT)/src/lauxlib.h
+!endif
