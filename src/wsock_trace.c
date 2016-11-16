@@ -97,10 +97,10 @@ static const char *get_timestamp (void);
 
 /*
  * There is some difference between some Winsock prototypes in MS-SDK's
- * versuses MinGW-TDM/MinGW-w64 headers. This is to fit the
- * 'const struct timeval*' parameter in 'select()' etc.
+ * versuses MinGW headers. This is to fit the 'const struct timeval*'
+ * parameter in 'select()' etc.
  */
-#if defined(__MINGW64_VERSION_MAJOR)
+#if defined(__MINGW32__)
   #define CONST_PTIMEVAL   const PTIMEVAL
 #else
   #define CONST_PTIMEVAL   const struct timeval *
