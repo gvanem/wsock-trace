@@ -817,7 +817,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   char     buf [25];
   unsigned num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
 
-  TRACE (4, "Looking for %s (%lu) in %u elements.\n",
+  TRACE (5, "Looking for %s (%lu) in %u elements.\n",
          wsock_trace_inet_ntop4((const u_char*)addr,buf,sizeof(buf)),
          ip_num, num);
 
@@ -841,7 +841,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   char     buf [MAX_IP6_SZ];
   unsigned num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
 
-  TRACE (4, "Looking for %s in %u elements.\n",
+  TRACE (5, "Looking for %s in %u elements.\n",
          wsock_trace_inet_ntop6((const u_char*)addr,buf,sizeof(buf)), num);
 
    if (geoip_ipv6_entries)
@@ -1718,6 +1718,64 @@ static void rand_test_addr6 (int loops)
   }
 }
 
+/*
+ * Removes end-of-line termination from a string.
+ */
+static char *rip (char *s)
+{
+  char *p;
+
+  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
+  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
+  return (s);
+}
+
+static smartlist_t *make_argv_list (int _argc, const char **_argv)
+{
+  smartlist_t *list = smartlist_new();
+  FILE        *f;
+  char         buf[512];
+  const char  *p;
+  int          i;
+
+  if (_argc > 0 && _argv[0][0] == '@')
+  {
+    p = _argv[0] + 1;
+    f = fopen (p, "rt");
+    while (!feof(f))
+    {
+      if (fgets(buf, (int)sizeof(buf), f) == NULL)
+         break;
+      smartlist_add (list, strdup(rip(buf)));
+    }
+    fclose (f);
+  }
+  else if (isatty(fileno(stdin)) == 0)
+  {
+    while (!feof(stdin))
+    {
+      if (fgets(buf, (int)sizeof(buf), stdin) == NULL)
+         break;
+      smartlist_add (list, strdup(rip(buf)));
+    }
+  }
+  else
+  {
+    for (i = 0; i < _argc; i++)
+        smartlist_add (list, strdup(_argv[i]));
+  }
+  return (list);
+}
+
+static void free_argv_list (smartlist_t *sl)
+{
+  int i, max = smartlist_len (sl);
+
+  for (i = 0; i < max; i++)
+      free (smartlist_get(sl, i));
+  smartlist_free (sl);
+}
+
 int main (int argc, char **argv)
 {
   int  i, c, do_cidr = 0, do_generate = 0, do_4 = 0, do_6 = 0;
@@ -1833,13 +1891,18 @@ int main (int argc, char **argv)
   }
   else
   {
+    smartlist_t *list = make_argv_list (argc, argv);
+    int          i, max = smartlist_len (list);
+
     if (do_4)
-       for (i = 0; i < argc; i++)
-           test_addr4 (argv[i]);
+       for (i = 0; i < max; i++)
+           test_addr4 (smartlist_get(list, i));
 
     if (do_6)
-       for (i = 0; i < argc; i++)
-           test_addr6 (argv[i]);
+       for (i = 0; i < max; i++)
+           test_addr6 (smartlist_get(list, i));
+
+    free_argv_list (list);
   }
 
   wsock_trace_exit();
