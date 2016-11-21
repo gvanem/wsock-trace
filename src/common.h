@@ -297,8 +297,8 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define WCTRACE(fmt, ...)     /* nothing */
 #endif
 
-#define WARNING(fmt, ...)  do {                                       \
-                             trace_printf (fmt "\7", ## __VA_ARGS__); \
+#define WARNING(fmt, ...)  do {                                     \
+                             fprintf (stderr, fmt, ## __VA_ARGS__); \
                            } while (0)
 
 #define FATAL(fmt, ...)    do {                                        \
@@ -310,6 +310,15 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
                                   abort();                             \
                              else ExitProcess (GetCurrentProcessId()); \
                            } while (0)
+
+#if !defined(NDEBUG)
+  #define WS_ASSERT(x)     do {                                    \
+                               if (!(x))                           \
+                                  FATAL ("Assertion failed: " #x); \
+                             } while (0)
+#else
+  #define WS_ASSERT(x)     ((void)0)
+#endif
 
 /*
  * Defined in newer <sal.h> for MSVC.
