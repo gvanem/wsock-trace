@@ -773,8 +773,10 @@ int trace_flush (void)
      */
     written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
 #else
-    int hnd = _fileno (g_cfg.trace_stream);
+    int hnd;
 
+    assert (g_cfg.trace_stream != NULL);
+    hnd = _fileno (g_cfg.trace_stream);
     assert (hnd >= 1);
     written = _write (hnd, trace_buf, (unsigned int)len);
 #endif
