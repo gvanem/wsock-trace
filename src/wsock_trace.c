@@ -97,7 +97,7 @@ static const char *get_timestamp (void);
 
 /*
  * There is some difference between some Winsock prototypes in MS-SDK's
- * versuses MinGW headers. This is to fit the 'const struct timeval*'
+ * versus MinGW headers. This is to fit the 'const struct timeval*'
  * parameter in 'select()' etc.
  */
 #if defined(__MINGW32__)
