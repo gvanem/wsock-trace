@@ -780,10 +780,12 @@ void wsock_trace_init (void)
 
     if (!g_cfg.trace_stream || !FILE_EXISTS(g_cfg.trace_file))
     {
-      WARNING ("Failed to open or create trace_file '%s': %s\n"
-               "Printing to stdout.\n", g_cfg.trace_file, strerror(errno));
+      const char *fname = g_cfg.trace_file;
+
       g_cfg.trace_stream = stdout;
       g_cfg.trace_file = NULL;
+      WARNING ("Failed to open or create trace_file '%s': %s\n"
+               "Printing to stdout.\n", fname, strerror(errno));
     }
   }
 
