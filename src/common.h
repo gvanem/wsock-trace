@@ -389,6 +389,7 @@ extern char        prog_dir  [MAX_PATH];
 extern HINSTANCE   ws_trace_base;        /* Our base-address */
 
 extern char       *ws_strerror (DWORD err, char *buf, size_t len);
+extern char       *win_strerror (DWORD err);
 extern char       *basename (const char *fname);
 extern char       *dirname (const char *fname);
 extern char       *str_replace (int ch1, int ch2, char *str);

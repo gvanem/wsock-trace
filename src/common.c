@@ -208,6 +208,38 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
   return (buf);
 }
 
+/**
+ * Removes end-of-line termination from a string.
+ */
+static char *rip (char *s)
+{
+  char *p;
+
+  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
+  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
+  return (s);
+}
+
+/**
+ * Return err-number and string for 'err'. Only use this with
+ * GetLastError(). Remove trailing [\r\n.]
+ */
+char *win_strerror (DWORD err)
+{
+  static char buf[512+20];
+  char   err_buf[512], *p;
+
+  if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, err,
+                      LANG_NEUTRAL, err_buf, sizeof(err_buf)-1, NULL))
+     strcpy (err_buf, "Unknown error");
+  snprintf (buf, sizeof(buf), "%lu/0x%lX: %s", (u_long)err, (u_long)err, err_buf);
+  rip (buf);
+  p = strrchr (buf, '.');
+  if (p && p[1] == '\0')
+     *p = '\0';
+  return (buf);
+}
+
 /*
  * Handling of dynamic loading and unloading of DLLs and their functions.
  */
@@ -854,12 +886,6 @@ int trace_putc (int ch)
       case 5:
            color = &g_cfg.color_func;
            break;
-#if defined(__MINGW32__) && 1
-      case -16:
-      case -38:
-           ch = '!';
-           goto put_it;
-#endif
       default:
            FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
                   ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
