@@ -22,8 +22,10 @@ BIN_TARGET = $(VCINSTALLDIR)bin
 !if "$(WANT_64_BITS)" == "1"
 X_SUFFIX = _x64
 MACHINE = x64
+BITNESS = 64
 !else
 MACHINE = x86
+BITNESS = 32
 !endif
 
 #
@@ -168,7 +170,7 @@ vclean realclean: clean
 	-rd $(OBJ_DIR)
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
-	rc -nologo -DDEBUG=$(USE_DEBUG) -DMACHINE=$(MACHINE) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
+	rc -nologo -DDEBUG=$(USE_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
 
 
 #
