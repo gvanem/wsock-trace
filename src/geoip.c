@@ -53,8 +53,8 @@ static BOOL use_geoip_generated = FALSE;
  */
 typedef struct smartlist_t {
         /*
-         * 'list' has enough capacity to store exactly 'capacity' elements
-         * before it needs to be resized. Only the first 'num_used'
+         * 'list' (of anything) has enough capacity to store exactly 'capacity'
+         * elements before it needs to be resized. Only the first 'num_used'
          * (<= capacity) elements point to valid data.
          */
         void **list;
@@ -182,12 +182,12 @@ static smartlist_t *smartlist_new_fixed (void *start, size_t el_size, unsigned n
   char        *ofs = (char*) start;
   size_t       i;
 
-  sl->capacity = num;
-  sl->list     = malloc (sizeof(void*) * sl->capacity);
-  sl->num_used = 0;
+  sl->list = malloc (sizeof(void*) * sl->capacity);
 
   for (i = 0; i < num; i++, ofs += el_size)
-      sl->list [sl->num_used++] = ofs;
+      sl->list [i] = ofs;
+  sl->capacity = num;
+  sl->num_used = num;
   return (sl);
 }
 #endif
@@ -386,7 +386,7 @@ static int geoip_ipv4_compare_entries (const void **_a, const void **_b)
 
 /*
  * smartlist_bsearch() helper: return -1, 1, or 0 based on comparison of an IP (a pointer
- * to a DWORD in host order) to a 'ipv4_node'.
+ * to a DWORD in host order) to a 'ipv4_node' element.
  */
 static int geoip_ipv4_compare_key_to_entry (const void *key, const void **member)
 {
@@ -402,7 +402,7 @@ static int geoip_ipv4_compare_key_to_entry (const void *key, const void **member
 
 /*
  * smartlist_sort() helper: return -1, 1, or 0 based on comparison of two
- * 'ipv6_node'
+ * 'struct ipv6_node' elements.
  */
 static int geoip_ipv6_compare_entries (const void **_a, const void **_b)
 {
