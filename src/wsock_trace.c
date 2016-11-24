@@ -2723,6 +2723,8 @@ static void test_get_caller (const void *from)
 }
 #endif  /* USE_BFD */
 
+#include "wsock_trace.rc"
+
 static const char *set_dll_name (void)
 {
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
@@ -2731,18 +2733,9 @@ static const char *set_dll_name (void)
   #define X_SUFFIX ""
 #endif
 
-#if defined(__MINGW32__)
-  return ("wsock_trace_mw" X_SUFFIX ".dll");
-#elif defined(__CYGWIN__)
-  return ("wsock_trace_cyg" X_SUFFIX ".dll");
-#elif defined(_MSC_VER)
-  return ("wsock_trace.dll" X_SUFFIX ".dll");
-#elif defined(__WATCOMC__)
-  return ("wsock_trace_ow" X_SUFFIX ".dll");
-#else
-  return (NULL);
-#endif
+  return (RC_BASENAME X_SUFFIX ".dll");
 }
+
 
 BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
