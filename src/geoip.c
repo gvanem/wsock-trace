@@ -182,12 +182,12 @@ static smartlist_t *smartlist_new_fixed (void *start, size_t el_size, unsigned n
   char        *ofs = (char*) start;
   size_t       i;
 
+  sl->capacity = num;
+  sl->num_used = num;
   sl->list = malloc (sizeof(void*) * sl->capacity);
 
   for (i = 0; i < num; i++, ofs += el_size)
       sl->list [i] = ofs;
-  sl->capacity = num;
-  sl->num_used = num;
   return (sl);
 }
 #endif
