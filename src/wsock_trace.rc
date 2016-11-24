@@ -10,16 +10,27 @@
  */
 #if defined(__CYGWIN__)
   #define RC_BUILDER  "CygWin"
+  #define RC_BASENAME "wsock_trace_cyg"
+
 #elif defined(__MINGW64__)        /* seems to be a built-in in MinGW64 no matter what the CPU target is */
   #define RC_BUILDER  "MinGW-w64"
+  #define RC_BASENAME "wsock_trace_mw"
+
 #elif defined(__MINGW32__)
   #define RC_BUILDER  "MinGW"
+  #define RC_BASENAME "wsock_trace_mw"
+
 #elif defined(_MSC_VER)
   #define RC_BUILDER  "Visual-C"
+  #define RC_BASENAME "wsock_trace"
+
 #elif defined(__WATCOMC__)
   #define RC_BUILDER  "Watcom"
+  #define RC_BASENAME "wsock_trace_ow"
+
 #else
   #define RC_BUILDER  "??"
+  #define RC_BASENAME "??"
 #endif
 
 #if defined(DEBUG) && (DEBUG > 0)
@@ -32,9 +43,13 @@
 
 #if defined(BITNESS) && (BITNESS == 64)
   #define RC_BITNESS ", 64-bit)"
+  #define RC_SUFFIX  "_x64"
 #else
   #define RC_BITNESS ", 32-bit)"
+  #define RC_SUFFIX  ""
 #endif
+
+#define RC_DLL_NAME RC_BASENAME RC_SUFFIX
 
 VS_VERSION_INFO VERSIONINFO
   FILEVERSION     RC_VERSION
@@ -53,9 +68,9 @@ BEGIN
       VALUE "CompanyName",      "Wsock_trace DLL v" RC_VER_STR ". Hosted at https://github.com/gvanem/wsock-trace"
       VALUE "FileDescription",  "Winsock tracing DLL " RC_DBG_REL RC_BITNESS
       VALUE "FileVersion",      RC_VER_STR
-      VALUE "InternalName",     "Wsock_trace"
-      VALUE "OriginalFilename", "wsock_trace.dll"
-      VALUE "ProductName",      "Wsock_trace DLL"
+      VALUE "InternalName",     RC_DLL_NAME
+      VALUE "OriginalFilename", RC_DLL_NAME ".dll"
+      VALUE "ProductName",      RC_DLL_NAME " Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR " (" RC_BUILDER ")"
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
                                 "\t\t\tCopyright 2012-2015, Gisle Vanem <gvanem@yahoo.no>."
