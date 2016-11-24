@@ -1029,6 +1029,41 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
   return (out);
 }
 
+/*
+ * Function that prints the line argument while limiting it
+ * to at most 'g_cfg.screen_width'. An appropriate number
+ * of spaces are added on subsequent lines.
+ *
+ * Stolen from Wget (main.c) and rewritten.
+ */
+static void format_and_print_line (const char *line, int indent, int brk_ch)
+{
+  char *token, *line_dup = strdup (line);
+  char  brk_chars[2] = "?";
+  int   remaining_chars = g_cfg.screen_width - indent;
+
+  brk_chars[0] = brk_ch;
+  token = strtok (line_dup, brk_chars);
+  while (token)
+  {
+    /* If a token is much larger than the maximum
+     * line length, we print the token on the next line.
+     */
+    if (remaining_chars <= (int)strlen(token))
+    {
+      trace_printf ("\n%*c", indent, ' ');
+      remaining_chars = g_cfg.screen_width - indent;
+    }
+    trace_puts (token);
+    remaining_chars -= strlen (token);
+    token = strtok (NULL, brk_chars);
+    if (token)
+       trace_putc (brk_ch);
+  }
+  trace_putc ('\n');
+  free (line_dup);
+}
+
 void dump_addrinfo (const struct addrinfo *ai)
 {
   for ( ; ai; ai = ai->ai_next)
@@ -1189,7 +1224,36 @@ void dump_one_proto_info (const char *prefix, const char *buf)
   trace_printf ("%s%s\n", prefix ? prefix : padding, buf);
 }
 
-void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
+void dump_provider_path (const GUID *guid, const void *provider_path_func)
+{
+  /* Watcom lacks many things making this difficult.
+   */
+#if !defined(__WATCOMC__)
+  int     error;
+  wchar_t path[MAX_PATH] = L"??";
+  int     path_len = DIM(path);
+
+  /* As in wsock_trace.c:
+   */
+  typedef int (WINAPI *func_WSCGetProviderPath) (GUID    *provider_id,
+                                                 wchar_t *provider_dll_path,
+                                                 int     *provider_dll_path_len,
+                                                 int     *error);
+
+  func_WSCGetProviderPath p_WSCGetProviderPath = (func_WSCGetProviderPath) provider_path_func;
+
+  if (p_WSCGetProviderPath &&
+      (*p_WSCGetProviderPath)((GUID*)guid, path, &path_len, &error) == 0)
+  {
+    char buf [100+MAX_PATH];
+
+    snprintf (buf, sizeof(buf), "~4Provider Path:      \"%" WCHAR_FMT "\"~0", path);
+    dump_one_proto_info (NULL, buf);
+  }
+#endif
+}
+
+void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)
 {
   /* Watcom lacks many things making this difficult.
    */
@@ -1225,14 +1289,14 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
 
   snprintf (buf2, sizeof(buf2), "dwServiceFlags1:    %s", flags_str);
 
-#if 0
-  {
-    int indent = g_cfg.trace_indent + strlen(buf1) + strlen("dwServiceFlags1:");
-    maybe_wrap_line (indent, 0, buf2, buf2);
-  }
+#if 1
+  trace_indent (g_cfg.trace_indent+2);
+  trace_puts (buf1);
+  format_and_print_line (buf2, g_cfg.trace_indent + strlen(buf1) + sizeof("dwServiceFlags1:   "), '|');
+#else
+  dump_one_proto_info (buf1, buf2);
 #endif
 
-  dump_one_proto_info (buf1, buf2);
   dump_one_proto_info (NULL, "dwServiceFlags2:    Reserved");
   dump_one_proto_info (NULL, "dwServiceFlags3:    Reserved");
   dump_one_proto_info (NULL, "dwServiceFlags4:    Reserved");
@@ -1293,6 +1357,10 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
 
   snprintf (buf2, sizeof(buf2), "ProviderId:         %s", get_guid_string(&pi_a->ProviderId));
   dump_one_proto_info (NULL, buf2);
+
+  if (ascii_or_wide == 'A')
+       dump_provider_path (&pi_a->ProviderId, provider_path_func);
+  else dump_provider_path (&pi_w->ProviderId, provider_path_func);
 
   trace_puts ("~0");
 #endif

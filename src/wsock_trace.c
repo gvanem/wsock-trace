@@ -348,13 +348,13 @@ typedef int (WINAPI *func_WSAEnumNetworkEvents) (SOCKET s, WSAEVENT ev, WSANETWO
 
 typedef DWORD (WINAPI *func_WSAWaitForMultipleEvents) (DWORD           num_ev,
                                                        const WSAEVENT *ev,
-                                                       BOOL            waitAll,
+                                                       BOOL            wait_all,
                                                        DWORD           timeout,
                                                        BOOL            alertable);
 
 typedef DWORD (WINAPI *func_WaitForMultipleObjectsEx) (DWORD         num_ev,
                                                        const HANDLE *hnd,
-                                                       BOOL          waitAll,
+                                                       BOOL          wait_all,
                                                        DWORD         timeout,
                                                        BOOL          alertable);
 
@@ -436,9 +436,6 @@ static func_getprotobyname           p_getprotobyname = NULL;
 static func_getnameinfo              p_getnameinfo = NULL;
 static func_getaddrinfo              p_getaddrinfo = NULL;
 static func_freeaddrinfo             p_freeaddrinfo = NULL;
-static func_gai_strerrorA            p_gai_strerrorA = NULL;
-static func_gai_strerrorW            p_gai_strerrorW = NULL;
-
 static func_inet_pton                p_inet_pton = NULL;
 static func_inet_ntop                p_inet_ntop = NULL;
 static func_WSARecv                  p_WSARecv = NULL;
@@ -456,9 +453,14 @@ static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
 static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
 static func_WSACancelBlockingCall    p_WSACancelBlockingCall = NULL;
 static func_WSCGetProviderPath       p_WSCGetProviderPath = NULL;
-// static func_WaitForMultipleObjectsEx p_WaitForMultipleObjectsEx = NULL;
+static func_WaitForMultipleObjectsEx p_WaitForMultipleObjectsEx = NULL;
 
 static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
+
+#if defined(__MINGW32__)
+  static func_gai_strerrorA          p_gai_strerrorA = NULL;
+  static func_gai_strerrorW          p_gai_strerrorW = NULL;
+#endif
 
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
@@ -473,6 +475,7 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSACreateEvent),
               ADD_VALUE (0, "ws2_32.dll", WSACloseEvent),
               ADD_VALUE (0, "ws2_32.dll", WSAResetEvent),
+              ADD_VALUE (0, "ws2_32.dll", WSASetEvent),
               ADD_VALUE (0, "ws2_32.dll", WSAEventSelect),
               ADD_VALUE (0, "ws2_32.dll", WSAAsyncSelect),
               ADD_VALUE (0, "ws2_32.dll", WSAAddressToStringA),
@@ -657,18 +660,11 @@ const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
  */
 const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
 {
-  char *p, *q = (char*) sockaddr_str_port (sa, sa_len);
+  const char *p = sockaddr_str_port (sa, sa_len);
 
-  if (!q)
+  if (!p)
      return sockaddr_str (sa, sa_len);
-#if 0
-  p = strrchr (q, ':');
-  if (p)
-    *p = '\0';
-#else
-  ARGSUSED (p);
-#endif
-  return (q);
+  return (p);
 }
 
 const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
@@ -756,24 +752,6 @@ static const char *socket_or_error (SOCK_RC_TYPE rc)
   return _itoa ((int)rc, buf, 10);
 }
 
-#if !defined(__WATCOMC__)
-static void dump_provider_path (GUID *guid)
-{
-  int     error;
-  wchar_t path[MAX_PATH] = L"??";
-  int     path_len = DIM(path);
-
-  if (p_WSCGetProviderPath &&
-      (*p_WSCGetProviderPath)(guid, path, &path_len, &error) == 0)
-  {
-    char buf [100+MAX_PATH];
-
-    snprintf (buf, sizeof(buf), "~4Provider Path:      \"%" WCHAR_FMT "\"~0", path);
-    dump_one_proto_info (NULL, buf);
-  }
-}
-#endif
-
 /*
  * The actual Winsock functions we trace.
  */
@@ -856,19 +834,15 @@ EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
            proto_info, group, wsasocket_flags_decode(flags),
            socket_or_error(rc));
 
-#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-  {
-    dump_wsaprotocol_info ('A', proto_info);
-    dump_provider_path (&proto_info->ProviderId);
-  }
-#endif
+     dump_wsaprotocol_info ('A', proto_info, p_WSCGetProviderPath);
 
   LEAVE_CRIT();
   return (rc);
 }
 
-EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol, WSAPROTOCOL_INFOW *proto_info,
+EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol,
+                                 WSAPROTOCOL_INFOW *proto_info,
                                  GROUP group, DWORD flags)
 {
   SOCKET rc;
@@ -883,13 +857,8 @@ EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol, WSAPROTOCOL_INF
            proto_info, group, wsasocket_flags_decode(flags),
            socket_or_error(rc));
 
-#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-  {
-    dump_wsaprotocol_info ('W', proto_info);
-    dump_provider_path (&proto_info->ProviderId);
-  }
-#endif
+     dump_wsaprotocol_info ('W', proto_info, p_WSCGetProviderPath);
 
   LEAVE_CRIT();
   return (rc);
@@ -907,13 +876,8 @@ EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   WSTRACE ("WSADuplicateSocketA (%u, proc-ID %lu, ...) --> %s.\n",
            SOCKET_CAST(s), process_id, get_error(rc));
 
-#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-  {
-    dump_wsaprotocol_info ('A', proto_info);
-    dump_provider_path (&proto_info->ProviderId);
-  }
-#endif
+     dump_wsaprotocol_info ('A', proto_info, p_WSCGetProviderPath);
 
   LEAVE_CRIT();
   return (rc);
@@ -931,13 +895,8 @@ EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   WSTRACE ("WSADuplicateSocketW (%u, proc-ID %lu, ...) --> %s.\n",
             SOCKET_CAST(s), process_id, get_error(rc));
 
-#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-  {
-    dump_wsaprotocol_info ('W', proto_info);
-    dump_provider_path (&proto_info->ProviderId);
-  }
-#endif
+     dump_wsaprotocol_info ('W', proto_info, p_WSCGetProviderPath);
 
   LEAVE_CRIT();
   return (rc);
@@ -958,13 +917,8 @@ EXPORT INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
 
   WSTRACE ("WSAAddressToStringA(). --> %s.\n", rc == 0 ? result_string : get_error(rc));
 
-#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-  {
-    dump_wsaprotocol_info ('A', proto_info);
-    dump_provider_path (&proto_info->ProviderId);
-  }
-#endif
+     dump_wsaprotocol_info ('A', proto_info, p_WSCGetProviderPath);
 
   LEAVE_CRIT();
   return (rc);
@@ -987,13 +941,8 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
        WSTRACE ("WSAAddressToStringW(). --> %" WCHAR_FMT ".\n", result_string);
   else WSTRACE ("WSAAddressToStringW(). --> %s.\n", get_error(rc));
 
-#if !defined(__WATCOMC__)
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
-  {
-    dump_wsaprotocol_info ('W', proto_info);
-    dump_provider_path (&proto_info->ProviderId);
-  }
-#endif
+     dump_wsaprotocol_info ('W', proto_info, p_WSCGetProviderPath);
 
   LEAVE_CRIT();
   return (rc);
@@ -1084,7 +1033,7 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAConnect (%u, %s, %p, %p, ...) --> %s.\n",
+  WSTRACE ("WSAConnect (%u, %s, 0x%p, 0x%p, ...) --> %s.\n",
             SOCKET_CAST(s), sockaddr_str2(name,&namelen),
             caller_data, callee_data, socket_or_error(rc));
 
@@ -1311,7 +1260,7 @@ int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
        WSTRACE ("FD_ISSET (%u, \"wr fd_set\") --> %d.\n", _s, rc);
   else if (fd == last_ex_fd)
        WSTRACE ("FD_ISSET (%u, \"ex fd_set\") --> %d.\n", _s, rc);
-  else WSTRACE ("FD_ISSET (%u, %p) --> %d.\n", _s, fd, rc);
+  else WSTRACE ("FD_ISSET (%u, 0x%p) --> %d.\n", _s, fd, rc);
 
   LEAVE_CRIT();
   return (rc);
@@ -2064,16 +2013,30 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
 
 /* \todo:
  */
+#if 0
+EXPORT DWORD WaitForMultipleObjectsEx (DWORD         num_ev,
+                                       const HANDLE *hnd,
+                                       BOOL          wait_all,
+                                       DWORD         timeout,
+                                       BOOL          alertable)
+{
+}
+#endif
+
 EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
                                               const WSAEVENT *ev,
                                               BOOL            wait_all,
                                               DWORD           timeout,
                                               BOOL            alertable)
 {
-  int rc;
+  DWORD rc;
 
   if (p_WSAWaitForMultipleEvents == NULL)
-     rc = WaitForMultipleObjectsEx (num_ev, (const HANDLE*)ev, wait_all, timeout, alertable);
+  {
+    /* This should maybe call '(*p_WaitForMultipleObjectsEx)()' when finished.
+     */
+    rc = WaitForMultipleObjectsEx (num_ev, (const HANDLE*)ev, wait_all, timeout, alertable);
+  }
   else
   {
     INIT_PTR (p_WSAWaitForMultipleEvents);
@@ -2082,8 +2045,34 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAWaitForMultipleEvents (%lu, %p, %d, %lu, %d) --> %s.\n",
-           num_ev, ev, wait_all,timeout, alertable, get_error(rc));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAWaitForMultipleEvents"));
+
+  if (!exclude_this)
+  {
+    char  extra[20] = "";
+    char  time[20]  = "WSA_INFINITE";
+    const char *err = "Unknown";
+
+    if (rc == WSA_WAIT_FAILED)
+         err = get_error (rc);
+    else if (rc == WSA_WAIT_IO_COMPLETION)
+         err = "WSA_WAIT_IO_COMPLETION";
+    else if (rc == WSA_WAIT_TIMEOUT)
+         err = "WSA_WAIT_TIMEOUT";
+    else if (rc >= WSA_WAIT_EVENT_0 && rc < (WSA_WAIT_EVENT_0 + num_ev))
+    {
+      err = "WSA_WAIT_EVENT_0";
+      if (wait_all)
+           strcpy (extra, ", all");
+      else snprintf (extra, sizeof(extra), ", %lu", rc-WSA_WAIT_EVENT_0);
+    }
+
+    if (timeout != WSA_INFINITE)
+       snprintf (time, sizeof(time), "%lu ms", timeout);
+
+    WSTRACE ("WSAWaitForMultipleEvents (%lu, 0x%p, %s, %s, %sALERTABLE) --> %s%s.\n",
+             num_ev, ev, wait_all ? "TRUE" : "FALSE", time, alertable ? "" : "not ", err, extra);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -2121,6 +2110,16 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
            SOCKET_CAST(s), socklevel_name(level), sockopt_name(level,opt),
            sockopt_value(opt_val, opt_len ? *opt_len : 0),
            opt_len ? *opt_len : 0, get_error(rc));
+
+#if 0  /* \todo */
+  if (level == SOL_SOCKET && !exclude_this && g_cfg.dump_wsaprotocol_info)
+  {
+    if (opt == SO_PROTOCOL_INFOA)
+       dump_wsaprotocol_info ('A', opt_val, p_WSCGetProviderPath);
+    else if (opt == SO_PROTOCOL_INFOW)
+       dump_wsaprotocol_info ('W', opt_val, p_WSCGetProviderPath);
+  }
+#endif
 
   LEAVE_CRIT();
   return (rc);
