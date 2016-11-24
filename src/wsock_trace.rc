@@ -53,7 +53,7 @@ BEGIN
       VALUE "CompanyName",      "Wsock_trace DLL v" RC_VER_STR ". Hosted at https://github.com/gvanem/wsock-trace"
       VALUE "FileDescription",  "Winsock tracing DLL " RC_DBG_REL RC_BITNESS
       VALUE "FileVersion",      RC_VER_STR
-      VALUE "InternalName",     "Wsock_trace " RC_DBG_REL RC_BITNESS
+      VALUE "InternalName",     "Wsock_trace"
       VALUE "OriginalFilename", "wsock_trace.dll"
       VALUE "ProductName",      "Wsock_trace DLL"
       VALUE "ProductVersion",   RC_VER_STR " (" RC_BUILDER ")"
