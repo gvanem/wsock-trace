@@ -13,12 +13,12 @@
 #include "geoip.h"
 #include "wsock_trace.h"
 
-#if defined(_MSC_VER)
-  #include <MSTcpIp.h>
+#if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
+  #include <mstcpip.h>
   #include <ws2bth.h>
 
 #elif defined(__MINGW32__)
-  typedef struct pollfd WSAPOLLFD;  /* Missing in MingW */
+  typedef struct pollfd WSAPOLLFD;  /* Missing in MinGW */
 #endif
 
 #include <MSWSock.h>
@@ -394,7 +394,7 @@
   #define SIO_RCVALL_IF                     _WSAIOW  (IOC_VENDOR,14)
   #define SIO_UDP_NETRESET                  _WSAIOW  (IOC_VENDOR,15)
 
-  #if !defined(__MINGW64_VERSION_MAJOR)
+  #if (_WIN32_WINNT < 0x0600)
     #define SIO_BSP_HANDLE                  _WSAIOR  (IOC_WS2,27)
     #define SIO_BSP_HANDLE_SELECT           _WSAIOR  (IOC_WS2,28)
     #define SIO_BSP_HANDLE_POLL             _WSAIOR  (IOC_WS2,29)
@@ -979,7 +979,7 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
 
   if (ofs + i < data_len - 1)
   {
-    trace_indent (g_cfg.trace_indent);
+    trace_indent (g_cfg.trace_indent+2);
     trace_printf ("<%d more bytes...>\n", data_len-1-ofs-i);
   }
   trace_puts ("~0");
@@ -1191,6 +1191,9 @@ void dump_one_proto_info (const char *prefix, const char *buf)
 
 void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
 {
+  /* Watcom lacks many things making this difficult.
+   */
+#if !defined(__WATCOMC__)
   const char *flags_str;
   char        buf1 [100];
   char        buf2 [200];
@@ -1239,6 +1242,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
        flags_str = "0";
   else flags_str = flags_decode (flags, wsaprotocol_info_ProviderFlags,
                                  DIM(wsaprotocol_info_ProviderFlags));
+
   snprintf (buf2, sizeof(buf2), "dwProviderFlags:    %s", flags_str);
   dump_one_proto_info (NULL, buf2);
 
@@ -1291,6 +1295,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info)
   dump_one_proto_info (NULL, buf2);
 
   trace_puts ("~0");
+#endif
 }
 
 #if defined(__GNUC__)
@@ -1570,7 +1575,13 @@ void dump_events (const WSANETWORKEVENTS *events)
  *
  * Listed at:
  *   https://msdn.microsoft.com/en-us/library/windows/desktop/bb736550(v=vs.85).aspx
+ *
+ * Should be in <mswsock.h>, but it's not for __WATCOMC__.
  */
+#ifndef WSAID_WSASENDMSG
+#define WSAID_WSASENDMSG { 0xA441E712, 0x754F, 0x43CA, {0x84,0xA7,0x0D,0xEE,0x44,0xCF,0x60,0x6D }}
+#endif
+
 static const struct GUID_search_list extension_guids[] = {
                     ADD_VALUE (WSAID_ACCEPTEX),
                     ADD_VALUE (WSAID_CONNECTEX),
