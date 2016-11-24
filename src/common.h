@@ -11,6 +11,10 @@
   #define EXPORT  __declspec(dllexport)
 #endif
 
+#if defined(IN_WSOCK_TRACE_C) && (defined(UNICODE) || defined(_UNICODE))
+  #error "Compiling this as UNICODE breaks in countless ways."
+#endif
+
 /*
  * OpenWatcom has no #ifdef around it's WINSOCK_API_LINKAGE.
  * Hence we cannot export stuff in it's <winsock2.h>. So just
@@ -263,20 +267,12 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
  * The 'WSTRACE()' macro shows what the *user* of wsock_trace.dll is doing.
  *
  */
-#define TRACE(level, fmt, ...)  do {                                    \
-                                  if (g_cfg.trace_level >= level)       \
-                                    debug_printf (__FILE__, __LINE__,   \
-                                                  fmt, ## __VA_ARGS__); \
-                                } while (0)
-#if defined(__WATCOMC__)
-  #define WCTRACE(fmt, ...)     do {                                 \
-                                  debug_printf (__FILE__, __LINE__,  \
-                                                "Watcom: " fmt "\n", \
-                                                ## __VA_ARGS__);     \
-                                } while (0)
-#else
-  #define WCTRACE(fmt, ...)     /* nothing */
-#endif
+#define TRACE(level, fmt, ...)                                     \
+                           do {                                    \
+                             if (g_cfg.trace_level >= level)       \
+                               debug_printf (__FILE__, __LINE__,   \
+                                             fmt, ## __VA_ARGS__); \
+                           } while (0)
 
 #define WARNING(fmt, ...)  do {                                     \
                              fprintf (stderr, fmt, ## __VA_ARGS__); \
@@ -291,15 +287,6 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
                                   abort();                             \
                              else ExitProcess (GetCurrentProcessId()); \
                            } while (0)
-
-#if !defined(NDEBUG)
-  #define WS_ASSERT(x)     do {                                    \
-                               if (!(x))                           \
-                                  FATAL ("Assertion failed: " #x); \
-                             } while (0)
-#else
-  #define WS_ASSERT(x)     ((void)0)
-#endif
 
 /*
  * Defined in newer <sal.h> for MSVC.
