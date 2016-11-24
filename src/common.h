@@ -27,21 +27,29 @@
   #include <inaddr.h>
   #include <in6addr.h>
 
-  #define WSAEVENT           HANDLE
-  #define GROUP              unsigned int
-  #define WSAPROTOCOL_INFOA  void    /* Not important in wsock_trace.c */
-  #define WSAOVERLAPPED      void    /* Ditto */
-  #define WSAPROTOCOL_INFOW  void    /* Ditto */
-  #define WSANETWORKEVENTS   void    /* Ditto */
-  #define AF_INET            2
-  #define AF_INET6           23
-  #define MSG_PEEK           0x00000002L
-  #define INVALID_SOCKET     0xFFFFFFFF
-  #define SOCKET_ERROR       (-1)
+  #define WSAEVENT                HANDLE
+  #define GROUP                   unsigned int
+  #define WSAPROTOCOL_INFOA       struct { GUID ProviderId; } /* fake; not important in wsock_trace.c */
+  #define WSAPROTOCOL_INFOW       struct { GUID ProviderId; } /* Ditto */
+  #define WSAOVERLAPPED           void                        /* Ditto */
+  #define WSANETWORKEVENTS        void                        /* Ditto */
+  #define AF_INET                 2
+  #define AF_INET6                23
+  #define MSG_PEEK                0x00000002L
+  #define INVALID_SOCKET          0xFFFFFFFF
+  #define SOCKET_ERROR            (-1)
 
-  typedef unsigned short     u_short;
-  typedef unsigned long      u_long;
-  typedef int                socklen_t;
+  #define WSA_WAIT_FAILED         WAIT_FAILED
+  #define WSA_WAIT_IO_COMPLETION  WAIT_IO_COMPLETION
+  #define WSA_WAIT_TIMEOUT        WAIT_TIMEOUT
+  #define WSA_WAIT_EVENT_0        WAIT_OBJECT_0
+  #define WSA_INFINITE            INFINITE
+
+  typedef unsigned short          u_short;
+  typedef unsigned long           u_long;
+  typedef int                     socklen_t;
+
+  #include <ws2def.h>  /* needs 'u_short' */
 
   typedef struct fd_set {
           unsigned fd_count;
@@ -57,33 +65,6 @@
           unsigned short  iMaxUdpDg;
           char           *lpVendorInfo;
         } WSADATA, *LPWSADATA;
-
-  typedef struct WSABUF {
-          ULONG   len;
-          CHAR    *buf;
-        } WSABUF, *LPWSABUF;
-
-  typedef struct {
-          union {
-            struct {
-              ULONG Zone  : 28;
-              ULONG Level : 4;
-            };
-            ULONG   Value;
-          };
-        } SCOPE_ID;
-
-  typedef struct sockaddr {
-          u_short  sa_family;
-          CHAR     sa_data[14];
-        } SOCKADDR;
-
-  typedef struct sockaddr_in {
-          short           sin_family;
-          USHORT          sin_port;
-          IN_ADDR         sin_addr;
-          CHAR            sin_zero[8];
-        } SOCKADDR_IN;
 
   typedef struct sockaddr_in6 {
           short           sin6_family;
@@ -306,7 +287,7 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
                                       __FILE__, __LINE__,              \
                                       ## __VA_ARGS__);                 \
                              fatal_error = 1;                          \
-                             if (0 && IsDebuggerPresent())             \
+                             if (IsDebuggerPresent())                  \
                                   abort();                             \
                              else ExitProcess (GetCurrentProcessId()); \
                            } while (0)
