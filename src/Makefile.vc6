@@ -134,10 +134,10 @@ geoip2.exe: geoip.c common.c in_addr.c init.c getopt.c geoip-gen4.c geoip-gen6.c
 	del common.obj geoip.obj getopt.obj init.obj in_addr.obj
 
 geoip-gen4.c: geoip.exe
-	(set WSOCK_TRACE_LEVEL=0 & geoip.exe -g4) > $@
+	geoip.exe -g4 > $@
 
 geoip-gen6.c: geoip.exe
-	(set WSOCK_TRACE_LEVEL=0 & geoip.exe -g6) > $@
+	geoip.exe -g6 > $@
 
 run_test: test.exe
 	test.exe -dd

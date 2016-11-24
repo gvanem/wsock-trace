@@ -14,7 +14,7 @@
 #
 [core]
 
-trace_level   = 2                  # The level of trace to give; higher value gives more details
+trace_level   = 1                  # The level of trace to give; higher value gives more details
 trace_indent  = 2                  # The number of spaces to indent e.g. '  * test.c(45)'.
 trace_caller  = 1                  ; ditto comment
 trace_report  = 1                  # print a final trace report at program exit.
