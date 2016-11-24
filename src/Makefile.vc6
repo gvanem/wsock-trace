@@ -104,7 +104,8 @@ $(OBJ_DIR):
 $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(USE_LUA)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(DATA_OBJ)
-	copy $(WSOCK_MAP) + link.tmp $(WSOCK_MAP)
+	@copy $(WSOCK_MAP) + link.tmp $(WSOCK_MAP)
+	@del $(WSOCK_LIB:.lib=.exp)
 
 install:
 	copy $(WSOCK_LIB)               "$(LIB_TARGET)"
@@ -156,11 +157,11 @@ compile_juajit_1:
 
 clean:
 	-del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res \
-	     test.map test.lib test.exp
+	     test.map test.lib
 
 vclean realclean: clean
-	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.exp     wsock_trace.pdb
-	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.exp wsock_trace_x64.pdb
+	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.pdb
+	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.pdb
 	-del geoip.exe  geoip.map  geoip.pdb
 	-del geoip2.exe geoip2.map geoip2.pdb geoip-gen4.c geoip-gen6.c
 	-del test.exe   test.pdb   dump.exe   dump.pdb
