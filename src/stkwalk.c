@@ -1,5 +1,5 @@
 /*!\file stkwalk.c
- * StackWalker (backtrace) for Win32 / MSVC+MingW
+ * StackWalker (backtrace) for Win32 / MSVC+MinGW
  */
 
 /*
@@ -47,7 +47,7 @@
 #endif
 
 #include <windows.h>
-#include <PsApi.h>
+#include <psapi.h>
 #include <tlhelp32.h>
 #include <imagehlp.h>
 
@@ -75,7 +75,7 @@ static DWORD  g_proc_id;
  * 'API_VERSION_NUMBER' defined in <imagehlp.h>
  *
  * Here I have included the API-Version 9 declarations, so it will also compile on systems,
- * where the new PSDK is not installed.
+ * where the new 'Platform SDK' is not installed.
  */
 #if defined(API_VERSION_NUMBER) && (API_VERSION_NUMBER < 9)
 
@@ -644,16 +644,19 @@ static BOOL SetSymbolSearchPath (void)
     }
     free (dir);
   }
+
   if (GetEnvironmentVariable("_NT_SYMBOL_PATH", tmp, sizeof(tmp)))
   {
     p   += snprintf (p, left, "%s;", tmp);
     left = end - p;
   }
+
   if (GetEnvironmentVariable("_NT_ALTERNATE_SYMBOL_PATH", tmp, sizeof(tmp)))
   {
     p   += snprintf (p, left, "%s;", tmp);
     left = end - p;
   }
+
   if (GetEnvironmentVariable("SYSTEMROOT", tmp, sizeof(tmp)))
   {
     p   += snprintf (p, left, "%s;", tmp);
