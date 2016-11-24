@@ -135,9 +135,6 @@ install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) $(LDFLAGS) -o $@ $^ > test.map
 
-dump.exe: dump.c common.c in_addr.c processes.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_DUMP_DATA $^ -o $@ -lws2_32 -lole32 > dump.map
-
 geoip.exe: geoip.c common.c init.c in_addr.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE $^ -o $@ -lws2_32 -lole32 > geoip.map
 
@@ -171,8 +168,8 @@ clean:
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
-	      dump.exe dump.map geoip.exe geoip.map geoip2.exe geoip2.map \
-	      geoip-gen4.c geoip-gen6.c test.exe test.map .depend.MinGW
+	      geoip.exe geoip.map geoip2.exe geoip2.map test.exe test.map \
+	      geoip-gen4.c geoip-gen6.c .depend.MinGW
 	- rmdir $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o: %.c

@@ -36,7 +36,7 @@ OBJS = $(OBJ_DIR)\wsock_trace.obj $(OBJ_DIR)\wsock_trace_lua.obj &
 WSOCK_LIB = wsock_trace_ow.lib
 WSOCK_DLL = wsock_trace_ow.dll
 
-TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe # dump.exe
+TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe
 
 all: $(OBJ_DIR) $(TARGETS) .SYMBOLIC
 	@echo Welcome to Wsock_trace library and example.
