@@ -1,3 +1,14 @@
+/*
+ * init.c - Part of Wsock-Trace.
+ *
+ * Most things here are called from 'wsock_trace_init()'
+ * which is called from 'DllMain()'.
+ *
+ * 1) Parsing of the 'wsock_trace' config-file.
+ * 2) exclude-list handling.
+ *    \todo: use a 'smartlist_t' for this in the near future.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
