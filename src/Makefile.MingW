@@ -143,10 +143,10 @@ geoip2.exe: geoip.c common.c init.c in_addr.c geoip-gen4.c geoip-gen6.c
 	      geoip.c common.c init.c in_addr.c -o $@ -lws2_32 -lole32 > geoip2.map
 
 geoip-gen4.c: geoip.exe
-	geoip.exe -g4 > $@
+	geoip.exe -4g $@
 
 geoip-gen6.c: geoip.exe
-	geoip.exe -g6 > $@
+	geoip.exe -6g $@
 
 run_test: test.exe
 	test.exe -dd
