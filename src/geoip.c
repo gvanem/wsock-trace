@@ -1194,11 +1194,13 @@ static func_InternetOpenUrlA     p_InternetOpenUrlA;
 static func_InternetReadFile     p_InternetReadFile;
 static func_InternetCloseHandle  p_InternetCloseHandle;
 
-static struct LoadTable funcs [] = {
-                 { 0, NULL, "wininet.dll", "InternetOpenA",       (void**)&p_InternetOpenA },
-                 { 0, NULL, "wininet.dll", "InternetOpenUrlA",    (void**)&p_InternetOpenUrlA },
-                 { 0, NULL, "wininet.dll", "InternetReadFile",    (void**)&p_InternetReadFile },
-                 { 0, NULL, "wininet.dll", "InternetCloseHandle", (void**)&p_InternetCloseHandle }
+#define ADD_VALUE(func)   { 0, NULL, "wininet.dll", #func, (void**)&p_##func }
+
+static struct LoadTable funcs[] = {
+                 ADD_VALUE (InternetOpenA),
+                 ADD_VALUE (InternetOpenUrlA),
+                 ADD_VALUE (InternetReadFile),
+                 ADD_VALUE (InternetCloseHandle)
                };
 
 static DWORD download_file (const char *file, const char *url)
@@ -1385,16 +1387,16 @@ static DWORD network_len128 (const struct in6_addr *a, const struct in6_addr *b)
   return (3*32*v3 + 2*32*v2 + 32*v1 + v0);
 }
 
-static void dump_ipv4_entries (int dump_cidr, int raw)
+static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
 {
   int i, len, max = smartlist_len (geoip_ipv4_entries);
 
   if (!raw)
   {
-    fputs ("IPv4 entries:\n Index: ", stdout);
+    fputs ("IPv4 entries:\n Index: ", out);
     if (dump_cidr)
-         puts ("CIDR                    Country");
-    else puts ("  IP-low      IP-high      Diff  Country");
+         fputs ("CIDR                    Country\n", out);
+    else fputs ("  IP-low      IP-high      Diff  Country\n", out);
   }
 
   for (i = 0; i < max; i++)
@@ -1408,46 +1410,46 @@ static void dump_ipv4_entries (int dump_cidr, int raw)
       DWORD addr   = swap32 (entry->low);
 
       wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
-      len = printf ("%6d: %s/%d", i, low, nw_len);
+      len = fprintf (out, "%6d: %s/%d", i, low, nw_len);
     }
     else
     {
       if (raw)
-           printf ("  { %10lu, %10lu, ", entry->low, entry->high);
-      else printf ("%6d: %10lu  %10lu %8ld",
-                   i, entry->low, entry->high, (long)(entry->high - entry->low));
+           fprintf (out, "  { %10lu, %10lu, ", entry->low, entry->high);
+      else fprintf (out, "%6d: %10lu  %10lu %8ld",
+                    i, entry->low, entry->high, (long)(entry->high - entry->low));
       len = 30;
     }
     if (raw)
-         printf (" \"%.2s\" },\n", entry->country);
-    else printf (" %*s %.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
+         fprintf (out, " \"%.2s\" },\n", entry->country);
+    else fprintf (out, " %*s %.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
   }
 }
 
-static void hex_dump (const void *data_p, size_t datalen)
+static void hex_dump (FILE *out, const void *data_p, size_t datalen)
 {
   const BYTE *data = (const BYTE*) data_p;
   UINT  i;
 
   for (i = 0; i < datalen; i++)
   {
-    printf ("0x%02X", (unsigned)data[i]);
+    fprintf (out, "0x%02X", (unsigned)data[i]);
     if (i < datalen-1)
-       putchar (',');
+       fputc (',', out);
   }
 }
 
-static void dump_ipv6_entries (int dump_cidr, int raw)
+static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
 {
   int i, len, max = smartlist_len (geoip_ipv6_entries);
 
   if (!raw)
   {
-    fputs ("IPv6 entries:\nIndex: ", stdout);
+    fputs ("IPv6 entries:\nIndex: ", out);
 
     if (dump_cidr)
-         printf ("%-*s Country\n", MAX_IP6_SZ-4, "CIDR");
-    else printf ("%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-4, "IP-high");
+         fprintf (out, "%-*s Country\n", MAX_IP6_SZ-4, "CIDR");
+    else fprintf (out, "%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-4, "IP-high");
   }
 
   for (i = 0; i < max; i++)
@@ -1462,27 +1464,27 @@ static void dump_ipv6_entries (int dump_cidr, int raw)
 
     if (raw)
     {
-      fputs (" { {", stdout);
-      hex_dump (&entry->low, sizeof(entry->low));
+      fputs (" { {", out);
+      hex_dump (out, &entry->low, sizeof(entry->low));
       fputs ("},\n"
-             "   {", stdout);
-      hex_dump (&entry->high, sizeof(entry->high));
-      fputs ("}, ", stdout);
+             "   {", out);
+      hex_dump (out, &entry->high, sizeof(entry->high));
+      fputs ("}, ", out);
     }
     else if (dump_cidr)
     {
       nw_len = network_len128 (&entry->high, &entry->low);
-      len = printf ("%5d: %s/%d", i, low, nw_len);
+      len = fprintf (out, "%5d: %s/%d", i, low, nw_len);
     }
     else
     {
-      printf ("%5d: %-*s %-*s", i, MAX_IP6_SZ-4, low, MAX_IP6_SZ-4, high);
+      fprintf (out, "%5d: %-*s %-*s", i, MAX_IP6_SZ-4, low, MAX_IP6_SZ-4, high);
       len = 45;
     }
 
     if (raw)
-         printf ("\"%s\" },\n", entry->country);
-    else printf (" %*s %.2s - %s\n", 45-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
+         fprintf (out, "\"%s\" },\n", entry->country);
+    else fprintf (out, " %*s %.2s - %s\n", 45-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
   }
 }
 
@@ -1599,32 +1601,58 @@ static void test_addr6 (const char *ip6_addr)
     puts ("Invalid address.");
 }
 
-static void geoip_generate_array (int family)
+#if !defined(USE_GEOIP_GENERATED)
+static void geoip_generate_array (int family, const char *out_file)
 {
-  int    len = (family == AF_INET  && geoip_ipv4_entries) ? smartlist_len(geoip_ipv4_entries) :
-               (family == AF_INET6 && geoip_ipv6_entries) ? smartlist_len(geoip_ipv6_entries) : 0;
-  int    fam = (family == AF_INET) ? '4' : '6';
+  int    len, fam;
   time_t now = time (NULL);
+  FILE  *out = fopen (out_file, "w+t");
 
-  printf ("\n"
-          "/*\n"
-          " * This file was generated at %.24s.\n"
-          " * by the Makefile command: \"geoip.exe -g%c > geoip-gen%c.c\"\n"
-          " * DO NOT EDIT!\n"
-          " */\n"
-          "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", ctime(&now), fam, fam, fam, fam, len);
+  if (!out)
+  {
+    printf ("Failed to create file %s; %s\n", out_file, strerror(errno));
+    return;
+  }
+
+  if (family == AF_INET && geoip_ipv4_entries)
+  {
+    len = smartlist_len (geoip_ipv4_entries);
+    fam = '4';
+  }
+  else if (family == AF_INET6 && geoip_ipv6_entries)
+  {
+    len = smartlist_len (geoip_ipv6_entries);
+    fam = '6';
+  }
+  else
+  {
+    printf ("'family must be AF_INET or AF_INET6.\n");
+    return;
+  }
+
+  fprintf (out,
+           "/*\n"
+           " * This file was generated at %.24s.\n"
+           " * by the Makefile command: \"geoip.exe -%cg %s\"\n"
+           " * DO NOT EDIT!\n"
+           " */\n", ctime(&now), fam, out_file);
+
+  fprintf (out, "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
 
   if (family == AF_INET)
-       dump_ipv4_entries (0, 1);
-  else dump_ipv6_entries (0, 1);
+       dump_ipv4_entries (out, 0, 1);
+  else dump_ipv6_entries (out, 0, 1);
 
-  printf ("};\n"
-          "\n"
-          "static smartlist_t *smartlist_new_fixed_ipv%c (void)\n"
-          "{\n"
-          "  return smartlist_new_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
-          "}\n\n", fam, fam, fam, len);
+  fprintf (out,
+           "};\n"
+           "\n"
+           "static smartlist_t *smartlist_new_fixed_ipv%c (void)\n"
+           "{\n"
+           "  return smartlist_new_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
+           "}\n\n", fam, fam, fam, len);
+  fclose (out);
 }
+#endif  /* USE_GEOIP_GENERATED */
 
 /*
  * A random integer in range [a..b].
@@ -1662,23 +1690,27 @@ static void show_help (void)
 {
   const char *G_option = "";
   const char *G_help   = "";
+  const char *g_option = " [-g file]";
+  const char *g_help   = "       -g file: generate IPv4/IPv6 tables to <file>.\n";
 
 #if defined(USE_GEOIP_GENERATED)
   G_option = "G";
-  G_help   = "       -G:    Use generated built-in IPv4/IPv6 arrays.\n";
+  G_help   = "       -G:      Use generated built-in IPv4/IPv6 arrays.\n";
+  g_option = "";
+  g_help   = "";
 #endif
 
-  printf ("Usage: test [-cdg%snruh] <-4|-6> address(es)\n"
-          "       -c:    dump addresses on CIDR form.\n"
-          "       -d:    dump address entries for countries and count of blocks.\n"
-          "       -g:    generate IPv4/IPv6 tables.\n"
+  printf ("Usage: test [-cd%snruh]%s <-4|-6> address(es)\n"
+          "       -c:      dump addresses on CIDR form.\n"
+          "       -d:      dump address entries for countries and count of blocks.\n"
           "%s"
-          "       -n #:  number of loops for random test.\n"
-          "       -r:    random test for '-n' rounds (default 10).\n"
-          "       -u:    test updating of geoip files.\n"
-          "       -4:    test IPv4 address(es).\n"
-          "       -6:    test IPv6 address(es).\n"
-          "       -h:    this help.\n", G_option, G_help);
+          "%s"
+          "       -n #:    number of loops for random test.\n"
+          "       -r:      random test for '-n' rounds (default 10).\n"
+          "       -u:      test updating of geoip files.\n"
+          "       -4:      test IPv4 address(es).\n"
+          "       -6:      test IPv6 address(es).\n"
+          "       -h:      this help.\n", G_option, g_option, G_help, g_help);
   exit (0);
 }
 
@@ -1730,7 +1762,7 @@ static char *rip (char *s)
   return (s);
 }
 
-static smartlist_t *make_argv_list (int _argc, const char **_argv)
+static smartlist_t *make_argv_list (int _argc, char **_argv)
 {
   smartlist_t *list = smartlist_new();
   FILE        *f;
@@ -1778,19 +1810,24 @@ static void free_argv_list (smartlist_t *sl)
 
 int main (int argc, char **argv)
 {
-  int  i, c, do_cidr = 0, do_generate = 0, do_4 = 0, do_6 = 0;
-  int  do_update = 0, do_dump = 0, do_rand = 0;
-  int  loops = 10;
+  int c, do_cidr = 0,  do_4 = 0, do_6 = 0;
+  int do_update = 0, do_dump = 0, do_rand = 0;
+  int loops = 10;
 
 #if defined(USE_GEOIP_GENERATED)
   #define G_OPT "G"
+  #define g_OPT ""
 #else
   #define G_OPT ""
+  #define g_OPT "g:"
+
+  int         do_generate = 0;
+  const char *g_file = NULL;
 #endif
 
   wsock_trace_init();
 
-  while ((c = getopt (argc, argv, "h?cdg" G_OPT "n:ru46")) != EOF)
+  while ((c = getopt (argc, argv, "h?cd" g_OPT G_OPT "n:ru46")) != EOF)
     switch (c)
     {
       case '?':
@@ -1803,10 +1840,12 @@ int main (int argc, char **argv)
       case 'd':
            do_dump++;
            break;
+#if !defined(USE_GEOIP_GENERATED)
       case 'g':
            do_generate++;
+           g_file = optarg;
            break;
-#if defined(USE_GEOIP_GENERATED)
+#else
       case 'G':
            use_geoip_generated = TRUE;
            geoip_exit();
@@ -1860,14 +1899,16 @@ int main (int argc, char **argv)
     }
   }
 
+#if !defined(USE_GEOIP_GENERATED)
   if (do_generate)
   {
     if (do_4)
-       geoip_generate_array (AF_INET);
+       geoip_generate_array (AF_INET, g_file);
     if (do_6)
-       geoip_generate_array (AF_INET6);
+       geoip_generate_array (AF_INET6, g_file);
     return (0);
   }
+#endif
 
   argc -= optind;
   argv += optind;
@@ -1875,9 +1916,9 @@ int main (int argc, char **argv)
   if (do_dump)
   {
     if (do_4)
-       dump_ipv4_entries (do_cidr, 0);
+       dump_ipv4_entries (stdout, do_cidr, 0);
     if (do_6)
-       dump_ipv6_entries (do_cidr, 0);
+       dump_ipv6_entries (stdout, do_cidr, 0);
     if (do_dump >= 2 && (do_4 || do_6))
        dump_num_ip_blocks_by_country();
   }
