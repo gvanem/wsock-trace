@@ -9,8 +9,9 @@
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
 
-*Note*: As an added bonus, Geo-IP information is also added. Thanks to the Tor-project for
-a simplified version of the MaxMind GeiIP-databases.
+Geo-IP information has also been added. Thanks to the Tor-project for
+a simplified version of the MaxMind GeoIP-databases. Also many thanks to
+MaxMind for their GeoLite data-files. Available from <a href="http://www.maxmind.com">http://www.maxmind.com</a>.
 
 ### Installation (MSVC):
 
