@@ -555,6 +555,7 @@ static void parse_config_file (FILE *file)
   }
 }
 
+#if !defined(TEST_GEOIP)
 static void trace_report (void)
 {
   const struct exclude *ex;
@@ -618,6 +619,7 @@ static void trace_report (void)
   trace_printf ("    Send bytes:  %15s",               qword_str(g_cfg.counts.send_bytes));
   trace_printf ("  Send errors: %15s\n",               qword_str(g_cfg.counts.send_errors));
 }
+#endif /* TEST_GEOIP */
 
 /*
  * Called from DllMain(): dwReason == DLL_PROCESS_DETACH
@@ -639,7 +641,7 @@ void wsock_trace_exit (void)
   if (g_cfg.trace_report)
      trace_report();
 
-  /* Crashes inside free() when mixing MingW + MSVC100 :-(
+  /* Crashes inside free() when mixing MinGW + MSVC100 :-(
    */
 #if !defined(MINGW_USE_MSVCR_100)
   exclude_list_free();
@@ -827,7 +829,10 @@ void wsock_trace_init (void)
     DWORD num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
     DWORD num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
 
-#if !defined(TEST_GEOIP)
+#if defined(TEST_GEOIP)
+    ARGSUSED (num4);
+    ARGSUSED (num6);
+#else
     if (num4 == 0 && num6 == 0)
        g_cfg.geoip_enable = FALSE;
 #endif
