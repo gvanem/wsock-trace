@@ -215,15 +215,17 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
 
 #if defined(_MSC_VER)
   #ifndef _CRTDBG_MAP_ALLOC
-  #define strdup    _strdup
+  #define strdup       _strdup
   #endif
 
-  #define strnicmp  _strnicmp
-  #define stricmp   _stricmp
-  #define snprintf  _snprintf
-  #define vsnprintf _vsnprintf
-  #define fdopen    _fdopen
-  #define tzset()   _tzset()
+  #define strnicmp    _strnicmp
+  #define stricmp     _stricmp
+  #define snprintf    _snprintf
+  #define vsnprintf   _vsnprintf
+  #define fdopen      _fdopen
+  #define tzset()     _tzset()
+  #define isatty(fd)  _isatty (fd)
+  #define fileno(f)   _fileno (f)
 
 #elif defined(__MINGW32__)
   /*
