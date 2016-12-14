@@ -1630,14 +1630,14 @@ void dump_events (const WSANETWORKEVENTS *events)
   ev = events->lNetworkEvents;
   trace_printf ("lNetworkEvents: %s\n", event_bits_decode(ev));
 
-  for (i = 0; i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs); i++)
+  for (i = 0; i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs) && ev; i++)
   {
-    if (ev && (1 << i))
+    if (ev & (1 << i))
     {
-      const char *ev_bit = list_lookup_name (ev, wsa_events_flgs, DIM(wsa_events_flgs));
+      const char *ev_bit = list_lookup_name (ev & (1 << i), wsa_events_flgs, DIM(wsa_events_flgs));
 
       trace_indent (g_cfg.trace_indent+4);
-      trace_printf ("iErrorCode [%s]: %08X\n", ev_bit, events->iErrorCode[i]);
+      trace_printf ("iErrorCode [%s_BIT/%d]: %08X\n", ev_bit, i, events->iErrorCode[i]);
       ev &= ~(1 << i);
     }
   }
