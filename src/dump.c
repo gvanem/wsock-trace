@@ -1616,7 +1616,8 @@ void dump_protoent (const struct protoent *proto)
 
 void dump_events (const WSANETWORKEVENTS *events)
 {
-  int i;
+  int  i;
+  long ev;
 
   trace_indent (g_cfg.trace_indent+2);
   trace_puts ("~4events: ");
@@ -1625,11 +1626,20 @@ void dump_events (const WSANETWORKEVENTS *events)
     trace_puts ("NULL~0");
     return;
   }
-  trace_printf ("lNetworkEvents: %s\n", event_bits_decode(events->lNetworkEvents));
-  for (i = 0; i < DIM(events->iErrorCode); i++)
+
+  ev = events->lNetworkEvents;
+  trace_printf ("lNetworkEvents: %s\n", event_bits_decode(ev));
+
+  for (i = 0; i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs); i++)
   {
-    trace_indent (g_cfg.trace_indent+4);
-    trace_printf ("iErrorCode[%d]: %08X\n", i, events->iErrorCode[i]);
+    if (ev && (1 << i))
+    {
+      const char *ev_bit = list_lookup_name (ev, wsa_events_flgs, DIM(wsa_events_flgs));
+
+      trace_indent (g_cfg.trace_indent+4);
+      trace_printf ("iErrorCode [%s]: %08X\n", ev_bit, events->iErrorCode[i]);
+      ev &= ~(1 << i);
+    }
   }
   trace_puts ("~0");
 }
