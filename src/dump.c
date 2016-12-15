@@ -77,6 +77,25 @@
 #endif
 
 /*
+ * Missing 'SOL_x' levels.
+ */
+#ifndef SOL_RFCOMM
+#define SOL_RFCOMM  0x0003
+#endif
+
+#ifndef SOL_IRLMP
+#define SOL_IRLMP   0x00FF
+#endif
+
+#ifndef SOL_L2CAP
+#define SOL_L2CAP   0x0100
+#endif
+
+#ifndef SOL_SDP
+#define SOL_SDP     0x0101
+#endif
+
+/*
  * Missing 'SO_x' codes.
  */
 #ifndef SO_BSP_STATE
@@ -332,91 +351,351 @@
 #endif
 
 /*
- * Missing 'SIO_x' codes.
+ * All 'SIO_x' codes presently in MS's Windows headers.
  */
-#ifndef SIO_SOCKET_CLOSE_NOTIFY
-#define SIO_SOCKET_CLOSE_NOTIFY             _WSAIOW (IOC_VENDOR,13)
+#ifndef SIO_ASSOCIATE_HANDLE
+#define SIO_ASSOCIATE_HANDLE                         _WSAIOW (IOC_WS2, 1)
+#endif
+
+#ifndef SIO_ENABLE_CIRCULAR_QUEUEING
+#define SIO_ENABLE_CIRCULAR_QUEUEING                 _WSAIO (IOC_WS2, 2)
+#endif
+
+#ifndef SIO_FIND_ROUTE
+#define SIO_FIND_ROUTE                               _WSAIOR (IOC_WS2, 3)
+#endif
+
+#ifndef SIO_FLUSH
+#define SIO_FLUSH                                    _WSAIO (IOC_WS2, 4)
+#endif
+
+#ifndef SIO_GET_BROADCAST_ADDRESS
+#define SIO_GET_BROADCAST_ADDRESS                    _WSAIOR (IOC_WS2, 5)
 #endif
 
 #ifndef SIO_GET_EXTENSION_FUNCTION_POINTER
-#define SIO_GET_EXTENSION_FUNCTION_POINTER  _WSAIORW (IOC_WS2,6)
+#define SIO_GET_EXTENSION_FUNCTION_POINTER           _WSAIORW (IOC_WS2, 6)
 #endif
 
 #ifndef SIO_GET_QOS
-#define SIO_GET_QOS                         _WSAIORW (IOC_WS2,7)
+#define SIO_GET_QOS                                  _WSAIORW (IOC_WS2, 7)
 #endif
 
-#ifndef SIO_GET_INTERFACE_LIST
-#define SIO_GET_INTERFACE_LIST              _IOR ('t', 127, ULONG)
+#ifndef SIO_GET_GROUP_QOS
+#define SIO_GET_GROUP_QOS                            _WSAIORW (IOC_WS2, 8)
 #endif
 
-#ifndef SIO_GET_INTERFACE_LIST_EX
-#define SIO_GET_INTERFACE_LIST_EX           _IOR ('t', 126, ULONG)
+#ifndef SIO_MULTIPOINT_LOOPBACK
+#define SIO_MULTIPOINT_LOOPBACK                      _WSAIOW (IOC_WS2, 9)
 #endif
 
-#ifndef SIO_SET_MULTICAST_FILTER
-#define SIO_SET_MULTICAST_FILTER            _IOW ('t', 125, ULONG)
+#ifndef SIO_SET_QOS
+#define SIO_SET_QOS                                  _WSAIOW (IOC_WS2, 11)
 #endif
 
-#ifndef SIO_GET_MULTICAST_FILTER
-#define SIO_GET_MULTICAST_FILTER            _IOW ('t', 124 | IOC_IN, ULONG)
+#ifndef SIO_MULTICAST_SCOPE
+#define SIO_MULTICAST_SCOPE                          _WSAIOW (IOC_WS2, 10)
 #endif
 
-#ifndef SIO_IDEAL_SEND_BACKLOG_QUERY
-#define SIO_IDEAL_SEND_BACKLOG_QUERY        _IOR ('t', 123, ULONG)
+#ifndef SIO_SET_GROUP_QOS
+#define SIO_SET_GROUP_QOS                            _WSAIOW (IOC_WS2, 12)
+#endif
+
+#ifndef SIO_TRANSLATE_HANDLE
+#define SIO_TRANSLATE_HANDLE                         _WSAIORW (IOC_WS2, 13)
+#endif
+
+#ifndef SIO_ROUTING_INTERFACE_CHANGE
+#define SIO_ROUTING_INTERFACE_CHANGE                 _WSAIOW (IOC_WS2, 21)
+#endif
+
+#ifndef SIO_ROUTING_INTERFACE_QUERY
+#define SIO_ROUTING_INTERFACE_QUERY                  _WSAIORW (IOC_WS2, 20)
+#endif
+
+#ifndef SIO_ADDRESS_LIST_QUERY
+#define SIO_ADDRESS_LIST_QUERY                       _WSAIOR (IOC_WS2, 22)
+#endif
+
+#ifndef SIO_ADDRESS_LIST_CHANGE
+#define SIO_ADDRESS_LIST_CHANGE                      _WSAIO (IOC_WS2, 23)
+#endif
+
+#ifndef SIO_QUERY_TARGET_PNP_HANDLE
+#define SIO_QUERY_TARGET_PNP_HANDLE                  _WSAIOR (IOC_WS2, 24)
+#endif
+
+#ifndef SIO_ADDRESS_LIST_SORT
+#define SIO_ADDRESS_LIST_SORT                        _WSAIORW (IOC_WS2, 25)
+#endif
+
+#ifndef SIO_NSP_NOTIFY_CHANGE
+#define SIO_NSP_NOTIFY_CHANGE                        _WSAIOW (IOC_WS2, 25)
+#endif
+
+#ifndef SIO_RESERVED_1
+#define SIO_RESERVED_1                               _WSAIOW (IOC_WS2, 26)
+#endif
+
+#ifndef SIO_BSP_HANDLE
+#define SIO_BSP_HANDLE                               _WSAIOR (IOC_WS2, 27)
+#endif
+
+#ifndef SIO_BSP_HANDLE_SELECT
+#define SIO_BSP_HANDLE_SELECT                        _WSAIOR (IOC_WS2, 28)
+#endif
+
+#ifndef SIO_BSP_HANDLE_POLL
+#define SIO_BSP_HANDLE_POLL                          _WSAIOR (IOC_WS2, 29)
+#endif
+
+#ifndef SIO_EXT_SELECT
+#define SIO_EXT_SELECT                               _WSAIORW (IOC_WS2, 30)
+#endif
+
+#ifndef SIO_EXT_POLL
+#define SIO_EXT_POLL                                 _WSAIORW (IOC_WS2, 31)
+#endif
+
+#ifndef SIO_EXT_SENDMSG
+#define SIO_EXT_SENDMSG                              _WSAIORW (IOC_WS2, 32)
+#endif
+
+#ifndef SIO_RESERVED_2
+#define SIO_RESERVED_2                               _WSAIOW (IOC_WS2, 33)
+#endif
+
+#ifndef SIO_BASE_HANDLE
+#define SIO_BASE_HANDLE                              _WSAIOR (IOC_WS2, 34)
+#endif
+
+#ifndef SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER
+#define SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER  _WSAIORW (IOC_WS2, 36)
+#endif
+
+#ifndef SIO_QUERY_RSS_PROCESSOR_INFO
+#define SIO_QUERY_RSS_PROCESSOR_INFO                 _WSAIOR (IOC_WS2, 37)
 #endif
 
 #ifndef SIO_IDEAL_SEND_BACKLOG_CHANGE
-#define SIO_IDEAL_SEND_BACKLOG_CHANGE       _IO ('t', 122)
+#define SIO_IDEAL_SEND_BACKLOG_CHANGE                _IO ('t', 122)
 #endif
 
-/*
- * More missing 'SIO_x' codes.
- */
-#if !defined(_MSC_VER)
-  #if !defined(__MINGW64_VERSION_MAJOR)
-    #define SIO_RCVALL                      _WSAIOW  (IOC_VENDOR,1)
-    #define SIO_RCVALL_MCAST                _WSAIOW  (IOC_VENDOR,2)
-    #define SIO_RCVALL_IGMPMCAST            _WSAIOW  (IOC_VENDOR,3)
-    #define SIO_KEEPALIVE_VALS              _WSAIOW  (IOC_VENDOR,4)
-    #define SIO_ABSORB_RTRALERT             _WSAIOW  (IOC_VENDOR,5)
-    #define SIO_UCAST_IF                    _WSAIOW  (IOC_VENDOR,6)
-    #define SIO_LIMIT_BROADCASTS            _WSAIOW  (IOC_VENDOR,7)
-    #define SIO_INDEX_BIND                  _WSAIOW  (IOC_VENDOR,8)
-    #define SIO_INDEX_MCASTIF               _WSAIOW  (IOC_VENDOR,9)
-    #define SIO_INDEX_ADD_MCAST             _WSAIOW  (IOC_VENDOR,10)
-    #define SIO_INDEX_DEL_MCAST             _WSAIOW  (IOC_VENDOR,11)
-  #endif
-
-  #undef  SIO_UDP_CONNRESET
-  #define SIO_UDP_CONNRESET                 _WSAIOW  (IOC_VENDOR,12)
-  #define SIO_RCVALL_MCAST_IF               _WSAIOW  (IOC_VENDOR,13)
-  #define SIO_RCVALL_IF                     _WSAIOW  (IOC_VENDOR,14)
-  #define SIO_UDP_NETRESET                  _WSAIOW  (IOC_VENDOR,15)
-
-  #if (_WIN32_WINNT < 0x0600)
-    #define SIO_BSP_HANDLE                  _WSAIOR  (IOC_WS2,27)
-    #define SIO_BSP_HANDLE_SELECT           _WSAIOR  (IOC_WS2,28)
-    #define SIO_BSP_HANDLE_POLL             _WSAIOR  (IOC_WS2,29)
-    #define SIO_EXT_SELECT                  _WSAIORW (IOC_WS2,30)
-    #define SIO_EXT_POLL                    _WSAIORW (IOC_WS2,31)
-    #define SIO_EXT_SENDMSG                 _WSAIORW (IOC_WS2,32)
-    #define SIO_BASE_HANDLE                 _WSAIOR  (IOC_WS2,34)
-  #endif
-
-  #define SIO_ACQUIRE_PORT_RESERVATION      _WSAIOW  (IOC_VENDOR, 100)
-  #define SIO_RELEASE_PORT_RESERVATION      _WSAIOW  (IOC_VENDOR, 101)
-  #define SIO_ASSOCIATE_PORT_RESERVATION    _WSAIOW  (IOC_VENDOR, 102)
-
-  #define SIO_SET_SECURITY                  _WSAIOW  (IOC_VENDOR, 200)
-  #define SIO_QUERY_SECURITY                _WSAIORW (IOC_VENDOR, 201)
-  #define SIO_SET_PEER_TARGET_NAME          _WSAIOW  (IOC_VENDOR, 202)
-  #define SIO_DELETE_PEER_TARGET_NAME       _WSAIOW  (IOC_VENDOR, 203)
-  #define SIO_SOCKET_USAGE_NOTIFICATION     _WSAIOW  (IOC_VENDOR, 204)
-  #define SIO_QUERY_WFP_ALE_ENDPOINT_HANDLE _WSAIOR  (IOC_VENDOR, 205)
-  #define SIO_QUERY_RSS_SCALABILITY_INFO    _WSAIOR  (IOC_VENDOR, 210)
+#ifndef SIO_IDEAL_SEND_BACKLOG_QUERY
+#define SIO_IDEAL_SEND_BACKLOG_QUERY                 _IOR ('t', 123, ULONG)
 #endif
 
+#ifndef SIO_GET_MULTICAST_FILTER
+#define SIO_GET_MULTICAST_FILTER                     _IOW ('t', 124 | IOC_IN, ULONG)
+#endif
+
+#ifndef SIO_SET_MULTICAST_FILTER
+#define SIO_SET_MULTICAST_FILTER                     _IOW ('t', 125, ULONG)
+#endif
+
+#ifndef SIO_GET_INTERFACE_LIST_EX
+#define SIO_GET_INTERFACE_LIST_EX                    _IOR ('t', 126, ULONG)
+#endif
+
+#ifndef SIO_LAZY_DISCOVERY
+#define SIO_LAZY_DISCOVERY                           _IOR ('t', 127, u_long)
+#endif
+
+#ifndef SIO_GET_INTERFACE_LIST
+#define SIO_GET_INTERFACE_LIST                       _IOR ('t', 127, ULONG)
+#endif
+
+#ifndef SIO_RCVALL
+#define SIO_RCVALL                                   _WSAIOW (IOC_VENDOR, 1)
+#endif
+
+#ifndef SIO_CHK_QOS
+#define SIO_CHK_QOS                                  _WSAIORW (IOC_VENDOR, 1)
+#endif
+
+#ifndef SIO_RCVALL_MCAST
+#define SIO_RCVALL_MCAST                             _WSAIOW (IOC_VENDOR, 2)
+#endif
+
+#ifndef SIO_RCVALL_IGMPMCAST
+#define SIO_RCVALL_IGMPMCAST                         _WSAIOW (IOC_VENDOR, 3)
+#endif
+
+#ifndef SIO_KEEPALIVE_VALS
+#define SIO_KEEPALIVE_VALS                           _WSAIOW (IOC_VENDOR, 4)
+#endif
+
+#ifndef SIO_ABSORB_RTRALERT
+#define SIO_ABSORB_RTRALERT                          _WSAIOW (IOC_VENDOR, 5)
+#endif
+
+#ifndef SIO_UCAST_IF
+#define SIO_UCAST_IF                                 _WSAIOW (IOC_VENDOR, 6)
+#endif
+
+#ifndef SIO_LIMIT_BROADCASTS
+#define SIO_LIMIT_BROADCASTS                         _WSAIOW (IOC_VENDOR, 7)
+#endif
+
+#ifndef SIO_BTH_PING
+#define SIO_BTH_PING                                 _WSAIORW (IOC_VENDOR, 8)
+#endif
+
+#ifndef SIO_INDEX_BIND
+#define SIO_INDEX_BIND                               _WSAIOW (IOC_VENDOR, 8)
+#endif
+
+#ifndef SIO_INDEX_MCASTIF
+#define SIO_INDEX_MCASTIF                            _WSAIOW (IOC_VENDOR, 9)
+#endif
+
+#ifndef SIO_BTH_INFO
+#define SIO_BTH_INFO                                 _WSAIORW (IOC_VENDOR, 9)
+#endif
+
+#ifndef SIO_INDEX_ADD_MCAST
+#define SIO_INDEX_ADD_MCAST                          _WSAIOW (IOC_VENDOR, 10)
+#endif
+
+#ifndef SIO_INDEX_DEL_MCAST
+#define SIO_INDEX_DEL_MCAST                          _WSAIOW (IOC_VENDOR, 11)
+#endif
+
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET                            _WSAIOW (IOC_VENDOR, 12)
+#endif
+
+#ifndef SIO_RCVALL_MCAST_IF
+#define SIO_RCVALL_MCAST_IF                          _WSAIOW (IOC_VENDOR, 13)
+#endif
+
+#ifndef SIO_SOCKET_CLOSE_NOTIFY
+#define SIO_SOCKET_CLOSE_NOTIFY                      _WSAIOW (IOC_VENDOR, 13)
+#endif
+
+#ifndef SIO_RCVALL_IF
+#define SIO_RCVALL_IF                                _WSAIOW (IOC_VENDOR, 14)
+#endif
+
+#ifndef SIO_UDP_NETRESET
+#define SIO_UDP_NETRESET                             _WSAIOW (IOC_VENDOR, 15)
+#endif
+
+#ifndef SIO_LOOPBACK_FAST_PATH
+#define SIO_LOOPBACK_FAST_PATH                       _WSAIOW (IOC_VENDOR, 16)
+#endif
+
+#ifndef SIO_TCP_INITIAL_RTO
+#define SIO_TCP_INITIAL_RTO                          _WSAIOW (IOC_VENDOR, 17)
+#endif
+
+#ifndef SIO_APPLY_TRANSPORT_SETTING
+#define SIO_APPLY_TRANSPORT_SETTING                  _WSAIOW (IOC_VENDOR, 19)
+#endif
+
+#ifndef SIO_QUERY_TRANSPORT_SETTING
+#define SIO_QUERY_TRANSPORT_SETTING                  _WSAIOW (IOC_VENDOR, 20)
+#endif
+
+#ifndef SIO_TCP_SET_ICW
+#define SIO_TCP_SET_ICW                              _WSAIOW (IOC_VENDOR, 22)
+#endif
+
+#ifndef SIO_TCP_SET_ACK_FREQUENCY
+#define SIO_TCP_SET_ACK_FREQUENCY                    _WSAIOW (IOC_VENDOR, 23)
+#endif
+
+#ifndef SIO_ACQUIRE_PORT_RESERVATION
+#define SIO_ACQUIRE_PORT_RESERVATION                 _WSAIOW (IOC_VENDOR, 100)
+#endif
+
+#ifndef SIO_RELEASE_PORT_RESERVATION
+#define SIO_RELEASE_PORT_RESERVATION                 _WSAIOW (IOC_VENDOR, 101)
+#endif
+
+#ifndef SIO_RFCOMM_SEND_COMMAND
+#define SIO_RFCOMM_SEND_COMMAND                      _WSAIORW (IOC_VENDOR, 101)
+#endif
+
+#ifndef SIO_ASSOCIATE_PORT_RESERVATION
+#define SIO_ASSOCIATE_PORT_RESERVATION               _WSAIOW (IOC_VENDOR, 102)
+#endif
+
+#ifndef SIO_RFCOMM_WAIT_COMMAND
+#define SIO_RFCOMM_WAIT_COMMAND                      _WSAIORW (IOC_VENDOR, 102)
+#endif
+
+#ifndef SIO_RFCOMM_SESSION_FLOW_OFF
+#define SIO_RFCOMM_SESSION_FLOW_OFF                  _WSAIORW (IOC_VENDOR, 103)
+#endif
+
+#ifndef SIO_RFCOMM_TEST
+#define SIO_RFCOMM_TEST                              _WSAIORW (IOC_VENDOR, 104)
+#endif
+
+#ifndef SIO_RFCOMM_USECFC
+#define SIO_RFCOMM_USECFC                            _WSAIORW (IOC_VENDOR, 105)
+#endif
+
+#ifndef SIO_SET_SECURITY
+#define SIO_SET_SECURITY                             _WSAIOW (IOC_VENDOR, 200)
+#endif
+
+#ifndef SIO_QUERY_SECURITY
+#define SIO_QUERY_SECURITY                           _WSAIORW (IOC_VENDOR, 201)
+#endif
+
+#ifndef SIO_SET_PEER_TARGET_NAME
+#define SIO_SET_PEER_TARGET_NAME                     _WSAIOW (IOC_VENDOR, 202)
+#endif
+
+#ifndef SIO_DELETE_PEER_TARGET_NAME
+#define SIO_DELETE_PEER_TARGET_NAME                  _WSAIOW (IOC_VENDOR, 203)
+#endif
+
+#ifndef SIO_SOCKET_USAGE_NOTIFICATION
+#define SIO_SOCKET_USAGE_NOTIFICATION                _WSAIOW (IOC_VENDOR, 204)
+#endif
+
+#ifndef SIO_QUERY_WFP_ALE_ENDPOINT_HANDLE
+#define SIO_QUERY_WFP_ALE_ENDPOINT_HANDLE            _WSAIOR (IOC_VENDOR, 205)
+#endif
+
+#ifndef SIO_QUERY_RSS_SCALABILITY_INFO
+#define SIO_QUERY_RSS_SCALABILITY_INFO               _WSAIOR (IOC_VENDOR, 210)
+#endif
+
+#ifndef SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT
+#define SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT    _WSAIOW (IOC_VENDOR, 221)
+#endif
+
+#ifndef SIO_QUERY_WFP_CONNECTION_REDIRECT_RECORDS
+#define SIO_QUERY_WFP_CONNECTION_REDIRECT_RECORDS    _WSAIOW (IOC_VENDOR, 220)
+#endif
+
+#ifndef SIO_SET_WFP_CONNECTION_REDIRECT_RECORDS
+#define SIO_SET_WFP_CONNECTION_REDIRECT_RECORDS      _WSAIOW (IOC_VENDOR, 222)
+#endif
+
+#ifndef SIO_SET_COMPATIBILITY_MODE
+#define SIO_SET_COMPATIBILITY_MODE                   _WSAIOW (IOC_VENDOR, 300)
+#endif
+
+#ifndef SIO_GET_NUMBER_OF_ATM_DEVICES
+#define SIO_GET_NUMBER_OF_ATM_DEVICES                0x50160001
+#endif
+
+#ifndef SIO_GET_ATM_ADDRESS
+#define SIO_GET_ATM_ADDRESS                          0xD0160002
+#endif
+
+#ifndef SIO_ASSOCIATE_PVC
+#define SIO_ASSOCIATE_PVC                            0x90160003
+#endif
+
+#ifndef SIO_GET_ATM_CONNECTION_ID
+#define SIO_GET_ATM_CONNECTION_ID                    0x50160004
+#endif
 
 
 static const struct search_list sol_options[] = {
@@ -441,6 +720,8 @@ static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_GROUP_PRIORITY),
                     ADD_VALUE (SO_MAX_MSG_SIZE),
                     ADD_VALUE (SO_PROTOCOL_INFO),
+                /*  ADD_VALUE (SO_PROTOCOL_INFOA), Same as above */
+                    ADD_VALUE (SO_PROTOCOL_INFOW),
                     ADD_VALUE (SO_CONDITIONAL_ACCEPT),
                     ADD_VALUE (SO_UPDATE_CONNECT_CONTEXT),
                     ADD_VALUE (SO_BSP_STATE),
@@ -460,8 +741,6 @@ static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_OPENTYPE),
                     ADD_VALUE (SO_PAUSE_ACCEPT),
                     ADD_VALUE (SO_PORT_SCALABILITY),
-                    ADD_VALUE (SO_PROTOCOL_INFOA),
-                    ADD_VALUE (SO_PROTOCOL_INFOW),
                     ADD_VALUE (SO_RANDOMIZE_PORT),
                     ADD_VALUE (SO_REUSE_UNICASTPORT),
                     ADD_VALUE (SO_REUSE_MULTICASTPORT),
@@ -579,6 +858,10 @@ static const struct search_list families[] = {
 
 static const struct search_list levels[] = {
                     ADD_VALUE (SOL_SOCKET),
+                    ADD_VALUE (SOL_IRLMP),
+                    ADD_VALUE (SOL_SDP),
+                    ADD_VALUE (SOL_RFCOMM),
+                    ADD_VALUE (SOL_L2CAP),
                     ADD_VALUE (IPPROTO_UDP),
                     ADD_VALUE (IPPROTO_TCP),
                     ADD_VALUE (IPPROTO_IP),
@@ -692,48 +975,93 @@ static const struct search_list ioctl_commands[] = {
                   };
 
 static const struct search_list sio_codes[] = {
-                    ADD_VALUE (SIO_RCVALL),
-                    ADD_VALUE (SIO_RCVALL_MCAST),
-                    ADD_VALUE (SIO_RCVALL_IGMPMCAST),
-                    ADD_VALUE (SIO_KEEPALIVE_VALS),
                     ADD_VALUE (SIO_ABSORB_RTRALERT),
-                    ADD_VALUE (SIO_UCAST_IF),
-                    ADD_VALUE (SIO_LIMIT_BROADCASTS),
-                    ADD_VALUE (SIO_INDEX_BIND),
-                    ADD_VALUE (SIO_INDEX_MCASTIF),
-                    ADD_VALUE (SIO_INDEX_ADD_MCAST),
-                    ADD_VALUE (SIO_INDEX_DEL_MCAST),
-                    ADD_VALUE (SIO_UDP_CONNRESET),
-                    ADD_VALUE (SIO_RCVALL_MCAST_IF),
-                    ADD_VALUE (SIO_RCVALL_IF),
                     ADD_VALUE (SIO_ACQUIRE_PORT_RESERVATION),
-                    ADD_VALUE (SIO_RELEASE_PORT_RESERVATION),
+                    ADD_VALUE (SIO_ADDRESS_LIST_CHANGE),
+                    ADD_VALUE (SIO_ADDRESS_LIST_QUERY),
+                    ADD_VALUE (SIO_ADDRESS_LIST_SORT),
+                    ADD_VALUE (SIO_APPLY_TRANSPORT_SETTING),
+                    ADD_VALUE (SIO_ASSOCIATE_HANDLE),
                     ADD_VALUE (SIO_ASSOCIATE_PORT_RESERVATION),
-                    ADD_VALUE (SIO_SET_SECURITY),
-                    ADD_VALUE (SIO_QUERY_SECURITY),
-                    ADD_VALUE (SIO_SET_PEER_TARGET_NAME),
-                    ADD_VALUE (SIO_DELETE_PEER_TARGET_NAME),
-                    ADD_VALUE (SIO_SOCKET_USAGE_NOTIFICATION),
-                    ADD_VALUE (SIO_QUERY_WFP_ALE_ENDPOINT_HANDLE),
-                    ADD_VALUE (SIO_QUERY_RSS_SCALABILITY_INFO),
-                    ADD_VALUE (SIO_UDP_NETRESET),
-                    ADD_VALUE (SIO_BSP_HANDLE),
-                    ADD_VALUE (SIO_BSP_HANDLE_SELECT),
-                    ADD_VALUE (SIO_BSP_HANDLE_POLL),
+                    ADD_VALUE (SIO_ASSOCIATE_PVC),
                     ADD_VALUE (SIO_BASE_HANDLE),
-                    ADD_VALUE (SIO_EXT_SELECT),
+                    ADD_VALUE (SIO_BSP_HANDLE),
+                    ADD_VALUE (SIO_BSP_HANDLE_POLL),
+                    ADD_VALUE (SIO_BSP_HANDLE_SELECT),
+                    ADD_VALUE (SIO_BTH_INFO),
+                    ADD_VALUE (SIO_BTH_PING),
+                    ADD_VALUE (SIO_CHK_QOS),
+                    ADD_VALUE (SIO_DELETE_PEER_TARGET_NAME),
+                    ADD_VALUE (SIO_ENABLE_CIRCULAR_QUEUEING),
                     ADD_VALUE (SIO_EXT_POLL),
+                    ADD_VALUE (SIO_EXT_SELECT),
                     ADD_VALUE (SIO_EXT_SENDMSG),
-                    ADD_VALUE (SIO_SOCKET_CLOSE_NOTIFY),
+                    ADD_VALUE (SIO_FIND_ROUTE),
+                    ADD_VALUE (SIO_FLUSH),
+                    ADD_VALUE (SIO_GET_ATM_ADDRESS),
+                    ADD_VALUE (SIO_GET_ATM_CONNECTION_ID),
+                    ADD_VALUE (SIO_GET_BROADCAST_ADDRESS),
                     ADD_VALUE (SIO_GET_EXTENSION_FUNCTION_POINTER),
-                    ADD_VALUE (SIO_GET_QOS),
+                    ADD_VALUE (SIO_GET_GROUP_QOS),
                     ADD_VALUE (SIO_GET_INTERFACE_LIST),
                     ADD_VALUE (SIO_GET_INTERFACE_LIST_EX),
-                    ADD_VALUE (SIO_SET_MULTICAST_FILTER),
                     ADD_VALUE (SIO_GET_MULTICAST_FILTER),
+                    ADD_VALUE (SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER),
+                    ADD_VALUE (SIO_GET_NUMBER_OF_ATM_DEVICES),
+                    ADD_VALUE (SIO_GET_QOS),
+                    ADD_VALUE (SIO_IDEAL_SEND_BACKLOG_CHANGE),
                     ADD_VALUE (SIO_IDEAL_SEND_BACKLOG_QUERY),
-                    ADD_VALUE (SIO_IDEAL_SEND_BACKLOG_CHANGE)
-                  };
+                    ADD_VALUE (SIO_INDEX_ADD_MCAST),
+                    ADD_VALUE (SIO_INDEX_BIND),
+                    ADD_VALUE (SIO_INDEX_DEL_MCAST),
+                    ADD_VALUE (SIO_INDEX_MCASTIF),
+                    ADD_VALUE (SIO_KEEPALIVE_VALS),
+                 /* ADD_VALUE (SIO_LAZY_DISCOVERY), Because it's the same value as 'SIO_GET_INTERFACE_LIST' */
+                    ADD_VALUE (SIO_LIMIT_BROADCASTS),
+                    ADD_VALUE (SIO_LOOPBACK_FAST_PATH),
+                    ADD_VALUE (SIO_MULTICAST_SCOPE),
+                    ADD_VALUE (SIO_MULTIPOINT_LOOPBACK),
+                    ADD_VALUE (SIO_NSP_NOTIFY_CHANGE),
+                    ADD_VALUE (SIO_QUERY_RSS_PROCESSOR_INFO),
+                    ADD_VALUE (SIO_QUERY_RSS_SCALABILITY_INFO),
+                    ADD_VALUE (SIO_QUERY_SECURITY),
+                    ADD_VALUE (SIO_QUERY_TARGET_PNP_HANDLE),
+                    ADD_VALUE (SIO_QUERY_TRANSPORT_SETTING),
+                    ADD_VALUE (SIO_QUERY_WFP_ALE_ENDPOINT_HANDLE),
+                    ADD_VALUE (SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT),
+                    ADD_VALUE (SIO_QUERY_WFP_CONNECTION_REDIRECT_RECORDS),
+                    ADD_VALUE (SIO_RCVALL),
+                    ADD_VALUE (SIO_RCVALL_IF),
+                    ADD_VALUE (SIO_RCVALL_IGMPMCAST),
+                    ADD_VALUE (SIO_RCVALL_MCAST),
+                 /* ADD_VALUE (SIO_RCVALL_MCAST_IF), Because it's the same value as 'SIO_SOCKET_CLOSE_NOTIFY' */
+                    ADD_VALUE (SIO_RELEASE_PORT_RESERVATION),
+                    ADD_VALUE (SIO_RESERVED_1),
+                    ADD_VALUE (SIO_RESERVED_2),
+                    ADD_VALUE (SIO_RFCOMM_SEND_COMMAND),
+                    ADD_VALUE (SIO_RFCOMM_SESSION_FLOW_OFF),
+                    ADD_VALUE (SIO_RFCOMM_TEST),
+                    ADD_VALUE (SIO_RFCOMM_USECFC),
+                    ADD_VALUE (SIO_RFCOMM_WAIT_COMMAND),
+                    ADD_VALUE (SIO_ROUTING_INTERFACE_CHANGE),
+                    ADD_VALUE (SIO_ROUTING_INTERFACE_QUERY),
+                    ADD_VALUE (SIO_SET_COMPATIBILITY_MODE),
+                    ADD_VALUE (SIO_SET_GROUP_QOS),
+                    ADD_VALUE (SIO_SET_MULTICAST_FILTER),
+                    ADD_VALUE (SIO_SET_PEER_TARGET_NAME),
+                    ADD_VALUE (SIO_SET_QOS),
+                    ADD_VALUE (SIO_SET_SECURITY),
+                    ADD_VALUE (SIO_SET_WFP_CONNECTION_REDIRECT_RECORDS),
+                    ADD_VALUE (SIO_SOCKET_CLOSE_NOTIFY),
+                    ADD_VALUE (SIO_SOCKET_USAGE_NOTIFICATION),
+                    ADD_VALUE (SIO_TCP_INITIAL_RTO),
+                    ADD_VALUE (SIO_TCP_SET_ACK_FREQUENCY),
+                    ADD_VALUE (SIO_TCP_SET_ICW),
+                    ADD_VALUE (SIO_TRANSLATE_HANDLE),
+                    ADD_VALUE (SIO_UCAST_IF),
+                    ADD_VALUE (SIO_UDP_CONNRESET),
+                    ADD_VALUE (SIO_UDP_NETRESET)
+                 };
 
 static const struct search_list wsapollfd_flgs[] = {
                     ADD_VALUE (POLLERR),
@@ -849,6 +1177,18 @@ const char *sockopt_name (int level, int opt)
   {
     case SOL_SOCKET:
          return list_lookup_name (opt, sol_options, DIM(sol_options));
+
+    case SOL_IRLMP:
+         return ("IrDA option!?");
+
+    case SOL_SDP:
+         return ("SDP option!?");
+
+    case SOL_RFCOMM:
+         return ("RFCOMM option!?");
+
+    case SOL_L2CAP:
+         return ("L2CAP option!?");
 
     case IPPROTO_UDP:
          return ("UDP option!?");
@@ -1637,7 +1977,7 @@ void dump_events (const WSANETWORKEVENTS *events)
       const char *ev_bit = list_lookup_name (ev & (1 << i), wsa_events_flgs, DIM(wsa_events_flgs));
 
       trace_indent (g_cfg.trace_indent+4);
-      trace_printf ("iErrorCode [%s_BIT/%d]: %08X\n", ev_bit, i, events->iErrorCode[i]);
+      trace_printf ("iErrorCode [%s_BIT]: %08X\n", ev_bit, events->iErrorCode[i]);
       ev &= ~(1 << i);
     }
   }
