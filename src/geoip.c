@@ -540,12 +540,15 @@ DWORD geoip_parse_file (const char *file, int family)
   while (!feof(f))
   {
     char buf[512];
+    int  rc;
 
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
        break;
     if (family == AF_INET)
-         geoip4_parse_entry (buf, &line, &num4);
-    else geoip6_parse_entry (buf, &line, &num6);
+         rc = geoip4_parse_entry (buf, &line, &num4);
+    else rc = geoip6_parse_entry (buf, &line, &num6);
+    if (rc < 0)  /* malloc() failed, give up */
+       break;
   }
 
   fclose (f);
@@ -766,7 +769,7 @@ static int geoip4_add_entry (DWORD low, DWORD high, const char *country)
   struct ipv4_node *entry = malloc (sizeof(*entry));
 
   if (!entry)
-     return (0);
+     return (-1);
 
   entry->low  = low;
   entry->high = high;
@@ -780,7 +783,7 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
   struct ipv6_node *entry = malloc (sizeof(*entry));
 
   if (!entry)
-     return (0);
+     return (-1);
 
   memcpy (&entry->low,  low,  sizeof(entry->low));
   memcpy (&entry->high, high, sizeof(entry->high));
@@ -1337,7 +1340,7 @@ void geoip_update_file (int family, BOOL force_update)
  * Determine length of the network part in an IPv4 address.
  * Courtesey of 'Lev Walkin <vlm@lionet.info>'.
  */
-static int network_len32_1 (DWORD hi, DWORD lo)
+static int network_len32 (DWORD hi, DWORD lo)
 {
   DWORD m = (hi - lo);
 
@@ -1349,47 +1352,62 @@ static int network_len32_1 (DWORD hi, DWORD lo)
   return (m);
 }
 
-static int network_len32_2 (DWORD hi, DWORD lo)
+/*
+ * Figure out the prefix length by checking the common '1's in each
+ * of the 16 BYTEs in IPv6-addresses '*a' and '*b'.
+ */
+static int network_len128 (const struct in6_addr *a, const struct in6_addr *b)
 {
-  DWORD diff = hi - lo;
-  int   bit, len = 0;
+  int  i, j, bits = 0;
+  BYTE v;
 
-  for (bit = 0; bit < 32; bit++)
+  for (i = 15; i >= 0; i--)
   {
-    if (diff & (1 << bit))
-         len++;
-    else break;
+    v = (a->s6_bytes[i] ^ b->s6_bytes[i]);
+    for (j = 0; j < 8; j++, bits++)
+        if ((v & (1 << j)) == 0)
+           goto quit;
   }
-  return (len);
+quit:
+  return (128 - bits);
 }
 
-/*
- * Figure out the prefix length by checking the common 0-s in each
- * of the 4 DWORDs in IPv6-addresses '*a' and '*b'.
- */
-static DWORD network_len128 (const struct in6_addr *a, const struct in6_addr *b)
+static int check_ipv4_unallocated (FILE *out, int dump_cidr, const struct ipv4_node *entry, const struct ipv4_node *last, long *diff_p)
 {
-  const DWORD *a_dw = (const DWORD*) &a->s6_addr;
-  const DWORD *b_dw = (const DWORD*) &b->s6_addr;
-  int   v0, v1, v2, v3;
+  long diff = (long)(entry->low - last->high);
+  int  len;
 
-#if 0
-  v0 = network_len32_1 (b_dw[0], a_dw[0]);
-  v1 = network_len32_1 (b_dw[1], a_dw[1]);
-  v2 = network_len32_1 (b_dw[2], a_dw[2]);
-  v3 = network_len32_1 (b_dw[3], a_dw[3]);
-#else
-  v0 = network_len32_2 (b_dw[0], a_dw[0]);
-  v1 = network_len32_2 (b_dw[1], a_dw[1]);
-  v2 = network_len32_2 (b_dw[2], a_dw[2]);
-  v3 = network_len32_2 (b_dw[3], a_dw[3]);
-#endif
-  return (3*32*v3 + 2*32*v2 + 32*v1 + v0);
+  if (diff > 1)
+  {
+    fprintf (out, "    **: ");
+    if (dump_cidr)
+    {
+      char  low[25] = "?";
+      int   nw_len = network_len32 (last->high+1, entry->low-1);
+      DWORD addr   = swap32 (last->high+1);
+
+      wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
+      len = fprintf (out, "%s/%d", low, nw_len);
+    }
+    else
+    {
+      fprintf (out, "%10lu  %10lu %8ld", last->high+1, entry->low-1, diff);
+      len = 22;
+    }
+    fprintf (out, "%*sUnallocated block\n", 24-len, "");
+    *diff_p = diff;
+    return (1);
+  }
+  return (0);
 }
 
 static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
 {
   int i, len, max = smartlist_len (geoip_ipv4_entries);
+  DWORD missing_blocks = 0;
+  DWORD missing_addr = 0;
+  long  diff;
+  const struct ipv4_node *last = NULL;
 
   if (!raw)
   {
@@ -1403,10 +1421,17 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
   {
     const struct ipv4_node *entry = smartlist_get (geoip_ipv4_entries, i);
 
+    if (!raw && last)
+    {
+      missing_blocks += check_ipv4_unallocated (out, dump_cidr, entry, last, &diff);
+      missing_addr   += (DWORD)diff;
+    }
+    last = entry;
+
     if (dump_cidr)
     {
       char  low[25] = "?";
-      int   nw_len = network_len32_1 (entry->high, entry->low);
+      int   nw_len = network_len32 (entry->high, entry->low);
       DWORD addr   = swap32 (entry->low);
 
       wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
@@ -1424,6 +1449,12 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
          fprintf (out, " \"%.2s\" },\n", entry->country);
     else fprintf (out, " %*s %.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
   }
+
+  if (!raw)
+  {
+    fprintf (out, "%s missing blocks ", dword_str(missing_blocks));
+    fprintf (out, "totalling %s missing IPv4 addresses.\n", dword_str(missing_addr));
+  }
 }
 
 static void hex_dump (FILE *out, const void *data_p, size_t datalen)
@@ -1439,17 +1470,53 @@ static void hex_dump (FILE *out, const void *data_p, size_t datalen)
   }
 }
 
+static int check_ipv6_unallocated (FILE *out, int dump_cidr, const struct ipv6_node *entry, const struct ipv6_node *last, uint64 *diff_p)
+{
+#if 0
+  uint64 diff = (long)(entry->low - last->high);
+  int    len;
+
+  if (diff > 1)
+  {
+    fprintf (out, "    **: ");
+    if (dump_cidr)
+    {
+      char  low[25] = "?";
+      int   nw_len = network_len32 (last->high+1, entry->low-1);
+      DWORD addr   = swap32 (last->high+1);
+
+      wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
+      len = fprintf (out, "%s/%d", low, nw_len);
+    }
+    else
+    {
+      fprintf (out, "%10lu  %10lu %8ld", last->high+1, entry->low-1, diff);
+      len = 22;
+    }
+    fprintf (out, "%*sUnallocated block\n", 24-len, "");
+    *diff_p = diff;
+    return (1);
+  }
+#endif
+  *diff_p = 0;
+  return (0);
+}
+
 static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
 {
   int i, len, max = smartlist_len (geoip_ipv6_entries);
+  uint64 missing_blocks = 0;
+  uint64 missing_addr = 0;
+  uint64 diff;
+  const struct ipv6_node *last = NULL;
 
   if (!raw)
   {
     fputs ("IPv6 entries:\nIndex: ", out);
 
     if (dump_cidr)
-         fprintf (out, "%-*s Country\n", MAX_IP6_SZ-4, "CIDR");
-    else fprintf (out, "%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-4, "IP-high");
+         fprintf (out, "%-*s Country\n", MAX_IP6_SZ-5, "CIDR");
+    else fprintf (out, "%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-5, "IP-high");
   }
 
   for (i = 0; i < max; i++)
@@ -1458,6 +1525,13 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
     char low  [MAX_IP6_SZ] = "?";
     char high [MAX_IP6_SZ] = "?";
     int  nw_len;
+
+    if (!raw && last)
+    {
+      missing_blocks += check_ipv6_unallocated (out, dump_cidr, entry, last, &diff);
+      missing_addr   += diff;
+    }
+    last = entry;
 
     wsock_trace_inet_ntop6 ((const u_char*)&entry->low, low, sizeof(low));
     wsock_trace_inet_ntop6 ((const u_char*)&entry->high, high, sizeof(high));
@@ -1473,18 +1547,30 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
     }
     else if (dump_cidr)
     {
+#if 0
+      char *end = low + strlen(low);
+
+      if (!strncmp(end-2,"::",2))   /* Drop the last "::" */
+         end[-2] = '\0';
+#endif
       nw_len = network_len128 (&entry->high, &entry->low);
-      len = fprintf (out, "%5d: %s/%d", i, low, nw_len);
+      len = fprintf (out, "%5d: %s/%d ", i, low, nw_len);
     }
     else
     {
       fprintf (out, "%5d: %-*s %-*s", i, MAX_IP6_SZ-4, low, MAX_IP6_SZ-4, high);
-      len = 45;
+      len = 50;
     }
 
     if (raw)
          fprintf (out, "\"%s\" },\n", entry->country);
-    else fprintf (out, " %*s %.2s - %s\n", 45-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
+    else fprintf (out, "%*.2s - %s\n", 51-len, entry->country, geoip_get_long_name_by_A2(entry->country));
+  }
+
+  if (!raw)
+  {
+    fprintf (out, "%s missing blocks ", qword_str(missing_blocks));
+    fprintf (out, "totalling %s missing IPv6 addresses.\n", qword_str(missing_addr));
   }
 }
 
@@ -1499,7 +1585,7 @@ static void dump_num_ip_blocks_by_country (void)
   memset (counts6, 0, sizeof(*counts6) * num_c);
 
   puts ("IPv4/6 blocks by countries:\n"
-        " Idx: Country                        IPv4  IPv6");
+        " Idx: Country                           IPv4   IPv6");
 
   if (geoip_ipv4_entries)
      for (i = 0; i < num_c; i++, list++)
@@ -1535,7 +1621,7 @@ static void dump_num_ip_blocks_by_country (void)
   list = c_list + 0;
 
   for (i = 0; i < num_c; i++, list++)
-      printf (" %3d: %c%c, %-25.25s %5u  %5u\n",
+      printf (" %3d: %c%c, %-28.28s %5u  %5u\n",
               i, toupper(list->short_name[0]), toupper(list->short_name[1]),
               list->long_name, counts4[i], counts6[i]);
   puts ("");
@@ -1686,7 +1772,7 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   }
 }
 
-static void show_help (void)
+static void show_help (const char *my_name)
 {
   const char *G_option = "";
   const char *G_help   = "";
@@ -1700,7 +1786,7 @@ static void show_help (void)
   g_help   = "";
 #endif
 
-  printf ("Usage: test [-cd%snruh]%s <-4|-6> address(es)\n"
+  printf ("Usage: %s [-cd%snruh]%s <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
           "       -d:      dump address entries for countries and count of blocks.\n"
           "%s"
@@ -1710,7 +1796,9 @@ static void show_help (void)
           "       -u:      test updating of geoip files.\n"
           "       -4:      test IPv4 address(es).\n"
           "       -6:      test IPv6 address(es).\n"
-          "       -h:      this help.\n", G_option, g_option, G_help, g_help);
+          "       -h:      this help.\n", my_name, G_option, g_option, G_help, g_help);
+  printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
+          "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\"\n");
   exit (0);
 }
 
@@ -1750,52 +1838,38 @@ static void rand_test_addr6 (int loops)
   }
 }
 
-/*
- * Removes end-of-line termination from a string.
- */
-static char *rip (char *s)
+static smartlist_t *read_file (FILE *f, smartlist_t *list)
 {
-  char *p;
+  while (f && !feof(f))
+  {
+    char *p, buf[512];
 
-  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
-  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
-  return (s);
+    if (fgets(buf, (int)sizeof(buf), f) == NULL)
+       break;
+    if ((p = strrchr(buf,'\n')) != NULL) *p = '\0';
+    if ((p = strrchr(buf,'\r')) != NULL) *p = '\0';
+    smartlist_add (list, strdup(buf));
+  }
+  if (f && f != stdin)
+     fclose (f);
+  return (list);
 }
 
 static smartlist_t *make_argv_list (int _argc, char **_argv)
 {
   smartlist_t *list = smartlist_new();
-  FILE        *f;
-  char         buf[512];
-  const char  *p;
   int          i;
+
+  if (isatty(fileno(stdin)) == 0)
+     return read_file (stdin, list);
 
   if (_argc > 0 && _argv[0][0] == '@')
   {
-    p = _argv[0] + 1;
-    f = fopen (p, "rt");
-    while (!feof(f))
-    {
-      if (fgets(buf, (int)sizeof(buf), f) == NULL)
-         break;
-      smartlist_add (list, strdup(rip(buf)));
-    }
-    fclose (f);
+    const char *p = _argv[0] + 1;
+    return read_file (fopen(p,"rt"), list);
   }
-  else if (isatty(fileno(stdin)) == 0)
-  {
-    while (!feof(stdin))
-    {
-      if (fgets(buf, (int)sizeof(buf), stdin) == NULL)
-         break;
-      smartlist_add (list, strdup(rip(buf)));
-    }
-  }
-  else
-  {
-    for (i = 0; i < _argc; i++)
-        smartlist_add (list, strdup(_argv[i]));
-  }
+  for (i = 0; i < _argc; i++)
+      smartlist_add (list, strdup(_argv[i]));
   return (list);
 }
 
@@ -1813,6 +1887,7 @@ int main (int argc, char **argv)
   int c, do_cidr = 0,  do_4 = 0, do_6 = 0;
   int do_update = 0, do_dump = 0, do_rand = 0;
   int loops = 10;
+  const char *my_name = argv[0];
 
 #if defined(USE_GEOIP_GENERATED)
   #define G_OPT "G"
@@ -1832,7 +1907,7 @@ int main (int argc, char **argv)
     {
       case '?':
       case 'h':
-           show_help();
+           show_help (my_name);
            break;
       case 'c':
            do_cidr = 1;
@@ -1871,7 +1946,7 @@ int main (int argc, char **argv)
     }
 
   if (!do_4 && !do_6)
-     show_help();
+     show_help (my_name);
 
   if (do_update)
   {
@@ -1949,5 +2024,5 @@ int main (int argc, char **argv)
   wsock_trace_exit();
   return (0);
 }
-#endif  /* GEOIP_TEST */
+#endif  /* TEST_GEOIP */
 
