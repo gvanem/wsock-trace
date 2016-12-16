@@ -1406,7 +1406,7 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
   int i, len, max = smartlist_len (geoip_ipv4_entries);
   DWORD missing_blocks = 0;
   DWORD missing_addr = 0;
-  long  diff;
+  long  diff = 0;
   const struct ipv4_node *last = NULL;
 
   if (!raw)
