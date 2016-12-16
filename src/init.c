@@ -555,13 +555,13 @@ static void parse_config_file (FILE *file)
   }
 }
 
-#if !defined(TEST_GEOIP)
+#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
 static void trace_report (void)
 {
   const struct exclude *ex;
   const char  *indent;
   unsigned     i;
-  size_t       len, max_len = 0;
+  size_t       len, max_len = 0, max_digits = 0;
 
   g_cfg.trace_report = FALSE;
 
@@ -573,6 +573,9 @@ static void trace_report (void)
     len = strlen (ex->name);
     if (max_len < len)
        max_len = len;
+    len = strlen (qword_str(ex->num_excludes));
+    if (max_digits < len)
+       max_digits = len;
   }
   if (i == 0)
     trace_puts (" None.\n");
@@ -583,8 +586,9 @@ static void trace_report (void)
       indent = (i == 0) ? " " : "              ";
       ex = &g_cfg.excl.func[i];
       len = strlen (ex->name);
-      trace_printf ("%s%s():%*s %s times.\n",
-                    indent, ex->name, (int)(max_len-len), "", qword_str(ex->num_excludes));
+      trace_printf ("%s%s():%*s %*s times.\n",
+                    indent, ex->name, (int)(max_len-len), "",
+                    max_digits, qword_str(ex->num_excludes));
     }
   }
 
@@ -619,7 +623,7 @@ static void trace_report (void)
   trace_printf ("    Send bytes:  %15s",               qword_str(g_cfg.counts.send_bytes));
   trace_printf ("  Send errors: %15s\n",               qword_str(g_cfg.counts.send_errors));
 }
-#endif /* TEST_GEOIP */
+#endif /* !TEST_GEOIP !TEST_NLM */
 
 /*
  * Called from DllMain(): dwReason == DLL_PROCESS_DETACH
@@ -631,7 +635,7 @@ void wsock_trace_exit (void)
   if (fatal_error)
      g_cfg.trace_report = FALSE;
 
-#if !defined(TEST_GEOIP)
+#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
 
 #if 0
   if (!cleaned_up || startup_count > 0)
@@ -641,11 +645,7 @@ void wsock_trace_exit (void)
   if (g_cfg.trace_report)
      trace_report();
 
-  /* Crashes inside free() when mixing MinGW + MSVC100 :-(
-   */
-#if !defined(MINGW_USE_MSVCR_100)
   exclude_list_free();
-#endif
 
 #if !defined(NO_STACK_WALK)
   StackWalkExit();
@@ -665,7 +665,7 @@ void wsock_trace_exit (void)
     print_process_times();
   }
 #endif
-#endif  /* TEST_GEOIP */
+#endif  /* !TEST_GEOIP && !TEST_NLM */
 
   common_exit();
 
@@ -855,7 +855,16 @@ void wsock_trace_init (void)
           GetConsoleScreenBufferInfo(console_hnd, &console_info));
 
   if (!okay || GetFileType(console_hnd) != FILE_TYPE_CHAR)
-     g_cfg.stdout_redirected = TRUE;
+  {
+    g_cfg.stdout_redirected = TRUE;
+  }
+  else
+  {
+    DWORD mode;
+
+    GetConsoleMode (console_hnd, &mode);
+    TRACE (3, "GetConsoleMode(): 0x%08lX\n", mode);
+  }
 
   if (!g_cfg.stdout_redirected)
   {
@@ -891,6 +900,9 @@ void wsock_trace_init (void)
     if (!g_cfg.color_trace)
        g_cfg.color_trace = console_info.wAttributes;
 
+    if (!g_cfg.color_time)
+       g_cfg.color_time = console_info.wAttributes;
+
     if (!g_cfg.color_data)
        g_cfg.color_data = console_info.wAttributes;
   }
@@ -915,7 +927,7 @@ void wsock_trace_init (void)
   TRACE (3, "curr_prog: '%s', curr_dir: '%s'\n"
             "  prog_dir: '%s'\n", curr_prog, curr_dir, prog_dir);
 
-#if !defined(TEST_GEOIP)
+#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
@@ -932,10 +944,10 @@ void wsock_trace_init (void)
 #if defined(USE_LUA)
   wstrace_init_lua (g_cfg.lua_init_script);
 #endif
-#endif  /* TEST_GEOIP */
+#endif  /* !TEST_GEOIP && !TEST_NLM */
 }
 
-#if !defined(TEST_GEOIP)
+#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
 
 /*
  * Used as e.g. 'INIT_PTR (p_WSAStartup)' which expands to
@@ -961,7 +973,7 @@ void init_ptr (const void **ptr, const char *ptr_name)
   if (cleaned_up)
      TRACE (0, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
-#endif  /* TEST_GEOIP */
+#endif  /* !TEST_GEOIP && !TEST_NLM */
 
 static const struct search_list colors[] = {
                               { 0, "black"   },

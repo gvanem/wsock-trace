@@ -8,7 +8,6 @@
 USE_DEBUG    = 0
 USE_BFD      = 0
 USE_DEF_FILE = 0
-USE_MSVCRT10 = 0
 
 #
 # If you want Lua-script support, change these:
@@ -53,10 +52,6 @@ else
   X_SUFFIX =
 endif
 
-ifeq ($(USE_MSVCRT10),1)
-  CFLAGS += -D__MSVCRT_VERSION__=0x0A00 -DMINGW_USE_MSVCR_100
-endif
-
 ifeq ($(USE_LUA),1)
   CFLAGS  += -DUSE_LUA -I$(LUAJIT_ROOT)/src
   EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
@@ -89,10 +84,6 @@ ifeq ($(USE_DEF_FILE),1)
 endif
 
 EX_LIBS += -lole32
-
-ifeq ($(USE_MSVCRT10),1)
-  EX_LIBS += -lmsvcr100
-endif
 
 OBJ_DIR = MinGW_obj
 
