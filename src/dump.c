@@ -1837,8 +1837,8 @@ void dump_countries (int type, const char **addresses)
     trace_printf_cc (cc, loc, a4, a6, addresses[i+1]);
   }
   if (i == 0)
-       trace_puts ("None!?\n~0");
-  else trace_puts ("\n~0");
+       trace_puts ("None!?~0\n");
+  else trace_puts ("~0\n");
 
   WSAError_save_restore (1);
 }
@@ -1911,8 +1911,8 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
                      ai->ai_next);
   }
   if (num == 0)
-       trace_puts ("None!?\n~0");
-  else trace_puts ("\n~0");
+       trace_puts ("None!?~0\n");
+  else trace_puts ("~0\n");
 
   WSAError_save_restore (1);
 }
@@ -1920,7 +1920,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 void dump_nameinfo (const char *host, const char *serv, DWORD flags)
 {
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4name: %s, serv: %s\n~0",
+  trace_printf ("~4name: %s, serv: %s~0\n",
                 host ? host : "NULL", serv ? serv : "NULL");
 }
 
@@ -1932,7 +1932,7 @@ void dump_hostent (const struct hostent *host)
                 dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list));
 
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("aliases: %s\n~0", dump_aliases(host->h_aliases));
+  trace_printf ("aliases: %s~0\n", dump_aliases(host->h_aliases));
 }
 
 void dump_servent (const struct servent *serv)
@@ -1942,7 +1942,7 @@ void dump_servent (const struct servent *serv)
                 serv->s_name, swap16(serv->s_port), serv->s_proto);
 
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("aliases: %s\n~0", dump_aliases(serv->s_aliases));
+  trace_printf ("aliases: %s~0\n", dump_aliases(serv->s_aliases));
 }
 
 void dump_protoent (const struct protoent *proto)
@@ -1951,7 +1951,7 @@ void dump_protoent (const struct protoent *proto)
   trace_printf ("~4name: %s, proto: %d\n", proto->p_name, proto->p_proto);
 
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("aliases: %s\n~0", dump_aliases(proto->p_aliases));
+  trace_printf ("aliases: %s~0\n", dump_aliases(proto->p_aliases));
 }
 
 void dump_events (const WSANETWORKEVENTS *events)
@@ -1970,7 +1970,7 @@ void dump_events (const WSANETWORKEVENTS *events)
   ev = events->lNetworkEvents;
   trace_printf ("lNetworkEvents: %s\n", event_bits_decode(ev));
 
-  for (i = 0; i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs) && ev; i++)
+  for (i = 0; i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs); i++)
   {
     if (ev & (1 << i))
     {
@@ -1978,7 +1978,6 @@ void dump_events (const WSANETWORKEVENTS *events)
 
       trace_indent (g_cfg.trace_indent+4);
       trace_printf ("iErrorCode [%s_BIT]: %08X\n", ev_bit, events->iErrorCode[i]);
-      ev &= ~(1 << i);
     }
   }
   trace_puts ("~0");
