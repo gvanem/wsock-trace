@@ -110,7 +110,7 @@ void print_thread_times (HANDLE thread)
   if (!GetThreadTimes(thread, &ctime, &etime, &ktime, &utime))
   {
     DWORD err = GetLastError();
-    TRACE (2, "  GetThreadTimes() %s, ", win_strerror(err));
+    TRACE (2, "  GetThreadTimes() %s.\n", win_strerror(err));
     return;
   }
 
@@ -150,6 +150,9 @@ void print_process_times (void)
                              FALSE, GetCurrentProcessId());
   FILETIME cr_time, exit_time, krnl_time, usr_time;
 
+  if (!proc)
+     return;
+
   if (GetProcessTimes(proc, &cr_time, &exit_time, &krnl_time, &usr_time))
   {
     const struct tm *tm;
@@ -163,8 +166,11 @@ void print_process_times (void)
          strftime (time_str, sizeof(time_str), "%Y%m%d/%H:%M:%S", tm);
     else strcpy (time_str, "??");
 
-    printf ("\ncreation-time: %s.%06" U64_FMT ", exit-time: %.6fs, kernel-time: %.6fs, user-time: %.6fs\n",
-            time_str, ct % U64_SUFFIX(1000000), filetime_sec(&exit_time), filetime_sec(&krnl_time), filetime_sec(&usr_time));
+    /* 'exit_time' is not printed since the process has not exited yet.
+     * Therefore it is zero.
+     */
+    printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
+            time_str, ct % U64_SUFFIX(1000000), filetime_sec(&krnl_time), filetime_sec(&usr_time));
   }
   CloseHandle (proc);
 }
@@ -220,7 +226,7 @@ void print_perf_times (void)
   if (rc != 0)
   {
     DWORD err = GetLastError();
-    TRACE (2, "  NtQuerySystemInformation() %s, ", win_strerror(err));
+    TRACE (2, "  NtQuerySystemInformation() %s.\n", win_strerror(err));
     return;
   }
 
@@ -229,7 +235,7 @@ void print_perf_times (void)
   if ((ret_len % sizeof(info[0])) != 0)
   {
     TRACE (1, "NtQuery didn't return expected amount of data\n"
-              "Expected a multiple of %u, returned %lu\n",
+              "Expected a multiple of %u, returned %lu.\n",
               SIZEOF(info[0]), (u_long)ret_len);
     return;
   }
@@ -238,7 +244,7 @@ void print_perf_times (void)
   if (ret_num_CPUs != num_cpus)
   {
     TRACE (1, "NtQuery didn't return expected amount of data\n"
-              "Expected data for %i CPUs, returned %lu\n",
+              "Expected data for %i CPUs, returned %lu.\n",
               num_cpus, (u_long)ret_num_CPUs);
     return;
   }
