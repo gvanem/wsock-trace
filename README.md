@@ -18,7 +18,7 @@ MaxMind for their GeoLite data-files. Available from <a href="http://www.maxmind
  Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
  This produces a `wsock_trace.lib` that you'll need to use to
  link your project(s) with. This lib would then trace the normal
- Winsock calls. Example screen-short above or details in
+ Winsock calls. Example screen-shot above or details in
  **Running samples** below.
 
 ### Usage (MSVC):
