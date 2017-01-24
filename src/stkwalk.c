@@ -869,22 +869,20 @@ char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
   char        *end  = str + left;
   STACKFRAME64 stk;    /* in/out stackframe */
 
-#ifdef _WIN64
-  image_type = IMAGE_FILE_MACHINE_IA64;
-#else
-  image_type = IMAGE_FILE_MACHINE_I386;
-#endif
-
   memset (&stk, 0, sizeof(stk));
 
   /* init STACKFRAME.
    * Notes: AddrModeFlat is just an assumption.
    */
 #ifdef _WIN64
+  image_type = IMAGE_FILE_MACHINE_AMD64;
+
   stk.AddrPC.Offset    = ctx->Rip;
   stk.AddrFrame.Offset = ctx->Rbp;
   stk.AddrStack.Offset = ctx->Rsp;
 #else
+  image_type = IMAGE_FILE_MACHINE_I386;
+
   stk.AddrPC.Offset    = ctx->Eip;
   stk.AddrFrame.Offset = ctx->Ebp;
   stk.AddrStack.Offset = ctx->Esp;
