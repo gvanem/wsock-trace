@@ -801,7 +801,6 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
      return (4);
 
 #else
-
   sym.hdr.MaxNameLength = sizeof(sym.name);
   if (!(*p_SymGetSymFromAddr64)(g_proc, stk->AddrPC.Offset, &ofs_from_symbol, &sym.hdr))
      return (4);
@@ -863,24 +862,34 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
 
 char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
 {
-  /* \todo: Normally, call ImageNtHeader() and use machine-info from PE header
-   * but we assume that it is an I386 image.
-   */
-  DWORD        image_type = IMAGE_FILE_MACHINE_I386;
+  DWORD        image_type;
   DWORD        err  = 0;
   size_t       left = sizeof(ret_buf);
   char        *str  = ret_buf;
   char        *end  = str + left;
   STACKFRAME64 stk;    /* in/out stackframe */
 
+#ifdef _WIN64
+  image_type = IMAGE_FILE_MACHINE_IA64;
+#else
+  image_type = IMAGE_FILE_MACHINE_I386;
+#endif
+
   memset (&stk, 0, sizeof(stk));
 
   /* init STACKFRAME.
    * Notes: AddrModeFlat is just an assumption.
    */
+#ifdef _WIN64
+  stk.AddrPC.Offset    = ctx->Rip;
+  stk.AddrFrame.Offset = ctx->Rbp;
+  stk.AddrStack.Offset = ctx->Rsp;
+#else
   stk.AddrPC.Offset    = ctx->Eip;
   stk.AddrFrame.Offset = ctx->Ebp;
   stk.AddrStack.Offset = ctx->Esp;
+#endif
+
   stk.AddrPC.Mode      = AddrModeFlat;
   stk.AddrFrame.Mode   = AddrModeFlat;
   stk.AddrStack.Mode   = AddrModeFlat;
