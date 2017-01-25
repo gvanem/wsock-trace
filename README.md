@@ -192,26 +192,26 @@ whatever calls you like.
 
 ### Implementation notes
 
- The names of the import libraries and the names of the 32-bit .DLLs are:
+The names of the import libraries and the names of the 32-bit .DLLs are:
   * For MSVC:      `wsock_trace.lib` and `wsock_trace.dll` .
   * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw.dll` .
   * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
 
- And the import libraries and 64-bit .DLLs:
+And the import libraries and 64-bit .DLLs:
   * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
   * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
   * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`  (*not yet*).
 
- These DLLs off-course needs to be in current directory or on `%PATH`. The reason
- I've chosen to make it a DLL and not a static-lib is that applications
- using `wsock_trace.lib` needs not to be re-linked when I do change the inner
- workings of the `wsock_trace` source code (I've done that a lot lately).
- As long as the ABI is stable (e.g. not adding functions to the `wsock_trace.def`
- file), the application using `wsock_trace.dll` should work the same. Only the
- trace should change.
+These DLLs off-course needs to be in current directory or on `%PATH`. The reason
+I've chosen to make it a DLL and not a static-lib is that applications
+using `wsock_trace.lib` needs not to be re-linked when I do change the inner
+workings of the `wsock_trace` source code (I've done that a lot lately).
+As long as the ABI is stable (e.g. not adding functions to the `wsock_trace.def`
+file), the application using `wsock_trace.dll` should work the same. Only the
+trace should change.
 
- Note that some virus scanners may find the behaviour of programs linked to
- `wsock_trace.lib` suspicious.
+Note that some virus scanners may find the behaviour of programs linked to
+`wsock_trace.lib` suspicious.
 
 ### Future plans:
 
