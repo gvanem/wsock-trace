@@ -2671,7 +2671,11 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     {
       char *a, *b;
 
+#ifdef _WIN64
+      ctx.Rip = (ULONG_PTR) frames [3];
+#else
       ctx.Eip = (ULONG_PTR) frames [3];
+#endif
 
       a = strdup (ret);
       b = strdup (StackWalkShow (thr, &ctx));
