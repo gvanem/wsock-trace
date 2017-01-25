@@ -1275,7 +1275,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
   if (!force_update && _st_loc && st_loc.st_mtime >= past)
   {
     TRACE (1, "update not needed for \"%s\". Try again in %ld days.\n",
-           loc_file, g_cfg.geoip_max_days + (now-st_loc.st_mtime)/(24*3600));
+           loc_file, g_cfg.geoip_max_days + (int)(now-st_loc.st_mtime)/(24*3600));
     return (rc);
   }
 

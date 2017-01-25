@@ -588,7 +588,7 @@ static void trace_report (void)
       len = strlen (ex->name);
       trace_printf ("%s%s():%*s %*s times.\n",
                     indent, ex->name, (int)(max_len-len), "",
-                    max_digits, qword_str(ex->num_excludes));
+                    (int)max_digits, qword_str(ex->num_excludes));
     }
   }
 
@@ -1227,7 +1227,7 @@ static const void *make_ip_hdr (size_t data_len)
   return (&ip);
 }
 
-static const void *make_udp_hdr (int data_len)
+static const void *make_udp_hdr (size_t data_len)
 {
   static struct udp_header uh;
 
@@ -1235,7 +1235,7 @@ static const void *make_udp_hdr (int data_len)
   return (&uh);
 }
 
-static const void *make_tcp_hdr (int data_len)
+static const void *make_tcp_hdr (size_t data_len)
 {
   static struct tcp_header th;
 

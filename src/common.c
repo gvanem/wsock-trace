@@ -774,7 +774,7 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 /*
  * Indent a printed line to 'indent' spaces.
  */
-int trace_indent (int indent)
+int trace_indent (size_t indent)
 {
   int rc = 0;
 
@@ -786,10 +786,10 @@ int trace_indent (int indent)
 /*
  * Write out the trace-buffer.
  */
-int trace_flush (void)
+size_t trace_flush (void)
 {
-  int len = trace_ptr - trace_buf;
-  int written = len;
+  size_t len = trace_ptr - trace_buf;
+  size_t written = len;
 
   if (g_cfg.trace_use_ods)
   {
