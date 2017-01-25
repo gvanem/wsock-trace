@@ -13,7 +13,7 @@
 #define __STACKWALKER_H__
 
 #if !defined(_X86_)
-  #error Only INTEL environments are supported!
+//  #error Only INTEL environments are supported!
 #endif
 
 extern BOOL  StackWalkInit (void);

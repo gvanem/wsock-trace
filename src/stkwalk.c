@@ -289,11 +289,11 @@ static func_StackWalk64               p_StackWalk64 = NULL;
 static func_UnDecorateSymbolName      p_UnDecorateSymbolName = NULL;
 
 struct ModuleEntry {
-       char  *moduleName;        /* fully qualified name of module */
-       char  *parentName;        /* fully qualified name of parent module */
-       DWORD  baseAddress;
-       DWORD  size;
-       struct ModuleEntry *next; /* \todo: make it a linked list */
+       char               *moduleName;    /* fully qualified name of module */
+       char               *parentName;    /* fully qualified name of parent module */
+       ULONG_PTR           baseAddress;
+       DWORD               size;
+       struct ModuleEntry *next;          /* \todo: make it a linked list */
      } ModuleEntry;
 
 static struct ModuleEntry *me_list = NULL;
@@ -450,7 +450,7 @@ static int GetModuleListTH32 (void)
     struct ModuleEntry e;
 
     e.moduleName  = strdup (me.szExePath);
-    e.baseAddress = (DWORD) me.modBaseAddr;
+    e.baseAddress = (ULONG_PTR) me.modBaseAddr;
     e.size        = me.modBaseSize;
     AddToModuleList (i, &e);
 
@@ -545,7 +545,7 @@ static int GetModuleListPSAPI (void)
     MODULEINFO  mi;
 
     (*p_GetModuleInformation) (g_proc, hMods[i], &mi, sizeof(mi));
-    me.baseAddress = (DWORD) mi.lpBaseOfDll;
+    me.baseAddress = (ULONG_PTR) mi.lpBaseOfDll;
     me.size = mi.SizeOfImage;
 
     /*
@@ -621,13 +621,13 @@ static int EnumAndLoadModuleSymbols (void)
 
 static BOOL SetSymbolSearchPath (void)
 {
-  DWORD symOptions;
-  char  tmp [TTBUFLEN];
-  char  path [TTBUFLEN];
-  char *p    = path;
-  char *end  = path + sizeof(path) - 1;
-  char *dir  = NULL;
-  int   left = end - path;
+  DWORD  symOptions;
+  char   tmp [TTBUFLEN];
+  char   path [TTBUFLEN];
+  char  *p    = path;
+  char  *end  = path + sizeof(path) - 1;
+  char  *dir  = NULL;
+  size_t left = end - path;
 
   if (curr_dir[0])  /* set in wsock_trace_init() */
   {
