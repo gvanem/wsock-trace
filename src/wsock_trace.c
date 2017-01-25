@@ -174,12 +174,19 @@ static const char *get_timestamp (void);
           "mov eax, ebp" \
           modify [eax];
 
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) && !defined(__x86_64__)
   extern __inline__ ULONG_PTR get_EBP (void)
   {
     ULONG_PTR ebp;
     __asm__ __volatile__ ("movl %%ebp,%k0" : "=r" (ebp) : );
     return (ebp);
+  }
+
+#elif defined(__GNUC__)
+  extern __inline__ ULONG_PTR get_EBP (void)
+  {
+    ULONG_PTR rbp = 0; /* todo */
+    return (rbp);
   }
 #else
   #error "Unsupported compiler."
@@ -2644,13 +2651,18 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     WSAError_save_restore (0);
 #endif
 
-    /* We don't need a CONTEXT_FULL; only EIP+EBP. We want the caller's address of
-     * a traced function (e.g. select()). Since we're called twice, that address
+    /* We don't need a CONTEXT_FULL; only EIP+EBP (or RIP+RBP for x64). We want the caller's
+     * address of a traced function (e.g. select()). Since we're called twice, that address
      * (for MSVC/PDB files) should be at frames[2]. For gcc, the RtlCaptureStackBackTrace()
      * doesn't work. I've had to use __builtin_return_addres(0) (='ret_addr').
      */
+#ifdef _WIN64
+    ctx.Rip = ret_addr;
+    ctx.Rbp = ebp;
+#else
     ctx.Eip = ret_addr;
     ctx.Ebp = ebp;
+#endif
 
     ret = StackWalkShow (thr, &ctx);
 
