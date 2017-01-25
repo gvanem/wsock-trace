@@ -197,7 +197,7 @@ The names of the import libraries and the names of the 32-bit .DLLs are:
   * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw.dll` .
   * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
 
-And the import libraries and 64-bit .DLLs:
+And the 64-bit equivalents:
   * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
   * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
   * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`  (*not yet*).
@@ -259,7 +259,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem <gvanem@yahoo.no> 2013 - 2016.
+G. Vanem <gisle.vanem@gmail.com> 2013 - 2017.
 
 Footnotes:
 
