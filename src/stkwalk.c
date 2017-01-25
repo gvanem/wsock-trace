@@ -603,8 +603,8 @@ static int EnumAndLoadModuleSymbols (void)
       ws_trace_base = (HINSTANCE) me->baseAddress;
     }
 
-    TRACE (2, "  %-60s 0x%08lX %7s kB. %s\n",
-           me->moduleName, me->baseAddress, dword_str(me->size/1024),
+    TRACE (2, "  %-60s 0x%" ADDR_FMT " %7s kB. %s\n",
+           me->moduleName, ADDR_CAST(me->baseAddress), dword_str(me->size/1024),
            rc == 0 ? get_error() : "");
 
 #ifdef USE_BFD
