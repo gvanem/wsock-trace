@@ -1516,7 +1516,7 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
 
     if (dump_cidr)
          fprintf (out, "%-*s Country\n", MAX_IP6_SZ-5, "CIDR");
-    else fprintf (out, "%-*s %-*s Country\n", MAX_IP6_SZ-4, "IP-low", MAX_IP6_SZ-5, "IP-high");
+    else fprintf (out, "%-*s %-*s Country\n", (int)(MAX_IP6_SZ-4), "IP-low", (int)(MAX_IP6_SZ-5), "IP-high");
   }
 
   for (i = 0; i < max; i++)
@@ -1558,7 +1558,7 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
     }
     else
     {
-      fprintf (out, "%5d: %-*s %-*s", i, MAX_IP6_SZ-4, low, MAX_IP6_SZ-4, high);
+      fprintf (out, "%5d: %-*s %-*s", i, (int)(MAX_IP6_SZ-4), low, (int)(MAX_IP6_SZ-4), high);
       len = 50;
     }
 
@@ -1622,7 +1622,7 @@ static void dump_num_ip_blocks_by_country (void)
 
   for (i = 0; i < num_c; i++, list++)
       printf (" %3d: %c%c, %-28.28s %5u  %5u\n",
-              i, toupper(list->short_name[0]), toupper(list->short_name[1]),
+              (int)i, toupper(list->short_name[0]), toupper(list->short_name[1]),
               list->long_name, counts4[i], counts6[i]);
   puts ("");
 }
