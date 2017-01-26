@@ -41,7 +41,7 @@ CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces
 RCFLAGS = -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__
 
 ifeq ($(CPU),x64)
-  CFLAGS  += -m64 -DNO_STACK_WALK  # stkwalk.c is only for x86 ATM.
+  CFLAGS  += -m64
   LDFLAGS  = -m64
   RCFLAGS  += -DBITNESS=64 --target=pe-x86-64
   X_SUFFIX = _x64

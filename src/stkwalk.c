@@ -56,8 +56,6 @@
 #include <time.h>
 #include <assert.h>
 
-#if !defined(NO_STACK_WALK)  /* Rest of file */
-
 #include "common.h"
 #include "init.h"
 #include "bfd_gcc.h"
@@ -910,5 +908,3 @@ char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
 
   return (ret_buf);
 }
-
-#endif  /* NO_STACK_WALK */

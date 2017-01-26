@@ -50,13 +50,6 @@ CFLAGS  = $(CFLAGS) -MDd -Zi -Os -D_DEBUG
 CFLAGS  = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
 !endif
 
-#
-# stkwalk.c is not 64-bit ready.
-#
-!if "$(MACHINE)" == "x64"
-CFLAGS = $(CFLAGS) -DNO_STACK_WALK
-!endif
-
 !if "$(USE_DEF_FILE)" == "1"
 CFLAGS      = $(CFLAGS) -DUSE_DEF_FILE
 WSOCK_DEF   = wsock_trace$(X_SUFFIX).def

@@ -25,11 +25,8 @@
 #include "dump.h"
 #include "wsock_trace_lua.h"
 #include "geoip.h"
+#include "stkwalk.h"
 #include "init.h"
-
-#if !defined(NO_STACK_WALK)
-  #include "stkwalk.h"
-#endif
 
 struct config_table g_cfg;
 int    fatal_error;
@@ -646,10 +643,7 @@ void wsock_trace_exit (void)
      trace_report();
 
   exclude_list_free();
-
-#if !defined(NO_STACK_WALK)
   StackWalkExit();
-#endif
 
 #if defined(USE_LUA)
   wstrace_exit_lua (g_cfg.lua_exit_script);
@@ -937,9 +931,7 @@ void wsock_trace_init (void)
   BFD_init();
 #endif
 
-#if !defined(NO_STACK_WALK)
   StackWalkInit();
-#endif
 
 #if defined(USE_LUA)
   wstrace_init_lua (g_cfg.lua_init_script);

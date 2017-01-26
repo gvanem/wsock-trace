@@ -35,10 +35,7 @@
 #include "dump.h"
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
-
-#if !defined(NO_STACK_WALK)
-  #include "stkwalk.h"
-#endif
+#include "stkwalk.h"
 
 /* This used to be set in the Makefiles to '-DWSOCK_TRACE_DLL="..."'.
  * It was not so reliable. Hence hardcode it in DllMain() below.
@@ -2606,15 +2603,6 @@ static const char *get_timestamp (void)
   return (NULL);
 }
 
-#if defined(NO_STACK_WALK)
-static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
-{
-  ARGSUSED (ret_addr);
-  ARGSUSED (ebp);
-  return ("No stkwalk for X64 yet");
-}
-
-#else
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 {
   static int reentry = 0;
@@ -2680,7 +2668,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       a = strdup (ret);
       b = strdup (StackWalkShow (thr, &ctx));
       ret = malloc (strlen(a)+strlen(b)+50);
-      sprintf (ret, "%s\n                  %s", a, b);
+      sprintf (ret, "%s\n               %s", a, b);
     }
 #endif
 
@@ -2691,7 +2679,6 @@ quit:
   reentry--;
   return (ret);
 }
-#endif  /* NO_STACK_WALK */
 
 #if defined(USE_BFD)  /* MinGW implied */
 
