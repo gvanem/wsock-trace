@@ -103,6 +103,9 @@ static void test_send (void);
 static void test_WSAFDIsSet (void);
 static void test_WSAAddressToStringA (void);
 static void test_WSAAddressToStringW (void);
+static void test_WSAStringToAddressA (void);
+static void test_WSAStringToAddressW (void);
+
 
 /*
  * fmatch() is copyright djgpp. Now simplified and renamed to
@@ -136,6 +139,8 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAFDIsSet),
                     ADD_TEST (WSAAddressToStringA),
                     ADD_TEST (WSAAddressToStringW),
+                    ADD_TEST (WSAStringToAddressA),
+                    ADD_TEST (WSAStringToAddressW),
                     ADD_TEST (WSACleanup)
                   };
 
@@ -409,6 +414,24 @@ static void test_WSAAddressToStringW (void)
   WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), &p_info, (wchar_t*)&data, &size);
   TEST_CONDITION (== 0, wcscmp(data,L"127.0.0.1"));
   TEST_CONDITION (== 1, (size == 20));
+}
+
+static void test_WSAStringToAddressA (void)
+{
+  SOCKADDR sa;
+  int      len = sizeof(sa);
+  int      rc = WSAStringToAddressA ("127.0.0.1", AF_INET, NULL, &sa, &len);
+
+  TEST_CONDITION (== 0, rc);
+}
+
+static void test_WSAStringToAddressW (void)
+{
+  SOCKADDR sa;
+  int      len = sizeof(sa);
+  int      rc = WSAStringToAddressW (L"127.0.0.1", AF_INET, NULL, &sa, &len);
+
+  TEST_CONDITION (== 0, rc);
 }
 
 static int show_help (void)
