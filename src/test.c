@@ -40,7 +40,7 @@
 
 /* Because of:
  *   warning C4007: 'main': must be '__cdecl'
- * whe using 'cl -Gr'.
+ * when using 'cl -Gr'.
  */
 #if defined(_MSC_VER)
   #define MS_CDECL __cdecl
