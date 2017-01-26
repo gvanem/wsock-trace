@@ -29,6 +29,13 @@
    *                          previous dllimport ignored [-Wattributes]
    */
   #pragma GCC diagnostic ignored "-Wattributes"
+
+#elif defined(_MSC_VER) && defined(_WIN64)
+  /*
+   * Ignore warnings like:
+   *   'type cast': pointer truncation from 'hostent *' to 'int'
+   */
+  #pragma warning (disable: 4311)
 #endif
 
 /* Because of:
