@@ -5,7 +5,11 @@ function os_details()
                         jit.version, jit.os, jit.arch);
 end
 
--- io.write ("HOME: " .. os.getenv("HOME") .. '.\n')
+-- local ws = require "wsock_trace"
 
--- io.write ("Hello from 'wsock_trace_init.lua': " .. os_details() .. '.\n');
--- io.write ("package.path[]: " .. package.path .. '.\n');
+-- ws:trace_puts ("~4trace_puts()~0.\n")
+
+-- exec ("init.lua")
+
+io.write ("Hello from '" .. os.getenv("APPDATA") .. "\\wsock_trace_init.lua': " .. os_details() .. '.\n');
+io.write ("package.path[]: " .. package.path .. '.\n');
