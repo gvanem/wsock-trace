@@ -53,7 +53,7 @@ test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) $(LDFLAGS) -o $@ $^ $(EX_LIBS) > test.map
 
 geoip.exe: geoip.c common.c init.c in_addr.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE $^ -o $@ -lws2_32 -lole32 > geoip.map
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -o $@ -lws2_32 -lole32 > geoip.map
 
 run_test: test.exe
 	test.exe

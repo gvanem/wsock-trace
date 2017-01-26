@@ -1330,10 +1330,6 @@ void geoip_update_file (int family, BOOL force_update)
 
 #if defined(TEST_GEOIP)
 
-#if !defined(USE_FWRITE)
-#error "Define -DUSE_FWRITE while compiling geoip.c."
-#endif
-
 #include "getopt.h"
 
 /*

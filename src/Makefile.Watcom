@@ -76,8 +76,8 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	@echo
 
 geoip.exe: geoip.c init.c $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR)\getopt.obj
-	*$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE -fo=$(OBJ_DIR)\geoip.obj geoip.c
-	*$(CC) $(CFLAGS) -DTEST_GEOIP -DUSE_FWRITE -fo=$(OBJ_DIR)\init.obj  init.c
+	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\geoip.obj geoip.c
+	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\init.obj  init.c
 	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\geoip.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj &
 	                                $(OBJ_DIR)\init.obj  $(OBJ_DIR)\getopt.obj                      } &
 	                         library clib3$(STACK_OR_REG).lib

@@ -127,10 +127,10 @@ test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) $(LDFLAGS) -o $@ $^ > test.map
 
 geoip.exe: geoip.c common.c init.c in_addr.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE $^ -o $@ -lws2_32 -lole32 > geoip.map
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -o $@ -lws2_32 -lole32 > geoip.map
 
 geoip2.exe: geoip.c common.c init.c in_addr.c geoip-gen4.c geoip-gen6.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_FWRITE -DUSE_GEOIP_GENERATED \
+	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP -DUSE_GEOIP_GENERATED \
 	      geoip.c common.c init.c in_addr.c -o $@ -lws2_32 -lole32 > geoip2.map
 
 geoip-gen4.c: geoip.exe

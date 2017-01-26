@@ -798,20 +798,11 @@ size_t trace_flush (void)
   }
   else
   {
-#if defined(USE_LUA) || defined(USE_FWRITE)
     /*
-     * Use 'fwrite()' (a bit slower?) so the Lua-output
+     * Use 'fwrite()' (a bit slower than '_write()') so the Lua-output
      * written using 'io.write()' is in sync with our trace-output.
      */
     written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
-#else
-    int hnd;
-
-    assert (g_cfg.trace_stream != NULL);
-    hnd = _fileno (g_cfg.trace_stream);
-    assert (hnd >= 1);
-    written = _write (hnd, trace_buf, (unsigned int)len);
-#endif
   }
   trace_ptr = trace_buf;   /* restart buffer */
   return (written);
