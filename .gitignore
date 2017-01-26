@@ -52,4 +52,10 @@ src/wsock_trace_x64.def
 src/test/*
 src/geoip-gen4.c
 src/geoip-gen6.c
+backup/*
+Nlm.c
+_socket_py.c
+cpp_filter.py
+crashlog_win.cpp
+geoip-addresses.test
 
