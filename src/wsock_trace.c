@@ -33,9 +33,9 @@
 #include "in_addr.h"
 #include "init.h"
 #include "dump.h"
+#include "stkwalk.h"
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
-#include "stkwalk.h"
 
 /* This used to be set in the Makefiles to '-DWSOCK_TRACE_DLL="..."'.
  * It was not so reliable. Hence hardcode it in DllMain() below.
@@ -2628,6 +2628,14 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     if (num_frames <= 2)
     {
       ret = "No stack";
+
+#if defined(_MSC_VER)
+     /*
+      * The MSVC flags '-Ox' (maximum optimizations) breaks the assumption for
+      * 'RtlCaptureStackBackTrace()'. Hence warn strongly against it.
+      */
+      TRACE (2, "RtlCaptureStackBackTrace(): %d; Do not use '-Ox' in your CFLAGS.\n", num_frames);
+#endif
       goto quit;
     }
 
