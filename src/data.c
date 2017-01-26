@@ -7,6 +7,8 @@
 #include "common.h"
 #include "in_addr.h"
 
+GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
+
 const IN_ADDR in4addr_any                     = { 0,0,0,0 };
 const IN_ADDR in4addr_loopback                = { 127,0,0,1 };
 const IN_ADDR in4addr_broadcast               = { 255,255,255,255 };
