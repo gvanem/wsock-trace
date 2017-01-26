@@ -802,6 +802,8 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
  * '-DUSE_GEOIP_GENERATED' to make use of this faster feature.
  */
 #if defined(USE_GEOIP_GENERATED)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
+
   #include "geoip-gen4.c"
   #include "geoip-gen6.c"
 #endif

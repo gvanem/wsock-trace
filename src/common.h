@@ -165,6 +165,18 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define U64_SUFFIX(x)  (x##ULL)
 #endif
 
+#if defined(__GNUC__)
+  #define GCC_VERSION  (10000 * __GNUC__ + 100 * __GNUC_MINOR__ + __GNUC_PATCHLEVEL__)
+#else
+  #define GCC_VERSION  0
+#endif
+
+#if (GCC_VERSION >= 40600)
+  #define GCC_PRAGMA(x)  _Pragma (#x)
+#else
+  #define GCC_PRAGMA(x)
+#endif
+
 
 /*
  * Printing an hex linear address.
