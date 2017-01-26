@@ -369,6 +369,15 @@ static smartlist_t *geoip_ipv4_entries = NULL;
 static smartlist_t *geoip_ipv6_entries = NULL;
 
 /*
+ * Simplified version of the one in wsock_trace.c.
+ */
+static const char *get_ws_error (void)
+{
+  static char buf[150];
+  return ws_strerror (WSAGetLastError(), buf, sizeof(buf));
+}
+
+/*
  * smartlist_sort() helper: return -1, 1, or 0 based on comparison of two
  * 'ipv4_node'
  */
@@ -478,12 +487,12 @@ void geoip_ipv6_add_specials (void)
 
     if (wsock_trace_inet_pton6(priv[i].low, (u_char*)&low) != 1)
     {
-      TRACE (0, "Illegal low IPv6 address: %s, %d\n", priv[i].low, WSAGetLastError());
+      TRACE (0, "Illegal low IPv6 address: %s, %s\n", priv[i].low, get_ws_error());
       continue;
     }
     if (wsock_trace_inet_pton6(priv[i].high, (u_char*)&high) != 1)
     {
-      TRACE (0, "Illegal high IPv6 address: %s, %d\n", priv[i].high, WSAGetLastError());
+      TRACE (0, "Illegal high IPv6 address: %s, %s\n", priv[i].high, get_ws_error());
       continue;
     }
     geoip6_add_entry (&low, &high, "--");
@@ -1277,7 +1286,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
   if (!force_update && _st_loc && st_loc.st_mtime >= past)
   {
     TRACE (1, "update not needed for \"%s\". Try again in %ld days.\n",
-           loc_file, g_cfg.geoip_max_days + (int)(now-st_loc.st_mtime)/(24*3600));
+           loc_file, g_cfg.geoip_max_days + (long int)(now-st_loc.st_mtime)/(24*3600));
     return (rc);
   }
 
@@ -1652,7 +1661,7 @@ static void test_addr4 (const char *ip4_addr)
     }
   }
   else
-    puts ("Invalid address.");
+    printf ("Invalid address: %s.\n", get_ws_error());
 }
 
 static void test_addr6 (const char *ip6_addr)
@@ -1682,7 +1691,7 @@ static void test_addr6 (const char *ip6_addr)
     }
   }
   else
-    puts ("Invalid address.");
+    printf ("Invalid address: %s.\n", get_ws_error());
 }
 
 #if !defined(USE_GEOIP_GENERATED)
