@@ -100,6 +100,7 @@ static void test_ioctlsocket (void);
 static void test_connect (void);
 static void test_select (void);
 static void test_send (void);
+static void test_WSAPoll (void);
 static void test_WSAFDIsSet (void);
 static void test_WSAAddressToStringA (void);
 static void test_WSAAddressToStringW (void);
@@ -136,6 +137,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (connect),
                     ADD_TEST (select),
                     ADD_TEST (send),
+                    ADD_TEST (WSAPoll),
                     ADD_TEST (WSAFDIsSet),
                     ADD_TEST (WSAAddressToStringA),
                     ADD_TEST (WSAAddressToStringW),
@@ -358,6 +360,23 @@ static void test_send (void)
      data[i] = i;
 
   TEST_CONDITION (== -1, send (s1, (const char*)&data, sizeof(data), 0));
+}
+
+static void test_WSAPoll (void)
+{
+#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
+  struct pollfd poll[2];
+
+  poll[0].fd      = s1;
+  poll[0].events  = POLLOUT;
+  poll[0].revents = 0;
+
+  poll[1].fd      = s2;
+  poll[1].events  = POLLOUT;
+  poll[1].revents = 0;
+
+  TEST_CONDITION (== 1, WSAPoll ((LPWSAPOLLFD)&poll, 2, 10));
+#endif
 }
 
 static void test_WSAFDIsSet (void)
