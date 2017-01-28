@@ -157,13 +157,13 @@ static int run_test (const char *wildcard)
   {
     if (name_match(wildcard, t->name) != NAME_MATCH)
     {
-      if (chatty > 2)
+      if (chatty >= 2)
          printf ("Skipping test %s().\n", t->name);
       continue;
     }
     rc++;
-    if (chatty > 0)
-       printf ("\nTesting %s().\n", t->name);
+    if (chatty >= 1)
+       printf ("\nTesting %s():\n", t->name);
     (*t->func)();
   }
   return (rc);
@@ -598,24 +598,24 @@ static void test_ptr_or_error64 (void)
  */
 static void test_condition (int okay, const char *function)
 {
- if (chatty < 2)
-    return;
-
-  printf ("  %-50s: ", function);
-  if (okay)
-       puts ("OKAY");
-  else printf ("FAILED. result %d\n", last_result);
+  if (chatty >= 1)
+  {
+    printf ("  %-50s: ", function);
+    if (okay)
+         puts ("OKAY");
+    else printf ("FAILED. result %d\n", last_result);
+  }
 }
 
 static void test_string (const char *expect, const char *result, const char *function)
 {
- if (chatty < 2)
-    return;
-
-  printf ("  %-50s: ", function);
-  if (!strcmp(expect,result))
-       puts ("OKAY");
-  else printf ("FAILED. expected: %s\n", expect);
+  if (chatty >= 1)
+  {
+    printf ("  %-50s: ", function);
+    if (!strcmp(expect,result))
+         puts ("OKAY");
+    else printf ("FAILED. expected: %s\n", expect);
+  }
 }
 
 static int name_match (const char *wildcard, const char *string)
