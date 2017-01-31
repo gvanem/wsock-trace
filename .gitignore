@@ -24,6 +24,7 @@ t
 *.plg
 *.obj
 *.bat
+enum_proto.*
 .depend.*
 src/Cygwin_obj/*
 src/Debug/*
