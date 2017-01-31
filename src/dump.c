@@ -278,8 +278,40 @@
 #define BTHPROTO_RFCOMM  3
 #endif
 
+#ifndef AF_CLUSTER
+#define AF_CLUSTER       24
+#endif
+
+#ifndef AF_12844
+#define AF_12844         25
+#endif
+
+#ifndef AF_NETDES
+#define AF_NETDES        28
+#endif
+
+#ifndef AF_TCNPROCESS
+#define AF_TCNPROCESS    29
+#endif
+
+#ifndef AF_TCNMESSAGE
+#define AF_TCNMESSAGE    30
+#endif
+
+#ifndef AF_ICLFXBM
+#define AF_ICLFXBM       31
+#endif
+
 #ifndef AF_BTH
-#define AF_BTH  32
+#define AF_BTH           32
+#endif
+
+#ifndef AF_LINK
+#define AF_LINK          33
+#endif
+
+#ifndef AF_HYPERV
+#define AF_HYPERV        34
 #endif
 
 #ifndef IOCGROUP
@@ -853,7 +885,15 @@ static const struct search_list families[] = {
                     ADD_VALUE (AF_ATM),
                     ADD_VALUE (AF_INET6),
                     ADD_VALUE (AF_IRDA),
-                    ADD_VALUE (AF_BTH)
+                    ADD_VALUE (AF_BTH),
+                    ADD_VALUE (AF_CLUSTER),
+                    ADD_VALUE (AF_12844),
+                    ADD_VALUE (AF_NETDES),
+                    ADD_VALUE (AF_TCNPROCESS),
+                    ADD_VALUE (AF_TCNMESSAGE),
+                    ADD_VALUE (AF_ICLFXBM),
+                    ADD_VALUE (AF_LINK),
+                    ADD_VALUE (AF_HYPERV)
                   };
 
 static const struct search_list levels[] = {
@@ -916,7 +956,7 @@ static const struct search_list protocols[] = {
                     ADD_VALUE (IPPROTO_TCP),
                     ADD_VALUE (IPPROTO_UDP),
                     ADD_VALUE (IPPROTO_ICMPV6),
-                    ADD_VALUE (IPPROTO_RM),
+                    ADD_VALUE (IPPROTO_RM)
                   };
 
 static const struct search_list wsaprotocol_info_ServiceFlags1[] = {
@@ -1373,35 +1413,32 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
  * Function that prints the line argument while limiting it
  * to at most 'g_cfg.screen_width'. An appropriate number
  * of spaces are added on subsequent lines.
- *
- * Stolen from Wget (main.c) and rewritten.
  */
-static void format_and_print_line (const char *line, int indent, int brk_ch)
+static void print_long_flags (const char *start, size_t indent, int brk_ch)
 {
-  char *token, *line_dup = strdup (line);
-  char  brk_chars[2] = "?";
-  int   remaining_chars = g_cfg.screen_width - indent;
+  size_t      room, left = g_cfg.screen_width - indent;
+  const char *c = start;
 
-  brk_chars[0] = brk_ch;
-  token = strtok (line_dup, brk_chars);
-  while (token)
+  while (*c)
   {
-    /* If a token is much larger than the maximum
-     * line length, we print the token on the next line.
+    /* Break a long line only at 'break char'.
+     * Check if room for a flag-component ("foo|") before we must break the line.
      */
-    if (remaining_chars <= (int)strlen(token))
+    if (*c == brk_ch)
     {
-      trace_printf ("\n%*c", indent, ' ');
-      remaining_chars = g_cfg.screen_width - indent;
+      room = (size_t) (start - strchr(c+1,brk_ch));
+      if (c[1] && room < left)
+      {
+        trace_printf ("%c\n%*c", *c++, (int)indent, ' ');
+        left  = g_cfg.screen_width - indent;
+        start = c;
+        continue;
+      }
     }
-    trace_puts (token);
-    remaining_chars -= strlen (token);
-    token = strtok (NULL, brk_chars);
-    if (token)
-       trace_putc (brk_ch);
+    trace_putc (*c++);
+    left--;
   }
   trace_putc ('\n');
-  free (line_dup);
 }
 
 void dump_addrinfo (const struct addrinfo *ai)
@@ -1531,16 +1568,15 @@ static const char *wsapollfd_event_decode (SHORT ev, char *buf)
   if (ev == (POLLOUT | POLLRDNORM | POLLRDBAND))
      return ("POLLOUT|POLLIN");
 
-  strcpy (buf, flags_decode(ev, wsapollfd_flgs, DIM(wsapollfd_flgs)));
-  return (buf);
+  return strcpy (buf, flags_decode(ev, wsapollfd_flgs, DIM(wsapollfd_flgs)));
 }
 
 void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
 {
   const WSAPOLLFD *fd = fd_array;
   int   line = 0;
-  char  ev_buf1[30];
-  char  ev_buf2[30];
+  char  ev_buf1[100];
+  char  ev_buf2[100];
   ULONG i;
 
   for (i = 0; i < fds; i++, fd++)
@@ -1556,19 +1592,35 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
   }
 }
 
-void dump_one_proto_info (const char *prefix, const char *buf)
-{
-  static const char *padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
+static const char *proto_padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
 
+static void dump_one_proto_info (const char *prefix, const char *buf)
+{
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("%s%s\n", prefix ? prefix : padding, buf);
+  trace_printf ("%s%s\n", prefix ? prefix : proto_padding, buf);
 }
 
-void dump_provider_path (const GUID *guid, const void *provider_path_func)
+static void dump_one_proto_infof (const char *fmt, ...)
 {
-  /* Watcom lacks many things making this difficult.
-   */
-#if !defined(__WATCOMC__)
+  va_list args;
+
+  va_start (args, fmt);
+  trace_indent (g_cfg.trace_indent+2);
+  trace_puts (proto_padding);
+  trace_vprintf (fmt, args);
+  va_end (args);
+}
+
+/*
+ * Watcom lacks many things making this difficult.
+ */
+#if defined(__WATCOMC__)
+void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)
+{
+}
+#else
+static void dump_provider_path (const GUID *guid, const void *provider_path_func)
+{
   int     error;
   wchar_t path[MAX_PATH] = L"??";
   int     path_len = DIM(path);
@@ -1582,23 +1634,14 @@ void dump_provider_path (const GUID *guid, const void *provider_path_func)
 
   func_WSCGetProviderPath p_WSCGetProviderPath = (func_WSCGetProviderPath) provider_path_func;
 
-  if (p_WSCGetProviderPath &&
-      (*p_WSCGetProviderPath)((GUID*)guid, path, &path_len, &error) == 0)
-  {
-    char buf [100+MAX_PATH];
+  (*p_WSCGetProviderPath) ((GUID*)guid, path, &path_len, &error);
 
-    snprintf (buf, sizeof(buf), "~4Provider Path:      \"%" WCHAR_FMT "\"~0", path);
-    dump_one_proto_info (NULL, buf);
-  }
-#endif
+  dump_one_proto_infof ("Provider Path:      \"%" WCHAR_FMT "\"\n", path);
 }
 
 void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)
 {
-  /* Watcom lacks many things making this difficult.
-   */
-#if !defined(__WATCOMC__)
-  const char *flags_str;
+  const char *flags_str, *af_str;
   char        buf1 [100];
   char        buf2 [200];
   DWORD       flags;
@@ -1616,8 +1659,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
 
   if (!proto_info)
   {
-    dump_one_proto_info (buf1, "NULL");
-    trace_puts ("~0");
+    dump_one_proto_info (buf1, "NULL~0");
     return;
   }
 
@@ -1629,17 +1671,13 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
 
   snprintf (buf2, sizeof(buf2), "dwServiceFlags1:    %s", flags_str);
 
-#if 1
   trace_indent (g_cfg.trace_indent+2);
   trace_puts (buf1);
-  format_and_print_line (buf2, g_cfg.trace_indent + strlen(buf1) + sizeof("dwServiceFlags1:   "), '|');
-#else
-  dump_one_proto_info (buf1, buf2);
-#endif
+  print_long_flags (buf2, g_cfg.trace_indent + strlen(buf1) + sizeof("dwServiceFlags1:   "), '|');
 
-  dump_one_proto_info (NULL, "dwServiceFlags2:    Reserved");
-  dump_one_proto_info (NULL, "dwServiceFlags3:    Reserved");
-  dump_one_proto_info (NULL, "dwServiceFlags4:    Reserved");
+  dump_one_proto_infof ("dwServiceFlags2:    0x%08lX (reserved)\n", pi_a->dwServiceFlags2);
+  dump_one_proto_infof ("dwServiceFlags3:    0x%08lX (reserved)\n", pi_a->dwServiceFlags3);
+  dump_one_proto_infof ("dwServiceFlags4:    0x%08lX (reserved)\n", pi_a->dwServiceFlags4);
 
   flags = pi_a->dwProviderFlags;
   if (flags == 0)
@@ -1647,72 +1685,47 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   else flags_str = flags_decode (flags, wsaprotocol_info_ProviderFlags,
                                  DIM(wsaprotocol_info_ProviderFlags));
 
-  snprintf (buf2, sizeof(buf2), "dwProviderFlags:    %s", flags_str);
-  dump_one_proto_info (NULL, buf2);
+  dump_one_proto_infof ("dwProviderFlags:    %s\n", flags_str);
+  dump_one_proto_infof ("dwCatalogEntryId:   %lu\n", pi_a->dwCatalogEntryId);
+  dump_one_proto_infof ("ProtocolChain:      len: %d, %s\n", pi_a->ProtocolChain.ChainLen,
+                                                             (pi_a->ProtocolChain.ChainLen == 1) ?
+                                                             "Base Service Provider" : "Layered Chain Entry");
+  dump_one_proto_infof ("iVersion:           %d\n",      pi_a->iVersion);
 
-  snprintf (buf2, sizeof(buf2), "dwCatalogEntryId:   %lu", pi_a->dwCatalogEntryId);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "ProtocolChain:      {len: %d... }", pi_a->ProtocolChain.ChainLen);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iVersion:           %d", pi_a->iVersion);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iAddressFamily:     %d = %s", pi_a->iAddressFamily, socket_family(pi_a->iAddressFamily));
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iMaxSockAddr:       %d", pi_a->iMaxSockAddr);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iMinSockAddr:       %d", pi_a->iMinSockAddr);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iSocketType:        %d = %s", pi_a->iSocketType, socket_type(pi_a->iSocketType));
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iProtocol:          %d = %s", pi_a->iProtocol, protocol_name(pi_a->iProtocol));
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iProtocolMaxOffset: %d", pi_a->iProtocolMaxOffset);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iNetworkByteOrder:  %d = %s",
-            pi_a->iNetworkByteOrder, pi_a->iNetworkByteOrder == 0 ? "BIGENDIAN" : "LITTLEENDIAN");
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "iSecurityScheme:    %d", pi_a->iSecurityScheme);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "dwMessageSize:      0x%08lX", pi_a->dwMessageSize);
-  dump_one_proto_info (NULL, buf2);
-
-  snprintf (buf2, sizeof(buf2), "dwProviderReserved: Reserved");
-  dump_one_proto_info (NULL, buf2);
+  af_str = socket_family (pi_a->iAddressFamily);
+  dump_one_proto_infof ("iAddressFamily:     %d = %s\n", pi_a->iAddressFamily, isdigit(*af_str) ? "Unknown" : af_str);
+  dump_one_proto_infof ("iMaxSockAddr:       %d\n",      pi_a->iMaxSockAddr);
+  dump_one_proto_infof ("iMinSockAddr:       %d\n",      pi_a->iMinSockAddr);
+  dump_one_proto_infof ("iSocketType:        %d = %s\n", pi_a->iSocketType, socket_type(pi_a->iSocketType));
+  dump_one_proto_infof ("iProtocol:          %d = %s\n", pi_a->iProtocol, protocol_name(pi_a->iProtocol));
+  dump_one_proto_infof ("iProtocolMaxOffset: %d\n",      pi_a->iProtocolMaxOffset);
+  dump_one_proto_infof ("iNetworkByteOrder:  %d = %s\n", pi_a->iNetworkByteOrder,
+                                                         pi_a->iNetworkByteOrder == 0 ? "BIGENDIAN" : "LITTLEENDIAN");
+  dump_one_proto_infof ("iSecurityScheme:    %d\n",      pi_a->iSecurityScheme);
+  dump_one_proto_infof ("dwMessageSize:      %lu\n",     pi_a->dwMessageSize);
+  dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", pi_a->dwProviderReserved);
 
   if (ascii_or_wide == 'A')
-       snprintf (buf2, sizeof(buf2), "szProtocol:         \"%.*s\"", WSAPROTOCOL_LEN, pi_a->szProtocol);
-  else snprintf (buf2, sizeof(buf2), "szProtocol:         \"%.*S\"", WSAPROTOCOL_LEN, pi_w->szProtocol);
-  dump_one_proto_info (NULL, buf2);
+       dump_one_proto_infof ("szProtocol:         \"%.*s\"\n", WSAPROTOCOL_LEN, pi_a->szProtocol);
+  else dump_one_proto_infof ("szProtocol:         \"%.*S\"\n", WSAPROTOCOL_LEN, pi_w->szProtocol);
 
-  snprintf (buf2, sizeof(buf2), "ProviderId:         %s", get_guid_string(&pi_a->ProviderId));
-  dump_one_proto_info (NULL, buf2);
+  dump_one_proto_infof ("ProviderId:         %s\n", get_guid_string(&pi_a->ProviderId));
 
-  if (ascii_or_wide == 'A')
-       dump_provider_path (&pi_a->ProviderId, provider_path_func);
-  else dump_provider_path (&pi_w->ProviderId, provider_path_func);
-
+  if (provider_path_func)
+  {
+    if (ascii_or_wide == 'A')
+         dump_provider_path (&pi_a->ProviderId, provider_path_func);
+    else dump_provider_path (&pi_w->ProviderId, provider_path_func);
+  }
   trace_puts ("~0");
-#endif
 }
+#endif  /* __WATCOMC__ */
 
-#if defined(__GNUC__)
-  /*
-   * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
-   *                  addr = "<??>";
-   */
-  #pragma GCC diagnostic ignored "-Wtrigraphs"
-#endif
+/*
+ * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
+ *                  addr = "<??>";
+ */
+GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
 
 static const char *dump_addr_list (int type, const char **addresses)
 {
