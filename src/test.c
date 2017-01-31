@@ -1,4 +1,7 @@
-
+/*
+ * test.c - test the printout of some of the hooked functions in Wsock_trace.
+ * Make sure 'trace_level = 1' (or higher) in your '%APPDATA%/wsock_trace'.
+ */
 #if 0
   #define UNICODE
   #define _UNICODE
@@ -14,6 +17,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <tchar.h>
+#include <malloc.h>
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -104,9 +108,10 @@ static void test_WSAPoll (void);
 static void test_WSAFDIsSet (void);
 static void test_WSAAddressToStringA (void);
 static void test_WSAAddressToStringW (void);
+static void test_WSAAddressToStringWP (void);
 static void test_WSAStringToAddressA (void);
 static void test_WSAStringToAddressW (void);
-
+static void test_WSAEnumProtocols (void);
 
 /*
  * fmatch() is copyright djgpp. Now simplified and renamed to
@@ -141,8 +146,10 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAFDIsSet),
                     ADD_TEST (WSAAddressToStringA),
                     ADD_TEST (WSAAddressToStringW),
+                    ADD_TEST (WSAAddressToStringWP),
                     ADD_TEST (WSAStringToAddressA),
                     ADD_TEST (WSAStringToAddressW),
+                    ADD_TEST (WSAEnumProtocols),
                     ADD_TEST (WSACleanup)
                   };
 
@@ -397,23 +404,45 @@ static void test_WSAAddressToStringA (void)
   WSAAddressToStringA ((SOCKADDR*)&sa4, sizeof(sa4), NULL, (LPTSTR)&data, &size);
 
   TEST_CONDITION (== 0, strcmp(data,"127.0.0.1"));
-  TEST_CONDITION (== 1, (size == 10));
+  TEST_CONDITION (== 1, (size == sizeof("127.0.0.1")));
+}
+
+static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
+{
+  struct sockaddr_in sa4;
+  wchar_t            data[256];
+  DWORD              size = DIM (data);
+
+  memset (&sa4, 0, sizeof(sa4));
+  sa4.sin_family = AF_INET;
+  sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+
+  WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, (wchar_t*)&data, &size);
+
+  TEST_CONDITION (== 0, wcscmp(data,L"127.0.0.1"));
+  TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1")/2));
 }
 
 static void test_WSAAddressToStringW (void)
 {
-  struct sockaddr_in sa4;
-  GUID               guid;
-  WSAPROTOCOL_INFOW  p_info;
-  wchar_t            data[256];
-  DWORD              size = DIM (data);
+  test_WSAAddressToStringW_common (NULL);
+}
+
+/*
+ * As above, but with the 'WSAPROTOCOL_INFOW' parameter.
+ */
+static void test_WSAAddressToStringWP (void)
+{
+  WSAPROTOCOL_INFOW p_info;
+  GUID              guid;
 
   /* Just to test dump_wsaprotocol_info(). I assume the GUID:
-   * {E70F1AA0-AB8B-11CF-8CA3-00805F48A192} is unique on all versions of Win-XP.
-   * This is the "MSAFD Tcpip [TCP/IP]" provider.
+   * {E70F1AA0-AB8B-11CF-8CA3-00805F48A192} is unique on all versions of Windows.
+   * (seems the case from Win_XP to Win-10).
+   * This GUID is the "MSAFD Tcpip [TCP/IP]" provider.
    */
-  memset (&guid, 0, sizeof(guid));
   memset (&p_info, 0, sizeof(p_info));
+  memset (&guid, 0, sizeof(guid));
   guid.Data1 = 0xE70F1AA0;
   guid.Data2 = 0xAB8B;
   guid.Data3 = 0x11CF;
@@ -424,15 +453,13 @@ static void test_WSAAddressToStringW (void)
 
   p_info.dwServiceFlags1 = XP1_CONNECTIONLESS | XP1_PSEUDO_STREAM | XP1_DISCONNECT_DATA;
   p_info.dwProviderFlags = PFL_RECOMMENDED_PROTO_ENTRY;
+  p_info.iAddressFamily  = AF_INET;
+  p_info.iSocketType     = SOCK_STREAM;
+  p_info.iProtocol       = IPPROTO_TCP;
+
   memcpy (&p_info.ProviderId, &guid, sizeof(p_info.ProviderId));
 
-  memset (&sa4, 0, sizeof(sa4));
-  sa4.sin_family = AF_INET;
-  sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-
-  WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), &p_info, (wchar_t*)&data, &size);
-  TEST_CONDITION (== 0, wcscmp(data,L"127.0.0.1"));
-  TEST_CONDITION (== 1, (size == 20));
+  test_WSAAddressToStringW_common (&p_info);
 }
 
 static void test_WSAStringToAddressA (void)
@@ -451,6 +478,18 @@ static void test_WSAStringToAddressW (void)
   int      rc = WSAStringToAddressW (L"127.0.0.1", AF_INET, NULL, &sa, &len);
 
   TEST_CONDITION (== 0, rc);
+}
+
+static void test_WSAEnumProtocols (void)
+{
+  WSAPROTOCOL_INFO *p_info = NULL;
+  DWORD             len = 0;
+  DWORD             num = WSAEnumProtocols (NULL, p_info, &len);
+
+  if (num == SOCKET_ERROR && WSAGetLastError() == WSAENOBUFS)
+     p_info = alloca (len);
+
+  TEST_CONDITION ( > 0, WSAEnumProtocols (NULL, p_info, &len));
 }
 
 static int show_help (void)
@@ -655,3 +694,4 @@ static int name_match (const char *wildcard, const char *string)
     }
   }
 }
+
