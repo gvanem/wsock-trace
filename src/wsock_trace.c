@@ -62,34 +62,15 @@ static const char *get_timestamp (void);
   #define SOCK_RC_TYPE unsigned
 #endif
 
-
 /*
  * All 'p_function' pointers below are checked before use with this
  * macro. 'init_ptr()' makes sure 'wsock_trace_init()' is called once
  * and 'p_function' is not NULL.
 */
-#if defined(USE_DETOURS)
-  #define INIT_PTR(ptr) /* */
+#if defined(USE_DETOURS)   /* \todo */
+  #define INIT_PTR(ptr)    /* */
 #else
   #define INIT_PTR(ptr) init_ptr ((const void**)&ptr, #ptr)
-#endif
-
-#if defined(__MINGW_GNUC_PREREQ)
-  #if __MINGW_GNUC_PREREQ(4, 4) && 0
-    #define NO_WARN_FORMAT()                \
-           _Pragma ("GCC diagnostic push"); \
-           _Pragma ("GCC diagnostic ignored -Wformat")
-    #define POP_WARN_FORMAT() \
-            _Pragma ("GCC diagnostic pop")
-  #endif
-#endif
-
-#ifndef NO_WARN_FORMAT
-#define NO_WARN_FORMAT()   ((void)0)
-#endif
-
-#ifndef POP_WARN_FORMAT
-#define POP_WARN_FORMAT()  ((void)0)
 #endif
 
 /*
@@ -109,7 +90,7 @@ static const char *get_timestamp (void);
  *   https://msdn.microsoft.com/en-us/library/windows/desktop/ms741557(v=vs.85).aspx
  *
  * they want an 'LPSTR' for 'node_name' and 'service_name'. Hence so does MinGW.
- * But the <winsockk2.h> in the WindowsKit wants an 'LPCSTR'.
+ * But the <winsock2.h> in the WindowsKit wants an 'LPCSTR'.
  *
  * Funny enough, 'WSAConnectByNameW()' doesn't want a 'const wide-string'.
  */
@@ -118,7 +99,6 @@ static const char *get_timestamp (void);
 #else
   #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
 #endif
-
 
 /*
  * A WSTRACE() macro for the WinSock calls we support.
@@ -139,9 +119,7 @@ static const char *get_timestamp (void);
                        get_timestamp(),                     \
                        get_caller (GET_RET_ADDR(),          \
                                    get_EBP()) );            \
-       NO_WARN_FORMAT();                                    \
        wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
-       POP_WARN_FORMAT();                                   \
     }                                                       \
   } while (0)
 
@@ -152,17 +130,23 @@ static const char *get_timestamp (void);
   #define GET_RET_ADDR()  0
 #endif
 
-#if defined(_MSC_VER) && defined(_X86_)
+#if (defined(_MSC_VER) && defined(_M_X64)) || \
+    (defined(__GNUC__) && defined(__x86_64__))
+  #define get_EBP() 0
+
+#elif defined(_MSC_VER) && defined(_X86_)
   __declspec(naked) static ULONG_PTR get_EBP (void)
   {
     __asm mov eax, ebp
     __asm ret
   }
 
-#elif defined(_MSC_VER) && defined(_M_X64)
-  static __inline ULONG_PTR get_EBP (void)
+#elif defined(__GNUC__)
+  extern __inline__ ULONG_PTR get_EBP (void)
   {
-    return (0); /* \todo */
+    ULONG_PTR ebp;
+    __asm__ __volatile__ ("movl %%ebp,%k0" : "=r" (ebp) : );
+    return (ebp);
   }
 
 #elif defined(__WATCOMC__)
@@ -171,20 +155,6 @@ static const char *get_timestamp (void);
           "mov eax, ebp" \
           modify [eax];
 
-#elif defined(__GNUC__) && !defined(__x86_64__)
-  extern __inline__ ULONG_PTR get_EBP (void)
-  {
-    ULONG_PTR ebp;
-    __asm__ __volatile__ ("movl %%ebp,%k0" : "=r" (ebp) : );
-    return (ebp);
-  }
-
-#elif defined(__GNUC__)
-  extern __inline__ ULONG_PTR get_EBP (void)
-  {
-    ULONG_PTR rbp = 0; /* todo */
-    return (rbp);
-  }
 #else
   #error "Unsupported compiler."
 #endif
@@ -193,7 +163,8 @@ static fd_set *last_rd_fd = NULL;
 static fd_set *last_wr_fd = NULL;
 static fd_set *last_ex_fd = NULL;
 
-static void wstrace_printf (BOOL first_line, const char *fmt, ...) ATTR_PRINTF (2,3);
+static void wstrace_printf (BOOL first_line,
+                            _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (2,3);
 
 typedef SOCKET  (WINAPI *func_socket) (int family, int type, int protocol);
 typedef SOCKET  (WINAPI *func_accept) (SOCKET s, struct sockaddr *addr, int *addr_len);
@@ -335,14 +306,14 @@ typedef INT (WINAPI *func_WSAAddressToStringW) (SOCKADDR          *address,
                                                 wchar_t           *result_string,
                                                 DWORD             *result_string_len);
 
-typedef INT (WINAPI *func_WSAStringToAddressA) (char             *addressStr,
-                                                INT               addressFamily,
+typedef INT (WINAPI *func_WSAStringToAddressA) (char              *addressStr,
+                                                INT                addressFamily,
                                                 WSAPROTOCOL_INFOA *protocolInfo,
                                                 SOCKADDR          *address,
                                                 INT               *addressLength);
 
-typedef INT (WINAPI *func_WSAStringToAddressW) (wchar_t          *addressStr,
-                                                INT               addressFamily,
+typedef INT (WINAPI *func_WSAStringToAddressW) (wchar_t           *addressStr,
+                                                INT                addressFamily,
                                                 WSAPROTOCOL_INFOW *protocolInfo,
                                                 SOCKADDR          *address,
                                                 INT               *addressLength);
@@ -351,6 +322,9 @@ typedef BOOL (WINAPI *func_WSAGetOverlappedResult) (SOCKET s, WSAOVERLAPPED *ov,
                                                     BOOL wait, DWORD *flags);
 
 typedef int (WINAPI *func_WSAEnumNetworkEvents) (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events);
+
+typedef int (WINAPI *func_WSAEnumProtocolsA) (int *protocols, WSAPROTOCOL_INFOA *proto_info, DWORD *buf_len);
+typedef int (WINAPI *func_WSAEnumProtocolsW) (int *protocols, WSAPROTOCOL_INFOW *proto_info, DWORD *buf_len);
 
 typedef DWORD (WINAPI *func_WSAWaitForMultipleEvents) (DWORD           num_ev,
                                                        const WSAEVENT *ev,
@@ -456,6 +430,8 @@ static func_WSAConnectByNameW        p_WSAConnectByNameW = NULL;
 static func_WSAConnectByList         p_WSAConnectByList = NULL;
 static func_WSAGetOverlappedResult   p_WSAGetOverlappedResult = NULL;
 static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
+static func_WSAEnumProtocolsA        p_WSAEnumProtocolsA = NULL;
+static func_WSAEnumProtocolsW        p_WSAEnumProtocolsW = NULL;
 static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
 static func_WSACancelBlockingCall    p_WSACancelBlockingCall = NULL;
 static func_WSCGetProviderPath       p_WSCGetProviderPath = NULL;
@@ -504,6 +480,8 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "ws2_32.dll", WSAPoll),
               ADD_VALUE (0, "ws2_32.dll", WSAGetOverlappedResult),
               ADD_VALUE (0, "ws2_32.dll", WSAEnumNetworkEvents),
+              ADD_VALUE (1, "ws2_32.dll", WSAEnumProtocolsA),
+              ADD_VALUE (1, "ws2_32.dll", WSAEnumProtocolsW),
               ADD_VALUE (0, "ws2_32.dll", WSACancelBlockingCall),
               ADD_VALUE (1, "ws2_32.dll", WSAWaitForMultipleEvents),
               ADD_VALUE (1, "ws2_32.dll", WSCGetProviderPath),
@@ -1253,7 +1231,7 @@ EXPORT
 int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
 {
   int     rc;
-  unsigned _s = s;
+  unsigned _s = (unsigned) s;
 
   INIT_PTR (p___WSAFDIsSet);
   rc = (*p___WSAFDIsSet) (s, fd);
@@ -1939,8 +1917,77 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
   WSTRACE ("WSAEnumNetworkEvents (%u, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s",
            SOCKET_CAST(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc));
 
-    if (rc == 0 && !exclude_this && g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events)
-       dump_events (events);
+  if (rc == 0 && !exclude_this && g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events)
+     dump_events (events);
+
+  LEAVE_CRIT();
+  return (rc);
+}
+
+/*
+ * This function is what the command "netsh WinSock Show Catalog" uses.
+ */
+EXPORT int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_info, DWORD *buf_len)
+{
+  char buf[50], *p = buf;
+  int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsaprotocol_info);
+
+  INIT_PTR (p_WSAEnumProtocolsA);
+  rc = (*p_WSAEnumProtocolsA) (protocols, proto_info, buf_len);
+
+  ENTER_CRIT();
+
+  if (do_it)
+  {
+    if (rc > 0)
+         snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, *buf_len);
+    else p = (char*) get_error (rc);
+  }
+
+  WSTRACE ("WSAEnumProtocolsA() --> %s", p);
+
+  if (do_it && rc != SOCKET_ERROR && rc > 0 && !exclude_this)
+  {
+    for (i = 0; i < rc; i++)
+    {
+      trace_indent (g_cfg.trace_indent+2);
+      trace_printf ("~1Provider Entry # %d:\n", i);
+      dump_wsaprotocol_info ('A', proto_info + i, p_WSCGetProviderPath);
+    }
+  }
+
+  LEAVE_CRIT();
+  return (rc);
+}
+
+EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_info, DWORD *buf_len)
+{
+  char buf[50], *p = buf;
+  int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsaprotocol_info);
+
+  INIT_PTR (p_WSAEnumProtocolsW);
+  rc = (*p_WSAEnumProtocolsW) (protocols, proto_info, buf_len);
+
+  ENTER_CRIT();
+
+  if (do_it)
+  {
+    if (rc > 0)
+         snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, *buf_len);
+    else p = (char*) get_error (rc);
+  }
+
+  WSTRACE ("WSAEnumProtocolsW() --> %s", p);
+
+  if (do_it && rc != SOCKET_ERROR && rc > 0 && !exclude_this)
+  {
+    for (i = 0; i < rc; i++)
+    {
+      trace_indent (g_cfg.trace_indent+2);
+      trace_printf ("~1Winsock Catalog Provider Entry #%d\n", i);
+      dump_wsaprotocol_info ('W', proto_info + i, p_WSCGetProviderPath);
+    }
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -2613,6 +2660,10 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     ret = "get_caller() reentry. Breaking out.";
     g_cfg.reentries++;
   }
+  else if (g_cfg.callee_level == 0)
+  {
+    ret = "~1";
+  }
   else
   {
     CONTEXT ctx;
@@ -2639,10 +2690,14 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       goto quit;
     }
 
-    /* For MSVC/Watcom (USE_BFD undefined), the passed 'ret_addr' is
+#if !defined(__GNUC__)
+    /*
+     * For MSVC/Watcom (USE_BFD undefined), the passed 'ret_addr' is
      * always 0. We have to get it from 'frames[2]'.
      */
     ret_addr = (ULONG_PTR) frames [2];
+#endif
+
 #else
     WSAError_save_restore (0);
 #endif
@@ -2654,7 +2709,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
      */
 #ifdef _WIN64
     ctx.Rip = ret_addr;
-    ctx.Rbp = ebp;
+    ctx.Rbp = ebp;       /* = 0 */
 #else
     ctx.Eip = ret_addr;
     ctx.Ebp = ebp;
@@ -2663,7 +2718,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     ret = StackWalkShow (thr, &ctx);
 
 #if !defined(USE_BFD)
-    if (g_cfg.callee_level > 1)
+    if (g_cfg.callee_level > 1 && num_frames > 2 && frames[3])
     {
       char *a, *b;
 
