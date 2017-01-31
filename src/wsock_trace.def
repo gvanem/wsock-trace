@@ -6,6 +6,8 @@ EXPORTS
  _WSACleanup@0
  _WSAGetLastError@0
  _WSASetLastError@4
+ _WSAEnumProtocolsA@12
+ _WSAEnumProtocolsW@12
  _WSASocketA@24
  _WSASocketW@24
  _WSADuplicateSocketA@12
@@ -20,6 +22,8 @@ EXPORTS
  _WSAAsyncSelect@16
  _WSAAddressToStringA@20
  _WSAAddressToStringW@20
+ _WSAStringToAddressA@20
+ _WSAStringToAddressW@20
  _WSARecv@28
  _WSARecvEx@16
  _WSARecvFrom@36
@@ -80,62 +84,56 @@ EXPORTS
 ;
 ; Other functions exported from ws2_32.dll:
 ;
-;   GetAddrInfoW
-;   GetNameInfoW
-;   FreeAddrInfoW
-;   WPUCompleteOverlappedRequest
-;   WSApSetPostRoutine
-;   WSAAccept
-;   WSAEnumNameSpaceProvidersA
-;   WSAEnumNameSpaceProvidersW
-;   WSAEnumProtocolsA
-;   WSAEnumProtocolsW
-;   WSAGetQOSByName
-;   WSAGetServiceClassInfoA
-;   WSAGetServiceClassInfoW
-;   WSAGetServiceClassNameByClassIdA
-;   WSAGetServiceClassNameByClassIdW
-;   WSAHtonl
-;   WSAHtons
-;   WSAInstallServiceClassA
-;   WSAInstallServiceClassW
-;   WSAJoinLeaf
-;   WSALookupServiceBeginA
-;   WSALookupServiceBeginW
-;   WSALookupServiceEnd
-;   WSALookupServiceNextA
-;   WSALookupServiceNextW
-;   WSANSPIoctl
-;   WSANtohl
-;   WSANtohs
-;   WSAProviderConfigChange
-;   WSARemoveServiceClass
-;   WSASetServiceA
-;   WSASetServiceW
-    WSAStringToAddressA
-    WSAStringToAddressW
-;   WSCDeinstallProvider
-;   WSCEnableNSProvider
-;   WSCEnumProtocols
-;   WSCGetProviderPath
-;   WSCInstallNameSpace
-;   WSCInstallProvider
-;   WSCUnInstallNameSpace
-;   WSCUpdateProvider
-;   WSCWriteNameSpaceOrder
-;   WSCWriteProviderOrder
-;   WSAAsyncGetHostByAddr
-;   WSAAsyncGetHostByName
-;   WSAAsyncGetProtoByNumber
-;   WSAAsyncGetProtoByName
-;   WSAAsyncGetServByPort
-;   WSAAsyncGetServByName
-;   WSACancelAsyncRequest
-;   WSASetBlockingHook
-;   WSAUnhookBlockingHook
-;   WSACancelBlockingCall
-;   WSAIsBlocking
-
+;   WPUCompleteOverlappedRequest@20
+;   WSApSetPostRoutine@4
+;   WSAAccept@20
+;   WSAEnumNameSpaceProvidersA@8
+;   WSAEnumNameSpaceProvidersW@8
+;   WSAGetQOSByName@12
+;   WSAGetServiceClassInfoA@16
+;   WSAGetServiceClassInfoW@16
+;   WSAGetServiceClassNameByClassIdA@12
+;   WSAGetServiceClassNameByClassIdW@12
+;   WSAHtonl@12
+;   WSAHtons@12
+;   WSAInstallServiceClassA@4
+;   WSAInstallServiceClassW@4
+;   WSAJoinLeaf@32
+;   WSALookupServiceBeginA@12
+;   WSALookupServiceBeginW@12
+;   WSALookupServiceEnd@4
+;   WSALookupServiceNextA@16
+;   WSALookupServiceNextW@16
+;   WSANSPIoctl@32
+;   WSANtohl@12
+;   WSANtohs@12
+;   WSAProviderConfigChange@12
+;   WSARemoveServiceClass@4
+;   WSASetServiceA@12
+;   WSASetServiceW@12
+;   WSCDeinstallProvider@8
+;   WSCEnableNSProvider@8
+;   WSCEnumProtocols@16
+;   WSCGetProviderPathW@16
+;   WSCInstallNameSpace@20
+;   WSCInstallNameSpaceEx@24
+;   WSCInstallProvider@20
+;   WSCInstallProviderAndChains@32
+;   WSCUnInstallNameSpace@4
+;   WSCUpdateProvider@20
+;   WSCWriteNameSpaceOrder@8
+;   WSCWriteProviderOrder@8
+;   WSAAsyncGetHostByAddr@28
+;   WSAAsyncGetHostByName@20
+;   WSAAsyncGetProtoByNumber@20
+;   WSAAsyncGetProtoByName@20
+;   WSAAsyncGetServByPort@24
+;   WSAAsyncGetServByName@24
+;   WSACancelAsyncRequest@4
+;   WSASetBlockingHook@4
+;   WSAUnhookBlockingHook@0
+;   WSAIsBlocking@0
+;   WEP@0
 ;
 ; Exports from MSWSOCK.DLL
 ;
@@ -164,31 +162,3 @@ EXPORTS
 ;   rresvport@4
 ;   s_perror@8
 ;   sethostname@8
-
-;
-; From pedump2 ws2_32.dll:
-;
-;   WSCDeinstallProvider
-;   WSCEnableNSProvider
-;   WSCEnumProtocols
-;   WSCGetProviderPath
-;   WSCInstallNameSpace
-;   WSCInstallProvider
-;   WSCUnInstallNameSpace
-;   WSCUpdateProvider
-;   WSCWriteNameSpaceOrder
-;   WSCWriteProviderOrder
-;   WSAAsyncGetProtoByName
-;   WSAAsyncGetServByPort
-;   WSAAsyncGetServByName
-;   WSACancelAsyncRequest
-;   WSASetBlockingHook
-;   WSAUnhookBlockingHook
-;   WSAGetLastError
-;   WSASetLastError
-;   WSACancelBlockingCall
-;   WSAIsBlocking
-;   WSAStartup
-;   WSACleanup
-;   __WSAFDIsSet
-;   WEP
