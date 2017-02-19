@@ -756,9 +756,10 @@ static void fname_cache_free (void)
  */
 void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 {
-  int     save = g_cfg.test_trace;
+  static int save;
   va_list args;
 
+  save = g_cfg.test_trace;
   g_cfg.test_trace = 1;
   trace_indent (g_cfg.trace_indent);
 
@@ -914,9 +915,10 @@ put_it:
 
 int trace_putc_raw (int ch)
 {
-  BOOL save = tilde_escape;
-  int  rc;
+  static BOOL save;
+  int    rc;
 
+  save = tilde_escape;
   tilde_escape = FALSE;
   rc = trace_putc (ch);
   tilde_escape = save;
