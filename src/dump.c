@@ -956,9 +956,11 @@ static const struct search_list protocols[] = {
                     ADD_VALUE (IPPROTO_TCP),
                     ADD_VALUE (IPPROTO_UDP),
                     ADD_VALUE (IPPROTO_ICMPV6),
-                    ADD_VALUE (IPPROTO_RM)
+                    ADD_VALUE (IPPROTO_RM),
+                    ADD_VALUE (IPPROTO_RAW)
                   };
 
+#if !defined(__WATCOMC__)
 static const struct search_list wsaprotocol_info_ServiceFlags1[] = {
                     ADD_VALUE (XP1_CONNECTIONLESS),
                     ADD_VALUE (XP1_GUARANTEED_DELIVERY),
@@ -989,6 +991,7 @@ static const struct search_list wsaprotocol_info_ProviderFlags[] = {
                     ADD_VALUE (PFL_MATCHES_PROTOCOL_ZERO),
                     ADD_VALUE (PFL_NETWORKDIRECT_PROVIDER)
                   };
+#endif
 
 static const struct search_list wsa_events_flgs[] = {
                     ADD_VALUE (FD_READ),
@@ -1414,7 +1417,7 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
  * to at most 'g_cfg.screen_width'. An appropriate number
  * of spaces are added on subsequent lines.
  */
-static void print_long_flags (const char *start, size_t indent, int brk_ch)
+void print_long_flags (const char *start, size_t indent, int brk_ch)
 {
   size_t      room, left = g_cfg.screen_width - indent;
   const char *c = start;
@@ -1594,13 +1597,13 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
 
 static const char *proto_padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
 
-static void dump_one_proto_info (const char *prefix, const char *buf)
+void dump_one_proto_info (const char *prefix, const char *buf)
 {
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("%s%s\n", prefix ? prefix : proto_padding, buf);
 }
 
-static void dump_one_proto_infof (const char *fmt, ...)
+void dump_one_proto_infof (const char *fmt, ...)
 {
   va_list args;
 
