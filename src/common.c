@@ -759,6 +759,12 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   static int save;
   va_list args;
 
+  /* Since 'g_cfg.test_trace=0' below, ensure colorised messages from 'WSTRACE()'
+   * cannot interrupt this piece of code (we'd then get colours here).
+   * This make this a critical region.
+   */
+  ENTER_CRIT();
+
   save = g_cfg.test_trace;
   g_cfg.test_trace = 1;
   trace_indent (g_cfg.trace_indent);
@@ -770,6 +776,7 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   trace_vprintf (fmt, args);
   g_cfg.test_trace = save;
   va_end (args);
+  LEAVE_CRIT();
 }
 
 /*
