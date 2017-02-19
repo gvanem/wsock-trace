@@ -585,10 +585,16 @@ static int EnumAndLoadModuleSymbols (void)
     TRACE (2, "GetModuleListTH32(): Enumerated %d modules:\n", rc);
   }
 
-  TRACE (2, "  %-60s Baseaddr       Size\n"
+#ifdef _WIN64
+  #define EXTRAS "--------"
+#else
+  #define EXTRAS ""
+#endif
+
+  TRACE (2, "  %-60s Baseaddr       %*sSize\n"
             "  -------------------------------------------------"
-            "---------------------------------------------------\n",
-            "Module");
+            "---------------------------------------------------" EXTRAS " \n",
+            "Module", 1+sizeof(EXTRAS), "");
 
   for (num = 0, me = me_list; num < me_list_top; me++, num++)
   {
@@ -886,9 +892,9 @@ char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
   stk.AddrStack.Offset = ctx->Esp;
 #endif
 
-  stk.AddrPC.Mode      = AddrModeFlat;
-  stk.AddrFrame.Mode   = AddrModeFlat;
-  stk.AddrStack.Mode   = AddrModeFlat;
+  stk.AddrPC.Mode    = AddrModeFlat;
+  stk.AddrFrame.Mode = AddrModeFlat;
+  stk.AddrStack.Mode = AddrModeFlat;
 
   err = decode_one_stack_frame (thread, image_type, &stk, ctx);
   if (err == 0)
