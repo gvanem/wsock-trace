@@ -35,7 +35,7 @@ static const char hex_chars[] = "0123456789abcdef";
  * \retval NULL on error (see errno).
  * \author Paul Vixie, 1996.
  */
-/* EXPORT */ PCSTR WINAPI inet_ntop (INT af, PVOID src, PSTR dst, size_t size)
+/* EXPORT */ PCSTR WINAPI inet_ntop (INT af, const void *src, PSTR dst, size_t size)
 {
   switch (af)
   {
@@ -77,7 +77,7 @@ EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
  */
 char *wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
 {
-  return (char*) inet_ntop (family, (PVOID)addr, result, result_size);
+  return (char*) inet_ntop (family, addr, result, result_size);
 }
 
 int wsock_trace_inet_pton (int family, const char *addr, void *result)

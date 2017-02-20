@@ -16,8 +16,8 @@
 #define MAX_PORT_SZ  sizeof("65000")
 
 #if !defined(NTDDI_VERSION) || (NTDDI_VERSION < NTDDI_VISTA) || defined(__MINGW32__)
-  EXPORT PCSTR WSAAPI inet_ntop (INT Family, PVOID pAddr, PSTR pStringBuf, size_t StringBufSize);
-  EXPORT INT   WSAAPI inet_pton (INT Family, PCSTR pszAddrString, PVOID pAddrBuf);
+  EXPORT PCSTR WSAAPI inet_ntop (INT family, const void *addr, PSTR string_buf, size_t string_buf_size);
+  EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, PVOID addr_buf);
 #endif
 
 extern char       *wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
