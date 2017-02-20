@@ -594,8 +594,8 @@ static void trace_report (void)
 
   if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
   {
-    trace_printf ("  DLL attach %"U64_FMT " times.\n", g_cfg.counts.dll_attach);
-    trace_printf ("  DLL detach %"U64_FMT " times.\n", g_cfg.counts.dll_detach);
+    trace_printf ("  DLL attach %" U64_FMT " times.\n", g_cfg.counts.dll_attach);
+    trace_printf ("  DLL detach %" U64_FMT " times.\n", g_cfg.counts.dll_detach);
   }
 
  /* E.g.:
