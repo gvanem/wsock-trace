@@ -116,7 +116,7 @@ void print_thread_times (HANDLE thread)
   if (!GetThreadTimes(thread, &ctime, &etime, &ktime, &utime))
   {
     DWORD err = GetLastError();
-    TRACE (2, "  GetThreadTimes (%" ADDR_FMT ") %s.\n", thread, win_strerror(err));
+    TRACE (2, "  GetThreadTimes (%" ADDR_FMT ") %s.\n", ADDR_CAST(thread), win_strerror(err));
     return;
   }
 
