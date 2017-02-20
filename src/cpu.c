@@ -107,10 +107,16 @@ void print_thread_times (HANDLE thread)
 
   init_cpu();
 
+  if (thread == NULL)
+  {
+    TRACE (2, "  GetThreadTimes(NULL) called!.\n");
+    return;
+  }
+
   if (!GetThreadTimes(thread, &ctime, &etime, &ktime, &utime))
   {
     DWORD err = GetLastError();
-    TRACE (2, "  GetThreadTimes() %s.\n", win_strerror(err));
+    TRACE (2, "  GetThreadTimes (% " ADDR_FMT ") %s.\n", thread, win_strerror(err));
     return;
   }
 
