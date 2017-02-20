@@ -9,6 +9,7 @@
   #define FD_SETSIZE 256
 #endif
 
+#undef  _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include <stdio.h>
@@ -492,12 +493,94 @@ static void test_WSAEnumProtocols (void)
   TEST_CONDITION ( > 0, WSAEnumProtocols (NULL, p_info, &len));
 }
 
+/*
+ * per-thread data given to 'thread_worker()' in it's 'arg' parameter.
+ */
+struct thr_data {
+       char              t_name[20];
+       DWORD             t_id;
+       HANDLE            t_hnd;
+       int               t_err;   /* per-thread error-code */
+       CRITICAL_SECTION *t_crit;  /* the same for all threads */
+     };
+
+static DWORD WINAPI thread_worker (void *arg)
+{
+  const struct thr_data *td = (const struct thr_data*) arg;
+  DWORD tid;
+  int   i;
+
+  /* This should demonstate that Winsock preserves 1 error-code per thread.
+   * Ref. the 'TEST_CONDITION()' below.
+   */
+  WSASetLastError (td->t_err);
+
+  for (i = 0; i < 5; i++)
+  {
+    EnterCriticalSection (td->t_crit);
+    tid = GetCurrentThreadId();
+    printf ("In %s thread (%lu)\n", td->t_name, td->t_id);
+
+    TEST_CONDITION (== td->t_err, WSAGetLastError());
+    fflush (stdout);
+
+    LeaveCriticalSection (td->t_crit);
+    Sleep (300);
+  }
+  return (0);
+}
+
+/*
+ * Create and start 'num_threads-1' sub-threads.
+ * Thread 0 is the main-thread.
+ */
+static int thread_test (int num_threads)
+{
+  CRITICAL_SECTION crit_sect;
+  struct thr_data *td = calloc (1, num_threads * sizeof(*td));
+  int    i;
+
+  InitializeCriticalSection (&crit_sect);
+
+  strcpy (td[0].t_name, "main");
+  td[0].t_id  = GetCurrentThreadId();
+  td[0].t_err = 0;
+  td[0].t_crit = &crit_sect;
+  TEST_CONDITION (!= 0, td[0].t_id);
+
+  for (i = 1; i < num_threads; i++)
+  {
+    snprintf (td[i].t_name, sizeof(td[i].t_name), "sub%d", i-1);
+
+    /* Start at 'WSABASEERR + 40' which is a range with no holes.
+     */
+    td[i].t_err  = WSABASEERR + 39 + i;
+    td[i].t_crit = &crit_sect;
+    td[i].t_hnd  = CreateThread (NULL, 0, thread_worker, td+i, 0, &td[i].t_id);
+    TEST_CONDITION (!= 0, td[i].t_id);
+  }
+
+  thread_worker (td + 0);
+
+  for (i = 1; i < num_threads; i++)
+  {
+    printf ("Waiting for %s thread.\n", td[i].t_name);
+    WaitForSingleObject (td[i].t_hnd, INFINITE);
+    CloseHandle (td[i].t_hnd);
+  }
+
+  DeleteCriticalSection (&crit_sect);
+  free (td);
+  return (0);
+}
+
 static int show_help (void)
 {
-  puts ("Usage: test [-h] [-d] [-l] [test-wildcard]  (default = '*')");
-  puts ("       -h:  this help.");
-  puts ("       -d:  increase verbosity.");
-  puts ("       -l:  list tests and exit.");
+  puts ("Usage: test [-h] [-d] [-l] [-t] [test-wildcard]  (default = '*')");
+  puts ("       -h:     this help.");
+  puts ("       -d:     increase verbosity.");
+  puts ("       -l:     list tests and exit.");
+  puts ("       -t [N]: only do a thread test with <N> running threads.");
   return (0);
 }
 
@@ -516,7 +599,7 @@ int MS_CDECL main (int argc, char **argv)
 {
   int i, c, num = 0;
 
-  while ((c = getopt (argc, argv, "h?dl")) != EOF)
+  while ((c = getopt (argc, argv, "h?dlt::")) != EOF)
     switch (c)
     {
       case '?':
@@ -525,6 +608,12 @@ int MS_CDECL main (int argc, char **argv)
            break;
       case 'l':
            exit (list_tests());
+           break;
+      case 't':
+           if (optarg)
+                num = atoi (optarg);
+           else num = 1;
+           exit (thread_test(num));
            break;
       case 'd':
            chatty++;
@@ -560,18 +649,22 @@ int MS_CDECL main (int argc, char **argv)
      gethostbyaddr (127.0.0.1, 4, AF_INET) --> 0x009F9088.
      name: localhost, addrtype: AF_INET, addr_list: 127.0.0.1
      aliases: ...
+     geo-IP: Not global.
    * 37.813 msec: test.c(149) (test_gethostbyaddr+171):
      gethostbyaddr (0.0.0.0, 4, AF_INET) --> 0x009F9088.
      name: null, addrtype: AF_INET, addr_list: 0.0.0.0
      aliases: <none>
+     geo-IP: Not global.
    * 42.091 msec: test.c(152) (test_gethostbyaddr+224):
      gethostbyaddr (::1, 16, AF_INET6) --> 0x009F9088.
      name: localhost, addrtype: AF_INET6, addr_list: ::1
      aliases: <none>
+     geo-IP: Not global.
    * 47.725 msec: test.c(157) (test_gethostbyname+14):
      gethostbyname (localhost) --> 0x009F9088.
      name: SNURRE.dev.null, addrtype: AF_INET, addr_list: 127.0.0.1
      aliases: <none>
+     geo-IP: Not global.
 
    ...
 */
