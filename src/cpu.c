@@ -113,12 +113,19 @@ void print_thread_times (HANDLE thread)
     return;
   }
 
+  memset (&etime, '\0', sizeof(etime));  /* exit-time */
+
   if (!GetThreadTimes(thread, &ctime, &etime, &ktime, &utime))
   {
     DWORD err = GetLastError();
     TRACE (2, "  GetThreadTimes (%" ADDR_FMT ") %s.\n", ADDR_CAST(thread), win_strerror(err));
     return;
   }
+
+  /* The thread has not yet exited.
+   */
+  if (CompareFileTime(&etime,&ctime) < 0)
+     GetSystemTimeAsFileTime (&etime);
 
   printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
           filetime_sec(&ktime), filetime_sec(&utime),
