@@ -2807,7 +2807,6 @@ static const char *set_dll_name (void)
 
 BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
-  extern void print_thread_times (HANDLE thread);
   char note[30] = "";
 
   if (dwReason == DLL_PROCESS_ATTACH)
@@ -2836,7 +2835,13 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 
     case DLL_THREAD_DETACH:
          if (g_cfg.trace_level >= 3)
-            print_thread_times (OpenThread(0,FALSE,GetCurrentThreadId()));
+         {
+           extern void print_thread_times (HANDLE thread);
+           DWORD  tid = GetCurrentThreadId();
+           HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, tid);
+
+           print_thread_times (hnd);
+         }
          g_cfg.counts.dll_detach++;
          TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
                ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
