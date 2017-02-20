@@ -20,6 +20,10 @@
   #define RC_BUILDER  "MinGW"
   #define RC_BASENAME "wsock_trace_mw"
 
+#elif defined(__clang__)
+  #define RC_BUILDER  "clang-cl"
+  #define RC_BASENAME "wsock_trace"
+
 #elif defined(_MSC_VER)
   #define RC_BUILDER  "Visual-C"
   #define RC_BASENAME "wsock_trace"

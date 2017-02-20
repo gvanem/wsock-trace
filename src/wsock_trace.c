@@ -348,7 +348,7 @@ typedef int (WINAPI *func_WSCGetProviderPath) (GUID    *provider_id,
  * Windows-Vista functions.
  */
 typedef INT   (WINAPI *func_inet_pton) (int family, const char *string, void *res);
-typedef PCSTR (WINAPI *func_inet_ntop) (int family, void *addr, char *string, size_t string_size);
+typedef PCSTR (WINAPI *func_inet_ntop) (int family, const void *addr, char *string, size_t string_size);
 typedef int   (WINAPI *func_WSAPoll) (WSAPOLLFD *fd_array, ULONG fds, int timeout);
 
 /*
@@ -2669,7 +2669,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     CONTEXT ctx;
     HANDLE  thr = GetCurrentThread();
 
-#if !defined(USE_BFD)       /* I.e. MSVC/Watcom, not gcc */
+#if !defined(USE_BFD)       /* I.e. MSVC/clang-cl/Watcom, not gcc */
     void   *frames [10];
     USHORT  num_frames;
 
@@ -2680,7 +2680,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     {
       ret = "No stack";
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)
      /*
       * The MSVC flags '-Ox' (maximum optimizations) breaks the assumption for
       * 'RtlCaptureStackBackTrace()'. Hence warn strongly against it.
@@ -2692,7 +2692,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 
 #if !defined(__GNUC__)
     /*
-     * For MSVC/Watcom (USE_BFD undefined), the passed 'ret_addr' is
+     * For MSVC/clang-cl/Watcom (USE_BFD undefined), the passed 'ret_addr' is
      * always 0. We have to get it from 'frames[2]'.
      */
     ret_addr = (ULONG_PTR) frames [2];
