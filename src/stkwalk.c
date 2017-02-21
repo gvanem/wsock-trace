@@ -1,5 +1,5 @@
 /*!\file stkwalk.c
- * StackWalker (backtrace) for Win32 / MSVC+MinGW
+ * StackWalker (backtrace) for Win32 / MSVC+clang-cl+MinGW
  */
 
 /*
