@@ -112,7 +112,6 @@ struct config_table {
        DWORD  reentries;
 
        TS_TYPE    trace_time_format;
-       SYSTEMTIME start_time;
        uint64     start_ticks;
        uint64     clocks_per_usec;
      };

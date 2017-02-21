@@ -67,12 +67,13 @@ static const char *get_time_now (void)
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
                                    };
   static char time[50];
+  SYSTEMTIME start_time;
 
-  GetLocalTime (&g_cfg.start_time);
+  GetLocalTime (&start_time);
 
   snprintf (time, sizeof(time), "%02d %s %d, %02u:%02u:%02u",
-            g_cfg.start_time.wDay, months[g_cfg.start_time.wMonth-1], g_cfg.start_time.wYear,
-            g_cfg.start_time.wHour, g_cfg.start_time.wMinute, g_cfg.start_time.wSecond);
+            start_time.wDay, months[start_time.wMonth-1], start_time.wYear,
+            start_time.wHour, start_time.wMinute, start_time.wSecond);
   return (time);
 }
 
