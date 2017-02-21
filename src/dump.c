@@ -1503,14 +1503,14 @@ static void dump_one_fd (const fd_set *fd, int indent)
   {
     char buf[10];
 
-    _itoa (fd->fd_array[i], buf, 10);
-    max_len = g_cfg.screen_width - strlen(buf) - 1;
+    _itoa ((int)fd->fd_array[i], buf, 10);
+    max_len = (u_int) (g_cfg.screen_width - strlen(buf) - 1);
     trace_puts (buf);
 
     if (i < fd->fd_count-1)
     {
       trace_putc (',');
-      len += strlen(buf) + 1;
+      len += (u_int) strlen(buf) + 1;
     }
     else
     {
