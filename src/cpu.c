@@ -127,17 +127,17 @@ void print_thread_times (HANDLE thread)
   if (CompareFileTime(&etime,&ctime) < 0)
      GetSystemTimeAsFileTime (&etime);
 
-  printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
-          filetime_sec(&ktime), filetime_sec(&utime),
-          filetime_sec(&etime) - filetime_sec(&ctime));
+  trace_printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
+                filetime_sec(&ktime), filetime_sec(&utime),
+                filetime_sec(&etime) - filetime_sec(&ctime));
 
   if (p_QueryThreadCycleTime)
   {
     ULONG64 cycle_time;
 
     if (!(*p_QueryThreadCycleTime) (thread, &cycle_time))
-         printf (", cycle-time: <failed>");
-    else printf (", cycle-time: %s clocks", qword_str(cycle_time));
+         trace_printf (", cycle-time: <failed>");
+    else trace_printf (", cycle-time: %s clocks", qword_str(cycle_time));
   }
 
   if (p_NtQueryInformationThread)
@@ -148,10 +148,10 @@ void print_thread_times (HANDLE thread)
                       thread, ThreadPerformanceCount, &perf_count,
                       sizeof(perf_count), NULL);
     if (rc != STATUS_SUCCESS)
-         printf (", perf-count: <fail %ld>", (long)rc);
-    else printf (", perf-count: %s", qword_str(perf_count.QuadPart));
+         trace_printf (", perf-count: <fail %ld>", (long)rc);
+    else trace_printf (", perf-count: %s", qword_str(perf_count.QuadPart));
   }
-  putchar ('\n');
+  trace_putc ('\n');
 }
 
 /**
@@ -182,8 +182,8 @@ void print_process_times (void)
     /* 'exit_time' is not printed since the process has not exited yet.
      * Therefore it is zero.
      */
-    printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
-            time_str, ct % U64_SUFFIX(1000000), filetime_sec(&krnl_time), filetime_sec(&usr_time));
+    trace_printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
+                  time_str, ct % U64_SUFFIX(1000000), filetime_sec(&krnl_time), filetime_sec(&usr_time));
   }
   CloseHandle (proc);
 }
@@ -269,22 +269,22 @@ void print_perf_times (void)
   {
     ULONG64 x;
 
-    printf ("CPU %lu:%s", (u_long)i, (i == 0) ? "\t\t\t  CPU clocks\n" : "\n");
+    trace_printf ("CPU %lu:%s", (u_long)i, (i == 0) ? "\t\t\t  CPU clocks\n" : "\n");
 
     x = info[i].KernelTime.QuadPart - info[i].IdleTime.QuadPart;
-    printf ("  KernelTime:     %18s\n", qword_str(x));
+    trace_printf ("  KernelTime:     %18s\n", qword_str(x));
 
     x = info[i].IdleTime.QuadPart;
-    printf ("  IdleTime:       %18s\n", qword_str(x));
+    trace_printf ("  IdleTime:       %18s\n", qword_str(x));
 
     x = info[i].UserTime.QuadPart;
-    printf ("  UserTime:       %18s\n", qword_str(x));
+    trace_printf ("  UserTime:       %18s\n", qword_str(x));
 
     x = info[i].DpcTime.QuadPart;
-    printf ("  DpcTime:        %18s\n", qword_str(x));
+    trace_printf ("  DpcTime:        %18s\n", qword_str(x));
 
     x = info[i].InterruptTime.QuadPart;
-    printf ("  InterruptTime:  %18s\n", qword_str(x));
-    printf ("  InterruptCount: %18s\n", dword_str(info[i].InterruptCount));
+    trace_printf ("  InterruptTime:  %18s\n", qword_str(x));
+    trace_printf ("  InterruptCount: %18s\n", dword_str(info[i].InterruptCount));
   }
 }
