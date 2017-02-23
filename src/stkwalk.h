@@ -14,6 +14,6 @@
 
 extern BOOL  StackWalkInit (void);
 extern BOOL  StackWalkExit (void);
-extern char *StackWalkShow (HANDLE thread, CONTEXT *c);
+extern char *StackWalkShow (HANDLE thread, CONTEXT *ctx);
 
 #endif  /* __STACKWALKER_H__ */
