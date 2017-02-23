@@ -103,7 +103,7 @@ void wstrace_init_lua (const char *script)
   L = luaL_newstate();
   luaL_openlibs (L);    /* Load Lua libraries */
 
-  /* Set up the 'panic' handler, which let's us control.
+  /* Set up the 'panic' handler, which let's us control Lua execution.
    */
   lua_atpanic (L, wstrace_lua_panic);
 
@@ -154,14 +154,7 @@ int luaopen_wsock_trace (lua_State *l)
  */
 int luaJIT_BC_wsock_trace (lua_State *l)
 {
-  char *dll = strdup (wsock_trace_dll_name);
-  char *dot = strrchr (dll, '.');
-
-  *dot = '\0';
-  LUA_TRACE (2, "In %s()\n", __FUNCTION__);
-  luaL_register (l, dll, wstrace_lua_table);
-  free (dll);
-  return (1);
+  return luaopen_wsock_trace (l);
 }
 
 int l_WSAStartup (WORD ver, WSADATA *data)
