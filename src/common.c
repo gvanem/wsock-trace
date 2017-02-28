@@ -43,18 +43,16 @@ int trace_binmode = 0;
  * entry in fname_cache_get().
  */
 struct file_name_entry {
-       char                   *orig_name;
-       char                   *real_name;
-       DWORD                   crc32;
-       struct file_name_entry *next;
+       char  *orig_name;
+       char  *real_name;
+       DWORD  crc32;
      };
 
-static struct file_name_entry *fname_list0 = NULL;
-
-static const char *fname_cache_get (const char *fname);
-static const char *fname_cache_add (const char *fname);
-static void        fname_cache_free (void);
-static void        fname_cache_dump (void);
+static smartlist_t *fname_list = NULL;
+static const char  *fname_cache_get (const char *fname);
+static const char  *fname_cache_add (const char *fname);
+static void         fname_cache_free (void);
+static void         fname_cache_dump (void);
 
 static void  crc_init  (void);
 static void  crc_exit (void);
@@ -688,9 +686,18 @@ static const char *fname_cache_get (const char *fname)
 {
   const struct file_name_entry *fe;
   DWORD crc32 = crc_bytes (fname, strlen(fname));
+  int   i, max;
 
-  for (fe = fname_list0; fe; fe = fe->next)
+  if (!fname_list)
   {
+    fname_list = smartlist_new();
+    return (NULL);
+  }
+  max = smartlist_len (fname_list);
+
+  for (i = 0; i < max; i++)
+  {
+    fe = smartlist_get (fname_list, i);
     if (crc32 == fe->crc32)
        return (fe->real_name ? fe->real_name : fe->orig_name);
   }
@@ -717,18 +724,18 @@ static const char *fname_cache_add (const char *fname)
        fn->real_name = str_replace ('\\', '/', strdup(buf));
   else fn->real_name = NULL;
 
-  fn->next    = fname_list0;
-  fname_list0 = fn;
+  smartlist_add (fname_list, fn);
   return (fn->real_name ? fn->real_name : fn->orig_name);
 }
 
 static void fname_cache_dump (void)
 {
-  const struct file_name_entry *fn;
-  int   i;
+  int i, max = smartlist_len (fname_list);
 
-  for (i = 0, fn = fname_list0; fn; fn = fn->next, i++)
+  for (i = 0; i < max; i++)
   {
+    const struct file_name_entry *fn = smartlist_get (fname_list, i);
+
     trace_printf ("%2d: orig: '%s'\n"
                   "    real: '%s',   CRC32: 0x%08lX\n",
                   i, fn->orig_name, fn->real_name, fn->crc32);
@@ -737,18 +744,21 @@ static void fname_cache_dump (void)
 
 static void fname_cache_free (void)
 {
-  struct file_name_entry *fn, *next;
+  struct file_name_entry *fn;
+  int    i, max = smartlist_len (fname_list);
 
   if (g_cfg.trace_level >= 5)
      fname_cache_dump();
 
-  for (fn = fname_list0; fn; fn = next)
+  for (i = 0; i < max; i++)
   {
+    fn = smartlist_get (fname_list, i);
     if (fn->real_name)
        free (fn->real_name);
-    next = fn->next;
     free (fn);
   }
+  smartlist_free (fname_list);
+  fname_list = NULL;
 }
 
 /*
