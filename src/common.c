@@ -1294,9 +1294,9 @@ void smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void 
  * a match; less than 0 if key is less than member, and greater than 0 if key
  * is greater then member.
  */
-static int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
-                                  int (*compare)(const void *key, const void **member),
-                                  int *found_out)
+int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
+                           int (*compare)(const void *key, const void **member),
+                           int *found_out)
 {
   int hi, lo, cmp, mid, len, diff;
 
@@ -1365,7 +1365,7 @@ static int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
        * a key in the middle of the list but not matching.  Thus, we just
        * assert for consistency here rather than handle a mid == len case.
        */
-      assert(mid < len);
+      assert (mid < len);
 
       /* Move lo to the element immediately after sl[mid]
        */

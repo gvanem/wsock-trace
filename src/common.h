@@ -443,7 +443,12 @@ extern void         smartlist_free (smartlist_t *sl);
 extern void         smartlist_ensure_capacity (smartlist_t *sl, size_t num);
 extern void         smartlist_add (smartlist_t *sl, void *element);
 extern void         smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void **b));
-extern void        *smartlist_bsearch (const smartlist_t *sl, const void *key,
-                                       int (*compare)(const void *key, const void **member));
+
+extern int   smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
+                                    int (*compare)(const void *key, const void **member),
+                                    int *found_out);
+
+extern void *smartlist_bsearch (const smartlist_t *sl, const void *key,
+                                int (*compare)(const void *key, const void **member));
 
 #endif  /* _COMMON_H */
