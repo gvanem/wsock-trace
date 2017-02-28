@@ -15,8 +15,18 @@
 #define MAX_IP6_SZ   sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")
 #define MAX_PORT_SZ  sizeof("65000")
 
+/*
+ * In MS's <ws2tcpip.h> header, the 'addr' parameter in 'inet_ntop()'
+ * sensible is defined as 'const void *'. But in MinGW it is 'void *'.
+ */
+#if defined(__MINGW32__)
+  #define INET_NTOP_ADDR void *
+#else
+  #define INET_NTOP_ADDR const void *
+#endif
+
 #if !defined(NTDDI_VERSION) || (NTDDI_VERSION < NTDDI_VISTA) || defined(__MINGW32__)
-  EXPORT PCSTR WSAAPI inet_ntop (INT family, const void *addr, PSTR string_buf, size_t string_buf_size);
+  EXPORT PCSTR WSAAPI inet_ntop (INT family, INET_NTOP_ADDR addr, PSTR string_buf, size_t string_buf_size);
   EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, PVOID addr_buf);
 #endif
 
