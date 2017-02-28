@@ -404,4 +404,46 @@ extern FILE * fopen_excl (const char *file, const char *mode);
   #define strnicmp(s1, s2, n)  strncasecmp (s1, s2, n)
 #endif
 
+/*
+ * From Tor's src/common/container.h:
+ *
+ * A resizeable list of pointers, with associated helpful functionality.
+ *
+ * The members of this struct are exposed only so that macros and inlines can
+ * use them; all access to smartlist internals should go through the functions
+ * and macros defined here.
+ */
+typedef struct smartlist_t {
+        /*
+         * 'list' (of anything) has enough capacity to store exactly 'capacity'
+         * elements before it needs to be resized. Only the first 'num_used'
+         * (<= capacity) elements point to valid data.
+         */
+        void **list;
+        int    num_used;
+        int    capacity;
+      } smartlist_t;
+
+/*
+ * All newly allocated smartlists have this capacity.
+ * I.e. room for 16 elements in 'smartlist_t::list[]'.
+ */
+#define SMARTLIST_DEFAULT_CAPACITY  16
+
+/*
+ * A smartlist can hold 'INT_MAX' (2147483647) number of
+ * elements in 'smartlist_t::list[]'.
+ */
+#define SMARTLIST_MAX_CAPACITY  INT_MAX
+
+extern smartlist_t *smartlist_new (void);
+extern int          smartlist_len (const smartlist_t *sl);
+extern void        *smartlist_get (const smartlist_t *sl, int idx);
+extern void         smartlist_free (smartlist_t *sl);
+extern void         smartlist_ensure_capacity (smartlist_t *sl, size_t num);
+extern void         smartlist_add (smartlist_t *sl, void *element);
+extern void         smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void **b));
+extern void        *smartlist_bsearch (const smartlist_t *sl, const void *key,
+                                       int (*compare)(const void *key, const void **member));
+
 #endif  /* _COMMON_H */

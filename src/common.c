@@ -1190,3 +1190,257 @@ static void crc_exit (void)
   crc_table = NULL;
 }
 
+/*
+ * Code from Tor's src/common/container.c:
+ *
+ * Allocate and return an empty smartlist.
+ */
+smartlist_t *smartlist_new (void)
+{
+  smartlist_t *sl = malloc (sizeof(*sl));
+
+  if (sl)
+  {
+    sl->num_used = 0;
+    sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
+    sl->list = calloc (sizeof(void*), sl->capacity);
+  }
+  return (sl);
+}
+
+/*
+ * Return the number of items in 'sl'.
+ */
+int smartlist_len (const smartlist_t *sl)
+{
+  assert (sl);
+  return (sl->num_used);
+}
+
+/*
+ * Return the 'idx'th element of 'sl'.
+ */
+void *smartlist_get (const smartlist_t *sl, int idx)
+{
+  assert (sl);
+  assert (idx >= 0);
+  assert (sl->num_used > idx);
+  return (sl->list[idx]);
+}
+
+/*
+ * Deallocate a smartlist. Does not release storage associated with the
+ * list's elements.
+ */
+void smartlist_free (smartlist_t *sl)
+{
+  if (sl)
+  {
+    free (sl->list);
+    free (sl);
+  }
+}
+/*
+ * Make sure that 'sl' can hold at least 'num' entries.
+ */
+void smartlist_ensure_capacity (smartlist_t *sl, size_t num)
+{
+  assert (num <= SMARTLIST_MAX_CAPACITY);
+
+  if (num > (size_t)sl->capacity)
+  {
+    size_t higher = (size_t) sl->capacity;
+
+    if (num > SMARTLIST_MAX_CAPACITY/2)
+       higher = SMARTLIST_MAX_CAPACITY;
+    else
+    {
+      while (num > higher)
+        higher *= 2;
+    }
+    sl->list = realloc (sl->list, sizeof(void*) * higher);
+    memset (sl->list + sl->capacity, 0, sizeof(void*) * (higher - sl->capacity));
+    sl->capacity = (int) higher;
+  }
+}
+
+/*
+ * Append element to the end of the list.
+ */
+void smartlist_add (smartlist_t *sl, void *element)
+{
+  smartlist_ensure_capacity (sl, 1 + (size_t)sl->num_used);
+  sl->list [sl->num_used++] = element;
+}
+
+/*
+ * Sort the members of 'sl' into an order defined by
+ * the ordering function 'compare', which returns less then 0 if a
+ * precedes b, greater than 0 if b precedes a, and 0 if a 'equals' b.
+ */
+void smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void **b))
+{
+  if (sl->num_used > 0)
+     qsort (sl->list, sl->num_used, sizeof(void*),
+            (int (*)(const void *,const void*))compare);
+}
+
+/*
+ * Assuming the members of 'sl' are in order, return the index of the
+ * member that matches 'key'.  If no member matches, return the index of
+ * the first member greater than 'key', or 'smartlist_len(sl)' if no member
+ * is greater than 'key'.  Set 'found_out to true on a match, to false otherwise.
+ * Ordering and matching are defined by a 'compare' function that returns 0 on
+ * a match; less than 0 if key is less than member, and greater than 0 if key
+ * is greater then member.
+ */
+static int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
+                                  int (*compare)(const void *key, const void **member),
+                                  int *found_out)
+{
+  int hi, lo, cmp, mid, len, diff;
+
+  assert (sl);
+  assert (compare);
+  assert (found_out);
+
+  len = smartlist_len (sl);
+
+  /* Check for the trivial case of a zero-length list
+   */
+  if (len == 0)
+  {
+    *found_out = 0;
+
+    /* We already know smartlist_len(sl) is 0 in this case
+     */
+    return (0);
+  }
+
+  /* Okay, we have a real search to do
+   */
+  assert (len > 0);
+  lo = 0;
+  hi = len - 1;
+
+  /*
+   * These invariants are always true:
+   *
+   * For all i such that 0 <= i < lo, sl[i] < key
+   * For all i such that hi < i <= len, sl[i] > key
+   */
+
+  while (lo <= hi)
+  {
+    diff = hi - lo;
+
+    /*
+     * We want mid = (lo + hi) / 2, but that could lead to overflow, so
+     * instead diff = hi - lo (non-negative because of loop condition), and
+     * then hi = lo + diff, mid = (lo + lo + diff) / 2 = lo + (diff / 2).
+     */
+    mid = lo + (diff / 2);
+    cmp = (*compare) (key, (const void**) &(sl->list[mid]));
+    if (cmp == 0)
+    {
+      /* sl[mid] == key; we found it
+       */
+      *found_out = 1;
+      return (mid);
+    }
+    if (cmp > 0)
+    {
+      /*
+       * key > sl[mid] and an index i such that sl[i] == key must
+       * have i > mid if it exists.
+       */
+
+      /*
+       * Since lo <= mid <= hi, hi can only decrease on each iteration (by
+       * being set to mid - 1) and hi is initially len - 1, mid < len should
+       * always hold, and this is not symmetric with the left end of list
+       * mid > 0 test below.  A key greater than the right end of the list
+       * should eventually lead to lo == hi == mid == len - 1, and then
+       * we set lo to len below and fall out to the same exit we hit for
+       * a key in the middle of the list but not matching.  Thus, we just
+       * assert for consistency here rather than handle a mid == len case.
+       */
+      assert(mid < len);
+
+      /* Move lo to the element immediately after sl[mid]
+       */
+      lo = mid + 1;
+    }
+    else
+    {
+      /* This should always be true in this case
+       */
+      assert (cmp < 0);
+
+      /*
+       * key < sl[mid] and an index i such that sl[i] == key must
+       * have i < mid if it exists.
+       */
+
+      if (mid > 0)
+      {
+        /* Normal case, move hi to the element immediately before sl[mid] */
+        hi = mid - 1;
+      }
+      else
+      {
+        /* These should always be true in this case
+         */
+        assert (mid == lo);
+        assert (mid == 0);
+
+        /*
+         * We were at the beginning of the list and concluded that every
+         * element e compares e > key.
+         */
+        *found_out = 0;
+        return (0);
+      }
+    }
+  }
+
+  /*
+   * lo > hi; we have no element matching key but we have elements falling
+   * on both sides of it.  The lo index points to the first element > key.
+   */
+  assert (lo == hi + 1);  /* All other cases should have been handled */
+  assert (lo >= 0);
+  assert (lo <= len);
+  assert (hi >= 0);
+  assert (hi <= len);
+
+  if (lo < len)
+  {
+    cmp = (*compare) (key, (const void**) &(sl->list[lo]));
+    assert (cmp < 0);
+  }
+  else
+  {
+    cmp = (*compare) (key, (const void**) &(sl->list[len-1]));
+    assert (cmp > 0);
+  }
+
+  *found_out = 0;
+  return (lo);
+}
+
+/*
+ * Assuming the members of 'sl' are in order, return a pointer to the
+ * member that matches 'key'. Ordering and matching are defined by a
+ * 'compare' function that returns 0 on a match; less than 0 if key is
+ * less than member, and greater than 0 if key is greater then member.
+ */
+void *smartlist_bsearch (const smartlist_t *sl, const void *key,
+                         int (*compare)(const void *key, const void **member))
+{
+  int found, idx = smartlist_bsearch_idx (sl, key, compare, &found);
+
+  return (found ? smartlist_get(sl, idx) : NULL);
+}
+
+
