@@ -1,21 +1,12 @@
 #ifndef _INIT_H
 #define _INIT_H
 
-#define MAX_EXCLUDES 100
-
 typedef unsigned __int64 uint64;
 typedef          __int64 int64;
 
 struct exclude {
        char   *name;          /* name of function to exclude from the trace */
        uint64  num_excludes;  /* # of times this function was excluded */
-     };
-
-/* \todo: rewrite this into a 'smartlist_t'.
- */
-struct excludes {
-       unsigned       list_max;
-       struct exclude func [MAX_EXCLUDES];
      };
 
 struct statistics {
@@ -107,7 +98,6 @@ struct config_table {
        char   *lua_exit_script;
 
        struct pcap_cfg    pcap;
-       struct excludes    excl;
        struct statistics  counts;
        DWORD  reentries;
 

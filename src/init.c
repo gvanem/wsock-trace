@@ -36,6 +36,8 @@ CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
+static smartlist_t *exclude_list = NULL;
+
 static void init_timestamp (void)
 {
   LARGE_INTEGER rc;
@@ -205,21 +207,24 @@ static int config_get_line (FILE        *fil,
  */
 BOOL exclude_list_get (const char *fmt)
 {
-  size_t i, len;
+  size_t len;
+  int    i, max;
 
-  /* No tracing of callers should exclude everything.
+  /* If no tracing of callers, that should exclude everything.
    */
   if (g_cfg.trace_caller <= 0)
      return (TRUE);
 
-  for (i = 0; i < g_cfg.excl.list_max; i++)
-  {
-    struct exclude *excl = &g_cfg.excl.func[i];
+  max = exclude_list ? smartlist_len (exclude_list) : 0;
 
-    len = strlen (excl->name);
-    if (!strnicmp(fmt, excl->name, len))
+  for (i = 0; i < max; i++)
+  {
+    struct exclude *ex = smartlist_get (exclude_list, i);
+
+    len = strlen (ex->name);
+    if (!strnicmp(fmt, ex->name, len))
     {
-      excl->num_excludes++;
+      ex->num_excludes++;
       return (TRUE);
     }
   }
@@ -228,15 +233,16 @@ BOOL exclude_list_get (const char *fmt)
 
 BOOL exclude_list_free (void)
 {
-  size_t i;
+  struct exclude *ex;
+  int    i, max = exclude_list ? smartlist_len (exclude_list) : 0;
 
-  for (i = 0; i < g_cfg.excl.list_max; i++)
+  for (i = 0; i < max; i++)
   {
-    struct exclude *excl = &g_cfg.excl.func[i];
-    free (excl->name);
+    ex = smartlist_get (exclude_list, i);
+    free (ex);
   }
-  g_cfg.excl.list_max = 0;
-
+  smartlist_free (exclude_list);
+  exclude_list = NULL;
   return (TRUE);
 }
 
@@ -246,19 +252,19 @@ BOOL exclude_list_free (void)
  */
 BOOL exclude_list_add (const char *name)
 {
-  int i = g_cfg.excl.list_max;
+  struct exclude *ex;
 
   if (!isalpha(*name))
      return (FALSE);
 
-  if (i >= DIM(g_cfg.excl.func)-1)
-  {
-    TRACE (0, "g_cfg.excl.func[] too small (max. %d elements). val: \"%s\"\n",
-              DIM(g_cfg.excl.func), name);
-    return (FALSE);
-  }
-  g_cfg.excl.func[i].name = strdup (name);
-  g_cfg.excl.list_max++;
+  ex = malloc (sizeof(*ex)+strlen(name)+1);
+
+  if (!exclude_list)
+     exclude_list = smartlist_new();
+  ex->num_excludes = 0;
+  ex->name = (char*) (ex + 1);
+  strcpy (ex->name, name);
+  smartlist_add (exclude_list, ex);
   return (TRUE);
 }
 
@@ -558,16 +564,18 @@ static void trace_report (void)
 {
   const struct exclude *ex;
   const char  *indent;
-  unsigned     i;
+  int          i, max;
   size_t       len, max_len = 0, max_digits = 0;
 
   g_cfg.trace_report = FALSE;
 
   trace_puts ("\n  Exclusions:~5");
 
-  for (i = 0; i < g_cfg.excl.list_max; i++)
+  max = smartlist_len (exclude_list);
+
+  for (i = 0; i < max; i++)
   {
-    ex = &g_cfg.excl.func[i];
+    ex = smartlist_get (exclude_list, i);
     len = strlen (ex->name);
     if (max_len < len)
        max_len = len;
@@ -576,13 +584,13 @@ static void trace_report (void)
        max_digits = len;
   }
   if (i == 0)
-    trace_puts (" None.\n");
+     trace_puts (" None.\n");
   else
   {
-    for (i = 0; i < g_cfg.excl.list_max; i++)
+    for (i = 0; i < max; i++)
     {
       indent = (i == 0) ? " " : "              ";
-      ex = &g_cfg.excl.func[i];
+      ex = smartlist_get (exclude_list, i);
       len = strlen (ex->name);
       trace_printf ("%s%s():%*s %*s times.\n",
                     indent, ex->name, (int)(max_len-len), "",
