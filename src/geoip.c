@@ -1522,6 +1522,7 @@ static void show_help (const char *my_name)
           "       -h:      this help.\n", my_name, G_option, g_option, G_help, g_help);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\"\n");
+  wsock_trace_exit();
   exit (0);
 }
 
