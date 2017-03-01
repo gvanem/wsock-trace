@@ -36,6 +36,16 @@ CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
+/*
+ * Structure for 'exclude_list*()' functions.
+ */
+struct exclude {
+       char   *name;          /* name of function to exclude from the trace */
+       uint64  num_excludes;  /* # of times this function was excluded */
+     };
+
+/* Dynamic array of above exclude structure.
+ */
 static smartlist_t *exclude_list = NULL;
 
 static void init_timestamp (void)

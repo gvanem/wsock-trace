@@ -4,11 +4,6 @@
 typedef unsigned __int64 uint64;
 typedef          __int64 int64;
 
-struct exclude {
-       char   *name;          /* name of function to exclude from the trace */
-       uint64  num_excludes;  /* # of times this function was excluded */
-     };
-
 struct statistics {
        uint64  send_bytes;
        uint64  send_errors;
