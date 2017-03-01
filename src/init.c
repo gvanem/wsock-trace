@@ -581,7 +581,7 @@ static void trace_report (void)
 
   trace_puts ("\n  Exclusions:~5");
 
-  max = smartlist_len (exclude_list);
+  max = exclude_list ? smartlist_len (exclude_list) : 0;
 
   for (i = 0; i < max; i++)
   {
@@ -683,7 +683,7 @@ void wsock_trace_exit (void)
   common_exit();
 
   if (g_cfg.trace_stream)
-    fclose (g_cfg.trace_stream);
+     fclose (g_cfg.trace_stream);
 
   g_cfg.trace_file_okay = FALSE;
   g_cfg.trace_stream = NULL;
