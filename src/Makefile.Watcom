@@ -13,7 +13,7 @@ CFLAGS = -bt=nt -mf -w6 -d2 -zq -zc -zm -wx -3$(STACK_OR_REG) -fpi -fr=nul -I. &
          -of+ -s -d2 -hc -DWIN32_LEAN_AND_MEAN=1 -D_WIN32_WINNT=0x0501
 
 LDFLAGS = option quiet, map, eliminate, caseexact &
-          system nt debug all sort global library $(WSOCK_LIB)
+          system nt debug all sort global
 
 OBJ_DIR = Watcom_obj
 
@@ -72,7 +72,7 @@ uninstall: .SYMBOLIC
 	-del $(BIN_TARGET)\\$(WSOCK_DLL)
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
-	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj
+	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
 	@echo
 
 geoip.exe: geoip.c init.c $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR)\getopt.obj
@@ -80,7 +80,7 @@ geoip.exe: geoip.c init.c $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR
 	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\init.obj  init.c
 	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\geoip.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj &
 	                                $(OBJ_DIR)\init.obj  $(OBJ_DIR)\getopt.obj                      } &
-	                         library clib3$(STACK_OR_REG).lib
+	                         library clib3$(STACK_OR_REG).lib, ws2_32.lib
 	rm -f $(OBJ_DIR)\init.obj $(OBJ_DIR)\geoip.obj
 	@echo
 
