@@ -730,7 +730,7 @@ static const char *fname_cache_add (const char *fname)
 
 static void fname_cache_dump (void)
 {
-  int i, max = smartlist_len (fname_list);
+  int i, max = fname_list ? smartlist_len (fname_list) : 0;
 
   for (i = 0; i < max; i++)
   {
@@ -745,7 +745,7 @@ static void fname_cache_dump (void)
 static void fname_cache_free (void)
 {
   struct file_name_entry *fn;
-  int    i, max = smartlist_len (fname_list);
+  int    i, max = fname_list ? smartlist_len (fname_list) : 0;
 
   if (g_cfg.trace_level >= 5)
      fname_cache_dump();
@@ -771,7 +771,7 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 
   /* Since 'g_cfg.test_trace=0' below, ensure colorised messages from 'WSTRACE()'
    * cannot interrupt this piece of code (we'd then get colours here).
-   * This make this a critical region.
+   * Thus make this a critical region.
    */
   ENTER_CRIT();
 
