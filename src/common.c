@@ -54,8 +54,6 @@ static const char  *fname_cache_add (const char *fname);
 static void         fname_cache_free (void);
 static void         fname_cache_dump (void);
 
-static void  crc_init  (void);
-static void  crc_exit (void);
 static DWORD crc_bytes (const char *buf, size_t len);
 
 #define TRACE_BUF_SIZE (2*1024)
@@ -71,12 +69,10 @@ void common_init (void)
   trace_buf = malloc (TRACE_BUF_SIZE);
   trace_ptr = trace_buf;
   trace_end = trace_ptr + TRACE_BUF_SIZE - 1;
-  crc_init();
 }
 
 void common_exit (void)
 {
-  crc_exit();
   fname_cache_free();
 
   free (trace_buf);
@@ -1130,13 +1126,12 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
 
 /* Pre-generated table for speeding up CRC calculations.
  */
-static DWORD *crc_table = NULL;
+static DWORD crc_table [256 * sizeof(DWORD)] = { '\0' };
 
 /*
  * mk_crctbl() derives a CRC lookup table from the CRC polynomial.
  * The table is used later by crc_bytes() below.
  * mk_crctbl() only needs to be called once at the dawn of time.
- * I.e. in crc_init().
  *
  * The theory behind mk_crctbl() is that table[i] is initialized
  * with the CRC of i, and this is related to the CRC of `i >> 1',
@@ -1177,27 +1172,12 @@ static DWORD crc_bytes (const char *buf, size_t len)
 {
   DWORD accum;
 
-  assert (crc_table);
+  if (!crc_table[0])
+     mk_crctbl (CRC_PRZ, crc_table);
 
   for (accum = 0; len > 0; len--)
       accum = (accum << 8) ^ crc_table[(BYTE)(accum >> CRC_SHIFTS) ^ *buf++];
   return (accum);
-}
-
-static void crc_init (void)
-{
-  crc_table = calloc (sizeof(DWORD), 256);
-  if (!crc_table)
-     FATAL ("Failed to generated CRC-table.\n");
-
-  mk_crctbl (CRC_PRZ, crc_table);
-}
-
-static void crc_exit (void)
-{
-  if (crc_table)
-     free (crc_table);
-  crc_table = NULL;
 }
 
 /*
