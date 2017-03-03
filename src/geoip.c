@@ -64,19 +64,16 @@ static void smartlist_free_all (smartlist_t *sl)
  */
 static smartlist_t *smartlist_new_fixed (void *start, size_t el_size, unsigned num)
 {
-  smartlist_t *sl  = malloc (sizeof(*sl));
+  smartlist_t *sl = smartlist_new();
   char        *ofs = (char*) start;
   size_t       i;
 
-  sl->capacity = num;
-  sl->num_used = num;
-  sl->list = malloc (sizeof(void*) * sl->capacity);
-
+  smartlist_ensure_capacity (sl, num);
   for (i = 0; i < num; i++, ofs += el_size)
-      sl->list [i] = ofs;
+     smartlist_add (sl, ofs);
   return (sl);
 }
-#endif
+#endif /* USE_GEOIP_GENERATED */
 
 /*
  * Geoip specific stuff.
@@ -1639,17 +1636,17 @@ int main (int argc, char **argv)
       case 'd':
            do_dump++;
            break;
-#if !defined(USE_GEOIP_GENERATED)
-      case 'g':
-           do_generate++;
-           g_file = optarg;
-           break;
-#else
+#if defined(USE_GEOIP_GENERATED)
       case 'G':
            use_geoip_generated = TRUE;
            geoip_exit();
            geoip_ipv4_entries = smartlist_new_fixed_ipv4();
            geoip_ipv6_entries = smartlist_new_fixed_ipv6();
+           break;
+#else
+      case 'g':
+           do_generate++;
+           g_file = optarg;
            break;
 #endif
       case 'n':
