@@ -49,6 +49,7 @@ struct config_table {
        int     callee_level;
        int     cpp_demangle;
        int     max_data;
+       int     max_displacement;
        BOOL    test_trace;
        BOOL    start_new_line;
        BOOL    dump_data;
@@ -64,6 +65,7 @@ struct config_table {
        BOOL    use_full_path;
        BOOL    use_toolhlp32;
        BOOL    use_ole32;
+       BOOL    pdb_report;
        WORD    color_file;
        WORD    color_time;
        WORD    color_func;

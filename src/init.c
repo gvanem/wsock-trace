@@ -272,8 +272,7 @@ BOOL exclude_list_add (const char *name)
   if (!exclude_list)
      exclude_list = smartlist_new();
   ex->num_excludes = 0;
-  ex->name = (char*) (ex + 1);
-  strcpy (ex->name, name);
+  ex->name = strcpy ((char*)(ex+1), name);
   smartlist_add (exclude_list, ex);
   return (TRUE);
 }
@@ -379,6 +378,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"short_errors"))
      g_cfg.short_errors = atoi (val);
 
+  else if (!stricmp(key,"pdb_report"))
+     g_cfg.pdb_report = atoi (val);
+
   else if (!stricmp(key,"use_toolhlp32"))
      g_cfg.use_toolhlp32 = atoi (val);
 
@@ -432,6 +434,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 
   else if (!stricmp(key,"max_data"))
      g_cfg.max_data = atoi (val);
+
+  else if (!stricmp(key,"max_displacement"))
+     g_cfg.max_displacement = atoi (val);
 
   else if (!stricmp(key,"start_new_line"))
      g_cfg.start_new_line = atoi (val);
@@ -611,11 +616,25 @@ static void trace_report (void)
   if (g_cfg.reentries > 0)
      trace_printf ("  get_caller() reentered %lu times.\n", g_cfg.reentries);
 
-  if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
+// if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
   {
     trace_printf ("  DLL attach %" U64_FMT " times.\n", g_cfg.counts.dll_attach);
     trace_printf ("  DLL detach %" U64_FMT " times.\n", g_cfg.counts.dll_detach);
   }
+
+#if 0
+  {
+    max = thread_list ? smartlist_len(thread_list) : 0;
+    for (i = 0; i < max; i++)
+    {
+      const struct thread_info *thr = smartlist_get (thread_list, i);
+      HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, thr->id);
+
+      trace_printf (" tid: %lu, alive: %d:\n", thr->id, thr->alive);
+      print_thread_times (hnd);
+    }
+  }
+#endif
 
  /* E.g.:
   *  Statistics:
@@ -668,7 +687,7 @@ void wsock_trace_exit (void)
   wstrace_exit_lua (g_cfg.lua_exit_script);
 #endif
 
-#if 1
+#if 0
   if (g_cfg.trace_level >= 3)
   {
     extern void print_perf_times (void);
