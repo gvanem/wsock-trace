@@ -15,6 +15,7 @@
 #include <wininet.h>
 
 #include "common.h"
+#include "smartlist.h"
 #include "init.h"
 #include "in_addr.h"
 #include "geoip.h"
