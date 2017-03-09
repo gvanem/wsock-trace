@@ -187,10 +187,12 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #if defined(_MSC_VER) ||   /* MSVC/WIN64 little untested */ \
       defined(__GNUC__)      /* MinGW64 normally */
     #define ADDR_FMT     "016I64X"
-    #define ADDR_CAST(x) ((uint64)(x))
+    #define ADDR_CAST(x) ((unsigned __int64)(x))
   #else
     #error Help me!
   #endif
+
+  #define IS_WIN64 1
 
   /*
    * A 'SOCKET' is defined as 'unsigned long long' on Win64.
@@ -202,6 +204,7 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
   #define ADDR_FMT        "08lX"
   #define ADDR_CAST(x)    ((DWORD_PTR)(x))   /* "cl -Wp64" warns here. Ignore it. */
   #define SOCKET_CAST(s)  s
+  #define IS_WIN64        0
 #endif
 
 #if defined(__CYGWIN__)
@@ -374,7 +377,10 @@ extern char       *ws_strerror (DWORD err, char *buf, size_t len);
 extern char       *win_strerror (DWORD err);
 extern char       *basename (const char *fname);
 extern char       *dirname (const char *fname);
+extern char       *fix_path (const char *path);
+extern char       *copy_path (char *out_path, const char *in_path, char use);
 extern char       *str_replace (int ch1, int ch2, char *str);
+extern char       *strip_nl (char *s);
 extern const char *shorten_path (const char *path);
 extern const char *list_lookup_name (unsigned value, const struct search_list *list, int num);
 extern unsigned    list_lookup_value (const char *name, const struct search_list *list, int num);
@@ -389,11 +395,13 @@ extern unsigned long  swap32 (DWORD val);
 extern unsigned short swap16 (WORD val);
 
 extern const char    *get_guid_string (const GUID *guid);
+extern const char    *get_guid_path_string (const GUID *guid);
 extern const char    *dword_str (DWORD val);
 extern const char    *qword_str (unsigned __int64 val);
 
 extern char * _strlcpy (char *dst, const char *src, size_t len);
 extern char * _strtok_r (char *ptr, const char *sep, char **end);
+extern char * _strrepeat (int ch, size_t num);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
 
@@ -403,52 +411,5 @@ extern FILE * fopen_excl (const char *file, const char *mode);
   #define stricmp(s1, s2)      strcasecmp (s1, s2)
   #define strnicmp(s1, s2, n)  strncasecmp (s1, s2, n)
 #endif
-
-/*
- * From Tor's src/common/container.h:
- *
- * A resizeable list of pointers, with associated helpful functionality.
- *
- * The members of this struct are exposed only so that macros and inlines can
- * use them; all access to smartlist internals should go through the functions
- * and macros defined here.
- */
-typedef struct smartlist_t {
-        /*
-         * 'list' (of anything) has enough capacity to store exactly 'capacity'
-         * elements before it needs to be resized. Only the first 'num_used'
-         * (<= capacity) elements point to valid data.
-         */
-        void **list;
-        int    num_used;
-        int    capacity;
-      } smartlist_t;
-
-/*
- * All newly allocated smartlists have this capacity.
- * I.e. room for 16 elements in 'smartlist_t::list[]'.
- */
-#define SMARTLIST_DEFAULT_CAPACITY  16
-
-/*
- * A smartlist can hold 'INT_MAX' (2147483647) number of
- * elements in 'smartlist_t::list[]'.
- */
-#define SMARTLIST_MAX_CAPACITY  INT_MAX
-
-extern smartlist_t *smartlist_new (void);
-extern int          smartlist_len (const smartlist_t *sl);
-extern void        *smartlist_get (const smartlist_t *sl, int idx);
-extern void         smartlist_free (smartlist_t *sl);
-extern void         smartlist_ensure_capacity (smartlist_t *sl, size_t num);
-extern void         smartlist_add (smartlist_t *sl, void *element);
-extern void         smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void **b));
-
-extern int   smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
-                                    int (*compare)(const void *key, const void **member),
-                                    int *found_out);
-
-extern void *smartlist_bsearch (const smartlist_t *sl, const void *key,
-                                int (*compare)(const void *key, const void **member));
 
 #endif  /* _COMMON_H */

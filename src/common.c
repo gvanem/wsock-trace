@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
@@ -20,6 +21,7 @@
 #endif
 
 #include "common.h"
+#include "smartlist.h"
 #include "init.h"
 #include "dump.h"
 
@@ -28,6 +30,9 @@
 #ifndef WSA_QOS_EUNKOWNPSOBJ
 #define WSA_QOS_EUNKOWNPSOBJ  (WSABASEERR + 1024)
 #endif
+
+#define IS_SLASH(c)  ((c) == '\\' || (c) == '/')
+#define TOUPPER(c)   toupper ((int)(c))
 
 char curr_dir  [MAX_PATH] = { '\0' };
 char curr_prog [MAX_PATH] = { '\0' };
@@ -69,10 +74,14 @@ void common_init (void)
   trace_buf = malloc (TRACE_BUF_SIZE);
   trace_ptr = trace_buf;
   trace_end = trace_ptr + TRACE_BUF_SIZE - 1;
+
 }
 
 void common_exit (void)
 {
+  if (g_cfg.trace_level >= 5)
+     fname_cache_dump();
+
   fname_cache_free();
 
   free (trace_buf);
@@ -479,7 +488,7 @@ char *dirname (const char *fname)
     /* Find the rightmost slash.  */
     while (*p)
     {
-      if (*p == '/' || *p == '\\')
+      if (IS_SLASH(*p))
          slash = p;
       p++;
     }
@@ -492,7 +501,7 @@ char *dirname (const char *fname)
     else
     {
       /* Remove any trailing slashes.  */
-      while (slash > fname && (slash[-1] == '/' || slash[-1] == '\\'))
+      while (slash > fname && IS_SLASH(slash[-1]))
           slash--;
 
       /* How long is the directory we will return?  */
@@ -514,16 +523,58 @@ char *dirname (const char *fname)
   return (NULL);
 }
 
-static const char *get_guid_ole32_str (const GUID *guid)
+/*
+ * Copy and replace (single or multiple) '\\' with single '/' if use == '/'. And vice-versa.
+ * Assume 'in_path' and 'out_path' are not larger than '_MAX_PATH'.
+ */
+char *copy_path (char *out_path, const char *in_path, char use)
 {
-  static char result [40];
-  wchar_t     str [40];
-  DWORD       len;
+  _strlcpy (out_path, in_path, _MAX_PATH);
+  if (use == '/')
+     str_replace ('\\', '/', out_path);
+  else if (use == '\\')
+     str_replace ('/', '\\', out_path);
+  return (out_path);
+}
+
+/*
+ * Canonize file and paths names. E.g. convert this:
+ *   g:\mingw32\bin\../lib/gcc/x86_64-w64-mingw32/4.8.1/include
+ * into something more readable:
+ *   g:\mingw32\lib\gcc\x86_64-w64-mingw32\4.8.1\include
+ *
+ * I.e. turns 'path' into a fully-qualified path.
+ *
+ * Note: the 'path' doesn't have to exist.
+ *       assumes 'result' is at least '_MAX_PATH' characters long (if non-NULL).
+ */
+char *fix_path (const char *path)
+{
+  static char result [_MAX_PATH];
+
+ /* GetFullPathName() doesn't seems to handle
+  * '/' in 'path'. Convert to '\\'.
+  *
+  * Note: the 'result' file or path may not exists.
+  *       Use 'FILE_EXISTS()' to test.
+  */
+  copy_path (result, path, '\\');
+  if (!GetFullPathName(result, sizeof(result), result, NULL))
+     TRACE (2, "GetFullPathName(\"%s\") failed: %s\n",
+            path, win_strerror(GetLastError()));
+
+  return (result);
+}
+
+static const char *get_guid_ole32_str (const GUID *guid, char *result, size_t result_size)
+{
+  wchar_t *str = alloca (result_size);
+  DWORD    len;
 
   strcpy (result, "{??}");
-  if (StringFromGUID2(guid, (LPOLESTR)&str, DIM(str)-1))
+  if (StringFromGUID2(guid, (LPOLESTR)str, result_size-1))
   {
-    len = WideCharToMultiByte (CP_ACP, 0, str, -1, result, sizeof(result), NULL, NULL);
+    len = WideCharToMultiByte (CP_ACP, 0, str, -1, result, result_size, NULL, NULL);
     if (len == 0)
        strcpy (result, "{??}");
   }
@@ -532,9 +583,8 @@ static const char *get_guid_ole32_str (const GUID *guid)
 
 static const char hex_chars[] = "0123456789ABCDEF";
 
-static const char *get_guid_internal_str (const GUID *guid)
+static const char *get_guid_internal_str (const GUID *guid, char *result, size_t result_size)
 {
-  static char result [40];
   char  *out;
   const  BYTE *bytes;
   BYTE   v, hi_nibble, lo_nibble;
@@ -577,9 +627,29 @@ static const char *get_guid_internal_str (const GUID *guid)
  */
 const char *get_guid_string (const GUID *guid)
 {
+  static char result [40];
+
   if (g_cfg.use_ole32)
-     return get_guid_ole32_str (guid);
-  return get_guid_internal_str (guid);
+     return get_guid_ole32_str (guid, result, sizeof(result));
+  return get_guid_internal_str (guid, result, sizeof(result));
+}
+
+/*
+ * As above, but with the '{', '}' and '-' stripped.
+ */
+const char *get_guid_path_string (const GUID *guid)
+{
+  static char result [40];
+  const char *p = get_guid_string (guid);
+  char       *out;
+
+  for (out = result; *p; p++)
+  {
+    if (*p != '{' && *p != '}' && *p != '-')
+      *out++ = *p;
+  }
+  *out = '\0';
+  return (result);
 }
 
 static char hex_result [9];
@@ -635,12 +705,22 @@ char *str_replace (int ch1, int ch2, char *str)
 }
 
 /*
+ * Removes end-of-line termination from a string.
+ * Removes "\n" (Unix), "\r" (MacOS) or "\r\n" (DOS) terminations.
+ */
+char *strip_nl (char *s)
+{
+  char *p;
+
+  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
+  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
+  return (s);
+}
+
+/*
  * Return the left-trimmed place where paths 'p1' and 'p2' are similar.
  * Not case sensitive. Treats '/' and '\\' equally.
  */
-#define IS_SLASH(c)  ((c) == '\\' || (c) == '/')
-#define TOUPPER(c)   toupper ((int)(c))
-
 const char *path_ltrim (const char *p1, const char *p2)
 {
   for ( ; *p1 && *p2; p1++, p2++)
@@ -672,7 +752,6 @@ const char *shorten_path (const char *path)
     if (!real_name)
        return (path);
   }
-
   if (!g_cfg.use_full_path && len >= 3 && !strnicmp(prog_dir,path,len))
      return (real_name + len);
   return (real_name);
@@ -743,9 +822,6 @@ static void fname_cache_free (void)
   struct file_name_entry *fn;
   int    i, max = fname_list ? smartlist_len (fname_list) : 0;
 
-  if (g_cfg.trace_level >= 5)
-     fname_cache_dump();
-
   for (i = 0; i < max; i++)
   {
     fn = smartlist_get (fname_list, i);
@@ -804,6 +880,8 @@ size_t trace_flush (void)
 {
   size_t len = trace_ptr - trace_buf;
   size_t written = len;
+
+  assert (len <= TRACE_BUF_SIZE);
 
   if (g_cfg.trace_use_ods)
   {
@@ -1023,6 +1101,23 @@ char *_strlcpy (char *dst, const char *src, size_t len)
 }
 
 /*
+ * Return a string with 'ch' repeated 'num' times.
+ * Limited to 200 characters.
+ */
+char *_strrepeat (int ch, size_t num)
+{
+  static char buf [200];
+  char  *p = buf;
+  size_t i;
+
+  *p = '\0';
+  for (i = 0; i < num && i < sizeof(buf)-1; i++)
+     *p++ = ch;
+  *p = '\0';
+  return (buf);
+}
+
+/*
  * A strtok_r() function taken from libcurl:
  *
  * Copyright (C) 1998 - 2007, Daniel Stenberg, <daniel@haxx.se>, et al.
@@ -1178,259 +1273,6 @@ static DWORD crc_bytes (const char *buf, size_t len)
   for (accum = 0; len > 0; len--)
       accum = (accum << 8) ^ crc_table[(BYTE)(accum >> CRC_SHIFTS) ^ *buf++];
   return (accum);
-}
-
-/*
- * Code from Tor's src/common/container.c:
- *
- * Allocate and return an empty smartlist.
- */
-smartlist_t *smartlist_new (void)
-{
-  smartlist_t *sl = malloc (sizeof(*sl));
-
-  if (sl)
-  {
-    sl->num_used = 0;
-    sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
-    sl->list = calloc (sizeof(void*), sl->capacity);
-  }
-  return (sl);
-}
-
-/*
- * Return the number of items in 'sl'.
- */
-int smartlist_len (const smartlist_t *sl)
-{
-  assert (sl);
-  return (sl->num_used);
-}
-
-/*
- * Return the 'idx'th element of 'sl'.
- */
-void *smartlist_get (const smartlist_t *sl, int idx)
-{
-  assert (sl);
-  assert (idx >= 0);
-  assert (sl->num_used > idx);
-  return (sl->list[idx]);
-}
-
-/*
- * Deallocate a smartlist. Does not release storage associated with the
- * list's elements.
- */
-void smartlist_free (smartlist_t *sl)
-{
-  if (sl)
-  {
-    free (sl->list);
-    free (sl);
-  }
-}
-/*
- * Make sure that 'sl' can hold at least 'num' entries.
- */
-void smartlist_ensure_capacity (smartlist_t *sl, size_t num)
-{
-  assert (num <= SMARTLIST_MAX_CAPACITY);
-
-  if (num > (size_t)sl->capacity)
-  {
-    size_t higher = (size_t) sl->capacity;
-
-    if (num > SMARTLIST_MAX_CAPACITY/2)
-       higher = SMARTLIST_MAX_CAPACITY;
-    else
-    {
-      while (num > higher)
-        higher *= 2;
-    }
-    sl->list = realloc (sl->list, sizeof(void*) * higher);
-    memset (sl->list + sl->capacity, 0, sizeof(void*) * (higher - sl->capacity));
-    sl->capacity = (int) higher;
-  }
-}
-
-/*
- * Append element to the end of the list.
- */
-void smartlist_add (smartlist_t *sl, void *element)
-{
-  smartlist_ensure_capacity (sl, 1 + (size_t)sl->num_used);
-  sl->list [sl->num_used++] = element;
-}
-
-/*
- * Sort the members of 'sl' into an order defined by
- * the ordering function 'compare', which returns less then 0 if a
- * precedes b, greater than 0 if b precedes a, and 0 if a 'equals' b.
- */
-void smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void **b))
-{
-  if (sl->num_used > 0)
-     qsort (sl->list, sl->num_used, sizeof(void*),
-            (int (*)(const void *,const void*))compare);
-}
-
-/*
- * Assuming the members of 'sl' are in order, return the index of the
- * member that matches 'key'.  If no member matches, return the index of
- * the first member greater than 'key', or 'smartlist_len(sl)' if no member
- * is greater than 'key'.  Set 'found_out to true on a match, to false otherwise.
- * Ordering and matching are defined by a 'compare' function that returns 0 on
- * a match; less than 0 if key is less than member, and greater than 0 if key
- * is greater then member.
- */
-int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
-                           int (*compare)(const void *key, const void **member),
-                           int *found_out)
-{
-  int hi, lo, cmp, mid, len, diff;
-
-  assert (sl);
-  assert (compare);
-  assert (found_out);
-
-  len = smartlist_len (sl);
-
-  /* Check for the trivial case of a zero-length list
-   */
-  if (len == 0)
-  {
-    *found_out = 0;
-
-    /* We already know smartlist_len(sl) is 0 in this case
-     */
-    return (0);
-  }
-
-  /* Okay, we have a real search to do
-   */
-  assert (len > 0);
-  lo = 0;
-  hi = len - 1;
-
-  /*
-   * These invariants are always true:
-   *
-   * For all i such that 0 <= i < lo, sl[i] < key
-   * For all i such that hi < i <= len, sl[i] > key
-   */
-
-  while (lo <= hi)
-  {
-    diff = hi - lo;
-
-    /*
-     * We want mid = (lo + hi) / 2, but that could lead to overflow, so
-     * instead diff = hi - lo (non-negative because of loop condition), and
-     * then hi = lo + diff, mid = (lo + lo + diff) / 2 = lo + (diff / 2).
-     */
-    mid = lo + (diff / 2);
-    cmp = (*compare) (key, (const void**) &(sl->list[mid]));
-    if (cmp == 0)
-    {
-      /* sl[mid] == key; we found it
-       */
-      *found_out = 1;
-      return (mid);
-    }
-    if (cmp > 0)
-    {
-      /*
-       * key > sl[mid] and an index i such that sl[i] == key must
-       * have i > mid if it exists.
-       */
-
-      /*
-       * Since lo <= mid <= hi, hi can only decrease on each iteration (by
-       * being set to mid - 1) and hi is initially len - 1, mid < len should
-       * always hold, and this is not symmetric with the left end of list
-       * mid > 0 test below.  A key greater than the right end of the list
-       * should eventually lead to lo == hi == mid == len - 1, and then
-       * we set lo to len below and fall out to the same exit we hit for
-       * a key in the middle of the list but not matching.  Thus, we just
-       * assert for consistency here rather than handle a mid == len case.
-       */
-      assert (mid < len);
-
-      /* Move lo to the element immediately after sl[mid]
-       */
-      lo = mid + 1;
-    }
-    else
-    {
-      /* This should always be true in this case
-       */
-      assert (cmp < 0);
-
-      /*
-       * key < sl[mid] and an index i such that sl[i] == key must
-       * have i < mid if it exists.
-       */
-
-      if (mid > 0)
-      {
-        /* Normal case, move hi to the element immediately before sl[mid] */
-        hi = mid - 1;
-      }
-      else
-      {
-        /* These should always be true in this case
-         */
-        assert (mid == lo);
-        assert (mid == 0);
-
-        /*
-         * We were at the beginning of the list and concluded that every
-         * element e compares e > key.
-         */
-        *found_out = 0;
-        return (0);
-      }
-    }
-  }
-
-  /*
-   * lo > hi; we have no element matching key but we have elements falling
-   * on both sides of it.  The lo index points to the first element > key.
-   */
-  assert (lo == hi + 1);  /* All other cases should have been handled */
-  assert (lo >= 0);
-  assert (lo <= len);
-  assert (hi >= 0);
-  assert (hi <= len);
-
-  if (lo < len)
-  {
-    cmp = (*compare) (key, (const void**) &(sl->list[lo]));
-    assert (cmp < 0);
-  }
-  else
-  {
-    cmp = (*compare) (key, (const void**) &(sl->list[len-1]));
-    assert (cmp > 0);
-  }
-
-  *found_out = 0;
-  return (lo);
-}
-
-/*
- * Assuming the members of 'sl' are in order, return a pointer to the
- * member that matches 'key'. Ordering and matching are defined by a
- * 'compare' function that returns 0 on a match; less than 0 if key is
- * less than member, and greater than 0 if key is greater then member.
- */
-void *smartlist_bsearch (const smartlist_t *sl, const void *key,
-                         int (*compare)(const void *key, const void **member))
-{
-  int found, idx = smartlist_bsearch_idx (sl, key, compare, &found);
-
-  return (found ? smartlist_get(sl, idx) : NULL);
 }
 
 
