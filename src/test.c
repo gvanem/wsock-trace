@@ -192,7 +192,7 @@ static void test_WSACleanup (void)
 static void test_gethostbyaddr (void)
 {
   struct in_addr  ia4;
-  struct in6_addr ia6 = {{ IN6ADDR_LOOPBACK_INIT }};
+  struct in6_addr ia6 = IN6ADDR_LOOPBACK_INIT;
   const char     *ia;
 
   ia4.s_addr = htonl (INADDR_LOOPBACK);
@@ -504,29 +504,38 @@ struct thr_data {
        CRITICAL_SECTION *t_crit;  /* the same for all threads */
      };
 
-static DWORD WINAPI thread_worker (void *arg)
+/*
+ * This sub-routine checks if tracing of 'callee_level > 1' works.
+ * Like:
+ *  * 0.038 sec: test.c(523) (thread_sub_func+35)
+ *               test.c(538) (thread_worker+44):
+ *    WSASetLastError (0=No error).
+ */
+static void thread_sub_func (const struct thr_data *td)
 {
-  const struct thr_data *td = (const struct thr_data*) arg;
-  DWORD tid;
-  int   i;
+  EnterCriticalSection (td->t_crit);
 
   /* This should demonstate that Winsock preserves 1 error-code per thread.
    * Ref. the 'TEST_CONDITION()' below.
    */
   WSASetLastError (td->t_err);
 
+  printf ("In %s thread (%lu)\n", td->t_name, td->t_id);
+
+  TEST_CONDITION (== td->t_err, WSAGetLastError());
+  fflush (stdout);
+
+  LeaveCriticalSection (td->t_crit);
+  Sleep (300);
+}
+
+static DWORD WINAPI thread_worker (void *arg)
+{
+  const struct thr_data *td = (const struct thr_data*) arg;
+  int   i;
+
   for (i = 0; i < 5; i++)
-  {
-    EnterCriticalSection (td->t_crit);
-    tid = GetCurrentThreadId();
-    printf ("In %s thread (%lu)\n", td->t_name, td->t_id);
-
-    TEST_CONDITION (== td->t_err, WSAGetLastError());
-    fflush (stdout);
-
-    LeaveCriticalSection (td->t_crit);
-    Sleep (300);
-  }
+      thread_sub_func (td);
   return (0);
 }
 
