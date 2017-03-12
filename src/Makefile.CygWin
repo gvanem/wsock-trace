@@ -31,7 +31,7 @@ EX_LIBS += -lole32
 OBJ_DIR = Cygwin_obj
 
 SOURCES = wsock_trace.c init.c common.c cpu.c dump.c geoip.c \
-          in_addr.c stkwalk.c bfd_gcc.c
+          in_addr.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 
@@ -52,7 +52,7 @@ libwsock_trace.a wsock_trace_cyg.dll: $(OBJECTS)
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) $(LDFLAGS) -o $@ $^ $(EX_LIBS) > test.map
 
-geoip.exe: geoip.c common.c init.c in_addr.c
+geoip.exe: geoip.c common.c init.c in_addr.c smartlist.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -o $@ -lws2_32 -lole32 > geoip.map
 
 run_test: test.exe

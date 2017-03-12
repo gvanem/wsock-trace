@@ -82,7 +82,9 @@ OBJECTS = $(OBJ_DIR)\common.obj          \
           $(OBJ_DIR)\geoip.obj           \
           $(OBJ_DIR)\init.obj            \
           $(OBJ_DIR)\in_addr.obj         \
+          $(OBJ_DIR)\smartlist.obj       \
           $(OBJ_DIR)\stkwalk.obj         \
+          $(OBJ_DIR)\vm_dump.obj         \
           $(OBJ_DIR)\wsock_trace_lua.obj \
           $(OBJ_DIR)\wsock_trace.obj     \
           $(OBJ_DIR)\wsock_trace.res
@@ -193,6 +195,7 @@ $(OBJ_DIR)\init.obj:        init.c common.h stkwalk.h bfd_gcc.h init.h wsock_tra
 $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
 $(OBJ_DIR)\test.obj:        test.c getopt.h
 
+$(OBJ_DIR)\smartlist.obj:   smartlist.c common.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h stkwalk.h in_addr.h \
                             init.h dump.h wsock_trace_lua.h wsock_trace.h

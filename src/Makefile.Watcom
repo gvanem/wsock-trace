@@ -25,7 +25,7 @@ OBJS = $(OBJ_DIR)\wsock_trace.obj $(OBJ_DIR)\wsock_trace_lua.obj &
        $(OBJ_DIR)\init.obj        $(OBJ_DIR)\common.obj          &
        $(OBJ_DIR)\cpu.obj         $(OBJ_DIR)\dump.obj            &
        $(OBJ_DIR)\in_addr.obj     $(OBJ_DIR)\geoip.obj           &
-       $(OBJ_DIR)\stkwalk.obj
+       $(OBJ_DIR)\smartlist.obj   $(OBJ_DIR)\stkwalk.obj
 
 #
 # The 'wsock_trace.lib' is an import-lib for 'wsock_trace.dll'.
@@ -75,11 +75,11 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
 	@echo
 
-geoip.exe: geoip.c init.c $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR)\getopt.obj
+geoip.exe: geoip.c init.c $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\smartlist.obj
 	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\geoip.obj geoip.c
 	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\init.obj  init.c
-	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\geoip.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj &
-	                                $(OBJ_DIR)\init.obj  $(OBJ_DIR)\getopt.obj                      } &
+	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\geoip.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj     &
+	                                $(OBJ_DIR)\init.obj  $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\smartlist.obj } &
 	                         library clib3$(STACK_OR_REG).lib, ws2_32.lib
 	rm -f $(OBJ_DIR)\init.obj $(OBJ_DIR)\geoip.obj
 	@echo

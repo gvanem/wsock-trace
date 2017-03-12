@@ -88,7 +88,7 @@ EX_LIBS += -lole32
 OBJ_DIR = MinGW_obj
 
 SOURCES = wsock_trace.c wsock_trace_lua.c init.c common.c cpu.c dump.c \
-          geoip.c in_addr.c stkwalk.c bfd_gcc.c
+          geoip.c in_addr.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS  = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 DATA_OBJ = $(OBJ_DIR)/data.o
