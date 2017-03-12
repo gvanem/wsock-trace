@@ -6,7 +6,6 @@
  *
  * 1) Parsing of the 'wsock_trace' config-file.
  * 2) exclude-list handling.
- *    \todo: use a 'smartlist_t' for this in the near future.
  */
 
 #include <stdio.h>
@@ -25,6 +24,7 @@
 #include "dump.h"
 #include "wsock_trace_lua.h"
 #include "geoip.h"
+#include "smartlist.h"
 #include "stkwalk.h"
 #include "init.h"
 
