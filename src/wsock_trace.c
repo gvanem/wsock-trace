@@ -52,7 +52,7 @@ static BOOL exclude_this = FALSE;
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 static const char *get_timestamp (void);
 
-#ifdef USE_BFD
+#if defined(USE_BFD) || defined(__clang__)
   static void test_get_caller (const void *from);
 #endif
 
@@ -124,7 +124,7 @@ static const char *get_timestamp (void);
   } while (0)
 
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
   #define GET_RET_ADDR()  (ULONG_PTR)__builtin_return_address (0)
 #else
   #define GET_RET_ADDR()  0
@@ -2283,12 +2283,16 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
 
   ENTER_CRIT();
 
-#ifdef USE_BFD
+#if defined(USE_BFD)
   // test_get_caller (&gethostbyaddr);
 #endif
 
   WSTRACE ("gethostbyaddr (%s, %d, %s) --> %s",
            inet_ntop2(addr,type), len, socket_family(type), ptr_or_error(rc));
+
+#if defined(__clang__)
+  // test_get_caller (&gethostbyaddr);
+#endif
 
   if (!exclude_this)
   {
@@ -2680,9 +2684,15 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     {
       ret = "No stack";
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(__clang__)
      /*
-      * The MSVC flags '-Ox' (maximum optimizations) breaks the assumption for
+      * The flag '-Oy-' turns off frame pointer omission.
+      */
+      TRACE (2, "RtlCaptureStackBackTrace(): %d; add '-Oy-' to your CFLAGS.\n", num_frames);
+
+#elif defined(_MSC_VER)
+     /*
+      * The MSVC flag '-Ox' (maximum optimizations) breaks the assumption for
       * 'RtlCaptureStackBackTrace()'. Hence warn strongly against it.
       */
       TRACE (2, "RtlCaptureStackBackTrace(): %d; Do not use '-Ox' in your CFLAGS.\n", num_frames);
@@ -2789,6 +2799,54 @@ static void test_get_caller (const void *from)
             buf, (DWORD) (ADDR_CAST(frames[0]) - ADDR_CAST(from)));
   exit (0);
 }
+
+#elif defined(__clang__)
+
+#include <imagehlp.h>
+
+static void test_get_caller (const void *from)
+{
+  CONTEXT     ctx;
+  HANDLE      thr = GetCurrentThread();
+  void       *frames [5];
+  const char *ret;
+  int         i, num;
+
+  memset (frames, '\0', sizeof(frames));
+  num = (*p_RtlCaptureStackBackTrace) (1, DIM(frames), frames, NULL);
+
+  for (i = 0; i < num; i++)
+  {
+    ret = "<none>";
+    if (i == 0)
+    {
+      ctx.Eip = (DWORD) frames[i];
+      ctx.Ebp = 0;
+      ret = StackWalkShow (thr, &ctx);
+    }
+    TRACE (1, "frames[%d]: 0x%" ADDR_FMT ", ret: %s\n", i, ADDR_CAST(frames[i]), ret);
+  }
+  ARGSUSED (from);
+
+#if 0
+  void *stk_p = NULL;
+  STACKFRAME64 *stk;
+
+  memset (&ctx, '\0', sizeof(ctx));
+  ctx.ContextFlags = CONTEXT_FULL;
+  GetThreadContext (thr, &ctx);
+  ctx.Eip = (DWORD) from;
+  ctx.Ebp = 0;
+  ret = StackWalkShow2 (thr, &ctx, &stk_p);
+  TRACE (1, "from: 0x%" ADDR_FMT ", ret: %s\n", ADDR_CAST(from), ret);
+
+  stk = (STACKFRAME64*) stk_p;
+  ctx.Eip = stk->AddrPC.Offset;
+  ctx.Ebp = 0;
+  ret = StackWalkShow2 (thr, &ctx, &stk_p);
+  TRACE (1, "from: 0x%" ADDR_FMT ", ret: %s\n", ADDR_CAST(from), ret);
+#endif
+}
 #endif  /* USE_BFD */
 
 #include "wsock_trace.rc"
@@ -2807,7 +2865,8 @@ static const char *set_dll_name (void)
 
 BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
-  char note[30] = "";
+  char  note[30] = "";
+  DWORD tid;
 
   if (dwReason == DLL_PROCESS_ATTACH)
      wsock_trace_dll_name = set_dll_name();
@@ -2820,6 +2879,9 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
     case DLL_PROCESS_ATTACH:
          crtdbg_init();
          wsock_trace_init();
+#if 0
+         smartlist_add (thread_list, GetCurrentThreadId());
+#endif
          break;
 
     case DLL_PROCESS_DETACH:
@@ -2828,23 +2890,34 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
          break;
 
     case DLL_THREAD_ATTACH:
+         tid = GetCurrentThreadId();
          g_cfg.counts.dll_attach++;
          TRACE (3, "  DLL_THREAD_ATTACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-                ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
+                ADDR_CAST(hinstDLL), note, tid);
+
+         /* \todo:
+          *   Add this 'tid' as a new thread to a 'smartlist_t' and call 'print_thread_times()'
+          *   for it when 'DLL_PROCESS_DETACH' is received.
+          */
          break;
 
     case DLL_THREAD_DETACH:
+         tid = GetCurrentThreadId();
+         g_cfg.counts.dll_detach++;
+         TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
+               ADDR_CAST(hinstDLL), note, tid);
          if (g_cfg.trace_level >= 3)
          {
            extern void print_thread_times (HANDLE thread);
-           DWORD  tid = GetCurrentThreadId();
            HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, tid);
 
            print_thread_times (hnd);
          }
-         g_cfg.counts.dll_detach++;
-         TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-               ADDR_CAST(hinstDLL), note, GetCurrentThreadId());
+         /* \todo:
+          *   Instead of calling 'print_thread_times()' here, add this 'tid' as
+          *   dying thread and call 'print_thread_times()' for all threads (alive or dead) when
+          *   'DLL_PROCESS_DETACH' is received.
+          */
          break;
   }
 
