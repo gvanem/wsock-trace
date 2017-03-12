@@ -242,6 +242,14 @@ void BFD_unload_all_symbols (void)
   BFD_table_top = 0;
 }
 
+int BFD_demangle (const char *module, const char *raw_name, char *und_name, size_t und_size)
+{
+  ARGSUSED (module);
+  ARGSUSED (raw_name);
+  ARGSUSED (und_name);
+  ARGSUSED (und_size);
+  return (0);
+}
 
 /*
  * Compare on value (i.e. address).

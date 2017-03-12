@@ -21,6 +21,7 @@
   extern void  BFD_unload_all_symbols (void);
   extern void  BFD_dump (void);
   extern int   BFD_get_function_name (bfd_vma address, char *ret_buf, size_t buf_size);
+  extern int   BFD_demangle (const char *module, const char *raw_name, char *und_name, size_t und_size);
 #endif
 
 #endif
