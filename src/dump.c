@@ -1449,6 +1449,22 @@ void print_long_flags (const char *start, size_t indent, int brk_ch)
   trace_putc ('\n');
 }
 
+const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
+{
+  static char buf[300];
+
+  snprintf (buf, sizeof(buf),
+            "ai_flags:    %s\n"
+            "%*sai_family:   %s\n"
+            "%*sai_socktype: %s\n"
+            "%*sai_protocol: %s",
+            ai_flags_decode(hint->ai_flags),
+            indent, "", socket_family(hint->ai_family),
+            indent, "", socket_type(hint->ai_socktype),
+            indent, "", protocol_name(hint->ai_protocol));
+  return (buf);
+}
+
 void dump_addrinfo (const struct addrinfo *ai)
 {
   for ( ; ai; ai = ai->ai_next)

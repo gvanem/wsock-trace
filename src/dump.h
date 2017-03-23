@@ -37,5 +37,6 @@ extern const char *ai_flags_decode (int flags);
 extern const char *getnameinfo_flags_decode (int flags);
 extern const char *event_bits_decode (long flag);
 extern const char *get_sio_name (DWORD code);
+extern const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent);
 
 #endif
