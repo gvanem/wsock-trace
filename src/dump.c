@@ -329,6 +329,10 @@
 #define AI_ALL                    0x00000100
 #endif
 
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV            0x00000008
+#endif
+
 #ifndef AI_ADDRCONFIG
 #define AI_ADDRCONFIG             0x00000400
 #endif
@@ -931,6 +935,7 @@ static const struct search_list ai_flgs[] = {
                     ADD_VALUE (AI_PASSIVE),
                     ADD_VALUE (AI_CANONNAME),
                     ADD_VALUE (AI_NUMERICHOST),
+                    ADD_VALUE (AI_NUMERICSERV),
                     ADD_VALUE (AI_ADDRCONFIG),
                     ADD_VALUE (AI_NON_AUTHORITATIVE),
                     ADD_VALUE (AI_SECURE),
