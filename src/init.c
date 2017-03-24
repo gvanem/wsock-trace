@@ -24,6 +24,7 @@
 #include "dump.h"
 #include "wsock_trace_lua.h"
 #include "geoip.h"
+#include "idna.h"
 #include "smartlist.h"
 #include "stkwalk.h"
 #include "init.h"
@@ -502,11 +503,30 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
               fname, line, key, val);
 }
 
+/*
+ * Handler for '[idna]' section.
+ */
+static void parse_idna_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key,"enable"))
+       g_cfg.idna_enable = atoi (val);
+
+  else if (!stricmp(key,"winidn"))
+       g_cfg.idna_winidn = atoi (val);
+
+  else if (!stricmp(key,"codepage"))
+       g_cfg.idna_cp = atoi (val);
+
+  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
 enum cfg_sections {
      CFG_NONE = 0,
      CFG_CORE,
      CFG_LUA,
-     CFG_GEOIP
+     CFG_GEOIP,
+     CFG_IDNA
    };
 
 static enum cfg_sections lookup_section (const char *section)
@@ -517,6 +537,8 @@ static enum cfg_sections lookup_section (const char *section)
      return (CFG_LUA);
   if (section && !stricmp(section,"geoip"))
      return (CFG_GEOIP);
+  if (section && !stricmp(section,"idna"))
+     return (CFG_IDNA);
   return (CFG_NONE);
 }
 
@@ -558,6 +580,10 @@ static void parse_config_file (FILE *file)
       case CFG_GEOIP:
            parse_geoip_settings (key, val, line);
            strcpy (last_section,"geoip");
+           break;
+      case CFG_IDNA:
+           parse_idna_settings (key, val, line);
+           strcpy (last_section,"idna");
            break;
 
       /* \todo: handle more 'key' / 'val' here by extending lookup_section(). */
@@ -850,6 +876,12 @@ void wsock_trace_init (void)
   {
     g_cfg.pcap.dump_stream = fopen_excl (g_cfg.pcap.dump_fname, "w+b");
     write_pcap_header();
+  }
+
+  if (g_cfg.idna_enable && !IDNA_init(g_cfg.idna_cp, g_cfg.idna_winidn))
+  {
+    g_cfg.idna_enable = FALSE;
+    IDNA_exit();
   }
 
 #if defined(TEST_GEOIP)

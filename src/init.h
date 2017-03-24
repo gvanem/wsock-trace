@@ -79,6 +79,10 @@ struct config_table {
        char   *geoip4_url;
        char   *geoip6_url;
 
+       BOOL    idna_enable;
+       BOOL    idna_winidn;
+       UINT    idna_cp;
+
        BOOL    msvc_only;
        BOOL    mingw_only;
        BOOL    cygwin_only;
