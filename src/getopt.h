@@ -200,15 +200,15 @@ struct option
    `getopt'.  If OPTS begins with `+', or POSIXLY_CORRECT is set in
    the environment, then do not permute arguments.  */
 
-extern int getopt (int ___argc, char *const *___argv, const char *__shortopts)
+extern int __cdecl getopt (int ___argc, char *const *___argv, const char *__shortopts)
        __THROW;
 
 #ifndef __need_getopt
-extern int getopt_long (int ___argc, char *__getopt_argv_const *___argv,
+extern int __cdecl getopt_long (int ___argc, char *__getopt_argv_const *___argv,
 			const char *__shortopts,
 		        const struct option *__longopts, int *__longind)
        __THROW;
-extern int getopt_long_only (int ___argc, char *__getopt_argv_const *___argv,
+extern int __cdecl getopt_long_only (int ___argc, char *__getopt_argv_const *___argv,
 			     const char *__shortopts,
 		             const struct option *__longopts, int *__longind)
        __THROW;

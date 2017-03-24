@@ -1101,7 +1101,7 @@ enum { POSIXLY_CORRECT = 0 };
 enum { POSIXLY_CORRECT = 1 };
 #endif
 
-int
+int __cdecl
 getopt (int argc, char *const *argv, const char *optstring)
 {
   return _getopt_internal (argc, (char **) argv, optstring, NULL, NULL, 0,
