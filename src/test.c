@@ -49,6 +49,7 @@
  */
 #if defined(_MSC_VER)
   #define MS_CDECL __cdecl
+  extern int MS_CDECL getopt (int, char *const *, const char *);
 #else
   #define MS_CDECL
 #endif
@@ -219,7 +220,7 @@ static void test_gethostbyaddr (void)
 static void test_gethostbyname (void)
 {
   TEST_CONDITION (!= 0, gethostbyname ("localhost"));
-  TEST_CONDITION (!= 0, gethostbyname ("google-public-dns-a.google.com"));
+  TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /* Test idna.c functions */
 }
 
 /*
