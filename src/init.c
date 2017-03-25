@@ -30,9 +30,7 @@
 #include "init.h"
 
 struct config_table g_cfg;
-int    fatal_error;
 
-CRITICAL_SECTION           crit_sect;
 CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
@@ -758,6 +756,7 @@ void wsock_trace_exit (void)
      free (g_cfg.geoip6_url);
 
   geoip_exit();
+  IDNA_exit();
 
   DeleteCriticalSection (&crit_sect);
 }

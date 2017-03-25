@@ -34,6 +34,9 @@
 #define IS_SLASH(c)  ((c) == '\\' || (c) == '/')
 #define TOUPPER(c)   toupper ((int)(c))
 
+int              fatal_error;
+CRITICAL_SECTION crit_sect;
+
 char curr_dir  [MAX_PATH] = { '\0' };
 char curr_prog [MAX_PATH] = { '\0' };
 char prog_dir  [MAX_PATH] = { '\0' };
