@@ -1413,8 +1413,11 @@ static void geoip_generate_array (int family, const char *out_file)
 {
   int    len, fam;
   time_t now = time (NULL);
-  FILE  *out = fopen (out_file, "w+t");
+  FILE  *out;
 
+  if (!strcmp(out_file,"-"))
+       out = stdout;
+  else out = fopen (out_file, "w+t");
   if (!out)
   {
     printf ("Failed to create file %s; %s\n", out_file, strerror(errno));
@@ -1498,7 +1501,7 @@ static void show_help (const char *my_name)
   const char *G_option = "";
   const char *G_help   = "";
   const char *g_option = " [-g file]";
-  const char *g_help   = "       -g file: generate IPv4/IPv6 tables to <file>.\n";
+  const char *g_help   = "       -g file: generate IPv4/IPv6 tables to <file> (or '-' for stdout).\n";
 
 #if defined(USE_GEOIP_GENERATED)
   G_option = "G";
@@ -1568,8 +1571,7 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
 
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
        break;
-    if ((p = strrchr(buf,'\n')) != NULL) *p = '\0';
-    if ((p = strrchr(buf,'\r')) != NULL) *p = '\0';
+    strip_nl (buf);
     smartlist_add (list, strdup(buf));
   }
   if (f && f != stdin)
