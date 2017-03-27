@@ -97,7 +97,7 @@ DATA_OBJ = $(OBJ_DIR)\data.obj
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
-all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe install
+all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe install
 	@echo Welcome to Wsock_trace library and example.
 
 $(OBJ_DIR):
@@ -146,7 +146,7 @@ compile_juajit_0:
 # You may have to add a "call vcvarsall.bat $(MACHINE)" here.
 #
 compile_juajit_1:
-	pushd $(LUAJIT_ROOT)\src & \
+	pushd $(LUAJIT_ROOT)\src      &    \
 	if not exist lua51_static.lib (    \
 	   msvcbuild.bat debug static &    \
 	   copy lua51.lib lua51_static.lib )
