@@ -30,10 +30,14 @@ endif
 EX_LIBS += -lole32
 OBJ_DIR = Cygwin_obj
 
-SOURCES = wsock_trace.c init.c common.c cpu.c dump.c geoip.c \
-          in_addr.c smartlist.c stkwalk.c bfd_gcc.c
+SOURCES = wsock_trace.c idna.c init.c common.c cpu.c dump.c \
+          geoip.c geoip-gen4.c geoip-gen6.c in_addr.c smartlist.c \
+          stkwalk.c bfd_gcc.c
 
 OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
+
+GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c getopt.c smartlist.c
+GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a test.exe
 	@echo 'Welcome to Wsock_trace library and example.'
@@ -50,10 +54,20 @@ libwsock_trace.a wsock_trace_cyg.dll: $(OBJECTS)
 	cp --update wsock_trace_cyg.dll $(BIN_TARGET)
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
-	$(CC) $(LDFLAGS) -o $@ $^ $(EX_LIBS) > test.map
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
 
-geoip.exe: geoip.c common.c init.c in_addr.c smartlist.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -o $@ -lws2_32 -lole32 > geoip.map
+idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
+
+geoip.exe: $(GEOIP_SRC) geoip-null.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip.map
+	geoip.exe -4g geoip-gen4.c
+	geoip.exe -6g geoip-gen6.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^ geoip-gen4.c geoip-gen6.c
+	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
+	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
+
+geoip-gen4.c geoip-gen6.c: geoip.exe
 
 run_test: test.exe
 	test.exe
@@ -63,7 +77,8 @@ clean:
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_cyg.dll wsock_trace_cyg.map \
-	      geoip.exe geoip.map test.exe test.map .depend.CygWin
+	      geoip-gen4.c geoip-gen6.c idna.exe idna.map geoip.exe geoip.map \
+	      test.exe test.map .depend.CygWin
 	- rmdir $(OBJ_DIR)
 
 #
