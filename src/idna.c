@@ -23,6 +23,8 @@
 #include "init.h"
 #include "idna.h"
 
+#define USE_WINIDN 1
+
 #ifndef MAX_HOST_LEN
 #define MAX_HOST_LEN  256
 #endif
@@ -34,24 +36,27 @@
 int _idna_winnls_errno = 0;
 int _idna_errno = 0;
 
+static BOOL using_winidn = FALSE;
 static BOOL cp_found = FALSE;
 static UINT cp_requested = 0;
 static UINT cur_cp = CP_ACP;
 
-typedef int (WINAPI *func_IdnToAscii) (DWORD          flags,
-                                       const wchar_t *unicode_chars,
-                                       int            unicode_len,
-                                       wchar_t       *ASCII_chars,
-                                       int            ASCII_len);
+#if defined(USE_WINIDN)
+  typedef int (WINAPI *func_IdnToAscii) (DWORD          flags,
+                                         const wchar_t *unicode_chars,
+                                         int            unicode_len,
+                                         wchar_t       *ASCII_chars,
+                                         int            ASCII_len);
 
-typedef int (WINAPI *func_IdnToUnicode) (DWORD          flags,
-                                         const wchar_t *ASCII_chars,
-                                         int            ASCII_len,
-                                         wchar_t       *unicode_chars,
-                                         int            unicode_len);
+  typedef int (WINAPI *func_IdnToUnicode) (DWORD          flags,
+                                           const wchar_t *ASCII_chars,
+                                           int            ASCII_len,
+                                           wchar_t       *unicode_chars,
+                                           int            unicode_len);
 
-static func_IdnToAscii   p_IdnToAscii = NULL;
-static func_IdnToUnicode p_IdnToUnicode = NULL;
+  static func_IdnToAscii   p_IdnToAscii = NULL;
+  static func_IdnToUnicode p_IdnToUnicode = NULL;
+#endif
 
 /*
  * punycode from RFC 3492
@@ -92,11 +97,11 @@ typedef enum punycode_status {
  * except punycode_bad_input; if not punycode_success, then
  * output_size and output might contain garbage.
  */
-static enum punycode_status punycode_encode (DWORD input_length,
+static enum punycode_status punycode_encode (DWORD        input_length,
                                              const DWORD *input,
-                                             const BYTE *case_flags,
-                                             size_t *output_length,
-                                             char *output);
+                                             const BYTE  *case_flags,
+                                             size_t      *output_length,
+                                             char        *output);
 
 /*
  * punycode_decode() converts Punycode to Unicode.  The input is
@@ -120,11 +125,11 @@ static enum punycode_status punycode_encode (DWORD input_length,
  * decoder will never need to write an output_length greater than
  * input_length, because of how the encoding is defined.
  */
-static enum punycode_status punycode_decode (DWORD input_length,
+static enum punycode_status punycode_decode (DWORD       input_length,
                                              const char *input,
-                                             size_t *output_length,
-                                             DWORD *output,
-                                             BYTE *case_flags);
+                                             size_t     *output_length,
+                                             DWORD      *output,
+                                             BYTE       *case_flags);
 
 /*
  * The following string is used to convert printable
@@ -190,19 +195,7 @@ BOOL IDNA_CheckCodePage (UINT cp)
   return (cp_found);
 }
 
-void IDNA_exit (void)
-{
-#if 0  /* todo */
-  if (mod_WinIdn)
-     FreeLibrary (mod_WinIdn);
-#endif
-}
-
-/*
- * Get active codpage and optionally initialise WinIDN.
- */
-BOOL IDNA_init (WORD cp, BOOL use_winidn)
-{
+#if defined(USE_WINIDN)
   #define ADD_VALUE(dll, func)  { 1, NULL, dll, #func, (void**)&p_##func }
 
   static struct LoadTable dyn_funcs [] = {
@@ -211,14 +204,35 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
                 ADD_VALUE ("kernel32.dll", IdnToAscii),
                 ADD_VALUE ("kernel32.dll", IdnToUnicode)
               };
+#endif
 
+void IDNA_exit (void)
+{
+#if defined(USE_WINIDN)
+  if (using_winidn)
+     unload_dynamic_table (dyn_funcs, DIM(dyn_funcs));
+#endif
+}
+
+/*
+ * Get active codpage and optionally initialise WinIDN.
+ */
+BOOL IDNA_init (WORD cp, BOOL use_winidn)
+{
+#if defined(USE_WINIDN)
   if (use_winidn)
   {
     int num = load_dynamic_table (dyn_funcs, DIM(dyn_funcs));
-    TRACE (3, "num: %d\n", num);
+
+    TRACE (3, "load_dynamic_table() -> %d\n", num);
     if (num < 2)
-       return (FALSE);
+    {
+      unload_dynamic_table (dyn_funcs, DIM(dyn_funcs));
+      return (FALSE);
+    }
+    using_winidn = TRUE;
   }
+#endif
 
   if (cp == 0)
   {
@@ -233,6 +247,22 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
   }
   cur_cp = cp;
   TRACE (3, "IDNA_init: Using codepage %u\n", cp);
+  return (TRUE);
+}
+
+/*
+ * Return FALSE if 'name' is not a plain US-ASCII name.
+ * Thus need to call 'IDNA_convert_to_ACE()'.
+ */
+BOOL IDNA_is_ASCII (const char *name)
+{
+  const BYTE *ch = (const BYTE*) name;
+
+  while (*ch)
+  {
+    if (*ch++ & 0x80)
+       return (FALSE);
+  }
   return (TRUE);
 }
 
@@ -430,6 +460,54 @@ static char *convert_from_ACE (const char *name)
   return (status == punycode_success ? out_buf : NULL);
 }
 
+#if defined(USE_WINIDN) && 0
+/*
+ * Taken from libcurl's idn_win32.c and rewritten.
+ */
+static BOOL win32_idn_to_ascii (const char *in, char **out)
+{
+  BOOL     rc = FALSE;
+  wchar_t *in_w = Curl_convert_UTF8_to_wchar (in);
+
+  if (in_w)
+  {
+    wchar_t punycode [IDN_MAX_LENGTH];
+    int     chars = (*p_IdnToAscii) (0, in_w, -1, punycode, DIM(punycode));
+
+    free (in_w);
+    if (chars)
+    {
+      *out = Curl_convert_wchar_to_UTF8 (punycode);
+      if (*out)
+         rc = TRUE;
+    }
+  }
+  return (rc);
+}
+
+static BOOL win32_ascii_to_idn (const char *in, char **out)
+{
+  BOOL     rc   = FALSE;
+  wchar_t *in_w = Curl_convert_UTF8_to_wchar (in);
+
+  if (in_w)
+  {
+    size_t  in_len = wcslen (in_w) + 1;
+    wchar_t unicode [IDN_MAX_LENGTH];
+    int     chars = (*p_IdnToUnicode) (0, in_w, curlx_uztosi(in_len),
+                                       unicode, DIM(unicode));
+    free (in_w);
+    if (chars)
+    {
+      *out = Curl_convert_wchar_to_UTF8 (unicode);
+      if (*out)
+         rc = TRUE;
+    }
+  }
+  return (rc);
+}
+#endif  /* USE_WINIDN */
+
 /*
  * E.g. convert "www.tromsø.no" to ACE:
  *
@@ -457,11 +535,9 @@ BOOL IDNA_convert_to_ACE (
   size_t len = 0;
   BOOL   rc = FALSE;
 
-#if 0
-  if (p_IdnToAscii)
-  {
-    (*p_IdnToAscii) ();
-  }
+#if defined(USE_WINIDN) && 0
+  if (using_winidn)
+     return win32_idn_to_ascii (name, size);
 #endif
 
   labels = split_labels (name);
@@ -533,11 +609,9 @@ BOOL IDNA_convert_from_ACE (
   int    i;
   BOOL   rc = FALSE;
 
-#if 0
-  if (p_IdnToUnicode)
-  {
-    (*p_IdnToUnicode) ();
-  }
+#if defined(USE_WINIDN) && 0
+  if (using_winidn)
+     return win32_ascii_to_idn (name, size);
 #endif
 
   labels  = split_labels (name);
@@ -873,8 +947,27 @@ static enum punycode_status punycode_decode (DWORD input_length,
 
 #include "getopt.h"
 
-CRITICAL_SECTION crit_sect;
-int              fatal_error;
+struct config_table g_cfg;
+
+#if defined(USE_WINIDN)
+  #define W_GETOPT "w"
+  #define W_OPT    "[-w] "
+  #define W_HELP   "   -w use the Windows Idn functions\n"
+#else
+  #define W_GETOPT ""
+  #define W_OPT    ""
+  #define W_HELP   ""
+#endif
+
+void usage (void)
+{
+  printf ("%s [-d] %s[-c CP-number] hostname | ip-address\n"
+          "   -d debug level, \"-dd\" for more details\n"
+          "%s"
+          "   -c select codepage (active is CP%d)\n",
+          __argv[0], W_OPT, W_HELP, IDNA_GetCodePage());
+  exit (0);
+}
 
 void set_color (const WORD *col)
 {
@@ -892,8 +985,7 @@ int resolve_name (const char *name)
   char   host [100];
   size_t len;
 
-  strncpy (host, name, sizeof(host)-1);
-  host [sizeof(host)-1] = '\0';
+  _strlcpy (host, name, sizeof(host)-1);
   len = sizeof (host);
   if (!IDNA_convert_to_ACE(host, &len))
   {
@@ -920,8 +1012,7 @@ int reverse_resolve (struct in_addr addr)
     return (-1);
   }
 
-  strncpy (host,  he->h_name, sizeof(host)-1);
-  host [sizeof(host)-1] = '\0';
+  _strlcpy (host,  he->h_name, sizeof(host)-1);
   printf ("raw ACE: \"%s\"\n", host);
   len = strlen (host);
   if (!IDNA_convert_from_ACE(host, &len))
@@ -933,15 +1024,6 @@ int reverse_resolve (struct in_addr addr)
   return (0);
 }
 
-void usage (const char *argv0)
-{
-  printf ("%s [-d] [-w] [-c CP-number] hostname | ip-address\n"
-          "   -d debug level, \"-dd\" for more details\n"
-          "   -w use WinIdn\n"
-          "   -c select codepage (active is CP%d)\n", argv0, IDNA_GetCodePage());
-  exit (0);
-}
-
 void sock_init (void)
 {
   WSADATA wsa;
@@ -949,22 +1031,39 @@ void sock_init (void)
 
   if (WSAStartup(ver, &wsa) != 0 || wsa.wVersion < ver)
   {
-    fprintf (stderr, "Winsock init failed; code %s\n", win_strerror(GetLastError()));
+    printf ("Winsock init failed; code %s\n", win_strerror(GetLastError()));
     exit (-1);
   }
 }
 
-struct config_table g_cfg;
+static int do_test (WORD cp, const char *host)
+{
+  struct in_addr addr;
+
+  if (!IDNA_init(cp,g_cfg.idna_winidn))
+  {
+    printf ("%s\n", IDNA_strerror(_idna_errno));
+    return (-1);
+  }
+
+  printf ("Resolving `%s'...", host);
+  fflush (stdout);
+
+  /* If 'host' is an IP-address, try to reverse resolve the address. Unfortunately
+   * I've not found any ACE encoded hostnames with a PTR record, so this may not
+   */
+  addr.s_addr = inet_addr (host);
+  if (addr.s_addr != INADDR_NONE)
+     return reverse_resolve (addr);
+  return resolve_name (host);
+}
 
 int main (int argc, char **argv)
 {
-  struct in_addr addr;
-  char   host [100];
-  WORD   cp = 0;
-  int    ch;
-  const char *prog = argv[0];
+  WORD cp = 0;
+  int  ch, rc;
 
-  while ((ch = getopt(argc, argv, "c:dwh?")) != EOF)
+  while ((ch = getopt(argc, argv, "c:d" W_GETOPT "h?")) != EOF)
      switch (ch)
      {
        case 'c':
@@ -984,38 +1083,25 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            usage (prog);
+            usage();
             break;
   }
 
   argc -= optind;
   argv += optind;
   if (!*argv)
-     usage (prog);
+     usage();
 
   sock_init();
   common_init();
   g_cfg.trace_stream = stdout;
   g_cfg.show_caller = TRUE;
-
   InitializeCriticalSection (&crit_sect);
 
-  if (!IDNA_init(cp,g_cfg.idna_winidn))
-  {
-    printf ("%s\n", IDNA_strerror(_idna_errno));
-    return (-1);
-  }
+  rc = do_test (cp, argv[0]);
 
-  strncpy (host, argv[0], sizeof(host));
-  printf ("Resolving `%s'...", host);
-  fflush (stdout);
+  common_exit();
 
-  /* If 'host' is an IP-address, try to reverse resolve the address. Unfortunately
-   * I've not found any ACE encoded hostnames with a PTR record, so this may not
-   */
-  addr.s_addr = inet_addr (host);
-  if (addr.s_addr != INADDR_NONE)
-     return reverse_resolve (addr);
-  return resolve_name (host);
+  return (rc);
 }
 #endif  /* TEST_IDNA */
