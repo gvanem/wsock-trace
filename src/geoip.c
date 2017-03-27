@@ -29,26 +29,12 @@ static int geoip6_parse_entry (char *buf, unsigned *line, DWORD *num);
 static int geoip4_add_entry (DWORD low, DWORD high, const char *country);
 static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *high, const char *country);
 
-struct ipv4_node {
-       DWORD low;
-       DWORD high;
-       char  country[3];
-     };
-
-struct ipv6_node {
-       struct in6_addr low;
-       struct in6_addr high;
-       char            country[3];
-     };
-
-static BOOL use_geoip_generated = FALSE;
-
 /*
  * Deallocate a smartlist and associated storage in the list's elements.
  */
 static void smartlist_free_all (smartlist_t *sl)
 {
-  if (sl && !use_geoip_generated)
+  if (sl && !g_cfg.geoip_use_generated)
   {
     int i, max = smartlist_len (sl);
 
@@ -58,12 +44,12 @@ static void smartlist_free_all (smartlist_t *sl)
   smartlist_free (sl);
 }
 
-#if defined(USE_GEOIP_GENERATED)
 /*
  * Used to make the smartlists for the fixed arrays 'ipv4_gen_array' and 'ipv6_gen_array'.
  * Since we know their sizes, just allocate the smartlist size once.
+ * Called from 'gen-geoip4.c' and 'geoip-gen6.c'
  */
-static smartlist_t *smartlist_new_fixed (void *start, size_t el_size, unsigned num)
+smartlist_t *geoip_smartlist_fixed (void *start, size_t el_size, unsigned num)
 {
   smartlist_t *sl = smartlist_new();
   char        *ofs = (char*) start;
@@ -74,7 +60,6 @@ static smartlist_t *smartlist_new_fixed (void *start, size_t el_size, unsigned n
      smartlist_add (sl, ofs);
   return (sl);
 }
-#endif /* USE_GEOIP_GENERATED */
 
 /*
  * Geoip specific stuff.
@@ -214,7 +199,39 @@ void geoip_ipv6_add_specials (void)
 }
 
 /*
- * Open and parse either a GeoIP file with either:
+ * Load pre-generated data from GeoIP files.
+ *   IPv4-address (AF_INET) only or
+ *   IPv6-address (AF_INET6) only.
+ *
+ * Watcom-C is not able to compile the huge generated geoip-gen6.c.
+ * Thus no 'geoip_smartlist_fixed_ipv4/6()' for Watcom :-(
+ */
+DWORD geoip_load_data (int family)
+{
+  DWORD num = 0;
+
+  if (family == AF_INET)
+  {
+    geoip_ipv4_entries = geoip_smartlist_fixed_ipv4();
+    num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
+    TRACE (2, "Using %lu fixed IPv4 records instead of parsing %s.\n", num, g_cfg.geoip4_file);
+  }
+  else if (family == AF_INET6)
+  {
+    geoip_ipv6_entries = geoip_smartlist_fixed_ipv6();
+    num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
+    TRACE (2, "Using %lu fixed IPv6 records instead of parsing %s.\n", num, g_cfg.geoip6_file);
+  }
+  else
+  {
+    TRACE (0, "Only address-families AF_INET and AF_INET6 supported.\n");
+    return (0);
+  }
+  return (num);
+}
+
+/*
+ * Open and parse a GeoIP file with either:
  *   IPv4-address (AF_INET) only or
  *   IPv6-address (AF_INET6) only.
  *
@@ -472,7 +489,7 @@ int geoip_addr_is_global (const struct in_addr *ip4, const struct in6_addr *ip6)
    else if (ip6)
    {
      /*
-      * As IANA does not appy masks > 8-bit for Global Unicast block,
+      * As IANA does not apply masks > 8-bit for Global Unicast block,
       * only the first 8-bit are significant for this test.
       */
      if ((ip6->s6_bytes[0] & 0xE0) == 0x20)
@@ -514,22 +531,6 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
   smartlist_add (geoip_ipv6_entries, entry);
   return (1);
 }
-
-/*
- * To compile a version of geoip.c using '-DUSE_GEOIP_GENERATED', is
- * bit of an "chicken and egg" problem. These 2 commands:
- *   geoip.exe -g4 > geoip-gen4.c
- *   geoip.exe -g6 > geoip-gen6.c
- *
- * will generate these files. Then geoip.c must be compiled again with
- * '-DUSE_GEOIP_GENERATED' to make use of this faster feature.
- */
-#if defined(USE_GEOIP_GENERATED)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
-
-  #include "geoip-gen4.c"
-  #include "geoip-gen6.c"
-#endif
 
 /*
  * Given an IPv4 address on network order, return an ISO-3166 2 letter
@@ -866,6 +867,8 @@ const char *geoip_get_long_name_by_A2 (const char *short_name)
   if (!short_name)
      return ("?");
 
+  /* \todo: rewrite this into using bsearch().
+   */
   for (i = 0; i < num; i++, list++)
   {
     if (!strnicmp(list->short_name,short_name, sizeof(list->short_name)))
@@ -885,6 +888,8 @@ const char *geoip_get_long_name_by_id (int number)
   if (number == 0)
      return ("?");
 
+  /* \todo: rewrite this into using bsearch().
+   */
   for (i = 0; i < num; i++, list++)
   {
     if (list->country_number == number)
@@ -1124,7 +1129,7 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr, const struct ipv4_n
 
 static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
 {
-  int i, len, max = smartlist_len (geoip_ipv4_entries);
+  int i, len, max = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
   DWORD missing_blocks = 0;
   DWORD missing_addr = 0;
   long  diff = 0;
@@ -1225,7 +1230,7 @@ static int check_ipv6_unallocated (FILE *out, int dump_cidr, const struct ipv6_n
 
 static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
 {
-  int i, len, max = smartlist_len (geoip_ipv6_entries);
+  int i, len, max = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
   uint64 missing_blocks = 0;
   uint64 missing_addr = 0;
   uint64 diff;
@@ -1408,7 +1413,6 @@ static void test_addr6 (const char *ip6_addr)
     printf ("Invalid address: %s.\n", get_ws_error());
 }
 
-#if !defined(USE_GEOIP_GENERATED)
 static void geoip_generate_array (int family, const char *out_file)
 {
   int    len, fam;
@@ -1436,7 +1440,7 @@ static void geoip_generate_array (int family, const char *out_file)
   }
   else
   {
-    printf ("'family must be AF_INET or AF_INET6.\n");
+    printf ("family must be AF_INET or AF_INET6.\n");
     return;
   }
 
@@ -1445,7 +1449,11 @@ static void geoip_generate_array (int family, const char *out_file)
            " * This file was generated at %.24s.\n"
            " * by the Makefile command: \"geoip.exe -%cg %s\"\n"
            " * DO NOT EDIT!\n"
-           " */\n", ctime(&now), fam, out_file);
+           " */\n"
+           "#include \"geoip.h\"\n"
+           "\n"
+           "GCC_PRAGMA (GCC diagnostic ignored \"-Wmissing-braces\")\n"
+           "\n", ctime(&now), fam, out_file);
 
   fprintf (out, "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
 
@@ -1456,13 +1464,12 @@ static void geoip_generate_array (int family, const char *out_file)
   fprintf (out,
            "};\n"
            "\n"
-           "static smartlist_t *smartlist_new_fixed_ipv%c (void)\n"
+           "smartlist_t *geoip_smartlist_fixed_ipv%c (void)\n"
            "{\n"
-           "  return smartlist_new_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
+           "  return geoip_smartlist_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
            "}\n\n", fam, fam, fam, len);
   fclose (out);
 }
-#endif  /* USE_GEOIP_GENERATED */
 
 /*
  * A random integer in range [a..b].
@@ -1498,29 +1505,17 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 
 static void show_help (const char *my_name)
 {
-  const char *G_option = "";
-  const char *G_help   = "";
-  const char *g_option = " [-g file]";
-  const char *g_help   = "       -g file: generate IPv4/IPv6 tables to <file> (or '-' for stdout).\n";
-
-#if defined(USE_GEOIP_GENERATED)
-  G_option = "G";
-  G_help   = "       -G:      Use generated built-in IPv4/IPv6 arrays.\n";
-  g_option = "";
-  g_help   = "";
-#endif
-
-  printf ("Usage: %s [-cd%snruh]%s <-4|-6> address(es)\n"
+  printf ("Usage: %s [-cdGnruh] [-g file] <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
           "       -d:      dump address entries for countries and count of blocks.\n"
-          "%s"
-          "%s"
+          "       -G:      Use generated built-in IPv4/IPv6 arrays.\n"
+          "       -g file: generate IPv4/IPv6 tables to <file> (or '-' for stdout).\n"
           "       -n #:    number of loops for random test.\n"
           "       -r:      random test for '-n' rounds (default 10).\n"
           "       -u:      test updating of geoip files.\n"
           "       -4:      test IPv4 address(es).\n"
           "       -6:      test IPv6 address(es).\n"
-          "       -h:      this help.\n", my_name, G_option, g_option, G_help, g_help);
+          "       -h:      this help.\n", my_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\"\n");
   wsock_trace_exit();
@@ -1567,7 +1562,7 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
 {
   while (f && !feof(f))
   {
-    char *p, buf[512];
+    char buf[512];
 
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
        break;
@@ -1609,24 +1604,14 @@ static void free_argv_list (smartlist_t *sl)
 int main (int argc, char **argv)
 {
   int c, do_cidr = 0,  do_4 = 0, do_6 = 0;
-  int do_update = 0, do_dump = 0, do_rand = 0;
+  int do_update = 0, do_dump = 0, do_rand = 0, do_generate = 0;
   int loops = 10;
   const char *my_name = argv[0];
-
-#if defined(USE_GEOIP_GENERATED)
-  #define G_OPT "G"
-  #define g_OPT ""
-#else
-  #define G_OPT ""
-  #define g_OPT "g:"
-
-  int         do_generate = 0;
   const char *g_file = NULL;
-#endif
 
   wsock_trace_init();
 
-  while ((c = getopt (argc, argv, "h?cd" g_OPT G_OPT "n:ru46")) != EOF)
+  while ((c = getopt (argc, argv, "h?cdGg:n:ru46")) != EOF)
     switch (c)
     {
       case '?':
@@ -1639,19 +1624,16 @@ int main (int argc, char **argv)
       case 'd':
            do_dump++;
            break;
-#if defined(USE_GEOIP_GENERATED)
-      case 'G':
-           use_geoip_generated = TRUE;
-           geoip_exit();
-           geoip_ipv4_entries = smartlist_new_fixed_ipv4();
-           geoip_ipv6_entries = smartlist_new_fixed_ipv6();
-           break;
-#else
       case 'g':
            do_generate++;
            g_file = optarg;
            break;
-#endif
+      case 'G':
+           geoip_exit();
+           g_cfg.geoip_use_generated = TRUE;
+           geoip_load_data (AF_INET);
+           geoip_load_data (AF_INET6);
+           break;
       case 'n':
            loops = atoi (optarg);
            break;
@@ -1679,7 +1661,7 @@ int main (int argc, char **argv)
     if (do_6)
        geoip_update_file (AF_INET6, FALSE);
   }
-  else if (!use_geoip_generated)
+  else if (!g_cfg.geoip_use_generated)
   {
     if (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file))
     {
@@ -1698,7 +1680,6 @@ int main (int argc, char **argv)
     }
   }
 
-#if !defined(USE_GEOIP_GENERATED)
   if (do_generate)
   {
     if (do_4)
@@ -1707,7 +1688,6 @@ int main (int argc, char **argv)
        geoip_generate_array (AF_INET6, g_file);
     return (0);
   }
-#endif
 
   argc -= optind;
   argv += optind;
