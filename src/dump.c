@@ -11,6 +11,7 @@
 #include "in_addr.h"
 #include "init.h"
 #include "geoip.h"
+#include "idna.h"
 #include "wsock_trace.h"
 
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
@@ -345,6 +346,10 @@
 #define AI_NON_AUTHORITATIVE      0x00004000
 #endif
 
+#ifndef AI_SECURE
+#define AI_SECURE                 0x00008000
+#endif
+
 #ifndef AI_RETURN_PREFERRED_NAMES
 #define AI_RETURN_PREFERRED_NAMES 0x00010000
 #endif
@@ -357,8 +362,8 @@
 #define AI_FILESERVER             0x00040000
 #endif
 
-#ifndef AI_SECURE
-#define AI_SECURE                 0x00008000
+#ifndef AI_DISABLE_IDN_ENCODING
+#define AI_DISABLE_IDN_ENCODING   0x00080000
 #endif
 
 /*
@@ -941,6 +946,7 @@ static const struct search_list ai_flgs[] = {
                     ADD_VALUE (AI_SECURE),
                     ADD_VALUE (AI_RETURN_PREFERRED_NAMES),
                     ADD_VALUE (AI_FILESERVER),
+                    ADD_VALUE (AI_DISABLE_IDN_ENCODING),
                     ADD_VALUE (AI_ALL),
                     ADD_VALUE (AI_V4MAPPED),
                     ADD_VALUE (AI_FQDN)
@@ -1838,6 +1844,24 @@ static void trace_printf_cc (const char            *country_code,
   ARGSUSED (location);
 }
 
+static void check_and_dump_idna (const char *name)
+{
+  char   buf [256] = "?";
+  size_t size;
+
+  if (!g_cfg.idna_enable || !name || !strstr(name,"xn--"))
+     return;
+
+  trace_indent (g_cfg.trace_indent+2);
+  trace_puts ("from ACE: ");
+
+  _strlcpy (buf, name, sizeof(buf));
+  size = strlen (buf);
+  if (IDNA_convert_from_ACE(buf, &size))
+       trace_printf ("%s\n", buf);
+  else trace_printf ("failed for %s: %s\n", name, IDNA_strerror(_idna_errno));
+}
+
 void dump_countries (int type, const char **addresses)
 {
   int i;
@@ -1959,6 +1983,7 @@ void dump_nameinfo (const char *host, const char *serv, DWORD flags)
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4name: %s, serv: %s~0\n",
                 host ? host : "NULL", serv ? serv : "NULL");
+  check_and_dump_idna (host);
 }
 
 void dump_hostent (const struct hostent *host)
@@ -1967,6 +1992,8 @@ void dump_hostent (const struct hostent *host)
   trace_printf ("~4name: %s, addrtype: %s, addr_list: %s\n",
                 host->h_name, socket_family(host->h_addrtype),
                 dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list));
+
+  check_and_dump_idna (host->h_name);
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("aliases: %s~0\n", dump_aliases(host->h_aliases));
