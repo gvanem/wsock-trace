@@ -5,6 +5,7 @@
  * and rewritten to support MSVC-debug mode.
  */
 #include <assert.h>
+#include <limits.h>
 
 #define EXPOSE_SMARTLIST_DETAILS
 
