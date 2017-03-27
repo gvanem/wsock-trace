@@ -73,6 +73,7 @@ struct config_table {
        WORD    color_data;
 
        BOOL    geoip_enable;
+       BOOL    geoip_use_generated;
        int     geoip_max_days;
        char   *geoip4_file;
        char   *geoip6_file;

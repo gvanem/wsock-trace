@@ -482,6 +482,9 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   if (!stricmp(key,"enable"))
        g_cfg.geoip_enable = (*val > '0') ? 1 : 0;
 
+  else if (!stricmp(key,"use_generated"))
+       g_cfg.geoip_use_generated = atoi (val);
+
   else if (!stricmp(key,"geoip4_file"))
        g_cfg.geoip4_file = strdup (val);
 
@@ -889,8 +892,18 @@ void wsock_trace_init (void)
 
   if (g_cfg.geoip_enable && (g_cfg.trace_level > 0 || open_geoip))
   {
-    DWORD num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
-    DWORD num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
+    DWORD num4, num6;
+
+    if (!open_geoip && g_cfg.geoip_use_generated)
+    {
+      num4 = geoip_load_data (AF_INET);
+      num6 = geoip_load_data (AF_INET6);
+    }
+    else
+    {
+      num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
+      num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
+    }
 
 #if defined(TEST_GEOIP)
     ARGSUSED (num4);
