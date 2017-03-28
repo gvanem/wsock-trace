@@ -29,6 +29,22 @@
 static const char hex_chars[] = "0123456789abcdef";
 
 /**
+ * Check if 'str' is simply an IPv4 address.
+ */
+BOOL is_ip4_addr (const char *str)
+{
+  int ch;
+
+  while ((ch = *str++) != 0)
+  {
+    if (isdigit(ch) || ch == '.')
+       continue;
+    return (FALSE);
+  }
+  return (TRUE);
+}
+
+/**
  * Convert a network format address to presentation format.
  *
  * \retval pointer to presentation format address (`dst'),
@@ -290,6 +306,9 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
   const   char *curtok;
   int     ch, saw_xdigit;
   u_int   val;
+
+  if (is_ip4_addr(src)) /* A plain IPv4 address is illegal here */
+     goto inval;
 
   memset (tmp, 0, sizeof(tmp));
   endp   = tmp + sizeof(tmp);

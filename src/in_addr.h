@@ -30,6 +30,8 @@
   EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, PVOID addr_buf);
 #endif
 
+extern BOOL       is_ip4_addr (const char *str);
+
 extern char       *wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
 extern int         wsock_trace_inet_pton (int family, const char *addr, void *dst);
 
