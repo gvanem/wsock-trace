@@ -536,10 +536,10 @@ void load_ws2_funcs (void)
       g_cfg.trace_caller = 0;
 
   if (p_inet_pton == NULL)
-      p_inet_pton = inet_pton;
+      p_inet_pton = (func_inet_pton) inet_pton;
 
   if (p_inet_ntop == NULL)
-      p_inet_ntop = inet_ntop;
+      p_inet_ntop = (func_inet_ntop) inet_ntop;
 }
 
 struct LoadTable *find_ws2_func_by_name (const char *func)
@@ -2260,12 +2260,7 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
   WSTRACE ("gethostbyname (\"%s\") --> %s", name, ptr_or_error(rc));
 
   if (rc && !exclude_this && g_cfg.dump_hostent)
-  {
-    dump_hostent (rc);
-
-    /* \todo: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
-     */
-  }
+     dump_hostent (rc);
 
   if (rc && !exclude_this && g_cfg.geoip_enable)
      dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
@@ -2492,12 +2487,7 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   if (!exclude_this)
   {
     if (rc == 0 && g_cfg.dump_nameinfo)
-    {
-      dump_nameinfo (host, serv_buf, flags);
-
-      /* \todo: Turn IDNA names like "www.xn--seghr-kiac.no" into sensible local names.
-       */
-    }
+       dump_nameinfo (host, serv_buf, flags);
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (sa);
@@ -2513,12 +2503,32 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
   int rc;
 
   INIT_PTR (p_getaddrinfo);
-  rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
 
   ENTER_CRIT();
 
-  WSTRACE ("getaddrinfo (%s, %s, ...) --> %s",
-           host_name, serv_name, get_error(rc));
+  rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
+
+#if 0
+  if (rc != 0 && g_cfg.idna_enable && g_cfg.idna_helper && !IDNA_is_ASCII(host_name))
+  {
+    char   buf [256] = "?";
+    size_t size;
+
+    _strlcpy (buf, host_name, sizeof(buf));
+    size = strlen (buf);
+    if (IDNA_convert_to_ACE(buf,&size))
+    {
+      host_name = buf;
+      rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
+    }
+  }
+#endif
+
+  WSTRACE ("getaddrinfo (%s, %s, <hints>, ...) --> %s\n"
+           "%*shints: %s",
+           host_name, serv_name, get_error(rc),
+           g_cfg.trace_indent+4, "",
+           hints ? get_addrinfo_hint(hints,g_cfg.trace_indent+3+sizeof("hints: ")) : "<none>");
 
   if (rc == 0 && *res && !exclude_this)
   {
