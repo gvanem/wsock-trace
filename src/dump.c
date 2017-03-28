@@ -1846,7 +1846,7 @@ static void trace_printf_cc (const char            *country_code,
 
 static void check_and_dump_idna (const char *name)
 {
-  char   buf [256] = "?";
+  char   buf [MAX_HOST_LEN] = "?";
   size_t size;
 
   if (!g_cfg.idna_enable || !name || !strstr(name,"xn--"))

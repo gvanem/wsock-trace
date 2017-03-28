@@ -25,14 +25,6 @@
 
 #define USE_WINIDN 1
 
-#ifndef MAX_HOST_LEN
-#define MAX_HOST_LEN  256
-#endif
-
-#ifndef MAX_HOST_LABELS
-#define MAX_HOST_LABELS  8
-#endif
-
 int _idna_winnls_errno = 0;
 int _idna_errno = 0;
 

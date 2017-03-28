@@ -228,6 +228,14 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
 #define SIZEOF(x)       (int) sizeof(x)
 #define ARGSUSED(foo)   (void)foo
 
+#ifndef MAX_HOST_LEN
+#define MAX_HOST_LEN  256
+#endif
+
+#ifndef MAX_HOST_LABELS
+#define MAX_HOST_LABELS  8
+#endif
+
 #if defined(_MSC_VER)
   #ifndef _CRTDBG_MAP_ALLOC
   #define strdup       _strdup
