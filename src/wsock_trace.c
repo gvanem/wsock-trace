@@ -2511,7 +2511,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 #if 0
   if (rc != 0 && g_cfg.idna_enable && g_cfg.idna_helper && !IDNA_is_ASCII(host_name))
   {
-    char   buf [256] = "?";
+    char   buf [MAX_HOST_LEN] = "?";
     size_t size;
 
     _strlcpy (buf, host_name, sizeof(buf));
