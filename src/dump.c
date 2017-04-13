@@ -2063,6 +2063,10 @@ void dump_events (const WSANETWORKEVENTS *events)
 #define WSAID_WSASENDMSG { 0xA441E712, 0x754F, 0x43CA, {0x84,0xA7,0x0D,0xEE,0x44,0xCF,0x60,0x6D }}
 #endif
 
+#ifndef WSAID_WSAPOLL
+#define WSAID_WSAPOLL { 0x18C76F85, 0xDC66, 0x4964, {0x97,0x2E,0x23,0xC2,0x72,0x38,0x31,0x2B }}
+#endif
+
 static const struct GUID_search_list extension_guids[] = {
                     ADD_VALUE (WSAID_ACCEPTEX),
                     ADD_VALUE (WSAID_CONNECTEX),
@@ -2071,7 +2075,8 @@ static const struct GUID_search_list extension_guids[] = {
                     ADD_VALUE (WSAID_TRANSMITFILE),
                     ADD_VALUE (WSAID_TRANSMITPACKETS),
                     ADD_VALUE (WSAID_WSARECVMSG),
-                    ADD_VALUE (WSAID_WSASENDMSG)
+                    ADD_VALUE (WSAID_WSASENDMSG),
+                    ADD_VALUE (WSAID_WSAPOLL)
                   };
 
 void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
