@@ -66,6 +66,10 @@ struct config_table {
        BOOL    use_toolhlp32;
        BOOL    use_ole32;
        BOOL    pdb_report;
+       DWORD   recv_delay;
+       DWORD   send_delay;
+       DWORD   select_delay;
+       DWORD   poll_delay;
        WORD    color_file;
        WORD    color_time;
        WORD    color_func;

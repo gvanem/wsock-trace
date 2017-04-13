@@ -380,6 +380,18 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"pdb_report"))
      g_cfg.pdb_report = atoi (val);
 
+  else if (!stricmp(key,"recv_delay"))
+     g_cfg.recv_delay = (DWORD) _atoi64 (val);
+
+  else if (!stricmp(key,"send_delay"))
+     g_cfg.send_delay = (DWORD) _atoi64 (val);
+
+  else if (!stricmp(key,"select_delay"))
+     g_cfg.select_delay = (DWORD) _atoi64 (val);
+
+  else if (!stricmp(key,"poll_delay"))
+     g_cfg.poll_delay = (DWORD) _atoi64 (val);
+
   else if (!stricmp(key,"use_toolhlp32"))
      g_cfg.use_toolhlp32 = atoi (val);
 

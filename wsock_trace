@@ -37,6 +37,18 @@ trace_time = relative              # Print timestamps at each trace-line. One of
 
 pdb_report  = 1                    # Report PDB-symbols information found in all modules
 
+#
+# For testing too fast programs:
+#   delay all receive, transmit, select() and WSAPoll() calls the
+#   specified number of milli-seconds.
+#
+#  Note: The delay happens even if 'trace_level = 0'.
+#
+recv_delay   = 0                   # For recv(), recvfrom(), WSARecv(), WSARecvEx(), WSARecvFrom() and WSARecvDisconnect()
+send_delay   = 0                   # For send(), sendto(), WSASend() and WSASendTo()
+select_delay = 0                   # For select()
+poll_delay   = 0                   # For WSAPoll()
+
 pcap_enable = 0
 pcap_dump   = %TEMP%\wstrace.pcap
 

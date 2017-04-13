@@ -526,6 +526,13 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "ws2_32.dll", gai_strerrorA),
               ADD_VALUE (1, "ws2_32.dll", gai_strerrorW),
 #endif
+
+#if 0  /* to-do? Allthough 'WSASendMsg()' seems to be an 'extension-function'
+        * accessible only (?) via the 'WSAID_WSASENDMSG' GUID, it is present in
+        * libws2_32.a in some MinGW distros
+        */
+              ADD_VALUE (1, "ws2_32.dll", WSASendMsg),
+#endif
             };
 
 void load_ws2_funcs (void)
@@ -1425,6 +1432,9 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
     }
   }
 
+  if (g_cfg.select_delay)
+     SleepEx (g_cfg.select_delay, FALSE);
+
   LEAVE_CRIT();
   return (rc);
 }
@@ -1494,6 +1504,9 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
        dump_data (buf, rc);
   }
 
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
@@ -1545,6 +1558,9 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
        dump_countries_sockaddr (from);
   }
 
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
@@ -1581,6 +1597,9 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
     if (g_cfg.dump_data)
        dump_data (buf, buf_len);
   }
+
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
 
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, TRUE);
@@ -1623,6 +1642,9 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
        dump_countries_sockaddr (to);
   }
 
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
+
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, TRUE);
 
@@ -1662,6 +1684,9 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
   }
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
 
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, FALSE);
@@ -1712,6 +1737,9 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
        dump_countries_sockaddr (from);
   }
 
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
@@ -1750,6 +1778,9 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
        dump_data (buf, rc);
   }
 
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
@@ -1771,6 +1802,9 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 
   if (!exclude_this && rc == NO_ERROR && g_cfg.dump_data)
      dump_data (disconnect_data->buf, disconnect_data->len);
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
 
   LEAVE_CRIT();
   return (rc);
@@ -1825,6 +1859,9 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
        dump_wsabuf (bufs, num_bufs);
   }
 
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
+
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
@@ -1873,6 +1910,9 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (to);
   }
+
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
 
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, TRUE);
@@ -2058,6 +2098,9 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
     else trace_puts ("None!\n");
     trace_puts ("~0");
   }
+
+  if (g_cfg.poll_delay)
+     SleepEx (g_cfg.poll_delay, FALSE);
 
   LEAVE_CRIT();
 
