@@ -12,9 +12,6 @@ USE_DEF_FILE = 1
 USE_LUA     = 0
 LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
 
-LIB_TARGET = $(VCINSTALLDIR)lib
-BIN_TARGET = $(VCINSTALLDIR)bin
-
 #
 # Set '%WANT_64_BITS%=1' to build a 64-bit version. Adds a '_x64' suffix to
 # the DLL and lib.
@@ -23,9 +20,13 @@ BIN_TARGET = $(VCINSTALLDIR)bin
 X_SUFFIX = _x64
 MACHINE = x64
 BITNESS = 64
+LIB_TARGET = $(VCINSTALLDIR)lib\amd64
+BIN_TARGET = $(VCINSTALLDIR)bin\amd64
 !else
 MACHINE = x86
 BITNESS = 32
+LIB_TARGET = $(VCINSTALLDIR)lib
+BIN_TARGET = $(VCINSTALLDIR)bin
 !endif
 
 #
@@ -115,8 +116,8 @@ install:
 	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
 
 uninstall:
-	-del $(LIB_TARGET)\$(WSOCK_LIB)
-	-del $(BIN_TARGET)\$(WSOCK_DLL)
+	-del "$(LIB_TARGET)\$(WSOCK_LIB)"
+	-del "$(BIN_TARGET)\$(WSOCK_DLL)"
 
 geoip-gen4.c geoip-gen6.c: geoip.exe
 
