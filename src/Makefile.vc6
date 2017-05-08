@@ -111,8 +111,8 @@ $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(
 	@del $(WSOCK_LIB:.lib=.exp)
 
 install:
-	copy $(WSOCK_LIB)               "$(LIB_TARGET)"
-	copy $(WSOCK_DLL)               "$(BIN_TARGET)"
+	copy $(WSOCK_LIB) "$(LIB_TARGET)"
+	copy $(WSOCK_DLL) "$(BIN_TARGET)"
 	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
 
 uninstall:
