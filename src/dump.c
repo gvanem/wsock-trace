@@ -1817,16 +1817,30 @@ static const char *dump_aliases (char **aliases)
 }
 
 /*
- * \todo: Optionally use MaxMind's Geoip*.mmdb files and print the location (city) too.
+ * \todo:
+ *   Optionally use MaxMind's Geoip*.mmdb files and print the location (city) too.
+ *   This will have to be coded in 'geoip_get_location_by_ipv4()' and 'geoip_get_location_by_ipv6()'.
  */
-static void trace_printf_cc (const char            *country_code,
-                             const char            *location,
-                             const struct in_addr  *a4,
-                             const struct in6_addr *a6,
-                             const void            *next_addr)
+static const char *cc_last = NULL;
+static BOOL        cc_equal = FALSE;
+
+static int trace_printf_cc (const char            *country_code,
+                            const char            *location,
+                            const struct in_addr  *a4,
+                            const struct in6_addr *a6)
 {
-  if (country_code)
+  if (country_code && *country_code)
+  {
+   /* Print Country-code only once for a host with multiple addresses.
+    * Like with 'www.google.no':
+    *   193.212.4.117, 193.212.4.120, 193.212.4.123, 193.212.4.119,
+    *   193.212.4.122, 193.212.4.121, 193.212.4.116, 193.212.4.118
+    */
+    cc_equal = (cc_last && !strcmp(country_code,cc_last));
+    if (!cc_equal)
        trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
+    cc_last = country_code;
+  }
   else if (geoip_addr_is_zero(a4,a6))
        trace_puts ("NULL-addr");
   else if (geoip_addr_is_multicast(a4,a6))
@@ -1837,11 +1851,8 @@ static void trace_printf_cc (const char            *country_code,
        trace_puts ("Not global");
   else trace_puts ("None");
 
-  if (next_addr)
-       trace_puts (", ");
-  else trace_putc ('.');
-
   ARGSUSED (location);
+  return (!cc_equal);
 }
 
 static void check_and_dump_idna (const char *name)
@@ -1870,6 +1881,8 @@ void dump_countries (int type, const char **addresses)
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
+  cc_last = NULL;
+  cc_equal = FALSE;
 
   for (i = 0; addresses && addresses[i]; i++)
   {
@@ -1892,14 +1905,15 @@ void dump_countries (int type, const char **addresses)
     }
     else
     {
-      trace_printf ("Unknown family: %d.", type);
+      trace_printf ("Unknown family: %d", type);
       break;
     }
-    trace_printf_cc (cc, loc, a4, a6, addresses[i+1]);
+    if (trace_printf_cc(cc, loc, a4, a6) && addresses[i+1])
+       trace_puts (", ");
   }
   if (i == 0)
        trace_puts ("None!?~0\n");
-  else trace_puts ("~0\n");
+  else trace_puts ("~0.\n");
 
   WSAError_save_restore (1);
 }
@@ -1943,6 +1957,8 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
+  cc_last = NULL;
+  cc_equal = FALSE;
 
   for (num = 0; ai; ai = ai->ai_next, num++)
   {
@@ -1955,25 +1971,27 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
     {
       sa4 = (const struct sockaddr_in*) ai->ai_addr;
       cc  = geoip_get_country_by_ipv4 (&sa4->sin_addr);
+  //  loc = geoip_get_location_by_ipv4 (sa4);
     }
     else if (ai->ai_family == AF_INET6)
     {
       sa6 = (const struct sockaddr_in6*) ai->ai_addr;
       cc  = geoip_get_country_by_ipv6 (&sa6->sin6_addr);
+  //  loc = geoip_get_location_by_ipv6 (sa6);
     }
     else
     {
-      trace_printf ("Unknown family: %d.", ai->ai_family);
+      trace_printf ("Unknown family: %d", ai->ai_family);
       break;
     }
-    trace_printf_cc (cc, loc,
-                     sa4 ? &sa4->sin_addr : NULL,
-                     sa6 ? &sa6->sin6_addr : NULL,
-                     ai->ai_next);
+    if (trace_printf_cc(cc, loc,
+                        sa4 ? &sa4->sin_addr : NULL,
+                        sa6 ? &sa6->sin6_addr : NULL) && ai->ai_next)
+      trace_puts (", ");
   }
   if (num == 0)
        trace_puts ("None!?~0\n");
-  else trace_puts ("~0\n");
+  else trace_puts ("~0.\n");
 
   WSAError_save_restore (1);
 }
