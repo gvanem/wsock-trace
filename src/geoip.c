@@ -24,6 +24,10 @@
   #define _utime(path, buf) utime (path, buf)
 #endif
 
+/* Number of calls for 'smartlist_bsearch()' to find an IPv4 or IPv6 entry.
+ */
+static DWORD num_4_compare, num_6_compare;
+
 static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num);
 static int geoip6_parse_entry (char *buf, unsigned *line, DWORD *num);
 static int geoip4_add_entry (DWORD low, DWORD high, const char *country);
@@ -94,12 +98,14 @@ static int geoip_ipv4_compare_entries (const void **_a, const void **_b)
 
 /*
  * smartlist_bsearch() helper: return -1, 1, or 0 based on comparison of an IP (a pointer
- * to a DWORD in host order) to a 'ipv4_node' element.
+ * to a DWORD in host order) to a 'struct ipv4_node' element.
  */
 static int geoip_ipv4_compare_key_to_entry (const void *key, const void **member)
 {
   const struct ipv4_node *entry = *member;
   const DWORD             addr  = *(DWORD*) key;
+
+  num_4_compare++;
 
   if (addr < entry->low)
      return (-1);
@@ -128,6 +134,8 @@ static int geoip_ipv6_compare_key_to_entry (const void *key, const void **member
 {
   const struct ipv6_node *entry = *member;
   const struct in6_addr  *addr  = (const struct in6_addr*) key;
+
+  num_6_compare++;
 
   if (memcmp(addr->s6_addr, entry->low.s6_addr, sizeof(struct in6_addr)) < 0)
      return (-1);
@@ -158,9 +166,11 @@ void geoip_ipv4_add_specials (void)
   {
     DWORD low, high;
 
-    wsock_trace_inet_pton4 (priv[i].low, (u_char*)&low);
-    wsock_trace_inet_pton4 (priv[i].high, (u_char*)&high);
-    geoip4_add_entry (swap32(low), swap32(high), "--");
+    if (wsock_trace_inet_pton4(priv[i].low, (u_char*)&low) == 1 &&
+        wsock_trace_inet_pton4(priv[i].high, (u_char*)&high) == 1)
+      geoip4_add_entry (swap32(low), swap32(high), NULL);
+    else
+      TRACE (0, "Illegal low/high IPv4 address: %s/%s\n", priv[i].low, priv[i].high);
   }
 }
 
@@ -194,7 +204,7 @@ void geoip_ipv6_add_specials (void)
       TRACE (0, "Illegal high IPv6 address: %s, %s\n", priv[i].high, get_ws_error());
       continue;
     }
-    geoip6_add_entry (&low, &high, "--");
+    geoip6_add_entry (&low, &high, NULL);
   }
 }
 
@@ -256,13 +266,13 @@ DWORD geoip_parse_file (const char *file, int family)
   {
     assert (geoip_ipv4_entries == NULL);
     geoip_ipv4_entries = smartlist_new();
- // geoip_ipv4_add_specials();
+    geoip_ipv4_add_specials();
   }
   else if (family == AF_INET6)
   {
     assert (geoip_ipv6_entries == NULL);
     geoip_ipv6_entries = smartlist_new();
- // geoip_ipv6_add_specials();
+    geoip_ipv6_add_specials();
   }
   else
   {
@@ -513,7 +523,9 @@ static int geoip4_add_entry (DWORD low, DWORD high, const char *country)
 
   entry->low  = low;
   entry->high = high;
-  memcpy (&entry->country, country, sizeof(entry->country));
+  if (country)
+       memcpy (&entry->country, country, sizeof(entry->country));
+  else entry->country[0] = '\0';
   smartlist_add (geoip_ipv4_entries, entry);
   return (1);
 }
@@ -527,7 +539,9 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 
   memcpy (&entry->low,  low,  sizeof(entry->low));
   memcpy (&entry->high, high, sizeof(entry->high));
-  memcpy (&entry->country, country, sizeof(entry->country));
+  if (country)
+       memcpy (&entry->country, country, sizeof(entry->country));
+  else entry->country[0] = '\0';
   smartlist_add (geoip_ipv6_entries, entry);
   return (1);
 }
@@ -551,9 +565,14 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
          ip_num, num);
 
   if (geoip_ipv4_entries)
-     entry = smartlist_bsearch (geoip_ipv4_entries, &ip_num,
-                                geoip_ipv4_compare_key_to_entry);
-
+  {
+    entry = smartlist_bsearch (geoip_ipv4_entries, &ip_num,
+                               geoip_ipv4_compare_key_to_entry);
+#if 0 /* \todo */
+    if (g_cfg.trace_report)
+       g_cfg.counts.num_countries += is_unique_country_ipv4 (entry);
+#endif
+  }
   return (entry ? entry->country : NULL);
 }
 
@@ -574,9 +593,15 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
          wsock_trace_inet_ntop6((const u_char*)addr,buf,sizeof(buf)), num);
 
    if (geoip_ipv6_entries)
-      entry = smartlist_bsearch (geoip_ipv6_entries, addr,
-                                 geoip_ipv6_compare_key_to_entry);
+   {
+     entry = smartlist_bsearch (geoip_ipv6_entries, addr,
+                                geoip_ipv6_compare_key_to_entry);
 
+#if 0 /* \todo */
+    if (g_cfg.trace_report)
+       g_cfg.counts.num_countries += is_unique_country_ipv6 (entry);
+#endif
+  }
   return (entry ? entry->country : NULL);
 }
 
@@ -1358,14 +1383,15 @@ static void test_addr4 (const char *ip4_addr)
   struct in_addr addr;
 
   printf ("%s(): ", __FUNCTION__);
+  num_4_compare = 0;
 
   if (wsock_trace_inet_pton4((const char*)ip4_addr, (u_char*)&addr) == 1)
   {
     const char *comment = "";
     const char *cc = geoip_get_country_by_ipv4 (&addr);
 
-    if (cc)
-       printf ("cc: %s, %s.\n", cc, geoip_get_long_name_by_A2(cc));
+    if (cc && *cc)
+       printf ("cc: %s, %s, ", cc, geoip_get_long_name_by_A2(cc));
     else
     {
       if (geoip_addr_is_zero(&addr,NULL))
@@ -1376,8 +1402,8 @@ static void test_addr4 (const char *ip4_addr)
          comment = "Special.";
       else if (!geoip_addr_is_global(&addr,NULL))
          comment = "Not global.";
-      puts (comment);
     }
+    printf ("%lu compares. %s\n", num_4_compare, comment);
   }
   else
     printf ("Invalid address: %s.\n", get_ws_error());
@@ -1388,14 +1414,15 @@ static void test_addr6 (const char *ip6_addr)
   struct in6_addr addr;
 
   printf ("%s(): ", __FUNCTION__);
+  num_6_compare = 0;
 
   if (wsock_trace_inet_pton6(ip6_addr,(u_char*)&addr) == 1)
   {
     const char *comment = "";
     const char *cc = geoip_get_country_by_ipv6 (&addr);
 
-    if (cc)
-       printf ("cc: %s, %s.\n", cc, geoip_get_long_name_by_A2(cc));
+    if (cc && *cc)
+       printf ("cc: %s, %s, ", cc, geoip_get_long_name_by_A2(cc));
     else
     {
       if (geoip_addr_is_zero(NULL,&addr))
@@ -1406,8 +1433,8 @@ static void test_addr6 (const char *ip6_addr)
          comment = "Special.";
       else if (!geoip_addr_is_global(NULL,&addr))
          comment = "Not global.";
-      puts (comment);
     }
+    printf ("%lu compares. %s\n", num_6_compare, comment);
   }
   else
     printf ("Invalid address: %s.\n", get_ws_error());
