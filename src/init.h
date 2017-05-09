@@ -17,6 +17,8 @@ struct statistics {
        uint64  connect_EWOULDBLOCK;
        uint64  dll_attach;
        uint64  dll_detach;
+
+       DWORD   num_countries;
      };
 
 typedef enum TS_TYPE {  /* Time-Stamp enum type */

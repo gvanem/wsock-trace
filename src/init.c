@@ -696,6 +696,9 @@ static void trace_report (void)
   trace_printf ("    Recv bytes:  %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
   trace_printf ("    Send bytes:  %15s",               qword_str(g_cfg.counts.send_bytes));
   trace_printf ("  Send errors: %15s\n",               qword_str(g_cfg.counts.send_errors));
+
+  if (g_cfg.geoip_enable)
+     trace_printf ("  # of countries: %15s\n", qword_str(g_cfg.counts.num_countries));
 }
 #endif /* !TEST_GEOIP !TEST_NLM */
 
