@@ -114,6 +114,7 @@ static void test_WSAAddressToStringWP (void);
 static void test_WSAStringToAddressA (void);
 static void test_WSAStringToAddressW (void);
 static void test_WSAEnumProtocols (void);
+static void test_IDNA_functions (void);
 
 /*
  * fmatch() is copyright djgpp. Now simplified and renamed to
@@ -133,6 +134,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAStartup),
                     ADD_TEST (gethostbyaddr),
                     ADD_TEST (gethostbyname),
+                    ADD_TEST (IDNA_functions),
                     ADD_TEST (getprotobyname),
                     ADD_TEST (getprotobynumber),
                     ADD_TEST (getservbyname),
@@ -220,7 +222,7 @@ static void test_gethostbyaddr (void)
 static void test_gethostbyname (void)
 {
   TEST_CONDITION (!= 0, gethostbyname ("localhost"));
-  TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /* Test idna.c functions */
+  TEST_CONDITION (!= 0, gethostbyname ("google-public-dns-a.google.com"));
 }
 
 /*
@@ -236,6 +238,15 @@ static void test_getprotobynumber (void)
 {
   TEST_CONDITION (!= 0, getprotobynumber (1));      /* == icmp */
   TEST_CONDITION (== 0, getprotobynumber (9999));
+}
+
+/* Test idna.c functions
+ */
+static void test_IDNA_functions (void)
+{
+  TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /* ACE: www.xn--seoghr-fya.no (www.lookhere.no) */
+  TEST_CONDITION (!= 0, gethostbyname ("www.Bücher.ch"));   /* ACE: www.xn--bcher-kva.ch (www.books.ch) */
+  TEST_CONDITION (!= 0, gethostbyname ("öbb.at"));         /* From: http://unicode.org/faq/idn.html */
 }
 
 /*
@@ -619,6 +630,11 @@ int MS_CDECL main (int argc, char **argv)
       case 'l':
            exit (list_tests());
            break;
+
+      /* The above "t::" means 'optarg' is optional.
+       * A limitation in getopt.c shows that if 4 threads is wanted, start this
+       * programs as 'test.exe -t4' and not 'test.exe -t 4'.
+       */
       case 't':
            if (optarg)
                 num = atoi (optarg);
