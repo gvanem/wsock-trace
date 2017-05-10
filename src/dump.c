@@ -1818,9 +1818,45 @@ static const char *dump_aliases (char **aliases)
 
 /*
  * \todo:
- *   Optionally use MaxMind's Geoip*.mmdb files and print the location (city) too.
+ *   Optionally use MaxMind's GeoLite2-City.mmdb file and print the location (city) too.
  *   This will have to be coded in 'geoip_get_location_by_ipv4()' and 'geoip_get_location_by_ipv6()'.
+ *   Emulate what this command does:
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions 0 names en
+ *   giving:
+ *     "New York" <utf8_string>
+ *
+ *   Or this command:
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions location
+ *   giving:
+ *     {
+ *       "accuracy_radius":
+ *         1000 <uint16>
+ *       "latitude":
+ *         43.048100 <double>
+ *       "longitude":
+ *         -76.147400 <double>
+ *       "metro_code":
+ *         555 <uint16>
+ *       "time_zone":
+ *         "America/New_York" <utf8_string>
+ *     }
+ *
+ * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
+ *
+ * \todo: moved these to geoip.c (inside a '#ifdef USE_MAXMINDDB' section) later.
  */
+static const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
+{
+  ARGSUSED (ip4);
+  return (NULL);
+}
+
+static const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
+{
+  ARGSUSED (ip6);
+  return (NULL);
+}
+
 static const char *cc_last = NULL;
 static BOOL        cc_equal = FALSE;
 
@@ -1895,13 +1931,13 @@ void dump_countries (int type, const char **addresses)
     {
       a4 = (const struct in_addr*) addresses[i];
       cc = geoip_get_country_by_ipv4 (a4);
-  //  loc = geoip_get_location_by_ipv4 (a4);
+      loc = geoip_get_location_by_ipv4 (a4);
     }
     else if (type == AF_INET6)
     {
       a6 = (const struct in6_addr*) addresses[i];
       cc = geoip_get_country_by_ipv6 (a6);
-  //  loc = geoip_get_location_by_ipv6 (a6);
+      loc = geoip_get_location_by_ipv6 (a6);
     }
     else
     {
@@ -1971,13 +2007,13 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
     {
       sa4 = (const struct sockaddr_in*) ai->ai_addr;
       cc  = geoip_get_country_by_ipv4 (&sa4->sin_addr);
-  //  loc = geoip_get_location_by_ipv4 (sa4);
+      loc = geoip_get_location_by_ipv4 (&sa4->sin_addr);
     }
     else if (ai->ai_family == AF_INET6)
     {
       sa6 = (const struct sockaddr_in6*) ai->ai_addr;
       cc  = geoip_get_country_by_ipv6 (&sa6->sin6_addr);
-  //  loc = geoip_get_location_by_ipv6 (sa6);
+      loc = geoip_get_location_by_ipv6 (&sa6->sin6_addr);
     }
     else
     {
