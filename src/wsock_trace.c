@@ -563,7 +563,7 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
 
   if (first_line)
   {
-    /* If stdout or stderr is redirected, we cannot get the cursor coloumn.
+    /* If stdout or stderr is redirected, we cannot get the cursor column.
      * So just wrap if told to do so. Also add an extra newline if writing
      * to a trace-file.
      */
