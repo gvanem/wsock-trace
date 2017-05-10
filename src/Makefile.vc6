@@ -1,7 +1,16 @@
 #
 # Wsock-trace makefile for MSVC6+
-# G. Vanem <gvanem@yahoo.no> 2011.
+# G. Vanem <gvanem@yahoo.no> 2017.
 #
+# Usage:
+# Open a "MSVC Developer Command Prompt" and set the compiler
+# environment:
+#
+#     "%VSINSTALLDIR%VC\vcvarsall.bat" x86
+#   -or-
+#     "%VSINSTALLDIR%VC\vcvarsall.bat" x64
+#
+# Then cd to this directory and run this makefile.
 
 USE_DEBUG    = 0
 USE_DEF_FILE = 1
@@ -12,11 +21,11 @@ USE_DEF_FILE = 1
 USE_LUA     = 0
 LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
 
+# Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
+# Developer Command Prompt or set '%WANT_64_BITS%=1' to build a 64-bit version.
+# 64-bit builds have a '_x64' suffix on DLL and lib.
 #
-# Set '%WANT_64_BITS%=1' to build a 64-bit version. Adds a '_x64' suffix to
-# the DLL and lib.
-#
-!if "$(WANT_64_BITS)" == "1"
+!if "$(PLATFORM)" == "X64" || "$(WANT_64_BITS)" == "1"
 X_SUFFIX = _x64
 MACHINE = x64
 BITNESS = 64
@@ -99,7 +108,7 @@ GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
 all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe install
-	@echo Welcome to Wsock_trace library and example.
+	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
@@ -144,7 +153,7 @@ compile_juajit_0:
 	@echo
 
 #
-# You may have to add a "call vcvarsall.bat $(MACHINE)" here.
+# You may have to add a run "%VSINSTALLDIR%VC\vcvarsall.bat" $(MACHINE) here.
 #
 compile_juajit_1:
 	pushd $(LUAJIT_ROOT)\src      &    \
