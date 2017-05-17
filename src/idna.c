@@ -89,7 +89,7 @@ typedef enum punycode_status {
  * except punycode_bad_input; if not punycode_success, then
  * output_size and output might contain garbage.
  */
-static enum punycode_status punycode_encode (DWORD        input_length,
+static enum punycode_status punycode_encode (size_t       input_length,
                                              const DWORD *input,
                                              const BYTE  *case_flags,
                                              size_t      *output_length,
@@ -117,7 +117,7 @@ static enum punycode_status punycode_encode (DWORD        input_length,
  * decoder will never need to write an output_length greater than
  * input_length, because of how the encoding is defined.
  */
-static enum punycode_status punycode_decode (DWORD       input_length,
+static enum punycode_status punycode_decode (size_t      input_length,
                                              const char *input,
                                              size_t     *output_length,
                                              DWORD      *output,
@@ -715,24 +715,26 @@ static DWORD adapt (DWORD delta, DWORD numpoints, int firsttime)
 }
 
 /*
- *Main encode function
+ * Main encode function
  */
-static enum punycode_status punycode_encode (DWORD input_length,
+static enum punycode_status punycode_encode (size_t       input_length,
                                              const DWORD *input,
-                                             const BYTE *case_flags,
-                                             size_t *output_length,
-                                             char *output)
+                                             const BYTE  *case_flags,
+                                             size_t      *output_length,
+                                             char        *output)
 {
-  DWORD n, delta, h, b, out, max_out, bias, j, m, q, k, t;
+  DWORD n, delta, h, b, out, max_out;
+  DWORD bias, j, m, q, k, t;
 
-  /* Initialize the state: */
-
+  /* Initialize the state:
+   */
   n = initial_n;
   delta = out = 0;
   max_out = *output_length;
   bias = initial_bias;
 
-  /* Handle the basic code points: */
+  /* Handle the basic code points:
+   */
   for (j = 0; j < input_length; ++j)
   {
     if (basic (input[j]))
@@ -824,13 +826,14 @@ static enum punycode_status punycode_encode (DWORD input_length,
   return (punycode_success);
 }
 
-/*** Main decode function ***/
-
-static enum punycode_status punycode_decode (DWORD input_length,
+/*
+ * Main decode function
+ */
+static enum punycode_status punycode_decode (size_t      input_length,
                                              const char *input,
-                                             size_t *output_length,
-                                             DWORD *output,
-                                             BYTE *case_flags)
+                                             size_t      *output_length,
+                                             DWORD       *output,
+                                             BYTE        *case_flags)
 {
   DWORD n, out, i, max_out, bias, b, j, in, oldi, w, k, digit, t;
 

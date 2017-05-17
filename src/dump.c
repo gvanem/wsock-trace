@@ -1465,9 +1465,9 @@ const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
             "%*sai_socktype: %s\n"
             "%*sai_protocol: %s",
             ai_flags_decode(hint->ai_flags),
-            indent, "", socket_family(hint->ai_family),
-            indent, "", socket_type(hint->ai_socktype),
-            indent, "", protocol_name(hint->ai_protocol));
+            (int)indent, "", socket_family(hint->ai_family),
+            (int)indent, "", socket_type(hint->ai_socktype),
+            (int)indent, "", protocol_name(hint->ai_protocol));
   return (buf);
 }
 

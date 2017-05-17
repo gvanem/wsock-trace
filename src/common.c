@@ -575,9 +575,9 @@ static const char *get_guid_ole32_str (const GUID *guid, char *result, size_t re
   DWORD    len;
 
   strcpy (result, "{??}");
-  if (StringFromGUID2(guid, (LPOLESTR)str, result_size-1))
+  if (StringFromGUID2(guid, (LPOLESTR)str, (int)result_size-1))
   {
-    len = WideCharToMultiByte (CP_ACP, 0, str, -1, result, result_size, NULL, NULL);
+    len = WideCharToMultiByte (CP_ACP, 0, str, -1, result, (int)result_size, NULL, NULL);
     if (len == 0)
        strcpy (result, "{??}");
   }
