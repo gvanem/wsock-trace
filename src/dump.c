@@ -2072,13 +2072,13 @@ void dump_protoent (const struct protoent *proto)
   trace_printf ("aliases: %s~0\n", dump_aliases(proto->p_aliases));
 }
 
-void dump_events (const WSANETWORKEVENTS *events)
+static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
 {
   int  i;
   long ev;
 
   trace_indent (g_cfg.trace_indent+2);
-  trace_puts ("~4events: ");
+  trace_printf ("~4%s", out ? "out: " : "in:  ");
   if (!events)
   {
     trace_puts ("NULL~0");
@@ -2086,9 +2086,17 @@ void dump_events (const WSANETWORKEVENTS *events)
   }
 
   ev = events->lNetworkEvents;
-  trace_printf ("lNetworkEvents: %s\n", event_bits_decode(ev));
+  trace_puts ("lNetworkEvents: ");
 
-  for (i = 0; i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs); i++)
+  /*
+   * Print this like:
+   *   in:  lNetworkEvents: FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CLOSE|FD_QOS|FD_GROUP_QOS|
+   *                        FD_ADDRESS_LIST_CHANGE|0xDEADBC00
+   */
+  print_long_flags (event_bits_decode(ev), g_cfg.trace_indent +
+                    sizeof("events in:            "), '|');
+
+  for (i = 0; out && i < DIM(events->iErrorCode) && i < DIM(wsa_events_flgs); i++)
   {
     if (ev & (1 << i))
     {
@@ -2099,6 +2107,12 @@ void dump_events (const WSANETWORKEVENTS *events)
     }
   }
   trace_puts ("~0");
+}
+
+void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events)
+{
+  _dump_events (FALSE, in_events);
+  _dump_events (TRUE, out_events);
 }
 
 /*
