@@ -16,7 +16,7 @@ extern void dump_select    (const fd_set *rd, const fd_set *wr, const fd_set *ex
 extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent);
 
 extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func);
-extern void dump_events           (const WSANETWORKEVENTS *events);
+extern void dump_events           (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events);
 extern void dump_extension_funcs  (const GUID *guid, const void *out_buf);
 
 extern void dump_countries          (int type, const char **addresses);
