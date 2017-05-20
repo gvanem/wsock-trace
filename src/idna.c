@@ -969,6 +969,14 @@ void set_color (const WORD *col)
   ARGSUSED (col);
 }
 
+void ws_sema_wait (void)
+{
+}
+
+void ws_sema_release (void)
+{
+}
+
 void print_last_error (void)
 {
   printf ("IDNA error: %s\n", IDNA_strerror(_idna_errno));

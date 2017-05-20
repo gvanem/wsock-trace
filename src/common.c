@@ -886,6 +886,8 @@ size_t trace_flush (void)
 
   assert (len <= TRACE_BUF_SIZE);
 
+  ws_sema_wait();
+
   if (g_cfg.trace_use_ods)
   {
     *trace_ptr = '\0';
@@ -900,6 +902,9 @@ size_t trace_flush (void)
     written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
   }
   trace_ptr = trace_buf;   /* restart buffer */
+
+  ws_sema_release();
+
   return (written);
 }
 

@@ -35,6 +35,12 @@ CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
+/* Use CreateSemaphore() to verify of there are multiple instances of outself.
+ */
+static HANDLE      ws_sema;
+static BOOL        ws_sema_inherited;
+static const char *ws_sema_name = "Global\\wsock_trace-semaphore";
+
 /*
  * Structure for 'exclude_list*()' functions.
  */
@@ -46,6 +52,25 @@ struct exclude {
 /* Dynamic array of above exclude structure.
  */
 static smartlist_t *exclude_list = NULL;
+
+void ws_sema_wait (void)
+{
+  while (ws_sema)
+  {
+    DWORD ret = WaitForSingleObject (ws_sema, 0);
+
+    if (ret == WAIT_OBJECT_0)
+       break;
+    g_cfg.counts.sema_waits++;
+    Sleep (5);
+  }
+}
+
+void ws_sema_release (void)
+{
+  if (ws_sema)
+     ReleaseSemaphore (ws_sema, 1, NULL);
+}
 
 static void init_timestamp (void)
 {
@@ -691,11 +716,14 @@ static void trace_report (void)
 
   trace_printf ("~0\n"
                 "  Statistics:\n"
-                "    Recv bytes:  %15s",               qword_str(g_cfg.counts.recv_bytes));
-  trace_printf ("  Recv errors: %15s\n",               qword_str(g_cfg.counts.recv_errors));
-  trace_printf ("    Recv bytes:  %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
-  trace_printf ("    Send bytes:  %15s",               qword_str(g_cfg.counts.send_bytes));
-  trace_printf ("  Send errors: %15s\n",               qword_str(g_cfg.counts.send_errors));
+                "    Recv bytes:   %15s",               qword_str(g_cfg.counts.recv_bytes));
+  trace_printf ("  Recv errors:  %15s\n",               qword_str(g_cfg.counts.recv_errors));
+  trace_printf ("    Recv bytes:   %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
+  trace_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
+  trace_printf ("  Send errors : %15s\n",               qword_str(g_cfg.counts.send_errors));
+
+  if (ws_sema_inherited)
+     trace_printf ("  Semaphore wait: %15s\n",          qword_str(g_cfg.counts.sema_waits));
 
   if (g_cfg.geoip_enable)
      trace_printf ("  # of countries: %15s\n", qword_str(g_cfg.counts.num_countries));
@@ -776,6 +804,9 @@ void wsock_trace_exit (void)
   geoip_exit();
   IDNA_exit();
 
+  if (ws_sema)
+     CloseHandle (ws_sema);
+  ws_sema = NULL;
   DeleteCriticalSection (&crit_sect);
 }
 
@@ -796,6 +827,22 @@ void wsock_trace_init (void)
   /* Set default values.
    */
   memset (&g_cfg, 0, sizeof(g_cfg));
+
+  /* Check if we've already got an instance of ourself.
+   * If we are the top-level wsock_trace, and we want the handle to be inherited
+   * by child processes.
+   */
+  {
+    SECURITY_ATTRIBUTES sec;
+
+    sec.nLength = sizeof (sec);
+    sec.lpSecurityDescriptor = NULL;
+    sec.bInheritHandle       = TRUE;
+    ws_sema = CreateSemaphore (&sec, 1, 1, ws_sema_name);
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+         ws_sema_inherited = TRUE;
+    else ws_sema_inherited = FALSE;
+  }
 
   /* Set trace-level before config-file could reset it.
    */
@@ -979,6 +1026,9 @@ void wsock_trace_init (void)
 
   TRACE (2, "g_cfg.trace_file_okay: %d, g_cfg.trace_file_device: %d\n",
             g_cfg.trace_file_okay, g_cfg.trace_file_device);
+
+  TRACE (2, "ws_sema: 0x%" ADDR_FMT ", ws_sema_inherited: %d\n",
+         ADDR_CAST(ws_sema), ws_sema_inherited);
 
   if (!g_cfg.stdout_redirected)
   {

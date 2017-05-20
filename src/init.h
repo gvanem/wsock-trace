@@ -17,6 +17,7 @@ struct statistics {
        uint64  connect_EWOULDBLOCK;
        uint64  dll_attach;
        uint64  dll_detach;
+       uint64  sema_waits;
 
        DWORD   num_countries;
      };
@@ -124,6 +125,8 @@ extern void wsock_trace_init (void);
 extern void wsock_trace_exit (void);
 extern void crtdbg_init (void);
 extern void crtdbg_exit (void);
+extern void ws_sema_wait (void);
+extern void ws_sema_release (void);
 
 extern void set_color (const WORD *col);
 extern void get_color (const char *str, WORD *col);
