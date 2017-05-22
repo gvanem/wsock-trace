@@ -730,7 +730,7 @@ static enum punycode_status punycode_encode (size_t       input_length,
    */
   n = initial_n;
   delta = out = 0;
-  max_out = *output_length;
+  max_out = *(DWORD*)output_length;
   bias = initial_bias;
 
   /* Handle the basic code points:
@@ -841,7 +841,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
   n = initial_n;
   out = i = 0;
-  max_out = *output_length;
+  max_out = *(DWORD*) output_length;
   bias = initial_bias;
 
   /* Handle the basic code points:  Let b be the number of input code
@@ -1023,7 +1023,7 @@ int reverse_resolve (struct in_addr addr)
     print_last_error();
     return (-1);
   }
-  printf (" -> \"%.*s\"", len, host);
+  printf (" -> \"%.*s\"", (int)len, host);
   return (0);
 }
 
