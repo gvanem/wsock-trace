@@ -571,7 +571,7 @@ char *fix_path (const char *path)
 
 static const char *get_guid_ole32_str (const GUID *guid, char *result, size_t result_size)
 {
-  wchar_t *str = alloca (result_size);
+  wchar_t *str = alloca (2*result_size);
   DWORD    len;
 
   strcpy (result, "{??}");

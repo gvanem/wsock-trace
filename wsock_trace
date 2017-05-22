@@ -57,7 +57,7 @@ cpp_demangle   = 1
 short_errors   = 1
 use_full_path  = 1                 # Report with full file-names in traces.
 use_toolhlp32  = 1
-use_ole32      = 1
+use_ole32      = 0                 # Decode and print GUIDs using internal functions
 start_new_line = 0                 # Always start tracing on column 1.
 show_caller    = 0                 # Internal: show file/line where TRACE() was called.
 
