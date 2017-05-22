@@ -829,7 +829,7 @@ void wsock_trace_init (void)
   memset (&g_cfg, 0, sizeof(g_cfg));
 
   /* Check if we've already got an instance of ourself.
-   * If we are the top-level wsock_trace, and we want the handle to be inherited
+   * If we are the top-level wsock_trace, we want the handle to be inherited
    * by child processes.
    */
   {
