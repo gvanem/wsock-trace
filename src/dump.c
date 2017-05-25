@@ -1495,7 +1495,7 @@ void dump_addrinfo (const struct addrinfo *ai)
 fd_set *copy_fd_set (const fd_set *fd)
 {
   fd_set *copy;
-  size_t  size;
+  size_t  size, count;
   u_int   i;
 
   if (!fd)
@@ -1507,12 +1507,14 @@ fd_set *copy_fd_set (const fd_set *fd)
    * typedef struct fd_set {
    *         u_int  fd_count;
    *         SOCKET fd_array[FD_SETSIZE];
-   *      } fd_set;
+   *       } fd_set;
    *
+   * 'FD_SETSIZE' is defined to 64 in <winsock.h> by default.
    * But we cannot assume a certain 'FD_SETSIZE'.
-   * Just allocate according to 'fd_count'.
+   * Just allocate according to the maximum of 64 and 'fd_count'.
    */
-  size = fd->fd_count * sizeof(SOCKET) + sizeof(u_int);
+  count = max (64, fd->fd_count);
+  size = count * sizeof(SOCKET) + sizeof(u_int);
   copy = malloc (size);
 
   copy->fd_count = fd->fd_count;
