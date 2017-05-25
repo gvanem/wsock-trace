@@ -53,6 +53,7 @@ struct config_table {
        int     cpp_demangle;
        int     max_data;
        int     max_displacement;
+       BOOL    use_sema;
        BOOL    test_trace;
        BOOL    start_new_line;
        BOOL    dump_data;

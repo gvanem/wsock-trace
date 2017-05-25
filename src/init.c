@@ -405,6 +405,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"pdb_report"))
      g_cfg.pdb_report = atoi (val);
 
+  else if (!stricmp(key,"use_sema"))
+     g_cfg.use_sema = atoi (val);
+
   else if (!stricmp(key,"recv_delay"))
      g_cfg.recv_delay = (DWORD) _atoi64 (val);
 
@@ -722,7 +725,7 @@ static void trace_report (void)
   trace_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
   trace_printf ("  Send errors : %15s\n",               qword_str(g_cfg.counts.send_errors));
 
-  if (ws_sema_inherited)
+  if (g_cfg.use_sema && ws_sema_inherited)
      trace_printf ("  Semaphore wait: %15s\n",          qword_str(g_cfg.counts.sema_waits));
 
   if (g_cfg.geoip_enable)
@@ -828,22 +831,6 @@ void wsock_trace_init (void)
    */
   memset (&g_cfg, 0, sizeof(g_cfg));
 
-  /* Check if we've already got an instance of ourself.
-   * If we are the top-level wsock_trace, we want the handle to be inherited
-   * by child processes.
-   */
-  {
-    SECURITY_ATTRIBUTES sec;
-
-    sec.nLength = sizeof (sec);
-    sec.lpSecurityDescriptor = NULL;
-    sec.bInheritHandle       = TRUE;
-    ws_sema = CreateSemaphore (&sec, 1, 1, ws_sema_name);
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
-         ws_sema_inherited = TRUE;
-    else ws_sema_inherited = FALSE;
-  }
-
   /* Set trace-level before config-file could reset it.
    */
   if (env && isdigit(*env))
@@ -884,6 +871,24 @@ void wsock_trace_init (void)
   is_msvc   = image_opt_header_is_msvc (mod);
   is_mingw  = image_opt_header_is_mingw (mod);
   is_cygwin = image_opt_header_is_cygwin (mod);
+
+  if (g_cfg.use_sema)
+  {
+    /* Check if we've already got an instance of ourself.
+     * If we are the top-level wsock_trace, we want the handle to be inherited
+     * by child processes.
+     */
+    SECURITY_ATTRIBUTES sec;
+
+    sec.nLength = sizeof (sec);
+    sec.lpSecurityDescriptor = NULL;
+    sec.bInheritHandle       = TRUE;
+    ws_sema = CreateSemaphore (&sec, 1, 1, ws_sema_name);
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+         ws_sema_inherited = TRUE;
+    else ws_sema_inherited = FALSE;
+  }
+
 
   /* Should test on 'wsock_trace_dll_name' too.
    */
@@ -1027,8 +1032,9 @@ void wsock_trace_init (void)
   TRACE (2, "g_cfg.trace_file_okay: %d, g_cfg.trace_file_device: %d\n",
             g_cfg.trace_file_okay, g_cfg.trace_file_device);
 
-  TRACE (2, "ws_sema: 0x%" ADDR_FMT ", ws_sema_inherited: %d\n",
-         ADDR_CAST(ws_sema), ws_sema_inherited);
+  if (g_cfg.use_sema)
+     TRACE (2, "ws_sema: 0x%" ADDR_FMT ", ws_sema_inherited: %d\n",
+            ADDR_CAST(ws_sema), ws_sema_inherited);
 
   if (!g_cfg.stdout_redirected)
   {

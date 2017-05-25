@@ -36,6 +36,7 @@ trace_time = relative              # Print timestamps at each trace-line. One of
                                    #   "none"     for no timestamps
 
 pdb_report  = 1                    # Report PDB-symbols information found in all modules
+use_sema = 0
 
 #
 # For testing too fast programs:
