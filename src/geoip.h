@@ -16,18 +16,19 @@ struct ipv6_node {
        char            country[3];
      };
 
-extern DWORD        geoip_load_data (int family);
-extern DWORD        geoip_parse_file (const char *file, int fam);
-extern const char  *geoip_get_country_by_ipv4 (const struct in_addr *addr);
-extern const char  *geoip_get_country_by_ipv6 (const struct in6_addr *addr);
-extern const char  *geoip_get_long_name_by_id (int number);
-extern const char  *geoip_get_long_name_by_A2 (const char *short_name);
-extern void         geoip_exit (void);
+extern int         geoip_init (DWORD *_num4, DWORD *_num6);
+extern void        geoip_exit (void);
+extern const char *geoip_get_country_by_ipv4 (const struct in_addr *addr);
+extern const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr);
+extern const char *geoip_get_long_name_by_id (int number);
+extern const char *geoip_get_long_name_by_A2 (const char *short_name);
 
-extern int          geoip_addr_is_zero (const struct in_addr *ip4, const struct in6_addr *ip6);
-extern int          geoip_addr_is_multicast (const struct in_addr *ip4, const struct in6_addr *ip6);
-extern int          geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6);
-extern int          geoip_addr_is_global (const struct in_addr *ip4, const struct in6_addr *ip6);
+extern int         geoip_addr_is_zero (const struct in_addr *ip4, const struct in6_addr *ip6);
+extern int         geoip_addr_is_multicast (const struct in_addr *ip4, const struct in6_addr *ip6);
+extern int         geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6);
+extern int         geoip_addr_is_global (const struct in_addr *ip4, const struct in6_addr *ip6);
+
+extern void        geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6);
 
 /*
  * To build a version of geoip.exe that should support 'g_cfg.geoip_use_generated',
