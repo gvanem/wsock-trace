@@ -54,6 +54,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <conio.h>
 #include <assert.h>
 
 #include "common.h"
@@ -70,7 +71,7 @@
   * The latter case causes very long C++ symbols to be found in 'enum_symbols_proc()'
   * for 'g_module'. Ref. the use of 'g_long_CPP_syms'.
   */
-  extern int __scrt_is_ucrt_dll_in_use (void);
+  extern int __cdecl __scrt_is_ucrt_dll_in_use (void);
 #endif
 
 static HANDLE       g_proc;
@@ -79,6 +80,7 @@ static char         g_module [_MAX_PATH];
 static smartlist_t *g_modules_list;
 static smartlist_t *g_symbols_list;
 static BOOL         g_long_CPP_syms = FALSE;
+static int          g_quit_count = 0;
 
 static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose);
 
@@ -589,12 +591,15 @@ DWORD StackWalkSymbols (smartlist_t **sl_p)
 
   assert (g_symbols_list);
   sym_len = smartlist_len (g_symbols_list);
+
   if (sym_len == 0)
   {
    /* Walking the symbols in 'enum_and_load_symbols()' takes time.
     * Hence do this only if 'sym_len == 0'.
+    * And quit as soon as 'check_quit()' sets 'g_quit_count > 0'.
     */
-    for (i = 0; i < mod_len; i++)
+    g_quit_count = 0;
+    for (i = 0; i < mod_len && g_quit_count == 0; i++)
     {
       me = smartlist_get (g_modules_list, i);
       enum_and_load_symbols (me->module_name);
@@ -643,7 +648,7 @@ static const char *get_error (void)
     _itoa (err, buf+2, 16);
     return (buf);
   }
-  return _itoa (err,buf,10);
+  return win_strerror (err);
 }
 
 /**************************************** ToolHelp32 *************************/
@@ -757,21 +762,26 @@ static int GetModuleListPSAPI (void)
   DWORD    i, needed, num_modules;
   HMODULE *mods;
   BOOL     okay = (load_dynamic_table(psapi_funcs, DIM(psapi_funcs)) >= 3);
+  DWORD    rc;
 
   if (!okay || !p_EnumProcessModules)
      goto cleanup;
 
-  (*p_EnumProcessModules)(g_proc, NULL, 0, &needed);
-  if (GetLastError() != ERROR_BUFFER_OVERFLOW)
+  needed = rc = 0;
+
+  if (!(*p_EnumProcessModules)(g_proc, NULL, 0, &needed))
+     rc = GetLastError();
+
+  if (rc != 0 && rc != ERROR_BUFFER_OVERFLOW)
   {
-    TRACE (1, "EnumProcessModules() failed: %s.\n", get_error());
+    TRACE (1, "(1): EnumProcessModules() failed: %s.\n", get_error());
     goto cleanup;
   }
 
   mods = alloca (needed);
   if (!(*p_EnumProcessModules)(g_proc, mods, needed, &needed))
   {
-    TRACE (1, "EnumProcessModules() failed: %s.\n", get_error());
+    TRACE (1, "(2): EnumProcessModules() failed: %s.\n", get_error());
     goto cleanup;
   }
 
@@ -801,7 +811,11 @@ cleanup:
   return smartlist_len (g_modules_list);
 }
 
-static void print_module_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info)
+/*
+ * Show the retrieved information on all out modules;
+ * PDB symbols etc.
+ */
+static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info)
 {
   DWORD total_text = 0;
   DWORD total_data = 0;
@@ -862,6 +876,26 @@ static void print_module_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info)
                    76+8*IS_WIN64, "", total_text, total_data, total_cpp, total_junk);
 }
 
+/*
+ * Just a simple 'q' / ESC-handler to force 'SymEnumSymbolsEx()' to quit
+ * calling the callback 'enum_symbols_proc()'.
+ *
+ * I tried setting up a ^C|^Break handler using 'SetConsoleCtrlHandler()',
+ * but that doesn't seems to work in a DLL (?)
+ */
+static BOOL check_quit (void)
+{
+  if (_kbhit())
+  {
+    int ch = _getch();
+
+    if (ch == 'q' || ch == '27')
+       g_quit_count++;
+    return (1);
+  }
+  return (0);
+}
+
 static void enum_and_load_modules (void)
 {
   struct ModuleEntry *me;
@@ -874,7 +908,9 @@ static void enum_and_load_modules (void)
      rc = GetModuleListPSAPI();    /* if not okay, then try PSAPI */
 
   max = smartlist_len (g_modules_list);
-  for (i = 0; i < max; i++)
+  g_quit_count = 0;
+
+  for (i = 0; i < max && g_quit_count == 0; i++)
   {
     me = smartlist_get (g_modules_list, i);
     (*p_SymLoadModule64) (g_proc, 0, me->module_name, me->module_name,
@@ -1035,6 +1071,9 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   static ULONG64 last_base_addr;
   static char   *module;
   static struct ModuleEntry *me;
+
+  if (check_quit() > 0)
+     return (FALSE);
 
   is_cv_cpp = is_gnu_cpp = FALSE;
 
@@ -1408,9 +1447,10 @@ check_mingw_map_file:
 
   me->stat.num_syms = me->stat.num_our_syms + me->stat.num_other_syms + num_mingw_syms;
 
-  TRACE (3, " num_our_syms: %lu, num_other_syms: %lu, num_cpp_syms: %lu, num_junk_syms: %lu, num_data_syms: %lu, num_syms_lines: %lu, is_last: %d.\n",
+  TRACE (3, " num_our_syms: %lu, num_other_syms: %lu, num_cpp_syms: %lu, num_junk_syms: %lu,\n"
+         "                    num_data_syms: %lu, num_syms_lines: %lu, is_last: %d, g_quit_count: %d.\n",
          me->stat.num_our_syms, me->stat.num_other_syms, me->stat.num_cpp_syms, me->stat.num_junk_syms,
-         me->stat.num_data_syms, me->stat.num_syms_lines, is_last);
+         me->stat.num_data_syms, me->stat.num_syms_lines, is_last, g_quit_count);
 
   return (me->stat.num_syms);
 }
@@ -1479,8 +1519,8 @@ BOOL StackWalkInit (void)
     return (FALSE);
   }
 
-  if (g_cfg.pdb_report || g_cfg.trace_level >= 2)
-     print_module_and_pdb_info (g_cfg.pdb_report, FALSE);
+  if (g_cfg.pdb_report || g_cfg.trace_level >= 4)
+     print_modules_and_pdb_info (g_cfg.pdb_report, FALSE);
 
   TRACE (2, "\n");
   return (ok);
@@ -1564,6 +1604,12 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
    */
 #endif
 
+  /* 'addr' is address of the returning location. Subtracting the address-width
+   * (width of the address bus) will give a more precise location of the address
+   * we were called *from*.
+   */
+  addr -= sizeof(void*);
+
 #ifdef USE_BFD
   if (BFD_get_function_name(addr, str, left) != 0)
      return (3);
@@ -1578,6 +1624,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
 
 #if USE_SYMFROMADDR
   sym.hdr.MaxNameLen = sizeof(sym.name);
+
   if (!(*p_SymFromAddr)(g_proc, addr, &ofs_from_symbol, &sym.hdr))
      return (4);
 
