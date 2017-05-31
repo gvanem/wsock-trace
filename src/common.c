@@ -928,7 +928,7 @@ int trace_printf (const char *fmt, ...)
 
 int trace_vprintf (const char *fmt, va_list args)
 {
-  char buf [500];
+  char buf [800];
   int  l1, l2 = vsnprintf (buf, sizeof(buf), fmt, args);
 
   l1 = trace_puts (buf);
