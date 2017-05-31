@@ -131,7 +131,7 @@ static const char *get_timestamp (void);
 #endif
 
 #if (defined(_MSC_VER) && defined(_M_X64)) || \
-    (defined(__GNUC__) && defined(__x86_64__))
+    (defined(__GNUC__) && !defined( __i386__))
   #define get_EBP() 0
 
 #elif defined(_MSC_VER) && defined(_X86_)
@@ -2910,7 +2910,7 @@ static void test_get_caller (const void *from)
 
 static const char *set_dll_name (void)
 {
-#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__ia64__)
   #define X_SUFFIX "_x64"
 #else
   #define X_SUFFIX ""
