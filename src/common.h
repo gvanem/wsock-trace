@@ -303,14 +303,14 @@ extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
                              fprintf (stderr, fmt, ## __VA_ARGS__); \
                            } while (0)
 
-#define FATAL(fmt, ...)    do {                                        \
-                             fprintf (stderr, "\n%s(%u): " fmt,        \
-                                      __FILE__, __LINE__,              \
-                                      ## __VA_ARGS__);                 \
-                             fatal_error = 1;                          \
-                             if (IsDebuggerPresent())                  \
-                                  abort();                             \
-                             else ExitProcess (GetCurrentProcessId()); \
+#define FATAL(fmt, ...)    do {                                         \
+                             fprintf (stderr, "\nFatal error: %s(%u): " \
+                                      fmt, __FILE__, __LINE__,          \
+                                      ## __VA_ARGS__);                  \
+                             fatal_error = 1;                           \
+                             if (IsDebuggerPresent())                   \
+                                  abort();                              \
+                             else ExitProcess (GetCurrentProcessId());  \
                            } while (0)
 
 /*
