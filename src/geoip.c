@@ -1010,7 +1010,8 @@ static void geoip_stats_init (void)
     geoip_stats_buf[i].country[0] = toupper (c_A2[0]);
     geoip_stats_buf[i].country[1] = toupper (c_A2[1]);
   }
-  TRACE (2, "Allocated %zu bytes for %d country statistics.\n", size, num);
+  TRACE (2, "Allocated %u bytes for %d country statistics.\n",
+         (unsigned)size, (unsigned)num);
 }
 
 static void geoip_stats_exit (void)

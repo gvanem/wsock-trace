@@ -404,8 +404,8 @@ static char *convert_to_ACE (const char *name)
   }
   out_buf[i] = '\0';
 
-  TRACE (3, "punycode_encode: status %d, out_len %d, out_buf `%s'\n",
-              status, out_len, out_buf);
+  TRACE (3, "punycode_encode: status %d, out_len %u, out_buf `%s'\n",
+         status, (unsigned)out_len, out_buf);
   if (status == punycode_success && i == (int)out_len)   /* encoding and ASCII conversion okay */
      return (out_buf);
   return (NULL);
@@ -447,8 +447,8 @@ static char *convert_from_ACE (const char *name)
     j += len;
   }
   out_buf[j] = '\0';
-  TRACE (3, "punycode_decode: status %d, out_len %d, out_buf `%s'\n",
-              status, ucs_len, out_buf);
+  TRACE (3, "punycode_decode: status %d, out_len %u, out_buf `%s'\n",
+         status, (unsigned)ucs_len, out_buf);
   return (status == punycode_success ? out_buf : NULL);
 }
 
@@ -579,7 +579,7 @@ BOOL IDNA_convert_to_ACE (
   len = name - in_name;
   *name = '\0';
   *size = len;
-  TRACE (3, "IDNA_convert_to_ACE: `%s', %d bytes\n", in_name, len);
+  TRACE (3, "IDNA_convert_to_ACE: `%s', %u bytes\n", in_name, (unsigned)len);
   rc = TRUE;
 
 quit:

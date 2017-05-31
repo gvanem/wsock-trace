@@ -1617,7 +1617,7 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
        continue;
 
     trace_printf ("%*sfd: %4u, fd->events: %s, fd->revents: %s\n",
-                  line > 0 ? indent : 0, "", fd->fd,
+                  line > 0 ? indent : 0, "", (unsigned)fd->fd,
                   wsapollfd_event_decode(fd->events,ev_buf1),
                   wsapollfd_event_decode(fd->revents,ev_buf2));
     line++;
