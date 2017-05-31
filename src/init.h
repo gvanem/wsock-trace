@@ -18,8 +18,6 @@ struct statistics {
        uint64  dll_attach;
        uint64  dll_detach;
        uint64  sema_waits;
-
-       DWORD   num_countries;
      };
 
 typedef enum TS_TYPE {  /* Time-Stamp enum type */

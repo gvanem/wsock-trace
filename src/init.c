@@ -723,13 +723,19 @@ static void trace_report (void)
   trace_printf ("  Recv errors:  %15s\n",               qword_str(g_cfg.counts.recv_errors));
   trace_printf ("    Recv bytes:   %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
   trace_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
-  trace_printf ("  Send errors : %15s\n",               qword_str(g_cfg.counts.send_errors));
+  trace_printf ("  Send errors:  %15s\n",               qword_str(g_cfg.counts.send_errors));
 
   if (g_cfg.use_sema && ws_sema_inherited)
      trace_printf ("  Semaphore wait: %15s\n",          qword_str(g_cfg.counts.sema_waits));
 
   if (g_cfg.geoip_enable)
-     trace_printf ("  # of countries: %15s\n", qword_str(g_cfg.counts.num_countries));
+  {
+    DWORD num_ip4, num_ip6;
+
+    geoip_num_unique_countries (&num_ip4, &num_ip6);
+    trace_printf ("  # of unique countries (IPv4): %lu\n", num_ip4);
+    trace_printf ("  # of unique countries (IPv6): %lu\n", num_ip6);
+  }
 }
 #endif /* !TEST_GEOIP !TEST_NLM */
 
@@ -823,7 +829,7 @@ void wsock_trace_init (void)
   const char *now;
   BOOL        okay;
   HMODULE     mod;
-  BOOL        is_msvc, is_mingw, is_cygwin, open_geoip = FALSE;
+  BOOL        is_msvc, is_mingw, is_cygwin;
 
   InitializeCriticalSection (&crit_sect);
 
@@ -953,33 +959,7 @@ void wsock_trace_init (void)
     IDNA_exit();
   }
 
-#if defined(TEST_GEOIP)
-  open_geoip = TRUE;
-#endif
-
-  if (g_cfg.geoip_enable && (g_cfg.trace_level > 0 || open_geoip))
-  {
-    DWORD num4, num6;
-
-    if (!open_geoip && g_cfg.geoip_use_generated)
-    {
-      num4 = geoip_load_data (AF_INET);
-      num6 = geoip_load_data (AF_INET6);
-    }
-    else
-    {
-      num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
-      num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
-    }
-
-#if defined(TEST_GEOIP)
-    ARGSUSED (num4);
-    ARGSUSED (num6);
-#else
-    if (num4 == 0 && num6 == 0)
-       g_cfg.geoip_enable = FALSE;
-#endif
-  }
+  geoip_init (NULL, NULL);
 
   now = get_time_now();
 
