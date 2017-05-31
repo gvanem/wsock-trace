@@ -889,7 +889,7 @@ static BOOL check_quit (void)
   {
     int ch = _getch();
 
-    if (ch == 'q' || ch == '27')
+    if (ch == 'q' || ch == 27) /* 'q' or ESC */
        g_quit_count++;
     return (1);
   }
