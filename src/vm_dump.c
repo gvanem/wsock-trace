@@ -47,8 +47,9 @@ int vm_bug_debug = 0;
   #define MS_CDECL
 #endif
 
-#if defined(__GNUC__)
-  /* Problems at 'gcc -O0'. Use this hack
+#if defined(__GNUC__) && defined(__i386__)
+  /*
+   * Problems at 'gcc -O0'. Use this hack
    */
   static inline void *_NtCurrentTeb (void)
   {
