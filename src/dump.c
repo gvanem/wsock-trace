@@ -1867,7 +1867,9 @@ static int trace_printf_cc (const char            *country_code,
                             const struct in_addr  *a4,
                             const struct in6_addr *a6)
 {
-  if (country_code && *country_code)
+  const char *remark = NULL;
+
+  if (country_code && isalpha(*country_code))
   {
    /* Print Country-code only once for a host with multiple addresses.
     * Like with 'www.google.no':
@@ -1879,12 +1881,19 @@ static int trace_printf_cc (const char            *country_code,
        trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
     cc_last = country_code;
   }
+  else if (geoip_addr_is_special(a4,a6,&remark))
+  {
+    trace_puts ("Special");
+    if (remark)
+       trace_printf (" (%s)", remark);
+    trace_putc ('\n');
+  }
+  else if (country_code && *country_code == '-')
+       trace_puts ("Private");
   else if (geoip_addr_is_zero(a4,a6))
        trace_puts ("NULL-addr");
   else if (geoip_addr_is_multicast(a4,a6))
        trace_puts ("Multicast");
-  else if (geoip_addr_is_special(a4,a6))
-       trace_puts ("Special");
   else if (!geoip_addr_is_global(a4,a6))
        trace_puts ("Not global");
   else trace_puts ("None");
@@ -2023,7 +2032,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
       break;
     }
     if (trace_printf_cc(cc, loc,
-                        sa4 ? &sa4->sin_addr : NULL,
+                        sa4 ? &sa4->sin_addr  : NULL,
                         sa6 ? &sa6->sin6_addr : NULL) && ai->ai_next)
       trace_puts (", ");
   }

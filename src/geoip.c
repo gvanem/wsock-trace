@@ -173,7 +173,7 @@ void geoip_ipv4_add_specials (void)
          const char *high;
        } priv[] = {
          { "0.0.0.0",     "0.255.255.255"   },
-         { "10.0.0.0",    "10.255.255.255"  },
+         { "10.0.0.0",    "10.255.255.255"  }, /* https://en.wikipedia.org/wiki/Private_network */
          { "127.0.0.0",   "127.255.255.255" },
          { "172.16.0.0",  "172.31.255.255"  },
          { "192.168.0.0", "192.168.255.255" },
@@ -187,7 +187,7 @@ void geoip_ipv4_add_specials (void)
 
     if (wsock_trace_inet_pton4(priv[i].low, (u_char*)&low) == 1 &&
         wsock_trace_inet_pton4(priv[i].high, (u_char*)&high) == 1)
-      geoip4_add_entry (swap32(low), swap32(high), NULL);
+      geoip4_add_entry (swap32(low), swap32(high), "--");
     else
       TRACE (0, "Illegal low/high IPv4 address: %s/%s\n", priv[i].low, priv[i].high);
   }
@@ -505,30 +505,43 @@ int geoip_addr_is_multicast (const struct in_addr *ip4, const struct in6_addr *i
   return (0);
 }
 
-int geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6)
+int geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6, const char **remark)
 {
   if (ip4)
   {
     /* 240.0.0.0/4, https://whois.arin.net/rest/net/NET-240-0-0-0-0
      */
     if (ip4->S_un.S_un_b.s_b1 >= 240)
-       return (1);
+    {
+      if (ip4->S_un.S_un_b.s_b1 == 255)
+           *remark = "Broadcast";
+      else *remark = "Future use";
+      return (1);
+    }
 
     /* 169.254.0.0/16, https://whois.arin.net/rest/net/NET-169-254-0-0-1
      */
     if (ip4->S_un.S_un_b.s_b1 == 169 && ip4->S_un.S_un_b.s_b2 == 254)
-       return (1);
+    {
+      *remark = "Link Local";
+      return (1);
+    }
 
     /* 100.64.0.0/10, https://whois.arin.net/rest/net/NET-100-64-0-0-1
      */
     if (ip4->S_un.S_un_b.s_b1 == 100 &&
         (ip4->S_un.S_un_b.s_b2 >= 64 && ip4->S_un.S_un_b.s_b2 <= 127))
-       return (1);
+    {
+      *remark = " Shared Address Space";
+      return (1);
+    }
   }
   else if (ip6)
   {
     /* \todo */
+    *remark = "TBD";
   }
+  *remark = NULL;
   return (0);
 }
 
@@ -1317,6 +1330,7 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
   BOOL special = FALSE;
   BOOL mcast = FALSE;
   BOOL global = FALSE;
+  const char *remark = NULL;
 
   if (diff > 1)
   {
@@ -1329,7 +1343,7 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
 
       addr.s_addr = swap32 (last->high+1);
 
-      special = geoip_addr_is_special (&addr, NULL);
+      special = geoip_addr_is_special (&addr, NULL, &remark);
       mcast   = geoip_addr_is_multicast (&addr, NULL);
       global  = geoip_addr_is_global (&addr, NULL);
 
@@ -1341,11 +1355,12 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
       fprintf (out, "%10lu  %10lu %8ld", last->high+1, entry->low-1, diff);
       len = 22;
     }
-    fprintf (out, "%*sUnallocated block%s%s%s\n",
+    fprintf (out, "%*sUnallocated block%s%s%s %s\n",
              24-len, "",
              special ? ", Special"   : "",
              mcast   ? ", Multicast" : "",
-             !global ? ", !Global"   : "");
+             !global ? ", !Global"   : "",
+             remark  ? remark        : "");
 
     *diff_p = 0;
     if (special)
@@ -1585,6 +1600,7 @@ static void dump_num_ip_blocks_by_country (void)
 static void test_addr4 (const char *ip4_addr)
 {
   struct in_addr addr;
+  const char    *remark;
 
   printf ("%s(): ", __FUNCTION__);
   num_4_compare = 0;
@@ -1605,7 +1621,7 @@ static void test_addr4 (const char *ip4_addr)
          comment = "NULL-addr.";
       else if (geoip_addr_is_multicast(&addr,NULL))
          comment = "Multicast.";
-      else if (geoip_addr_is_special(&addr,NULL))
+      else if (geoip_addr_is_special(&addr,NULL,&remark))
          comment = "Special.";
       else if (!geoip_addr_is_global(&addr,NULL))
          comment = "Not global.";
@@ -1619,6 +1635,7 @@ static void test_addr4 (const char *ip4_addr)
 static void test_addr6 (const char *ip6_addr)
 {
   struct in6_addr addr;
+  const char     *remark;
 
   printf ("%s(): ", __FUNCTION__);
   num_6_compare = 0;
@@ -1639,7 +1656,7 @@ static void test_addr6 (const char *ip6_addr)
          comment = "NULL-addr.";
       else if (geoip_addr_is_multicast(NULL,&addr))
          comment = "Multicast.";
-      else if (geoip_addr_is_special(NULL,&addr))
+      else if (geoip_addr_is_special(NULL,&addr,&remark))
          comment = "Special.";
       else if (!geoip_addr_is_global(NULL,&addr))
          comment = "Not global.";
