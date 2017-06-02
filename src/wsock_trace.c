@@ -131,7 +131,7 @@ static const char *get_timestamp (void);
 #endif
 
 #if (defined(_MSC_VER) && defined(_M_X64)) || \
-    (defined(__GNUC__) && !defined( __i386__))
+    (defined(__GNUC__) && !defined(__i386__))
   #define get_EBP() 0
 
 #elif defined(_MSC_VER) && defined(_X86_)
@@ -658,11 +658,16 @@ const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
   return (p);
 }
 
+/*
+ * This returns the address AND the port in the 'buf'.
+ * Like: "127.0.0.1:1234"  for an AF_INET sockaddr. And
+ *       "[0F::80::]:1234" for an AF_INET6 sockaddr.
+ */
 const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
 {
   const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) sa;
   const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) sa;
-  static char buf [MAX_IP6_SZ+MAX_PORT_SZ+1];
+  static char buf [MAX_IP6_SZ+MAX_PORT_SZ+3];
   char       *end;
 
   if (!sa4)
@@ -678,11 +683,12 @@ const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
               swap16(sa4->sin_port));
     return (buf);
   }
-
   if (sa4->sin_family == AF_INET6)
   {
-    wsock_trace_inet_ntop6 ((const u_char*)&sa6->sin6_addr, buf, sizeof(buf));
+    buf[0] = '[';
+    wsock_trace_inet_ntop6 ((const u_char*)&sa6->sin6_addr, buf+1, sizeof(buf)-1);
     end = strchr (buf, '\0');
+    *end++ = ']';
     *end++ = ':';
     _itoa (swap16(sa6->sin6_port), end, 10);
     return (buf);
