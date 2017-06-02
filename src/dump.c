@@ -1607,8 +1607,8 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
 {
   const WSAPOLLFD *fd = fd_array;
   int   line = 0;
-  char  ev_buf1[100];
-  char  ev_buf2[100];
+  char  ev_buf1 [300];
+  char  ev_buf2 [300];
   ULONG i;
 
   for (i = 0; i < fds; i++, fd++)
@@ -1622,6 +1622,8 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
                   wsapollfd_event_decode(fd->revents,ev_buf2));
     line++;
   }
+  if (line == 0)
+     trace_puts ("<None>\n");
 }
 
 static const char *proto_padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
@@ -1886,7 +1888,6 @@ static int trace_printf_cc (const char            *country_code,
     trace_puts ("Special");
     if (remark)
        trace_printf (" (%s)", remark);
-    trace_putc ('\n');
   }
   else if (country_code && *country_code == '-')
        trace_puts ("Private");
@@ -1960,7 +1961,7 @@ void dump_countries (int type, const char **addresses)
   }
   if (i == 0)
        trace_puts ("None!?~0\n");
-  else trace_puts ("~0.\n");
+  else trace_puts ("~0\n");
 
   WSAError_save_restore (1);
 }
@@ -2038,7 +2039,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
   }
   if (num == 0)
        trace_puts ("None!?~0\n");
-  else trace_puts ("~0.\n");
+  else trace_puts ("~0\n");
 
   WSAError_save_restore (1);
 }
