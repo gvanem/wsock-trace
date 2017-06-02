@@ -538,8 +538,42 @@ int geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6
   }
   else if (ip6)
   {
-    /* \todo */
-    *remark = "TBD";
+    if (IN6_IS_ADDR_LOOPBACK(ip6))
+    {
+      *remark = "Loopback";
+      return (1);
+    }
+    if (IN6_IS_ADDR_LINKLOCAL(ip6))
+    {
+      *remark = "Link Local";
+      return (1);
+    }
+    if (IN6_IS_ADDR_SITELOCAL(ip6))
+    {
+      *remark = "Site Local";
+      return (1);
+    }
+
+    /* Teredo in RFC 4380 is 2001:0::/32
+     * http://www.ipuptime.net/Teredo.aspx
+     */
+    if (ip6->s6_bytes[0] == 0x20 &&
+        ip6->s6_bytes[1] == 0x01 &&
+        ip6->s6_bytes[2] == 0x00)
+    {
+      *remark = "Teredo";
+      return (1);
+    }
+
+    /* Old WinXP Teredo prefix, 3FFE:831F::/32
+     * https://technet.microsoft.com/en-us/library/bb457011.aspx
+     */
+    if (ip6->s6_bytes[0] == 0x3F && ip6->s6_bytes[1] == 0xFE &&
+        ip6->s6_bytes[2] == 0x83 && ip6->s6_bytes[3] == 0x1F)
+    {
+      *remark = "Teredo old";
+      return (1);
+    }
   }
   *remark = NULL;
   return (0);
