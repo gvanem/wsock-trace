@@ -597,8 +597,8 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
 
 /*
  * Save and restore WSA error-state:
- *   push: WSAGetLastError()
- *   pop:  WSASetLastError()
+ *   pop = 0: WSAGetLastError()
+ *   pop = 1: WSASetLastError()
  */
 int WSAError_save_restore (int pop)
 {
@@ -619,10 +619,10 @@ static const char *get_error (SOCK_RC_TYPE rc)
      */
     static char buf[150];
     const char *ret;
-    int   err = WSAError_save_restore (0);
+    int   err = WSAERROR_PUSH();
 
     ret = ws_strerror (err, buf, sizeof(buf));
-    WSAError_save_restore (1);
+    WSAERROR_POP();
     return (ret);
   }
   return ("No error");
@@ -638,10 +638,10 @@ const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
   DWORD  size = sizeof(buf);
   DWORD  len  = sa_len ? *(DWORD*)sa_len : (DWORD)sizeof(*sa);
 
-  WSAError_save_restore (0);
+  WSAERROR_PUSH();
   if ((*p_WSAAddressToStringA)((SOCKADDR*)sa, len, NULL, buf, &size))
      strcpy (buf, "??");
-  WSAError_save_restore (1);
+  WSAERROR_POP();
   return (buf);
 }
 
@@ -701,13 +701,13 @@ static const char *inet_ntop2 (const char *addr, int family)
   static char buf [MAX_IP6_SZ+1];
   PCSTR  rc;
 
-  WSAError_save_restore (0);
+  WSAERROR_PUSH();
   rc  = (*p_inet_ntop) (family, (void*)addr, buf, sizeof(buf));
 
   if (!rc)
      strcpy (buf, "??");
 
-  WSAError_save_restore (1);
+  WSAERROR_POP();
   return (buf);
 }
 
@@ -2740,7 +2740,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     void   *frames [10];
     USHORT  num_frames;
 
-    WSAError_save_restore (0);
+    WSAERROR_PUSH();
     memset (frames, '\0', sizeof(frames));
     num_frames = (*p_RtlCaptureStackBackTrace) (0, DIM(frames), frames, NULL);
     if (num_frames <= 2)
@@ -2772,7 +2772,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 #endif
 
 #else
-    WSAError_save_restore (0);
+    WSAERROR_PUSH();
 #endif
 
     /* We don't need a CONTEXT_FULL; only EIP+EBP (or RIP+RBP for x64). We want the caller's
@@ -2808,7 +2808,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     }
 #endif
 
-    WSAError_save_restore (1);
+    WSAERROR_POP();
   }
 
 quit:

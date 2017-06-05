@@ -1925,7 +1925,7 @@ void dump_countries (int type, const char **addresses)
 {
   int i;
 
-  WSAError_save_restore (0);
+  WSAERROR_PUSH();
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
@@ -1963,7 +1963,7 @@ void dump_countries (int type, const char **addresses)
        trace_puts ("None!?~0\n");
   else trace_puts ("~0\n");
 
-  WSAError_save_restore (1);
+  WSAERROR_POP();
 }
 
 /*
@@ -2001,7 +2001,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 {
   int num;
 
-  WSAError_save_restore (0);
+  WSAERROR_PUSH();
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
@@ -2041,7 +2041,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
        trace_puts ("None!?~0\n");
   else trace_puts ("~0\n");
 
-  WSAError_save_restore (1);
+  WSAERROR_POP();
 }
 
 void dump_nameinfo (const char *host, const char *serv, DWORD flags)
