@@ -189,6 +189,16 @@ And another example from C-ares' adig [2]:
 are excluded from the trace. You can edit the `%HOME/wsock_trace` file and exclude
 whatever calls you like.
 
+A more eleborated example from 2 OpenVPN clients (linked to `wsock_trace.lib`) running a
+simple test (in OpenVPN's root-dir):
+```
+cd sample
+start /pos=200,50,1000,800   ..\openvpn.exe --config sample-config-files/loopback-server
+start /pos=800,150,1000,1000 ..\openvpn.exe --config sample-config-files/loopback-client
+```
+[![screenshot](screenshot-openvpn-tmb.jpg?raw=true)](screenshot-openvpn-tmb.jpg?raw=true):
+http://www.watt-32.net/misc/screenshot-openvpn.png
+
 
 ### Implementation notes
 
