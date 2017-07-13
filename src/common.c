@@ -239,13 +239,24 @@ static char *rip (char *s)
  */
 char *win_strerror (DWORD err)
 {
-  static char buf[512+20];
-  char   err_buf[512], *p;
+  static  char buf[512+20];
+  char    err_buf[512], *p;
+  HRESULT hr = 0;
 
+  if (HRESULT_SEVERITY(err))
+     hr = err;
+
+  if (err == ERROR_SUCCESS)
+     strcpy (err_buf, "No error");
+  else
   if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, err,
                       LANG_NEUTRAL, err_buf, sizeof(err_buf)-1, NULL))
      strcpy (err_buf, "Unknown error");
-  snprintf (buf, sizeof(buf), "%lu/0x%lX: %s", (u_long)err, (u_long)err, err_buf);
+
+  if (hr)
+       snprintf (buf, sizeof(buf), "0x%08lX: %s", (u_long)hr, err_buf);
+  else snprintf (buf, sizeof(buf), "%lu: %s", (u_long)err, err_buf);
+
   rip (buf);
   p = strrchr (buf, '.');
   if (p && p[1] == '\0')
