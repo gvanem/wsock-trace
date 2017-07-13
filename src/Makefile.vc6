@@ -116,7 +116,7 @@ $(OBJ_DIR):
 $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(USE_LUA)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(DATA_OBJ)
-	@copy $(WSOCK_MAP) + link.tmp $(WSOCK_MAP)
+	@type link.tmp >> $(WSOCK_MAP)
 	@del $(WSOCK_LIB:.lib=.exp)
 
 install:
@@ -132,12 +132,13 @@ geoip-gen4.c geoip-gen6.c: geoip.exe
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_LIB)
 	link $(LDFLAGS) -out:$@ -pdb:$*.pdb $** > link.tmp
-	copy test.map + link.tmp test.map
+	type link.tmp >> test.map
 
 geoip.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) $(CFLAGS) -DTEST_GEOIP $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib > link.tmp
-	geoip.exe -4g geoip-gen4.c
-	geoip.exe -6g geoip-gen6.c
+	type link.tmp >> geoip.map
+	geoip.exe -4g -> geoip-gen4.c
+	geoip.exe -6g -> geoip-gen6.c
 	$(CC) -c $(CFLAGS) geoip-gen4.c geoip-gen6.c
 	link $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib > link.tmp
 	del $(GEOIP_OBJ) geoip-null.obj geoip-gen4.obj geoip-gen6.obj
@@ -153,7 +154,7 @@ compile_juajit_0:
 	@echo
 
 #
-# You may have to add a run "%VSINSTALLDIR%VC\vcvarsall.bat" $(MACHINE) here.
+# You may have to add a "%VSINSTALLDIR%VC\vcvarsall.bat" $(MACHINE) here.
 #
 compile_juajit_1:
 	pushd $(LUAJIT_ROOT)\src      &    \
@@ -202,7 +203,9 @@ wsock_trace_x64.def: wsock_trace.def Makefile.VC6
 $(OBJ_DIR)\common.obj:      common.c common.h init.h dump.h
 $(OBJ_DIR)\data.obj:        data.c common.h in_addr.h
 $(OBJ_DIR)\dump.obj:        dump.c common.h idna.h in_addr.h init.h wsock_trace.h
-$(OBJ_DIR)\geoip.obj:       geoip.c common.h in_addr.h init.h geoip.h
+$(OBJ_DIR)\geoip.obj:       geoip.c common.h in_addr.h init.h geoip.h getopt.h smartlist.h
+$(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h
+$(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h idna.h
 $(OBJ_DIR)\init.obj:        init.c common.h idna.h stkwalk.h bfd_gcc.h init.h wsock_trace_lua.h wsock_trace.h
 $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
