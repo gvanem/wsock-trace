@@ -1066,6 +1066,10 @@ void wsock_trace_init (void)
 
   StackWalkInit();
 
+#if defined(USE_LWIP)
+  ws_lwip_init();
+#endif
+
 #if defined(USE_LUA)
   wstrace_init_lua (g_cfg.lua_init_script);
 #endif
