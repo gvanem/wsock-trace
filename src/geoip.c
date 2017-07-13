@@ -171,13 +171,14 @@ void geoip_ipv4_add_specials (void)
   static const struct {
          const char *low;
          const char *high;
+         const char *remark;
        } priv[] = {
-         { "0.0.0.0",     "0.255.255.255"   },
-         { "10.0.0.0",    "10.255.255.255"  }, /* https://en.wikipedia.org/wiki/Private_network */
-         { "127.0.0.0",   "127.255.255.255" },
-         { "172.16.0.0",  "172.31.255.255"  },
-         { "192.168.0.0", "192.168.255.255" },
-         { "224.0.0.0",   "239.255.255.253" }  /* https://en.wikipedia.org/wiki/Multicast_address */
+         { "0.0.0.0",     "0.255.255.255",   "-L" },
+         { "10.0.0.0",    "10.255.255.255",  "-P" }, /* https://en.wikipedia.org/wiki/Private_network */
+         { "127.0.0.0",   "127.255.255.255", "-L" },
+         { "172.16.0.0",  "172.31.255.255",  "-P" },
+         { "192.168.0.0", "192.168.255.255", "-P" },
+         { "224.0.0.0",   "239.255.255.253", "-M" }  /* https://en.wikipedia.org/wiki/Multicast_address */
        };
   int i;
 
@@ -187,7 +188,7 @@ void geoip_ipv4_add_specials (void)
 
     if (wsock_trace_inet_pton4(priv[i].low, (u_char*)&low) == 1 &&
         wsock_trace_inet_pton4(priv[i].high, (u_char*)&high) == 1)
-      geoip4_add_entry (swap32(low), swap32(high), "--");
+      geoip4_add_entry (swap32(low), swap32(high), priv[i].remark);
     else
       TRACE (0, "Illegal low/high IPv4 address: %s/%s\n", priv[i].low, priv[i].high);
   }
@@ -201,11 +202,16 @@ void geoip_ipv6_add_specials (void)
   static const struct {
          const char *low;
          const char *high;
+         const char *remark;
        } priv[] = {
-         { "::",     "::"       },                                /* IN6_IS_ADDR_UNSPECIFIED() */
-         { "::1",    "::1"      },                                /* IN6_IS_ADDR_LOOPBACK() */
-         { "f0::",   "f0::ffff" },                                /* !IN6_IS_ADDR_GLOBAL() */
-         { "fe80::", "fe80:ffff:ffff:ffff:ffff:ffff:ffff:ffff" }  /* IN6_IS_ADDR_LINKLOCAL() */
+         { "::",      "::",  "-Z"       },                                   /* IN6_IS_ADDR_UNSPECIFIED() */
+         { "::1",     "::1", "-L"      },                                    /* IN6_IS_ADDR_LOOPBACK() */
+      #if 1
+         { "2001:0::",    "2001:0000:ffff:ffff:ffff:ffff:ffff:ffff", "-T" }, /* RFC 4380 Teredo, 2001:0::/32 */
+         { "3ffe:831f::", "3ffe:831f:ffff:ffff:ffff:ffff:ffff:ffff", "-t" }, /* WinXP Teroedo,   3FFE:831F::/32 */
+      #endif
+         { "f0::",    "f0::ffff", "-G" },                                    /* !IN6_IS_ADDR_GLOBAL() */
+         { "fe80::",  "fe80:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "-l" }      /* IN6_IS_ADDR_LINKLOCAL() */
        };
   int i;
 
@@ -223,7 +229,7 @@ void geoip_ipv6_add_specials (void)
       TRACE (0, "Illegal high IPv6 address: %s, %s\n", priv[i].high, get_ws_error());
       continue;
     }
-    geoip6_add_entry (&low, &high, NULL);
+    geoip6_add_entry (&low, &high, priv[i].remark);
   }
 }
 
@@ -479,7 +485,7 @@ int geoip_addr_is_zero (const struct in_addr *ip4, const struct in6_addr *ip6)
   }
   else if (ip6)
   {
-    if (!memcmp(ip6, "\x00\x00\x00\x00\x00\x00\x00\x00"
+    if (!memcmp(ip6, "\x00\x00\x00\x00\x00\x00\x00\x00"   /* IN6_IS_ADDR_UNSPECIFIED() */
                      "\x00\x00\x00\x00\x00\x00\x00\x00", sizeof(*ip6)))
        return (1);
   }
@@ -1359,27 +1365,22 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
                                    const struct ipv4_node *entry, const struct ipv4_node *last,
                                    long *diff_p)
 {
-  long diff = (long)(entry->low - last->high);
-  int  len;
-  BOOL special = FALSE;
-  BOOL mcast = FALSE;
-  BOOL global = FALSE;
+  struct in_addr addr;
+  long   diff = (long)(entry->low - last->high);
+  int    len;
+  BOOL   special = FALSE;
+  BOOL   mcast = FALSE;
+  BOOL   global = FALSE;
   const char *remark = NULL;
 
   if (diff > 1)
   {
+    addr.s_addr = swap32 (last->high+1);
     fprintf (out, "    **: ");
     if (dump_cidr)
     {
-      struct in_addr addr;
-      char   low[25] = "?";
-      int    nw_len = network_len32 (last->high+1, entry->low-1);
-
-      addr.s_addr = swap32 (last->high+1);
-
-      special = geoip_addr_is_special (&addr, NULL, &remark);
-      mcast   = geoip_addr_is_multicast (&addr, NULL);
-      global  = geoip_addr_is_global (&addr, NULL);
+      char low[25] = "?";
+      int  nw_len = network_len32 (last->high+1, entry->low-1);
 
       wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
       len = fprintf (out, "%s/%d", low, nw_len);
@@ -1389,6 +1390,11 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
       fprintf (out, "%10lu  %10lu %8ld", last->high+1, entry->low-1, diff);
       len = 22;
     }
+
+    special = geoip_addr_is_special (&addr, NULL, &remark);
+    mcast   = geoip_addr_is_multicast (&addr, NULL);
+    global  = geoip_addr_is_global (&addr, NULL);
+
     fprintf (out, "%*sUnallocated block%s%s%s %s\n",
              24-len, "",
              special ? ", Special"   : "",
@@ -1701,7 +1707,7 @@ static void test_addr6 (const char *ip6_addr)
     printf ("Invalid address: %s.\n", get_ws_error());
 }
 
-static void geoip_generate_array (int family, const char *out_file)
+static int geoip_generate_array (int family, const char *out_file)
 {
   int    len, fam;
   time_t now = time (NULL);
@@ -1713,7 +1719,7 @@ static void geoip_generate_array (int family, const char *out_file)
   if (!out)
   {
     printf ("Failed to create file %s; %s\n", out_file, strerror(errno));
-    return;
+    return (1);
   }
 
   if (family == AF_INET && geoip_ipv4_entries)
@@ -1729,7 +1735,7 @@ static void geoip_generate_array (int family, const char *out_file)
   else
   {
     printf ("family must be AF_INET or AF_INET6.\n");
-    return;
+    return (1);
   }
 
   fprintf (out,
@@ -1757,6 +1763,7 @@ static void geoip_generate_array (int family, const char *out_file)
            "  return geoip_smartlist_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
            "}\n\n", fam, fam, fam, len);
   fclose (out);
+  return (0);
 }
 
 /*
@@ -1901,6 +1908,7 @@ int main (int argc, char **argv)
   int c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
   int do_update = 0, do_dump = 0, do_rand = 0, do_generate = 0;
   int loops = 10;
+  int rc = 0;
   const char *my_name = argv[0];
   const char *g_file = NULL;
 
@@ -1974,18 +1982,23 @@ int main (int argc, char **argv)
     }
     if (!g_cfg.geoip_enable)
     {
-      printf ("'[geoip]' section must have 'enable=1' in %s is needed for these tests.\n", config_file_name());
+      printf ("'[geoip]' section must have 'enable=1' in %s for these tests.\n", config_file_name());
       return (0);
     }
   }
 
   if (do_generate)
   {
+    if (!g_cfg.geoip_enable)
+    {
+      printf ("'[geoip]' section must have 'enable=1' in %s for this '-g' option.\n", config_file_name());
+      rc++;
+    }
     if (do_4)
-       geoip_generate_array (AF_INET, g_file);
+       rc += geoip_generate_array (AF_INET, g_file);
     if (do_6)
-       geoip_generate_array (AF_INET6, g_file);
-    return (0);
+       rc += geoip_generate_array (AF_INET6, g_file);
+    return (rc);
   }
 
   argc -= optind;
@@ -2025,7 +2038,7 @@ int main (int argc, char **argv)
   }
 
   wsock_trace_exit();
-  return (0);
+  return (rc);
 }
 #endif  /* TEST_GEOIP */
 
