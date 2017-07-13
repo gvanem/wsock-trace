@@ -1941,14 +1941,14 @@ void dump_countries (int type, const char **addresses)
 
     if (type == AF_INET)
     {
-      a4 = (const struct in_addr*) addresses[i];
-      cc = geoip_get_country_by_ipv4 (a4);
+      a4  = (const struct in_addr*) addresses[i];
+      cc  = geoip_get_country_by_ipv4 (a4);
       loc = geoip_get_location_by_ipv4 (a4);
     }
     else if (type == AF_INET6)
     {
-      a6 = (const struct in6_addr*) addresses[i];
-      cc = geoip_get_country_by_ipv6 (a6);
+      a6  = (const struct in6_addr*) addresses[i];
+      cc  = geoip_get_country_by_ipv6 (a6);
       loc = geoip_get_location_by_ipv6 (a6);
     }
     else
@@ -1972,7 +1972,7 @@ void dump_countries (int type, const char **addresses)
  */
 void dump_countries_sockaddr (const struct sockaddr *sa)
 {
-  const char                *addr[2] = { NULL, NULL };
+  const char                *addr[2];
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
 
@@ -1983,12 +1983,14 @@ void dump_countries_sockaddr (const struct sockaddr *sa)
   {
     sa4 = (const struct sockaddr_in*) sa;
     addr[0] = (const char*) &sa4->sin_addr;
+    addr[1] = NULL;
     dump_countries (AF_INET, addr);
   }
   else if (sa->sa_family == AF_INET6)
   {
     sa6 = (const struct sockaddr_in6*) sa;
     addr[0] = (const char*) &sa6->sin6_addr;
+    addr[1] = NULL;
     dump_countries (AF_INET6, addr);
   }
 }
