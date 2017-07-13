@@ -2426,7 +2426,7 @@ EXPORT u_long WINAPI inet_addr (const char *addr)
   rc = (*p_inet_addr) (addr);
 
   ENTER_CRIT();
-  WSTRACE ("inet_addr (\"%s\")", addr);
+  WSTRACE ("inet_addr (\"%s\") -> %lu", addr, rc);
   LEAVE_CRIT();
   return (rc);
 }
