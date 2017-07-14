@@ -170,8 +170,8 @@ static int config_get_line (FILE        *fil,
 {
   static char key[256], val[512], val2[512], section[40];
   static BOOL seen_a_section = FALSE;
-  char   *p, *q;
-  size_t  len;
+  char  *p, *q;
+  int    len;
 
   while (1)
   {
@@ -222,7 +222,7 @@ static int config_get_line (FILE        *fil,
 
     /* Remove trailing space.
      */
-    for (len = strlen(val)-1; len >= 0 && isspace((int)val[len]); )
+    for (len = (int)strlen(val)-1; len >= 0 && isspace((int)val[len]); )
         val[len--] = '\0';
     break;
   }
