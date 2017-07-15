@@ -27,6 +27,7 @@
 #include "idna.h"
 #include "smartlist.h"
 #include "stkwalk.h"
+#include "overlap.h"
 #include "init.h"
 
 struct config_table g_cfg;
@@ -761,6 +762,7 @@ void wsock_trace_exit (void)
 
   exclude_list_free();
   StackWalkExit();
+  overlap_exit();
 
 #if defined(USE_LUA)
   wstrace_exit_lua (g_cfg.lua_exit_script);
@@ -1065,6 +1067,7 @@ void wsock_trace_init (void)
 #endif
 
   StackWalkInit();
+  overlap_init();
 
 #if defined(USE_LWIP)
   ws_lwip_init();
