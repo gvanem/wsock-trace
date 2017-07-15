@@ -1,12 +1,10 @@
 /*
- * vm_dump.c -
- *
- * $Author: ko1 $
+ * vm_dump.c
  *
  * Copyright (C) 2004-2007 Koichi Sasada
  *
  * Heavily modified version of the Ruby crash-handler at:
- *   https://opensource.apple.com/source/ruby/ruby-104/ruby/vm_dump.c.auto.html
+ *   https://opensource.apple.com/source/ruby/ruby-104/ruby/vm_dump.c
  */
 
 #include <stdio.h>
@@ -312,12 +310,14 @@ static DWORD WINAPI dump_thread (void *arg)
     }
 
     /* The return-address is usually 5 bytes after the calling line.
-     * E.g. 'call foo' decodes to 'E8 xx xx xx xx'.
+     * E.g. 'call foo' decodes to
+     *   E8 xx xx xx xx             for 32-bit.
+     *   E8 xx xx xx xx xx xx xx xx for 64-bit.
      *
      * So try to get the function-name, displacement and line of the calling
      * line. We're not so much interested in the 'return address'.
      */
-    addr -= 5;
+    addr -= 1 + sizeof(void*);
 
     args.p_SymFromAddr          = p_SymFromAddr;
     args.p_SymGetModuleBase64   = p_SymGetModuleBase64;
@@ -368,7 +368,7 @@ void vm_bug_list (int skip_frames, void *list)
 
   init();
 
-  arg.list          = list; /* \todo: A user defined 'smartlist_t' array to fill */
+  arg.list          = list;    /* \todo: A user defined 'smartlist_t' array to fill */
   arg.tid           = GetCurrentThreadId();
   arg.skip_frames   = skip_frames;
   arg.max_recursion = INT_MAX;
@@ -404,7 +404,7 @@ static void MS_CDECL abort_handler (int sig)
   fflush (stderr);
 
 #if 0
-  vm_bug_list (4, NULL);  /* First traced function should become raise() in the CRT */
+  vm_bug_list (4, NULL);   /* First traced function should become raise() in the CRT */
 #else
   vm_bug_list (10, NULL);  /* First traced function should become the function with assert(FALSE) */
 #endif
