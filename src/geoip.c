@@ -1041,6 +1041,7 @@ const char *geoip_get_long_name_by_id (int number)
 
 /*
  * Allocate memory for the geoip statistics array.
+ * Keep a zero-element at the end.
  */
 static void geoip_stats_init (void)
 {
@@ -1048,22 +1049,21 @@ static void geoip_stats_init (void)
 
   assert (geoip_stats_buf == NULL);
 
-  num = geoip_num_countries();
-  size = sizeof(*geoip_stats_buf) * num;
-  size += sizeof(*geoip_stats_buf);
+  num  = geoip_num_countries();
+  size = sizeof(*geoip_stats_buf) * (num + 1);
 
   geoip_stats_buf = calloc (1, size);
   if (!geoip_stats_buf)
-     return;
+     size = 0;
 
-  for (i = 0; i < num; i++)
+  for (i = 0; size && i < num; i++)
   {
     const char *c_A2 = geoip_get_short_name_by_idx ((int)i);
 
     geoip_stats_buf[i].country[0] = toupper (c_A2[0]);
     geoip_stats_buf[i].country[1] = toupper (c_A2[1]);
   }
-  TRACE (2, "Allocated %u bytes for %d country statistics.\n",
+  TRACE (2, "Allocated %u bytes for geoip_stats_buf needed for %d countries.\n",
          (unsigned)size, (unsigned)num);
 }
 
