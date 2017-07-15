@@ -177,7 +177,6 @@ void smartlist_del (smartlist_t *sl, int idx)
   sl->list [sl->num_used] = NULL;
 }
 
-
 /*
  * Remove the 'idx'-th element of 'sl':
  *   if 'idx' is not the last element, move all subsequent elements back one
@@ -190,8 +189,14 @@ void smartlist_del_keeporder (smartlist_t *sl, int idx)
   assert (idx < sl->num_used);
   --sl->num_used;
   if (idx < sl->num_used)
-     memmove (sl->list+idx, sl->list+idx+1, sl->num_used-idx*sizeof(void*));
-  sl->list[sl->num_used] = NULL;
+  {
+    void *src = sl->list+idx+1;
+    void *dst = sl->list+idx;
+    size_t sz = (sl->num_used - idx) * sizeof(void*);
+
+    memmove (dst, src, sz);
+  }
+  sl->list [sl->num_used] = NULL;
 }
 
 /*
