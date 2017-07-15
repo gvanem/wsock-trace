@@ -34,6 +34,7 @@
 #include "init.h"
 #include "dump.h"
 #include "stkwalk.h"
+#include "overlap.h"
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
@@ -318,9 +319,6 @@ typedef INT (WINAPI *func_WSAStringToAddressW) (wchar_t           *addressStr,
                                                 SOCKADDR          *address,
                                                 INT               *addressLength);
 
-typedef BOOL (WINAPI *func_WSAGetOverlappedResult) (SOCKET s, WSAOVERLAPPED *ov, DWORD *transfered,
-                                                    BOOL wait, DWORD *flags);
-
 typedef int (WINAPI *func_WSAEnumNetworkEvents) (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events);
 
 typedef int (WINAPI *func_WSAEnumProtocolsA) (int *protocols, WSAPROTOCOL_INFOA *proto_info, DWORD *buf_len);
@@ -428,7 +426,6 @@ static func_WSAConnect               p_WSAConnect = NULL;
 static func_WSAConnectByNameA        p_WSAConnectByNameA = NULL;
 static func_WSAConnectByNameW        p_WSAConnectByNameW = NULL;
 static func_WSAConnectByList         p_WSAConnectByList = NULL;
-static func_WSAGetOverlappedResult   p_WSAGetOverlappedResult = NULL;
 static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
 static func_WSAEnumProtocolsA        p_WSAEnumProtocolsA = NULL;
 static func_WSAEnumProtocolsW        p_WSAEnumProtocolsW = NULL;
@@ -1657,6 +1654,18 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
   return (rc);
 }
 
+/*
+ * Count the number of bytes in an array of 'WSABUF' structures.
+ */
+static int count_wsabuf (const WSABUF *bufs, DWORD num_bufs)
+{
+  int i, rc = 0;
+
+  for (i = 0; i < (int)num_bufs && bufs; i++, bufs++)
+      rc += bufs->len;
+  return (rc);
+}
+
 EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                            DWORD *flags, WSAOVERLAPPED *ov,
                            LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
@@ -1671,23 +1680,28 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecv"));
 
   if (rc == NO_ERROR)
-       g_cfg.counts.recv_bytes += bufs->len * num_bufs;
-  else g_cfg.counts.recv_errors++;
+  {
+    /* If the transfer is overlapped this counter should be
+     * updated in 'WSAGetOverlappedResult()'
+     */
+    g_cfg.counts.recv_bytes += bufs->len * num_bufs;
+  }
 
   if (!exclude_this)
   {
     char        res[100];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
 
-    if (rc == SOCKET_ERROR)
-         strcpy (res, get_error(rc));
-    else strcpy (res, "<Pending>");
+    strcpy (res, get_error(rc));
 
     WSTRACE ("WSARecv (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s",
              SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg, ov, func, res);
 
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
+
+    if (ov)
+       overlap_store (s, ov, bufs->len * num_bufs, TRUE);
   }
 
   if (g_cfg.recv_delay)
@@ -1713,9 +1727,13 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvFrom"));
 
-  if (rc >= 0)
-       g_cfg.counts.recv_bytes += rc;
-  else g_cfg.counts.recv_errors++;
+  if (rc == NO_ERROR)
+  {
+    /* If the transfer is overlapped this counter should be
+     * updated in 'WSAGetOverlappedResult()'
+     */
+    g_cfg.counts.recv_bytes += bufs->len * num_bufs;
+  }
 
   if (!exclude_this)
   {
@@ -1727,9 +1745,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
          _itoa (*num_bytes, nbytes, 10);
     else strcpy (nbytes, "??");
 
-    if (rc == SOCKET_ERROR)
-         strcpy (res, get_error(rc));
-    else strcpy (res, "<Pending>");
+    strcpy (res, get_error(rc));
 
     WSTRACE ("WSARecvFrom (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
              SOCKET_CAST(s), bufs, num_bufs, nbytes, flg,
@@ -1740,6 +1756,9 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (from);
+
+    if (ov)
+       overlap_store (s, ov, bufs->len * num_bufs, TRUE);
   }
 
   if (g_cfg.recv_delay)
@@ -1815,18 +1834,6 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
   return (rc);
 }
 
-/*
- * Count the number of bytes in an array of 'WSABUF' structures.
- */
-static int count_wsabuf (const WSABUF *bufs, DWORD num_bufs)
-{
-  int i, rc = 0;
-
-  for (i = 0; i < (int)num_bufs && bufs; i++, bufs++)
-      rc += bufs->len;
-  return (rc);
-}
-
 EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                            DWORD flags, WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
@@ -1837,9 +1844,13 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   ENTER_CRIT();
 
-  if (rc == SOCKET_ERROR)
-       g_cfg.counts.send_errors++;
-  else g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
+  if (rc == NO_ERROR)
+  {
+    /* If the transfer is overlapped this counter should be
+     * updated in 'WSAGetOverlappedResult()'
+     */
+    g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
+  }
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASend"));
 
@@ -1852,9 +1863,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
          _itoa (*num_bytes, nbytes, 10);
     else strcpy (nbytes, "??");
 
-    if (rc == SOCKET_ERROR)
-         strcpy (res, get_error(rc));
-    else strcpy (res, "<Pending>");
+    strcpy (res, get_error(rc));
 
     WSTRACE ("WSASend (%u, 0x%p, %lu, %s, <%s>, 0x%p, 0x%p) --> %s",
              SOCKET_CAST(s), bufs, num_bufs, nbytes,
@@ -1862,6 +1871,9 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
+
+    if (ov)
+       overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
   }
 
   if (g_cfg.send_delay)
@@ -1874,7 +1886,6 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   return (rc);
 }
 
-
 EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                              DWORD flags, const struct sockaddr *to, int to_len,
                              WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
@@ -1886,9 +1897,13 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
   ENTER_CRIT();
 
-  if (rc == SOCKET_ERROR)
-       g_cfg.counts.send_errors++;
-  else g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
+  if (rc == NO_ERROR)
+  {
+    /* If the transfer is overlapped this counter should be
+     * updated in 'WSAGetOverlappedResult()'
+     */
+    g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
+  }
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendTo"));
 
@@ -1901,9 +1916,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
          _itoa (*num_bytes, nbytes, 10);
     else strcpy (nbytes, "??");
 
-    if (rc == SOCKET_ERROR)
-         strcpy (res, get_error(rc));
-    else strcpy (res, "<Pending>");
+    strcpy (res, get_error(rc));
 
     WSTRACE ("WSASendTo (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
              SOCKET_CAST(s), bufs, num_bufs, nbytes, socket_flags(flags),
@@ -1914,6 +1927,9 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (to);
+
+    if (ov)
+       overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
   }
 
   if (g_cfg.send_delay)
@@ -1929,22 +1945,33 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *transfered,
                                            BOOL wait, DWORD *flags)
 {
-  BOOL rc;
+  BOOL  rc;
+  DWORD bytes = 0;
   char  xfer[10]  = "<N/A>";
   const char *flg = "<N/A>";
 
   INIT_PTR (p_WSAGetOverlappedResult);
-  rc = (*p_WSAGetOverlappedResult) (s, ov, transfered, wait, flags);
+  rc = (*p_WSAGetOverlappedResult) (s, ov, &bytes, wait, flags);
 
   ENTER_CRIT();
 
+  /* MSDN says "This parameter must not be a NULL pointer."
+   * But test anyway.
+   */
   if (transfered)
-     _itoa (*transfered, xfer, 10);
+     _itoa (bytes, xfer, 10);
+
   if (flags)
      flg = wsasocket_flags_decode (*flags);
 
   WSTRACE ("WSAGetOverlappedResult (%u, 0x%p, %s, %d, %s) --> %s",
            SOCKET_CAST(s), ov, xfer, wait, flg, get_error(rc));
+
+  if (transfered)
+  {
+    overlap_recall (s, ov, bytes);
+    *transfered = bytes;
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -2155,7 +2182,7 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
 
   if (!exclude_this)
   {
-    char  extra[20] = "";
+    char  buf[50];
     char  time[20]  = "WSA_INFINITE";
     const char *err = "Unknown";
 
@@ -2167,17 +2194,24 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
          err = "WSA_WAIT_TIMEOUT";
     else if (rc >= WSA_WAIT_EVENT_0 && rc < (WSA_WAIT_EVENT_0 + num_ev))
     {
-      err = "WSA_WAIT_EVENT_0";
       if (wait_all)
-           strcpy (extra, ", all");
-      else snprintf (extra, sizeof(extra), ", %lu", rc-WSA_WAIT_EVENT_0);
+           strcpy (buf, ", all completed");
+      else snprintf (buf, sizeof(buf), "%lu completed", rc-WSA_WAIT_EVENT_0);
+      err = buf;
     }
 
     if (timeout != WSA_INFINITE)
        snprintf (time, sizeof(time), "%lu ms", timeout);
 
-    WSTRACE ("WSAWaitForMultipleEvents (%lu, 0x%p, %s, %s, %sALERTABLE) --> %s%s",
-             num_ev, ev, wait_all ? "TRUE" : "FALSE", time, alertable ? "" : "not ", err, extra);
+    WSTRACE ("WSAWaitForMultipleEvents (%lu, 0x%p, %s, %s, %sALERTABLE) --> %s",
+             num_ev, ev, wait_all ? "TRUE" : "FALSE", time, alertable ? "" : "not ", err);
+
+#if 1
+    /* Try to update all overlapped operations matching this event.
+     */
+    if (rc >= WSA_WAIT_EVENT_0 && rc < (WSA_WAIT_EVENT_0 + num_ev))
+       overlap_recall_all (ev);
+#endif
   }
 
   LEAVE_CRIT();
