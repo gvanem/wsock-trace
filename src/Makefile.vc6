@@ -55,7 +55,7 @@ LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
 !if "$(USE_DEBUG)" == "1"
-CFLAGS = $(CFLAGS) -MDd -Zi -Os -D_DEBUG
+CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 !else
 CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
 !endif
@@ -95,6 +95,7 @@ OBJECTS = $(OBJ_DIR)\common.obj          \
           $(OBJ_DIR)\idna.obj            \
           $(OBJ_DIR)\init.obj            \
           $(OBJ_DIR)\in_addr.obj         \
+          $(OBJ_DIR)\overlap.obj         \
           $(OBJ_DIR)\smartlist.obj       \
           $(OBJ_DIR)\stkwalk.obj         \
           $(OBJ_DIR)\vm_dump.obj         \
@@ -137,8 +138,8 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_LIB)
 geoip.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) $(CFLAGS) -DTEST_GEOIP $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib > link.tmp
 	type link.tmp >> geoip.map
-	geoip.exe -4g -> geoip-gen4.c
-	geoip.exe -6g -> geoip-gen6.c
+	geoip.exe -4g geoip-gen4.c
+	geoip.exe -6g geoip-gen6.c
 	$(CC) -c $(CFLAGS) geoip-gen4.c geoip-gen6.c
 	link $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib > link.tmp
 	del $(GEOIP_OBJ) geoip-null.obj geoip-gen4.obj geoip-gen6.obj
@@ -209,6 +210,7 @@ $(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h idna.h
 $(OBJ_DIR)\init.obj:        init.c common.h idna.h stkwalk.h bfd_gcc.h init.h wsock_trace_lua.h wsock_trace.h
 $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
+$(OBJ_DIR)\overlap.obj:     overlap.c overlap.h common.h init.h smartlist.h
 $(OBJ_DIR)\test.obj:        test.c getopt.h
 
 $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h smartlist.h

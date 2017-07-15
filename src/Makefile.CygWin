@@ -31,8 +31,8 @@ EX_LIBS += -lole32
 OBJ_DIR = Cygwin_obj
 
 SOURCES = wsock_trace.c idna.c init.c common.c cpu.c dump.c \
-          geoip.c geoip-gen4.c geoip-gen6.c in_addr.c smartlist.c \
-          stkwalk.c bfd_gcc.c
+          geoip.c geoip-gen4.c geoip-gen6.c in_addr.c overlap.c \
+          smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 
