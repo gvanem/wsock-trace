@@ -64,12 +64,12 @@ void overlap_exit (void)
   if (g_cfg.trace_level > 0 && max > 0)
   {
     trace_puts ("\n");
-    trace_indent (g_cfg.trace_indent+2);
+    trace_indent (g_cfg.trace_indent);
     trace_printf ("%d overlapped tranfers not completed:~5\n", max);
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
-      trace_indent (g_cfg.trace_indent+4);
+      trace_indent (g_cfg.trace_indent+2);
       trace_printf ("Overlap: 0x%p, hEvent: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
                     ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
     }
@@ -139,7 +139,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
     ov->ov      = o;
   }
 
-  ov->event = o ? o->hEvent : 0;
+  ov->event = o ? o->hEvent : NULL;
   ov->bytes = num_bytes;
   if (!modify)
      smartlist_add (ov_list, ov);
@@ -149,7 +149,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
 /*
  * Try to update all overlapped operations matching this event.
  */
-void overlap_recall_all (WSAEVENT event)
+void overlap_recall_all (const WSAEVENT *event)
 {
   int i;
 

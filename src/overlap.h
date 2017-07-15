@@ -15,7 +15,7 @@ extern void overlap_exit (void);
 
 extern void overlap_store (SOCKET s, WSAOVERLAPPED *ov, DWORD num_bytes, BOOL is_recv);
 extern void overlap_recall (SOCKET s, const WSAOVERLAPPED *ov, DWORD bytes);
-extern void overlap_recall_all (WSAEVENT ev);
+extern void overlap_recall_all (const WSAEVENT *ev);
 extern void overlap_dump (SOCKET s, const WSAOVERLAPPED *ov);
 
 #endif /* _OVERLAP_H */
