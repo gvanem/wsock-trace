@@ -202,6 +202,9 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
   const struct WSAE_search_list *el = err_list;
   size_t i;
 
+  if (err == 0)
+     return ("No error");
+
   /* Some programs (notably Nmap and Nping) calls 'WSAGetLastError()'
    * when they ought to call 'GetLastError()'. Handle this so tracing
    * of e.g. 'WSAGetLastError()' returns the correct error-string.
