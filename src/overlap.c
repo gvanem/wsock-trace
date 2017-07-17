@@ -22,10 +22,11 @@
 #define OV_TRACE_LEVEL 2
 #endif
 
-#define OV_TRACE(fmt, ...)                                        \
-        do {                                                      \
-          if (g_cfg.trace_level >= OV_TRACE_LEVEL)                \
-             debug_printf (NULL, 0, "     " fmt, ## __VA_ARGS__); \
+#define OV_TRACE(fmt, ...)                                       \
+        do {                                                     \
+          if (g_cfg.trace_level >= OV_TRACE_LEVEL)               \
+             trace_printf ("%*.s" fmt, g_cfg.trace_indent+4, "", \
+                           ## __VA_ARGS__);                      \
         } while (0)
 
 func_WSAGetOverlappedResult  p_WSAGetOverlappedResult = NULL;
@@ -61,19 +62,16 @@ void overlap_exit (void)
   struct overlapped *ov;
   int    i, max = smartlist_len (ov_list);
 
-  if (g_cfg.trace_level > 0 && max > 0)
+  if (g_cfg.trace_level >= 1 && max >= 1)
   {
-    trace_puts ("\n");
-    trace_indent (g_cfg.trace_indent);
-    trace_printf ("%d overlapped tranfers not completed:~5\n", max);
+    trace_printf ("%*.s%d overlapped tranfers not completed:\n",
+                  g_cfg.trace_indent+2, "", max);
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
-      trace_indent (g_cfg.trace_indent+2);
-      trace_printf ("Overlap: 0x%p, hEvent: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
-                    ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
+      trace_printf ("%*.sOverlap: 0x%p, hEvent: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
+                    g_cfg.trace_indent+4, "", ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
     }
-    trace_puts ("~0");
   }
 
   for (i = 0; i < max; i++)
@@ -88,12 +86,6 @@ int overlap_init (void)
 {
   ov_list = smartlist_new();
   return (1);
-}
-
-void overlap_dump (SOCKET s, const WSAOVERLAPPED *o)
-{
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("Overlap: 0x%p, hEvent: 0x%p\n", o, o ? o->hEvent : NULL);
 }
 
 static void overlap_trace (int i, const struct overlapped *ov)
@@ -120,7 +112,8 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
-  overlap_dump (s, o);
+  OV_TRACE ("%s(): Overlap: 0x%p, sock: %u, hEvent: 0x%p\n",
+            __FUNCTION__, o, s, o ? o->hEvent : NULL);
 
   for (i = 0; i < max && !modify; i++)
   {
@@ -152,9 +145,6 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
 void overlap_recall_all (const WSAEVENT *event)
 {
   int i;
-
-  OV_TRACE ("WSAEVENT: 0x%p, p_WSAGetOverlappedResult: 0x%p, length of ov_list: %d\n",
-            event, p_WSAGetOverlappedResult, smartlist_len(ov_list));
 
   for (i = 0; i < smartlist_len(ov_list); i++)
   {
@@ -190,7 +180,7 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
 
   for (i = 0; i < smartlist_len(ov_list); i++)
   {
-    const struct overlapped *ov = smartlist_get (ov_list, i);
+    struct overlapped *ov = smartlist_get (ov_list, i);
 
     overlap_trace (i, ov);
 
@@ -209,8 +199,31 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
       OV_TRACE ("overlapped[%d]: sent %lu bytes, actual sent %lu bytes.\n",
                 i, ov->bytes, bytes);
     }
-    smartlist_del_keeporder (ov_list, i);
+    free (ov);
+    smartlist_del (ov_list, i);
     break;
   }
 }
 
+/*
+ * Remove a overlap entry matching socket 's'.
+ */
+void overlap_remove (SOCKET s)
+{
+  int i;
+
+  if (!ov_list)
+     return;
+
+  for (i = 0; i < smartlist_len(ov_list); i++)
+  {
+    struct overlapped *ov = smartlist_get (ov_list, i);
+
+    if (ov->sock == s)
+    {
+      free (ov);
+      smartlist_del (ov_list, i);
+    }
+  }
+  overlap_trace (-1, NULL);
+}
