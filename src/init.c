@@ -726,8 +726,8 @@ static void trace_report (void)
   trace_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
   trace_printf ("  Send errors:  %15s\n",               qword_str(g_cfg.counts.send_errors));
 
-  if (g_cfg.use_sema && ws_sema_inherited)
-     trace_printf ("  Semaphore wait: %15s\n",          qword_str(g_cfg.counts.sema_waits));
+  if (g_cfg.use_sema)
+     trace_printf ("    Semaphore wait: %13s\n",        qword_str(g_cfg.counts.sema_waits));
 
   if (g_cfg.geoip_enable)
   {
