@@ -1,31 +1,17 @@
 t
-*.cbp
-*.layout
-*.info
-*.prj
 *.map
 *.a
 *.tmp
-*.log
 *.exe
-*.idb
 *.pdb
-*.cbp
-*.aps
-*.dep
 *.dll
-*.dsp
-*.dsw
 *.exp
 *.lib
 *.mak
-*.ncb
-*.opt
-*.plg
 *.obj
-*.bat
-enum_proto.*
-.depend.*
+src/enum_proto.*
+src/.depend.*
+src/CLANG_obj/*
 src/Cygwin_obj/*
 src/Debug/*
 src/MSVC_obj/*
@@ -35,7 +21,6 @@ src/MingW-utils/*
 src/UpgradeLog.htm
 src/VC6_obj/*
 src/Watcom_obj/*
-src/Wsock-trace.vcxproj
 src/rcp/*
 src/wsock_trace_mw.def
 src/wsock_trace_mw_x64.def
@@ -43,8 +28,11 @@ src/wsock_trace_x64.def
 src/test/*
 src/geoip-gen*.c
 src/misc-stuff/*
-backup/*
+src/.vs/*
+src/Wsock-trace.VC.db
+src/Wsock-trace.vcxproj.user
+src/get_caller-notes.txt
 cpp_filter.py
-
+backup/*
 
 
