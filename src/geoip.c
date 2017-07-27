@@ -559,6 +559,16 @@ int geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6
       *remark = "Site Local";
       return (1);
     }
+    if (IN6_IS_ADDR_V4COMPAT(ip6))
+    {
+      *remark = "IPv4 compatible";
+      return (1);
+    }
+    if (IN6_IS_ADDR_V4MAPPED(ip6))
+    {
+      *remark = "IPv4 mapped";
+      return (1);
+    }
 
     /* Teredo in RFC 4380 is 2001:0::/32
      * http://www.ipuptime.net/Teredo.aspx
@@ -1640,7 +1650,7 @@ static void dump_num_ip_blocks_by_country (void)
 static void test_addr4 (const char *ip4_addr)
 {
   struct in_addr addr;
-  const char    *remark;
+  const char    *remark = NULL;
 
   printf ("%s(): ", __FUNCTION__);
   num_4_compare = 0;
@@ -1658,15 +1668,15 @@ static void test_addr4 (const char *ip4_addr)
     else
     {
       if (geoip_addr_is_zero(&addr,NULL))
-         comment = "NULL-addr.";
+         comment = "NULL-addr";
       else if (geoip_addr_is_multicast(&addr,NULL))
-         comment = "Multicast.";
+         comment = "Multicast";
       else if (geoip_addr_is_special(&addr,NULL,&remark))
-         comment = "Special.";
+         comment = "Special";
       else if (!geoip_addr_is_global(&addr,NULL))
-         comment = "Not global.";
+         comment = "Not global";
     }
-    printf ("%lu compares. %s\n", num_4_compare, comment);
+    printf ("%lu compares. %s. %s\n", num_4_compare, comment, remark ? remark : "");
   }
   else
     printf ("Invalid address: %s.\n", get_ws_error());
@@ -1675,7 +1685,7 @@ static void test_addr4 (const char *ip4_addr)
 static void test_addr6 (const char *ip6_addr)
 {
   struct in6_addr addr;
-  const char     *remark;
+  const char     *remark = NULL;
 
   printf ("%s(): ", __FUNCTION__);
   num_6_compare = 0;
@@ -1693,15 +1703,15 @@ static void test_addr6 (const char *ip6_addr)
     else
     {
       if (geoip_addr_is_zero(NULL,&addr))
-         comment = "NULL-addr.";
+         comment = "NULL-addr";
       else if (geoip_addr_is_multicast(NULL,&addr))
-         comment = "Multicast.";
+         comment = "Multicast";
       else if (geoip_addr_is_special(NULL,&addr,&remark))
-         comment = "Special.";
+         comment = "Special";
       else if (!geoip_addr_is_global(NULL,&addr))
-         comment = "Not global.";
+         comment = "Not global";
     }
-    printf ("%lu compares. %s\n", num_6_compare, comment);
+    printf ("%lu compares. %s %s\n", num_6_compare, comment, remark ? remark : "");
   }
   else
     printf ("Invalid address: %s.\n", get_ws_error());
