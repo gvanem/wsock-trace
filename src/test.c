@@ -25,6 +25,10 @@
 
 #include "getopt.h"
 
+#if defined(_MSC_VER) && (_MSC_VER <= 1700)
+  #define snprintf _snprintf
+#endif
+
 #if defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
   #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
