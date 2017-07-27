@@ -1913,6 +1913,26 @@ static void free_argv_list (smartlist_t *sl)
   smartlist_free (sl);
 }
 
+static int check_requirements (void)
+{
+  if (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file))
+  {
+    printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip4_file);
+    return (0);
+  }
+  if (!g_cfg.geoip6_file || !FILE_EXISTS(g_cfg.geoip6_file))
+  {
+    printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip6_file);
+    return (0);
+  }
+  if (!g_cfg.geoip_enable)
+  {
+    printf ("'[geoip]' section must have 'enable=1' in %s to use this option.\n", config_file_name());
+    return (0);
+  }
+  return (1);
+}
+
 int main (int argc, char **argv)
 {
   int c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
@@ -1980,31 +2000,15 @@ int main (int argc, char **argv)
   }
   else if (!g_cfg.geoip_use_generated)
   {
-    if (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file))
-    {
-      printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip4_file);
-      return (0);
-    }
-    if (!g_cfg.geoip6_file || !FILE_EXISTS(g_cfg.geoip6_file))
-    {
-      printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip6_file);
-      return (0);
-    }
-    if (!g_cfg.geoip_enable)
-    {
-      printf ("'[geoip]' section must have 'enable=1' in %s for these tests.\n", config_file_name());
-      return (0);
-    }
+    if (!check_requirements())
+       return (0);
   }
 
   if (do_generate)
   {
-    if (!g_cfg.geoip_enable)
-    {
-      printf ("'[geoip]' section must have 'enable=1' in %s for this '-g' option.\n", config_file_name());
-      rc++;
-    }
-    if (do_4)
+    if (!check_requirements())
+       rc++;
+    else if (do_4)
        rc += geoip_generate_array (AF_INET, g_file);
     if (do_6)
        rc += geoip_generate_array (AF_INET6, g_file);
