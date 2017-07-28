@@ -1374,7 +1374,9 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   fd_set *rd_copy = NULL;
   fd_set *wr_copy = NULL;
   fd_set *ex_copy = NULL;
+  char    rc_buf [20];
   char    tv_buf [50];
+  char    ts_buf [40] = "";  /* timestamp at start of select() */
   int     rc;
 
   INIT_PTR (p_select);
@@ -1384,6 +1386,8 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
   if (!exclude_this)
   {
+    strcpy (ts_buf, get_timestamp());
+
     if (!tv)
          strcpy (tv_buf, "unspec");
     else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
@@ -1406,14 +1410,19 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
   if (!exclude_this)
   {
-    char buf [20];
+    /* We want the timestamp for when select() was called.
+     * Not the timestamp for when select() returned. Hence do not
+     * use the WSTRACE() macro here.
+     */
+    wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
+                    ts_buf, get_caller (GET_RET_ADDR(), get_EBP()));
 
-    WSTRACE ("select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s",
-             nfds,
-             rd_fd ? "rd" : "NULL",
-             wr_fd ? "wr" : "NULL",
-             ex_fd ? "ex" : "NULL",
-             tv_buf, rc, rc > 0 ? _itoa(rc,buf,10) : get_error(rc));
+    wstrace_printf (FALSE, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
+                    nfds,
+                    rd_fd ? "rd" : "NULL",
+                    wr_fd ? "wr" : "NULL",
+                    ex_fd ? "ex" : "NULL",
+                    tv_buf, rc, rc > 0 ? _itoa(rc,rc_buf,10) : get_error(rc));
 
     if (g_cfg.dump_select)
     {
@@ -2753,7 +2762,7 @@ static const char *get_timestamp (void)
     case TS_NONE:
          return ("");
   }
-  return (NULL);
+  return ("");
 }
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
