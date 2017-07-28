@@ -2742,14 +2742,19 @@ static const char *get_timestamp (void)
          last = ticks;
          msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
 
-#if defined(__CYGWIN__) || defined(__WATCOMC__)  /* Doesn't seems to have 'fmodl()' */
+#if defined(__CYGWIN__) || defined(__WATCOMC__)  /* These doesn't seems to have 'fmodl()' */
          sprintf (buf, "%.3f msec: ", msec);
 #else
          {
            int         dec = (int) fmodl (msec, 1000.0);
            const char *sec = qword_str ((unsigned __int64) (msec/1000.0));
+           char *p;
 
-           sprintf (buf, "%s.%03d sec: ", sec, dec);
+           strcpy (buf, sec);
+           p = strchr (buf, '\0');
+           *p++ = '.';
+           _utoa10w (dec, 3, p);
+           strcat (buf, " sec: ");
          }
 #endif
          return (buf);
