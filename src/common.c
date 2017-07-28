@@ -352,6 +352,28 @@ struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size, const
 #endif
 
 /*
+ * 'unsigned int' to string with leading zeros specified in 'width'.
+ * _utoa10w (1234,5,buf) -> "01234".
+ *
+ * Faster than using 'snprintf (buf, sizeof(buf), "%*u", 5, 1234)'.
+ */
+char *_utoa10w (int value, int width, char *buf)
+{
+  int i = 0;
+
+  do           /* generate digits in reverse order */
+  {
+    buf[i++] = (value % 10) + '0';
+  }
+  while ((value /= 10) > 0);
+
+  while (i < width)
+     buf [i++] = '0';
+  buf [i] = '\0';
+  return _strreverse (buf);
+}
+
+/*
  * Search 'list' for 'value' and return it's name.
  */
 const char *list_lookup_name (unsigned value, const struct search_list *list, int num)
@@ -1187,6 +1209,22 @@ char *_strtok_r (char *ptr, const char *sep, char **end)
   }
   /* we ended up on a null byte, there are no more strings to find! */
   return (NULL);
+}
+
+/*
+ * Reverse string 'str' in place.
+ */
+char *_strreverse (char *str)
+{
+  int i, j;
+
+  for (i = 0, j = strlen(str)-1; i < j; i++, j--)
+  {
+    char c = str[i];
+    str[i] = str[j];
+    str[j] = c;
+  }
+  return (str);
 }
 
 /*

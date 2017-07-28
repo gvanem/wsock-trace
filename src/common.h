@@ -410,6 +410,8 @@ extern const char    *qword_str (unsigned __int64 val);
 extern char * _strlcpy (char *dst, const char *src, size_t len);
 extern char * _strtok_r (char *ptr, const char *sep, char **end);
 extern char * _strrepeat (int ch, size_t num);
+extern char * _strreverse (char *str);
+extern char * _utoa10w (int value, int width, char *buf);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
 
