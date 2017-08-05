@@ -1574,7 +1574,7 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
 
   info[0].fd = rd;
   info[1].fd = wr;
-  info[1].fd = ex;
+  info[2].fd = ex;
 
   for (i = 0; i < DIM(info); i++)
   {
