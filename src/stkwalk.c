@@ -57,6 +57,10 @@
 #include <conio.h>
 #include <assert.h>
 
+#ifdef __WATCOMC__
+  #include <stdint.h>
+#endif
+
 #include "common.h"
 #include "init.h"
 #include "bfd_gcc.h"
