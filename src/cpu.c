@@ -104,6 +104,7 @@ static double filetime_sec (const FILETIME *filetime)
 void print_thread_times (HANDLE thread)
 {
   FILETIME ctime, etime, ktime, utime;
+  double life_span;
 
   init_cpu();
 
@@ -127,9 +128,14 @@ void print_thread_times (HANDLE thread)
   if (CompareFileTime(&etime,&ctime) < 0)
      GetSystemTimeAsFileTime (&etime);
 
+  /* If this is negative, the thread lived in kernel all the time.
+   */
+  life_span = filetime_sec (&etime) - filetime_sec (&ctime);
+  if (life_span < 0.0)
+     life_span = -life_span;
+
   trace_printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
-                filetime_sec(&ktime), filetime_sec(&utime),
-                filetime_sec(&etime) - filetime_sec(&ctime));
+                filetime_sec(&ktime), filetime_sec(&utime), life_span);
 
   if (p_QueryThreadCycleTime)
   {
