@@ -1995,12 +1995,15 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
 
 EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
 {
-  WSANETWORKEVENTS in_events;
   int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events);
+
+#if !defined(__WATCOMC__)
+  WSANETWORKEVENTS in_events;
 
   if (do_it && events)
        memcpy (&in_events, events, sizeof(in_events));
   else memset (&in_events, '\0', sizeof(in_events));
+#endif
 
   INIT_PTR (p_WSAEnumNetworkEvents);
   rc = (*p_WSAEnumNetworkEvents) (s, ev, events);
@@ -2010,8 +2013,10 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
   WSTRACE ("WSAEnumNetworkEvents (%u, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s",
            SOCKET_CAST(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc));
 
+#if !defined(__WATCOMC__)
   if (rc == 0 && !exclude_this && do_it)
      dump_events (&in_events, events);
+#endif
 
   LEAVE_CRIT();
   return (rc);
