@@ -85,8 +85,10 @@ struct geoip_stats {
        char    flag;        /* The country was seen in IPv4 or IPv6 address(es) */
     };
 
-#define GEOIP_STAT_IPV4 0x01
-#define GEOIP_STAT_IPV6 0x02
+#define GEOIP_STAT_IPV4       0x01
+#define GEOIP_STAT_IPV6       0x02
+#define GEOIP_FOUND_BY_IP2LOC 0x04
+
 
 static struct geoip_stats *geoip_stats_buf = NULL;
 
@@ -374,6 +376,10 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
 
   geoip_stats_init();
 
+#ifdef USE_IP2LOCATION
+  ip2loc_init();
+#endif
+
   return geoip_get_num_addr (_num4, _num6);
 }
 
@@ -383,6 +389,10 @@ void geoip_exit (void)
   smartlist_free_all (geoip_ipv6_entries);
   geoip_ipv4_entries = geoip_ipv6_entries = NULL;
   geoip_stats_exit();
+
+#ifdef USE_IP2LOCATION
+  ip2loc_exit();
+#endif
 }
 
 /*
@@ -664,6 +674,14 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 }
 
 /*
+ * These are static here to get the location (city and region) later on.
+ */
+#ifdef USE_IP2LOCATION
+  static struct ip2loc_entry ip2loc_entry;
+  static BOOL   ip2loc_entry_good = FALSE;
+#endif
+
+/*
  * Given an IPv4 address on network order, return an ISO-3166 2 letter
  * Country-code representing the country to which that address
  * belongs, or NULL for "No geoip information available".
@@ -675,11 +693,30 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   struct ipv4_node *entry = NULL;
   DWORD    ip_num = swap32 (addr->s_addr);
   char     buf [25];
-  unsigned num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
+  unsigned num;
+  BOOL     use_ip2location = FALSE;
 
-  TRACE (5, "Looking for %s (%lu) in %u elements.\n",
+#ifdef USE_IP2LOCATION
+  num = ip2loc_num_entries();
+  use_ip2location = TRUE;
+  ip2loc_entry_good = FALSE;
+#else
+  num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
+#endif
+
+  TRACE (5, "Looking for %s (%lu) in %u elements (USE_IP2LOCATION: %d).\n",
          wsock_trace_inet_ntop4((const u_char*)addr,buf,sizeof(buf)),
-         ip_num, num);
+         ip_num, num, use_ip2location);
+
+#ifdef USE_IP2LOCATION
+  if (ip2loc_get_entry(ip_num, &ip2loc_entry))
+  {
+    ip2loc_entry_good = TRUE;
+    if (g_cfg.trace_report)
+       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_FOUND_BY_IP2LOC);
+    return (ip2loc_entry.country_short);
+  }
+#endif
 
   if (geoip_ipv4_entries)
   {
@@ -718,6 +755,80 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   }
   return (entry ? entry->country : NULL);
 }
+
+/*
+ * Given an IPv4 address, return the location (city+region).
+ * Currently only works when 'ip2location_bin_file' is present.
+ */
+const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
+{
+#ifdef USE_IP2LOCATION
+  static char buf [100];
+
+  if (ip2loc_entry_good)
+  {
+    /* Assume the next geoip_get_country_by_ipv4() is for another country.
+     */
+    ip2loc_entry_good = FALSE;
+    snprintf (buf, sizeof(buf), "%s/%s", ip2loc_entry.city, ip2loc_entry.region);
+    return (buf);
+  }
+#endif
+  ARGSUSED (ip4);
+  return (NULL);
+}
+
+/*
+ * Given an IPv6 address, return the location.
+ * Currently only works when 'ip2location_bin_file' is present.
+ */
+const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
+{
+#ifdef USE_IP2LOCATION
+  static char buf [100];
+
+  if (ip2loc_entry_good)
+  {
+    /* Assume the next geoip_get_country_by_ipv6() is for another country.
+     */
+    ip2loc_entry_good = FALSE;
+    snprintf (buf, sizeof(buf), "%s/%s", ip2loc_entry.city, ip2loc_entry.region);
+    return (buf);
+  }
+#endif
+  ARGSUSED (ip6);
+  return (NULL);
+}
+
+/*
+ * \todo:
+ *   Optionally use MaxMind's GeoLite2-City.mmdb file and print the location (city) too.
+ *   This will have to be coded in 'geoip_get_location_by_ipv4()' and 'geoip_get_location_by_ipv6()'.
+ *   Emulate what this command does:
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions 0 names en
+ *   giving:
+ *     "New York" <utf8_string>
+ *
+ *   Or this command:
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions location
+ *   giving:
+ *     {
+ *       "accuracy_radius":
+ *         1000 <uint16>
+ *       "latitude":
+ *         43.048100 <double>
+ *       "longitude":
+ *         -76.147400 <double>
+ *       "metro_code":
+ *         555 <uint16>
+ *       "time_zone":
+ *         "America/New_York" <utf8_string>
+ *     }
+ *
+ * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
+ *
+ * \todo: Put this inside a '#ifdef USE_MAXMINDDB' section later.
+ */
 
 static int geoip_get_num_addr (DWORD *num4, DWORD *num6)
 {
@@ -1101,9 +1212,10 @@ static void geoip_stats_update (const char *country_A2, int flag)
     c1 = (int)stats->country[0] + ((int)stats->country[1] << 8);
     if (c1 == c2)
     {
-      if (flag == GEOIP_STAT_IPV4)
+      if (flag & GEOIP_STAT_IPV4)
            stats->num4++;
-      else stats->num6++;
+      else if (flag & GEOIP_STAT_IPV6)
+           stats->num6++;
       stats->flag |= flag;
       break;
     }
@@ -1146,6 +1258,8 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6)
 {
   const struct geoip_stats *stats;
   DWORD  n4 = 0, n6 = 0;
+  DWORD  ip2loc_n4 = 0;
+  DWORD  ip2loc_n6 = 0;
   size_t i;
 
   for (i = 0, stats = geoip_stats_buf;
@@ -1153,15 +1267,25 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6)
        stats++, i++)
   {
     if (stats->num4 > 0)
-       n4++;
+    {
+      n4++;
+      if (stats->flag & GEOIP_FOUND_BY_IP2LOC)
+        ip2loc_n4++;
+    }
     if (stats->num6 > 0)
-       n6++;
-
+    {
+      n6++;
+      if (stats->flag & GEOIP_FOUND_BY_IP2LOC)
+        ip2loc_n6++;
+    }
   }
   if (num_ip4)
      *num_ip4 = n4;
   if (num_ip6)
      *num_ip6 = n6;
+
+  TRACE (2, "%s() n4: %lu, n6: %lu, ip2loc_n4: %lu, ip2loc_n6: %lu.\n",
+         __FUNCTION__, n4, n6, ip2loc_n4, ip2loc_n6);
 }
 
 uint64 geoip_get_stats_by_idx (int idx)
@@ -1423,7 +1547,7 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
 
 static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
 {
-  int   i, len, max = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
+  int   i, len, max;
   DWORD missing_blocks = 0;
   DWORD missing_addr = 0;
   long  diff = 0;
@@ -1437,6 +1561,7 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
     else fputs ("  IP-low      IP-high      Diff  Country\n", out);
   }
 
+  max = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
   for (i = 0; i < max; i++)
   {
     const struct ipv4_node *entry = smartlist_get (geoip_ipv4_entries, i);
@@ -1524,7 +1649,7 @@ static int check_ipv6_unallocated (FILE *out, int dump_cidr, const struct ipv6_n
 
 static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
 {
-  int    i, len, max = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
+  int    i, len, max;
   uint64 missing_blocks = 0;
   uint64 missing_addr = 0;
   uint64 diff;
@@ -1539,6 +1664,7 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
     else fprintf (out, "%-*s %-*s Country\n", (int)(MAX_IP6_SZ-4), "IP-low", (int)(MAX_IP6_SZ-5), "IP-high");
   }
 
+  max = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
   for (i = 0; i < max; i++)
   {
     const struct ipv6_node *entry = smartlist_get (geoip_ipv6_entries, i);

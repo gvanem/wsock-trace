@@ -22,6 +22,8 @@ extern const char *geoip_get_country_by_ipv4 (const struct in_addr *addr);
 extern const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr);
 extern const char *geoip_get_long_name_by_id (int number);
 extern const char *geoip_get_long_name_by_A2 (const char *short_name);
+extern const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4);
+extern const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6);
 
 extern int         geoip_addr_is_zero (const struct in_addr *ip4, const struct in6_addr *ip6);
 extern int         geoip_addr_is_multicast (const struct in_addr *ip4, const struct in6_addr *ip6);
@@ -48,6 +50,20 @@ extern smartlist_t *geoip_smartlist_fixed (void *start, size_t el_size, unsigned
  */
 extern smartlist_t *geoip_smartlist_fixed_ipv4 (void);
 extern smartlist_t *geoip_smartlist_fixed_ipv6 (void);
+
+#ifdef USE_IP2LOCATION
+  struct ip2loc_entry {
+         const char *country_short;
+         const char *country_long;
+         const char *city;
+         const char *region;
+       };
+
+  extern BOOL  ip2loc_init (void);
+  extern void  ip2loc_exit (void);
+  extern BOOL  ip2loc_get_entry (DWORD ip_num, struct ip2loc_entry *ent);
+  extern DWORD ip2loc_num_entries (void);
+#endif
 
 #endif
 
