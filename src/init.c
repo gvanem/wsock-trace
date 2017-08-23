@@ -30,6 +30,8 @@
 #include "overlap.h"
 #include "init.h"
 
+#define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
+
 struct config_table g_cfg;
 
 CONSOLE_SCREEN_BUFFER_INFO console_info;
@@ -541,6 +543,9 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   else if (!stricmp(key,"max_days"))
        g_cfg.geoip_max_days = atoi (val);
 
+  else if (!stricmp(key,"ip2location_bin_file"))
+       g_cfg.ip2location_bin_file = strdup (val);
+
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
@@ -788,29 +793,15 @@ void wsock_trace_exit (void)
   g_cfg.trace_file_okay = FALSE;
   g_cfg.trace_stream = NULL;
 
-  if (g_cfg.trace_file)
-     free (g_cfg.trace_file);
-
-  if (g_cfg.pcap.dump_fname)
-     free (g_cfg.pcap.dump_fname);
-
-  if (g_cfg.lua_init_script)
-     free (g_cfg.lua_init_script);
-
-  if (g_cfg.lua_exit_script)
-     free (g_cfg.lua_exit_script);
-
-  if (g_cfg.geoip4_file)
-     free (g_cfg.geoip4_file);
-
-  if (g_cfg.geoip6_file)
-     free (g_cfg.geoip6_file);
-
-  if (g_cfg.geoip4_url)
-     free (g_cfg.geoip4_url);
-
-  if (g_cfg.geoip6_url)
-     free (g_cfg.geoip6_url);
+  FREE (g_cfg.trace_file);
+  FREE (g_cfg.pcap.dump_fname);
+  FREE (g_cfg.lua_init_script);
+  FREE (g_cfg.lua_exit_script);
+  FREE (g_cfg.geoip4_file);
+  FREE (g_cfg.geoip6_file);
+  FREE (g_cfg.geoip4_url);
+  FREE (g_cfg.geoip6_url);
+  FREE (g_cfg.ip2location_bin_file);
 
   geoip_exit();
   IDNA_exit();

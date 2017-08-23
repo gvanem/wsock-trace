@@ -85,6 +85,7 @@ struct config_table {
        char   *geoip6_file;
        char   *geoip4_url;
        char   *geoip6_url;
+       char   *ip2location_bin_file;
 
        BOOL    idna_enable;
        BOOL    idna_winidn;
