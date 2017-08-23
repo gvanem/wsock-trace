@@ -10,6 +10,8 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
+#include <sys/stat.h>
+
 #include "common.h"
 #include "init.h"
 #include "geoip.h"
@@ -19,17 +21,30 @@
 #include <IP2Location.h>
 
 static IP2Location *handle;
+static DWORD        file_size;
 
-static IP2Location *open_file (char *file)
+static int IP2Location_initialize (IP2Location *loc);
+
+/*
+ * Cannot call 'IP2Location_open()' because of the 'calloc()' hack
+ * below. Hence just do what 'IP2Location_open()' do here.
+ */
+static IP2Location *open_file (const char *file)
 {
-  IP2Location *loc = IP2Location_open (file);
+  struct stat  st;
+  IP2Location *loc;
+  FILE        *f;
 
-  if (!loc)
+  f = fopen (file, "rb");
+  if (!f)
   {
     TRACE (1, "ip2loc: Failed to open \"bin_file\" file %s.\n", file);
     return (NULL);
   }
+  loc = calloc (1, sizeof(*loc));
+  loc->filehandle = f;
 
+  IP2Location_initialize (loc);
   if (IP2Location_open_mem(loc, IP2LOCATION_SHARED_MEMORY) == -1)
   {
     TRACE (1, "ip2loc: Call to IP2Location_open_mem() failed.\n");
@@ -37,9 +52,12 @@ static IP2Location *open_file (char *file)
     return (NULL);
   }
 
+  stat (file, &st);
+  file_size = st.st_size;
+
   TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s\n"
-            "                 Date: %02d-%02d-%04d, IPv: %d, "
-            "IP4count: %u, IP6count: %u\n",
+            "                Date: %02d-%02d-%04d, IPv: %d, "
+            "IP4count: %u, IP6count: %u.\n",
          dword_str(loc->ipv4databasecount), IP2Location_api_version_string(),
          loc->databaseday, loc->databasemonth, 2000+loc->databaseyear,
          loc->ipversion, loc->ipv4databasecount, loc->ipv6databasecount);
@@ -64,10 +82,17 @@ void ip2loc_exit (void)
   handle = NULL;
 }
 
-DWORD ip2loc_num_entries (void)
+DWORD ip2loc_num_ipv4_entries (void)
 {
   if (handle)
      return (handle->ipv4databasecount);
+  return (0);
+}
+
+DWORD ip2loc_num_ipv6_entries (void)
+{
+  if (handle)
+     return (handle->ipv6databasecount);
   return (0);
 }
 
@@ -86,39 +111,44 @@ DWORD ip2loc_num_entries (void)
 #if defined(_MSC_VER)
   #pragma warning (disable: 4101 4244)
 
-#elif defined(__WATCOMC__)
-  #include "in_addr.h"
+#elif defined(__GNUC__)
+  /*
+  * For warning: 'IP2Location_ipv6_to_no' declared 'static'
+  * but never defined [-Wunused-function]
+  */
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function");
 #endif
 
 /*
- * This assumes the "IP2Location.h" is in the %INCLUDE% or %C_INCLUDE_PATH% path.
- * The .c-files should be in the same directory.
+ * For 'inet_pton()' in below "IP2Location.c"
  */
-#include "IP2Location.c"
-#include "IP2Loc_DBInterface.c"
+#include "in_addr.h"
 
-/* A hack to avoid IP2Location.c allocating memory for the record.
+#undef  inet_pton
+#define inet_pton(family, addr, dst)  wsock_trace_inet_pton (family, addr, dst)
+
+/*
+ * A hack to avoid IP2Location.c allocating memory for the record.
  * Also to avoid the need to free it since we never work with several entries
  * at the time.
  */
 #undef  calloc
-#define calloc(x) &fixed
-
+#define calloc(num,sz)  &fixed
 static IP2LocationRecord fixed;
 
-BOOL ip2loc_get_entry (DWORD ip_num, struct ip2loc_entry *ent)
-{
-  IP2LocationRecord *r;
-  ipv_t parsed_ipv;
+/*
+ * This assumes the IP2Location .c/.h files are in the %INCLUDE% or %C_INCLUDE_PATH% path.
+ */
+#include "IP2Location.c"
+#include "IP2Loc_DBInterface.c"
 
-  parsed_ipv.ipv4 = ip_num;
-  r = IP2Location_get_ipv4_record (handle, NULL, COUNTRYSHORT | COUNTRYLONG | REGION | CITY, parsed_ipv);
+BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
+{
+  IP2LocationRecord *r = IP2Location_get_record (handle, (char*)addr,
+                                                 COUNTRYSHORT | COUNTRYLONG | REGION | CITY);
 
   memset (ent, '\0', sizeof(*ent));
-  if (!r)
-     return (FALSE);
-
-  if (!strncmp(r->country_short,"INVALID",7))
+  if (!r || !strncmp(r->country_short,"INVALID",7))
      return (FALSE);
 
   ent->country_short = r->country_short;
@@ -139,14 +169,19 @@ void ip2loc_exit (void)
 {
 }
 
-DWORD ip2loc_num_entries (void)
+DWORD ip2loc_num_ipv4_entries (void)
 {
   return (0);
 }
 
-BOOL ip2loc_get_entry (DWORD ip_num, struct ip2loc_entry *ent)
+DWORD ip2loc_num_ipv6_entries (void)
 {
-  ARGSUSED (ip_num);
+  return (0);
+}
+
+BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
+{
+  ARGSUSED (addr);
   ARGSUSED (ent);
   return (FALSE);
 }
