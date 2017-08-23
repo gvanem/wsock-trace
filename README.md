@@ -21,9 +21,9 @@ Also many thanks to MaxMind and IP2Location for their data-bases.
    * Sign-up and download the free IP2Location LITE databases at [here](http://lite.ip2location.com).
    * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%` or `%APPDATA%` directory.
    * Get the sources from Github: `git clone https://github.com/chrislim2888/IP2Location-C-Library c:/some/path`.
-   * Add `c:/some/path` to the `INCLUDE` and/or `C_INCLUDE_PATH`.
+   * Add `c:/some/path` to the `%INCLUDE%` and/or `%C_INCLUDE_PATH%`.
    * Edit the respective makefile to say `USE_IP2LOCATION = 1`
-   * Then rebuild.
+   * Then do the specific installation for your compiler.
 
 ### Installation (MSVC):
 
