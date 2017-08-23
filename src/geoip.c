@@ -14,6 +14,11 @@
 #include <windows.h>
 #include <wininet.h>
 
+#if defined(__WATCOMC__)
+  #undef  NTDDI_VERSION
+  #define NTDDI_VERSION 0x05010000
+#endif
+
 #include "common.h"
 #include "smartlist.h"
 #include "init.h"

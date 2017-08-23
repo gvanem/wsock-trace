@@ -37,8 +37,12 @@ static IP2Location *open_file (char *file)
     return (NULL);
   }
 
-  TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s\n",
-         dword_str(loc->ipv4databasecount), IP2Location_api_version_string());
+  TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s\n"
+            "                 Date: %02d-%02d-%04d, IPv: %d, "
+            "IP4count: %u, IP6count: %u\n",
+         dword_str(loc->ipv4databasecount), IP2Location_api_version_string(),
+         loc->databaseday, loc->databasemonth, 2000+loc->databaseyear,
+         loc->ipversion, loc->ipv4databasecount, loc->ipv6databasecount);
   return (loc);
 }
 
@@ -81,6 +85,9 @@ DWORD ip2loc_num_entries (void)
 
 #if defined(_MSC_VER)
   #pragma warning (disable: 4101 4244)
+
+#elif defined(__WATCOMC__)
+  #include "in_addr.h"
 #endif
 
 /*
