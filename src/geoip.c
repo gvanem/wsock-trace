@@ -380,10 +380,7 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
      g_cfg.geoip_enable = FALSE;
 
   geoip_stats_init();
-
-#ifdef USE_IP2LOCATION
   ip2loc_init();
-#endif
 
   return geoip_get_num_addr (_num4, _num6);
 }
@@ -394,10 +391,7 @@ void geoip_exit (void)
   smartlist_free_all (geoip_ipv6_entries);
   geoip_ipv4_entries = geoip_ipv6_entries = NULL;
   geoip_stats_exit();
-
-#ifdef USE_IP2LOCATION
   ip2loc_exit();
-#endif
 }
 
 /*
@@ -681,10 +675,8 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 /*
  * These are static here to get the location (city and region) later on.
  */
-#ifdef USE_IP2LOCATION
-  static struct ip2loc_entry ip2loc_entry;
-  static BOOL   ip2loc_entry_good = FALSE;
-#endif
+static struct ip2loc_entry ip2loc_entry;
+static BOOL   ip2loc_entry_good = FALSE;
 
 /*
  * Given an IPv4 address on network order, return an ISO-3166 2 letter
@@ -696,35 +688,33 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 {
   struct ipv4_node *entry = NULL;
-  DWORD    ip_num = swap32 (addr->s_addr);
   char     buf [25];
   unsigned num;
-  BOOL     use_ip2location = FALSE;
 
-#ifdef USE_IP2LOCATION
-  num = ip2loc_num_entries();
-  use_ip2location = TRUE;
   ip2loc_entry_good = FALSE;
-#else
-  num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
-#endif
 
-  TRACE (5, "Looking for %s (%lu) in %u elements (USE_IP2LOCATION: %d).\n",
-         wsock_trace_inet_ntop4((const u_char*)addr,buf,sizeof(buf)),
-         ip_num, num, use_ip2location);
+  wsock_trace_inet_ntop4 ((const u_char*)addr, buf, sizeof(buf));
 
 #ifdef USE_IP2LOCATION
-  if (ip2loc_get_entry(ip_num, &ip2loc_entry))
+  num = ip2loc_num_ipv4_entries();
+  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
+
+  if (num > 0 && geoip_addr_is_global(addr,NULL) && ip2loc_get_entry(buf, &ip2loc_entry))
   {
     ip2loc_entry_good = TRUE;
     if (g_cfg.trace_report)
        geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_FOUND_BY_IP2LOC);
     return (ip2loc_entry.country_short);
   }
+#else
+  num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
+  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
 #endif
 
   if (geoip_ipv4_entries)
   {
+    DWORD ip_num = swap32 (addr->s_addr);
+
     entry = smartlist_bsearch (geoip_ipv4_entries, &ip_num,
                                geoip_ipv4_compare_key_to_entry);
 
@@ -745,15 +735,32 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
 {
   struct ipv6_node *entry = NULL;
   char     buf [MAX_IP6_SZ];
-  unsigned num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
+  unsigned num;
 
-  TRACE (5, "Looking for %s in %u elements.\n",
-         wsock_trace_inet_ntop6((const u_char*)addr,buf,sizeof(buf)), num);
+  ip2loc_entry_good = FALSE;
 
-   if (geoip_ipv6_entries)
-   {
-     entry = smartlist_bsearch (geoip_ipv6_entries, addr,
-                                geoip_ipv6_compare_key_to_entry);
+  wsock_trace_inet_ntop6 ((const u_char*)addr, buf, sizeof(buf));
+
+#ifdef USE_IP2LOCATION
+  num = ip2loc_num_ipv6_entries();
+  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
+
+  if (num > 0 && geoip_addr_is_global(NULL,addr) && ip2loc_get_entry(buf, &ip2loc_entry))
+  {
+    ip2loc_entry_good = TRUE;
+    if (g_cfg.trace_report)
+       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_FOUND_BY_IP2LOC);
+    return (ip2loc_entry.country_short);
+  }
+#else
+  num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0
+  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n",  buf, num);
+#endif
+
+  if (geoip_ipv6_entries)
+  {
+    entry = smartlist_bsearch (geoip_ipv6_entries, addr,
+                               geoip_ipv6_compare_key_to_entry);
 
     if (g_cfg.trace_report && entry && entry->country[0])
        geoip_stats_update (entry->country, GEOIP_STAT_IPV6);
@@ -763,44 +770,38 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
 
 /*
  * Given an IPv4 address, return the location (city+region).
+ * Assumes geoip_get_country_by_ipv4() was just called for this address.
  * Currently only works when 'ip2location_bin_file' is present.
  */
 const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
 {
-#ifdef USE_IP2LOCATION
   static char buf [100];
 
   if (ip2loc_entry_good)
   {
-    /* Assume the next geoip_get_country_by_ipv4() is for another country.
-     */
     ip2loc_entry_good = FALSE;
     snprintf (buf, sizeof(buf), "%s/%s", ip2loc_entry.city, ip2loc_entry.region);
     return (buf);
   }
-#endif
   ARGSUSED (ip4);
   return (NULL);
 }
 
 /*
  * Given an IPv6 address, return the location.
+ * Assumes geoip_get_country_by_ipv6() was just called for this address.
  * Currently only works when 'ip2location_bin_file' is present.
  */
 const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
 {
-#ifdef USE_IP2LOCATION
   static char buf [100];
 
   if (ip2loc_entry_good)
   {
-    /* Assume the next geoip_get_country_by_ipv6() is for another country.
-     */
     ip2loc_entry_good = FALSE;
     snprintf (buf, sizeof(buf), "%s/%s", ip2loc_entry.city, ip2loc_entry.region);
     return (buf);
   }
-#endif
   ARGSUSED (ip6);
   return (NULL);
 }
