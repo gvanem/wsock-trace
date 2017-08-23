@@ -5,9 +5,10 @@
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 
-USE_DEBUG    = 0
-USE_BFD      = 0
-USE_DEF_FILE = 0
+USE_DEBUG       = 0
+USE_BFD         = 0
+USE_DEF_FILE    = 0
+USE_IP2LOCATION = 0
 
 #
 # If you want Lua-script support, change these:
@@ -66,6 +67,10 @@ else
   LDFLAGS += # -s
 endif
 
+ifeq ($(USE_IP2LOCATION),1)
+  CFLAGS += -DUSE_IP2LOCATION
+endif
+
 ifeq ($(USE_BFD),1)
   CFLAGS  += -DUSE_BFD
   EX_LIBS += -lbfd -liberty -lintl -lz
@@ -89,12 +94,12 @@ OBJ_DIR = MinGW_obj
 
 SOURCES = wsock_trace.c wsock_trace_lua.c idna.c init.c common.c \
           cpu.c dump.c geoip.c geoip-gen4.c geoip-gen6.c overlap.c \
-          in_addr.c smartlist.c stkwalk.c bfd_gcc.c
+          in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS  = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 DATA_OBJ = $(OBJ_DIR)/data.o
 
-GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a test.exe install

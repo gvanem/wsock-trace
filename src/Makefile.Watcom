@@ -5,17 +5,22 @@
 LIB_TARGET = $(%WATCOM)\lib386\nt
 BIN_TARGET = $(%WATCOM)\binnt
 
-STACK_OR_REG = r
+STACK_OR_REG    = r
+USE_IP2LOCATION = 0
 
 CC = wcc386
 
 CFLAGS = -bt=nt -mf -w6 -d2 -zq -zc -zm -wx -3$(STACK_OR_REG) -fpi -fr=nul -I. &
-         -of+ -s -d2 -hc -DWIN32_LEAN_AND_MEAN=1 -D_WIN32_WINNT=0x0501
+         -of+ -s -d2 -hc -DWIN32 -DWIN32_LEAN_AND_MEAN=1 -D_WIN32_WINNT=0x0501
 
 LDFLAGS = option quiet, map, eliminate, caseexact &
           system nt debug all sort global
 
 OBJ_DIR = Watcom_obj
+
+!if "$(USE_IP2LOCATION)" == "1"
+CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
+!endif
 
 LINK_ARG = $(OBJ_DIR)\wlink.arg
 
@@ -24,6 +29,7 @@ OBJS = $(OBJ_DIR)\wsock_trace.obj     &
        $(OBJ_DIR)\idna.obj            &
        $(OBJ_DIR)\init.obj            &
        $(OBJ_DIR)\in_addr.obj         &
+       $(OBJ_DIR)\ip2loc.obj          &
        $(OBJ_DIR)\common.obj          &
        $(OBJ_DIR)\cpu.obj             &
        $(OBJ_DIR)\dump.obj            &
@@ -38,13 +44,12 @@ DATA_OBJ = $(OBJ_DIR)\data.obj
 GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
             $(OBJ_DIR)\geoip-null.obj &
             $(OBJ_DIR)\common.obj     &
-            $(OBJ_DIR)\in_addr.obj    &
             $(OBJ_DIR)\idna.obj       &
+            $(OBJ_DIR)\in_addr.obj    &
             $(OBJ_DIR)\init.obj       &
+            $(OBJ_DIR)\ip2loc.obj     &
             $(OBJ_DIR)\getopt.obj     &
             $(OBJ_DIR)\smartlist.obj
-
-$(OBJ_DIR)\geoip-null.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\in_addr.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\smartlist.obj
 
 #
 # The 'wsock_trace_ow.lib' is an import-lib for 'wsock_trace_ow.dll'.

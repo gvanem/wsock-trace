@@ -5,8 +5,9 @@
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 
-USE_DEBUG = 1
-USE_BFD   = 0
+USE_DEBUG       = 1
+USE_BFD         = 0
+USE_IP2LOCATION = 0
 
 BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
@@ -27,16 +28,20 @@ ifeq ($(USE_BFD),1)
   EX_LIBS += -lbfd -liberty -lintl -lz
 endif
 
+ifeq ($(USE_IP2LOCATION),1)
+  CFLAGS += -DUSE_IP2LOCATION
+endif
+
 EX_LIBS += -lole32
 OBJ_DIR = Cygwin_obj
 
 SOURCES = wsock_trace.c idna.c init.c common.c cpu.c dump.c \
-          geoip.c geoip-gen4.c geoip-gen6.c in_addr.c overlap.c \
-          smartlist.c stkwalk.c bfd_gcc.c
+          geoip.c geoip-gen4.c geoip-gen6.c in_addr.c ip2loc.c \
+          overlap.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 
-GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a test.exe

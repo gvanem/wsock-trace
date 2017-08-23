@@ -12,8 +12,9 @@
 #
 # Then cd to this directory and run this makefile.
 
-USE_DEBUG    = 0
-USE_DEF_FILE = 1
+USE_DEBUG       = 0
+USE_DEF_FILE    = 1
+USE_IP2LOCATION = 1
 
 #
 # If you want Lua-script support, change these:
@@ -26,14 +27,14 @@ LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
 # 64-bit builds have a '_x64' suffix on DLL and lib.
 #
 !if "$(PLATFORM)" == "X64" || "$(WANT_64_BITS)" == "1"
-X_SUFFIX = _x64
-MACHINE = x64
-BITNESS = 64
-LIB_TARGET = $(VCINSTALLDIR)lib\amd64
-BIN_TARGET = $(VCINSTALLDIR)bin\amd64
+X_SUFFIX   = _x64
+MACHINE    = x64
+BITNESS    = 64
+LIB_TARGET = $(VCINSTALLDIR)lib\x64
+BIN_TARGET = $(VCINSTALLDIR)bin\x64
 !else
-MACHINE = x86
-BITNESS = 32
+MACHINE    = x86
+BITNESS    = 32
 LIB_TARGET = $(VCINSTALLDIR)lib
 BIN_TARGET = $(VCINSTALLDIR)bin
 !endif
@@ -71,6 +72,10 @@ CFLAGS = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
 EX_LIBS = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
+!if "$(USE_IP2LOCATION)" == "1"
+CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
+!endif
+
 EX_LIBS = $(EX_LIBS) ole32.lib
 
 
@@ -93,6 +98,7 @@ OBJECTS = $(OBJ_DIR)\common.obj          \
           $(OBJ_DIR)\geoip-gen4.obj      \
           $(OBJ_DIR)\geoip-gen6.obj      \
           $(OBJ_DIR)\idna.obj            \
+          $(OBJ_DIR)\ip2loc.obj          \
           $(OBJ_DIR)\init.obj            \
           $(OBJ_DIR)\in_addr.obj         \
           $(OBJ_DIR)\overlap.obj         \
@@ -105,7 +111,7 @@ OBJECTS = $(OBJ_DIR)\common.obj          \
 
 DATA_OBJ = $(OBJ_DIR)\data.obj
 
-GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
 all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe install
