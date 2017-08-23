@@ -1820,47 +1820,6 @@ static const char *dump_aliases (char **aliases)
   return (result);
 }
 
-/*
- * \todo:
- *   Optionally use MaxMind's GeoLite2-City.mmdb file and print the location (city) too.
- *   This will have to be coded in 'geoip_get_location_by_ipv4()' and 'geoip_get_location_by_ipv6()'.
- *   Emulate what this command does:
- *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions 0 names en
- *   giving:
- *     "New York" <utf8_string>
- *
- *   Or this command:
- *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions location
- *   giving:
- *     {
- *       "accuracy_radius":
- *         1000 <uint16>
- *       "latitude":
- *         43.048100 <double>
- *       "longitude":
- *         -76.147400 <double>
- *       "metro_code":
- *         555 <uint16>
- *       "time_zone":
- *         "America/New_York" <utf8_string>
- *     }
- *
- * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
- *
- * \todo: moved these to geoip.c (inside a '#ifdef USE_MAXMINDDB' section) later.
- */
-static const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
-{
-  ARGSUSED (ip4);
-  return (NULL);
-}
-
-static const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
-{
-  ARGSUSED (ip6);
-  return (NULL);
-}
-
 static const char *cc_last = NULL;
 static BOOL        cc_equal = FALSE;
 
@@ -1881,6 +1840,8 @@ static int trace_printf_cc (const char            *country_code,
     cc_equal = (cc_last && !strcmp(country_code,cc_last));
     if (!cc_equal)
        trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
+    if (location)
+       trace_printf (", %s", location);
     cc_last = country_code;
   }
   else if (geoip_addr_is_special(a4,a6,&remark))
@@ -1899,7 +1860,6 @@ static int trace_printf_cc (const char            *country_code,
        trace_puts ("Not global");
   else trace_puts ("None");
 
-  ARGSUSED (location);
   return (!cc_equal);
 }
 
