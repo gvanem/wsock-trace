@@ -9,9 +9,20 @@
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
 
-Geo-IP information has also been added. Thanks to the Tor-project for
-a simplified version of the MaxMind GeoIP-databases. Also many thanks to
-MaxMind for their GeoLite data-files. Available from <a href="http://www.maxmind.com">http://www.maxmind.com</a>.
+Geo-IP from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
+information has also been added. Thanks to the Tor-project for a simplified version of the MaxMind GeoIP-databases.
+Also many thanks to MaxMind and IP2Location for their data-bases.
+
+### Installation (all):
+
+ To be able to get more precise Geo-IP information for addresses (city and region), Wsock-trace
+ can use the [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library) library.
+ Do this:
+   * Sign-up and download the free IP2Location LITE databases at [here](http://lite.ip2location.com).
+   * Get the sources from Github: `git clone https://github.com/chrislim2888/IP2Location-C-Library c:/some/path`.
+   * Add `c:/some/path` to the `INCLUDE` and/or `C_INCLUDE_PATH`.
+   * Edit the respective makefile to say `USE_IP2LOCATION = 1`
+   * Then rebuild.
 
 ### Installation (MSVC):
 
@@ -30,7 +41,9 @@ MaxMind for their GeoLite data-files. Available from <a href="http://www.maxmind
 
 ### Installation (MinGW/CygWin):
 
- to-do :soon: ?
+ Enter the `src` sub-directory and do a *make -f Makefile.MinGW* or
+ *make -f Makefile.Cygwin*.
+
 
 ### Usage (MinGW/CygWin):
 
@@ -280,3 +293,5 @@ Footnotes:
 
    [2] A C library for asynchronous DNS requests (including name resolves)
        Ref. http://c-ares.haxx.se/
+
+   [3] This site or product includes IP2Location LITE data available from http://www.ip2location.com.
