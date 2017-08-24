@@ -223,7 +223,7 @@ wsock_trace.appveyor: Makefile.vc6
 	@echo # from Makfile.vc6. Edit that file instead. >> $@
 	@echo #                                           >> $@
 	@echo [core]                                      >> $@
-	@echo trace_level            = 3                  >> $@
+	@echo trace_level            = 2                  >> $@
 	@echo trace_indent           = 2                  >> $@
 	@echo trace_caller           = 1                  >> $@
 	@echo trace_report           = 1                  >> $@
