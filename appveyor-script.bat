@@ -57,7 +57,7 @@ goto :end
 ::
 :: Setup MSVC environment.
 ::
-"c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86
+call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86
 
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 set COLUMNS=120
