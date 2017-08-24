@@ -1,0 +1,9 @@
+before_build:
+  - set WSOCK_TRACE=./wsock_trace.appveyor
+
+build_script:
+  - '"c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86'
+  - cd src
+  - nmake.exe -f Makefile.vc6 USER=AppVeyor all
+  - echo Testing output
+  - test
