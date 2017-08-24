@@ -1,6 +1,6 @@
 ## Wsock-trace v0.3.5:
 
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/gvanem/wsock-trace?branch=master&svg=true)](https://ciappveyor.com/project/gvanem/wsock-trace)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/gvanem/wsock-trace?branch=master&svg=true)](https://ci.appveyor.com/project/gvanem/wsock-trace)
 
  A small and simple drop-in tracer for most normal Winsock calls.
  Works best for MSVC since the stack-walking code requires the program's
