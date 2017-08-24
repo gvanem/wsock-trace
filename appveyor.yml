@@ -1,3 +1,5 @@
-build:
-  - appveyor-script.bat init
-  - appveyor-script.bat build
+before_build:
+  -cmd: appveyor-script.bat init
+
+build_script:
+  -cmd: appveyor-script.bat build
