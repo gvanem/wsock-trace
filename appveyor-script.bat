@@ -1,4 +1,4 @@
-@echo off
+@echo on
 set WSOCK_TRACE=%CD%/wsock_trace.appveyor
 
 if %1. ==  build. goto :build
