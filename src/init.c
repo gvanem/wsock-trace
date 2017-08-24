@@ -287,7 +287,7 @@ BOOL exclude_list_free (void)
  * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
-BOOL exclude_list_add (const char *name)
+static BOOL _exclude_list_add (const char *name)
 {
   struct exclude *ex;
 
@@ -301,6 +301,19 @@ BOOL exclude_list_add (const char *name)
   ex->num_excludes = 0;
   ex->name = strcpy ((char*)(ex+1), name);
   smartlist_add (exclude_list, ex);
+  return (TRUE);
+}
+
+/*
+ * Handler for "exclude = func1, func2"
+ */
+BOOL exclude_list_add (const char *name)
+{
+  char *tok, *copy = strdup (name);
+
+  for (tok = strtok(copy," ,"); tok; tok = strtok(NULL," ,"))
+      _exclude_list_add (tok);
+  free (copy);
   return (TRUE);
 }
 
