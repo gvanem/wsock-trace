@@ -1,5 +1,8 @@
-@echo on
+@echo off
 set WSOCK_TRACE=%CD%/wsock_trace.appveyor
+
+if %1. ==  build. goto :build
+if %1. NEQ init.  exit /b 0
 
 echo Generating wsock_trace.appveyor...
 echo #                                    > wsock_trace.appveyor
@@ -42,14 +45,13 @@ echo enable   = 1                        >> wsock_trace.appveyor
 echo winidn   = 0                        >> wsock_trace.appveyor
 echo codepage = 0                        >> wsock_trace.appveyor
 
-if %1. == build. goto :build
-
 ::
 :: Get the IP2Location code.
 ::
 md IP2Location
 git clone https://github.com/chrislim2888/IP2Location-C-Library.git IP2Location
-exit 0 /b
+echo /* Dummy IP2Location config.h */ > IP2Location\config.h
+exit /b 0
 
 :build
 ::
@@ -57,11 +59,13 @@ exit 0 /b
 ::
 "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86
 
-set INCLUDE=%INCLUDE%;%CD%\IP2Location
+set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 set COLUMNS=120
 
 cd src
-nmake -f Makefile.vc6 USER=AppVeyor
-if errorlevel exit /b
+nmake -nologo -f Makefile.vc6 USER=AppVeyor
+if errorlevel exit /b 1
 
 test.exe
+
+:end

@@ -61,11 +61,6 @@ CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
 !endif
 
-!if "$(USER)" == "AppVeyor"
-APPVEYOR_CONFIG = wsock_trace.appveyor
-USE_IP2LOCATION = 0
-!endif
-
 !if "$(USE_DEF_FILE)" == "1"
 CFLAGS      = $(CFLAGS) -DUSE_DEF_FILE
 WSOCK_DEF   = wsock_trace$(X_SUFFIX).def
@@ -124,7 +119,7 @@ all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe install
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(APPVEYOR_CONFIG) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(USE_LUA)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(USE_LUA)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(DATA_OBJ)
 	@type link.tmp >> $(WSOCK_MAP)
@@ -211,53 +206,6 @@ wsock_trace_x64.def: wsock_trace.def Makefile.VC6
 	echo ;                                                           >> wsock_trace_x64.def
 	sed -e "s/LIBRARY wsock_trace.dll/LIBRARY wsock_trace_x64.dll/"  \
 	    -e "s/_\(.*\)@.*/\1/g" < wsock_trace.def                     >> wsock_trace_x64.def
-
-#
-# This gets built if %USER% == "AppVeyor". It's part of the
-# CI AppVeyor script in ../appveyor.yml.
-#
-wsock_trace.appveyor: Makefile.vc6
-	@echo 'Generating $@...'
-	@echo #                                            > $@
-	@echo # DO NOT EDIT! This file was generated      >> $@
-	@echo # from Makfile.vc6. Edit that file instead. >> $@
-	@echo #                                           >> $@
-	@echo [core]                                      >> $@
-	@echo trace_level            = 2                  >> $@
-	@echo trace_indent           = 2                  >> $@
-	@echo trace_caller           = 1                  >> $@
-	@echo trace_report           = 1                  >> $@
-	@echo trace_time             = relative           >> $@
-	@echo callee_level           = 1                  >> $@
-	@echo cpp_demangle           = 1                  >> $@
-	@echo short_errors           = 1                  >> $@
-	@echo use_full_path          = 1                  >> $@
-	@echo use_toolhlp32          = 1                  >> $@
-	@echo dump_select            = 1                  >> $@
-	@echo dump_hostent           = 1                  >> $@
-	@echo dump_protoent          = 1                  >> $@
-	@echo dump_servent           = 1                  >> $@
-	@echo dump_nameinfo          = 1                  >> $@
-	@echo dump_wsaprotocol_info  = 1                  >> $@
-	@echo dump_wsanetwork_events = 1                  >> $@
-	@echo dump_data              = 1                  >> $@
-	@echo max_data               = 5000               >> $@
-	@echo max_displacement       = 100                >> $@
-	@echo exclude                = htons              >> $@
-	@echo exclude                = htonl              >> $@
-	@echo.                                            >> $@
-	@echo [geoip]                                     >> $@
-	@echo enable               = 1                    >> $@
-	@echo use_generated        = 0                    >> $@
-	@echo max_days             = 10                   >> $@
-	@echo geoip4_file          = ..\geoip             >> $@
-	@echo geoip6_file          = ..\geoip6            >> $@
-	@echo ip2location_bin_file =                      >> $@
-	@echo.                                            >> $@
-	@echo [idna]                                      >> $@
-	@echo enable   = 1                                >> $@
-	@echo winidn   = 0                                >> $@
-	@echo codepage = 0                                >> $@
 
 $(OBJ_DIR)\common.obj:      common.c common.h init.h dump.h
 $(OBJ_DIR)\data.obj:        data.c common.h in_addr.h
