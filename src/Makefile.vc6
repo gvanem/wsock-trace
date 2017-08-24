@@ -39,7 +39,7 @@ LIB_TARGET = $(VCINSTALLDIR)lib
 BIN_TARGET = $(VCINSTALLDIR)bin
 !endif
 
-!if "$(USER)" != "AppVeyor"
+!if "$(USER)" == "AppVeyor"
 USE_IP2LOCATION = 0
 !endif
 
