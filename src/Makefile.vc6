@@ -61,6 +61,11 @@ CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
 !endif
 
+!if "$(USER)" == "AppVeyor"
+APPVEYOR_CONFIG = wsock_trace.appveyor
+USE_IP2LOCATION = 0
+!endif
+
 !if "$(USE_DEF_FILE)" == "1"
 CFLAGS      = $(CFLAGS) -DUSE_DEF_FILE
 WSOCK_DEF   = wsock_trace$(X_SUFFIX).def
@@ -77,10 +82,6 @@ CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib
-
-!if "$(USER)" == "AppVeyor"
-APPVEYOR_CONFIG = wsock_trace.appveyor
-!endif
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
