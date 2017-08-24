@@ -9,16 +9,18 @@
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
 
-Geo-IP from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
-information has also been added. Thanks to the Tor-project for a simplified version of the MaxMind GeoIP-databases.
-Also many thanks to MaxMind and IP2Location for their data-bases.
+Geo-IP information from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
+(an option) is built-in (the above `Mountain View/California` is Google's wellknown location provided by the
+*IP2Location* data-base). Thanks to the [Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/) for
+a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind and IP2Location [[3]](#Footnotes)
+for their data-bases.
 
 ### Installation (all):
 
  To be able to get more precise Geo-IP information for addresses (city and region), Wsock-trace
  can use the [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library) library.
  Do this:
-   * Sign-up and download the free IP2Location LITE databases at [here](http://lite.ip2location.com).
+   * Sign-up for an account and download the free IP2Location LITE databases [here](http://lite.ip2location.com).
    * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%` or `%APPDATA%` directory.
    * Get the sources from Github: `git clone https://github.com/chrislim2888/IP2Location-C-Library c:/some/path`.
    * Add `c:/some/path` to the `%INCLUDE%` and/or `%C_INCLUDE_PATH%`.
@@ -286,7 +288,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 G. Vanem <gisle.vanem@gmail.com> 2013 - 2017.
 
-Footnotes:
+### Footnotes:
 
    [1] Nmap; "Network Mapper" is a free and open source (license) utility for network discovery and
        security auditing.
