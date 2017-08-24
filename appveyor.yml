@@ -1,5 +1,6 @@
 before_build:
   - set WSOCK_TRACE=./wsock_trace.appveyor
+  - set COLUMNS=120
 
 build_script:
   - '"c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86'
