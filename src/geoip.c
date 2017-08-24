@@ -90,9 +90,9 @@ struct geoip_stats {
        char    flag;        /* The country was seen in IPv4 or IPv6 address(es) */
     };
 
-#define GEOIP_STAT_IPV4       0x01
-#define GEOIP_STAT_IPV6       0x02
-#define GEOIP_FOUND_BY_IP2LOC 0x04
+#define GEOIP_STAT_IPV4   0x01
+#define GEOIP_STAT_IPV6   0x02
+#define GEOIP_VIA_IP2LOC  0x04
 
 
 static struct geoip_stats *geoip_stats_buf = NULL;
@@ -703,7 +703,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   {
     ip2loc_entry_good = TRUE;
     if (g_cfg.trace_report)
-       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_FOUND_BY_IP2LOC);
+       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_VIA_IP2LOC);
     return (ip2loc_entry.country_short);
   }
 #else
@@ -749,7 +749,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   {
     ip2loc_entry_good = TRUE;
     if (g_cfg.trace_report)
-       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_FOUND_BY_IP2LOC);
+       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_VIA_IP2LOC);
     return (ip2loc_entry.country_short);
   }
 #else
@@ -1260,7 +1260,7 @@ int geoip_stats_is_unique (const char *country_A2, int flag)
   return (0);
 }
 
-void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6)
+void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2loc4, DWORD *num_ip2loc6)
 {
   const struct geoip_stats *stats;
   DWORD  n4 = 0, n6 = 0;
@@ -1275,13 +1275,13 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6)
     if (stats->num4 > 0)
     {
       n4++;
-      if (stats->flag & GEOIP_FOUND_BY_IP2LOC)
+      if (stats->flag & GEOIP_VIA_IP2LOC)
         ip2loc_n4++;
     }
     if (stats->num6 > 0)
     {
       n6++;
-      if (stats->flag & GEOIP_FOUND_BY_IP2LOC)
+      if (stats->flag & GEOIP_VIA_IP2LOC)
         ip2loc_n6++;
     }
   }
@@ -1289,6 +1289,10 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6)
      *num_ip4 = n4;
   if (num_ip6)
      *num_ip6 = n6;
+  if (num_ip2loc4)
+     *num_ip2loc4 = ip2loc_n4;
+  if (num_ip2loc6)
+     *num_ip2loc6 = ip2loc_n6;
 
   TRACE (2, "%s() n4: %lu, n6: %lu, ip2loc_n4: %lu, ip2loc_n6: %lu.\n",
          __FUNCTION__, n4, n6, ip2loc_n4, ip2loc_n6);
@@ -1296,7 +1300,7 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6)
 
 uint64 geoip_get_stats_by_idx (int idx)
 {
-  if (!geoip_stats_buf || idx < 0 || idx > DIM(c_list))
+  if (!geoip_stats_buf || idx < 0 || idx > (int)geoip_num_countries())
      return (0);
   return (geoip_stats_buf[idx].num4 + geoip_stats_buf[idx].num6);
 }
@@ -1977,7 +1981,7 @@ static void rand_test_addr4 (int loops)
     printf ("%-15s: ", buf);
     test_addr4 (buf);
   }
-  geoip_num_unique_countries (&num_ip4, NULL);
+  geoip_num_unique_countries (&num_ip4, NULL, NULL, NULL);
   printf ("# of unique IPv4 countries: %lu\n", num_ip4);
 }
 
@@ -1998,7 +2002,7 @@ static void rand_test_addr6 (int loops)
     printf ("%-40s: ", buf);
     test_addr6 (buf);
   }
-  geoip_num_unique_countries (NULL, &num_ip6);
+  geoip_num_unique_countries (NULL, &num_ip6, NULL, NULL);
   printf ("# of unique IPv6 countries: %lu\n", num_ip6);
 }
 

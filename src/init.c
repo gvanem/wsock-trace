@@ -736,11 +736,11 @@ static void trace_report (void)
 
   if (g_cfg.geoip_enable)
   {
-    DWORD num_ip4, num_ip6;
+    DWORD num_ip4, num_ip6, num_ip2loc4, num_ip2loc6;
 
-    geoip_num_unique_countries (&num_ip4, &num_ip6);
-    trace_printf ("  # of unique countries (IPv4): %lu\n", num_ip4);
-    trace_printf ("  # of unique countries (IPv6): %lu\n", num_ip6);
+    geoip_num_unique_countries (&num_ip4, &num_ip6, &num_ip2loc4, &num_ip2loc6);
+    trace_printf ("  # of unique countries (IPv4): %lu, by ip2loc: %lu.\n", num_ip2loc4);
+    trace_printf ("  # of unique countries (IPv6): %lu, by ip2loc: %lu.\n", num_ip2loc6);
   }
 }
 #endif /* !TEST_GEOIP !TEST_NLM */
