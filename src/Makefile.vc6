@@ -223,7 +223,7 @@ wsock_trace.appveyor: Makefile.vc6
 	@echo # from Makfile.vc6. Edit that file instead. >> $@
 	@echo #                                           >> $@
 	@echo [core]                                      >> $@
-	@echo trace_level            = 1                  >> $@
+	@echo trace_level            = 3                  >> $@
 	@echo trace_indent           = 2                  >> $@
 	@echo trace_caller           = 1                  >> $@
 	@echo trace_report           = 1                  >> $@
@@ -243,6 +243,8 @@ wsock_trace.appveyor: Makefile.vc6
 	@echo dump_data              = 1                  >> $@
 	@echo max_data               = 5000               >> $@
 	@echo max_displacement       = 100                >> $@
+	@echo exclude                = htons              >> $@
+	@echo exclude                = htonl              >> $@
 	@echo.                                            >> $@
 	@echo [geoip]                                     >> $@
 	@echo enable               = 1                    >> $@
