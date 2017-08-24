@@ -1,4 +1,4 @@
-@echo on
+@echo off
 set WSOCK_TRACE=%CD%/wsock_trace.appveyor
 
 if %1. ==  build. goto :build
@@ -61,6 +61,11 @@ call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86
 
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 set COLUMNS=120
+
+::
+:: To bypass a C-99 issue in IP2Location/libIP2Location/IP2Loc_DBInterface.c:
+::
+set CL=-D__powerpc64__
 
 cd src
 nmake -nologo -f Makefile.vc6 USER=AppVeyor
