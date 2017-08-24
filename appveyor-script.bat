@@ -62,15 +62,8 @@ call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 set COLUMNS=120
 
-::
-:: To bypass a C-99 issue in IP2Location/libIP2Location/IP2Loc_DBInterface.c:
-::
-set CL=-D__powerpc64__
-
 cd src
 nmake -nologo -f Makefile.vc6 USER=AppVeyor
-if errorlevel exit /b 1
-
-test.exe
+if errorlevel == 0 test.exe
 
 :end
