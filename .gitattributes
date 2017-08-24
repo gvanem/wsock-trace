@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+# * text=auto
+*.c eol=crlf
+*.h eol=crlf
+Makefile.* eol=crlf
+wsock_trace eol=crlf
