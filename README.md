@@ -12,7 +12,7 @@
 Geo-IP information from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
 (an option) is built-in (the above `Mountain View/California` is Google's wellknown location provided by the
 *IP2Location* data-base). Thanks to the [Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/) for
-a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind and IP2Location [[3]](#Footnotes)
+a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind and IP2Location [[3]](#footnotes)
 for their data-bases.
 
 ### Installation (all):
@@ -25,7 +25,7 @@ for their data-bases.
    * Get the sources from Github: `git clone https://github.com/chrislim2888/IP2Location-C-Library c:/some/path`.
    * Add `c:/some/path` to the `%INCLUDE%` and/or `%C_INCLUDE_PATH%`.
    * Edit the respective makefile to say `USE_IP2LOCATION = 1`
-   * Then do the specific installation for your compiler.
+   * Then do the specific installation for your compiler (see below).
 
 ### Installation (MSVC):
 
