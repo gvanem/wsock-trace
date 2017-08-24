@@ -753,7 +753,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
     return (ip2loc_entry.country_short);
   }
 #else
-  num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0
+  num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
   TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n",  buf, num);
 #endif
 
