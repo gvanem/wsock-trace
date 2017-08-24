@@ -26,8 +26,8 @@ static DWORD        file_size;
 static int IP2Location_initialize (IP2Location *loc);
 
 /*
- * Cannot call 'IP2Location_open()' because of the 'calloc()' hack
- * below. Hence just do what 'IP2Location_open()' do here.
+ * Do not call 'IP2Location_open()' because of it's 'printf()'.
+ * Hence just do what 'IP2Location_open()' do here.
  */
 static IP2Location *open_file (const char *file)
 {
@@ -128,15 +128,6 @@ DWORD ip2loc_num_ipv6_entries (void)
 #define inet_pton(family, addr, dst)  wsock_trace_inet_pton (family, addr, dst)
 
 /*
- * A hack to avoid IP2Location.c allocating memory for the record.
- * Also to avoid the need to free it since we never work with several entries
- * at the time.
- */
-#undef  calloc
-#define calloc(num,sz)  &fixed
-static IP2LocationRecord fixed;
-
-/*
  * This assumes the IP2Location .c/.h files are in the %INCLUDE% or %C_INCLUDE_PATH% path.
  */
 #include "IP2Location.c"
@@ -148,13 +139,20 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
                                                  COUNTRYSHORT | COUNTRYLONG | REGION | CITY);
 
   memset (ent, '\0', sizeof(*ent));
-  if (!r || !strncmp(r->country_short,"INVALID",7))
+  if (!r)
      return (FALSE);
 
-  ent->country_short = r->country_short;
-  ent->country_long  = r->country_long;
-  ent->city          = r->city;
-  ent->region        = r->region;
+  if (!strncmp(r->country_short,"INVALID",7))
+  {
+    IP2Location_free_record (r);
+    return (FALSE);
+  }
+
+  _strlcpy (ent->country_short, r->country_short, sizeof(ent->country_short));
+  _strlcpy (ent->country_long, r->country_long, sizeof(ent->country_long));
+  _strlcpy (ent->city, r->city, sizeof(ent->city));
+  _strlcpy (ent->region, r->region, sizeof(ent->region));
+  IP2Location_free_record (r);
   return (TRUE);
 }
 

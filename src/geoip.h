@@ -17,10 +17,10 @@ struct ipv6_node {
      };
 
 struct ip2loc_entry {
-       const char *country_short;
-       const char *country_long;
-       const char *city;
-       const char *region;
+       char country_short [3];
+       char country_long [30];
+       char city   [40];
+       char region [40];
      };
 
 extern int         geoip_init (DWORD *_num4, DWORD *_num6);
