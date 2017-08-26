@@ -1,7 +1,8 @@
 @echo off
-set WSOCK_TRACE=%CD%/wsock_trace.appveyor
+set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 
-if %1. ==  build. goto :build
+if %1. ==  build_msvc.  goto :build_msvc
+if %1. ==  build_mingw. goto :build_mingw
 if %1. NEQ init.  exit /b 0
 
 echo Generating wsock_trace.appveyor...
@@ -45,6 +46,8 @@ echo enable   = 1                        >> wsock_trace.appveyor
 echo winidn   = 0                        >> wsock_trace.appveyor
 echo codepage = 0                        >> wsock_trace.appveyor
 
+set COLUMNS=120
+
 ::
 :: Get the IP2Location code.
 ::
@@ -53,17 +56,27 @@ git clone https://github.com/chrislim2888/IP2Location-C-Library.git IP2Location
 echo /* Dummy IP2Location config.h */ > IP2Location\config.h
 goto :end
 
-:build
 ::
 :: Setup MSVC environment.
 ::
+:build_msvc
 call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86
-
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
-set COLUMNS=120
 
 cd src
 nmake -nologo -f Makefile.vc6 USER=AppVeyor
+if errorlevel == 0 test.exe
+goto :end
+
+::
+:: Setup MinGW environment.
+::
+:build_mingw
+set PATH=c:\MinGW\bin;%PATH%
+set C_INCLUDE_PATH=%C_INCLUDE_PATH%;%CD%\IP2Location\libIP2Location
+
+cd src
+make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1
 if errorlevel == 0 test.exe
 
 :end
