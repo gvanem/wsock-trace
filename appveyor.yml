@@ -1,4 +1,8 @@
+environment:
+    matrix:
+      - BUILDER: build_msvc
+      - BUILDER: build_mingw
+
 build_script:
   - cmd: appveyor-script.bat init
-  - cmd: appveyor-script.bat build_msvc
-  - cmd: appveyor-script.bat build_mingw
+  - cmd: appveyor-script.bat %BUILDER%
