@@ -31,7 +31,11 @@
 #endif
 
 #if !defined(s6_bytes)  /* mingw.org */
- #define s6_bytes _s6_bytes
+  #define s6_bytes _s6_bytes
+#endif
+
+#if !defined(s6_words)  /* mingw.org */
+  #define s6_words _s6_words
 #endif
 
 /* Number of calls for 'smartlist_bsearch()' to find an IPv4 or IPv6 entry.
