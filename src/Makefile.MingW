@@ -5,15 +5,15 @@
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 
-USE_DEBUG       = 0
-USE_BFD         = 0
-USE_DEF_FILE    = 0
-USE_IP2LOCATION = 0
+USE_DEBUG        = 0
+USE_BFD          = 0
+USE_DEF_FILE     = 0
+USE_IP2LOCATION ?= 0
 
 #
 # If you want Lua-script support, change these:
 #
-USE_LUA      = 0
+USE_LUA     ?= 0
 LUAJIT_ROOT ?= f:/MinGW32/src/Parsers/LuaJIT
 
 BIN_TARGET  = $(realpath $(MINGW32))/bin
@@ -113,10 +113,6 @@ $(OBJ_DIR):
 
 libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
 
-wsock_trace_mw$(X_SUFFIX).dll: LDFLAGS += -shared \
-                                          -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
-                                          -Wl,--out-implib,libwsock_trace.a
-
 WSOCK_DEPS = $(OBJECTS) $(DATA_OBJ)
 
 ifeq ($(USE_DEF_FILE),1)
@@ -125,12 +121,15 @@ ifeq ($(USE_DEF_FILE),1)
 endif
 
 wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_juajit_$(USE_LUA)
-	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
+	$(CC) $(LDFLAGS) -shared -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
+          -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
 	ar rs libwsock_trace.a $(DATA_OBJ)
 
 install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
+ifneq ($(USER),AppVeyor)
 	cp --update libwsock_trace.a              $(LIB_TARGET)
 	cp --update wsock_trace_mw$(X_SUFFIX).dll $(BIN_TARGET)
+endif
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) -o $@ $(LDFLAGS) $^ > test.map
@@ -147,6 +146,8 @@ geoip.exe: $(GEOIP_SRC) geoip-null.c
 	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
 
 geoip-gen4.c geoip-gen6.c: geoip.exe
+	geoip.exe -4g geoip-gen4.c
+	geoip.exe -6g geoip-gen6.c
 
 run_test: test.exe
 	test.exe -dd
