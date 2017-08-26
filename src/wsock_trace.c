@@ -76,10 +76,10 @@ static const char *get_timestamp (void);
 
 /*
  * There is some difference between some Winsock prototypes in MS-SDK's
- * versus MinGW headers. This is to fit the 'const struct timeval*'
+ * versus MinGW-w64/MinGW-TDM headers. This is to fit the 'const struct timeval*'
  * parameter in 'select()' etc.
  */
-#if defined(__MINGW32__)
+#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
   #define CONST_PTIMEVAL   const PTIMEVAL
 #else
   #define CONST_PTIMEVAL   const struct timeval *
@@ -436,7 +436,7 @@ static func_WaitForMultipleObjectsEx p_WaitForMultipleObjectsEx = NULL;
 
 static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
 
-#if defined(__MINGW32__)
+#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
   static func_gai_strerrorA          p_gai_strerrorA = NULL;
   static func_gai_strerrorW          p_gai_strerrorW = NULL;
 #endif
@@ -519,7 +519,7 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "ws2_32.dll", inet_ntop),
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
            // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
-#if defined(__MINGW32__)
+#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
               ADD_VALUE (1, "ws2_32.dll", gai_strerrorA),
               ADD_VALUE (1, "ws2_32.dll", gai_strerrorW),
 #endif
@@ -2659,7 +2659,10 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
   LEAVE_CRIT();
 }
 
-#if defined(__MINGW32__)
+/*
+ * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
+ */
+#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
 char * gai_strerrorA (int err)
 {
   char *rc;
@@ -2685,7 +2688,7 @@ wchar_t * gai_strerrorW (int err)
   LEAVE_CRIT();
   return (rc);
 }
-#endif  /* __MINGW32__ */
+#endif  /* __MINGW32__ && __MINGW64_VERSION_MAJOR */
 
 #if (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)) || defined(__WATCOMC__)
   #define ADDRINFOW  void *

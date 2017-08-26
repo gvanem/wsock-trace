@@ -70,6 +70,7 @@ goto :end
 
 ::
 :: Setup MinGW environment.
+:: This seems to be the 'mingw.org' MinGW.
 ::
 :build_mingw
 set PATH=c:\MinGW\bin;%PATH%
