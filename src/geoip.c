@@ -11,6 +11,7 @@
 #include <sys/utime.h>
 #include <limits.h>
 #include <errno.h>
+#include <ctype.h>
 #include <windows.h>
 #include <wininet.h>
 
@@ -27,6 +28,10 @@
 
 #if defined(__CYGWIN__)
   #define _utime(path, buf) utime (path, buf)
+#endif
+
+#if !defined(s6_bytes)  /* mingw.org */
+ #define s6_bytes _s6_bytes
 #endif
 
 /* Number of calls for 'smartlist_bsearch()' to find an IPv4 or IPv6 entry.

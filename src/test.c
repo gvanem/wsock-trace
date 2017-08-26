@@ -29,6 +29,11 @@
   #define snprintf _snprintf
 #endif
 
+#if !defined(s6_bytes)  /* mingw.org */
+ #define s6_bytes _s6_bytes
+#endif
+
+
 #if defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
   #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
