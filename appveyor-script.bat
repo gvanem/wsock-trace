@@ -76,7 +76,7 @@ set PATH=c:\MinGW\bin;%PATH%
 set C_INCLUDE_PATH=%C_INCLUDE_PATH%;%CD%\IP2Location\libIP2Location
 
 cd src
-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1
+mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1
 if errorlevel == 0 test.exe
 
 :end
