@@ -78,22 +78,36 @@
   extern int __cdecl __scrt_is_ucrt_dll_in_use (void);
 #endif
 
+/*
+ * Check if the <imagehlp.h> / <dbghelp.h> API is good enough for
+ * using 'SymEnumSymbolsEx()' etc.
+ */
+#if defined(API_VERSION_NUMBER) && (API_VERSION_NUMBER >= 11)
+  #define USE_SymEnumSymbolsEx 1
+#else
+  #define USE_SymEnumSymbolsEx 0
+#endif
+
 static HANDLE       g_proc;
 static DWORD        g_proc_id;
-static char         g_module [_MAX_PATH];
-static smartlist_t *g_modules_list;
+static char         g_module [_MAX_PATH];  /* The .exe we're linked to */
+static smartlist_t *g_modules_list;        /* List of all modules in our program */
 static smartlist_t *g_symbols_list;
-static BOOL         g_long_CPP_syms = FALSE;
 static int          g_quit_count = 0;
 
-static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose);
+#if USE_SymEnumSymbolsEx
+  static BOOL  g_long_CPP_syms = FALSE;
+  static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose);
+#endif
 
-#define USE_SYMFROMADDR 1
+#define USE_SymFromAaddr 1
 
 #define MAX_NAMELEN  1024        /* max name length for found symbols */
 #define TTBUFLEN     8096        /* for a temp buffer (2^13) */
 
+#ifndef IN_OPT
 #define IN_OPT
+#endif
 
 #ifndef SYMENUM_OPTIONS_DEFAULT
 #define SYMENUM_OPTIONS_DEFAULT 0x00000001
@@ -306,16 +320,18 @@ typedef DWORD (WINAPI *func_UnDecorateSymbolName) (IN  PCSTR DecoratedName,
                                                    IN  DWORD UndecoratedLength,
                                                    IN  DWORD Flags);
 
-typedef BOOL (WINAPI *func_SymEnumSymbolsEx) (IN     HANDLE                         hProcess,
-                                              IN     ULONG64                        BaseOfDll,
-                                              IN_OPT const char                    *Mask,
-                                              IN     PSYM_ENUMERATESYMBOLS_CALLBACK EnumSymbolsCallback,
-                                              IN_OPT VOID                           *UserContext,
-                                              IN     DWORD                          Options);
+#if USE_SymEnumSymbolsEx
+  typedef BOOL (WINAPI *func_SymEnumSymbolsEx) (IN     HANDLE                         hProcess,
+                                                IN     ULONG64                        BaseOfDll,
+                                                IN_OPT const char                    *Mask,
+                                                IN     PSYM_ENUMERATESYMBOLS_CALLBACK EnumSymbolsCallback,
+                                                IN_OPT VOID                           *UserContext,
+                                                IN     DWORD                          Options);
 
-typedef BOOL (WINAPI *func_SymSrvGetFileIndexInfo) (IN  PCTSTR             File,
-                                                    OUT PSYMSRV_INDEX_INFO Info,
-                                                    IN  DWORD              Flags);
+  typedef BOOL (WINAPI *func_SymSrvGetFileIndexInfo) (IN  PCTSTR             File,
+                                                      OUT PSYMSRV_INDEX_INFO Info,
+                                                      IN  DWORD              Flags);
+#endif
 
 static func_SymCleanup                p_SymCleanup = NULL;
 static func_SymFunctionTableAccess64  p_SymFunctionTableAccess64 = NULL;
@@ -328,10 +344,13 @@ static func_SymFromAddr               p_SymFromAddr = NULL;
 static func_SymInitialize             p_SymInitialize = NULL;
 static func_SymLoadModule64           p_SymLoadModule64 = NULL;
 static func_SymSetOptions             p_SymSetOptions = NULL;
-static func_SymEnumSymbolsEx          p_SymEnumSymbolsEx = NULL;
-static func_SymSrvGetFileIndexInfo    p_SymSrvGetFileIndexInfo = NULL;
 static func_StackWalk64               p_StackWalk64 = NULL;
 static func_UnDecorateSymbolName      p_UnDecorateSymbolName = NULL;
+
+#if USE_SymEnumSymbolsEx
+  static func_SymEnumSymbolsEx        p_SymEnumSymbolsEx = NULL;
+  static func_SymSrvGetFileIndexInfo  p_SymSrvGetFileIndexInfo = NULL;
+#endif
 
 /*
  * For decoding 'struct _SYMBOL_INFO::Flags'.
@@ -399,6 +418,7 @@ static const struct search_list symbol_info_flags[] = {
                                 ADD_VALUE (SYMFLAG_PUBLIC_CODE)
                               };
 
+#if USE_SymEnumSymbolsEx
 static const char *sym_flags_decode (DWORD flags)
 {
   if (flags == 0)
@@ -493,6 +513,7 @@ static const char *sym_tag_decode (unsigned tag)
 {
   return list_lookup_name (tag, symbol_tags, DIM(symbol_tags));
 }
+#endif /* USE_SymEnumSymbolsEx */
 
 /*
  * Add some module information to 'g_modules_list'.
@@ -559,6 +580,7 @@ static void symbols_list_free (void)
   g_symbols_list = NULL;
 }
 
+#if USE_SymEnumSymbolsEx
 static DWORD enum_and_load_symbols (const char *module)
 {
   const struct ModuleEntry *me;
@@ -579,6 +601,7 @@ static DWORD enum_and_load_symbols (const char *module)
 
   return (num);     /* # of symbols added for this module */
 }
+#endif
 
 /*
  * Never call this before StackWalkInit().
@@ -586,22 +609,24 @@ static DWORD enum_and_load_symbols (const char *module)
 DWORD StackWalkSymbols (smartlist_t **sl_p)
 {
   const struct ModuleEntry *me;
-  DWORD num;
-  int   mod_len, sym_len, i;
+  DWORD num = 0;
+  int   mod_len, sym_len;
 
   assert (g_modules_list);
   mod_len = smartlist_len (g_modules_list);
   assert (mod_len > 0);
-
   assert (g_symbols_list);
-  sym_len = smartlist_len (g_symbols_list);
 
+#if USE_SymEnumSymbolsEx
+  sym_len = smartlist_len (g_symbols_list);
   if (sym_len == 0)
   {
    /* Walking the symbols in 'enum_and_load_symbols()' takes time.
     * Hence do this only if 'sym_len == 0'.
     * And quit as soon as 'check_quit()' sets 'g_quit_count > 0'.
     */
+    int i;
+
     g_quit_count = 0;
     for (i = 0; i < mod_len && g_quit_count == 0; i++)
     {
@@ -611,10 +636,13 @@ DWORD StackWalkSymbols (smartlist_t **sl_p)
   }
 
   num = smartlist_len (g_symbols_list);
+#endif
 
   if (sl_p)
      *sl_p = g_symbols_list;
 
+  ARGSUSED (me);
+  ARGSUSED (sym_len);
   return (num);     /*  Total # of symbols */
 }
 
@@ -815,6 +843,7 @@ cleanup:
   return smartlist_len (g_modules_list);
 }
 
+#if USE_SymEnumSymbolsEx
 /*
  * Show the retrieved information on all out modules;
  * PDB symbols etc.
@@ -899,6 +928,7 @@ static BOOL check_quit (void)
   }
   return (0);
 }
+#endif /* USE_SymEnumSymbolsEx */
 
 static void enum_and_load_modules (void)
 {
@@ -912,6 +942,7 @@ static void enum_and_load_modules (void)
      rc = GetModuleListPSAPI();    /* if not okay, then try PSAPI */
 
   max = smartlist_len (g_modules_list);
+
   g_quit_count = 0;
 
   for (i = 0; i < max && g_quit_count == 0; i++)
@@ -929,8 +960,11 @@ static void enum_and_load_modules (void)
 #ifdef USE_BFD
     BFD_load_debug_symbols (me->module_name, me->base_addr, me->size);
 #endif
+
+#if USE_SymEnumSymbolsEx
     if (g_cfg.pdb_report || g_cfg.trace_level >= 4)
        enum_and_load_symbols (me->module_name);
+#endif
   }
 
 #ifdef USE_BFD
@@ -1005,6 +1039,7 @@ static BOOL set_symbol_search_path (void)
   return (TRUE);
 }
 
+#if USE_SymEnumSymbolsEx
 /*
  * Return index of entry in 'g_modules_list' whos 'me->module_name' == 'module'
  * or 'me->base_addr == base_addr'.
@@ -1037,7 +1072,7 @@ static int null_printf (const char *fmt, ...)
 /*
  * This callback called from 'SymEnumSymbolsEx()' should be called only for
  * modules possibly containing PDB-symbols. I.e. in a MinGW compiled program
- * 'test.exe' this should never look for symbols in 'test.pdb'.
+ * 'test.exe', this should never look for symbols in 'test.pdb'.
  */
 static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *arg)
 {
@@ -1242,27 +1277,25 @@ junk_sym:
  * Would have to use the archaic libbfd.a library (which is hard to use).
  * Use the easy way out and parse the <module>.map file.
  *
-
-  The parts we're interested in look like:
-
-  LOAD F:/MingW32/TDM-gcc/bin/../lib/gcc/x86_64-w64-mingw32/5.1.0/32/crtend.o
-   ...
-  .text          0x00000000702c14c0     0x236c MinGW_obj/common.o
-                 0x00000000702c14f7                common_init
-                 0x00000000702c1539                common_exit
-
-   Start parsing lines after a 'LOAD xx' is found.
-   Match only lines on the form:
-     ".text   0x00000000702c14c0    0x236c    MinGW_obj/common.o"
-              <addr>                <size>    <.o-file>
-
-   or if the above is found:
-      "  0x00000000702c1539   common_exit"
-
-   which is assumed to be an continuation of the first.
-   I.e. .o-file is the same.
+ * The parts we're interested in look like:
+ *
+ * LOAD F:/MingW32/TDM-gcc/bin/../lib/gcc/x86_64-w64-mingw32/5.1.0/32/crtend.o
+ *  ...
+ * .text          0x00000000702c14c0     0x236c MinGW_obj/common.o
+ *                0x00000000702c14f7                common_init
+ *                0x00000000702c1539                common_exit
+ *
+ *  Start parsing lines after a 'LOAD xx' is found.
+ *  Match only lines on the form:
+ *    ".text   0x00000000702c14c0    0x236c    MinGW_obj/common.o"
+ *             <addr>                <size>    <.o-file>
+ *
+ *  or if the above is found:
+ *     "  0x00000000702c1539   common_exit"
+ *
+ *  which is assumed to be an continuation of the first.
+ *  I.e. .o-file is the same.
  */
-
 static DWORD parse_map_file (const char *module, smartlist_t *sl)
 {
   const char *dot = strrchr (module, '.');
@@ -1458,6 +1491,7 @@ check_mingw_map_file:
 
   return (me->stat.num_syms);
 }
+#endif /* USE_SymEnumSymbolsEx */
 
 #undef  ADD_VALUE
 #define ADD_VALUE(opt, func)  { opt, NULL, "dbghelp.dll", #func, (void**)&p_##func }
@@ -1480,9 +1514,11 @@ BOOL StackWalkInit (void)
                           ADD_VALUE (0, SymSetOptions),
                           ADD_VALUE (0, StackWalk64),
                           ADD_VALUE (0, SymLoadModule64),
+#if USE_SymEnumSymbolsEx
                           ADD_VALUE (0, SymEnumSymbolsEx),
                           ADD_VALUE (1, SymSrvGetFileIndexInfo),
-                          ADD_VALUE (0, UnDecorateSymbolName)
+#endif
+                          ADD_VALUE (0, UnDecorateSymbolName),
                         };
   BOOL ok = (load_dynamic_table(dbghelp_funcs, DIM(dbghelp_funcs)) == DIM(dbghelp_funcs));
 
@@ -1523,8 +1559,10 @@ BOOL StackWalkInit (void)
     return (FALSE);
   }
 
+#if USE_SymEnumSymbolsEx
   if (g_cfg.pdb_report || g_cfg.trace_level >= 4)
      print_modules_and_pdb_info (g_cfg.pdb_report, FALSE);
+#endif
 
   TRACE (2, "\n");
   return (ok);
@@ -1538,7 +1576,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
                                      STACKFRAME64 *stk, CONTEXT *ctx)
 {
   struct {
-#if USE_SYMFROMADDR
+#if USE_SymFromAaddr
     SYMBOL_INFO  hdr;
 #else
     IMAGEHLP_SYMBOL64  hdr;
@@ -1626,7 +1664,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   memset (&sym, '\0', sizeof(sym));
   sym.hdr.SizeOfStruct  = sizeof(sym.hdr);
 
-#if USE_SYMFROMADDR
+#if USE_SymFromAaddr
   sym.hdr.MaxNameLen = sizeof(sym.name);
 
   if (!(*p_SymFromAddr)(g_proc, addr, &ofs_from_symbol, &sym.hdr))
