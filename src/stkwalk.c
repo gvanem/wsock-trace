@@ -57,8 +57,8 @@
 #include <conio.h>
 #include <assert.h>
 
-#ifdef __WATCOMC__
-  #include <stdint.h>
+#if defined(__WATCOMC__) || defined(__MINGW32__)
+  #include <stdint.h>   /* 'uintptr_t' */
 #endif
 
 #include "common.h"
@@ -394,6 +394,8 @@ static func_UnDecorateSymbolName      p_UnDecorateSymbolName = NULL;
 
 #define ADD_VALUE(v)  { v, #v }
 
+#if USE_SymEnumSymbolsEx
+
 static const struct search_list symbol_info_flags[] = {
                                 ADD_VALUE (SYMFLAG_CLR_TOKEN),
                                 ADD_VALUE (SYMFLAG_CONSTANT),
@@ -418,7 +420,6 @@ static const struct search_list symbol_info_flags[] = {
                                 ADD_VALUE (SYMFLAG_PUBLIC_CODE)
                               };
 
-#if USE_SymEnumSymbolsEx
 static const char *sym_flags_decode (DWORD flags)
 {
   if (flags == 0)
