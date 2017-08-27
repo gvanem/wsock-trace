@@ -145,9 +145,13 @@ geoip.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
 	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
 
-geoip-gen4.c geoip-gen6.c: geoip.exe
-	geoip.exe -4g geoip-gen4.c
-	geoip.exe -6g geoip-gen6.c
+geoip-gen4.c: geoip.exe
+	@echo 'Generating $@.'
+	geoip.exe -4g $@
+
+geoip-gen6.c: geoip.exe
+	@echo 'Generating $@.'
+	geoip.exe -6g $@
 
 run_test: test.exe
 	test.exe -dd
