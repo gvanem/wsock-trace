@@ -1,4 +1,4 @@
-@echo on
+@echo off
 if %1. ==  build_msvc.  goto :build_msvc
 if %1. ==  build_mingw. goto :build_mingw
 if %1. NEQ init.  exit /b 0
