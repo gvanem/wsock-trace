@@ -30,9 +30,16 @@
 #endif
 
 #if !defined(s6_bytes)  /* mingw.org */
- #define s6_bytes _s6_bytes
+  #define s6_bytes _s6_bytes
 #endif
 
+#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
+  #define USE_WSAPoll 0
+#elif defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
+  #define USE_WSAPoll 1
+#else
+  #define USE_WSAPoll 0
+#endif
 
 #if defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -217,15 +224,15 @@ static void test_gethostbyaddr (void)
   ia = (const char*) &ia6;         /* '::' -> hostname of this machine */
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6));
 
-  /* Some www.google.com IPv6 addresses: Shoud be in Ireland.
+  /* Some www.google.com IPv6 addresses: Should be in Ireland.
    */
   TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:400F:805::1011", &ia6.s6_addr));
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6));
 
-  /* Shoud be in Finland.
+  /* Should be in Finland.
    */
   TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:4010:C07::63", &ia6.s6_addr));
-  TEST_CONDITION (== 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6)); /* No reverse */
+  TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6)); /* Has a reverse */
 }
 
 static void test_gethostbyname (void)
@@ -393,7 +400,7 @@ static void test_send (void)
 
 static void test_WSAPoll (void)
 {
-#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
+#if USE_WSAPoll
   struct pollfd poll[2];
 
   poll[0].fd      = s1;
@@ -405,6 +412,9 @@ static void test_WSAPoll (void)
   poll[1].revents = 0;
 
   TEST_CONDITION (== 1, WSAPoll ((LPWSAPOLLFD)&poll, 2, 10));
+#else
+  if (chatty >= 1)
+     puts ("  disabled.");
 #endif
 }
 
