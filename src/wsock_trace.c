@@ -165,281 +165,272 @@ static fd_set *last_wr_fd = NULL;
 static fd_set *last_ex_fd = NULL;
 
 static void wstrace_printf (BOOL first_line,
-                            _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (2,3);
+                            _Printf_format_string_ const char *fmt, ...)
+                            ATTR_PRINTF (2,3);
 
-typedef SOCKET  (WINAPI *func_socket) (int family, int type, int protocol);
-typedef SOCKET  (WINAPI *func_accept) (SOCKET s, struct sockaddr *addr, int *addr_len);
-typedef int     (WINAPI *func_bind) (SOCKET s, const struct sockaddr *addr, int addr_len);
-typedef int     (WINAPI *func_shutdown) (SOCKET s, int how);
-typedef int     (WINAPI *func_closesocket) (SOCKET s);
-typedef int     (WINAPI *func_connect) (SOCKET s, const struct sockaddr *addr, int addr_len);
-typedef int     (WINAPI *func_ioctlsocket) (SOCKET s, long opt, u_long *arg);
-typedef int     (WINAPI *func_select) (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, CONST_PTIMEVAL timeout);
-typedef int     (WINAPI *func_listen) (SOCKET s, int backlog);
-typedef int     (WINAPI *func_recv) (SOCKET s, char *buf, int buf_len, int flags);
-typedef int     (WINAPI *func_recvfrom) (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len);
-typedef int     (WINAPI *func_send) (SOCKET s, const char *buf, int buf_len, int flags);
-typedef int     (WINAPI *func_sendto) (SOCKET s, const char *buf, int buf_len, int flags, const struct sockaddr *to, int to_len);
-typedef int     (WINAPI *func_setsockopt) (SOCKET s, int level, int opt, const char *opt_val, int opt_len);
-typedef int     (WINAPI *func_getsockopt) (SOCKET s, int level, int opt, char *opt_val, int *opt_len);
-typedef int     (WINAPI *func_gethostname) (char *buf, int buf_len);
-typedef int     (WINAPI *func_getpeername) (SOCKET s, struct sockaddr *name, int *namelen);
-typedef int     (WINAPI *func_getsockname) (SOCKET s, struct sockaddr *name, int *namelen);
-typedef u_short (WINAPI *func_htons) (u_short x);
-typedef u_short (WINAPI *func_ntohs) (u_short x);
-typedef u_long  (WINAPI *func_htonl) (u_long x);
-typedef u_long  (WINAPI *func_ntohl) (u_long x);
-typedef u_long  (WINAPI *func_inet_addr) (const char *addr);
-typedef char *  (WINAPI *func_inet_ntoa) (struct in_addr addr);
+/*
+ * Handy macro to both define and declare the function-pointer.
+ */
+#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                static func_##f  p_##f = NULL
 
-typedef struct servent  *(WINAPI *func_getservbyport) (int port, const char *proto);
-typedef struct servent  *(WINAPI *func_getservbyname) (const char *serv, const char *proto);
-typedef struct hostent  *(WINAPI *func_gethostbyname) (const char *name);
-typedef struct hostent  *(WINAPI *func_gethostbyaddr) (const char *addr, int len, int type);
-typedef struct protoent *(WINAPI *func_getprotobynumber) (int num);
-typedef struct protoent *(WINAPI *func_getprotobyname) (const char *name);
+DEF_FUNC (SOCKET,  socket,      (int family, int type, int protocol));
+DEF_FUNC (SOCKET,  accept,      (SOCKET s, struct sockaddr *addr, int *addr_len));
+DEF_FUNC (int,     bind,        (SOCKET s, const struct sockaddr *addr, int addr_len));
+DEF_FUNC (int,     shutdown,    (SOCKET s, int how));
+DEF_FUNC (int,     closesocket, (SOCKET s));
+DEF_FUNC (int,     connect,     (SOCKET s, const struct sockaddr *addr, int addr_len));
+DEF_FUNC (int,     ioctlsocket, (SOCKET s, long opt, u_long *arg));
+DEF_FUNC (int,     select,      (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, CONST_PTIMEVAL timeout));
+DEF_FUNC (int,     listen,      (SOCKET s, int backlog));
+DEF_FUNC (int,     recv,        (SOCKET s, char *buf, int buf_len, int flags));
+DEF_FUNC (int,     recvfrom,    (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len));
+DEF_FUNC (int,     send,        (SOCKET s, const char *buf, int buf_len, int flags));
+DEF_FUNC (int,     sendto,      (SOCKET s, const char *buf, int buf_len, int flags, const struct sockaddr *to, int to_len));
+DEF_FUNC (int,     setsockopt,  (SOCKET s, int level, int opt, const char *opt_val, int opt_len));
+DEF_FUNC (int,     getsockopt,  (SOCKET s, int level, int opt, char *opt_val, int *opt_len));
+DEF_FUNC (int,     gethostname, (char *buf, int buf_len));
+DEF_FUNC (int,     getpeername, (SOCKET s, struct sockaddr *name, int *namelen));
+DEF_FUNC (int,     getsockname, (SOCKET s, struct sockaddr *name, int *namelen));
+DEF_FUNC (u_short, htons,       (u_short x));
+DEF_FUNC (u_short, ntohs,       (u_short x));
+DEF_FUNC (u_long,  htonl,       (u_long x));
+DEF_FUNC (u_long,  ntohl,       (u_long x));
+DEF_FUNC (u_long,  inet_addr,   (const char *addr));
+DEF_FUNC (char *,  inet_ntoa,   (struct in_addr addr));
 
-typedef int (WINAPI *func_getnameinfo) (const struct sockaddr *sa, socklen_t sa_len,
-                                        char *buf, DWORD buf_size, char *serv_buf,
-                                        DWORD serv_buf_size, int flags);
+DEF_FUNC (struct servent *,  getservbyport,    (int port, const char *proto));
+DEF_FUNC (struct servent *,  getservbyname,    (const char *serv, const char *proto));
+DEF_FUNC (struct hostent *,  gethostbyname,    (const char *name));
+DEF_FUNC (struct hostent *,  gethostbyaddr,    (const char *addr, int len, int type));
+DEF_FUNC (struct protoent *, getprotobynumber, (int num));
+DEF_FUNC (struct protoent *, getprotobyname,   (const char *name));
 
-typedef int (WINAPI *func_getaddrinfo) (const char *host_name, const char *serv_name,
-                                        const struct addrinfo *hints, struct addrinfo **res);
+DEF_FUNC (int, getnameinfo, (const struct sockaddr *sa,
+                             socklen_t              sa_len,
+                             char                  *buf,
+                             DWORD                  buf_size,
+                             char                  *serv_buf,
+                             DWORD                  serv_buf_size,
+                             int                    flags));
 
-typedef void (WINAPI *func_freeaddrinfo) (struct addrinfo *ai);
+DEF_FUNC (int, getaddrinfo, (const char            *host_name,
+                             const char            *serv_name,
+                             const struct addrinfo *hints,
+                             struct addrinfo      **res));
 
-typedef char *    (WINAPI *func_gai_strerrorA) (int err);
-typedef wchar_t * (WINAPI *func_gai_strerrorW) (int err);
+DEF_FUNC (void, freeaddrinfo, (struct addrinfo *ai));
 
-typedef int  (WINAPI *func_WSAStartup) (WORD version, LPWSADATA data);
-typedef int  (WINAPI *func_WSACleanup) (void);
-typedef int  (WINAPI *func_WSAGetLastError) (void);
-typedef void (WINAPI *func_WSASetLastError) (int err);
-typedef int  (WINAPI *func_WSAIoctl) (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
-                                      VOID *out_buf, DWORD out_size, DWORD *size_ret,
-                                      WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
+#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
+  DEF_FUNC (char *,    gai_strerrorA, (int err));
+  DEF_FUNC (wchar_t *, gai_strerrorW, (int err));
+#endif
 
-typedef WSAEVENT (WINAPI *func_WSACreateEvent) (void);
-typedef BOOL     (WINAPI *func_WSACloseEvent) (WSAEVENT);
-typedef BOOL     (WINAPI *func_WSASetEvent) (WSAEVENT);
-typedef BOOL     (WINAPI *func_WSAResetEvent) (WSAEVENT);
-typedef int      (WINAPI *func_WSAEventSelect) (SOCKET s, WSAEVENT hnd, long net_ev);
-typedef int      (WINAPI *func_WSAAsyncSelect) (SOCKET s, HWND wnd, unsigned int msg, long net_ev);
+DEF_FUNC (int,  WSAStartup,      (WORD version, LPWSADATA data));
+DEF_FUNC (int,  WSACleanup,      (void));
+DEF_FUNC (int,  WSAGetLastError, (void));
+DEF_FUNC (void, WSASetLastError, (int err));
 
-typedef int      (WINAPI *func_WSARecv) (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                                         DWORD *flags, WSAOVERLAPPED *ov,
-                                         LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
+DEF_FUNC (int,  WSAIoctl, (SOCKET                             s,
+                           DWORD                              code,
+                           VOID                              *vals,
+                           DWORD                              size_in,
+                           VOID                              *out_buf,
+                           DWORD                              out_size,
+                           DWORD                             *size_ret,
+                           WSAOVERLAPPED                     *ov,
+                           LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
+
+DEF_FUNC (WSAEVENT, WSACreateEvent, (void));
+DEF_FUNC (BOOL,     WSACloseEvent,  (WSAEVENT));
+DEF_FUNC (BOOL,     WSASetEvent,    (WSAEVENT));
+DEF_FUNC (BOOL,     WSAResetEvent,  (WSAEVENT));
+
+DEF_FUNC (int, WSAEventSelect, (SOCKET   s,
+                                WSAEVENT hnd,
+                                long     net_ev));
+
+DEF_FUNC (int, WSAAsyncSelect, (SOCKET       s,
+                                HWND         wnd,
+                                unsigned int msg,
+                                long         net_ev));
+
+DEF_FUNC (int, WSARecv, (SOCKET                             s,
+                         WSABUF                            *bufs,
+                         DWORD                              num_bufs,
+                         DWORD                             *num_bytes,
+                         DWORD                             *flags,
+                         WSAOVERLAPPED                     *ov,
+                         LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
+
+DEF_FUNC (int, WSARecvFrom, (SOCKET                             s,
+                             WSABUF                            *bufs,
+                             DWORD                              num_bufs,
+                             DWORD                             *num_bytes,
+                             DWORD                             *flags,
+                             struct sockaddr                   *from,
+                             INT                               *from_len,
+                             WSAOVERLAPPED                     *ov,
+                             LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
+
+DEF_FUNC (int, WSARecvDisconnect, (SOCKET  s,
+                                   WSABUF *disconnect_data));
+
+DEF_FUNC (int, WSARecvEx,         (SOCKET s,
+                                   char  *buf,
+                                   int    buf_len,
+                                   int   *flags));
+
+DEF_FUNC (int, WSASend, (SOCKET                             s,
+                         WSABUF                            *bufs,
+                         DWORD                              num_bufs,
+                         DWORD                             *num_bytes,
+                         DWORD                              flags,
+                         WSAOVERLAPPED                     *ov,
+                         LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
+
+DEF_FUNC (int, WSASendTo, (SOCKET                             s,
+                           WSABUF                            *bufs,
+                           DWORD                              num_bufs,
+                           DWORD                             *num_bytes,
+                           DWORD                              flags,
+                           const struct sockaddr             *to,
+                           int                                to_len,
+                           WSAOVERLAPPED                     *ow,
+                           LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
+
+DEF_FUNC (int, WSAConnect, (SOCKET                 s,
+                                 const struct sockaddr *name,
+                                 int                    namelen,
+                                 WSABUF                *caller_data,
+                                 WSABUF                *callee_data,
+                                 QOS                   *SQOS,
+                                 QOS                   *GQOS));
 
 
-typedef int      (WINAPI *func_WSARecvFrom) (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                                             DWORD *flags, struct sockaddr *from, INT *from_len,
-                                             WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
+DEF_FUNC (BOOL, WSAConnectByList, (SOCKET               s,
+                                   SOCKET_ADDRESS_LIST *socket_addr_list,
+                                   DWORD               *local_addr_len,
+                                   SOCKADDR            *local_addr,
+                                   DWORD               *remote_addr_len,
+                                   SOCKADDR            *remote_addr,
+                                   CONST_PTIMEVAL       timeout,
+                                   WSAOVERLAPPED       *reserved));
 
-typedef int      (WINAPI *func_WSARecvDisconnect) (SOCKET s, WSABUF *disconnect_data);
-typedef int      (WINAPI *func_WSARecvEx) (SOCKET s, char *buf, int buf_len, int *flags);
+DEF_FUNC (BOOL, WSAConnectByNameA, (SOCKET              s,
+                                    CONST_LPSTR         node_name,
+                                    CONST_LPSTR         service_name,
+                                    DWORD              *local_addr_len,
+                                    SOCKADDR           *local_addr,
+                                    DWORD              *remote_addr_len,
+                                    SOCKADDR           *remote_addr,
+                                    CONST_PTIMEVAL      timeout,
+                                    WSAOVERLAPPED      *reserved));
 
-typedef int      (WINAPI *func_WSASend) (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                                         DWORD flags, WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
+DEF_FUNC (BOOL, WSAConnectByNameW, (SOCKET              s,
+                                    LPWSTR              node_name,
+                                    LPWSTR              service_name,
+                                    DWORD              *local_addr_len,
+                                    SOCKADDR           *local_addr,
+                                    DWORD              *remote_addr_len,
+                                    SOCKADDR           *remote_addr,
+                                    CONST_PTIMEVAL      timeout,
+                                    WSAOVERLAPPED      *reserved));
 
-typedef int      (WINAPI *func_WSASendTo) (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                                           DWORD flags, const struct sockaddr *to, int to_len,
-                                           WSAOVERLAPPED *ow, LPWSAOVERLAPPED_COMPLETION_ROUTINE func);
+DEF_FUNC (int, __WSAFDIsSet,  (SOCKET s,
+                               fd_set *fds));
 
-typedef int      (WINAPI *func_WSAConnect) (SOCKET s, const struct sockaddr *name, int namelen,
-                                            WSABUF *caller_data, WSABUF *callee_data, QOS *SQOS,
-                                            QOS *GQOS);
+DEF_FUNC (SOCKET, WSASocketA, (int                af,
+                               int                type,
+                               int                protocol,
+                               WSAPROTOCOL_INFOA *protocol_info,
+                               GROUP              grp,
+                               DWORD              flags));
 
+DEF_FUNC (SOCKET, WSASocketW, (int                af,
+                               int                type,
+                               int                protocol,
+                               WSAPROTOCOL_INFOW *protocol_info,
+                               GROUP              grp,
+                               DWORD              flags));
 
-typedef BOOL   (WINAPI *func_WSAConnectByList) (SOCKET               s,
-                                                SOCKET_ADDRESS_LIST *socket_addr_list,
-                                                DWORD               *local_addr_len,
-                                                SOCKADDR            *local_addr,
-                                                DWORD               *remote_addr_len,
-                                                SOCKADDR            *remote_addr,
-                                                CONST_PTIMEVAL       timeout,
-                                                WSAOVERLAPPED       *reserved);
+DEF_FUNC (int, WSADuplicateSocketA, (SOCKET             s,
+                                     DWORD              process_id,
+                                     WSAPROTOCOL_INFOA *protocol_info));
 
-typedef BOOL   (WINAPI *func_WSAConnectByNameA) (SOCKET              s,
-                                                 CONST_LPSTR         node_name,
-                                                 CONST_LPSTR         service_name,
-                                                 DWORD              *local_addr_len,
-                                                 SOCKADDR           *local_addr,
-                                                 DWORD              *remote_addr_len,
-                                                 SOCKADDR           *remote_addr,
-                                                 CONST_PTIMEVAL      timeout,
-                                                 WSAOVERLAPPED      *reserved);
+DEF_FUNC (int, WSADuplicateSocketW, (SOCKET             s,
+                                     DWORD              process_id,
+                                     WSAPROTOCOL_INFOW *protocol_info));
 
-typedef BOOL   (WINAPI *func_WSAConnectByNameW) (SOCKET              s,
-                                                 LPWSTR              node_name,
-                                                 LPWSTR              service_name,
-                                                 DWORD              *local_addr_len,
-                                                 SOCKADDR           *local_addr,
-                                                 DWORD              *remote_addr_len,
-                                                 SOCKADDR           *remote_addr,
-                                                 CONST_PTIMEVAL      timeout,
-                                                 WSAOVERLAPPED      *reserved);
+DEF_FUNC (INT, WSAAddressToStringA, (SOCKADDR          *address,
+                                     DWORD              address_len,
+                                     WSAPROTOCOL_INFOA *protocol_info,
+                                     char              *result_string,
+                                     DWORD             *result_string_len));
 
-typedef int    (WINAPI *func___WSAFDIsSet) (SOCKET s, fd_set *);
+DEF_FUNC (INT, WSAAddressToStringW, (SOCKADDR          *address,
+                                     DWORD              address_len,
+                                     WSAPROTOCOL_INFOW *protocol_info,
+                                     wchar_t           *result_string,
+                                     DWORD             *result_string_len));
 
-typedef SOCKET (WINAPI *func_WSASocketA) (int af, int type, int protocol,
-                                          WSAPROTOCOL_INFOA *protocol_info,
-                                          GROUP grp, DWORD dwFlags);
+DEF_FUNC (INT, WSAStringToAddressA, (char              *addressStr,
+                                     INT                addressFamily,
+                                     WSAPROTOCOL_INFOA *protocolInfo,
+                                     SOCKADDR          *address,
+                                     INT               *addressLength));
 
-typedef SOCKET (WINAPI *func_WSASocketW) (int af, int type, int protocol,
-                                          WSAPROTOCOL_INFOW *protocol_info,
-                                          GROUP grp, DWORD dwFlags);
+DEF_FUNC (INT, WSAStringToAddressW, (wchar_t           *addressStr,
+                                     INT                addressFamily,
+                                     WSAPROTOCOL_INFOW *protocolInfo,
+                                     SOCKADDR          *address,
+                                     INT               *addressLength));
 
-typedef int (WINAPI *func_WSADuplicateSocketA) (SOCKET, DWORD process_id,
-                                                WSAPROTOCOL_INFOA *protocol_info);
+DEF_FUNC (int, WSAEnumNetworkEvents, (SOCKET            s,
+                                      WSAEVENT          ev,
+                                      WSANETWORKEVENTS *events));
 
-typedef int (WINAPI *func_WSADuplicateSocketW) (SOCKET, DWORD process_id,
-                                                WSAPROTOCOL_INFOW *protocol_info);
+DEF_FUNC (int, WSAEnumProtocolsA,    (int               *protocols,
+                                      WSAPROTOCOL_INFOA *proto_info,
+                                      DWORD             *buf_len));
 
-typedef INT (WINAPI *func_WSAAddressToStringA) (SOCKADDR          *address,
-                                                DWORD              address_len,
-                                                WSAPROTOCOL_INFOA *protocol_info,
-                                                char              *result_string,
-                                                DWORD             *result_string_len);
+DEF_FUNC (int, WSAEnumProtocolsW,    (int               *protocols,
+                                      WSAPROTOCOL_INFOW *proto_info,
+                                      DWORD             *buf_len));
 
-typedef INT (WINAPI *func_WSAAddressToStringW) (SOCKADDR          *address,
-                                                DWORD              address_len,
-                                                WSAPROTOCOL_INFOW *protocol_info,
-                                                wchar_t           *result_string,
-                                                DWORD             *result_string_len);
+DEF_FUNC (DWORD, WSAWaitForMultipleEvents, (DWORD           num_ev,
+                                            const WSAEVENT *ev,
+                                            BOOL            wait_all,
+                                            DWORD           timeout,
+                                            BOOL            alertable));
 
-typedef INT (WINAPI *func_WSAStringToAddressA) (char              *addressStr,
-                                                INT                addressFamily,
-                                                WSAPROTOCOL_INFOA *protocolInfo,
-                                                SOCKADDR          *address,
-                                                INT               *addressLength);
+DEF_FUNC (DWORD, WaitForMultipleObjectsEx, (DWORD         num_ev,
+                                            const HANDLE *hnd,
+                                            BOOL          wait_all,
+                                            DWORD         timeout,
+                                            BOOL          alertable));
 
-typedef INT (WINAPI *func_WSAStringToAddressW) (wchar_t           *addressStr,
-                                                INT                addressFamily,
-                                                WSAPROTOCOL_INFOW *protocolInfo,
-                                                SOCKADDR          *address,
-                                                INT               *addressLength);
+DEF_FUNC (int, WSACancelBlockingCall, (void));
 
-typedef int (WINAPI *func_WSAEnumNetworkEvents) (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events);
-
-typedef int (WINAPI *func_WSAEnumProtocolsA) (int *protocols, WSAPROTOCOL_INFOA *proto_info, DWORD *buf_len);
-typedef int (WINAPI *func_WSAEnumProtocolsW) (int *protocols, WSAPROTOCOL_INFOW *proto_info, DWORD *buf_len);
-
-typedef DWORD (WINAPI *func_WSAWaitForMultipleEvents) (DWORD           num_ev,
-                                                       const WSAEVENT *ev,
-                                                       BOOL            wait_all,
-                                                       DWORD           timeout,
-                                                       BOOL            alertable);
-
-typedef DWORD (WINAPI *func_WaitForMultipleObjectsEx) (DWORD         num_ev,
-                                                       const HANDLE *hnd,
-                                                       BOOL          wait_all,
-                                                       DWORD         timeout,
-                                                       BOOL          alertable);
-
-typedef int (WINAPI *func_WSACancelBlockingCall) (void);
-
-typedef int (WINAPI *func_WSCGetProviderPath) (GUID    *provider_id,
-                                               wchar_t *provider_dll_path,
-                                               int     *provider_dll_path_len,
-                                               int     *error);
+DEF_FUNC (int, WSCGetProviderPath, (GUID    *provider_id,
+                                    wchar_t *provider_dll_path,
+                                    int     *provider_dll_path_len,
+                                    int     *error));
 /*
  * Windows-Vista functions.
  */
-typedef INT   (WINAPI *func_inet_pton) (int family, const char *string, void *res);
-typedef PCSTR (WINAPI *func_inet_ntop) (int family, const void *addr, char *string, size_t string_size);
-typedef int   (WINAPI *func_WSAPoll) (WSAPOLLFD *fd_array, ULONG fds, int timeout);
+DEF_FUNC (INT,   inet_pton, (int family, const char *string, void *res));
+DEF_FUNC (PCSTR, inet_ntop, (int family, const void *addr, char *string, size_t string_size));
+DEF_FUNC (int,   WSAPoll,   (WSAPOLLFD *fd_array, ULONG fds, int timeout));
 
 /*
  * In ntdll.dll
  */
-typedef USHORT (WINAPI *func_RtlCaptureStackBackTrace) (ULONG  frames_to_skip,
-                                                        ULONG  frames_to_capture,
-                                                        void **frames,
-                                                        ULONG *trace_hash);
+DEF_FUNC (USHORT, RtlCaptureStackBackTrace, (ULONG  frames_to_skip,
+                                             ULONG  frames_to_capture,
+                                             void **frames,
+                                             ULONG *trace_hash));
 
-/*
- * All function pointers are file global.
- */
-static func_WSAStartup               p_WSAStartup = NULL;
-static func_WSACleanup               p_WSACleanup = NULL;
-static func_WSAGetLastError          p_WSAGetLastError = NULL;
-static func_WSASetLastError          p_WSASetLastError = NULL;
-static func_WSASocketA               p_WSASocketA = NULL;
-static func_WSASocketW               p_WSASocketW = NULL;
-static func_WSADuplicateSocketA      p_WSADuplicateSocketA = NULL;
-static func_WSADuplicateSocketW      p_WSADuplicateSocketW = NULL;
-static func_WSAIoctl                 p_WSAIoctl = NULL;
-static func_WSACreateEvent           p_WSACreateEvent = NULL;
-static func_WSASetEvent              p_WSASetEvent = NULL;
-static func_WSACloseEvent            p_WSACloseEvent = NULL;
-static func_WSAResetEvent            p_WSAResetEvent = NULL;
-static func_WSAEventSelect           p_WSAEventSelect = NULL;
-static func_WSAAsyncSelect           p_WSAAsyncSelect = NULL;
-static func_WSAAddressToStringA      p_WSAAddressToStringA = NULL;
-static func_WSAAddressToStringW      p_WSAAddressToStringW = NULL;
-static func_WSAStringToAddressA      p_WSAStringToAddressA = NULL;
-static func_WSAStringToAddressW      p_WSAStringToAddressW = NULL;
-static func_WSAPoll                  p_WSAPoll = NULL;
-static func___WSAFDIsSet             p___WSAFDIsSet = NULL;
-static func_accept                   p_accept = NULL;
-static func_bind                     p_bind = NULL;
-static func_closesocket              p_closesocket = NULL;
-static func_connect                  p_connect = NULL;
-static func_ioctlsocket              p_ioctlsocket = NULL;
-static func_select                   p_select = NULL;
-static func_gethostname              p_gethostname = NULL;
-static func_listen                   p_listen = NULL;
-static func_recv                     p_recv = NULL;
-static func_recvfrom                 p_recvfrom = NULL;
-static func_send                     p_send = NULL;
-static func_sendto                   p_sendto = NULL;
-static func_setsockopt               p_setsockopt = NULL;
-static func_getsockopt               p_getsockopt = NULL;
-static func_shutdown                 p_shutdown = NULL;
-static func_socket                   p_socket = NULL;
-static func_getservbyport            p_getservbyport = NULL;
-static func_getservbyname            p_getservbyname = NULL;
-static func_gethostbyname            p_gethostbyname = NULL;
-static func_gethostbyaddr            p_gethostbyaddr = NULL;
-static func_htons                    p_htons = NULL;
-static func_ntohs                    p_ntohs = NULL;
-static func_htonl                    p_htonl = NULL;
-static func_ntohl                    p_ntohl = NULL;
-static func_inet_addr                p_inet_addr = NULL;
-static func_inet_ntoa                p_inet_ntoa = NULL;
-static func_getpeername              p_getpeername = NULL;
-static func_getsockname              p_getsockname = NULL;
-static func_getprotobynumber         p_getprotobynumber = NULL;
-static func_getprotobyname           p_getprotobyname = NULL;
-static func_getnameinfo              p_getnameinfo = NULL;
-static func_getaddrinfo              p_getaddrinfo = NULL;
-static func_freeaddrinfo             p_freeaddrinfo = NULL;
-static func_inet_pton                p_inet_pton = NULL;
-static func_inet_ntop                p_inet_ntop = NULL;
-static func_WSARecv                  p_WSARecv = NULL;
-static func_WSARecvEx                p_WSARecvEx = NULL;
-static func_WSARecvFrom              p_WSARecvFrom = NULL;
-static func_WSARecvDisconnect        p_WSARecvDisconnect = NULL;
-static func_WSASend                  p_WSASend = NULL;
-static func_WSASendTo                p_WSASendTo = NULL;
-static func_WSAConnect               p_WSAConnect = NULL;
-static func_WSAConnectByNameA        p_WSAConnectByNameA = NULL;
-static func_WSAConnectByNameW        p_WSAConnectByNameW = NULL;
-static func_WSAConnectByList         p_WSAConnectByList = NULL;
-static func_WSAEnumNetworkEvents     p_WSAEnumNetworkEvents = NULL;
-static func_WSAEnumProtocolsA        p_WSAEnumProtocolsA = NULL;
-static func_WSAEnumProtocolsW        p_WSAEnumProtocolsW = NULL;
-static func_WSAWaitForMultipleEvents p_WSAWaitForMultipleEvents = NULL;
-static func_WSACancelBlockingCall    p_WSACancelBlockingCall = NULL;
-static func_WSCGetProviderPath       p_WSCGetProviderPath = NULL;
-static func_WaitForMultipleObjectsEx p_WaitForMultipleObjectsEx = NULL;
-
-static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
-
-#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
-  static func_gai_strerrorA          p_gai_strerrorA = NULL;
-  static func_gai_strerrorW          p_gai_strerrorW = NULL;
-#endif
 
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
@@ -2663,7 +2654,7 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
  * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
  */
 #if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
-char * gai_strerrorA (int err)
+char *gai_strerrorA (int err)
 {
   char *rc;
 
@@ -2676,7 +2667,7 @@ char * gai_strerrorA (int err)
   return (rc);
 }
 
-wchar_t * gai_strerrorW (int err)
+wchar_t *gai_strerrorW (int err)
 {
   wchar_t *rc;
 
