@@ -1,6 +1,8 @@
 @echo off
-if %1. ==  build_msvc.  goto :build_msvc
-if %1. ==  build_mingw. goto :build_mingw
+@echo arg1: "%1", arg2: "%2"
+
+if %1. ==  build_msvc.  goto build_msvc
+if %1. ==  build_mingw. goto build_mingw
 if %1. NEQ init.  exit /b 0
 
 ::
@@ -56,8 +58,9 @@ echo /* Dummy IP2Location config.h */ > IP2Location\config.h
 ::
 set WSOCK_TRACE=
 set WSOCK_TRACE_LEVEL=
+echo Downloading IP4-COUNTRY.BIN.gz
 curl --remote-name --progress-bar http://www.watt-32.net/misc/IP4-COUNTRY.BIN.gz
-goto :end
+goto end
 
 ::
 :: Setup MSVC environment.
@@ -70,9 +73,10 @@ set COLUMNS=120
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 
 cd src
+echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
 nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
 if errorlevel == 0 test.exe
-goto :end
+goto end
 
 ::
 :: Setup MinGW 32-bit environment (if '%2 == x86').
@@ -90,6 +94,7 @@ if %2. == x86. (
 )
 
 cd src
+echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
 mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
 if errorlevel == 0 test.exe
 
