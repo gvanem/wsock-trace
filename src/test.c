@@ -262,7 +262,7 @@ static void test_IDNA_functions (void)
 {
   TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /* ACE: www.xn--seoghr-fya.no (www.lookhere.no) */
   TEST_CONDITION (!= 0, gethostbyname ("www.Bücher.ch"));   /* ACE: www.xn--bcher-kva.ch (www.books.ch) */
-  TEST_CONDITION (!= 0, gethostbyname ("öbb.at"));         /* From: http://unicode.org/faq/idn.html */
+  TEST_CONDITION (!= 0, gethostbyname ("öbb.at"));          /* From: http://unicode.org/faq/idn.html */
 }
 
 /*
