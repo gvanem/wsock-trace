@@ -88,11 +88,15 @@ set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set COLUMNS=120
 set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
+echo on
+
 if %2. == x86. (
-  set PATH=c:\MinGW\bin;%PATH%
+  set MINGW_ROOT=c:\MinGW
 ) else (
-  set PATH=c:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\bin;%PATH%
+  set MINGW_ROOT=c:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1
 )
+
+set PATH=%MINGW_ROOT%\bin;%PATH%
 
 cd src
 echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
