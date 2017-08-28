@@ -82,7 +82,7 @@ echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
 nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
 if errorlevel == 0^
   test.exe
-goto end
+exit /b 0
 
 ::
 :: Setup MinGW 32-bit environment (if '%2 == x86').
@@ -102,5 +102,3 @@ echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
 mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
 if errorlevel == 0^
    test.exe
-
-:end
