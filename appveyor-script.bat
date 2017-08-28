@@ -54,14 +54,15 @@ git clone https://github.com/chrislim2888/IP2Location-C-Library.git IP2Location
 echo /* Dummy IP2Location config.h */ > IP2Location\config.h
 
 ::
-:: Get the IP2Location .bin-file.
+:: Get the compressed IP2Location .bin-file + gunzip.
 ::
 set WSOCK_TRACE=
 set WSOCK_TRACE_LEVEL=
-echo Downloading IP4-COUNTRY.BIN.gz
+echo Downloading IP4-COUNTRY.BIN.gz + gunzip.exe
 curl --remote-name --progress-bar http://www.watt-32.net/misc/IP4-COUNTRY.BIN.gz
-:: echo Uncompressing IP4-COUNTRY.BIN.gz
-:: gunzip IP4-COUNTRY.BIN.gz
+curl --remote-name --progress-bar http://www.watt-32.net/misc/gunzip.exe
+echo Uncompressing IP4-COUNTRY.BIN.gz
+gunzip IP4-COUNTRY.BIN.gz
 goto end
 
 ::
