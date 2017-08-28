@@ -91,9 +91,11 @@ echo on
 set MINGW64_BIN=.
 
 if %2. == x64. (
-  set MINGW64_BIN=c:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\bin
   set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
-  dir %MING64_BIN%\*gcc*.exe
+  dir %MINGW64_BIN%\*gcc*.exe
+  gcc -v
+) else (
+  gcc -v
 )
 
 set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
