@@ -14,3 +14,6 @@ environment:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: appveyor-script.bat %BUILDER% %CPU%
+
+test_script:
+  - cmd: src\test.exe
