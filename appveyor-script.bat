@@ -95,7 +95,7 @@ if %2. == x86. (
   set MINGW_ROOT=c:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1
 )
 
-set PATH=%MINGW_ROOT%\bin;%PATH%
+set PATH=%MINGW_ROOT%\bin;c:\MinGW\bin;%PATH%
 
 cd src
 echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
