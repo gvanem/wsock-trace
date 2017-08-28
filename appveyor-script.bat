@@ -1,10 +1,13 @@
 @echo off
-@echo arg1: "%1", arg2: "%2"
 
-if %1. ==  build_msvc.  goto build_msvc
-if %1. ==  build_mingw. goto build_mingw
-if %1. NEQ init.  exit /b 0
+if %1. == build_msvc.  goto build_msvc
+if %1. == build_mingw. goto build_mingw
+if %1. == init.        goto init
 
+echo Usage: %0 "init / build_msvc / build_mingw" "x86 / x64"
+exit /b 0
+
+:init
 ::
 :: The CPU agnostic init-stage.
 ::
@@ -32,19 +35,17 @@ echo dump_wsaprotocol_info  = 1                     >> wsock_trace.appveyor
 echo dump_wsanetwork_events = 1                     >> wsock_trace.appveyor
 echo dump_data              = 1                     >> wsock_trace.appveyor
 echo max_data               = 5000                  >> wsock_trace.appveyor
-echo max_displacement       = 100                   >> wsock_trace.appveyor
+echo max_displacement       = 1000                  >> wsock_trace.appveyor
 echo exclude                = htons,htonl,inet_addr >> wsock_trace.appveyor
 echo [geoip]                                        >> wsock_trace.appveyor
-echo enable               = 1                       >> wsock_trace.appveyor
-echo use_generated        = 0                       >> wsock_trace.appveyor
-echo max_days             = 10                      >> wsock_trace.appveyor
-echo geoip4_file          = %CD%\geoip              >> wsock_trace.appveyor
-echo geoip6_file          = %CD%\geoip6             >> wsock_trace.appveyor
-echo ip2location_bin_file= #%CD%\IP4-COUNTRY.BIN    >> wsock_trace.appveyor
+echo enable                 = 1                     >> wsock_trace.appveyor
+echo use_generated          = 0                     >> wsock_trace.appveyor
+echo max_days               = 10                    >> wsock_trace.appveyor
+echo geoip4_file            = %CD%\geoip            >> wsock_trace.appveyor
+echo geoip6_file            = %CD%\geoip6           >> wsock_trace.appveyor
+echo ip2location_bin_file   = %CD%\IP4-COUNTRY.BIN  >> wsock_trace.appveyor
 echo [idna]                                         >> wsock_trace.appveyor
-echo enable   = 1                                   >> wsock_trace.appveyor
-echo winidn   = 0                                   >> wsock_trace.appveyor
-echo codepage = 0                                   >> wsock_trace.appveyor
+echo enable                 = 1                     >> wsock_trace.appveyor
 
 ::
 :: Get the IP2Location code.
@@ -56,14 +57,17 @@ echo /* Dummy IP2Location config.h */ > IP2Location\config.h
 ::
 :: Get the compressed IP2Location .bin-file + gunzip.
 ::
-set WSOCK_TRACE=
-set WSOCK_TRACE_LEVEL=
 echo Downloading IP4-COUNTRY.BIN.gz + gunzip.exe
-curl --remote-name --progress-bar http://www.watt-32.net/misc/IP4-COUNTRY.BIN.gz
-curl --remote-name --progress-bar http://www.watt-32.net/misc/gunzip.exe
+curl --remote-name --progress-bar http://www.watt-32.net/misc/{IP4-COUNTRY.BIN.gz,gunzip.exe}
 echo Uncompressing IP4-COUNTRY.BIN.gz
 gunzip IP4-COUNTRY.BIN.gz
-goto end
+
+::
+:: These should survive until 'build_msvc' + 'build_mingw' gets run.
+::
+set WSOCK_TRACE=%CD%\wsock_trace.appveyor
+set COLUMNS=120
+exit /b 0
 
 ::
 :: Setup MSVC environment.
@@ -71,14 +75,13 @@ goto end
 ::
 :build_msvc
 call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%2
-set WSOCK_TRACE=%CD%\wsock_trace.appveyor
-set COLUMNS=120
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 
 cd src
 echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
 nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
-if errorlevel == 0 test.exe
+if errorlevel == 0 ^
+  test.exe
 goto end
 
 ::
@@ -86,18 +89,18 @@ goto end
 :: Setup MinGW 64-bit environment (if '%2 == x64').
 ::
 :build_mingw
-set WSOCK_TRACE=%CD%\wsock_trace.appveyor
-set COLUMNS=120
 set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
 set MINGW64_BIN=.
-if %2. == x64. set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
+if %2. == x64. ^
+  set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
 
 set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
 
 cd src
 echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
 mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
-if errorlevel == 0 test.exe
+if errorlevel == 0 ^
+   test.exe
 
 :end
