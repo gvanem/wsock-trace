@@ -71,6 +71,7 @@ call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%2
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set COLUMNS=120
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
+set PLATFORM=%CPU%
 
 cd src
 echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
