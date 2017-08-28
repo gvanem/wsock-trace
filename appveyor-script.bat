@@ -60,8 +60,8 @@ set WSOCK_TRACE=
 set WSOCK_TRACE_LEVEL=
 echo Downloading IP4-COUNTRY.BIN.gz
 curl --remote-name --progress-bar http://www.watt-32.net/misc/IP4-COUNTRY.BIN.gz
-echo Uncompressing IP4-COUNTRY.BIN.gz
-gunzip IP4-COUNTRY.BIN.gz
+:: echo Uncompressing IP4-COUNTRY.BIN.gz
+:: gunzip IP4-COUNTRY.BIN.gz
 goto end
 
 ::
