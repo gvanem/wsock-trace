@@ -183,4 +183,4 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
   ARGSUSED (ent);
   return (FALSE);
 }
-#endif  /* USE_IP2LOCATION */
+#endif  /* USE_IP2LOCATION && !TEST_GEOIP */
