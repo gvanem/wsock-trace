@@ -71,6 +71,10 @@ ifeq ($(USE_IP2LOCATION),1)
   CFLAGS += -DUSE_IP2LOCATION
 endif
 
+ifeq ($(USER),AppVeyor)
+  CFLAGS += -DAPPVEYOR_BUILD
+endif
+
 ifeq ($(USE_BFD),1)
   CFLAGS  += -DUSE_BFD
   EX_LIBS += -lbfd -liberty -lintl -lz
@@ -102,8 +106,8 @@ DATA_OBJ = $(OBJ_DIR)/data.o
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe install
-	@echo 'Welcome to Wsock_trace library and example.'
+all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe install
+	@echo 'Welcome to Wsock_trace library and examples.'
 
 message:
 	@echo 'Building MinGW version. CPU=$(CPU).'
