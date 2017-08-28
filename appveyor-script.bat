@@ -80,7 +80,7 @@ set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 cd src
 echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
 nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
-if errorlevel == 0 ^
+if errorlevel == 0^
   test.exe
 goto end
 
@@ -92,7 +92,7 @@ goto end
 set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
 set MINGW64_BIN=.
-if %2. == x64. ^
+if %2. == x64.^
   set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
 
 set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
@@ -100,7 +100,7 @@ set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
 cd src
 echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
 mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
-if errorlevel == 0 ^
+if errorlevel == 0^
    test.exe
 
 :end
