@@ -60,6 +60,8 @@ set WSOCK_TRACE=
 set WSOCK_TRACE_LEVEL=
 echo Downloading IP4-COUNTRY.BIN.gz
 curl --remote-name --progress-bar http://www.watt-32.net/misc/IP4-COUNTRY.BIN.gz
+echo Uncompressing IP4-COUNTRY.BIN.gz
+gunzip IP4-COUNTRY.BIN.gz
 goto end
 
 ::
@@ -87,16 +89,8 @@ set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set COLUMNS=120
 set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
-echo on
 set MINGW64_BIN=.
-
-if %2. == x64. (
-  set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
-  dir c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin\*gcc*.exe
-  c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin\gcc -v
-) else (
-  c:\MinGW\bin\gcc -v
-)
+if %2. == x64. set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
 
 set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
 
