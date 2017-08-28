@@ -9,42 +9,42 @@ if %1. NEQ init.  exit /b 0
 :: The CPU agnostic init-stage.
 ::
 echo Generating wsock_trace.appveyor...
-echo #                                            > wsock_trace.appveyor
-echo # This file was generated from %0.          >> wsock_trace.appveyor
-echo #                                           >> wsock_trace.appveyor
-echo [core]                                      >> wsock_trace.appveyor
-echo trace_level            = 2                  >> wsock_trace.appveyor
-echo trace_indent           = 2                  >> wsock_trace.appveyor
-echo trace_caller           = 1                  >> wsock_trace.appveyor
-echo trace_report           = 1                  >> wsock_trace.appveyor
-echo trace_time             = relative           >> wsock_trace.appveyor
-echo callee_level           = 1                  >> wsock_trace.appveyor
-echo cpp_demangle           = 1                  >> wsock_trace.appveyor
-echo short_errors           = 1                  >> wsock_trace.appveyor
-echo use_full_path          = 1                  >> wsock_trace.appveyor
-echo use_toolhlp32          = 1                  >> wsock_trace.appveyor
-echo dump_select            = 1                  >> wsock_trace.appveyor
-echo dump_hostent           = 1                  >> wsock_trace.appveyor
-echo dump_protoent          = 1                  >> wsock_trace.appveyor
-echo dump_servent           = 1                  >> wsock_trace.appveyor
-echo dump_nameinfo          = 1                  >> wsock_trace.appveyor
-echo dump_wsaprotocol_info  = 1                  >> wsock_trace.appveyor
-echo dump_wsanetwork_events = 1                  >> wsock_trace.appveyor
-echo dump_data              = 1                  >> wsock_trace.appveyor
-echo max_data               = 5000               >> wsock_trace.appveyor
-echo max_displacement       = 100                >> wsock_trace.appveyor
-echo exclude                = htons,htonl        >> wsock_trace.appveyor
-echo [geoip]                                     >> wsock_trace.appveyor
-echo enable               = 1                    >> wsock_trace.appveyor
-echo use_generated        = 0                    >> wsock_trace.appveyor
-echo max_days             = 10                   >> wsock_trace.appveyor
-echo geoip4_file          = %CD%\geoip           >> wsock_trace.appveyor
-echo geoip6_file          = %CD%\geoip6          >> wsock_trace.appveyor
-echo ip2location_bin_file= #%CD%\IP4-COUNTRY.BIN >> wsock_trace.appveyor
-echo [idna]                                      >> wsock_trace.appveyor
-echo enable   = 1                                >> wsock_trace.appveyor
-echo winidn   = 0                                >> wsock_trace.appveyor
-echo codepage = 0                                >> wsock_trace.appveyor
+echo #                                               > wsock_trace.appveyor
+echo # This file was generated from %0.             >> wsock_trace.appveyor
+echo #                                              >> wsock_trace.appveyor
+echo [core]                                         >> wsock_trace.appveyor
+echo trace_level            = 2                     >> wsock_trace.appveyor
+echo trace_indent           = 2                     >> wsock_trace.appveyor
+echo trace_caller           = 1                     >> wsock_trace.appveyor
+echo trace_report           = 1                     >> wsock_trace.appveyor
+echo trace_time             = relative              >> wsock_trace.appveyor
+echo callee_level           = 1                     >> wsock_trace.appveyor
+echo cpp_demangle           = 1                     >> wsock_trace.appveyor
+echo short_errors           = 1                     >> wsock_trace.appveyor
+echo use_full_path          = 1                     >> wsock_trace.appveyor
+echo use_toolhlp32          = 1                     >> wsock_trace.appveyor
+echo dump_select            = 1                     >> wsock_trace.appveyor
+echo dump_hostent           = 1                     >> wsock_trace.appveyor
+echo dump_protoent          = 1                     >> wsock_trace.appveyor
+echo dump_servent           = 1                     >> wsock_trace.appveyor
+echo dump_nameinfo          = 1                     >> wsock_trace.appveyor
+echo dump_wsaprotocol_info  = 1                     >> wsock_trace.appveyor
+echo dump_wsanetwork_events = 1                     >> wsock_trace.appveyor
+echo dump_data              = 1                     >> wsock_trace.appveyor
+echo max_data               = 5000                  >> wsock_trace.appveyor
+echo max_displacement       = 100                   >> wsock_trace.appveyor
+echo exclude                = htons,htonl,inet_addr >> wsock_trace.appveyor
+echo [geoip]                                        >> wsock_trace.appveyor
+echo enable               = 1                       >> wsock_trace.appveyor
+echo use_generated        = 0                       >> wsock_trace.appveyor
+echo max_days             = 10                      >> wsock_trace.appveyor
+echo geoip4_file          = %CD%\geoip              >> wsock_trace.appveyor
+echo geoip6_file          = %CD%\geoip6             >> wsock_trace.appveyor
+echo ip2location_bin_file= #%CD%\IP4-COUNTRY.BIN    >> wsock_trace.appveyor
+echo [idna]                                         >> wsock_trace.appveyor
+echo enable   = 1                                   >> wsock_trace.appveyor
+echo winidn   = 0                                   >> wsock_trace.appveyor
+echo codepage = 0                                   >> wsock_trace.appveyor
 
 ::
 :: Get the IP2Location code.
@@ -88,14 +88,15 @@ set COLUMNS=120
 set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
 echo on
+set MINGW64_BIN=.
 
-if %2. == x86. (
-  set MINGW_ROOT=c:\MinGW
-) else (
-  set MINGW_ROOT=c:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1
+if %2. == x64. (
+  set MINGW64_BIN=c:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\bin
+  set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
+  dir %MINGW64_BIN%\*gcc*.exe
 )
 
-set PATH=%MINGW_ROOT%\bin;c:\MinGW\bin;%PATH%
+set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
 
 cd src
 echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
