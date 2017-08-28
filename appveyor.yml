@@ -16,4 +16,4 @@ build_script:
   - cmd: appveyor-script.bat %BUILDER% %CPU%
 
 test_script:
-  - cmd: src\test.exe
+  - cmd: echo %CD% & test.exe & idna.exe -dd www.seoghør.com
