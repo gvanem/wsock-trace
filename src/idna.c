@@ -23,7 +23,9 @@
 #include "init.h"
 #include "idna.h"
 
+#ifndef USE_WINIDN
 #define USE_WINIDN 1
+#endif
 
 int _idna_winnls_errno = 0;
 int _idna_errno = 0;
@@ -33,7 +35,7 @@ static BOOL cp_found = FALSE;
 static UINT cp_requested = 0;
 static UINT cur_cp = CP_ACP;
 
-#if defined(USE_WINIDN)
+#if (USE_WINIDN)
   typedef int (WINAPI *func_IdnToAscii) (DWORD          flags,
                                          const wchar_t *unicode_chars,
                                          int            unicode_len,
@@ -159,20 +161,21 @@ static BOOL CALLBACK print_cp_info (LPTSTR cp_str)
 {
   CPINFOEX cp_info;
   UINT     cp = atoi (cp_str);
+  BOOL     valid = IsValidCodePage (cp);
+  char     mark = ' ';
 
-  if(!IsValidCodePage(cp))
+  if (valid && cp == cp_requested)
   {
-    TRACE (1, "INVALID CODEPAGE: %u\n", cp);
-    return (TRUE);
+    cp_found = TRUE;
+    mark = '!';
   }
-  if (cp == cp_requested)
-     cp_found = TRUE;
 
-  TRACE (3, "CP: %5u, ", cp);
-
-  if (GetCPInfoEx(cp, 0, &cp_info))
-       TRACE (3, "name: %s\n", cp_info.CodePageName);
-  else TRACE (3, "name: <unknown>\n");
+  if (g_cfg.trace_level >= 3)
+  {
+    if (GetCPInfoEx(cp, 0, &cp_info))
+         debug_printf (__FILE__, __LINE__, "%cCP-name: %s\n", mark, cp_info.CodePageName);
+    else debug_printf (__FILE__, __LINE__, "%cCP-name: %-5u <unknown>\n", mark, cp);
+  }
   return (TRUE);
 }
 
@@ -187,7 +190,7 @@ BOOL IDNA_CheckCodePage (UINT cp)
   return (cp_found);
 }
 
-#if defined(USE_WINIDN)
+#if (USE_WINIDN)
   #define ADD_VALUE(dll, func)  { 1, NULL, dll, #func, (void**)&p_##func }
 
   static struct LoadTable dyn_funcs [] = {
@@ -200,7 +203,7 @@ BOOL IDNA_CheckCodePage (UINT cp)
 
 void IDNA_exit (void)
 {
-#if defined(USE_WINIDN)
+#if (USE_WINIDN)
   if (using_winidn)
      unload_dynamic_table (dyn_funcs, DIM(dyn_funcs));
 #endif
@@ -211,7 +214,7 @@ void IDNA_exit (void)
  */
 BOOL IDNA_init (WORD cp, BOOL use_winidn)
 {
-#if defined(USE_WINIDN)
+#if (USE_WINIDN)
   if (use_winidn)
   {
     int num = load_dynamic_table (dyn_funcs, DIM(dyn_funcs));
@@ -227,10 +230,9 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
 #endif
 
   if (cp == 0)
-  {
-    cp = IDNA_GetCodePage();
-  }
-  else if (!IDNA_CheckCodePage(cp))
+     cp = IDNA_GetCodePage();
+
+  if (!IDNA_CheckCodePage(cp))
   {
     _idna_errno = IDNAERR_ILL_CODEPAGE;
     _idna_winnls_errno = GetLastError();
@@ -452,7 +454,7 @@ static char *convert_from_ACE (const char *name)
   return (status == punycode_success ? out_buf : NULL);
 }
 
-#if defined(USE_WINIDN) && 0
+#if (USE_WINIDN && 0)
 /*
  * Taken from libcurl's idn_win32.c and rewritten.
  */
@@ -498,7 +500,7 @@ static BOOL win32_ascii_to_idn (const char *in, char **out)
   }
   return (rc);
 }
-#endif  /* USE_WINIDN */
+#endif  /* (USE_WINIDN && 0) */
 
 /*
  * E.g. convert "www.tromsø.no" to ACE:
@@ -527,7 +529,7 @@ BOOL IDNA_convert_to_ACE (
   size_t len = 0;
   BOOL   rc = FALSE;
 
-#if defined(USE_WINIDN) && 0
+#if (USE_WINIDN && 0)
   if (using_winidn)
      return win32_idn_to_ascii (name, size);
 #endif
@@ -601,7 +603,7 @@ BOOL IDNA_convert_from_ACE (
   int    i;
   BOOL   rc = FALSE;
 
-#if defined(USE_WINIDN) && 0
+#if (USE_WINIDN && 0)
   if (using_winidn)
      return win32_ascii_to_idn (name, size);
 #endif
@@ -944,7 +946,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
 struct config_table g_cfg;
 
-#if defined(USE_WINIDN)
+#if (USE_WINIDN)
   #define W_GETOPT "w"
   #define W_OPT    "[-w] "
   #define W_HELP   "   -w use the Windows Idn functions\n"
@@ -1053,7 +1055,8 @@ static int do_test (WORD cp, const char *host)
   fflush (stdout);
 
   /* If 'host' is an IP-address, try to reverse resolve the address. Unfortunately
-   * I've not found any ACE encoded hostnames with a PTR record, so this may not
+   * I've not found any ACE encoded hostname with a PTR record, so this may not
+   * work.
    */
   addr.s_addr = inet_addr (host);
   if (addr.s_addr != INADDR_NONE)
@@ -1071,10 +1074,15 @@ int main (int argc, char **argv)
      {
        case 'c':
             cp = atoi (optarg);
-            if (!cp)
+            if (cp < 0)
             {
               printf ("Illegal codepage '%s'\n", optarg);
               return (-1);
+            }
+            if (cp == 0)
+            {
+              cp = IDNA_GetCodePage();
+              printf ("'-c0' maps to code-page %u.\n", cp);
             }
             break;
        case 'd':
