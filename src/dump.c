@@ -1821,8 +1821,10 @@ static const char *dump_aliases (char **aliases)
   return (result);
 }
 
-static const char *cc_last = NULL;
-static BOOL        cc_equal = FALSE;
+static const char *cc_last   = NULL;  /* CountryCode of previous address */
+static const char *loc_last  = NULL;  /* Location of previous address */
+static BOOL        cc_equal  = FALSE;
+static BOOL        loc_equal = FALSE;
 
 static int trace_printf_cc (const char            *country_code,
                             const char            *location,
@@ -1833,17 +1835,24 @@ static int trace_printf_cc (const char            *country_code,
 
   if (country_code && isalpha(*country_code))
   {
-   /* Print Country-code only once for a host with multiple addresses.
+   /* Print Country-code (and location) only once for a host with multiple addresses.
     * Like with 'www.google.no':
     *   193.212.4.117, 193.212.4.120, 193.212.4.123, 193.212.4.119,
     *   193.212.4.122, 193.212.4.121, 193.212.4.116, 193.212.4.118
+    *
+    * PS. there should be no way to have 'location != NULL' and a
+    *     'country_code == NULL'.
     */
     cc_equal = (cc_last && !strcmp(country_code,cc_last));
     if (!cc_equal)
        trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
-    if (location)
+
+    loc_equal = (location && loc_last && !strcmp(location,loc_last));
+    if (location && !loc_equal)
        trace_printf (", %s", location);
-    cc_last = country_code;
+
+    cc_last  = country_code;
+    loc_last = location;
   }
   else if (geoip_addr_is_special(a4,a6,&remark))
   {
@@ -1861,7 +1870,7 @@ static int trace_printf_cc (const char            *country_code,
        trace_puts ("Not global");
   else trace_puts ("None");
 
-  return (!cc_equal);
+  return (!cc_equal && !loc_equal);
 }
 
 static void check_and_dump_idna (const char *name)
@@ -1890,8 +1899,8 @@ void dump_countries (int type, const char **addresses)
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
-  cc_last = NULL;
-  cc_equal = FALSE;
+  cc_last  = loc_last  = NULL;
+  cc_equal = loc_equal = FALSE;
 
   for (i = 0; addresses && addresses[i]; i++)
   {
@@ -1968,8 +1977,8 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
-  cc_last = NULL;
-  cc_equal = FALSE;
+  cc_last  = loc_last  = NULL;
+  cc_equal = loc_equal = FALSE;
 
   for (num = 0; ai; ai = ai->ai_next, num++)
   {
