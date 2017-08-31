@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "init.h"
+#include "smartlist.h"
 #include "idna.h"
 
 #ifndef USE_WINIDN
@@ -30,10 +31,10 @@
 int _idna_winnls_errno = 0;
 int _idna_errno = 0;
 
-static BOOL using_winidn = FALSE;
-static BOOL cp_found = FALSE;
-static UINT cp_requested = 0;
-static UINT cur_cp = CP_ACP;
+static BOOL         using_winidn = FALSE;
+static UINT         cp_requested = 0;
+static UINT         cur_cp = CP_ACP;
+static smartlist_t *cp_list;
 
 #if (USE_WINIDN)
   typedef int (WINAPI *func_IdnToAscii) (DWORD          flags,
@@ -154,29 +155,45 @@ UINT IDNA_GetCodePage (void)
   return (CP);
 }
 
+typedef struct code_page_info {
+        UINT  number;
+        char *name;
+        BOOL  valid;
+        char  mark;
+      } code_page_info;
+
 /*
  * Callback for EnumSystemCodePages()
  */
-static BOOL CALLBACK print_cp_info (LPTSTR cp_str)
+static BOOL CALLBACK get_cp_info (LPTSTR cp_str)
 {
-  CPINFOEX cp_info;
-  UINT     cp = atoi (cp_str);
-  BOOL     valid = IsValidCodePage (cp);
-  char     mark = ' ';
+  UINT            cp = atoi (cp_str);
+  CPINFOEX        cp_info_ex;
+  code_page_info *cp_info = calloc (1, sizeof(*cp_info));
 
-  if (valid && cp == cp_requested)
-  {
-    cp_found = TRUE;
-    mark = '!';
-  }
+  cp_info->number = cp;
+  cp_info->mark   = ' ';
+  cp_info->valid  = IsValidCodePage (cp);
 
-  if (g_cfg.trace_level >= 3)
-  {
-    if (GetCPInfoEx(cp, 0, &cp_info))
-         debug_printf (__FILE__, __LINE__, "%cCP-name: %s\n", mark, cp_info.CodePageName);
-    else debug_printf (__FILE__, __LINE__, "%cCP-name: %-5u <unknown>\n", mark, cp);
-  }
+  if (cp_info->valid && cp == cp_requested)
+     cp_info->mark = '!';
+
+  if (GetCPInfoEx(cp, 0, &cp_info_ex))
+     cp_info->name = strdup (cp_info_ex.CodePageName);
+
+  smartlist_add (cp_list, cp_info);
   return (TRUE);
+}
+
+/*
+ * smartlist_sort() helper: return -1, 1, or 0.
+ */
+static int cp_compare (const void **_a, const void **_b)
+{
+  const code_page_info *a = *_a;
+  const code_page_info *b = *_b;
+
+  return ((int)a->number - (int)b->number);
 }
 
 /*
@@ -184,9 +201,43 @@ static BOOL CALLBACK print_cp_info (LPTSTR cp_str)
  */
 BOOL IDNA_CheckCodePage (UINT cp)
 {
+  code_page_info *cp_info;
+  BOOL            cp_found = FALSE;
+  int             i, max;
+
+  cp_list = smartlist_new();
   cp_requested = cp;
-  cp_found = FALSE;
-  EnumSystemCodePages (print_cp_info, CP_INSTALLED);
+  EnumSystemCodePages (get_cp_info, CP_INSTALLED);
+
+  smartlist_sort (cp_list, cp_compare);
+  max = smartlist_len (cp_list);
+  for (i = 0; i < max; i++)
+  {
+    cp_info = smartlist_get (cp_list, i);
+    if (cp_info->valid && cp_info->number == cp_requested)
+    {
+      cp_info->mark = '!';
+      cp_found = TRUE;
+    }
+    if (g_cfg.trace_level >= 3)
+    {
+      if (cp_info->name)
+           debug_printf (__FILE__, __LINE__, "%cCP-name: %s\n",
+                         cp_info->mark, cp_info->name);
+      else debug_printf (__FILE__, __LINE__, "%cCP-name: %-5u <unknown>\n",
+                         cp_info->mark, cp_info->number);
+    }
+  }
+
+  for (i = 0; i < max; i++)
+  {
+    cp_info = smartlist_get (cp_list, i);
+    if (cp_info->name)
+       free (cp_info->name);
+    free (cp_info);
+  }
+  smartlist_free (cp_list);
+  cp_list = NULL;
   return (cp_found);
 }
 
