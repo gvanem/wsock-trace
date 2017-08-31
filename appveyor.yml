@@ -17,5 +17,5 @@ build_script:
 
 test_script:
   - cmd: test.exe
-  - cmd: chcp 865 & idna.exe www.seoghør.no
+  - cmd: chcp 865 & idna.exe www.seoghør.no & idna.exe -w www.seoghør.no
 
