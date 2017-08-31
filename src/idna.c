@@ -219,14 +219,9 @@ BOOL IDNA_CheckCodePage (UINT cp)
       cp_info->mark = '!';
       cp_found = TRUE;
     }
-    if (g_cfg.trace_level >= 3)
-    {
-      if (cp_info->name)
-           debug_printf (__FILE__, __LINE__, "%cCP-name: %s\n",
-                         cp_info->mark, cp_info->name);
-      else debug_printf (__FILE__, __LINE__, "%cCP-name: %-5u <unknown>\n",
-                         cp_info->mark, cp_info->number);
-    }
+    if (cp_info->name)
+         TRACE (3, "%cCP-name: %s\n", cp_info->mark, cp_info->name);
+    else TRACE (3, "%cCP-name: %-5u <unknown>\n", cp_info->mark, cp_info->number);
   }
 
   for (i = 0; i < max; i++)
