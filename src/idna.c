@@ -32,7 +32,6 @@ int _idna_winnls_errno = 0;
 int _idna_errno = 0;
 
 static BOOL         using_winidn = FALSE;
-static UINT         cp_requested = 0;
 static UINT         cur_cp = CP_ACP;
 static smartlist_t *cp_list;
 
@@ -159,7 +158,6 @@ typedef struct code_page_info {
         UINT  number;
         char *name;
         BOOL  valid;
-        char  mark;
       } code_page_info;
 
 /*
@@ -172,11 +170,7 @@ static BOOL CALLBACK get_cp_info (LPTSTR cp_str)
   code_page_info *cp_info = calloc (1, sizeof(*cp_info));
 
   cp_info->number = cp;
-  cp_info->mark   = ' ';
   cp_info->valid  = IsValidCodePage (cp);
-
-  if (cp_info->valid && cp == cp_requested)
-     cp_info->mark = '!';
 
   if (GetCPInfoEx(cp, 0, &cp_info_ex))
      cp_info->name = strdup (cp_info_ex.CodePageName);
@@ -206,22 +200,24 @@ BOOL IDNA_CheckCodePage (UINT cp)
   int             i, max;
 
   cp_list = smartlist_new();
-  cp_requested = cp;
+
   EnumSystemCodePages (get_cp_info, CP_INSTALLED);
 
   smartlist_sort (cp_list, cp_compare);
   max = smartlist_len (cp_list);
   for (i = 0; i < max; i++)
   {
+    char mark = ' ';
+
     cp_info = smartlist_get (cp_list, i);
-    if (cp_info->valid && cp_info->number == cp_requested)
+    if (cp_info->valid && cp_info->number == cp)
     {
-      cp_info->mark = '!';
+      mark = '!';
       cp_found = TRUE;
     }
     if (cp_info->name)
-         TRACE (3, "%cCP-name: %s\n", cp_info->mark, cp_info->name);
-    else TRACE (3, "%cCP-name: %-5u <unknown>\n", cp_info->mark, cp_info->number);
+         TRACE (3, "%cCP-name: %s\n", mark, cp_info->name);
+    else TRACE (3, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
   }
 
   for (i = 0; i < max; i++)
