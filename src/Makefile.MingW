@@ -38,7 +38,8 @@ ifeq ($(CPU),X64)
 endif
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces \
+          -Wno-unused-variable -Wno-unused-function
 RCFLAGS = -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__
 
 ifeq ($(CPU),x64)
