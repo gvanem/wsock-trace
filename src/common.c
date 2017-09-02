@@ -227,12 +227,24 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
 /**
  * Removes end-of-line termination from a string.
  */
-static char *rip (char *s)
+char *str_rip (char *s)
 {
   char *p;
 
   if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
   if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
+  return (s);
+}
+
+/**
+ * Removes end-of-line termination from a wide-string.
+ */
+wchar_t *str_ripw (wchar_t *s)
+{
+  wchar_t *p;
+
+  if ((p = wcsrchr(s,L'\n')) != NULL) *p = L'\0';
+  if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
   return (s);
 }
 
@@ -260,7 +272,7 @@ char *win_strerror (DWORD err)
        snprintf (buf, sizeof(buf), "0x%08lX: %s", (u_long)hr, err_buf);
   else snprintf (buf, sizeof(buf), "%lu: %s", (u_long)err, err_buf);
 
-  rip (buf);
+  str_rip (buf);
   p = strrchr (buf, '.');
   if (p && p[1] == '\0')
      *p = '\0';

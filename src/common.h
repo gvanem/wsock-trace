@@ -128,8 +128,6 @@
   #include <crtdbg.h>
 #endif
 
-extern int raw__WSAFDIsSet (SOCKET s, fd_set *fd);
-
 #if defined(__GNUC__)
   #define ATTR_PRINTF(_1,_2)   __attribute__((format(printf,_1,_2)))
 #else
@@ -398,6 +396,8 @@ extern int         list_lookup_check (const struct search_list *list, int num, i
 extern const char *str_hex_byte (BYTE val);
 extern const char *str_hex_word (WORD val);
 extern const char *str_hex_dword (DWORD val);
+extern char       *str_rip  (char *s);
+extern wchar_t    *str_ripw (wchar_t *s);
 
 extern unsigned long  swap32 (DWORD val);
 extern unsigned short swap16 (WORD val);
