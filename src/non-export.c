@@ -8,11 +8,14 @@
  * declaration, this non-export.obj is simply added to the imp-lib.
  */
 
-/* A hack to hide the different MinGW's prototype of 'gai_strerror[A|W]'
- * in <ws2tcpip.h>.
- */
-#define gai_strerrorA orig_gai_strerrorA
-#define gai_strerrorW orig_gai_strerrorW
+#if defined(__MINGW32__)
+  /*
+   * A hack to hide the different MinGW's prototype of 'gai_strerror[A|W]'
+   * in <ws2tcpip.h>.
+   */
+  #define gai_strerrorA orig_gai_strerrorA
+  #define gai_strerrorW orig_gai_strerrorW
+#endif
 
 #include "common.h"
 #include "in_addr.h"
