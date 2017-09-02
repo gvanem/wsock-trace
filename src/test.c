@@ -95,14 +95,16 @@ struct test_struct {
 static int chatty = 0;
 static int last_result = 0;
 
-#define TEST_STRING(expect, func)   test_string (expect, func, #func)
-#define TEST_CONDITION(cond, func)  do {                                        \
-                                      last_result = (int) func;                 \
-                                      test_condition (last_result cond, #func); \
-                                    } while (0)
+#define TEST_STRING(expect, func)                  test_string (expect, func, #func)
+#define TEST_WSTRING(expect, func_res, func_name)  test_wstring (expect, func_res, func_name)
+#define TEST_CONDITION(cond, func)                 do {                                        \
+                                                     last_result = (int) func;                 \
+                                                     test_condition (last_result cond, #func); \
+                                                   } while (0)
 
 static void test_condition (int okay, const char *function);
 static void test_string (const char *expect, const char *result, const char *function);
+static void test_wstring (const wchar_t *expect, const wchar_t *result, const char *function);
 
 static void test_ptr_or_error32 (void);
 static void test_ptr_or_error32b (void);
@@ -117,6 +119,7 @@ static void test_getservbyname (void);
 static void test_getservbyport (void);
 static void test_getnameinfo (void);
 static void test_getaddrinfo (void);
+static void test_gai_strerror (void);
 static void test_socket (void);
 static void test_ioctlsocket (void);
 static void test_connect (void);
@@ -157,6 +160,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (getservbyport),
                     ADD_TEST (getnameinfo),
                     ADD_TEST (getaddrinfo),
+                    ADD_TEST (gai_strerror),
                     ADD_TEST (socket),
                     ADD_TEST (ioctlsocket),
                     ADD_TEST (connect),
@@ -333,6 +337,40 @@ static void test_getaddrinfo (void)
 
   TEST_CONDITION (== 0, getaddrinfo ("www.ssllabs.com", "443", &hints, &res));
   TEST_CONDITION (== 0, getaddrinfo ("localhost", NULL, &hints, &res));
+}
+
+static void test_gai_strerror (void)
+{
+  struct addrinfo hints;
+  struct addrinfo *res = NULL;
+  char    err_buf1 [200];
+  wchar_t err_buf2 [200];
+  int     rc;
+
+  /* Use the same flags as in gai_strerror.c
+   */
+  #define FORMAT_FLAGS (FORMAT_MESSAGE_FROM_SYSTEM    | \
+                        FORMAT_MESSAGE_IGNORE_INSERTS | \
+                        FORMAT_MESSAGE_MAX_WIDTH_MASK)
+
+  FormatMessageA (FORMAT_FLAGS, NULL, WSAHOST_NOT_FOUND,
+                  LANG_NEUTRAL, err_buf1, sizeof(err_buf1)-1, NULL);
+
+  FormatMessageW (FORMAT_FLAGS, NULL, WSAHOST_NOT_FOUND,
+                  LANG_NEUTRAL, err_buf2, sizeof(err_buf2)/2-1, NULL);
+
+  memset (&hints, 0, sizeof(hints));
+  hints.ai_family   = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  rc = getaddrinfo ("www.no-such-host.com", NULL, &hints, &res);
+
+  /* For non-MinGW, the 'gai_strerror[A|W]()' return-strings comes from inline
+   * functions in <ws2tcpip.h>. So these should walways pass (a test that
+   * 'test_string()' + 'test_wstring()' works okay)
+   */
+  TEST_STRING  (err_buf1, gai_strerrorA(rc));
+  TEST_WSTRING (err_buf2, gai_strerrorW(rc), "gai_strerrorW");
 }
 
 static SOCKET s1, s2;
@@ -791,7 +829,18 @@ static void test_string (const char *expect, const char *result, const char *fun
     printf ("  %-50s: ", function);
     if (!strcmp(expect,result))
          puts ("OKAY");
-    else printf ("FAILED. expected: %s\n", expect);
+    else printf ("FAILED. expected: '%s', got: '%s'\n", expect, result);
+  }
+}
+
+static void test_wstring (const wchar_t *expect, const wchar_t *result, const char *function)
+{
+  if (chatty >= 1)
+  {
+    printf ("  %-50s: ", function);
+    if (!wcscmp(expect,result))
+         puts ("OKAY");
+    else printf ("FAILED. expected: '%S', got: '%S'\n", expect, result);
   }
 }
 
