@@ -44,7 +44,7 @@ OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe
+all: message $(OBJ_DIR) libwsock_trace.a test.exe install
 	@echo 'Welcome to Wsock_trace library and example.'
 
 message:
@@ -53,8 +53,13 @@ message:
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
 
-libwsock_trace.a wsock_trace_cyg.dll: $(OBJECTS)
-	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o wsock_trace_cyg.dll $^ $(EX_LIBS) > wsock_trace_cyg.map
+libwsock_trace.a: wsock_trace_cyg.dll
+
+wsock_trace_cyg.dll: $(OBJECTS) $(OBJ_DIR)/non-export.o
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(EX_LIBS) > wsock_trace_cyg.map
+	ar rs libwsock_trace.a $(OBJ_DIR)/non-export.o
+
+install: libwsock_trace.a wsock_trace_cyg.dll
 	cp --update libwsock_trace.a    $(LIB_TARGET)
 	cp --update wsock_trace_cyg.dll $(BIN_TARGET)
 
@@ -101,6 +106,6 @@ $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
 depend:
-	$(CC) -M $(CFLAGS) $(SOURCES) data.c | $(REPLACE) > .depend.CygWin
+	$(CC) -M $(CFLAGS) $(SOURCES) non-export.c | $(REPLACE) > .depend.CygWin
 
 -include .depend.CygWin

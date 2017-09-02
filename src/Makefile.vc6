@@ -85,7 +85,7 @@ EX_LIBS = $(EX_LIBS) ole32.lib
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
 # Since the SDK header <ws2ipdef.h> declares some data with no export
-# declaration ('in6addr_any' etc.), the data.obj is simply added to this
+# declaration ('in6addr_any' etc.), the non-export.obj is simply added to this
 # imp-lib.
 #
 WSOCK_LIB = wsock_trace$(X_SUFFIX).lib
@@ -112,7 +112,7 @@ OBJECTS = $(OBJ_DIR)\common.obj          \
           $(OBJ_DIR)\wsock_trace.obj     \
           $(OBJ_DIR)\wsock_trace.res
 
-DATA_OBJ = $(OBJ_DIR)\data.obj
+NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
@@ -123,9 +123,9 @@ all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe install
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(DATA_OBJ) compile_juajit_$(USE_LUA)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) compile_juajit_$(USE_LUA)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
-	lib -nologo $(WSOCK_LIB) $(DATA_OBJ)
+	lib -nologo $(WSOCK_LIB) $(NON_EXPORT_OBJ)
 	@type link.tmp >> $(WSOCK_MAP)
 	@del $(WSOCK_LIB:.lib=.exp)
 
@@ -212,7 +212,7 @@ wsock_trace_x64.def: wsock_trace.def Makefile.VC6
 	    -e "s/_\(.*\)@.*/\1/g" < wsock_trace.def                     >> wsock_trace_x64.def
 
 $(OBJ_DIR)\common.obj:      common.c common.h init.h dump.h
-$(OBJ_DIR)\data.obj:        data.c common.h in_addr.h
+$(OBJ_DIR)\non-export.obj:  non-export.c common.h in_addr.h
 $(OBJ_DIR)\dump.obj:        dump.c common.h idna.h in_addr.h init.h wsock_trace.h
 $(OBJ_DIR)\geoip.obj:       geoip.c common.h in_addr.h init.h geoip.h getopt.h smartlist.h
 $(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h

@@ -39,7 +39,7 @@ OBJS = $(OBJ_DIR)\wsock_trace.obj     &
        $(OBJ_DIR)\smartlist.obj       &
        $(OBJ_DIR)\stkwalk.obj
 
-DATA_OBJ = $(OBJ_DIR)\data.obj
+NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
 GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
             $(OBJ_DIR)\geoip-null.obj &
@@ -54,7 +54,7 @@ GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
 #
 # The 'wsock_trace_ow.lib' is an import-lib for 'wsock_trace_ow.dll'.
 # Since the SDK header <ws2ipdef.h> declares some data with no export
-# declaration ('in6addr_any' etc.), the data.obj is simply added to this
+# declaration ('in6addr_any' etc.), the non-export.obj is simply added to this
 # imp-lib.
 #
 WSOCK_LIB = wsock_trace_ow.lib
@@ -80,9 +80,9 @@ vclean realclean: clean .SYMBOLIC
 	*$(CC) $(CFLAGS) -fo=$@ $[@
 	@echo
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(OBJS) $(OBJ_DIR)\wsock_trace.res $(DATA_OBJ) $(LINK_ARG)
+$(WSOCK_DLL) $(WSOCK_LIB): $(OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
 	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
-	wlib $(WSOCK_LIB) +-$(DATA_OBJ)
+	wlib $(WSOCK_LIB) +-$(NON_EXPORT_OBJ)
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@

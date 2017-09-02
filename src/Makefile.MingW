@@ -101,8 +101,8 @@ SOURCES = wsock_trace.c wsock_trace_lua.c idna.c init.c common.c \
           cpu.c dump.c geoip.c geoip-gen4.c geoip-gen6.c overlap.c \
           in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c
 
-OBJECTS  = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
-DATA_OBJ = $(OBJ_DIR)/data.o
+OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
+NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
@@ -118,17 +118,19 @@ $(OBJ_DIR):
 
 libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
 
-WSOCK_DEPS = $(OBJECTS) $(DATA_OBJ)
+WSOCK_DEPS = $(OBJECTS) $(NON_EXPORT_OBJ)
 
 ifeq ($(USE_DEF_FILE),1)
   DEF_FILE    = wsock_trace$(X_SUFFIX).def
   WSOCK_DEPS += $(DEF_FILE)
 endif
 
+libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
+
 wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_juajit_$(USE_LUA)
 	$(CC) $(LDFLAGS) -shared -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
           -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
-	ar rs libwsock_trace.a $(DATA_OBJ)
+	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
 
 install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
 ifneq ($(USER),AppVeyor)
@@ -192,6 +194,6 @@ $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
 depend:
-	$(CC) -MM $(CFLAGS) $(SOURCES) data.c test.c | $(REPLACE) > .depend.MinGW
+	$(CC) -MM $(CFLAGS) $(SOURCES) non-export.c test.c | $(REPLACE) > .depend.MinGW
 
 -include .depend.MinGW
