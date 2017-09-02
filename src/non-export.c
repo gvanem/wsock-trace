@@ -8,6 +8,12 @@
  * declaration, this non-export.obj is simply added to the imp-lib.
  */
 
+/* A hack to hide the different MinGW's prototype of 'gai_strerror[A|W]'
+ * in <ws2tcpip.h>.
+ */
+#define gai_strerrorA orig_gai_strerrorA
+#define gai_strerrorW orig_gai_strerrorW
+
 #include "common.h"
 #include "in_addr.h"
 
@@ -93,6 +99,9 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
 #define FORMAT_FLAGS (FORMAT_MESSAGE_FROM_SYSTEM    | \
                       FORMAT_MESSAGE_IGNORE_INSERTS | \
                       FORMAT_MESSAGE_MAX_WIDTH_MASK)
+
+#undef gai_strerrorA
+#undef gai_strerrorW
 
 char *gai_strerrorA (int err)
 {
