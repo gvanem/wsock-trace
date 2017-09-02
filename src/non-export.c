@@ -1,5 +1,9 @@
 /*
- * The resulting 'wsock_trace.lib' is an import-lib for 'wsock_trace.dll'.
+ * non-export.c - Part of Wsock-Trace.
+ *
+ * The resulting 'wsock_trace.lib' (or 'libwsock_trace.a') is an import-lib for
+ * 'wsock_trace.dll' (or 'wsock_trace_mw.dll').
+ *
  * Since the SDK header <ws2ipdef.h> declares the below data with no export
  * declaration, this non-export.obj is simply added to the imp-lib.
  */
@@ -75,9 +79,62 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
       0x3F,0xFE,0x83,0x1F,0,0,0,0,0,0,0,0,0,0,0,0
     }};
 
-#if 0
-int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
+#if defined(__MINGW32__)  /* Rest of file */
+/*
+ * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
+ * But in other MinGW distribution they are not. In any case they are part
+ * of 'libws2_32.a' even though 'gai_strerror[A|W]' is not part of the
+ * system 'ws2_32.dll'. So for 'libwsock_trace.a' to be a replacement for
+ * 'libws2_32.a', we must also add these functions to it.
+ *
+ * But tracing these calls would be difficult since the needed functions
+ * for that is in wsock_trace.c.
+ */
+#define FORMAT_FLAGS (FORMAT_MESSAGE_FROM_SYSTEM    | \
+                      FORMAT_MESSAGE_IGNORE_INSERTS | \
+                      FORMAT_MESSAGE_MAX_WIDTH_MASK)
+
+char *gai_strerrorA (int err)
 {
-  return raw__WSAFDIsSet (s,fd);
+  static char err_buf [512];
+
+  err_buf[0] = '\0';
+  FormatMessageA (FORMAT_FLAGS, NULL, err, LANG_NEUTRAL,
+                  err_buf, sizeof(err_buf)-1, NULL);
+  return str_rip (err_buf);
 }
-#endif
+
+wchar_t *gai_strerrorW (int err)
+{
+  static wchar_t err_buf [512];
+
+  err_buf[0] = L'\0';
+  FormatMessageW (FORMAT_FLAGS, NULL, err, LANG_NEUTRAL,
+                  err_buf, DIM(err_buf)-1, NULL);
+  return str_ripw (err_buf);
+}
+
+/*
+ * These are also in common.c. But since this module is not part of
+ * the wsock_trace_mw.dll (only added to libwsock_trace.a), these
+ * function must also be here.
+ */
+char *str_rip (char *s)
+{
+  char *p;
+
+  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
+  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
+  return (s);
+}
+
+wchar_t *str_ripw (wchar_t *s)
+{
+  wchar_t *p;
+
+  if ((p = wcsrchr(s,L'\n')) != NULL) *p = L'\0';
+  if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
+  return (s);
+}
+#endif  /* __MINGW32__ */
+

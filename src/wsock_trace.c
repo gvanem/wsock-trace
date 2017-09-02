@@ -221,11 +221,6 @@ DEF_FUNC (int, getaddrinfo, (const char            *host_name,
 
 DEF_FUNC (void, freeaddrinfo, (struct addrinfo *ai));
 
-#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
-  DEF_FUNC (char *,    gai_strerrorA, (int err));
-  DEF_FUNC (wchar_t *, gai_strerrorW, (int err));
-#endif
-
 DEF_FUNC (int,  WSAStartup,      (WORD version, LPWSADATA data));
 DEF_FUNC (int,  WSACleanup,      (void));
 DEF_FUNC (int,  WSAGetLastError, (void));
@@ -510,10 +505,6 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "ws2_32.dll", inet_ntop),
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
            // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
-#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
-              ADD_VALUE (1, "ws2_32.dll", gai_strerrorA),
-              ADD_VALUE (1, "ws2_32.dll", gai_strerrorW),
-#endif
 
 #if 0  /* to-do? Allthough 'WSASendMsg()' seems to be an 'extension-function'
         * accessible only (?) via the 'WSAID_WSASENDMSG' GUID, it is present in
@@ -1248,15 +1239,6 @@ int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
 
   LEAVE_CRIT();
   return (rc);
-}
-
-/*
- * Since the MS SDK headers lacks an dllexport on this, this function is just
- * added to the imp-lib. Called from data.c.
- */
-int raw__WSAFDIsSet (SOCKET s, fd_set *fd)
-{
-  return __WSAFDIsSet (s, fd);
 }
 
 EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
@@ -2649,37 +2631,6 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
   WSTRACE ("freeaddrinfo (0x%" ADDR_FMT ")", ADDR_CAST(ai));
   LEAVE_CRIT();
 }
-
-/*
- * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
- */
-#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
-char *gai_strerrorA (int err)
-{
-  char *rc;
-
-  INIT_PTR (p_gai_strerrorA);
-  rc = (*p_gai_strerrorA) (err);
-
-  ENTER_CRIT();
-  WSTRACE ("gai_strerrorA (%d) -> %s", err, rc);
-  LEAVE_CRIT();
-  return (rc);
-}
-
-wchar_t *gai_strerrorW (int err)
-{
-  wchar_t *rc;
-
-  INIT_PTR (p_gai_strerrorW);
-  rc = (*p_gai_strerrorW) (err);
-
-  ENTER_CRIT();
-  WSTRACE ("gai_strerrorW (%d) -> %" WCHAR_FMT, err, rc);
-  LEAVE_CRIT();
-  return (rc);
-}
-#endif  /* __MINGW32__ && __MINGW64_VERSION_MAJOR */
 
 #if (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)) || defined(__WATCOMC__)
   #define ADDRINFOW  void *
