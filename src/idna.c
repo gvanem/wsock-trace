@@ -1,4 +1,6 @@
 /*
+ * idna.c - Part of Wsock-Trace.
+ *
  * Code for enabling lookup of names with non-ASCII letters via
  * ACE and IDNA (Internationalizing Domain Names in Applications)
  * Ref. RFC-3490.
@@ -50,6 +52,15 @@ static smartlist_t *cp_list;
 
   static func_IdnToAscii   p_IdnToAscii = NULL;
   static func_IdnToUnicode p_IdnToUnicode = NULL;
+
+  #define ADD_VALUE(dll, func)  { 1, NULL, dll, #func, (void**)&p_##func }
+
+  static struct LoadTable dyn_funcs [] = {
+                ADD_VALUE ("normaliz.dll", IdnToAscii),
+                ADD_VALUE ("normaliz.dll", IdnToUnicode),
+                ADD_VALUE ("kernel32.dll", IdnToAscii),
+                ADD_VALUE ("kernel32.dll", IdnToUnicode)
+              };
 #endif
 
 /*
@@ -237,17 +248,6 @@ BOOL IDNA_CheckCodePage (UINT cp)
   cp_list = NULL;
   return (cp_found);
 }
-
-#if (USE_WINIDN)
-  #define ADD_VALUE(dll, func)  { 1, NULL, dll, #func, (void**)&p_##func }
-
-  static struct LoadTable dyn_funcs [] = {
-                ADD_VALUE ("normaliz.dll", IdnToAscii),
-                ADD_VALUE ("normaliz.dll", IdnToUnicode),
-                ADD_VALUE ("kernel32.dll", IdnToAscii),
-                ADD_VALUE ("kernel32.dll", IdnToUnicode)
-              };
-#endif
 
 void IDNA_exit (void)
 {
@@ -475,7 +475,7 @@ static char *convert_from_ACE (const char *name)
   size_t ucs_len, i, j;
   punycode_status status;
 
-  memset (&ucs_case, 0, sizeof(ucs_case));
+  memset (&ucs_case, '\0', sizeof(ucs_case));
   ucs_len = sizeof(ucs_output);
   status = punycode_decode (strlen(name), name, &ucs_len, ucs_output, ucs_case);
 
