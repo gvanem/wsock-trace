@@ -347,7 +347,7 @@ static void test_gai_strerror (void)
   wchar_t err_buf2 [200];
   int     rc;
 
-  /* Use the same flags as in gai_strerror.c
+  /* Use the same flags as in non-export.c
    */
   #define FORMAT_FLAGS (FORMAT_MESSAGE_FROM_SYSTEM    | \
                         FORMAT_MESSAGE_IGNORE_INSERTS | \
