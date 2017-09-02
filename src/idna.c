@@ -53,6 +53,15 @@ static smartlist_t *cp_list;
 #endif
 
 /*
+ * Structure used in 'get_cp_info()' and 'EnumSystemCodePages()'.
+ */
+typedef struct code_page_info {
+        UINT  number;
+        char  name [100];
+        BOOL  valid;
+      } code_page_info;
+
+/*
  * punycode from RFC 3492
  * http://www.nicemice.net/idn/
  * Adam M. Costello
@@ -154,12 +163,6 @@ UINT IDNA_GetCodePage (void)
   return (CP);
 }
 
-typedef struct code_page_info {
-        UINT  number;
-        char *name;
-        BOOL  valid;
-      } code_page_info;
-
 /*
  * Callback for EnumSystemCodePages()
  */
@@ -173,7 +176,7 @@ static BOOL CALLBACK get_cp_info (LPTSTR cp_str)
   cp_info->valid  = IsValidCodePage (cp);
 
   if (GetCPInfoEx(cp, 0, &cp_info_ex))
-     cp_info->name = strdup (cp_info_ex.CodePageName);
+     _strlcpy (cp_info->name, cp_info_ex.CodePageName, sizeof(cp_info->name));
 
   smartlist_add (cp_list, cp_info);
   return (TRUE);
@@ -205,6 +208,9 @@ BOOL IDNA_CheckCodePage (UINT cp)
 
   smartlist_sort (cp_list, cp_compare);
   max = smartlist_len (cp_list);
+
+  TRACE (3, "%d Built-in CodePages:\n", max);
+
   for (i = 0; i < max; i++)
   {
     char mark = ' ';
@@ -215,16 +221,16 @@ BOOL IDNA_CheckCodePage (UINT cp)
       mark = '!';
       cp_found = TRUE;
     }
-    if (cp_info->name)
+    if (cp_info->name[0])
          TRACE (3, "%cCP-name: %s\n", mark, cp_info->name);
     else TRACE (3, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
   }
 
+  /* And now free the 'cp_list'
+   */
   for (i = 0; i < max; i++)
   {
     cp_info = smartlist_get (cp_list, i);
-    if (cp_info->name)
-       free (cp_info->name);
     free (cp_info);
   }
   smartlist_free (cp_list);
