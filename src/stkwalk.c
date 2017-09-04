@@ -1561,7 +1561,7 @@ BOOL StackWalkInit (void)
   }
 
 #if USE_SymEnumSymbolsEx
-  if (g_cfg.pdb_report || g_cfg.trace_level >= 4)
+  if (g_cfg.pdb_report || g_cfg.dump_modules)
      print_modules_and_pdb_info (g_cfg.pdb_report, FALSE);
 #endif
 

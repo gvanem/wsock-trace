@@ -472,6 +472,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"dump_protoent"))
      g_cfg.dump_protoent = atoi (val);
 
+  else if (!stricmp(key,"dump_modules"))
+     g_cfg.dump_modules = atoi (val);
+
   else if (!stricmp(key,"dump_hostent"))
      g_cfg.dump_hostent = atoi (val);
 
