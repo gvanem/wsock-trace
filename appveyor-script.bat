@@ -55,12 +55,12 @@ md IP2Location
 git clone https://github.com/chrislim2888/IP2Location-C-Library.git IP2Location
 
 ::
-:: Get the compressed IP2Location .bin-file + gunzip.
+:: Get the compressed IP2Location .bin-file + xz.
 ::
-echo Downloading IP4-COUNTRY.BIN.gz + gunzip.exe
-curl --remote-name --progress-bar http://www.watt-32.net/misc/{IP4-COUNTRY.BIN.gz,gunzip.exe}
-echo Uncompressing IP4-COUNTRY.BIN.gz
-gunzip IP4-COUNTRY.BIN.gz
+echo Downloading IP4-COUNTRY.BIN.gz + xz.exe
+curl --remote-name --progress-bar http://www.watt-32.net/misc/{IP4-COUNTRY.BIN.gz,xz.exe}
+echo Uncompressing IP4-COUNTRY.BIN.xz
+xz -dv IP4-COUNTRY.BIN.xz
 
 ::
 :: These should survive until 'build_msvc' + 'build_mingw' gets run.
