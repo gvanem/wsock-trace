@@ -16,17 +16,17 @@ echo #                                               > wsock_trace.appveyor
 echo # This file was generated from %0.             >> wsock_trace.appveyor
 echo #                                              >> wsock_trace.appveyor
 echo [core]                                         >> wsock_trace.appveyor
-echo trace_level            = %WSOCK_TRACE_LEVEL%   >> wsock_trace.appveyor
+echo trace_level            = %%WSOCK_TRACE_LEVEL%% >> wsock_trace.appveyor
 echo trace_indent           = 2                     >> wsock_trace.appveyor
 echo trace_caller           = 1                     >> wsock_trace.appveyor
-echo trace_report           = %WSOCK_TRACE_LEVEL%   >> wsock_trace.appveyor
+echo trace_report           = %%WSOCK_TRACE_LEVEL%% >> wsock_trace.appveyor
 echo trace_time             = relative              >> wsock_trace.appveyor
 echo callee_level           = 1                     >> wsock_trace.appveyor
 echo cpp_demangle           = 1                     >> wsock_trace.appveyor
 echo short_errors           = 1                     >> wsock_trace.appveyor
 echo use_full_path          = 1                     >> wsock_trace.appveyor
 echo use_toolhlp32          = 1                     >> wsock_trace.appveyor
-echo dump_modules           = %DUMP_MODULES%        >> wsock_trace.appveyor
+echo dump_modules           = %%DUMP_MODULES%%      >> wsock_trace.appveyor
 echo dump_select            = 1                     >> wsock_trace.appveyor
 echo dump_hostent           = 1                     >> wsock_trace.appveyor
 echo dump_protoent          = 1                     >> wsock_trace.appveyor
