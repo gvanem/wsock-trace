@@ -16,7 +16,7 @@ echo #                                               > wsock_trace.appveyor
 echo # This file was generated from %0.             >> wsock_trace.appveyor
 echo #                                              >> wsock_trace.appveyor
 echo [core]                                         >> wsock_trace.appveyor
-echo trace_level            = 2                     >> wsock_trace.appveyor
+echo trace_level            = %WSOCK_TRACE_LEVEL%   >> wsock_trace.appveyor
 echo trace_indent           = 2                     >> wsock_trace.appveyor
 echo trace_caller           = 1                     >> wsock_trace.appveyor
 echo trace_report           = 1                     >> wsock_trace.appveyor
@@ -65,6 +65,7 @@ gunzip IP4-COUNTRY.BIN.gz
 :: These should survive until 'build_msvc' + 'build_mingw' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
+set WSOCK_TRACE_LEVEL=2
 set COLUMNS=120
 exit /b 0
 
