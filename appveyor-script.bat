@@ -52,7 +52,6 @@ echo enable                 = 1                     >> wsock_trace.appveyor
 ::
 md IP2Location
 git clone https://github.com/chrislim2888/IP2Location-C-Library.git IP2Location
-echo /* Dummy IP2Location config.h */ > IP2Location\config.h
 
 ::
 :: Get the compressed IP2Location .bin-file + gunzip.

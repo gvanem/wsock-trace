@@ -7,7 +7,7 @@
 
 USE_DEBUG       = 1
 USE_BFD         = 0
-USE_IP2LOCATION = 0
+USE_IP2LOCATION = 1
 
 BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib

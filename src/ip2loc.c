@@ -99,15 +99,7 @@ DWORD ip2loc_num_ipv6_entries (void)
 /*
  * Include the IP2Location sources here to avoid the need to build the library.
  * The Makefile.win on Github is broken anyway.
- *
- * PACKAGE_VERSION is missing in "libIP2Location/IP2Location.c".
- * Must be a string. Take it from API_VERSION.
  */
-#undef PACKAGE_VERSION
-#define _STR2(x)  #x
-#define _STR(x)  _STR2(x)
-#define PACKAGE_VERSION  _STR(API_VERSION)
-
 #if defined(_MSC_VER)
   #pragma warning (disable: 4101 4244)
 
