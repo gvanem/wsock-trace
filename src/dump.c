@@ -1501,14 +1501,15 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
   trace_puts ("~0");
 }
 
-fd_set *copy_fd_set (const fd_set *fd)
+/*
+ * Return the number of bytes needed to hold a 'fd_set'
+ */
+size_t size_fd_set (const fd_set *fd)
 {
-  fd_set *copy;
-  size_t  size, count;
-  u_int   i;
+  size_t size, count;
 
   if (!fd)
-     return (NULL);
+     return (0);
 
   /*
    * From <winsock.h>:
@@ -1524,10 +1525,21 @@ fd_set *copy_fd_set (const fd_set *fd)
    */
   count = max (64, fd->fd_count);
   size = count * sizeof(SOCKET) + sizeof(u_int);
-  copy = malloc (size);
+  return (size);
+}
 
+fd_set *copy_fd_set (const fd_set *fd)
+{
+  fd_set *copy;
+  size_t  i, size;
+
+  size = size_fd_set (fd);
+  if (size == 0)
+     return (NULL);
+
+  copy = malloc (size);
   copy->fd_count = fd->fd_count;
-  for (i = 0; i < fd->fd_count; i++)
+  for (i = 0; i < (u_int)fd->fd_count; i++)
       copy->fd_array[i] = fd->fd_array[i];
   return (copy);
 }
