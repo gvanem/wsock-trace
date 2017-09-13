@@ -5,8 +5,6 @@
 #if 0
   #define UNICODE
   #define _UNICODE
-
-  #define FD_SETSIZE 256
 #endif
 
 #undef  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -124,6 +122,7 @@ static void test_socket (void);
 static void test_ioctlsocket (void);
 static void test_connect (void);
 static void test_select (void);
+static void test_select2 (void);
 static void test_send (void);
 static void test_WSAPoll (void);
 static void test_WSAFDIsSet (void);
@@ -165,6 +164,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (ioctlsocket),
                     ADD_TEST (connect),
                     ADD_TEST (select),
+                    ADD_TEST (select2),
                     ADD_TEST (send),
                     ADD_TEST (WSAPoll),
                     ADD_TEST (WSAFDIsSet),
@@ -423,6 +423,26 @@ static void test_select (void)
      FD_SET (i, &fd2);
 
   TEST_CONDITION (== -1, select (0, &fd1, &fd2, &fd2, &tv));
+}
+
+/*
+ * Test if 'select()' dumps huge fd_sets okay.
+ */
+#undef  FD_SET
+#define FD_SET(s,fd) ((fd_set*)(fd))->fd_array [((fd_set*)(fd))->fd_count++] = s
+#undef  FD_SETSIZE
+#define FD_SETSIZE   512
+
+static void test_select2 (void)
+{
+  struct timeval  tv = { 1, 1 };
+  int    i;
+
+  FD_ZERO (&fd1);
+  for (i = 0; i < FD_SETSIZE; i++)
+      FD_SET (i, &fd1);
+
+  TEST_CONDITION (== -1, select (0, &fd1, NULL, NULL, NULL));
 }
 
 static void test_send (void)
