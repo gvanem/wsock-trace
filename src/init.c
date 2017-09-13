@@ -515,6 +515,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"no_buffering"))
      g_cfg.no_buffering = atoi (val);
 
+  else if (!stricmp(key,"hosts_file"))
+     g_cfg.hosts_file = strdup (val);
+
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
@@ -812,6 +815,7 @@ void wsock_trace_exit (void)
   g_cfg.trace_stream = NULL;
 
   FREE (g_cfg.trace_file);
+  FREE (g_cfg.hosts_file);
   FREE (g_cfg.pcap.dump_fname);
   FREE (g_cfg.lua_init_script);
   FREE (g_cfg.lua_exit_script);
