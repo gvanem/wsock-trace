@@ -392,7 +392,7 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"trace_report"))
      g_cfg.trace_report = atoi (val);
 
-  else if (!stricmp(key,"trace_max_len"))
+  else if (!stricmp(key,"trace_max_len") || !stricmp(key,"trace_max_length"))
      g_cfg.trace_max_len = atoi (val);
 
   else if (!stricmp(key,"trace_time"))
