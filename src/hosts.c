@@ -67,7 +67,8 @@ static int hosts_bsearch_name (const void *key, const void **member)
   const char              *name = key;
   int   rc = strcmp (name, he->host_name);
 
-  TRACE (3, "name: %-30s, he->host_name: %-30s, rc: %d\n", name, he->host_name, rc);
+  TRACE (3, "name: %-30s, he->host_name: %-30s, he->addr_type: %d, rc: %d\n",
+         name, he->host_name, he->addr_type, rc);
   return (rc);
 }
 
@@ -111,7 +112,6 @@ static void parse_hosts (FILE *fil)
     else if (wsock_trace_inet_pton6(ip, (u_char*)&in6) == 1)
          add_entry (name, ip, &in6, sizeof(in6), AF_INET6);
   }
-  smartlist_sort (hosts_list, hosts_compare_name);
 }
 
 /*
@@ -121,13 +121,17 @@ static void hosts_file_dump (void)
 {
   int i, max = smartlist_len (hosts_list);
 
+  trace_printf ("\n%d entries in \"%s\" sorted on name:\n", max, g_cfg.hosts_file);
+
   for (i = 0; i < max; i++)
   {
     const struct host_entry *he = smartlist_get (hosts_list, i);
     char  buf [MAX_IP6_SZ];
 
     wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
-    trace_printf ( "%3d: host: %-40s addr: %s\n", i, he->host_name, buf);
+    trace_printf ("%3d: %-40s %-20s AF_INET%c\n",
+                  i, he->host_name, buf,
+                  (he->addr_type == AF_INET6) ? '6' : ' ');
   }
 }
 
@@ -166,11 +170,12 @@ void hosts_file_init (void)
       return;
     }
 
-    /* Cannot call 'WSASetLastError()' in in_addr.c before we're fully unitialised.
+    /* Cannot call 'WSASetLastError()' in in_addr.c before we're fully initialised.
      */
     call_WSASetLastError = FALSE;
     parse_hosts (fil);
     fclose (fil);
+    smartlist_sort (hosts_list, hosts_compare_name);
 
     if (g_cfg.trace_level >= 3)
        hosts_file_dump();
@@ -182,15 +187,15 @@ void hosts_file_init (void)
 /*
  * Check if one of the addresses for 'name' is from the hosts-file.
  */
-int hosts_file_check (const char *name, const struct hostent *host)
+int hosts_file_check_hostent (const char *name, const struct hostent *host)
 {
-  const char              **addresses = (const char**) host->h_addr_list;
+  const char              **addresses;
   const struct host_entry  *he;
   int                       i, num;
 
   /* This should never happen
    */
-  if (!hosts_list || hosts_list == (smartlist_t*)-1)
+  if (!name || !hosts_list || hosts_list == (smartlist_t*)-1)
      return (0);
 
   /* Do a binary search in the 'hosts_list'.
@@ -199,6 +204,8 @@ int hosts_file_check (const char *name, const struct hostent *host)
   if (!he)
      return (0);
 
+  addresses = (const char**) host->h_addr_list;
+
   for (i = num = 0; addresses && addresses[i]; i++)
   {
     if (he->addr_type == host->h_addrtype &&
@@ -206,4 +213,38 @@ int hosts_file_check (const char *name, const struct hostent *host)
        num++;
   }
   return (num);
+}
+
+/*
+ * As above, but for an 'struct addrinfo *'.
+ */
+int hosts_file_check_addrinfo (const char *name, const struct addrinfo *ai)
+{
+  struct hostent he;
+  const struct sockaddr_in  *sa4;
+  const struct sockaddr_in6 *sa6;
+  char *addr_list [2];
+
+  if (!ai || !ai->ai_addr || !name)
+     return (0);
+
+  addr_list[1]   = NULL;
+  he.h_aliases   = NULL;
+  he.h_addr_list = &addr_list[0];
+  he.h_addrtype  = ai->ai_family;
+
+  if (ai->ai_family == AF_INET)
+  {
+    sa4 = (const struct sockaddr_in*) ai->ai_addr;
+    addr_list[0] = (char*) &sa4->sin_addr;
+    return hosts_file_check_hostent (name, &he);
+  }
+
+  if (ai->ai_family == AF_INET6)
+  {
+    sa6 = (const struct sockaddr_in6*) ai->ai_addr;
+    addr_list[0] = (char*) &sa6->sin6_addr;
+    return hosts_file_check_hostent (name, &he);
+  }
+  return (0);
 }
