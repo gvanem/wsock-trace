@@ -366,7 +366,7 @@ static void test_gai_strerror (void)
   rc = getaddrinfo ("www.no-such-host.com", NULL, &hints, &res);
 
   /* For non-MinGW, the 'gai_strerror[A|W]()' return-strings comes from inline
-   * functions in <ws2tcpip.h>. So these should walways pass (a test that
+   * functions in <ws2tcpip.h>. So these should always pass (a test that
    * 'test_string()' + 'test_wstring()' works okay)
    */
   TEST_STRING  (err_buf1, gai_strerrorA(rc));
