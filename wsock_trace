@@ -39,6 +39,8 @@ dump_modules = 0                   # Dump information on all process modules.
 pdb_report  = 1                    # Report PDB-symbols information found in all modules.
 use_sema = 0
 
+hosts_file = %WINDIR%\system32\drivers\etc\hosts  # The standard location of the 'hosts' file.
+                                                  # Change to suite.
 #
 # For testing too fast programs:
 #   delay all receive, transmit, select() and WSAPoll() calls the
