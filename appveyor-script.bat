@@ -3,8 +3,9 @@
 if %1. == build_msvc.  goto build_msvc
 if %1. == build_mingw. goto build_mingw
 if %1. == init.        goto init
+if %1. == clean.       goto clean
 
-echo Usage: %0 "init / build_msvc / build_mingw" "x86 / x64"
+echo Usage: %0 "init / clean / build_msvc / build_mingw" "x86 / x64"
 exit /b 0
 
 :init
@@ -83,6 +84,14 @@ xz -dv IP4-COUNTRY.BIN.xz
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
 set COLUMNS=120
+exit /b 0
+
+::
+:: Cleanup after a local 'appveyor-script build_x'
+::
+:clean
+del /Q IP4-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
+echo Cleaning done.
 exit /b 0
 
 ::
