@@ -28,6 +28,7 @@
 #include "smartlist.h"
 #include "stkwalk.h"
 #include "overlap.h"
+#include "hosts.h"
 #include "init.h"
 
 #define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
@@ -784,6 +785,7 @@ void wsock_trace_exit (void)
   exclude_list_free();
   StackWalkExit();
   overlap_exit();
+  hosts_file_exit();
 
 #if defined(USE_LUA)
   wstrace_exit_lua (g_cfg.lua_exit_script);
@@ -1068,6 +1070,7 @@ void wsock_trace_init (void)
      check_all_search_lists();
 
   load_ws2_funcs();
+  hosts_file_init();
 
 #if defined(USE_BFD)
   BFD_init();
