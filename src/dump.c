@@ -1544,6 +1544,20 @@ fd_set *copy_fd_set (const fd_set *fd)
   return (copy);
 }
 
+/*
+ * As above, but 'dst' is allocated prior to this.
+ * E.g. by 'alloca()'.
+ */
+void *copy_fd_set_to (const fd_set *fd, fd_set *dst)
+{
+  u_int i;
+
+  dst->fd_count = fd->fd_count;
+  for (i = 0; i < fd->fd_count; i++)
+      dst->fd_array[i] = fd->fd_array[i];
+  return (dst);
+}
+
 static void dump_one_fd (const fd_set *fd, int indent)
 {
   u_int i, max_len, len = indent;
