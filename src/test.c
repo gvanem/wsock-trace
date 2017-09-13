@@ -435,14 +435,18 @@ static void test_select (void)
 
 static void test_select2 (void)
 {
-  struct timeval  tv = { 1, 1 };
   int    i;
+  struct timeval  tv = { 1, 1 };
+  struct {
+         u_int  fd_count;
+         SOCKET fd_array [FD_SETSIZE];
+       } fd;
 
-  FD_ZERO (&fd1);
+  FD_ZERO (&fd);
   for (i = 0; i < FD_SETSIZE; i++)
-      FD_SET (i, &fd1);
+      FD_SET (i, &fd);
 
-  TEST_CONDITION (== -1, select (0, &fd1, NULL, NULL, NULL));
+  TEST_CONDITION (== -1, select (0, (fd_set*)&fd, NULL, NULL, NULL));
 }
 
 static void test_send (void)
