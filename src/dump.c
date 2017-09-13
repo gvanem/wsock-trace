@@ -13,6 +13,7 @@
 #include "init.h"
 #include "geoip.h"
 #include "idna.h"
+#include "hosts.h"
 #include "wsock_trace.h"
 
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
@@ -2024,12 +2025,18 @@ void dump_nameinfo (const char *host, const char *serv, DWORD flags)
   check_and_dump_idna (host);
 }
 
-void dump_hostent (const struct hostent *host)
+void dump_hostent (const char *name, const struct hostent *host)
 {
+  const char *comment = "";
+
+  if (name && hosts_file_check(name, host) > 0)
+     comment = " (in 'hosts' file)";
+
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4name: %s, addrtype: %s, addr_list: %s\n",
+  trace_printf ("~4name: %s, addrtype: %s, addr_list: %s%s\n",
                 host->h_name, socket_family(host->h_addrtype),
-                dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list));
+                dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list),
+                comment);
 
   check_and_dump_idna (host->h_name);
 

@@ -703,7 +703,6 @@ static __inline const char *uint_ptr_hexval (UINT_PTR val, char *buf)
 
     val >>= 4;
     buf[j] = hex_chars [idx];
-//  printf ("val: 0x%08lX, idx: %u, buf[%d]: %c\n", val, idx, j, buf[j]);
   }
   return (buf);
 }
@@ -994,6 +993,14 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
   if (g_cfg.trace_level > 0 && code == SIO_GET_EXTENSION_FUNCTION_POINTER &&
       size_in == sizeof(GUID) && out_size == sizeof(void*))
      dump_extension_funcs (vals, out_buf);
+
+#if 0
+  /* \todo: hook the extension function only when someone wants to
+   *        use it. Thus allowing a trace of it.
+   */
+  if (g_cfg.hook_extensions 0 && code == SIO_GET_EXTENSION_FUNCTION_POINTER)
+     hook_extension_func (out_buf, out_size);
+#endif
 
   LEAVE_CRIT();
   return (rc);
@@ -2339,7 +2346,7 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
   WSTRACE ("gethostbyname (\"%s\") --> %s", name, ptr_or_error(rc));
 
   if (rc && !exclude_this && g_cfg.dump_hostent)
-     dump_hostent (rc);
+     dump_hostent (name, rc);
 
   if (rc && !exclude_this && g_cfg.geoip_enable)
      dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
@@ -2371,7 +2378,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
   if (!exclude_this)
   {
     if (rc && g_cfg.dump_hostent)
-       dump_hostent (rc);
+       dump_hostent (NULL, rc);
 
     if (g_cfg.geoip_enable)
     {
