@@ -5,12 +5,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-/* Avoid "warning C4996: 'GetVersion': was declared deprecated"
- */
-#ifndef BUILD_WINDOWS
-#define BUILD_WINDOWS
-#endif
-
 #include "common.h"
 #include "init.h"
 #include "smartlist.h"
@@ -25,8 +19,6 @@ struct host_entry {
      };
 
 static smartlist_t *hosts_list = (smartlist_t*) -1;
-
-static const char *etc_path (const char *file);
 
 /*
  * Add an entry to the 'hosts_list'.
@@ -47,6 +39,36 @@ static void add_entry (const char *name, const char *ip, const void *addr, size_
   _strlcpy (he->host_name, name, sizeof(he->host_name));
   memcpy (&he->addr, addr, size);
   smartlist_add (hosts_list, he);
+}
+
+/*
+ * smartlist_sort() helper:
+ *   compare on names.
+ */
+static int hosts_compare_name (const void **_a, const void **_b)
+{
+  const struct host_entry *a = *_a;
+  const struct host_entry *b = *_b;
+
+  if (a->addr_type == b->addr_type)
+     return strcmp (a->host_name, b->host_name);
+
+  /* This will cause AF_INET6 addresses to come last.
+   */
+  return (a->addr_type - b->addr_type);
+}
+
+/*
+ * smartlist_bsearch() helper; compare on name.
+ */
+static int hosts_bsearch_name (const void *key, const void **member)
+{
+  const struct host_entry *he = *member;
+  const char              *name = key;
+  int   rc = strcmp (name, he->host_name);
+
+  TRACE (3, "name: %-30s, he->host_name: %-30s, rc: %d\n", name, he->host_name, rc);
+  return (rc);
 }
 
 /*
@@ -89,6 +111,7 @@ static void parse_hosts (FILE *fil)
     else if (wsock_trace_inet_pton6(ip, (u_char*)&in6) == 1)
          add_entry (name, ip, &in6, sizeof(in6), AF_INET6);
   }
+  smartlist_sort (hosts_list, hosts_compare_name);
 }
 
 /*
@@ -104,7 +127,7 @@ static void hosts_file_dump (void)
     char  buf [MAX_IP6_SZ];
 
     wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
-    trace_printf ( "%3d: host: '%s', ip: %s\n", i, he->host_name, buf);
+    trace_printf ( "%3d: host: %-40s addr: %s\n", i, he->host_name, buf);
   }
 }
 
@@ -130,13 +153,19 @@ void hosts_file_init (void)
 {
   FILE *fil;
 
-  hosts_list = smartlist_new();
-  if (!hosts_list)
+  if (!g_cfg.hosts_file)
      return;
 
-  fil = fopen (etc_path("hosts"), "r");
+  fil = fopen (g_cfg.hosts_file, "r");
   if (fil)
   {
+    hosts_list = smartlist_new();
+    if (!hosts_list)
+    {
+      fclose (fil);
+      return;
+    }
+
     /* Cannot call 'WSASetLastError()' in in_addr.c before we're fully unitialised.
      */
     call_WSASetLastError = FALSE;
@@ -157,73 +186,24 @@ int hosts_file_check (const char *name, const struct hostent *host)
 {
   const char              **addresses = (const char**) host->h_addr_list;
   const struct host_entry  *he;
-  const char               *found = NULL;
-  int                       i, max, num = 0;
+  int                       i, num;
 
   /* This should never happen
    */
   if (!hosts_list || hosts_list == (smartlist_t*)-1)
      return (0);
 
-  /* Get number of entries in the '/etc/hosts' file.
+  /* Do a binary search in the 'hosts_list'.
    */
-  max = smartlist_len (hosts_list);
-  if (max == 0)
-     return (0); /* None! */
-
-  for (i = 0; i < max; i++)
-  {
-    he = smartlist_get (hosts_list, i);
-    if (!stricmp(he->host_name, name))
-    {
-      found = he->host_name;
-      break;
-    }
-  }
-
-  if (!found)
+  he = smartlist_bsearch (hosts_list, name, hosts_bsearch_name);
+  if (!he)
      return (0);
 
-  for (i = 0; addresses && addresses[i]; i++)
+  for (i = num = 0; addresses && addresses[i]; i++)
   {
-    if (he->addr_type != host->h_addrtype)
-       continue;
-    if (!memcmp(addresses[i], &he->addr, he->addr_size))
+    if (he->addr_type == host->h_addrtype &&
+        !memcmp(addresses[i], &he->addr, he->addr_size))
        num++;
   }
   return (num);
-}
-
-/*
- * Return TRUE if running under Win-95/98/ME.
- */
-static BOOL is_win9x (void)
-{
-  DWORD os_ver = GetVersion();
-  DWORD major_ver = LOBYTE (LOWORD(os_ver));
-
-  return (os_ver >= 0x80000000 && major_ver >= 4);
-}
-
-/*
- * Return path to "%SystemRoot%/drivers/etc/<file>"  (Win-NT+)
- *          or to "%Windir%/etc/<file>"              (Win-9x/ME)
- */
-static const char *etc_path (const char *file)
-{
-  BOOL win9x = is_win9x();
-  const char *env = win9x ? getenv("WinDir") : getenv("SystemRoot");
-  static char path [MAX_PATH];
-
-  TRACE (3, "win9x: %d, env: %s\n", win9x, env);
-
-  if (!env)
-     return (file);
-
-  if (win9x)
-       snprintf (path, sizeof(path), "%s\\etc\\%s", env, file);
-  else snprintf (path, sizeof(path), "%s\\system32\\drivers\\etc\\%s", env, file);
-
-  TRACE (3, "path: %s\n", path);
-  return (path);
 }
