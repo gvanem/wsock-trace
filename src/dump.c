@@ -1478,7 +1478,7 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
   for ( ; ai; ai = ai->ai_next)
   {
     const int  *addr_len;
-    const char *comment = "";
+    const char *comment;
 
     trace_indent (g_cfg.trace_indent+2);
     trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
@@ -1487,39 +1487,12 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
                   socket_type(ai->ai_socktype),
                   protocol_name(ai->ai_protocol));
 
+    if (hosts_file_check_addrinfo(name, ai) > 0)
+         comment = " (in 'hosts' file)";
+    else comment = "";
+
     trace_indent (g_cfg.trace_indent+4);
     addr_len = (const int*)&ai->ai_addrlen;
-
-    if (ai->ai_addr && ai->ai_family == AF_INET)
-    {
-      const struct sockaddr_in *sa4 = (const struct sockaddr_in*) ai->ai_addr;
-      struct hostent he;
-      char  *addr_list[2];
-
-      addr_list[0]   = (char*) &sa4->sin_addr;
-      addr_list[1]   = NULL;
-      he.h_aliases   = NULL;
-      he.h_addr_list = &addr_list[0];
-      he.h_addrtype  = AF_INET;
-
-      if (hosts_file_check(name, &he) > 0)
-         comment = " (in 'hosts' file)";
-    }
-    else if (ai->ai_addr && ai->ai_family == AF_INET6)
-    {
-      const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) ai->ai_addr;
-      struct hostent he;
-      char  *addr_list[2];
-
-      addr_list[0]   = (char*) &sa6->sin6_addr;
-      addr_list[1]   = NULL;
-      he.h_aliases   = NULL;
-      he.h_addr_list = &addr_list[0];
-      he.h_addrtype  = AF_INET6;
-
-      if (hosts_file_check(name, &he) > 0)
-         comment = " (in 'hosts' file)";
-    }
 
     trace_printf ("ai_canonname: %s, ai_addr: %s%s\n",
                   ai->ai_canonname, sockaddr_str2(ai->ai_addr,addr_len),
@@ -2061,10 +2034,11 @@ void dump_nameinfo (const char *host, const char *serv, DWORD flags)
 
 void dump_hostent (const char *name, const struct hostent *host)
 {
-  const char *comment = "";
+  const char *comment;
 
-  if (name && hosts_file_check(name, host) > 0)
-     comment = " (in 'hosts' file)";
+  if (hosts_file_check_hostent(name, host) > 0)
+       comment = " (in 'hosts' file)";
+  else comment = "";
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4name: %s, addrtype: %s, addr_list: %s%s\n",
