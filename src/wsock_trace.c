@@ -2378,7 +2378,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
   if (!exclude_this)
   {
     if (rc && g_cfg.dump_hostent)
-       dump_hostent (NULL, rc);
+       dump_hostent (rc->h_name, rc);
 
     if (g_cfg.geoip_enable)
     {
