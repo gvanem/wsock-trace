@@ -2064,7 +2064,7 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
     for (i = 0; i < rc; i++)
     {
       trace_indent (g_cfg.trace_indent+2);
-      trace_printf ("~1Winsock Catalog Provider Entry #%d\n", i);
+      trace_printf ("~1Provider Entry # %d\n", i);
       dump_wsaprotocol_info ('W', proto_info + i, p_WSCGetProviderPath);
     }
   }
