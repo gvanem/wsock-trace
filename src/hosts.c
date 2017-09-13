@@ -67,7 +67,7 @@ static int hosts_bsearch_name (const void *key, const void **member)
   const char              *name = key;
   int   rc = strcmp (name, he->host_name);
 
-  TRACE (3, "name: %-30s, he->host_name: %-30s, he->addr_type: %d, rc: %d\n",
+  TRACE (3, "key: %-30s he->host_name: %-30s he->addr_type: %d, rc: %d\n",
          name, he->host_name, he->addr_type, rc);
   return (rc);
 }
