@@ -1473,11 +1473,12 @@ const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
   return (buf);
 }
 
-void dump_addrinfo (const struct addrinfo *ai)
+void dump_addrinfo (const char *name, const struct addrinfo *ai)
 {
   for ( ; ai; ai = ai->ai_next)
   {
-    const int *addr_len;
+    const int  *addr_len;
+    const char *comment = "";
 
     trace_indent (g_cfg.trace_indent+2);
     trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
@@ -1488,8 +1489,41 @@ void dump_addrinfo (const struct addrinfo *ai)
 
     trace_indent (g_cfg.trace_indent+4);
     addr_len = (const int*)&ai->ai_addrlen;
-    trace_printf ("ai_canonname: %s, ai_addr: %s\n",
-                  ai->ai_canonname, sockaddr_str2(ai->ai_addr,addr_len));
+
+    if (ai->ai_addr && ai->ai_family == AF_INET)
+    {
+      const struct sockaddr_in *sa4 = (const struct sockaddr_in*) ai->ai_addr;
+      struct hostent he;
+      char  *addr_list[2];
+
+      addr_list[0]   = (char*) &sa4->sin_addr;
+      addr_list[1]   = NULL;
+      he.h_aliases   = NULL;
+      he.h_addr_list = &addr_list[0];
+      he.h_addrtype  = AF_INET;
+
+      if (hosts_file_check(name, &he) > 0)
+         comment = " (in 'hosts' file)";
+    }
+    else if (ai->ai_addr && ai->ai_family == AF_INET6)
+    {
+      const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) ai->ai_addr;
+      struct hostent he;
+      char  *addr_list[2];
+
+      addr_list[0]   = (char*) &sa6->sin6_addr;
+      addr_list[1]   = NULL;
+      he.h_aliases   = NULL;
+      he.h_addr_list = &addr_list[0];
+      he.h_addrtype  = AF_INET6;
+
+      if (hosts_file_check(name, &he) > 0)
+         comment = " (in 'hosts' file)";
+    }
+
+    trace_printf ("ai_canonname: %s, ai_addr: %s%s\n",
+                  ai->ai_canonname, sockaddr_str2(ai->ai_addr,addr_len),
+                  comment);
   }
   trace_puts ("~0");
 }

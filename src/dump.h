@@ -4,7 +4,7 @@
 extern void    check_all_search_lists (void);
 extern fd_set *copy_fd_set (const fd_set *fd);
 
-extern void dump_addrinfo  (const struct addrinfo *ai);
+extern void dump_addrinfo  (const char *name, const struct addrinfo *ai);
 extern void dump_data      (const void *data_p, unsigned data_len);
 extern void dump_wsabuf    (const WSABUF *bufs, DWORD num_bufs);
 
