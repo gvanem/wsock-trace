@@ -93,6 +93,7 @@ CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
 OBJECTS = $(OBJ_DIR)\common.obj          \
           $(OBJ_DIR)\cpu.obj             \
           $(OBJ_DIR)\dump.obj            \
+          $(OBJ_DIR)\hosts.obj           \
           $(OBJ_DIR)\geoip.obj           \
           $(OBJ_DIR)\geoip-gen4.obj      \
           $(OBJ_DIR)\geoip-gen6.obj      \

@@ -35,7 +35,7 @@ endif
 EX_LIBS += -lole32
 OBJ_DIR = Cygwin_obj
 
-SOURCES = wsock_trace.c idna.c init.c common.c cpu.c dump.c \
+SOURCES = wsock_trace.c hosts.c idna.c init.c common.c cpu.c dump.c \
           geoip.c geoip-gen4.c geoip-gen6.c in_addr.c ip2loc.c \
           overlap.c smartlist.c stkwalk.c bfd_gcc.c
 

@@ -26,6 +26,7 @@ LINK_ARG = $(OBJ_DIR)\wlink.arg
 
 OBJS = $(OBJ_DIR)\wsock_trace.obj     &
        $(OBJ_DIR)\wsock_trace_lua.obj &
+       $(OBJ_DIR)\hosts.obj           &
        $(OBJ_DIR)\idna.obj            &
        $(OBJ_DIR)\init.obj            &
        $(OBJ_DIR)\in_addr.obj         &

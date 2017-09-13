@@ -97,7 +97,7 @@ EX_LIBS += -lole32
 
 OBJ_DIR = MinGW_obj
 
-SOURCES = wsock_trace.c wsock_trace_lua.c idna.c init.c common.c \
+SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c init.c common.c \
           cpu.c dump.c geoip.c geoip-gen4.c geoip-gen6.c overlap.c \
           in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c
 
