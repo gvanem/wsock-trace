@@ -2619,7 +2619,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
   if (rc == 0 && *res && !exclude_this)
   {
     if (g_cfg.dump_data)
-       dump_addrinfo (*res);
+       dump_addrinfo (host_name, *res);
 
     if (g_cfg.geoip_enable)
        dump_countries_addrinfo (*res);
