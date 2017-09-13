@@ -22,6 +22,7 @@ echo trace_indent           = 2                     >> wsock_trace.appveyor
 echo trace_caller           = 1                     >> wsock_trace.appveyor
 echo trace_report           = %%WSOCK_TRACE_LEVEL%% >> wsock_trace.appveyor
 echo trace_time             = relative              >> wsock_trace.appveyor
+echo trace_max_length       = %%COLUMNS%%           >> wsock_trace.appveyor
 echo callee_level           = 1                     >> wsock_trace.appveyor
 echo cpp_demangle           = 1                     >> wsock_trace.appveyor
 echo short_errors           = 1                     >> wsock_trace.appveyor
@@ -38,7 +39,6 @@ echo dump_wsanetwork_events = 1                     >> wsock_trace.appveyor
 echo dump_data              = 1                     >> wsock_trace.appveyor
 echo max_data               = 5000                  >> wsock_trace.appveyor
 echo max_displacement       = 1000                  >> wsock_trace.appveyor
-echo max_length             = %%COLUMNS%%           >> wsock_trace.appveyor
 echo exclude                = htons,htonl,inet_addr >> wsock_trace.appveyor
 echo hosts_file             = %CD%\hosts            >> wsock_trace.appveyor
 echo [geoip]                                        >> wsock_trace.appveyor
