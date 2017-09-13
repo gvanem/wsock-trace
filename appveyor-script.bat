@@ -57,6 +57,11 @@ echo 127.0.0.1   localhost                          >> hosts
 echo ::1         localhost                          >> hosts
 echo 127.0.0.1   mpa.one.microsoft.com              >> hosts
 echo 8.8.8.8     google-public-dns-a.google.com     >> hosts
+echo #                                              >> hosts
+echo # This hostname is used in test.exe            >> hosts
+echo # check that it prints "from 'hosts' file".    >> hosts
+echo #                                              >> hosts
+echo 10.0.0.20   www.no-such-host.com               >> hosts
 
 ::
 :: Get the IP2Location code.
