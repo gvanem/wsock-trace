@@ -1358,6 +1358,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   char    tv_buf [50];
   char    ts_buf [40] = "";  /* timestamp at start of select() */
   int     rc;
+  size_t  sz;
 
   INIT_PTR (p_select);
   ENTER_CRIT();
@@ -1374,9 +1375,17 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
     if (g_cfg.dump_select)
     {
-      rd_copy = copy_fd_set (rd_fd);
-      wr_copy = copy_fd_set (wr_fd);
-      ex_copy = copy_fd_set (ex_fd);
+      sz = size_fd_set (rd_fd);
+      if (sz)
+         rd_copy = copy_fd_set_to (rd_fd, alloca(sz));
+
+      sz = size_fd_set (wr_fd);
+      if (sz)
+         wr_copy = copy_fd_set_to (wr_fd, alloca(sz));
+
+      sz = size_fd_set (ex_fd);
+      if (sz)
+         ex_copy = copy_fd_set_to (ex_fd, alloca(sz));
     }
   }
 
@@ -1395,7 +1404,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
      * use the WSTRACE() macro here.
      */
     wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
-                    ts_buf, get_caller (GET_RET_ADDR(), get_EBP()));
+                    ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
 
     wstrace_printf (FALSE, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
                     nfds,
@@ -1409,13 +1418,6 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
       trace_indent (g_cfg.trace_indent+2);
       trace_puts ("~4" FD_INPUT);
       dump_select (rd_copy, wr_copy, ex_copy, g_cfg.trace_indent + 1 + sizeof(FD_OUTPUT));
-
-      if (rd_copy)
-         free (rd_copy);
-      if (wr_copy)
-         free (wr_copy);
-      if (ex_copy)
-         free (ex_copy);
 
       trace_indent (g_cfg.trace_indent+2);
       trace_puts (FD_OUTPUT);
