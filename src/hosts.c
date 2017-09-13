@@ -6,7 +6,7 @@
 #include <assert.h>
 
 /* Avoid "warning C4996: 'GetVersion': was declared deprecated"
-*/
+ */
 #ifndef BUILD_WINDOWS
 #define BUILD_WINDOWS
 #endif
@@ -15,7 +15,6 @@
 #include "init.h"
 #include "smartlist.h"
 #include "in_addr.h"
-//#include "wsock_trace.h"
 #include "hosts.h"
 
 struct host_entry {
@@ -35,8 +34,6 @@ static const char *etc_path (const char *file);
 static void add_entry (const char *name, const char *ip, const void *addr, size_t size, int af_type)
 {
   struct host_entry *he = calloc (1, sizeof(*he));
-  char   buf [MAX_IP6_SZ];
-  int    len;
 
   if (!he)
      return;
@@ -87,8 +84,6 @@ static void parse_hosts (FILE *fil)
     if (!name || !ip)
        continue;
 
-    TRACE (2, "p: '%s', name: '%s', ip: '%s'\n", p, name, ip);
-
     if (wsock_trace_inet_pton4(ip, (u_char*)&in4) == 1)
          add_entry (name, ip, &in4, sizeof(in4), AF_INET);
     else if (wsock_trace_inet_pton6(ip, (u_char*)&in6) == 1)
@@ -97,7 +92,7 @@ static void parse_hosts (FILE *fil)
 }
 
 /*
- * Print the 'hosts_list'.
+ * Print the 'hosts_list' if 'g_cfg.trace_level >= 3'.
  */
 static void hosts_file_dump (void)
 {
@@ -106,9 +101,10 @@ static void hosts_file_dump (void)
   for (i = 0; i < max; i++)
   {
     const struct host_entry *he = smartlist_get (hosts_list, i);
+    char  buf [MAX_IP6_SZ];
 
-    TRACE (1, "%3d: host: '%s', ip: %s\n",
-         len-1, he->host_name, wsock_trace_inet_ntop(af_type,he->addr,buf,sizeof(buf)));
+    wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
+    trace_printf ( "%3d: host: '%s', ip: %s\n", i, he->host_name, buf);
   }
 }
 
@@ -145,11 +141,12 @@ void hosts_file_init (void)
      */
     call_WSASetLastError = FALSE;
     parse_hosts (fil);
-    call_WSASetLastError = TRUE;
     fclose (fil);
 
     if (g_cfg.trace_level >= 3)
        hosts_file_dump();
+
+    call_WSASetLastError = TRUE;
   }
 }
 
