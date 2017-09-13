@@ -38,6 +38,7 @@ echo dump_wsanetwork_events = 1                     >> wsock_trace.appveyor
 echo dump_data              = 1                     >> wsock_trace.appveyor
 echo max_data               = 5000                  >> wsock_trace.appveyor
 echo max_displacement       = 1000                  >> wsock_trace.appveyor
+echo max_length             = %%COLUMNS%%           >> wsock_trace.appveyor
 echo exclude                = htons,htonl,inet_addr >> wsock_trace.appveyor
 echo hosts_file             = %CD%\hosts            >> wsock_trace.appveyor
 echo [geoip]                                        >> wsock_trace.appveyor
