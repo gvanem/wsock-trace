@@ -16,7 +16,7 @@ build_script:
   - cmd: appveyor-script.bat %BUILDER% %CPU%
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=3 & set DUMP_MODULES=0 & test.exe
-  - cmd: set WSOCK_TRACE_LEVEL=0 & set DUMP_MODULES=0 & chcp 865 & idna.exe              www.seoghør.no
-  - cmd: set WSOCK_TRACE_LEVEL=0 & set DUMP_MODULES=0 &            idna.exe -c1252 -wddd www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
+  - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe              www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -wddd www.seoghør.no
 
