@@ -81,8 +81,8 @@ xz -dv IP4-COUNTRY.BIN.xz
 :: These should survive until 'build_msvc' + 'build_mingw' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
-set WSOCK_TRACE_LEVEL=2
-set DUMP_MODULES=1
+set WSOCK_TRACE_LEVEL=3
+set DUMP_MODULES=0
 set COLUMNS=120
 exit /b 0
 
