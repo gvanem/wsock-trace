@@ -38,6 +38,7 @@ echo dump_data              = 1                     >> wsock_trace.appveyor
 echo max_data               = 5000                  >> wsock_trace.appveyor
 echo max_displacement       = 1000                  >> wsock_trace.appveyor
 echo exclude                = htons,htonl,inet_addr >> wsock_trace.appveyor
+echo hosts_file             = %CD%\hosts            >> wsock_trace.appveyor
 echo [geoip]                                        >> wsock_trace.appveyor
 echo enable                 = 1                     >> wsock_trace.appveyor
 echo use_generated          = 0                     >> wsock_trace.appveyor
@@ -47,6 +48,15 @@ echo geoip6_file            = %CD%\geoip6           >> wsock_trace.appveyor
 echo ip2location_bin_file   = %CD%\IP4-COUNTRY.BIN  >> wsock_trace.appveyor
 echo [idna]                                         >> wsock_trace.appveyor
 echo enable                 = 1                     >> wsock_trace.appveyor
+
+echo Generating hosts file...
+echo #                                               > hosts
+echo # This file was generated from %0.             >> hosts
+echo #                                              >> hosts
+echo 127.0.0.1   localhost                          >> hosts
+echo ::1         localhost                          >> hosts
+echo 127.0.0.1   mpa.one.microsoft.com              >> hosts
+echo 8.8.8.8     google-public-dns-a.google.com     >> hosts
 
 ::
 :: Get the IP2Location code.
