@@ -18,15 +18,14 @@
 #include "smartlist.h"
 #include "overlap.h"
 
-#ifndef OV_TRACE_LEVEL
-#define OV_TRACE_LEVEL 2
-#endif
-
-#define OV_TRACE(fmt, ...)                                       \
-        do {                                                     \
-          if (g_cfg.trace_level >= OV_TRACE_LEVEL)               \
-             trace_printf ("%*.s" fmt, g_cfg.trace_indent+4, "", \
-                           ## __VA_ARGS__);                      \
+#define OV_TRACE(fmt, ...)                              \
+        do {                                            \
+          if (g_cfg.trace_overlap >= 1 &&               \
+              g_cfg.trace_level >= g_cfg.trace_overlap) \
+          {                                             \
+            trace_indent (g_cfg.trace_indent+2);        \
+            trace_printf ("overlap.c(%3u): " fmt, __LINE__, ## __VA_ARGS__);         \
+          }                                             \
         } while (0)
 
 func_WSAGetOverlappedResult  p_WSAGetOverlappedResult = NULL;
@@ -62,17 +61,18 @@ void overlap_exit (void)
   struct overlapped *ov;
   int    i, max = smartlist_len (ov_list);
 
-  if (g_cfg.trace_level >= 1 && max >= 1)
+  if (max >= 1)
   {
-    trace_printf ("%*.s%d overlapped tranfers not completed:\n",
-                  g_cfg.trace_indent+2, "", max);
+    OV_TRACE ("%d overlapped tranfers not completed:\n", max);
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
-      trace_printf ("%*.sOverlap: 0x%p, hEvent: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
-                    g_cfg.trace_indent+4, "", ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
+      OV_TRACE ("  o: 0x%p, hEvent: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
+                ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
     }
   }
+  else
+    OV_TRACE ("All overlapped tranfers completed.\n");
 
   for (i = 0; i < max; i++)
   {
@@ -96,12 +96,12 @@ static void overlap_trace (int i, const struct overlapped *ov)
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
-      OV_TRACE ("overlapped[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
+      OV_TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
                 i, ov->is_recv, ov->event, ov->sock);
     }
   }
   else
-    OV_TRACE ("overlapped[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
+    OV_TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
               i, ov->is_recv, ov->event, ov->sock);
 }
 
@@ -111,8 +111,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
-  OV_TRACE ("%s(): Overlap: 0x%p, sock: %u, hEvent: 0x%p\n",
-            __FUNCTION__, o, s, o ? o->hEvent : NULL);
+  OV_TRACE ("o: 0x%p, hEvent: 0x%p, sock: %u\n", o, o ? o->hEvent : NULL, s);
 
   for (i = 0; i < max && !modify; i++)
   {
@@ -158,18 +157,22 @@ void overlap_recall_all (const WSAEVENT *event)
       LEAVE_CRIT();
 
       if (rc)
-         overlap_recall (ov->sock, ov->ov, bytes);
+      {
+        /* This could reduce 'smartlist_len(ov_list)' by 1.
+         */
+        overlap_recall (ov->sock, ov->ov, bytes);
+      }
     }
     if (i < smartlist_len(ov_list))
-       OV_TRACE ("overlapped[%d]: event: 0x%p, is_recv: %d, rc: %d, got %lu bytes.\n",
+       OV_TRACE ("ov_list[%d]: event: 0x%p, is_recv: %d, rc: %d, got %lu bytes.\n",
                  i, ov->event, ov->is_recv, rc, bytes);
     else
-      OV_TRACE ("overlapped[%d]: is_recv: %d, was recalled.\n", i, ov->is_recv);
+      OV_TRACE ("ov_list[%d]: is_recv: %d, was recalled.\n", i, ov->is_recv);
   }
 }
 
 /*
- * Match the socket 's' and 'ov' value against a previous overlapped
+ * Match the socket 's' and 'o' value against a previous overlapped
  * 'WSARecvXX()' / 'WSASendXX()' and update the 'g_cfg.counts.recv_bytes'
  * or 'g_cfg.counts.send_bytes' statistics with the 'bytes' value.
  */
@@ -189,13 +192,13 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
     if (ov->is_recv)
     {
       g_cfg.counts.recv_bytes += bytes;
-      OV_TRACE ("overlapped[%d]: room for %lu bytes, got %lu bytes.\n",
+      OV_TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n",
                 i, ov->bytes, bytes);
     }
     else
     {
       g_cfg.counts.send_bytes += bytes;
-      OV_TRACE ("overlapped[%d]: sent %lu bytes, actual sent %lu bytes.\n",
+      OV_TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n",
                 i, ov->bytes, bytes);
     }
     free (ov);
