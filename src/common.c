@@ -1230,7 +1230,7 @@ char *_strreverse (char *str)
 {
   int i, j;
 
-  for (i = 0, j = strlen(str)-1; i < j; i++, j--)
+  for (i = 0, j = (int)strlen(str)-1; i < j; i++, j--)
   {
     char c = str[i];
     str[i] = str[j];
