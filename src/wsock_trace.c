@@ -1002,7 +1002,13 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
     * Ref. ws_hooks.c for details.
     */
     if (g_cfg.hook_extensions)
-       hook_extension_func (vals, out_buf);
+    {
+#if defined(HAVE_WSA_EXTENSIONS_FUNCTIONS)
+      hook_extension_func (vals, out_buf);
+#else
+      TRACE (1, "Tracing extension functions not possible with this compiler.\n");
+#endif
+    }
   }
 
   LEAVE_CRIT();
