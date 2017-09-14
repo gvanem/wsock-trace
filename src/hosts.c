@@ -13,10 +13,10 @@
 #include "hosts.h"
 
 struct host_entry {
-       char host_name [MAX_HOST_LEN];  /* name of 'etc/hosts' entry */
-       int  addr_size;                 /* size of this adresses (4 or 16) */
-       int  addr_type;                 /* type AF_INET or AF_INET6 */
-       char addr [IN6ADDRSZ];          /* the actual address */
+       char   host_name [MAX_HOST_LEN];  /* name of 'etc/hosts' entry */
+       size_t addr_size;                 /* size of this adresses (4 or 16) */
+       int    addr_type;                 /* type AF_INET or AF_INET6 */
+       char   addr [IN6ADDRSZ];          /* the actual address */
      };
 
 static smartlist_t *hosts_list = (smartlist_t*) -1;
@@ -43,8 +43,7 @@ static void add_entry (const char *name, const char *ip, const void *addr, size_
 }
 
 /*
- * smartlist_sort() helper:
- *   compare on names.
+ * smartlist_sort() helper; compare on names.
  */
 static int hosts_compare_name (const void **_a, const void **_b)
 {
@@ -60,7 +59,7 @@ static int hosts_compare_name (const void **_a, const void **_b)
 }
 
 /*
- * smartlist_bsearch() helper; compare on name.
+ * smartlist_bsearch() helper; compare on names.
  */
 static int hosts_bsearch_name (const void *key, const void **member)
 {
@@ -154,6 +153,9 @@ void hosts_file_exit (void)
   hosts_list = NULL;
 }
 
+/*
+ * \todo: support loading multiple '/etc/hosts' files.
+ */
 void hosts_file_init (void)
 {
   FILE *fil;
