@@ -1530,18 +1530,9 @@ size_t size_fd_set (const fd_set *fd)
 
 fd_set *copy_fd_set (const fd_set *fd)
 {
-  fd_set *copy;
-  size_t  i, size;
+  size_t size = size_fd_set (fd);
 
-  size = size_fd_set (fd);
-  if (size == 0)
-     return (NULL);
-
-  copy = malloc (size);
-  copy->fd_count = fd->fd_count;
-  for (i = 0; i < (u_int)fd->fd_count; i++)
-      copy->fd_array[i] = fd->fd_array[i];
-  return (copy);
+  return (size == 0 ? NULL : copy_fd_set_to (fd, malloc(size)));
 }
 
 /*
