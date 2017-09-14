@@ -56,7 +56,7 @@ static LPFN_WSARECVMSG           orig_WSARECVMSG;
 static LPFN_WSASENDMSG           orig_WSASENDMSG;
 static LPFN_WSAPOLL              orig_WSAPOLL;
 
-static const char *socket_or_error (SOCK_RC_TYPE rc);
+static const char *get_error (SOCK_RC_TYPE rc);
 
 static BOOL PASCAL hooked_ACCEPTEX (SOCKET      listen_sock,
                                     SOCKET      accept_sock,
@@ -67,16 +67,15 @@ static BOOL PASCAL hooked_ACCEPTEX (SOCKET      listen_sock,
                                     DWORD      *bytes_received,
                                     OVERLAPPED *ov)
 {
-  BOOL rc = (*orig_ACCEPTEX) (listen_sock,
-                              accept_sock,
-                              out_buf,
-                              recv_data_len,
-                              local_addr_len,
-                              remote_addr_len,
-                              bytes_received,
-                              ov);
+  BOOL rc;
 
-  WSTRACE ("AcceptEx (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+  rc = (*orig_ACCEPTEX) (listen_sock, accept_sock, out_buf, recv_data_len,
+                         local_addr_len, remote_addr_len, bytes_received, ov);
+
+  WSTRACE ("AcceptEx (%u, %u, ...) --> %s",
+           SOCKET_CAST(listen_sock), SOCKET_CAST(accept_sock), get_error(!rc));
+  LEAVE_CRIT();
   return (rc);
 }
 
@@ -88,15 +87,19 @@ static BOOL PASCAL hooked_CONNECTEX (SOCKET                 s,
                                      DWORD                 *bytes_sent,
                                      OVERLAPPED            *ov)
 {
-  BOOL rc = (*orig_CONNECTEX) (s,
-                               name,
-                               name_len,
-                               send_buf,
-                               send_data_len,
-                               bytes_sent,
-                               ov);
+  BOOL rc;
 
-  WSTRACE ("ConnectEx (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+  rc = (*orig_CONNECTEX) (s, name, name_len, send_buf, send_data_len,
+                          bytes_sent, ov);
+
+  WSTRACE ("ConnectEx (%u, ...) --> %s",
+           SOCKET_CAST(s), get_error(!rc));
+
+  if (g_cfg.dump_data && send_buf && (rc || WSAERROR_PUSH() == ERROR_IO_PENDING))
+     dump_data (send_buf, send_data_len);
+
+  LEAVE_CRIT();
   return (rc);
 }
 
@@ -105,12 +108,14 @@ static BOOL PASCAL hooked_DISCONNECTEX (SOCKET      s,
                                         DWORD       flags,
                                         DWORD       reserved)
 {
-  BOOL rc = (*orig_DISCONNECTEX) (s,
-                                  ov,
-                                  flags,
-                                  reserved);
+  BOOL rc;
 
-  WSTRACE ("DisconnectEx (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+  rc = (*orig_DISCONNECTEX) (s, ov, flags, reserved);
+
+  WSTRACE ("DisconnectEx (%u, ...) --> %s",
+           SOCKET_CAST(s), get_error(!rc));
+  LEAVE_CRIT();
   return (rc);
 }
 
@@ -123,16 +128,13 @@ static void PASCAL hooked_GETACCEPTEXSOCKADDRS (void             *out_buf,
                                                 struct sockaddr **remote_sa,
                                                 INT              *remote_sa_len)
 {
-  (*orig_GETACCEPTEXSOCKADDRS) (out_buf,
-                                          recv_data_len,
-                                          local_addr_len,
-                                          remote_addr_len,
-                                          local_sa,
-                                          local_sa_len,
-                                          remote_sa,
-                                          remote_sa_len);
+  ENTER_CRIT();
 
+  (*orig_GETACCEPTEXSOCKADDRS) (out_buf, recv_data_len, local_addr_len,
+                                remote_addr_len, local_sa, local_sa_len,
+                                remote_sa, remote_sa_len);
   WSTRACE ("GetAcceptExSockaddr (...)");
+  LEAVE_CRIT();
 }
 
 static BOOL PASCAL hooked_TRANSMITFILE (SOCKET                 s,
@@ -143,18 +145,18 @@ static BOOL PASCAL hooked_TRANSMITFILE (SOCKET                 s,
                                         TRANSMIT_FILE_BUFFERS *transmit_bufs,
                                         DWORD                  reserved)
 {
-  BOOL rc = (*orig_TRANSMITFILE) (s,
-                                  file,
-                                  bytes_to_write,
-                                  bytes_per_send,
-                                  ov,
-                                  transmit_bufs,
-                                  reserved);
+  BOOL rc;
 
-  WSTRACE ("TransmitFile (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+
+  rc = (*orig_TRANSMITFILE) (s, file, bytes_to_write, bytes_per_send,
+                             ov, transmit_bufs, reserved);
+
+  WSTRACE ("TransmitFile (%u, ...) --> %s",
+           SOCKET_CAST(s), get_error(!rc));
+  LEAVE_CRIT();
   return (rc);
 }
-
 
 static BOOL PASCAL hooked_TRANSMITPACKETS (SOCKET                    s,
                                            TRANSMIT_PACKETS_ELEMENT *packet_array,
@@ -163,19 +165,17 @@ static BOOL PASCAL hooked_TRANSMITPACKETS (SOCKET                    s,
                                            OVERLAPPED               *ov,
                                            DWORD                     flags)
 {
-  BOOL rc = (*orig_TRANSMITPACKETS) (s,
-                                     packet_array,
-                                     elements,
-                                     transmit_size,
-                                     ov,
-                                     flags);
+  BOOL rc;
 
-  WSTRACE ("TransmitPackets (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+
+  rc = (*orig_TRANSMITPACKETS) (s, packet_array, elements, transmit_size,
+                                ov, flags);
+  WSTRACE ("TransmitPackets (%u, ...) --> %s",
+           SOCKET_CAST(s), get_error(!rc));
+  LEAVE_CRIT();
   return (rc);
 }
-
-
-
 
 static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
                                      WSAMSG        *msg,
@@ -183,13 +183,15 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
                                      WSAOVERLAPPED *ov,
                                      LPWSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
 {
-  INT rc = (*orig_WSARECVMSG) (s,
-                               msg,
-                               bytes_recv,
-                               ov,
-                               complete_func);
+  INT rc;
 
-  WSTRACE ("WSARecvMsg (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+
+  rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
+
+  WSTRACE ("WSARecvMsg (%u, ...) --> %s",
+           SOCKET_CAST(s), get_error(!rc));
+  LEAVE_CRIT();
   return (rc);
 }
 
@@ -200,14 +202,15 @@ static INT PASCAL hooked_WSASENDMSG (SOCKET        s,
                                      WSAOVERLAPPED *ov,
                                      LPWSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
 {
-  INT rc = (*orig_WSASENDMSG) (s,
-                               msg,
-                               flags,
-                               bytes_sent,
-                               ov,
-                               complete_func);
+  INT rc;
 
-  WSTRACE ("WSASendMsg (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+
+  rc = (*orig_WSASENDMSG) (s, msg, flags, bytes_sent, ov, complete_func);
+
+  WSTRACE ("WSASendMsg (%u, ...) --> %s",
+           SOCKET_CAST(s), get_error(!rc));
+  LEAVE_CRIT();
   return (rc);
 }
 
@@ -218,9 +221,14 @@ static INT WSAAPI hooked_WSAPOLL (WSAPOLLFD *fdarray,
                                   ULONG      num_fds,
                                   INT        timeout)
 {
-  INT rc = (*orig_WSAPOLL) (fdarray, num_fds, timeout);
+  INT rc;
 
-  WSTRACE ("WSAPoll (...) --> %s", socket_or_error(rc));
+  ENTER_CRIT();
+  rc = (*orig_WSAPOLL) (fdarray, num_fds, timeout);
+
+  WSTRACE ("WSAPoll (...) --> %s", get_error(!rc));
+  LEAVE_CRIT();
+
   return (rc);
 }
 
