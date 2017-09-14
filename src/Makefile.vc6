@@ -224,7 +224,7 @@ $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h stkwalk.h in_addr.h \
                             init.h dump.h wsock_trace_lua.h wsock_trace.h \
-                            wsock_trace.rc
+                            ws_hooks.c wsock_trace.rc
 
 $(OBJ_DIR)\wsock_trace_lua.obj: wsock_trace_lua.c common.h init.h wsock_trace_lua.h
 
