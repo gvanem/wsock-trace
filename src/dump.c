@@ -15,6 +15,7 @@
 #include "idna.h"
 #include "hosts.h"
 #include "wsock_trace.h"
+#include "dump.h"
 
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
   #include <mstcpip.h>
@@ -1539,7 +1540,7 @@ fd_set *copy_fd_set (const fd_set *fd)
  * As above, but 'dst' is allocated prior to this.
  * E.g. by 'alloca()'.
  */
-void *copy_fd_set_to (const fd_set *fd, fd_set *dst)
+fd_set *copy_fd_set_to (const fd_set *fd, fd_set *dst)
 {
   u_int i;
 

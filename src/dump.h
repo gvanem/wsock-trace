@@ -4,7 +4,7 @@
 extern void    check_all_search_lists (void);
 extern size_t  size_fd_set    (const fd_set *fd);
 extern fd_set *copy_fd_set    (const fd_set *fd);
-extern void   *copy_fd_set_to (const fd_set *fd, fd_set *dst);
+extern fd_set *copy_fd_set_to (const fd_set *fd, fd_set *dst);
 
 extern void dump_addrinfo  (const char *name, const struct addrinfo *ai);
 extern void dump_data      (const void *data_p, unsigned data_len);
