@@ -55,6 +55,7 @@ struct overlapped {
      };
 
 static smartlist_t *ov_list;
+static DWORD        num_overlaps;
 
 void overlap_exit (void)
 {
@@ -72,6 +73,7 @@ void overlap_exit (void)
     }
   }
   else
+  if (num_overlaps)
     OV_TRACE ("All overlapped tranfers completed.\n");
 
   for (i = 0; i < max; i++)
@@ -133,7 +135,10 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   ov->event = o ? o->hEvent : NULL;
   ov->bytes = num_bytes;
   if (!modify)
-     smartlist_add (ov_list, ov);
+  {
+    smartlist_add (ov_list, ov);
+    num_overlaps++;
+  }
   overlap_trace (-1, NULL);
 }
 
