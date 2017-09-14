@@ -419,6 +419,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"exclude"))
      exclude_list_add (val);
 
+  else if (!stricmp(key,"hook_extensions"))
+     g_cfg.hook_extensions = atoi (val);
+
   else if (!stricmp(key,"short_errors"))
      g_cfg.short_errors = atoi (val);
 

@@ -70,6 +70,7 @@ struct config_table {
        BOOL    use_toolhlp32;
        BOOL    use_ole32;
        BOOL    pdb_report;
+       BOOL    hook_extensions;
        DWORD   recv_delay;
        DWORD   send_delay;
        DWORD   select_delay;
