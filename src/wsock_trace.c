@@ -168,6 +168,10 @@ static void wstrace_printf (BOOL first_line,
                             _Printf_format_string_ const char *fmt, ...)
                             ATTR_PRINTF (2,3);
 
+/*
+ * Hooking and tracing of Winsock extension functions returned in
+ * 'WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER,...)'.
+ */
 #include "ws_hooks.c"
 
 /*
@@ -600,10 +604,10 @@ static const char *get_error (SOCK_RC_TYPE rc)
      */
     static char buf[150];
     const char *ret;
-    int   err = WSAERROR_PUSH();
+    int   err = WSAERROR_PUSH();   /* = 'WSAError_save_restore (0)' */
 
     ret = ws_strerror (err, buf, sizeof(buf));
-    WSAERROR_POP();
+    WSAERROR_POP();                /* = WSAError_save_restore (1) */
     return (ret);
   }
   return ("No error");
