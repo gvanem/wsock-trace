@@ -168,6 +168,8 @@ static void wstrace_printf (BOOL first_line,
                             _Printf_format_string_ const char *fmt, ...)
                             ATTR_PRINTF (2,3);
 
+#include "ws_hooks.c"
+
 /*
  * Handy macro to both define and declare the function-pointer.
  */
@@ -992,15 +994,16 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
    */
   if (g_cfg.trace_level > 0 && code == SIO_GET_EXTENSION_FUNCTION_POINTER &&
       size_in == sizeof(GUID) && out_size == sizeof(void*))
-     dump_extension_funcs (vals, out_buf);
+  {
+    dump_extension_funcs (vals, out_buf);
 
-#if 0
-  /* \todo: hook the extension function only when someone wants to
-   *        use it. Thus allowing a trace of it.
-   */
-  if (g_cfg.hook_extensions 0 && code == SIO_GET_EXTENSION_FUNCTION_POINTER)
-     hook_extension_func (out_buf, out_size);
-#endif
+   /* hook the extension function only when someone wants to
+    * use it. Thus allowing a trace of it.
+    * Ref. ws_hooks.c for details.
+    */
+    if (g_cfg.hook_extensions)
+       hook_extension_func (vals, out_buf);
+  }
 
   LEAVE_CRIT();
   return (rc);
