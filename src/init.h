@@ -43,6 +43,7 @@ struct config_table {
        BOOL    trace_file_device;
        BOOL    trace_use_ods;
        int     trace_level;
+       int     trace_overlap;
        int     trace_indent;
        int     trace_max_len;
        int     line_buffered;

@@ -374,6 +374,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   if (!stricmp(key,"trace_level"))
      g_cfg.trace_level = atoi (val);
 
+  else if (!stricmp(key,"trace_overlap"))
+     g_cfg.trace_overlap = atoi (val);
+
   else if (!stricmp(key,"trace_file"))
      g_cfg.trace_file = strdup (val);
 

@@ -39,6 +39,13 @@ dump_modules = 0                   # Dump information on all process modules.
 pdb_report  = 1                    # Report PDB-symbols information found in all modules.
 use_sema = 0
 
+#
+# For tracing of overlapped transfers in some WSA* functions:
+#   If 'trace_overlap >= 1' and 'trace_level >= trace_overlap'
+#   the overlapped operation will be traced.
+#
+trace_overlap = 2
+
 hosts_file = %WINDIR%\system32\drivers\etc\hosts  # The standard location of the 'hosts' file.
                                                   # Change to suite.
 #
