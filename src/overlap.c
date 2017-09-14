@@ -32,7 +32,7 @@
 func_WSAGetOverlappedResult  p_WSAGetOverlappedResult = NULL;
 
 /*
- * Structure to remember a socket and overlapped structure.
+ * Structure for remembering a socket and an overlapped structure.
  * Used in overlapped send and receive to update the recv
  * and transmit counters in 'WSAGetOverlappedResult()'.
  */
@@ -82,10 +82,9 @@ void overlap_exit (void)
   smartlist_free (ov_list);
 }
 
-int overlap_init (void)
+void overlap_init (void)
 {
   ov_list = smartlist_new();
-  return (1);
 }
 
 static void overlap_trace (int i, const struct overlapped *ov)
@@ -206,7 +205,7 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
 }
 
 /*
- * Remove a overlap entry matching socket 's'.
+ * Remove an overlap entry matching socket 's'.
  */
 void overlap_remove (SOCKET s)
 {

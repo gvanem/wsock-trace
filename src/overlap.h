@@ -10,7 +10,7 @@ typedef BOOL (WINAPI *func_WSAGetOverlappedResult) (
 
 extern func_WSAGetOverlappedResult p_WSAGetOverlappedResult;
 
-extern int  overlap_init (void);
+extern void overlap_init (void);
 extern void overlap_exit (void);
 
 extern void overlap_store (SOCKET s, WSAOVERLAPPED *ov, DWORD num_bytes, BOOL is_recv);
