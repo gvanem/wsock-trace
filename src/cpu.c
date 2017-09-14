@@ -41,26 +41,28 @@ typedef enum _THREADINFOCLASS {
 
 /* end <NTddk.h> stuff */
 
-typedef BOOL  (WINAPI *func_QueryThreadCycleTime) (
-        IN     HANDLE   thread_handle,
-        OUT    ULONG64 *cycle_time);
+/*
+ * Handy macro to both define and declare the function-pointer.
+ */
+#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                static func_##f  p_##f = NULL
 
-typedef NTSTATUS (WINAPI *func_NtQueryInformationThread) (
-        IN        HANDLE           thread_handle,
-        IN        THREADINFOCLASS  thread_information_class,
-        IN OUT    void            *thread_information,
-        IN        ULONG            thread_information_length,
-        OUT       ULONG           *return_length OPTIONAL);
+DEF_FUNC (BOOL,    QueryThreadCycleTime,
+                   (IN     HANDLE   thread_handle,
+                    OUT    ULONG64 *cycle_time));
 
-typedef NTSTATUS (WINAPI *func_NtQuerySystemInformation) (
-        IN  ULONG  system_information_class,
-        OUT void  *system_information,
-        IN  ULONG  system_information_length,
-        OUT ULONG *return_length);
+DEF_FUNC (NTSTATUS, NtQueryInformationThread,
+                   (IN     HANDLE           thread_handle,
+                    IN     THREADINFOCLASS  thread_information_class,
+                    IN OUT void            *thread_information,
+                    IN     ULONG            thread_information_length,
+                    OUT    ULONG           *return_length OPTIONAL));
 
-static func_QueryThreadCycleTime      p_QueryThreadCycleTime;
-static func_NtQueryInformationThread  p_NtQueryInformationThread;
-static func_NtQuerySystemInformation  p_NtQuerySystemInformation;
+DEF_FUNC (NTSTATUS, NtQuerySystemInformation,
+                    (IN    ULONG  system_information_class,
+                     OUT   void  *system_information,
+                     IN    ULONG  system_information_length,
+                     OUT   ULONG *return_length));
 
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
@@ -104,7 +106,7 @@ static double filetime_sec (const FILETIME *filetime)
 void print_thread_times (HANDLE thread)
 {
   FILETIME ctime, etime, ktime, utime;
-  double life_span;
+  double   life_span;
 
   init_cpu();
 
