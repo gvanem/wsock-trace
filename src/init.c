@@ -869,7 +869,6 @@ void wsock_trace_init (void)
     g_cfg.trace_level = 1;
 
   g_cfg.trace_max_len = 9999;      /* Infinite */
-  g_cfg.screen_width  = g_cfg.trace_max_len;
   g_cfg.trace_stream  = stdout;
   g_cfg.trace_file_device = TRUE;
 
@@ -1010,28 +1009,33 @@ void wsock_trace_init (void)
     TRACE (3, "GetConsoleMode(): 0x%08lX\n", mode);
   }
 
-  if (!g_cfg.stdout_redirected)
+  /* These env-var override the actual screen-height and width.
+   * Even if console is redirected.
+   */
+  env = getenv ("LINES");
+  if (env && atoi(env) > 0)
+     g_cfg.screen_heigth = atoi (env);
+
+  env = getenv ("COLUMNS");
+  if (env && atoi(env) > 0)
+     g_cfg.screen_width = atoi (env);
+
+  /* If console not redirected and not set above.
+   */
+  if (g_cfg.screen_width == 0)
   {
-    const char *env = getenv ("LINES");
-
-    if (env && atoi(env) > 0)
-         g_cfg.screen_heigth = atoi (env);
-    else g_cfg.screen_heigth = console_info.srWindow.Bottom - console_info.srWindow.Top + 1;
-
-    env = getenv ("COLUMNS");
-
-    if (env && atoi(env) > 0)
-         g_cfg.screen_width = atoi (env);
-    else g_cfg.screen_width = console_info.srWindow.Right - console_info.srWindow.Left + 1;
+    if (!g_cfg.stdout_redirected)
+         g_cfg.screen_width = console_info.srWindow.Right - console_info.srWindow.Left + 1;
+    else g_cfg.screen_width = g_cfg.trace_max_len;
   }
-  else
-    g_cfg.screen_width = g_cfg.trace_max_len;
+  if (g_cfg.screen_heigth == 0 && !g_cfg.stdout_redirected)
+      g_cfg.screen_heigth = console_info.srWindow.Bottom - console_info.srWindow.Top + 1;
 
   TRACE (2, "g_cfg.screen_width: %d, g_cfg.screen_heigth: %d, g_cfg.stdout_redirected: %d\n",
-            g_cfg.screen_width, g_cfg.screen_heigth, g_cfg.stdout_redirected);
+         g_cfg.screen_width, g_cfg.screen_heigth, g_cfg.stdout_redirected);
 
   TRACE (2, "g_cfg.trace_file_okay: %d, g_cfg.trace_file_device: %d\n",
-            g_cfg.trace_file_okay, g_cfg.trace_file_device);
+         g_cfg.trace_file_okay, g_cfg.trace_file_device);
 
   if (g_cfg.use_sema)
      TRACE (2, "ws_sema: 0x%" ADDR_FMT ", ws_sema_inherited: %d\n",
