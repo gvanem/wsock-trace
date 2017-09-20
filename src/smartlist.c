@@ -147,7 +147,7 @@ void smartlist_ensure_capacity (smartlist_t *sl, size_t num)
         higher *= 2;
     }
     sl->list = realloc (sl->list, sizeof(void*) * higher);
-    memset (sl->list + sl->capacity, 0, sizeof(void*) * (higher - sl->capacity));
+    memset (sl->list + sl->capacity, '\0', sizeof(void*) * (higher - sl->capacity));
     sl->capacity = (int) higher;
   }
 }
@@ -158,6 +158,7 @@ void smartlist_ensure_capacity (smartlist_t *sl, size_t num)
 void smartlist_add (smartlist_t *sl, void *element)
 {
   assert (sl);
+  ASSERT_VAL (sl);
   smartlist_ensure_capacity (sl, 1 + (size_t)sl->num_used);
   sl->list [sl->num_used++] = element;
 }
@@ -170,6 +171,7 @@ void smartlist_add (smartlist_t *sl, void *element)
 void smartlist_del (smartlist_t *sl, int idx)
 {
   assert (sl);
+  ASSERT_VAL (sl);
   assert (idx >= 0);
   assert (idx < sl->num_used);
   --sl->num_used;
@@ -185,6 +187,7 @@ void smartlist_del (smartlist_t *sl, int idx)
 void smartlist_del_keeporder (smartlist_t *sl, int idx)
 {
   assert (sl);
+  ASSERT_VAL (sl);
   assert (idx >= 0);
   assert (idx < sl->num_used);
   --sl->num_used;
@@ -206,6 +209,7 @@ void smartlist_del_keeporder (smartlist_t *sl, int idx)
 void smartlist_insert (smartlist_t *sl, int idx, void *val)
 {
   assert (sl);
+  ASSERT_VAL (sl);
   assert (idx >= 0);
   assert (idx <= sl->num_used);
   if (idx == sl->num_used)
@@ -231,7 +235,11 @@ void smartlist_append (smartlist_t *sl1, const smartlist_t *sl2)
   size_t new_size;
 
   assert (sl1);
+  ASSERT_VAL (sl1);
+
   assert (sl2);
+  ASSERT_VAL (sl2);
+
   if (sl2->num_used == 0) /* 'sl2' is empty */
      return;
 
@@ -271,6 +279,7 @@ int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
   int hi, lo, cmp, mid, len, diff;
 
   assert (sl);
+  ASSERT_VAL (sl);
   assert (compare);
   assert (found_out);
 
