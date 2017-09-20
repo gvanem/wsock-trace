@@ -1427,24 +1427,40 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
 }
 
 /*
- * Function that prints the line argument while limiting it
- * to at most 'g_cfg.screen_width'. An appropriate number
- * of spaces are added on subsequent lines.
+ * Function that prints a long line while limiting it
+ * to at most 'g_cfg.screen_width'. And such that line-breaks
+ * does NOT occur in the middle of a word, but only at 'brk_ch'.
+ * An appropriate number of spaces are added on subsequent lines.
+ *
+ * Example, if 'start' is:
+ *   "XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|XP1_IFS_HANDLES" (80 bytes)
+ *
+ * and 'indent == 1' and 'g_cfg.screen_width == 80', that would without any wrap-checking
+ * caused thus "ugly" output:
+ *   " XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|XP1_IFS_HANDLE"\n
+ *   "S"
+ *
+ * With wrap at the correct place, it will instead loook like:
+ *  " XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|"\n
+ *  " XP1_IFS_HANDLES"
  */
 void print_long_flags (const char *start, size_t indent, int brk_ch)
 {
-  size_t      room, left = g_cfg.screen_width - indent;
+  int         left = (int) (g_cfg.screen_width - indent);
   const char *c = start;
 
   while (*c)
   {
     /* Break a long line only at 'break char'.
-     * Check if room for a flag-component ("foo|") before we must break the line.
+     * Check if room for a word ("foo|") before we must break the line.
      */
     if (*c == brk_ch)
     {
-      room = (size_t) (start - strchr(c+1,brk_ch));
-      if (c[1] && room < left)
+      const char *next = strchr (c+1, brk_ch);
+
+      if (!next)
+         next = strchr (c+1, '\0');
+      if (left <= 2 || (left <= next - c))
       {
         trace_printf ("%c\n%*c", *c++, (int)indent, ' ');
         left  = g_cfg.screen_width - indent;
