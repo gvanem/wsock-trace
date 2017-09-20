@@ -94,6 +94,7 @@ static char         g_module [_MAX_PATH];  /* The .exe we're linked to */
 static smartlist_t *g_modules_list;        /* List of all modules in our program */
 static smartlist_t *g_symbols_list;
 static int          g_quit_count = 0;
+static DWORD        g_num_compares;
 
 #if USE_SymEnumSymbolsEx
   static BOOL  g_long_CPP_syms = FALSE;
@@ -846,18 +847,37 @@ cleanup:
 
 #if USE_SymEnumSymbolsEx
 /*
- * Show the retrieved information on all out modules;
+ * smartlist_sort() helper; sort list of modules on base_addr.
+ */
+static int compare_on_baseaddr (const void **_a, const void **_b)
+{
+  const struct ModuleEntry *a = *_a;
+  const struct ModuleEntry *b = *_b;
+
+  g_num_compares++;
+
+  if (a->base_addr < b->base_addr)
+     return (-1);
+  if (a->base_addr > b->base_addr)
+     return (1);
+  return (0);
+}
+
+/*
+ * Show the retrieved information on all our modules;
  * PDB symbols etc.
  */
-static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info)
+static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL do_sort)
 {
-  DWORD total_text = 0;
-  DWORD total_data = 0;
-  DWORD total_cpp  = 0;
-  DWORD total_junk = 0;
-  const char *pdb_hdr  = "  PDB: text  data   C++  junk";
-  size_t      dash_len = 72 + 8*IS_WIN64;
-  int         i, max = smartlist_len (g_modules_list);
+  DWORD        total_text = 0;
+  DWORD        total_data = 0;
+  DWORD        total_cpp  = 0;
+  DWORD        total_junk = 0;
+  smartlist_t *orig_modules = NULL;
+  smartlist_t *modules_copy;
+  const char  *pdb_hdr  = "  PDB: text  data   C++  junk";
+  size_t       dash_len = 72 + 8*IS_WIN64;
+  int          i, max = smartlist_len (g_modules_list);
 
   if (do_pdb)
      dash_len += strlen (pdb_hdr);
@@ -865,6 +885,21 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info)
   trace_printf ("  %-50s %-*s Size%s\n",
                 "Module", 16+8*IS_WIN64, "Baseaddr", do_pdb ? pdb_hdr : "");
   trace_printf ("  %s\n", _strrepeat('-', dash_len));
+
+  /* Make a sorted copy before printing the module-list.
+   * Sort on Baseaddr
+   */
+  if (do_sort)
+  {
+    modules_copy = smartlist_new();
+    smartlist_append (modules_copy, g_modules_list);
+    g_num_compares = 0;
+    smartlist_sort (modules_copy, compare_on_baseaddr);
+    TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
+    g_num_compares = 0;
+    orig_modules = g_modules_list;
+    g_modules_list = modules_copy;
+  }
 
   for (i = 0; i < max; i++)
   {
@@ -900,6 +935,12 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info)
       else trace_printf ("%-25s: %s", basename(si.pdbfile), get_guid_path_string(&si.guid));
     }
     trace_putc ('\n');
+  }
+
+  if (orig_modules)
+  {
+    smartlist_free (modules_copy);
+    g_modules_list = orig_modules;
   }
 
   if (do_pdb)
@@ -1396,14 +1437,12 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
  * 'struct SymbolEntry'.
  * Sort on address.
  */
-static DWORD num_compares;
-
 static int compare_on_addr (const void **_a, const void **_b)
 {
   const struct SymbolEntry *a = *_a;
   const struct SymbolEntry *b = *_b;
 
-  num_compares++;
+  g_num_compares++;
 
   if (a->addr < b->addr)
      return (-1);
@@ -1473,10 +1512,10 @@ check_mingw_map_file:
    */
   if (is_last)
   {
-    num_compares = 0;
+    g_num_compares = 0;
     smartlist_sort (sl, compare_on_addr);
-    TRACE (3, "num_compares: %lu.\n", num_compares);
-    num_compares = 0;
+    TRACE (3, "g_num_compares: %lu.\n", g_num_compares);
+    g_num_compares = 0;
   }
 
   idx = find_module_index (module, 0);
@@ -1562,7 +1601,7 @@ BOOL StackWalkInit (void)
 
 #if USE_SymEnumSymbolsEx
   if (g_cfg.pdb_report || g_cfg.dump_modules)
-     print_modules_and_pdb_info (g_cfg.pdb_report, FALSE);
+     print_modules_and_pdb_info (g_cfg.pdb_report, FALSE, TRUE);
 #endif
 
   TRACE (2, "\n");
