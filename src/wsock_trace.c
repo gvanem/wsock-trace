@@ -795,7 +795,8 @@ EXPORT void WINAPI WSASetLastError (int err)
   (*p_WSASetLastError)(err);
 
   ENTER_CRIT();
-  WSTRACE ("WSASetLastError (%d=%s)", err, get_error(err));
+  WSTRACE ("WSASetLastError (%s%s)",
+           err ? "" : "0: ", get_error(err));
   LEAVE_CRIT();
 }
 
