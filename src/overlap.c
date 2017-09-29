@@ -18,7 +18,8 @@
 #include "smartlist.h"
 #include "overlap.h"
 
-#define OV_TRACE(fmt, ...)                                  \
+#undef  TRACE
+#define TRACE(fmt, ...)                                     \
         do {                                                \
           if (g_cfg.trace_overlap >= 1 &&                   \
               g_cfg.trace_level >= g_cfg.trace_overlap)     \
@@ -65,19 +66,19 @@ void overlap_exit (void)
 
   if (max >= 1)
   {
-    OV_TRACE ("%d overlapped tranfers not completed:\n", max);
+    TRACE ("%d overlapped tranfers not completed:\n", max);
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
-      OV_TRACE ("  o: 0x%p, event: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
-                ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
+      TRACE ("  o: 0x%p, event: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
+             ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
     }
   }
   else if (num_overlaps)
   {
     /* Print this only if we stored at least 1 overlap structure.
      */
-    OV_TRACE ("All overlapped tranfers completed.\n");
+    TRACE ("All overlapped tranfers completed.\n");
   }
 
   for (i = 0; i < max; i++)
@@ -103,13 +104,13 @@ static void overlap_trace (int i, const struct overlapped *ov)
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
-      OV_TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
-                i, ov->is_recv, ov->event, ov->sock);
+      TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
+             i, ov->is_recv, ov->event, ov->sock);
     }
   }
   else
-    OV_TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
-              i, ov->is_recv, ov->event, ov->sock);
+    TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
+           i, ov->is_recv, ov->event, ov->sock);
 }
 
 void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
@@ -118,7 +119,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
-  OV_TRACE ("o: 0x%p, event: 0x%p, sock: %u\n", o, o ? o->hEvent : NULL, s);
+  TRACE ("o: 0x%p, event: 0x%p, sock: %u\n", o, o ? o->hEvent : NULL, s);
 
   for (i = 0; i < max; i++)
   {
@@ -173,10 +174,10 @@ void overlap_recall_all (const WSAEVENT *event)
       }
     }
     if (i < smartlist_len(ov_list))
-       OV_TRACE ("ov_list[%d]: event: 0x%p, is_recv: %d, rc: %d, got %lu bytes.\n",
-                 i, ov->event, ov->is_recv, rc, bytes);
+       TRACE ("ov_list[%d]: event: 0x%p, is_recv: %d, rc: %d, got %lu bytes.\n",
+              i, ov->event, ov->is_recv, rc, bytes);
     else
-      OV_TRACE ("ov_list[%d]: is_recv: %d, was recalled.\n", i, ov->is_recv);
+      TRACE ("ov_list[%d]: is_recv: %d, was recalled.\n", i, ov->is_recv);
   }
 }
 
@@ -187,9 +188,9 @@ void overlap_recall_all (const WSAEVENT *event)
  */
 void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
 {
-  int i;
+  int i, max = smartlist_len (ov_list);
 
-  for (i = 0; i < smartlist_len(ov_list); i++)
+  for (i = 0; i < max; i++)
   {
     struct overlapped *ov = smartlist_get (ov_list, i);
 
@@ -201,14 +202,14 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
     if (ov->is_recv)
     {
       g_cfg.counts.recv_bytes += bytes;
-      OV_TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n",
-                i, ov->bytes, bytes);
+      TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n",
+             i, ov->bytes, bytes);
     }
     else
     {
       g_cfg.counts.send_bytes += bytes;
-      OV_TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n",
-                i, ov->bytes, bytes);
+      TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n",
+             i, ov->bytes, bytes);
     }
     free (ov);
     smartlist_del (ov_list, i);
@@ -221,22 +222,26 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
  */
 void overlap_remove (SOCKET s)
 {
-  int i;
+  int i, max;
 
-  /* This if-test should not be needed. It would mean 'closesocket()' was called after 'wsock_trace_exit()'.
+  /* This if-test should not be needed. It would mean 'closesocket()' was called
+   * after 'wsock_trace_exit()'.
    */
   if (!ov_list)
      return;
 
-  for (i = 0; i < smartlist_len(ov_list); i++)
+  max = smartlist_len (ov_list);
+  for (i = 0; i < max; i++)
   {
     struct overlapped *ov = smartlist_get (ov_list, i);
 
-    if (ov->sock == s)
-    {
-      free (ov);
-      smartlist_del (ov_list, i);
-    }
+    if (ov->sock != s)
+       continue;
+
+    free (ov);
+    smartlist_del (ov_list, i);
+    max--;
+    i--;
   }
   overlap_trace (-1, NULL);
 }
