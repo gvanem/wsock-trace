@@ -19,15 +19,15 @@
 #include "overlap.h"
 
 #undef  TRACE
-#define TRACE(fmt, ...)                                     \
-        do {                                                \
-          if (g_cfg.trace_overlap >= 1 &&                   \
-              g_cfg.trace_level >= g_cfg.trace_overlap)     \
-          {                                                 \
-            trace_indent (g_cfg.trace_indent+2);            \
-            trace_printf ("overlap.c(%3u): " fmt, __LINE__, \
-                          ## __VA_ARGS__);                  \
-          }                                                 \
+#define TRACE(fmt, ...)                                    \
+        do {                                               \
+          if (g_cfg.trace_overlap >= 1 &&                  \
+              g_cfg.trace_level >= g_cfg.trace_overlap)    \
+          {                                                \
+            trace_indent (g_cfg.trace_indent+2);           \
+            trace_printf ("overlap.c(%u): " fmt, __LINE__, \
+                          ## __VA_ARGS__);                 \
+          }                                                \
         } while (0)
 
 func_WSAGetOverlappedResult  p_WSAGetOverlappedResult = NULL;
