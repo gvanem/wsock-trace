@@ -1208,7 +1208,6 @@ EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
   int rc;
 
   INIT_PTR (p_WSAEventSelect);
-
   rc = (*p_WSAEventSelect) (s, ev, net_ev);
 
   ENTER_CRIT();
@@ -1403,7 +1402,15 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
     }
   }
 
+  LEAVE_CRIT();
+
+  /* The 'select()' can block for a long time. And other calls from other
+   * threads can call us. Therefore we must not be in a critical section
+   * while 'select()' is blocking.
+   */
   rc = (*p_select) (nfds, rd_fd, wr_fd, ex_fd, tv);
+
+  ENTER_CRIT();
 
   /* Remember last 'fd_set' for printing their types in FD_ISSET().
    */
@@ -1440,10 +1447,11 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
     }
   }
 
+  LEAVE_CRIT();
+
   if (g_cfg.select_delay)
      SleepEx (g_cfg.select_delay, FALSE);
 
-  LEAVE_CRIT();
   return (rc);
 }
 
@@ -1512,13 +1520,14 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
        dump_data (buf, rc);
   }
 
-  if (g_cfg.recv_delay)
-     SleepEx (g_cfg.recv_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   return (rc);
 }
 
@@ -1566,13 +1575,14 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
        dump_countries_sockaddr (from);
   }
 
-  if (g_cfg.recv_delay)
-     SleepEx (g_cfg.recv_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   return (rc);
 }
 
@@ -1606,13 +1616,14 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
        dump_data (buf, buf_len);
   }
 
-  if (g_cfg.send_delay)
-     SleepEx (g_cfg.send_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, TRUE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
+
   return (rc);
 }
 
@@ -1650,13 +1661,14 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
        dump_countries_sockaddr (to);
   }
 
-  if (g_cfg.send_delay)
-     SleepEx (g_cfg.send_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, TRUE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
+
   return (rc);
 }
 
@@ -1714,13 +1726,14 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
        overlap_store (s, ov, size, TRUE);
   }
 
-  if (g_cfg.recv_delay)
-     SleepEx (g_cfg.recv_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   return (rc);
 }
 
@@ -1773,13 +1786,14 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
        overlap_store (s, ov, size, TRUE);
   }
 
-  if (g_cfg.recv_delay)
-     SleepEx (g_cfg.recv_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   return (rc);
 }
 
@@ -1814,13 +1828,14 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
        dump_data (buf, rc);
   }
 
-  if (g_cfg.recv_delay)
-     SleepEx (g_cfg.recv_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.recv_delay)
+     SleepEx (g_cfg.recv_delay, FALSE);
+
   return (rc);
 }
 
@@ -1839,10 +1854,11 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
   if (!exclude_this && rc == NO_ERROR && g_cfg.dump_data)
      dump_data (disconnect_data->buf, disconnect_data->len);
 
+  LEAVE_CRIT();
+
   if (g_cfg.recv_delay)
      SleepEx (g_cfg.recv_delay, FALSE);
 
-  LEAVE_CRIT();
   return (rc);
 }
 
@@ -1888,13 +1904,14 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
        overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
   }
 
-  if (g_cfg.send_delay)
-     SleepEx (g_cfg.send_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
+
   return (rc);
 }
 
@@ -1944,13 +1961,14 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
        overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
   }
 
-  if (g_cfg.send_delay)
-     SleepEx (g_cfg.send_delay, FALSE);
-
   if (g_cfg.pcap.enable)
      write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
   LEAVE_CRIT();
+
+  if (g_cfg.send_delay)
+     SleepEx (g_cfg.send_delay, FALSE);
+
   return (rc);
 }
 
@@ -2153,10 +2171,10 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
     trace_puts ("~0");
   }
 
+  LEAVE_CRIT();
+
   if (g_cfg.poll_delay)
      SleepEx (g_cfg.poll_delay, FALSE);
-
-  LEAVE_CRIT();
 
   return (rc);
 }
