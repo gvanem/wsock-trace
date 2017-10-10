@@ -1285,13 +1285,13 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2l
     {
       n4++;
       if (stats->flag & GEOIP_VIA_IP2LOC)
-        ip2loc_n4++;
+         ip2loc_n4++;
     }
     if (stats->num6 > 0)
     {
       n6++;
       if (stats->flag & GEOIP_VIA_IP2LOC)
-        ip2loc_n6++;
+         ip2loc_n6++;
     }
   }
   if (num_ip4)
@@ -1928,7 +1928,7 @@ static int geoip_generate_array (int family, const char *out_file)
 unsigned int static randr (unsigned int min, unsigned int max)
 {
   double scaled = (double) rand()/RAND_MAX;
-  return (unsigned int) ((max - min +1)*scaled) + min;
+  return (unsigned int) ((max - min + 1) * scaled) + min;
 }
 
 /*
