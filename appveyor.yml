@@ -8,8 +8,8 @@ environment:
         CPU:     x64
       - BUILDER: build_mingw
         CPU:     x86
-   #  - BUILDER: build_mingw
-   #    CPU:     x64
+      - BUILDER: build_mingw
+        CPU:     x64
 
 build_script:
   - cmd: appveyor-script.bat init

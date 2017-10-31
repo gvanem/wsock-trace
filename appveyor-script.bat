@@ -117,7 +117,7 @@ set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
 set MINGW64_BIN=.
 if %2. == x64.^
-  set MINGW64_BIN=c:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\bin
+  set MINGW64_BIN=c:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
 
 set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
 
