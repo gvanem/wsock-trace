@@ -1,11 +1,11 @@
 @echo off
 
-if %1. == build_msvc.  goto build_msvc
-if %1. == build_mingw. goto build_mingw
-if %1. == init.        goto init
-if %1. == clean.       goto clean
+if %1. == msvc.  goto msvc
+if %1. == mingw. goto mingw
+if %1. == init.  goto init
+if %1. == clean. goto clean
 
-echo Usage: %0 "init / clean / build_msvc / build_mingw" "x86 / x64"
+echo Usage: %0 "init / clean / msvc / mingw" "x86 / x64"
 exit /b 0
 
 :init
@@ -80,7 +80,7 @@ echo Uncompressing IP4-COUNTRY.BIN.xz
 xz -dv IP4-COUNTRY.BIN.xz
 
 ::
-:: These should survive until 'build_msvc' + 'build_mingw' gets run.
+:: These should survive until 'msvc' + 'mingw' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
@@ -88,7 +88,7 @@ set COLUMNS=120
 exit /b 0
 
 ::
-:: Cleanup after a local 'appveyor-script build_x'
+:: Cleanup after a local 'appveyor-script <builder>'
 ::
 :clean
 del /Q IP4-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
@@ -99,7 +99,7 @@ exit /b 0
 :: Setup MSVC environment.
 :: Param '%2' is either 'x86' or 'x64'
 ::
-:build_msvc
+:msvc
 call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%2
 set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 
@@ -112,7 +112,7 @@ exit /b 0
 :: Setup MinGW 32-bit environment (if '%2 == x86').
 :: Setup MinGW 64-bit environment (if '%2 == x64').
 ::
-:build_mingw
+:mingw
 set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
 
 set MINGW64_BIN=.
