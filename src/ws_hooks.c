@@ -261,7 +261,6 @@ static void hook_extension_func (const GUID *in_guid, extension_func *in_out)
 {
   extension_func *orig = in_out;
   extensions      ex = find_extension_func (in_guid);
-  BOOL            set = FALSE;
 
   TRACE (3, "extension func at index %d matching GUID \"%s\"\n",
          ex, ex != ex_NONE ? extension_hooks[ex].guid_name : "<none>");
@@ -269,11 +268,11 @@ static void hook_extension_func (const GUID *in_guid, extension_func *in_out)
   #define CASE_HOOK(x)  case ex_##x:                                \
                              orig_##x = (LPFN_##x) *orig;           \
                              *in_out = (extension_func) hooked_##x; \
-                             set = TRUE;                            \
                              break;
   switch (ex)
   {
     case ex_NONE:
+         TRACE (2, "No hook set for extension func 0x%p!\n", orig);
          break;
     CASE_HOOK (ACCEPTEX);
     CASE_HOOK (CONNECTEX);
@@ -285,10 +284,7 @@ static void hook_extension_func (const GUID *in_guid, extension_func *in_out)
     CASE_HOOK (WSASENDMSG);
     CASE_HOOK (WSAPOLL);
   }
-
-  if (!set)
-       TRACE (2, "No hook set for extension func 0x%p!\n", orig);
-  else TRACE (2, "orig extension func 0x%p hooked to 0x%p\n", orig, *in_out);
+  TRACE (2, "orig extension func 0x%p hooked to 0x%p\n", orig, *in_out);
 }
 
 #undef ADD_HOOK
