@@ -570,7 +570,14 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
        g_cfg.geoip_max_days = atoi (val);
 
   else if (!stricmp(key,"ip2location_bin_file"))
-       g_cfg.ip2location_bin_file = strdup (val);
+  {
+    if (g_cfg.ip2location_bin_file)
+    {
+      WARNING ("'ip2location_bin_file' already set. Replacing with '%s'\n", val);
+      free (g_cfg.ip2location_bin_file);
+    }
+    g_cfg.ip2location_bin_file = strdup (val);
+  }
 
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
