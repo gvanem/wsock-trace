@@ -23,11 +23,13 @@
 static IP2Location *handle;
 static DWORD        file_size;
 
+/* A static function inside IP2Location.c which gets included below.
+ */
 static int IP2Location_initialize (IP2Location *loc);
 
 /*
- * Do not call 'IP2Location_open()' because of it's 'printf()'.
- * Hence just do what 'IP2Location_open()' do here.
+ * Do not call 'IP2Location_open()' because of it's use of 'printf()'.
+ * Hence just do what 'IP2Location_open()' does here.
  */
 static IP2Location *open_file (const char *file)
 {
