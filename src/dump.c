@@ -1863,6 +1863,11 @@ static const char *dump_aliases (char **aliases)
   return (result);
 }
 
+/*
+ * The dumping of country-codes and location is not thread safe.
+ * But all of this happens inside a critical region. So that should
+ * hopefully be okay.
+ */
 static const char *cc_last   = NULL;  /* CountryCode of previous address */
 static const char *loc_last  = NULL;  /* Location of previous address */
 static BOOL        cc_equal  = FALSE;

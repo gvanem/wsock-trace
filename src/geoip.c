@@ -715,6 +715,9 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
        geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_VIA_IP2LOC);
     return (ip2loc_entry.country_short);
   }
+
+  /* IP2LOCATION lookup failed. Fallback to a geoip lookup below.
+   */
 #else
   num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
   TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
