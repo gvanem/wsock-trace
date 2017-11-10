@@ -35,7 +35,7 @@ for their data-bases.
  This produces a `wsock_trace.lib` that you'll need to use to
  link your project(s) with. This lib would then trace the normal
  Winsock calls. Example screen-shot above or details in
- **Running samples** below.
+ **[Running samples](#running-samples)** below.
 
 ### Usage (MSVC):
 
@@ -198,8 +198,8 @@ And another example from C-ares adig [2]:
       * adig.c(411) (main+1894):   WSACleanup() --> No error.
 ```
 
-By default, the tracing of these calls:
-`c htons()`,`c htonl()`, `c ntohs()` and `c ntohl()` are excluded from the trace.<br>
+By default, the tracing of `htons()`,`htonl()`, `ntohs()` and `ntohl()` are
+excluded from the trace.<br>
 You can edit the `%HOME/wsock_trace` file and exclude whatever calls you like.
 
 A more eleborated example from 2 OpenVPN clients (linked to `wsock_trace.lib`) running a
