@@ -43,6 +43,9 @@ for their data-bases.
  most normal Winsock calls are traced on entry and exit. Remember to
  compile using `-Zi` to produce debug-symbols. And remember to use `-debug`
  when linking your program. See `src/Makefile.vc6` for an example.
+ It is not adviced to use option `/Oy` (*enable frame pointer omission*)
+ since that will make it difficult for `StackWalk64()` to  figure out the
+ filename and line of the calling function.
 
 ### Installation (MinGW/CygWin):
 
@@ -87,8 +90,7 @@ for their data-bases.
 ### Running samples
 
  Example output from src/test.exe (built with MSVC):
- ```
-
+ ```c
    * ws_trace/test.c(45) (main+50):              WSAStartup (2.2) --> No error.
    * ws_trace/test.c(24) (do_wsock_tests+125):   gethostbyaddr (127.0.0.1, 4, AF_INET) --> 0x003C8780.
    * ws_trace/test.c(27) (do_wsock_tests+150):   gethostbyaddr (0.0.0.0, 4, AF_INET) --> 0x003C8780.
@@ -111,8 +113,7 @@ for their data-bases.
   ```
 
   Here is a more realistic and useful example with wsock_trace.lib linked to Nmap [1]:
-  ```
-
+  ```c
     > nmap -sT -P0 -p23,80 10.0.0.1
 
       * mswin32/winfix.cc(134) (win_pre_init+68):   WSAStartup (2.2) --> No error.
@@ -169,8 +170,8 @@ Notes:
   (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
 
 
-And another example from C-ares' adig [2]:
-```
+And another example from C-ares adig [2]:
+```c
     > adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
       * ares_process.c(1065) (open_udp_socket+248):   socket (AF_INET, SOCK_DGRAM, 0) --> 1604.
@@ -197,15 +198,9 @@ And another example from C-ares' adig [2]:
       * adig.c(411) (main+1894):   WSACleanup() --> No error.
 ```
 
- By default, the tracing of these calls:
- ```
-  htons()
-  htonl()
-  ntohs()
-  ntohl()
- ```
-are excluded from the trace. You can edit the `%HOME/wsock_trace` file and exclude
-whatever calls you like.
+By default, the tracing of these calls:
+`c htons()`,`c htonl()`, `c ntohs()` and `c ntohl()` are excluded from the trace.<br>
+You can edit the `%HOME/wsock_trace` file and exclude whatever calls you like.
 
 A more eleborated example from 2 OpenVPN clients (linked to `wsock_trace.lib`) running a
 simple test (in OpenVPN's root-dir):
@@ -292,11 +287,16 @@ G. Vanem <gisle.vanem@gmail.com> 2013 - 2017.
 
 ### Footnotes:
 
-   [1] Nmap; "Network Mapper" is a free and open source (license) utility for network discovery and
-       security auditing.
+   * [1] Nmap; "Network Mapper" is a free and open source (license) utility for
+       network  discovery and security auditing.
        Ref. http://nmap.org/download.html
 
-   [2] A C library for asynchronous DNS requests (including name resolves)
+   * [2] A C library for asynchronous DNS requests (including name resolves)
        Ref. http://c-ares.haxx.se/
 
-   [3] This site or product includes IP2Location LITE data available from http://www.ip2location.com.
+   * [3] This site or product includes IP2Location LITE data available from
+       http://lite.ip2location.com.
+
+*PS*. This file is written with the aid of the **[Atom](https://atom.io/)**
+      editor and it's **[Markdown-Preview](https://atom.io/packages/markdown-preview)**.
+      A real time-saver.
