@@ -3,6 +3,7 @@
  *
  * This file is an interface for the IP2Location library.
  *   Ref: https://github.com/chrislim2888/IP2Location-C-Library
+ *        http://lite.ip2location.com
  *
  * For 'inet_addr' warning.
  */
