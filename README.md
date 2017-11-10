@@ -1,84 +1,89 @@
-## Wsock-trace v0.3.5:
+## Wsock-trace v. 0.3.5:
 
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/gvanem/wsock-trace?branch=master&svg=true)](https://ci.appveyor.com/project/gvanem/wsock-trace)
 
- A small and simple drop-in tracer for most normal Winsock calls.
- Works best for MSVC since the stack-walking code requires the program's
- **PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't
- produce PDB-symbols (GNU-debugger instead relies on the archaic **BFD**
- library). Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
- [C-ares](http://c-ares.haxx.se/)):
+A drop-in tracing library for most normal Winsock calls. It sits between your program
+and the real Winsock library (`ws2_32.dll`). It works best for MSVC since the stack-
+walking code requires the program's **PDB** symbol-file to be present. And
+unfortunately MinGW/CygWin doesn't produce PDB-symbols (GNU-debugger instead relies
+on the archaic **BFD** library).<br>
+Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
+**[C-ares](http://c-ares.haxx.se/)**):
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
 
 Geo-IP information from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
-(an option) is built-in (the above `Mountain View/California` is Google's wellknown location provided by the
-*IP2Location* data-base). Thanks to the [Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/) for
-a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind and IP2Location [[3]](#footnotes)
-for their data-bases.
+(an option) is built-in (the above `Mountain View/California` is Google's
+well-known location provided by the *IP2Location* data-base). Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)** for
+a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind
+and IP2Location [[3]](#footnotes) for their data-bases.
 
 ### Installation (all):
 
- To be able to get more precise Geo-IP information for addresses (city and region), Wsock-trace
- can use the [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library) library.
- Do this:
+To be able to get more precise Geo-IP information for addresses (city and
+region), Wsock-trace can use the [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library) library.
+Do this:
    * Sign-up for an account and download the free IP2Location LITE databases [here](http://lite.ip2location.com).
-   * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%` or `%APPDATA%` directory.
-   * Get the sources from Github: `git clone https://github.com/chrislim2888/IP2Location-C-Library c:/some/path`.
+   * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%`
+     or `%APPDATA%` directory.
+   * Get the sources from Github:
+   `git clone  https://github.com/chrislim2888/IP2Location-C-Library c:/some/path`.
    * Add `c:/some/path` to the `%INCLUDE%` and/or `%C_INCLUDE_PATH%`.
    * Edit the respective makefile to say `USE_IP2LOCATION = 1`
    * Then do the specific installation for your compiler (see below).
 
 ### Installation (MSVC):
 
- Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
- This produces a `wsock_trace.lib` that you'll need to use to
- link your project(s) with. This lib would then trace the normal
- Winsock calls. Example screen-shot above or details in
- **[Running samples](#running-samples)** below.
+Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
+This produces a `wsock_trace.lib` that you'll need to use to
+link your project(s) with. This lib would then trace the normal
+Winsock calls. Example screen-shot above or details in
+**[Running samples](#running-samples)** below.
 
 ### Usage (MSVC):
 
- Link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
- most normal Winsock calls are traced on entry and exit. Remember to
- compile using `-Zi` to produce debug-symbols. And remember to use `-debug`
- when linking your program. See `src/Makefile.vc6` for an example.
- It is not adviced to use option `/Oy` (*enable frame pointer omission*)
- since that will make it difficult for `StackWalk64()` to  figure out the
- filename and line of the calling function.
+Link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
+most normal Winsock calls are traced on entry and exit. Remember to
+compile using `-Zi` to produce debug-symbols. And remember to use `-debug`
+when linking your program. See `src/Makefile.vc6` for an example.
+It is not adviced to use option `/Oy` (*enable frame pointer omission*)
+since that will make it difficult for `StackWalk64()` to  figure out the
+filename and line of the calling function.
 
 ### Installation (MinGW/CygWin):
 
- Enter the `src` sub-directory and do a *make -f Makefile.MinGW* or
- *make -f Makefile.Cygwin*.
+Enter the `src` sub-directory and do a *make -f Makefile.MinGW* or
+*make -f Makefile.Cygwin*.
 
 
 ### Usage (MinGW/CygWin):
 
- Link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e. `-lws32_2`).
- So copy this library to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
- to link. The `Makefile.MinGW` already does the copying to `$(MINGW32)/lib`.
+Link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e.
+`-lws32_2`). So copy this library to a directory in `$(LIBRARY_PATH)` and
+use `-lwsock_trace` to link. The `Makefile.MinGW` already does the copying
+to `$(MINGW32)/lib`.
 
 ### Configuration
 
- The trace-level and other settings are controlled by a config-file
- `wsock_trace`. This file is searched along these places until found:
+The trace-level and other settings are controlled by a config-file
+`wsock_trace`. This file is searched along these places until found:
   *  The file pointed to by `%WSOCK_TRACE`.
   *  The current directory.
   *  The `%HOME` directory.
   *  Then finally the `%APPDATA` directory.
 
-   `wsock_trace` is read in *init.c* at startup. Read it's contents; the comments
-   therein should be self-explanatory. If `wsock_trace` is not found in one of
-   the above directories, the default `trace_level` is set to 1.
+   `wsock_trace` is read in *[init.c](src/init.c)* at startup. Read it's contents; the comments
+   therein should be self-explanatory.<br>
+   If `wsock_trace` is not found in one of the above directories, the default
+   `trace_level` is set to 1.
 
    You should copy the following files (here at GitHub) to your `%HOME` or `%APPDATA`
    directory:
-    ```
+```
     wsock_trace
     geoip
     geoip6
-    ```
+```
 
     These environment variables are on the form:
   * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
@@ -89,7 +94,7 @@ for their data-bases.
 
 ### Running samples
 
- Example output from src/test.exe (built with MSVC):
+Example output from src/test.exe (built with MSVC):
  ```c
    * ws_trace/test.c(45) (main+50):              WSAStartup (2.2) --> No error.
    * ws_trace/test.c(24) (do_wsock_tests+125):   gethostbyaddr (127.0.0.1, 4, AF_INET) --> 0x003C8780.
@@ -112,11 +117,11 @@ for their data-bases.
 
   ```
 
-  Here is a more realistic and useful example with wsock_trace.lib linked to Nmap [1]:
-  ```c
-    > nmap -sT -P0 -p23,80 10.0.0.1
-
-      * mswin32/winfix.cc(134) (win_pre_init+68):   WSAStartup (2.2) --> No error.
+Here is a more realistic and useful example with wsock_trace.lib linked to
+Nmap [[1]](#footnotes):
+```c
+  c:\> nmap -sT -P0 -p23,80 10.0.0.1
+     * mswin32/winfix.cc(134) (win_pre_init+68):   WSAStartup (2.2) --> No error.
 
     Starting Nmap 6.02 ( http://nmap.org ) at 2012-07-24 12:48 CET
       * g:/vc_2010/sdk/include/wspiapi.h(1011) (WspiapiGetAddrInfo+79):   WSASetLastError (0).
@@ -158,7 +163,6 @@ for their data-bases.
 
     Nmap done: 1 IP address (1 host up) scanned in 7.61 seconds
       * mswin32/winfix.cc(290) (win_cleanup+12):   WSACleanup() --> No error.
-
 ```
 
 Notes:
@@ -170,9 +174,9 @@ Notes:
   (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
 
 
-And another example from C-ares adig [2]:
+And another example from C-ares adig [[2]](#footnotes):
 ```c
-    > adig -t PTR 89.42.216.144
+    c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
       * ares_process.c(1065) (open_udp_socket+248):   socket (AF_INET, SOCK_DGRAM, 0) --> 1604.
       * ares_process.c(857) (setsocknonblock+61):   ioctlsocket (1604, FIONBIO, 1) --> No error.
@@ -202,7 +206,7 @@ By default, the tracing of `htons()`,`htonl()`, `ntohs()` and `ntohl()` are
 excluded from the trace.<br>
 You can edit the `%HOME/wsock_trace` file and exclude whatever calls you like.
 
-A more eleborated example from 2 OpenVPN clients (linked to `wsock_trace.lib`) running a
+A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** clients (linked to `wsock_trace.lib`) running a
 simple test (in OpenVPN's root-dir):
 ```
 cd sample
@@ -211,7 +215,7 @@ start /pos=800,150,1000,1000 ..\openvpn.exe --config sample-config-files/loopbac
 ```
 [![screenshot](screenshot-openvpn-tmb.jpg?raw=true)](screenshot-openvpn-tmb.jpg?raw=true):
 
-A [Larger version](http://www.watt-32.net/misc/screenshot-openvpn.png).
+A **[Larger](http://www.watt-32.net/misc/screenshot-openvpn.png)** version.
 
 
 ### Implementation notes
@@ -277,9 +281,9 @@ Note that some virus scanners may find the behaviour of programs linked to
       http://www.viksoe.dk/code/windowless1.htm
 
    8. Make it possible to switch network stacks at run-time (select amongst Winsock2,
-      [lwIP](http://savannah.nongnu.org/projects/lwip/),
-      [SwsSock](http://www.softsystem.co.uk/products/swssock.htm) and/or
-      [Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html) (ported to Win32)).
+      **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
+      **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or
+      **[Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html)** (ported to Win32)).
 
 -------------
 
