@@ -772,8 +772,8 @@ static void trace_report (void)
     DWORD num_ip4, num_ip6, num_ip2loc4, num_ip2loc6;
 
     geoip_num_unique_countries (&num_ip4, &num_ip6, &num_ip2loc4, &num_ip2loc6);
-    trace_printf ("  # of unique countries (IPv4): %lu, by ip2loc: %lu.\n", num_ip4, num_ip2loc4);
-    trace_printf ("  # of unique countries (IPv6): %lu, by ip2loc: %lu.\n", num_ip6, num_ip2loc6);
+    trace_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n", num_ip4, num_ip2loc4);
+    trace_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n", num_ip6, num_ip2loc6);
   }
 }
 #endif /* !TEST_GEOIP !TEST_NLM */
