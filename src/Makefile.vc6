@@ -114,23 +114,6 @@ NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
-help:
-	@echo Run one of the following commands:
-	@echo
-	@echo nmake -f Makefile.vc6 VAR=VAL
-	@echo nmake -f Makefile.vc6 install VAR=VAL
-	@echo
-	@echo where VAR can be of the following:
-	@echo
-	@echo USE_DEBUG (default: 0)
-	@echo USE_DEF_FILE (default: 1)
-	@echo USE_IP2LOCATION (default: 1)
-	@echo USE_LUA (default: 0)
-	@echo LUAJIT_ROOT (default: f:\MingW32\src\Parsers\LuaJIT)
-	@echo WANT_64_BITS (default: check)
-	@echo LIB_TARGET (default: '$(LIB_TARGET)')
-	@echo BIN_TARGET (default: '$(BIN_TARGET)')
-
 all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
@@ -198,6 +181,23 @@ vclean realclean: clean
 	-del geoip.exe geoip.map geoip.pdb geoip-gen4.c geoip-gen6.c
 	-del idna.exe  idna.map  idna.pdb  test.exe     test.pdb
 	-rd $(OBJ_DIR)
+
+help:
+	@echo Run one of the following commands:
+	@echo
+	@echo nmake -f Makefile.vc6 VAR=VAL
+	@echo nmake -f Makefile.vc6 install VAR=VAL
+	@echo
+	@echo where VAR can be of the following:
+	@echo
+	@echo USE_DEBUG (default: 0)
+	@echo USE_DEF_FILE (default: 1)
+	@echo USE_IP2LOCATION (default: 1)
+	@echo USE_LUA (default: 0)
+	@echo LUAJIT_ROOT (default: f:\MingW32\src\Parsers\LuaJIT)
+	@echo WANT_64_BITS (default: check)
+	@echo LIB_TARGET (default: '$(LIB_TARGET)')
+	@echo BIN_TARGET (default: '$(BIN_TARGET)')
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	rc -nologo -DDEBUG=$(USE_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
