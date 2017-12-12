@@ -126,7 +126,7 @@ $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) compile_jua
 	@type link.tmp >> $(WSOCK_MAP)
 	@del $(WSOCK_LIB:.lib=.exp)
 
-install:
+install: all
 !if "$(USER)" != "AppVeyor"
 	copy $(WSOCK_LIB)               "$(LIB_TARGET)"
 	copy $(WSOCK_DLL)               "$(BIN_TARGET)"
