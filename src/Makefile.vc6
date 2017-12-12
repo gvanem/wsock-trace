@@ -126,8 +126,7 @@ $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) compile_jua
 	@type link.tmp >> $(WSOCK_MAP)
 	@del $(WSOCK_LIB:.lib=.exp)
 
-install:
-!if "$(USER)" != "AppVeyor"
+install: all
 	copy $(WSOCK_LIB)               "$(LIB_TARGET)"
 	copy $(WSOCK_DLL)               "$(BIN_TARGET)"
 	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
@@ -135,7 +134,6 @@ install:
 uninstall:
 	-del "$(LIB_TARGET)\$(WSOCK_LIB)"
 	-del "$(BIN_TARGET)\$(WSOCK_DLL)"
-!endif
 
 geoip-gen4.c geoip-gen6.c: geoip.exe
 
@@ -181,6 +179,23 @@ vclean realclean: clean
 	-del geoip.exe geoip.map geoip.pdb geoip-gen4.c geoip-gen6.c
 	-del idna.exe  idna.map  idna.pdb  test.exe     test.pdb
 	-rd $(OBJ_DIR)
+
+help:
+	@type <<
+Run one of the following commands:
+  nmake -f Makefile.vc6 VAR=VAL
+  nmake -f Makefile.vc6 install VAR=VAL
+
+where VAR can be of the following:
+  USE_DEBUG       (default: $(USE_DEBUG))
+  USE_DEF_FILE    (default: $(USE_DEF_FILE))
+  USE_IP2LOCATION (default: $(USE_IP2LOCATION))
+  USE_LUA         (default: $(USE_LUA))
+  LUAJIT_ROOT     (default: '$(LUAJIT_ROOT)')
+  WANT_64_BITS    (default: check)
+  LIB_TARGET      (default: '$(LIB_TARGET)')
+  BIN_TARGET      (default: '$(BIN_TARGET)')
+<< NOKEEP
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	rc -nologo -DDEBUG=$(USE_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
