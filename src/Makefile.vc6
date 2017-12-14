@@ -23,7 +23,7 @@ USE_DEF_FILE     = 1
 # '%INCLUDE%' variable instead of setting it here.
 #
 USE_IP2LOCATION  = 1
-IP2LOCATION_ROOT = C:\Users\Username\projects\IP2Location-C-Library
+IP2LOCATION_ROOT = $(MAKEDIR)\..\IP2Location-C-Library
 
 #
 # If you want Lua-script support, change these:

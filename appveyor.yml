@@ -11,6 +11,10 @@ environment:
     # - BUILDER: mingw
     #   CPU:     x64
 
+install:
+  # clone the submodules
+  - cmd: git submodule update --init --recursive
+
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: appveyor-script.bat %BUILDER% %CPU%
