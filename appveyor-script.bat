@@ -66,12 +66,6 @@ echo #                                              >> hosts
 echo 10.0.0.20   www.no-such-host.com               >> hosts
 
 ::
-:: Get the IP2Location code.
-::
-md IP2Location
-git clone https://github.com/chrislim2888/IP2Location-C-Library.git IP2Location
-
-::
 :: Get the XZ compressed IP2Location .bin-file + xz.
 ::
 echo Downloading IP4-COUNTRY.BIN.xz + xz.exe
@@ -101,7 +95,6 @@ exit /b 0
 ::
 :msvc
 call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%2
-set INCLUDE=%INCLUDE%;%CD%\IP2Location\libIP2Location
 
 cd src
 echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
@@ -113,8 +106,6 @@ exit /b 0
 :: Setup MinGW 64-bit environment (if '%2 == x64').
 ::
 :mingw
-set C_INCLUDE_PATH=%CD%\IP2Location\libIP2Location
-
 set MINGW64_BIN=.
 if %2. == x64.^
   set MINGW64_BIN=c:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin

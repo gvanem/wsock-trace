@@ -9,7 +9,8 @@ USE_DEBUG        = 0
 USE_BFD          = 0
 USE_DEF_FILE     = 0
 USE_IP2LOCATION ?= 0
-
+IP2LOCATION_ROOT = ../IP2Location-C-Library
+# IP2LOCATION_ROOT = $(PWD)/../IP2Location-C-Library
 #
 # If you want Lua-script support, change these:
 #
@@ -69,7 +70,8 @@ else
 endif
 
 ifeq ($(USE_IP2LOCATION),1)
-  CFLAGS += -DUSE_IP2LOCATION
+  CFLAGS += -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
+# EX_LIBS += $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.a
 endif
 
 ifeq ($(USER),AppVeyor)
