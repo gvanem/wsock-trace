@@ -1871,15 +1871,6 @@ static int geoip_generate_array (int family, const char *out_file)
   time_t now = time (NULL);
   FILE  *out;
 
-  if (!strcmp(out_file,"-"))
-       out = stdout;
-  else out = fopen (out_file, "w+t");
-  if (!out)
-  {
-    printf ("Failed to create file %s; %s\n", out_file, strerror(errno));
-    return (1);
-  }
-
   if (family == AF_INET && geoip_ipv4_entries)
   {
     len = smartlist_len (geoip_ipv4_entries);
@@ -1893,6 +1884,15 @@ static int geoip_generate_array (int family, const char *out_file)
   else
   {
     printf ("family must be AF_INET or AF_INET6.\n");
+    return (1);
+  }
+
+  if (!strcmp(out_file,"-"))
+       out = stdout;
+  else out = fopen (out_file, "w+t");
+  if (!out)
+  {
+    printf ("Failed to create file %s; %s\n", out_file, strerror(errno));
     return (1);
   }
 
@@ -2061,14 +2061,14 @@ static void free_argv_list (smartlist_t *sl)
   smartlist_free (sl);
 }
 
-static int check_requirements (void)
+static int check_requirements (BOOL check_geoip4, BOOL check_geoip6)
 {
-  if (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file))
+  if (check_geoip4 && (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file)))
   {
     printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip4_file);
     return (0);
   }
-  if (!g_cfg.geoip6_file || !FILE_EXISTS(g_cfg.geoip6_file))
+  if (check_geoip6 && (!g_cfg.geoip6_file || !FILE_EXISTS(g_cfg.geoip6_file)))
   {
     printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip6_file);
     return (0);
@@ -2148,13 +2148,13 @@ int main (int argc, char **argv)
   }
   else if (!g_cfg.geoip_use_generated)
   {
-    if (!check_requirements())
+    if (!check_requirements(TRUE, TRUE))
        return (0);
   }
 
   if (do_generate)
   {
-    if (!check_requirements())
+    if (!check_requirements(do_4, do_6))
        rc++;
     else if (do_4)
        rc += geoip_generate_array (AF_INET, g_file);
