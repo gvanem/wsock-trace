@@ -64,10 +64,14 @@ DEF_FUNC (NTSTATUS, NtQuerySystemInformation,
                      IN    ULONG  system_information_length,
                      OUT   ULONG *return_length));
 
+DEF_FUNC (void, GetSystemTimePreciseAsFileTime, /* Win 8+ */
+                (OUT FILETIME *file_time));
+
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
 static struct LoadTable dyn_funcs2 [] = {
                         ADD_VALUE (1, "kernel32.dll", QueryThreadCycleTime),
+                        ADD_VALUE (1, "kernel32.dll", GetSystemTimePreciseAsFileTime),
                         ADD_VALUE (1, "ntdll.dll",    NtQueryInformationThread),
                         ADD_VALUE (1, "ntdll.dll",    NtQuerySystemInformation)
                       };
@@ -128,7 +132,11 @@ void print_thread_times (HANDLE thread)
   /* The thread has not yet exited.
    */
   if (CompareFileTime(&etime,&ctime) < 0)
-     GetSystemTimeAsFileTime (&etime);
+  {
+    if (p_GetSystemTimePreciseAsFileTime)
+         (*p_GetSystemTimePreciseAsFileTime) (&etime);
+    else GetSystemTimeAsFileTime (&etime);
+  }
 
   /* If this is negative, the thread lived in kernel all the time.
    */
@@ -151,10 +159,10 @@ void print_thread_times (HANDLE thread)
   if (p_NtQueryInformationThread)
   {
     LARGE_INTEGER perf_count;
-
     NTSTATUS rc = (*p_NtQueryInformationThread) (
                       thread, ThreadPerformanceCount, &perf_count,
                       sizeof(perf_count), NULL);
+
     if (rc != STATUS_SUCCESS)
          trace_printf (", perf-count: <fail %ld>", (long)rc);
     else trace_printf (", perf-count: %s", qword_str(perf_count.QuadPart));
