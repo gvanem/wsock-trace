@@ -12,10 +12,10 @@
 #
 # Then cd to this directory and run this makefile.
 
-USE_DEBUG       = 0
-USE_DEF_FILE    = 1
-USE_IP2LOCATION = 1
-
+USE_DEBUG        = 0
+USE_DEF_FILE     = 1
+USE_IP2LOCATION  = 1
+IP2LOCATION_ROOT = C:\Users\Username\projects\IP2Location-C-Library
 #
 # If you want Lua-script support, change these:
 #
@@ -73,7 +73,8 @@ EX_LIBS = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 !if "$(USE_IP2LOCATION)" == "1"
-CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
+CFLAGS = $(CFLAGS) -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
+# EX_LIBS = $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.lib
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib
@@ -187,14 +188,15 @@ Run one of the following commands:
   nmake -f Makefile.vc6 install VAR=VAL
 
 where VAR can be of the following:
-  USE_DEBUG       (default: $(USE_DEBUG))
-  USE_DEF_FILE    (default: $(USE_DEF_FILE))
-  USE_IP2LOCATION (default: $(USE_IP2LOCATION))
-  USE_LUA         (default: $(USE_LUA))
-  LUAJIT_ROOT     (default: '$(LUAJIT_ROOT)')
-  WANT_64_BITS    (default: check)
-  LIB_TARGET      (default: '$(LIB_TARGET)')
-  BIN_TARGET      (default: '$(BIN_TARGET)')
+  USE_DEBUG        (default: $(USE_DEBUG))
+  USE_DEF_FILE     (default: $(USE_DEF_FILE))
+  USE_IP2LOCATION  (default: $(USE_IP2LOCATION))
+  IP2LOCATION_ROOT (default: $(IP2LOCATION_ROOT))
+  USE_LUA          (default: $(USE_LUA))
+  LUAJIT_ROOT      (default: '$(LUAJIT_ROOT)')
+  WANT_64_BITS     (default: check)
+  LIB_TARGET       (default: '$(LIB_TARGET)')
+  BIN_TARGET       (default: '$(BIN_TARGET)')
 << NOKEEP
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
