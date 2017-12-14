@@ -14,8 +14,17 @@
 
 USE_DEBUG        = 0
 USE_DEF_FILE     = 1
+
+#
+# The IP2Location library:
+#   https://github.com/chrislim2888/IP2Location-C-Library
+#
+# You can also add '$(IP2LOCATION_ROOT)/libIP2Location' to your
+# '%INCLUDE%' variable instead of setting it here.
+#
 USE_IP2LOCATION  = 1
 IP2LOCATION_ROOT = C:\Users\Username\projects\IP2Location-C-Library
+
 #
 # If you want Lua-script support, change these:
 #
@@ -193,10 +202,10 @@ where VAR can be of the following:
   USE_IP2LOCATION  (default: $(USE_IP2LOCATION))
   IP2LOCATION_ROOT (default: $(IP2LOCATION_ROOT))
   USE_LUA          (default: $(USE_LUA))
-  LUAJIT_ROOT      (default: '$(LUAJIT_ROOT)')
+  LUAJIT_ROOT      (default: $(LUAJIT_ROOT))
   WANT_64_BITS     (default: check)
-  LIB_TARGET       (default: '$(LIB_TARGET)')
-  BIN_TARGET       (default: '$(BIN_TARGET)')
+  LIB_TARGET       (default: $(LIB_TARGET))
+  BIN_TARGET       (default: $(BIN_TARGET))
 << NOKEEP
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
