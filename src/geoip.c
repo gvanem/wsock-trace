@@ -366,10 +366,10 @@ static DWORD geoip_parse_file (const char *file, int family)
 int geoip_init (DWORD *_num4, DWORD *_num6)
 {
   DWORD num4 = 0, num6 = 0;
-#if defined(TEST_GEOIP)
-  BOOL open_geoip = TRUE;
-#else
   BOOL open_geoip = FALSE;
+
+#if defined(TEST_GEOIP)
+  open_geoip = TRUE;
 #endif
 
   if (g_cfg.geoip_enable && (g_cfg.trace_level > 0 || open_geoip))
