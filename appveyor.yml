@@ -17,6 +17,7 @@ install:
 
 build_script:
   - cmd: appveyor-script.bat init
+  - cmd: cd LuaJIT\src && msvcbuild.bat && cd ..\..
   - cmd: appveyor-script.bat %BUILDER% %CPU%
 
 test_script:

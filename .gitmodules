@@ -1,3 +1,8 @@
 [submodule "IP2Location-C-Library"]
     path = IP2Location-C-Library
     url = https://github.com/chrislim2888/IP2Location-C-Library.git
+    ignore = dirty
+[submodule "LuaJIT"]
+    path = LuaJIT
+    url = https://github.com/LuaJIT/LuaJIT.git
+    ignore = dirty
