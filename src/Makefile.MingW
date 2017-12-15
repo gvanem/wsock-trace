@@ -15,7 +15,7 @@ IP2LOCATION_ROOT = ../IP2Location-C-Library
 # If you want Lua-script support, change these:
 #
 USE_LUA     ?= 0
-LUAJIT_ROOT ?= f:/MinGW32/src/Parsers/LuaJIT
+LUAJIT_ROOT ?= ../LuaJIT
 
 BIN_TARGET  = $(realpath $(MINGW32))/bin
 LIB_TARGET  = $(realpath $(MINGW32))/lib
@@ -175,7 +175,10 @@ compile_juajit_0:
 # and that 'BUILDMODE = static'.
 #
 compile_juajit_1:
-	$(MAKE) -C $(LUAJIT_ROOT)/src all
+# XXX - luajit's all target depends on libluajit.a which is not build by all.
+# Inform Upstream?
+	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
+	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res

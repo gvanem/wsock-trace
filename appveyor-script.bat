@@ -1,11 +1,9 @@
 @echo off
 
-if %1. == msvc.  goto msvc
-if %1. == mingw. goto mingw
-if %1. == init.  goto init
-if %1. == clean. goto clean
+if %1. == init.   goto init
+if %1. == clean.  goto clean
 
-echo Usage: %0 "init / clean / msvc / mingw" "x86 / x64"
+echo Usage: %0 "init / clean"
 exit /b 0
 
 :init
@@ -66,14 +64,6 @@ echo #                                              >> hosts
 echo 10.0.0.20   www.no-such-host.com               >> hosts
 
 ::
-:: Get the XZ compressed IP2Location .bin-file + xz.
-::
-echo Downloading IP4-COUNTRY.BIN.xz + xz.exe
-curl --remote-name --progress-bar http://www.watt-32.net/CI/{IP4-COUNTRY.BIN.xz,xz.exe}
-echo Uncompressing IP4-COUNTRY.BIN.xz
-xz -dv IP4-COUNTRY.BIN.xz
-
-::
 :: These should survive until 'msvc' + 'mingw' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
@@ -88,30 +78,3 @@ exit /b 0
 del /Q IP4-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
 echo Cleaning done.
 exit /b 0
-
-::
-:: Setup MSVC environment.
-:: Param '%2' is either 'x86' or 'x64'
-::
-:msvc
-call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%2
-
-cd src
-echo nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
-nmake -nologo -f Makefile.vc6 USER=AppVeyor PLATFORM=%2
-exit /b 0
-
-::
-:: Setup MinGW 32-bit environment (if '%2 == x86').
-:: Setup MinGW 64-bit environment (if '%2 == x64').
-::
-:mingw
-set MINGW64_BIN=.
-if %2. == x64.^
-  set MINGW64_BIN=c:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
-
-set PATH=%MINGW64_BIN%;c:\MinGW\bin;%PATH%
-
-cd src
-echo mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2
-mingw32-make -f Makefile.MinGW USER=AppVeyor USE_IP2LOCATION=1 CPU=%2

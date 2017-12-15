@@ -29,7 +29,7 @@ IP2LOCATION_ROOT = $(MAKEDIR)\..\IP2Location-C-Library
 # If you want Lua-script support, change these:
 #
 USE_LUA     = 0
-LUAJIT_ROOT = f:\MingW32\src\Parsers\LuaJIT
+LUAJIT_ROOT = $(MAKEDIR)\..\LuaJIT
 
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
 # Developer Command Prompt or set '%WANT_64_BITS%=1' to build a 64-bit version.
@@ -170,9 +170,6 @@ run_test: test.exe
 compile_juajit_0:
 	@echo
 
-#
-# You may have to add a "%VSINSTALLDIR%VC\vcvarsall.bat" $(MACHINE) here.
-#
 compile_juajit_1:
 	pushd $(LUAJIT_ROOT)\src      &    \
 	if not exist lua51_static.lib (    \

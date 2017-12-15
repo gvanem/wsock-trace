@@ -9,6 +9,8 @@ t
 *.lib
 *.mak
 *.obj
+*.BIN
+*.xz
 src/enum_proto.*
 src/.depend.*
 src/CLANG_obj/*
@@ -34,5 +36,3 @@ src/Wsock-trace.vcxproj.user
 src/get_caller-notes.txt
 cpp_filter.py
 backup/*
-
-
