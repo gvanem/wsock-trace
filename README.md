@@ -12,9 +12,10 @@ Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
 
-Geo-IP information from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
+Geo-IP information from **[MaxMind](http://www.maxmind.com)** and **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**
 (an option) is built-in (the above `Mountain View/California` is Google's
-well-known location provided by the *IP2Location* data-base). Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+well-known location provided by the *IP2Location* data-base). Thanks to the
+**[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
 for a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind
 and IP2Location [[3]](#footnotes) for their data-bases.
 
