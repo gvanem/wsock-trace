@@ -1,17 +1,21 @@
 version: 1.0.{build}
 
+#
 # Skipping commits affecting these files
+#
 skip_commits:
    files:
     - '**/*.md'
     - '**/*.png'
     - '**/*.jpg'
 
+#
 # setting up etc\hosts file
 # XXX - use this instead of batch file generated one
+#
 hosts:
   localhost: 127.0.0.1
-#  localhost: ::1 # appveyor doesn't like "duplicates"
+# localhost: ::1 # appveyor doesn't like "duplicates"
   mpa.one.microsoft.com: 127.0.0.1
   google-public-dns-a.google.com: 8.8.8.8
   www.no-such-host.com: 10.0.0.20
@@ -32,18 +36,22 @@ environment:
     - BUILDER: mingw
       CPU:     x64
       MSYSTEM: MINGW64
-    - BUILDER: cygwin
-      CPU:     x64
+#   - BUILDER: cygwin
+#     CPU:     x64
 
 matrix:
+#
 # Immediately finish build if one of the above jobs fails.
+#
   fast_finish: true
   allow_failures:
     - BUILDER: cygwin
       CPU:     x64
 
+#
 # XXX - WIP
 # Get better version string. Maybe output of "git describe --tags --long"
+#
 cache:
   - wsock-trace-{build}
 
@@ -64,8 +72,8 @@ install:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: cd src
-  - cmd: if "%BUILDER%"=="msvc" nmake -nologo -f Makefile.vc6 USER=AppVeyor USE_LUA=1 PLATFORM=%CPU%
-  - cmd: if "%BUILDER%"=="mingw" make -f Makefile.MinGW USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
+  - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6 USER=AppVeyor USE_LUA=1 PLATFORM=%CPU%
+  - cmd: if "%BUILDER%"=="mingw"  make -f Makefile.MinGW USER=AppVeyor  USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
   - cmd: if "%BUILDER%"=="cygwin" make -f Makefile.CygWin USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
 
 test_script:
@@ -74,18 +82,23 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -wddd www.seoghør.no
 
 artifacts:
+#
 # Needed for cross-compiling
+#
   - path: 'src\geoip-gen*.c'
 # To push all *.zip/exe... files.
   - path: '**\*.dll'
   - path: '**\*.lib'
   - path: '**\*.a'
   - path: '**\*.exe'
+#
 # WIP: Push the entire wsock-trace-{build} folder as a single zip archive.
+#
   - path: wsock-trace-{build}
 
-
+#
 # XXX - One day...
+#
 # deploy:
   # Deploying to NuGet feed
   # - provider: NuGet
@@ -96,7 +109,7 @@ artifacts:
     # symbol_server: https://your.symbol.server/feed
     # artifact: MyPackage.nupkg
 
-    # Deploy to GitHub Releases
+  # Deploy to GitHub Releases
   # - provider: GitHub
     # artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
     # draft: false
