@@ -14,14 +14,14 @@ Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
 
 Geo-IP information from [MaxMind](http://www.maxmind.com) and [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)
 (an option) is built-in (the above `Mountain View/California` is Google's
-well-known location provided by the *IP2Location* data-base). Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)** for
-a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind
+well-known location provided by the *IP2Location* data-base). Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+for a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind
 and IP2Location [[3]](#footnotes) for their data-bases.
 
 ### Installation (all):
 
 To be able to get more precise Geo-IP information for addresses (city and
-region), Wsock-trace can use the [IP2Location](https://github.com/chrislim2888/IP2Location-C-Library) library.
+region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.
 Do this:
    * Sign-up for an account and download the free IP2Location LITE databases [here](http://lite.ip2location.com).
    * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%`
@@ -74,8 +74,8 @@ The trace-level and other settings are controlled by a config-file
   *  The `%HOME` directory.
   *  Then finally the `%APPDATA` directory.
 
-   `wsock_trace` is read in *[init.c](src/init.c)* at startup. Read it's contents; the comments
-   therein should be self-explanatory.<br>
+   `wsock_trace` is read in **[init.c](src/init.c)** at startup. Read it's contents;
+   the comments therein should be self-explanatory.<br>
    If `wsock_trace` is not found in one of the above directories, the default
    `trace_level` is set to 1.
 
@@ -208,8 +208,8 @@ By default, the tracing of `htons()`,`htonl()`, `ntohs()` and `ntohl()` are
 excluded from the trace.<br>
 You can edit the `%HOME/wsock_trace` file and exclude whatever calls you like.
 
-A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** clients (linked to `wsock_trace.lib`) running a
-simple test (in OpenVPN's root-dir):
+A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** programs (a client and a server linked to
+`wsock_trace.lib`) running a simple test (in OpenVPN's root-dir):
 ```
 cd sample
 start /pos=200,50,1000,800   ..\openvpn.exe --config sample-config-files/loopback-server
@@ -254,7 +254,8 @@ Note that some virus scanners may find the behaviour of programs linked to
       http://www.viksoe.dk/code/wepmetering.htm
 
    4. Optionally load [Wireshark's](https://www.wireshark.org) `libwireshark.dll` to dissect
-      transport and application protocols. Do it for selected processes only.
+      transport and application protocols. <br>
+      Do it for selected processes only.
 
    5. Deny certain applications to use `AF_INET6` protocols (return `-1` on
       `socket(AF_INET6,...)`.
