@@ -130,7 +130,7 @@ all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) compile_juajit_$(USE_LUA)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) compile_luajit_$(USE_LUA)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(NON_EXPORT_OBJ)
 	@type link.tmp >> $(WSOCK_MAP)
@@ -167,10 +167,10 @@ idna.exe: $(OBJ_DIR)\idna2.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ
 run_test: test.exe
 	test.exe -dd
 
-compile_juajit_0:
+compile_luajit_0:
 	@echo
 
-compile_juajit_1:
+compile_luajit_1:
 	pushd $(LUAJIT_ROOT)\src      &    \
 	if not exist lua51_static.lib (    \
 	   msvcbuild.bat debug static &    \

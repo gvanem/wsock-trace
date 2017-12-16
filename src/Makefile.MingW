@@ -129,7 +129,7 @@ endif
 
 libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
 
-wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_juajit_$(USE_LUA)
+wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
 	$(CC) $(LDFLAGS) -shared -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
           -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
 	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
@@ -165,7 +165,7 @@ geoip-gen6.c: geoip.exe
 run_test: test.exe
 	test.exe -dd
 
-compile_juajit_0:
+compile_luajit_0:
 	@echo
 
 #
@@ -174,7 +174,8 @@ compile_juajit_0:
 #
 # and that 'BUILDMODE = static'.
 #
-compile_juajit_1:
+compile_luajit_1:
+#
 # XXX - luajit's all target depends on libluajit.a which is not build by all.
 # Inform Upstream?
 	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
