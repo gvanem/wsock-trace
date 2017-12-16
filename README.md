@@ -26,10 +26,10 @@ Do this:
    * Sign-up for an account and download the free IP2Location LITE databases [here](http://lite.ip2location.com).
    * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%`
      or `%APPDATA%` directory.
-   * Clone this repo along with its submodules:
-   `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`
+   * Clone this repo along with its submodules:<br>
+   `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`<br>
    If you have already cloned this repository, you can initialize and update
-   the submodules like so:
+   the submodules like so:<br>
    `git submodule update --init --recursive`
    * Edit the respective makefile to say `USE_IP2LOCATION = 1`
    * Then do the specific installation for your compiler (see below).
