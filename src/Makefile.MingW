@@ -5,12 +5,16 @@
 # G. Vanem <gvanem@yahoo.no> 2011.
 #
 
-USE_DEBUG        = 0
-USE_BFD          = 0
-USE_DEF_FILE     = 0
+USE_CRT_DEBUG = 0
+USE_BFD       = 0
+USE_DEF_FILE  = 0
+
+#
+# Use the IP2Location library?
+#
 USE_IP2LOCATION ?= 0
 IP2LOCATION_ROOT = ../IP2Location-C-Library
-# IP2LOCATION_ROOT = $(PWD)/../IP2Location-C-Library
+
 #
 # If you want Lua-script support, change these:
 #
@@ -41,7 +45,7 @@ endif
 CC      = gcc
 CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces \
           -Wno-unused-variable -Wno-unused-function
-RCFLAGS = -O COFF -DDEBUG=$(USE_DEBUG) -D__MINGW32__
+RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__
 
 ifeq ($(CPU),x64)
   CFLAGS  += -m64
@@ -62,7 +66,7 @@ endif
 
 LDFLAGS += -Wl,--print-map,--sort-common -t
 
-ifeq ($(USE_DEBUG),1)
+ifeq ($(USE_CRT_DEBUG),1)
   CFLAGS += -O2 -g -D_DEBUG
 else
   CFLAGS  += -O3 -fomit-frame-pointer
@@ -71,7 +75,6 @@ endif
 
 ifeq ($(USE_IP2LOCATION),1)
   CFLAGS += -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
-# EX_LIBS += $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.a
 endif
 
 ifeq ($(USER),AppVeyor)
@@ -109,7 +112,7 @@ NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe install
+all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe
 	@echo 'Welcome to Wsock_trace library and examples.'
 
 message:
@@ -135,10 +138,8 @@ wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
 	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
 
 install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
-ifneq ($(USER),AppVeyor)
 	cp --update libwsock_trace.a              $(LIB_TARGET)
 	cp --update wsock_trace_mw$(X_SUFFIX).dll $(BIN_TARGET)
-endif
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) -o $@ $(LDFLAGS) $^ > test.map
