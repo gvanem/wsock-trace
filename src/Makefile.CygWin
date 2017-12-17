@@ -44,7 +44,7 @@ OBJECTS = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe install
+all: message $(OBJ_DIR) libwsock_trace.a test.exe
 	@echo 'Welcome to Wsock_trace library and example.'
 
 message:
