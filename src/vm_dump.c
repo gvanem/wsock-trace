@@ -14,6 +14,7 @@
 #include <imagehlp.h>
 
 #include "common.h"
+#include "cpu.h"
 #include "vm_dump.h"
 
 int vm_bug_debug = 0;
@@ -178,8 +179,6 @@ static void print_one_address (thread_args *args, DWORD64 addr)
   }
   putchar ('\n');
 }
-
-extern void print_thread_times (HANDLE thread);
 
 static DWORD WINAPI dump_thread (void *arg)
 {

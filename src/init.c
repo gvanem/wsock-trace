@@ -29,6 +29,7 @@
 #include "stkwalk.h"
 #include "overlap.h"
 #include "hosts.h"
+#include "cpu.h"
 #include "init.h"
 
 #define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
@@ -810,9 +811,6 @@ void wsock_trace_exit (void)
 #if 0
   if (g_cfg.trace_level >= 3)
   {
-    extern void print_perf_times (void);
-    extern void print_process_times (void);
-
     print_perf_times();
     print_process_times();
   }
@@ -1432,7 +1430,13 @@ static void _gettimeofday (struct pcap_timeval *tv)
   FILETIME ft;
   uint64   tim;
 
-  GetSystemTimeAsFileTime (&ft);
+#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
+  if (p_GetSystemTimePreciseAsFileTime)
+    (*p_GetSystemTimePreciseAsFileTime) (&ft);
+  else
+#endif
+    GetSystemTimeAsFileTime (&ft);
+
   tim = FileTimeToUnixEpoch (&ft);
   tv->tv_sec  = (DWORD) (tim / 1000000L);
   tv->tv_usec = (DWORD) (tim % 1000000L);

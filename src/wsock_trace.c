@@ -33,6 +33,7 @@
 #include "in_addr.h"
 #include "init.h"
 #include "dump.h"
+#include "cpu.h"
 #include "stkwalk.h"
 #include "overlap.h"
 #include "wsock_trace_lua.h"
@@ -3015,7 +3016,6 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
                ADDR_CAST(hinstDLL), note, tid);
          if (g_cfg.trace_level >= 3)
          {
-           extern void print_thread_times (HANDLE thread);
            HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, tid);
 
            print_thread_times (hnd);
