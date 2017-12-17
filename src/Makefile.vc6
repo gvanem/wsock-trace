@@ -35,7 +35,10 @@ IP2LOCATION_ROOT = ..\IP2Location-C-Library
 # Default value is 0.
 #
 !if "$(USE_LUA)" == ""
-USE_LUA     = 0
+USE_LUA = 0
+!endif
+
+!if "$(LUAJIT_ROOT)" == ""
 LUAJIT_ROOT = ..\LuaJIT
 !endif
 
