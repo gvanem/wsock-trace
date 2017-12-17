@@ -25,7 +25,7 @@ USE_DEF_FILE  = 1
 # Default value is 1.
 #
 !if "$(USE_IP2LOCATION)" == ""
-USE_IP2LOCATION  = 1
+USE_IP2LOCATION = 1
 !endif
 
 !if "$(IP2LOCATION_ROOT)" == ""
@@ -245,20 +245,22 @@ wsock_trace_x64.def: wsock_trace.def Makefile.VC6
 	    -e "s/_\(.*\)@.*/\1/g" < wsock_trace.def                     >> wsock_trace_x64.def
 
 $(OBJ_DIR)\common.obj:      common.c common.h init.h dump.h
+$(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h
 $(OBJ_DIR)\non-export.obj:  non-export.c common.h in_addr.h
 $(OBJ_DIR)\dump.obj:        dump.c common.h idna.h in_addr.h init.h wsock_trace.h
 $(OBJ_DIR)\geoip.obj:       geoip.c common.h in_addr.h init.h geoip.h getopt.h smartlist.h
 $(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h
 $(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h idna.h
-$(OBJ_DIR)\init.obj:        init.c common.h idna.h stkwalk.h bfd_gcc.h init.h wsock_trace_lua.h wsock_trace.h
+$(OBJ_DIR)\init.obj:        init.c common.h cpu.h idna.h stkwalk.h bfd_gcc.h init.h wsock_trace_lua.h wsock_trace.h
 $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
 $(OBJ_DIR)\overlap.obj:     overlap.c overlap.h common.h init.h smartlist.h
 $(OBJ_DIR)\test.obj:        test.c getopt.h
 
 $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h
-$(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h stkwalk.h in_addr.h \
+$(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
+$(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h cpu.h stkwalk.h in_addr.h \
                             init.h dump.h wsock_trace_lua.h wsock_trace.h \
                             ws_hooks.c wsock_trace.rc
 
