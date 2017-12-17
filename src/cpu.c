@@ -7,65 +7,11 @@
 #include <time.h>
 #include <windows.h>
 
+#define IN_CPU_C
+
 #include "common.h"
 #include "init.h"
-
-/*
- * Instead of including <NtDDK.h> here, we define undocumented stuff
- * needed for NtQueryInformationThread() here:
- */
-typedef LONG NTSTATUS;
-
-#define STATUS_SUCCESS 0
-
-typedef enum _THREADINFOCLASS {
-              ThreadBasicInformation,
-              ThreadTimes,
-              ThreadPriority,
-              ThreadBasePriority,
-              ThreadAffinityMask,
-              ThreadImpersonationToken,
-              ThreadDescriptorTableEntry,
-              ThreadEnableAlignmentFaultFixup,
-              ThreadEventPair_Reusable,
-              ThreadQuerySetWin32StartAddress,
-              ThreadZeroTlsCell,
-              ThreadPerformanceCount,
-              ThreadAmILastThread,
-              ThreadIdealProcessor,
-              ThreadPriorityBoost,
-              ThreadSetTlsArrayAddress,
-              ThreadIsIoPending,
-              MaxThreadInfoClass
-            } THREADINFOCLASS;
-
-/* end <NTddk.h> stuff */
-
-/*
- * Handy macro to both define and declare the function-pointer.
- */
-#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
-                                static func_##f  p_##f = NULL
-
-DEF_FUNC (BOOL,    QueryThreadCycleTime,
-                   (IN     HANDLE   thread_handle,
-                    OUT    ULONG64 *cycle_time));
-
-DEF_FUNC (NTSTATUS, NtQueryInformationThread,
-                   (IN     HANDLE           thread_handle,
-                    IN     THREADINFOCLASS  thread_information_class,
-                    IN OUT void            *thread_information,
-                    IN     ULONG            thread_information_length,
-                    OUT    ULONG           *return_length OPTIONAL));
-
-DEF_FUNC (NTSTATUS, NtQuerySystemInformation,
-                    (IN    ULONG  system_information_class,
-                     OUT   void  *system_information,
-                     IN    ULONG  system_information_length,
-                     OUT   ULONG *return_length));
-
-DEF_FUNC (void, GetSystemTimePreciseAsFileTime, /* Win 8+ */
-                (OUT FILETIME *file_time));
+#include "cpu.h"
 
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
