@@ -137,13 +137,13 @@ NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
-all: $(OBJ_DIR) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) compile_luajit_$(USE_LUA)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(NON_EXPORT_OBJ)
 	@type link.tmp >> $(WSOCK_MAP)
