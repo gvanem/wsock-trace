@@ -12,8 +12,8 @@
 #
 # Then cd to this directory and run this makefile.
 
-USE_DEBUG        = 0
-USE_DEF_FILE     = 1
+USE_CRT_DEBUG = 0
+USE_DEF_FILE  = 1
 
 #
 # The IP2Location library:
@@ -22,20 +22,28 @@ USE_DEF_FILE     = 1
 # You can also add '$(IP2LOCATION_ROOT)/libIP2Location' to your
 # '%INCLUDE%' variable instead of setting it here.
 #
+# Default value is 1.
+#
+!if "$(USE_IP2LOCATION)" == ""
 USE_IP2LOCATION  = 1
-IP2LOCATION_ROOT = $(MAKEDIR)\..\IP2Location-C-Library
+IP2LOCATION_ROOT = ..\IP2Location-C-Library
+!endif
 
 #
 # If you want Lua-script support, change these:
 #
+# Default value is 0.
+#
+!if "$(USE_LUA)" == ""
 USE_LUA     = 0
-LUAJIT_ROOT = $(MAKEDIR)\..\LuaJIT
+LUAJIT_ROOT = ..\LuaJIT
+!endif
 
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
-# Developer Command Prompt or set '%WANT_64_BITS%=1' to build a 64-bit version.
+# Developer Command Prompt or set '%CPU%=x64' to build a 64-bit version.
 # 64-bit builds have a '_x64' suffix on DLL and lib.
 #
-!if "$(PLATFORM)" == "x64" || "$(WANT_64_BITS)" == "1"
+!if "$(PLATFORM)" == "x64" || "$(CPU)" == "x64"
 X_SUFFIX   = _x64
 MACHINE    = x64
 BITNESS    = 64
@@ -64,7 +72,7 @@ LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
-!if "$(USE_DEBUG)" == "1"
+!if "$(USE_CRT_DEBUG)" == "1"
 CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 !else
 CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
@@ -83,7 +91,6 @@ EX_LIBS = $(LUAJIT_ROOT)/src/lua51_static.lib
 
 !if "$(USE_IP2LOCATION)" == "1"
 CFLAGS = $(CFLAGS) -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
-# EX_LIBS = $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.lib
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib
@@ -194,19 +201,19 @@ Run one of the following commands:
   nmake -f Makefile.vc6 install VAR=VAL
 
 where VAR can be of the following:
-  USE_DEBUG        (default: $(USE_DEBUG))
+  USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
   USE_IP2LOCATION  (default: $(USE_IP2LOCATION))
   IP2LOCATION_ROOT (default: $(IP2LOCATION_ROOT))
   USE_LUA          (default: $(USE_LUA))
   LUAJIT_ROOT      (default: $(LUAJIT_ROOT))
-  WANT_64_BITS     (default: check)
+  CPU              (default: $(CPU))
   LIB_TARGET       (default: $(LIB_TARGET))
   BIN_TARGET       (default: $(BIN_TARGET))
 << NOKEEP
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
-	rc -nologo -DDEBUG=$(USE_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
+	rc -nologo -DDEBUG=$(USE_CRT_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
 
 
 #
