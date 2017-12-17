@@ -58,12 +58,15 @@ cache:
 install:
   # clone the submodules
   - cmd: git submodule update --init --recursive
+
   # add a few locations to our path
   - cmd: set PATH=%CD%\src;%PATH%
-  - cmd: if "%BUILDER%"=="mingw" set PATH=C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="mingw"  set PATH=C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
   - cmd: if "%BUILDER%"=="cygwin" set PATH=C:\msys64\usr\bin;%PATH%
+
   # set compiler environment
   - cmd: if "%BUILDER%"=="msvc" call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
+
   # Download COUNTRY Database.
   # XXX - Encrypt URL! See https://www.appveyor.com/docs/build-configuration/#secure-variables
   - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP4-COUNTRY.BIN.xz
@@ -72,9 +75,9 @@ install:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: cd src
-  - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6 USER=AppVeyor USE_LUA=1 PLATFORM=%CPU%
-  - cmd: if "%BUILDER%"=="mingw"  make -f Makefile.MinGW USER=AppVeyor  USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
-  - cmd: if "%BUILDER%"=="cygwin" make -f Makefile.CygWin USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
+  - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6 USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU% PLATFORM=%CPU%
+  - cmd: if "%BUILDER%"=="mingw"  make -f Makefile.MinGW        USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
+  - cmd: if "%BUILDER%"=="cygwin" make -f Makefile.CygWin       USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe

@@ -72,7 +72,8 @@ set COLUMNS=120
 exit /b 0
 
 ::
-:: Cleanup after a local 'appveyor-script <builder>'
+:: Cleanup after a local 'appveyor-script <builder>'.
+:: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
 del /Q IP4-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
