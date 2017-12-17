@@ -26,6 +26,9 @@ USE_DEF_FILE  = 1
 #
 !if "$(USE_IP2LOCATION)" == ""
 USE_IP2LOCATION  = 1
+!endif
+
+!if "$(IP2LOCATION_ROOT)" == ""
 IP2LOCATION_ROOT = ..\IP2Location-C-Library
 !endif
 
