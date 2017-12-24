@@ -1394,9 +1394,12 @@ static DWORD download_file (const char *file, const char *url)
   DWORD flags = INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTP |
                 INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTPS |
                 INTERNET_FLAG_NO_UI;
-  HINTERNET h1 = NULL;
-  HINTERNET h2 = NULL;
-  FILE     *fil = NULL;
+  HINTERNET   h1 = NULL;
+  HINTERNET   h2 = NULL;
+  FILE       *fil = NULL;
+  DWORD       access_type = INTERNET_OPEN_TYPE_DIRECT;
+  const char *proxy_name = NULL;
+  const char *proxy_bypass = NULL;
 
   if (load_dynamic_table(funcs, DIM(funcs)) != DIM(funcs))
   {
@@ -1404,10 +1407,16 @@ static DWORD download_file (const char *file, const char *url)
     return (0);
   }
 
-  if (g_cfg.geoip_proxy)
-       h1 = (*p_InternetOpenA) ("GeoIP-update", INTERNET_OPEN_TYPE_PROXY, g_cfg.geoip_proxy, "<local>", 0);
-  else h1 = (*p_InternetOpenA) ("GeoIP-update", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+  if (g_cfg.geoip_proxy && g_cfg.geoip_proxy[0])
+  {
+    proxy_name = g_cfg.geoip_proxy;
+    proxy_bypass = "<local>";
+    access_type = INTERNET_OPEN_TYPE_PROXY;
+  }
 
+  TRACE (2, "Calling InternetOpenA(): proxy: %s, URL: %s.\n", proxy_name, url);
+
+  h1 = (*p_InternetOpenA) ("GeoIP-update", access_type, proxy_name, proxy_bypass, 0);
   if (!h1)
   {
     TRACE (0, "InternetOpenA() failed: %s.\n", wininet_strerror(GetLastError()));
