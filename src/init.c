@@ -567,6 +567,9 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   else if (!stricmp(key,"geoip6_url"))
        g_cfg.geoip6_url = strdup (val);
 
+  else if (!stricmp(key,"proxy"))
+       g_cfg.geoip_proxy = strdup (val);
+
   else if (!stricmp(key,"max_days"))
        g_cfg.geoip_max_days = atoi (val);
 
@@ -834,6 +837,7 @@ void wsock_trace_exit (void)
   FREE (g_cfg.geoip6_file);
   FREE (g_cfg.geoip4_url);
   FREE (g_cfg.geoip6_url);
+  FREE (g_cfg.geoip_proxy);
   FREE (g_cfg.ip2location_bin_file);
 
   geoip_exit();

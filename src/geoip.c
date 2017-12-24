@@ -1355,23 +1355,72 @@ static struct LoadTable funcs[] = {
                         ADD_VALUE (InternetCloseHandle)
                       };
 
+/**
+ * Return error-string for 'err' from wininet.dll.
+ */
+static const char *wininet_strerror (DWORD err)
+{
+  HMODULE mod = GetModuleHandle ("wininet.dll");
+  char    buf[512];
+
+  if (mod && mod != INVALID_HANDLE_VALUE &&
+      FormatMessageA (FORMAT_MESSAGE_FROM_HMODULE,
+                      mod, err, MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
+                      buf, sizeof(buf), NULL))
+  {
+    static char err_buf[512];
+    char  *p;
+
+    strip_nl (buf);
+    p = strrchr (buf, '.');
+    if (p && p[1] == '\0')
+       *p = '\0';
+     snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
+     return (err_buf);
+  }
+  return win_strerror (err);
+}
+
+/**
+ * Download a file from url using dynamcally load functions
+ * from wininet.dll.
+ *
+ * \param[in] file the file to write to.
+ * \param[in] url  the URL to retrieve from.
+ */
 static DWORD download_file (const char *file, const char *url)
 {
   DWORD rc = 0;
   DWORD flags = INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTP |
                 INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTPS |
                 INTERNET_FLAG_NO_UI;
-  HINTERNET h1, h2;
-  FILE     *fil;
+  HINTERNET h1 = NULL;
+  HINTERNET h2 = NULL;
+  FILE     *fil = NULL;
 
   if (load_dynamic_table(funcs, DIM(funcs)) != DIM(funcs))
   {
-    TRACE (2, "Failed to load needed WinInet.dll functions.\n");
+    TRACE (0, "Failed to load needed WinInet.dll functions.\n");
     return (0);
   }
 
-  h1  = (*p_InternetOpenA) ("GeoIP-update", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
-  h2  = (*p_InternetOpenUrlA) (h1, url, NULL, 0, flags, (DWORD_PTR)0);
+  if (g_cfg.geoip_proxy)
+       h1 = (*p_InternetOpenA) ("GeoIP-update", INTERNET_OPEN_TYPE_PROXY, g_cfg.geoip_proxy, "<local>", 0);
+  else h1 = (*p_InternetOpenA) ("GeoIP-update", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+
+  if (!h1)
+  {
+    TRACE (0, "InternetOpenA() failed: %s.\n", wininet_strerror(GetLastError()));
+    goto quit;
+  }
+
+  h2 = (*p_InternetOpenUrlA) (h1, url, NULL, 0, flags, (DWORD_PTR)0);
+  if (!h2)
+  {
+    TRACE (0, "InternetOpenA() failed: %s.\n", wininet_strerror(GetLastError()));
+    goto quit;
+  }
+
   fil = fopen (file, "w+b");
 
   while (1)
@@ -1384,9 +1433,15 @@ static DWORD download_file (const char *file, const char *url)
     fwrite (buf, 1, (size_t)read, fil);
     rc += read;
   }
-  fclose (fil);
-  (*p_InternetCloseHandle) (h2);
-  (*p_InternetCloseHandle) (h1);
+
+quit:
+  if (fil)
+     fclose (fil);
+
+  if (h2)
+    (*p_InternetCloseHandle) (h2);
+  if (h1)
+    (*p_InternetCloseHandle) (h1);
 
   unload_dynamic_table (funcs, DIM(funcs));
   return (rc);

@@ -151,6 +151,12 @@ geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
 geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
 
 #
+# The address of (a local) proxy-host to fetch the above URLs from.
+# If not set, retrieve directly.
+#
+proxy =
+
+#
 # IP2Location settings.
 # Ref. https://github.com/chrislim2888/IP2Location-C-Library
 #      http://lite.ip2location.com
