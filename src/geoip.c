@@ -1322,22 +1322,22 @@ uint64 geoip_get_stats_by_idx (int idx)
  * Load WinInet.dll dynamically.
  */
 typedef HINTERNET (WINAPI *func_InternetOpenA) (const char *user_agent,
-                                                DWORD       dwAccessType,
-                                                const char *lpszProxyName,
-                                                const char *lpszProxyBypass,
-                                                DWORD       dwFlags);
+                                                DWORD       access_type,
+                                                const char *proxy_name,
+                                                const char *proxy_bypass,
+                                                DWORD       flags);
 
-typedef HINTERNET (WINAPI *func_InternetOpenUrlA) (HINTERNET   hInternet,
-                                                   const char *lpszUrl,
-                                                   const char *lpszHeaders,
-                                                   DWORD       dwHeadersLength,
-                                                   DWORD       dwFlags,
-                                                   DWORD_PTR   dwContext);
+typedef HINTERNET (WINAPI *func_InternetOpenUrlA) (HINTERNET   hnd,
+                                                   const char *url,
+                                                   const char *headers,
+                                                   DWORD       headers_len,
+                                                   DWORD       flags,
+                                                   DWORD_PTR   context);
 
-typedef BOOL (WINAPI *func_InternetReadFile) (HINTERNET hFile,
-                                              VOID     *lpBuffer,
-                                              DWORD     dwNumberOfBytesToRead,
-                                              DWORD    *lpdwNumberOfBytesRead);
+typedef BOOL (WINAPI *func_InternetReadFile) (HINTERNET hnd,
+                                              VOID     *buffer,
+                                              DWORD     num_bytes_to_read,
+                                              DWORD    *num_bytes_read);
 
 typedef BOOL (WINAPI *func_InternetCloseHandle) (HINTERNET handle);
 
