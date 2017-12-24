@@ -2971,18 +2971,18 @@ static const char *set_dll_name (void)
 }
 
 
-BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
+BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
   char  note[30] = "";
   DWORD tid;
 
-  if (dwReason == DLL_PROCESS_ATTACH)
+  if (reason == DLL_PROCESS_ATTACH)
      wsock_trace_dll_name = set_dll_name();
 
-  if (ws_trace_base && hinstDLL == ws_trace_base)
+  if (ws_trace_base && instDLL == ws_trace_base)
      snprintf (note, sizeof(note), " (%s)", wsock_trace_dll_name);
 
-  switch (dwReason)
+  switch (reason)
   {
     case DLL_PROCESS_ATTACH:
          crtdbg_init();
@@ -3000,8 +3000,8 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
     case DLL_THREAD_ATTACH:
          tid = GetCurrentThreadId();
          g_cfg.counts.dll_attach++;
-         TRACE (3, "  DLL_THREAD_ATTACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-                ADDR_CAST(hinstDLL), note, tid);
+         TRACE (3, "  DLL_THREAD_ATTACH. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
+                ADDR_CAST(instDLL), note, tid);
 
          /* \todo:
           *   Add this 'tid' as a new thread to a 'smartlist_t' and call 'print_thread_times()'
@@ -3012,8 +3012,8 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
     case DLL_THREAD_DETACH:
          tid = GetCurrentThreadId();
          g_cfg.counts.dll_detach++;
-         TRACE (3, "  DLL_THREAD_DETACH. hinstDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-               ADDR_CAST(hinstDLL), note, tid);
+         TRACE (3, "  DLL_THREAD_DETACH. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
+               ADDR_CAST(instDLL), note, tid);
          if (g_cfg.trace_level >= 3)
          {
            HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, tid);
@@ -3028,7 +3028,7 @@ BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
          break;
   }
 
-  ARGSUSED (lpvReserved);
+  ARGSUSED (reserved);
   return (TRUE);
 }
 
