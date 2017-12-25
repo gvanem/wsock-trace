@@ -169,7 +169,7 @@
   #define GCC_VERSION  0
 #endif
 
-#if (GCC_VERSION >= 40600)
+#if (GCC_VERSION >= 40600) || defined(__clang__)
   #define GCC_PRAGMA(x)  _Pragma (#x)
 #else
   #define GCC_PRAGMA(x)
