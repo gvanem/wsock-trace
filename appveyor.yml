@@ -70,7 +70,7 @@ install:
   # Download COUNTRY Database.
   # XXX - Encrypt URL! See https://www.appveyor.com/docs/build-configuration/#secure-variables
   - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP4-COUNTRY.BIN.xz
-  - cmd: 7z.exe x IP4-COUNTRY.BIN.xz
+  - cmd: 7z.exe x IP4-COUNTRY.BIN.xz > NUL
 
 build_script:
   - cmd: appveyor-script.bat init
