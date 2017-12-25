@@ -17,7 +17,7 @@
 #include "init.h"
 #include "geoip.h"
 
-#if defined(USE_IP2LOCATION) && !defined(TEST_GEOIP)
+#if defined(USE_IP2LOCATION)
 #include <stdint.h>
 #include <IP2Location.h>
 
@@ -37,6 +37,7 @@ static IP2Location *open_file (const char *file)
   struct stat  st;
   IP2Location *loc;
   FILE        *f;
+  int          IPvX;
 
   f = fopen (file, "rb");
   if (!f)
@@ -58,12 +59,21 @@ static IP2Location *open_file (const char *file)
   stat (file, &st);
   file_size = st.st_size;
 
+  /* The IP2Loc database scheme is really strange.
+   */
+  IPvX = loc->ipversion;
+  if (IPvX == IPV4)
+     IPvX = 4;
+  else if (IPvX == IPV6)
+     IPvX = 6;
+
   TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s\n"
-            "                Date: %02d-%02d-%04d, IPv: %d, "
+            "                Date: %02d-%02d-%04d, IPvX: %d, "
             "IP4count: %u, IP6count: %u.\n",
          dword_str(loc->ipv4databasecount), IP2Location_api_version_string(),
          loc->databaseday, loc->databasemonth, 2000+loc->databaseyear,
-         loc->ipversion, loc->ipv4databasecount, loc->ipv6databasecount);
+         IPvX,
+         loc->ipv4databasecount, loc->ipv6databasecount);
   return (loc);
 }
 
@@ -72,7 +82,9 @@ BOOL ip2loc_init (void)
   if (!g_cfg.geoip_enable || !g_cfg.ip2location_bin_file)
      return (FALSE);
 
-  handle = open_file (g_cfg.ip2location_bin_file);
+  if (!handle)
+     handle = open_file (g_cfg.ip2location_bin_file);
+
   return (handle != NULL);
 }
 
@@ -123,7 +135,9 @@ DWORD ip2loc_num_ipv6_entries (void)
 #define inet_pton(family, addr, dst)  wsock_trace_inet_pton (family, addr, dst)
 
 /*
- * This assumes the IP2Location .c/.h files are in the %INCLUDE% or %C_INCLUDE_PATH% path.
+ * This assumes the IP2Location .c/.h files are in the %INCLUDE% or
+ * %C_INCLUDE_PATH% path. Or the '$(IP2LOCATION_ROOT)' is set in
+ * respctive makefile.
  */
 #include "IP2Location.c"
 #include "IP2Loc_DBInterface.c"
@@ -137,7 +151,11 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
   if (!r)
      return (FALSE);
 
-  if (!strncmp(r->country_short,"INVALID",7))
+  TRACE (3, "Record for %s; country_short: \"%.2s\"\n", addr, r->country_short);
+
+  if (r->country_short[0] == '-' ||                   /* is "-" for unallocated addr */
+      !strncmp(r->country_short,"INVALID",7) ||       /* INVALID_IPV4_ADDRESS */
+      !strncmp(r->country_short,"This parameter",14)) /* NOT_SUPPORTED */
   {
     IP2Location_free_record (r);
     return (FALSE);
@@ -151,7 +169,7 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
   return (TRUE);
 }
 
-#else /* USE_IP2LOCATION && !TEST_GEOIP */
+#else /* USE_IP2LOCATION */
 
 BOOL ip2loc_init (void)
 {
@@ -178,4 +196,4 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
   ARGSUSED (ent);
   return (FALSE);
 }
-#endif  /* USE_IP2LOCATION && !TEST_GEOIP */
+#endif  /* USE_IP2LOCATION */
