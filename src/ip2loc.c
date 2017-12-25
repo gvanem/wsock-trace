@@ -114,16 +114,18 @@ DWORD ip2loc_num_ipv6_entries (void)
 /*
  * Include the IP2Location sources here to avoid the need to build the library.
  * The Makefile.win on Github is broken anyway.
+ *
+ * And turn off some warnings:
  */
-#if defined(_MSC_VER)
-  #pragma warning (disable: 4101 4244)
-
-#elif defined(__GNUC__)
-  /*
-  * For warning: 'IP2Location_ipv6_to_no' declared 'static'
-  * but never defined [-Wunused-function]
-  */
+#if defined(__GNUC__) || defined(__clang__)
   GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function");
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-variable");
+  #if !defined(__clang__)
+    GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable");
+  #endif
+
+#elif defined(_MSC_VER)
+  #pragma warning (disable: 4101 4244)
 #endif
 
 /*
