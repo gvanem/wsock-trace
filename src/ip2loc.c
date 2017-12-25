@@ -137,7 +137,7 @@ DWORD ip2loc_num_ipv6_entries (void)
 /*
  * This assumes the IP2Location .c/.h files are in the %INCLUDE% or
  * %C_INCLUDE_PATH% path. Or the '$(IP2LOCATION_ROOT)' is set in
- * respctive makefile.
+ * respective makefile.
  */
 #include "IP2Location.c"
 #include "IP2Loc_DBInterface.c"
