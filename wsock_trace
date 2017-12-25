@@ -96,7 +96,8 @@ max_data    = 5000                 # but not more than 'max_data'.
 max_displacement = 100             # maximum distance for a public symbol to accept in SymGetLineFromAddr64()
 
 msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
-mingw_only  = 0                    # Trace only MingW programs using the wsock_trace.dll
+mingw_only  = 0                    # Trace only MinGW programs using the wsock_trace_mw.dll
+cygwin_only = 0                    # Trace only Cygwin programs using the wsock_trace_cyg.dll
 
 color_time  = bright red           # Color of time-stamp. E.g. '* 125.654 msec:'
 color_file  = bright white         # Color of first trace line. E.g.: ' sendf.c(319) (Curl_recv_plain+37):'
