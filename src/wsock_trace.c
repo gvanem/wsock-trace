@@ -26,7 +26,6 @@
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
-#include <math.h>
 
 #include "common.h"
 #include "bfd_gcc.h"
@@ -52,7 +51,6 @@ int volatile startup_count = 0;
 static BOOL exclude_this = FALSE;
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
-static const char *get_timestamp (void);
 
 #if defined(USE_BFD) || defined(__clang__)
   static void test_get_caller (const void *from);
@@ -570,7 +568,7 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
 #if 0
   if (first_line && g_cfg.trace_time_format != TS_NONE)
   {
-    trace_printf ("~3* %s: ~1", get_timestamp());
+    trace_printf ("~3* %s~1", get_timestamp());
     fmt += 4;  /* step over the "~1* " we're called with */
   }
 #endif
@@ -2709,58 +2707,6 @@ EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
 }
 
 /****************** Internal utility functions **********************************/
-
-static const char *get_timestamp (void)
-{
-  static LARGE_INTEGER last = { S64_SUFFIX(0) };
-  static char          buf [40];
-  SYSTEMTIME           now;
-  LARGE_INTEGER        ticks;
-  int64                clocks;
-  double               msec;
-
-  switch (g_cfg.trace_time_format)
-  {
-    case TS_RELATIVE:
-    case TS_DELTA:
-         if (last.QuadPart == 0ULL)
-            last.QuadPart = g_cfg.start_ticks;
-
-         QueryPerformanceCounter (&ticks);
-         if (g_cfg.trace_time_format == TS_RELATIVE)
-              clocks = (int64) (ticks.QuadPart - g_cfg.start_ticks);
-         else clocks = (int64) (ticks.QuadPart - last.QuadPart);
-
-         last = ticks;
-         msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
-
-#if defined(__CYGWIN__) || defined(__WATCOMC__)  /* These doesn't seems to have 'fmodl()' */
-         sprintf (buf, "%.3f msec: ", msec);
-#else
-         {
-           int         dec = (int) fmodl (msec, 1000.0);
-           const char *sec = qword_str ((unsigned __int64) (msec/1000.0));
-           char *p;
-
-           strcpy (buf, sec);
-           p = strchr (buf, '\0');
-           *p++ = '.';
-           _utoa10w (dec, 3, p);
-           strcat (buf, " sec: ");
-         }
-#endif
-         return (buf);
-
-    case TS_ABSOLUTE:
-         GetLocalTime (&now);
-         sprintf (buf, "%02u:%02u:%02u: ", now.wHour, now.wMinute, now.wSecond);
-         return (buf);
-
-    case TS_NONE:
-         return ("");
-  }
-  return ("");
-}
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 {

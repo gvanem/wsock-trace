@@ -132,11 +132,11 @@ void print_process_times (void)
   {
     const struct tm *tm;
     char   time_str [50];
-    uint64 ct      = FileTimeToUnixEpoch (&cr_time);
-    time_t ct_time = ct / U64_SUFFIX(1000000);
+    time_t ct      = FILETIME_to_time_t (&cr_time);
+    uint64 fract_t = FILETIME_to_unix_epoch (&cr_time) % U64_SUFFIX(1000000);
 
     tzset();
-    tm = localtime (&ct_time);
+    tm = localtime (&ct);
     if (tm)
          strftime (time_str, sizeof(time_str), "%Y%m%d/%H:%M:%S", tm);
     else strcpy (time_str, "??");
@@ -145,7 +145,7 @@ void print_process_times (void)
      * Therefore it is zero.
      */
     trace_printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
-                  time_str, ct % U64_SUFFIX(1000000), filetime_sec(&krnl_time), filetime_sec(&usr_time));
+                  time_str, fract_t, filetime_sec(&krnl_time), filetime_sec(&usr_time));
   }
   CloseHandle (proc);
 }

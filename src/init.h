@@ -144,7 +144,11 @@ extern BOOL exclude_list_get (const char *fmt);
 extern BOOL exclude_list_free (void);
 
 extern const char *config_file_name (void);
-extern uint64 FileTimeToUnixEpoch (const FILETIME *ft);
+extern const char *get_timestamp (void);
+extern const char *get_timestamp2 (void);
+
+extern uint64 FILETIME_to_unix_epoch (const FILETIME *ft);
+extern time_t FILETIME_to_time_t     (const FILETIME *ft);
 
 extern size_t write_pcap_header  (void);
 extern size_t write_pcap_packet  (SOCKET s, const void *pkt, size_t len, BOOL out);

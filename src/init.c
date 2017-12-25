@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <assert.h>
+#include <math.h>
 
 #include "common.h"
 #include "wsock_trace.h"
@@ -100,6 +101,88 @@ static void set_time_format (TS_TYPE *ret, const char *val)
   else if (!stricmp(val,"delta"))
      *ret = TS_DELTA;
   TRACE (4, "val: %s -> TS_TYPE: %d\n", val, *ret);
+}
+
+/*
+ * Return the prefered time-stamp string.
+ */
+const char *get_timestamp (void)
+{
+  static LARGE_INTEGER last = { S64_SUFFIX(0) };
+  static char          buf [40];
+  SYSTEMTIME           now;
+  LARGE_INTEGER        ticks;
+  int64                clocks;
+  double               msec;
+
+  switch (g_cfg.trace_time_format)
+  {
+    case TS_RELATIVE:
+    case TS_DELTA:
+         if (last.QuadPart == 0ULL)
+            last.QuadPart = g_cfg.start_ticks;
+
+         QueryPerformanceCounter (&ticks);
+         if (g_cfg.trace_time_format == TS_RELATIVE)
+              clocks = (int64) (ticks.QuadPart - g_cfg.start_ticks);
+         else clocks = (int64) (ticks.QuadPart - last.QuadPart);
+
+         last = ticks;
+         msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
+
+#if defined(__CYGWIN__) || defined(__WATCOMC__)  /* These doesn't seems to have 'fmodl()' */
+         sprintf (buf, "%.3f msec: ", msec);
+#else
+         {
+           int         dec = (int) fmodl (msec, 1000.0);
+           const char *sec = qword_str ((unsigned __int64) (msec/1000.0));
+           char *p;
+
+           strcpy (buf, sec);
+           p = strchr (buf, '\0');
+           *p++ = '.';
+           _utoa10w (dec, 3, p);
+           strcat (buf, " sec: ");
+         }
+#endif
+         return (buf);
+
+    case TS_ABSOLUTE:
+         GetLocalTime (&now);
+         sprintf (buf, "%02u:%02u:%02u: ", now.wHour, now.wMinute, now.wSecond);
+         return (buf);
+
+    case TS_NONE:
+         return ("");
+  }
+  return ("");
+}
+
+/*
+ * Return only a TS_DELTA time-stamp as " xxxx usec".
+ * Works independently of whether 'init_timestamp()' was called or not.
+ */
+const char *get_timestamp2 (void)
+{
+  static LARGE_INTEGER last = { S64_SUFFIX(0) };
+  static uint64 frequency = U64_SUFFIX(0);
+  static char          buf [100];
+  LARGE_INTEGER        ticks;
+  int64                clocks;
+  double               usec;
+
+  if (frequency == U64_SUFFIX(0))
+     QueryPerformanceFrequency ((LARGE_INTEGER*)&frequency);
+
+  QueryPerformanceCounter (&ticks);
+  if (last.QuadPart == 0ULL)
+       clocks = 0;
+  else clocks = (int64) (ticks.QuadPart - last.QuadPart);
+  last = ticks;
+  usec = (double)clocks / (double)frequency;
+  usec *= 1E6;
+  sprintf (buf, "%6.3f usec", usec);
+  return (buf);
 }
 
 static const char *get_time_now (void)
@@ -1419,7 +1502,7 @@ static const void *make_tcp_hdr (size_t data_len)
  */
 #define DELTA_EPOCH_IN_USEC  U64_SUFFIX (11644473600000000)
 
-uint64 FileTimeToUnixEpoch (const FILETIME *ft)
+uint64 FILETIME_to_unix_epoch (const FILETIME *ft)
 {
   uint64 res = (uint64) ft->dwHighDateTime << 32;
 
@@ -1427,6 +1510,11 @@ uint64 FileTimeToUnixEpoch (const FILETIME *ft)
   res /= 10;                   /* from 100 nano-sec periods to usec */
   res -= DELTA_EPOCH_IN_USEC;  /* from Win epoch to Unix epoch */
   return (res);
+}
+
+time_t FILETIME_to_time_t (const FILETIME *ft)
+{
+   return (FILETIME_to_unix_epoch (ft) / U64_SUFFIX(1000000));
 }
 
 static void _gettimeofday (struct pcap_timeval *tv)
@@ -1441,7 +1529,7 @@ static void _gettimeofday (struct pcap_timeval *tv)
 #endif
     GetSystemTimeAsFileTime (&ft);
 
-  tim = FileTimeToUnixEpoch (&ft);
+  tim = FILETIME_to_unix_epoch (&ft);
   tv->tv_sec  = (DWORD) (tim / 1000000L);
   tv->tv_usec = (DWORD) (tim % 1000000L);
 }
