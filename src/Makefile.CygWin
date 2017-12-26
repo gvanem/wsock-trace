@@ -1,8 +1,7 @@
 #
-# Wsock-trace makefile for Cygwin32.
-# Note: CygWin64 is NOT supported.
+# Wsock-trace makefile for Cygwin32 / CygWin64.
 #
-# G. Vanem <gvanem@yahoo.no> 2011.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2017.
 #
 
 USE_DEBUG       = 1
@@ -29,7 +28,7 @@ ifeq ($(USE_BFD),1)
 endif
 
 ifeq ($(USE_IP2LOCATION),1)
-  CFLAGS += -DUSE_IP2LOCATION
+  CFLAGS += -DUSE_IP2LOCATION -I../IP2Location-C-Library/libIP2Location
 endif
 
 EX_LIBS += -lole32
