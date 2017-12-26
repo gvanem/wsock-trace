@@ -85,18 +85,18 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -wddd www.seoghør.no
 
 artifacts:
-#
-# Needed for cross-compiling
-#
+  #
+  # Needed for cross-compiling
+  #
   - path: 'src\geoip-gen*.c'
-# To push all *.zip/exe... files.
+  # To push all *.zip/exe... files.
   - path: '**\*.dll'
   - path: '**\*.lib'
   - path: '**\*.a'
   - path: '**\*.exe'
-#
-# WIP: Push the entire wsock-trace-{build} folder as a single zip archive.
-#
+  #
+  # WIP: Push the entire wsock-trace-{build} folder as a single zip archive.
+  #
   - path: wsock-trace-{build}
 
 #
