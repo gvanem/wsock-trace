@@ -36,8 +36,8 @@ environment:
     - BUILDER: mingw
       CPU:     x64
       MSYSTEM: MINGW64
-#   - BUILDER: cygwin
-#     CPU:     x64
+    - BUILDER: cygwin
+      CPU:     x64
 
 matrix:
 #
