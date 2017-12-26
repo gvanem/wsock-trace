@@ -682,10 +682,13 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 }
 
 /*
- * These are static here to get the location (city and region) later on.
+ * This is global here to get the location (city and region) later on.
  */
-static struct ip2loc_entry ip2loc_entry;
-static BOOL   ip2loc_entry_good = FALSE;
+static struct ip2loc_entry g_ip2loc_entry;
+
+#define IP2LOC_IS_GOOD()  (g_ip2loc_entry.country_short[0] >= 'A' && \
+                           g_ip2loc_entry.country_short[0] <= 'Z')
+#define IP2LOC_SET_BAD()  g_ip2loc_entry.country_short[0] = '\0'
 
 /*
  * Given an IPv4 address on network order, return an ISO-3166 2 letter
@@ -700,27 +703,27 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   char     buf [25];
   unsigned num;
 
-  ip2loc_entry_good = FALSE;
+  IP2LOC_SET_BAD();
+  num_4_compare = 0;
 
   wsock_trace_inet_ntop4 ((const u_char*)addr, buf, sizeof(buf));
 
 #ifdef USE_IP2LOCATION
   num = ip2loc_num_ipv4_entries();
-  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
+  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
 
-  if (num > 0 && geoip_addr_is_global(addr,NULL) && ip2loc_get_entry(buf, &ip2loc_entry))
+  if (num > 0 && geoip_addr_is_global(addr,NULL) && ip2loc_get_entry(buf, &g_ip2loc_entry))
   {
-    ip2loc_entry_good = TRUE;
     if (g_cfg.trace_report)
-       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_VIA_IP2LOC);
-    return (ip2loc_entry.country_short);
+       geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_VIA_IP2LOC);
+    return (g_ip2loc_entry.country_short);
   }
 
   /* IP2LOCATION lookup failed. Fallback to a geoip lookup below.
    */
 #else
   num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
-  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
+  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
 #endif
 
   if (geoip_ipv4_entries)
@@ -749,24 +752,24 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   char     buf [MAX_IP6_SZ];
   unsigned num;
 
-  ip2loc_entry_good = FALSE;
+  IP2LOC_SET_BAD();
+  num_6_compare = 0;
 
   wsock_trace_inet_ntop6 ((const u_char*)addr, buf, sizeof(buf));
 
 #ifdef USE_IP2LOCATION
   num = ip2loc_num_ipv6_entries();
-  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
+  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
 
-  if (num > 0 && geoip_addr_is_global(NULL,addr) && ip2loc_get_entry(buf, &ip2loc_entry))
+  if (num > 0 && geoip_addr_is_global(NULL,addr) && ip2loc_get_entry(buf, &g_ip2loc_entry))
   {
-    ip2loc_entry_good = TRUE;
     if (g_cfg.trace_report)
-       geoip_stats_update (ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_VIA_IP2LOC);
-    return (ip2loc_entry.country_short);
+       geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_VIA_IP2LOC);
+    return (g_ip2loc_entry.country_short);
   }
 #else
   num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
-  TRACE (5, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n",  buf, num);
+  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n",  buf, num);
 #endif
 
   if (geoip_ipv6_entries)
@@ -789,10 +792,9 @@ const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
 {
   static char buf [100];
 
-  if (ip2loc_entry_good)
+  if (IP2LOC_IS_GOOD())
   {
-    ip2loc_entry_good = FALSE;
-    snprintf (buf, sizeof(buf), "%s/%s", ip2loc_entry.city, ip2loc_entry.region);
+    snprintf (buf, sizeof(buf), "%s/%s", g_ip2loc_entry.city, g_ip2loc_entry.region);
     return (buf);
   }
   ARGSUSED (ip4);
@@ -808,10 +810,9 @@ const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
 {
   static char buf [100];
 
-  if (ip2loc_entry_good)
+  if (IP2LOC_IS_GOOD())
   {
-    ip2loc_entry_good = FALSE;
-    snprintf (buf, sizeof(buf), "%s/%s", ip2loc_entry.city, ip2loc_entry.region);
+    snprintf (buf, sizeof(buf), "%s/%s", g_ip2loc_entry.city, g_ip2loc_entry.region);
     return (buf);
   }
   ARGSUSED (ip6);
@@ -1202,7 +1203,7 @@ static void geoip_stats_init (void)
     geoip_stats_buf[i].country[0] = toupper (c_A2[0]);
     geoip_stats_buf[i].country[1] = toupper (c_A2[1]);
   }
-  TRACE (2, "Allocated %u bytes for geoip_stats_buf needed for %d countries.\n",
+  TRACE (2, "Allocated %u bytes for geoip_stats_buf needed for %u countries.\n",
          (unsigned)size, (unsigned)num);
 }
 
@@ -1382,7 +1383,7 @@ static const char *wininet_strerror (DWORD err)
 }
 
 /**
- * Download a file from url using dynamcally load functions
+ * Download a file from url using dynamcally loaded functions
  * from wininet.dll.
  *
  * \param[in] file the file to write to.
@@ -1859,74 +1860,128 @@ static void dump_num_ip_blocks_by_country (void)
   puts ("");
 }
 
-static void test_addr4 (const char *ip4_addr)
+#ifdef USE_IP2LOCATION
+/*
+ * Get the region/city from the last successful call to either
+ * 'geoip_get_country_by_ipv4()' or 'geoip_get_country_by_ipv6()'.
+ *
+ * Just mimick the code in 'geoip_get_location_by_ipvX()' here
+ * as those functions doesn't use it's 'struct in_addr *' and
+ * 'struct in6_addr *' arguments.
+ */
+static const char *get_location (void)
 {
-  struct in_addr addr;
-  const char    *remark = NULL;
+  static char buf[110];
 
-  printf ("%s(): ", __FUNCTION__);
-  num_4_compare = 0;
+  if (IP2LOC_IS_GOOD())
+       snprintf (buf, sizeof(buf), "loc: %s/%s", g_ip2loc_entry.city, g_ip2loc_entry.region);
+  else strcpy (buf, "loc: <unknown>");
+  return (buf);
+}
+#endif
 
-  if (wsock_trace_inet_pton4((const char*)ip4_addr, (u_char*)&addr) == 1)
+/*
+ * Common code for testing an IPv4 or IPv6 address.
+ */
+static void test_addr_common (const struct in_addr  *a4,
+                              const struct in6_addr *a6,
+                              BOOL use_ip2loc)
+{
+  const char *location = NULL;
+  const char *comment  = NULL;
+  const char *remark   = NULL;
+  const char *cc;
+  int   save, flag, len, width = 0;
+  char  buf1 [100];
+  char  buf2 [100];
+
+  /* Start the timing now. Print the delta-time at the end.
+   */
+  get_timestamp2();
+
+  /* Needed for 'geoip_stats_update()' and the "unique" counter to work
+   */
+  save = g_cfg.trace_report;
+  g_cfg.trace_report = 1;
+
+  cc = (a4 ? geoip_get_country_by_ipv4(a4) :
+             geoip_get_country_by_ipv6(a6));
+
+  flag = (a4 ? GEOIP_STAT_IPV4 : GEOIP_STAT_IPV6);
+
+  g_cfg.trace_report = save;
+
+  if (cc && *cc != '-')
   {
-    const char *comment = "";
-    const char *cc = geoip_get_country_by_ipv4 (&addr);
+#ifdef USE_IP2LOCATION
+    if (use_ip2loc)
+    {
+      width = 40;
+      location = get_location();
+    }
+#endif
 
-    if (cc && *cc)
-    {
-      printf ("cc: %s, %-30s unique: %d, ",
-              cc, geoip_get_long_name_by_A2(cc), geoip_stats_is_unique(cc,GEOIP_STAT_IPV4));
-    }
-    else
-    {
-      if (geoip_addr_is_zero(&addr,NULL))
-         comment = "NULL-addr";
-      else if (geoip_addr_is_multicast(&addr,NULL))
-         comment = "Multicast";
-      else if (geoip_addr_is_special(&addr,NULL,&remark))
-         comment = "Special";
-      else if (!geoip_addr_is_global(&addr,NULL))
-         comment = "Not global";
-    }
-    printf ("%lu compares. %s. %s\n", num_4_compare, comment, remark ? remark : "");
+    /* Longest name from 'geoip_get_long_name_by_A2()' is
+     * "United States Minor Outlying Islands". 36 characters.
+     * Truncate to 20 thus becoming "United States Minor".
+     */
+    snprintf (buf1, sizeof(buf1),
+              "%-2s, %-20.20s %-*.*s",
+              cc, geoip_get_long_name_by_A2(cc), width, width, location);
+    snprintf (buf2, sizeof(buf2), "unique: %d", geoip_stats_is_unique(cc,flag));
   }
   else
-    printf ("Invalid address: %s.\n", get_ws_error());
+  {
+    if (geoip_addr_is_zero(a4,a6))
+       comment = "NULL-addr";
+    else if (geoip_addr_is_multicast(a4,a6))
+       comment = "Multicast";
+    else if (geoip_addr_is_special(a4,a6,&remark))
+       comment = "Special";
+    else if (!geoip_addr_is_global(a4,a6))
+       comment = "Not global";
+    else
+       comment = "Unallocated?";
+
+    if (remark)
+         snprintf (buf1, sizeof(buf1), "%s (%s)", comment, remark);
+    else snprintf (buf1, sizeof(buf1), "%s", comment);
+
+    if (a4 && geoip_ipv4_entries)
+         snprintf (buf2, sizeof(buf2), "%lu compares", num_4_compare);
+    else if (a6 && geoip_ipv6_entries)
+         snprintf (buf2, sizeof(buf2), "%lu compares", num_6_compare);
+    else strcpy (buf2, "??");
+  }
+
+#ifdef USE_IP2LOCATION
+  width = 60;
+#else
+  width = 29;
+#endif
+
+  if (!use_ip2loc)
+     width = 29;
+
+  printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
 }
 
-static void test_addr6 (const char *ip6_addr)
+static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
+{
+  struct in_addr addr;
+
+  if (wsock_trace_inet_pton4((const char*)ip4_addr, (u_char*)&addr) == 1)
+       test_addr_common (&addr, NULL, use_ip2loc);
+  else printf ("'%s': Invalid address: %s.\n", ip4_addr, get_ws_error());
+}
+
+static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
 {
   struct in6_addr addr;
-  const char     *remark = NULL;
-
-  printf ("%s(): ", __FUNCTION__);
-  num_6_compare = 0;
 
   if (wsock_trace_inet_pton6(ip6_addr,(u_char*)&addr) == 1)
-  {
-    const char *comment = "";
-    const char *cc = geoip_get_country_by_ipv6 (&addr);
-
-    if (cc && *cc)
-    {
-      printf ("cc: %s, %-30s unique: %d, ",
-              cc, geoip_get_long_name_by_A2(cc), geoip_stats_is_unique(cc,GEOIP_STAT_IPV6));
-    }
-    else
-    {
-      if (geoip_addr_is_zero(NULL,&addr))
-         comment = "NULL-addr";
-      else if (geoip_addr_is_multicast(NULL,&addr))
-         comment = "Multicast";
-      else if (geoip_addr_is_special(NULL,&addr,&remark))
-         comment = "Special";
-      else if (!geoip_addr_is_global(NULL,&addr))
-         comment = "Not global";
-    }
-    printf ("%lu compares. %s %s\n", num_6_compare, comment, remark ? remark : "");
-  }
-  else
-    printf ("Invalid address: %s.\n", get_ws_error());
+       test_addr_common (NULL, &addr, use_ip2loc);
+  else printf ("Invalid address: %s.\n", get_ws_error());
 }
 
 static int geoip_generate_array (int family, const char *out_file)
@@ -1992,7 +2047,7 @@ static int geoip_generate_array (int family, const char *out_file)
  * A random integer in range [a..b].
  *   http://stackoverflow.com/questions/2509679/how-to-generate-a-random-number-from-within-a-range
  */
-unsigned int static randr (unsigned int min, unsigned int max)
+unsigned int static rand_range (unsigned int min, unsigned int max)
 {
   double scaled = (double) rand()/RAND_MAX;
   return (unsigned int) ((max - min + 1) * scaled) + min;
@@ -2007,40 +2062,50 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 
   if (addr4)
   {
-    addr4->S_un.S_un_b.s_b1 = randr (1,255);
-    addr4->S_un.S_un_b.s_b2 = randr (1,255);
-    addr4->S_un.S_un_b.s_b3 = randr (1,255);
-    addr4->S_un.S_un_b.s_b4 = randr (1,255);
+    addr4->S_un.S_un_b.s_b1 = rand_range (1,255);
+    addr4->S_un.S_un_b.s_b2 = rand_range (1,255);
+    addr4->S_un.S_un_b.s_b3 = rand_range (1,255);
+    addr4->S_un.S_un_b.s_b4 = rand_range (1,255);
   }
   if (addr6)
   {
     addr6->s6_words[0] = swap16 (0x2001); /* Since most IPv6 addr has this prefix */
     for (i = 1; i < 8; i++)
-        addr6->s6_words[i] = randr (0,0xFFFF);
+        addr6->s6_words[i] = rand_range (0,0xFFFF);
   }
 }
 
 static void show_help (const char *my_name)
 {
-  printf ("Usage: %s [-cdfGnruh] [-g file] <-4|-6> address(es)\n"
+#ifdef USE_IP2LOCATION
+  #define I_OPT   "i"
+  #define I_HELP  "       -i:      do no use the IP2Location database.\n"
+#else
+  #define I_OPT   ""
+  #define I_HELP  ""
+#endif
+
+  printf ("Usage: %s [-cdfG%snruh] [-g file] <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
           "       -d:      dump address entries for countries and count of blocks.\n"
           "       -f:      force an update with the '-u' option.\n"
-          "       -G:      Use generated built-in IPv4/IPv6 arrays.\n"
+          "       -G:      use generated built-in IPv4/IPv6 arrays.\n"
           "       -g file: generate IPv4/IPv6 tables to <file> (or '-' for stdout).\n"
+          "%s"
           "       -n #:    number of loops for random test.\n"
           "       -r:      random test for '-n' rounds (default 10).\n"
           "       -u:      test updating of geoip files.\n"
           "       -4:      test IPv4 address(es).\n"
           "       -6:      test IPv6 address(es).\n"
-          "       -h:      this help.\n", my_name);
+          "       -h:      this help.\n",
+          my_name, I_OPT, I_HELP);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\"\n");
   wsock_trace_exit();
   exit (0);
 }
 
-static void rand_test_addr4 (int loops)
+static void rand_test_addr4 (int loops, BOOL use_ip2loc)
 {
   DWORD num_ip4;
   int   i;
@@ -2055,13 +2120,13 @@ static void rand_test_addr4 (int loops)
     make_random_addr (&addr, NULL);
     wsock_trace_inet_ntop4 ((const u_char*)&addr, buf, sizeof(buf));
     printf ("%-15s: ", buf);
-    test_addr4 (buf);
+    test_addr4 (buf, use_ip2loc);
   }
   geoip_num_unique_countries (&num_ip4, NULL, NULL, NULL);
   printf ("# of unique IPv4 countries: %lu\n", num_ip4);
 }
 
-static void rand_test_addr6 (int loops)
+static void rand_test_addr6 (int loops, BOOL use_ip2loc)
 {
   DWORD num_ip6;
   int   i;
@@ -2076,7 +2141,7 @@ static void rand_test_addr6 (int loops)
     make_random_addr (NULL, &addr);
     wsock_trace_inet_ntop6 ((const u_char*)&addr, buf, sizeof(buf));
     printf ("%-40s: ", buf);
-    test_addr6 (buf);
+    test_addr6 (buf, use_ip2loc);
   }
   geoip_num_unique_countries (NULL, &num_ip6, NULL, NULL);
   printf ("# of unique IPv6 countries: %lu\n", num_ip6);
@@ -2086,11 +2151,14 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
 {
   while (f && !feof(f))
   {
-    char buf[512];
+    char buf[512], *p;
 
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
        break;
-    strip_nl (buf);
+
+//  strip_nl (buf);
+    while ((p = strpbrk(buf, " \r\n#;")) != NULL)  /* Remove blanks, newlines or comments */
+       *p = '\0';
     smartlist_add (list, strdup(buf));
   }
   if (f && f != stdin)
@@ -2107,10 +2175,8 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
      return read_file (stdin, list);
 
   if (_argc > 0 && _argv[0][0] == '@')
-  {
-    const char *p = _argv[0] + 1;
-    return read_file (fopen(p,"rt"), list);
-  }
+     return read_file (fopen(_argv[0]+1,"rt"), list);
+
   for (i = 0; i < _argc; i++)
       smartlist_add (list, strdup(_argv[i]));
   return (list);
@@ -2149,6 +2215,7 @@ int main (int argc, char **argv)
 {
   int c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
   int do_update = 0, do_dump = 0, do_rand = 0, do_generate = 0;
+  int use_ip2loc = 1;
   int loops = 10;
   int rc = 0;
   const char *my_name = argv[0];
@@ -2157,7 +2224,7 @@ int main (int argc, char **argv)
   wsock_trace_init();
   g_cfg.trace_use_ods = FALSE;
 
-  while ((c = getopt (argc, argv, "h?cdfGg:n:ru46")) != EOF)
+  while ((c = getopt (argc, argv, "h?cdfGg:" I_OPT "n:ru46")) != EOF)
     switch (c)
     {
       case '?':
@@ -2182,6 +2249,10 @@ int main (int argc, char **argv)
            g_cfg.geoip_use_generated = TRUE;
            geoip_load_data (AF_INET);
            geoip_load_data (AF_INET6);
+           geoip_stats_init();
+           break;
+      case 'i':
+           use_ip2loc = 0;
            break;
       case 'n':
            loops = atoi (optarg);
@@ -2202,6 +2273,10 @@ int main (int argc, char **argv)
 
   if (!do_4 && !do_6)
      show_help (my_name);
+
+  /* Possibly call 'ip2loc_init()' again.
+   */
+  use_ip2loc ? ip2loc_init() : ip2loc_exit();
 
   if (do_update)
   {
@@ -2243,22 +2318,37 @@ int main (int argc, char **argv)
   if (do_rand)
   {
     if (do_4)
-       rand_test_addr4 (loops);
+       rand_test_addr4 (loops, use_ip2loc);
     if (do_6)
-       rand_test_addr6 (loops);
+       rand_test_addr6 (loops, use_ip2loc);
   }
   else
   {
     smartlist_t *list = make_argv_list (argc, argv);
     int          i, max = smartlist_len (list);
+    DWORD        num;
 
     if (do_4)
-       for (i = 0; i < max; i++)
-           test_addr4 (smartlist_get(list, i));
+    {
+      for (i = 0; i < max; i++)
+          test_addr4 (smartlist_get(list, i), use_ip2loc);
+      if (max > 1)
+      {
+        geoip_num_unique_countries (&num, NULL, NULL, NULL);
+        printf ("# of unique IPv4 countries: %lu\n", num);
+      }
+    }
 
     if (do_6)
-       for (i = 0; i < max; i++)
-           test_addr6 (smartlist_get(list, i));
+    {
+      for (i = 0; i < max; i++)
+           test_addr6 (smartlist_get(list, i), use_ip2loc);
+      if (max > 1)
+      {
+        geoip_num_unique_countries (NULL, &num, NULL, NULL, NULL);
+        printf ("# of unique IPv6 countries: %lu\n", num);
+      }
+    }
 
     free_argv_list (list);
   }
