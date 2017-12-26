@@ -24,7 +24,7 @@ environment:
   global:
     # CFLAGS: '-Wall --coverage'
     # LDFLAGS: '-lgcov --coverage'
-    CL: /nologo /MP
+    CL: -nologo -MP
   matrix:
     - BUILDER: msvc
       CPU:     x86
@@ -40,35 +40,41 @@ environment:
       CPU:     x64
 
 matrix:
-#
-# Immediately finish build if one of the above jobs fails.
-#
+  #
+  # Immediately finish build if one of the above jobs fails.
+  #
   fast_finish: true
   allow_failures:
     - BUILDER: cygwin
       CPU:     x64
 
 #
-# XXX - WIP
 # Get better version string. Maybe output of "git describe --tags --long"
 #
 cache:
   - wsock-trace-{build}
 
 install:
+  #
   # clone the submodules
+  #
   - cmd: git submodule update --init --recursive
 
+  #
   # add a few locations to our path
+  #
   - cmd: set PATH=%CD%\src;%PATH%
   - cmd: if "%BUILDER%"=="mingw"  set PATH=C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
   - cmd: if "%BUILDER%"=="cygwin" set PATH=C:\msys64\usr\bin;%PATH%
 
+  #
   # set compiler environment
+  #
   - cmd: if "%BUILDER%"=="msvc" call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
 
-  # Download COUNTRY Database.
-  # XXX - Encrypt URL! See https://www.appveyor.com/docs/build-configuration/#secure-variables
+  #
+  # Download IP2Loca Database and the 'xz' program to decompress it.
+  #
   - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP4-COUNTRY.BIN.xz
   - cmd: 7z.exe x IP4-COUNTRY.BIN.xz > NUL
 
@@ -89,10 +95,6 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
 
 artifacts:
-  #
-  # Needed for cross-compiling
-  #
-  - path: 'src\geoip-gen*.c'
   # To push all *.zip/exe... files.
   - path: '**\*.dll'
   - path: '**\*.lib'
@@ -104,23 +106,23 @@ artifacts:
   - path: wsock-trace-{build}
 
 #
-# XXX - One day...
+# One day...
 #
 # deploy:
-  # Deploying to NuGet feed
-  # - provider: NuGet
-    # server: https://my.nuget.server/feed
-    # api_key:
-      # secure: FYWX6NfjZIVw==
-    # skip_symbols: false
-    # symbol_server: https://your.symbol.server/feed
-    # artifact: MyPackage.nupkg
+#   Deploying to NuGet feed
+#   - provider: NuGet
+#     server: https://my.nuget.server/feed
+#     api_key:
+#       secure: FYWX6NfjZIVw==
+#     skip_symbols: false
+#     symbol_server: https://your.symbol.server/feed
+#     artifact: MyPackage.nupkg
 
-  # Deploy to GitHub Releases
-  # - provider: GitHub
-    # artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
-    # draft: false
-    # prerelease: false
-    # on:
-      # branch: master                # release from master branch only
-      # appveyor_repo_tag: true       # deploy on tag push only
+#   Deploy to GitHub Releases
+#   - provider: GitHub
+#     artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
+#     draft: false
+#     prerelease: false
+#     on:
+#       branch: master                # release from master branch only
+#       appveyor_repo_tag: true       # deploy on tag push only
