@@ -12,7 +12,7 @@ USE_DEF_FILE  = 0
 #
 # Use the IP2Location library?
 #
-USE_IP2LOCATION ?= 0
+USE_IP2LOCATION ?= 1
 IP2LOCATION_ROOT = ../IP2Location-C-Library
 
 #
@@ -75,10 +75,6 @@ endif
 
 ifeq ($(USE_IP2LOCATION),1)
   CFLAGS += -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
-endif
-
-ifeq ($(USER),AppVeyor)
-  CFLAGS += -DAPPVEYOR_BUILD
 endif
 
 ifeq ($(USE_BFD),1)
