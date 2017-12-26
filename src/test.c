@@ -15,6 +15,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <wchar.h>
 #include <tchar.h>
 #include <malloc.h>
 #include <windows.h>
@@ -39,9 +40,26 @@
   #define USE_WSAPoll 0
 #endif
 
+/*
+ * To fix the warnings for the use of "%lu" with a DWORD-arg.
+ * Or warnings with "%ld" and an 'int' argument.
+ * Especially noisy for 'x64' builds since CygWin is a LP64-platform:
+ *   https://en.wikipedia.org/wiki/64-bit_computing
+ */
+#if defined(__CYGWIN__)
+  #define DWORD_CAST(x)   ((unsigned long)(x))
+  #define LONG_CAST(x)    ((long int)(x))
+
+#else
+  #define DWORD_CAST(x)   x
+  #define LONG_CAST(x)    x
+#endif
+
+
 #if defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
   #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
+  #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 
   /* Because of warning:
    *   test.c:46:14: warning: 'inet_pton' redeclared without dllimport attribute:
@@ -435,8 +453,7 @@ static void test_select (void)
 
 static void test_select2 (void)
 {
-  int    i;
-  struct timeval  tv = { 1, 1 };
+  int i;
   struct {
          u_int  fd_count;
          SOCKET fd_array [FD_SETSIZE];
@@ -613,7 +630,7 @@ static void thread_sub_func (const struct thr_data *td)
    */
   WSASetLastError (td->t_err);
 
-  printf ("In %s thread (%lu)\n", td->t_name, td->t_id);
+  printf ("In %s thread (%lu)\n", td->t_name, DWORD_CAST(td->t_id));
 
   TEST_CONDITION (== td->t_err, WSAGetLastError());
   fflush (stdout);
