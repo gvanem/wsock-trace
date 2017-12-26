@@ -151,21 +151,6 @@
   #define LONG_CAST(x)    x
 #endif
 
-/*
- * To fix the warnings for the use of "%lu" with a DWORD-arg.
- * Or warnings with "%ld" and an 'int' argument.
- * Especially noisy for 'x64' builds since CygWin is a LP64-platform:
- *   https://en.wikipedia.org/wiki/64-bit_computing
- */
-#if defined(__CYGWIN__)
-  #define DWORD_CAST(x)  ((unsigned long)(x))
-  #define LONG_CAST(x)   ((long int)(x))
-
-#else
-  #define DWORD_CAST(x)  x
-  #define LONG_CAST(x)   x
-#endif
-
 
 /*
  * Printing an hex linear address.
