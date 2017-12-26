@@ -106,6 +106,12 @@ static void set_time_format (TS_TYPE *ret, const char *val)
 /*
  * Return the prefered time-stamp string.
  */
+#if (defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 11)) /* Not sure about this value */
+  #define HAVE_FMODL
+#elif !defined(__WATCOMC__)
+  #define HAVE_FMODL
+#endif
+
 const char *get_timestamp (void)
 {
   static LARGE_INTEGER last = { S64_SUFFIX(0) };
@@ -130,7 +136,7 @@ const char *get_timestamp (void)
          last = ticks;
          msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
 
-#if defined(__CYGWIN__) || defined(__WATCOMC__)  /* These doesn't seems to have 'fmodl()' */
+#if !defined(HAVE_FMODL)    /* If no 'fmodl()', fake it */
          sprintf (buf, "%.3f msec: ", msec);
 #else
          {
