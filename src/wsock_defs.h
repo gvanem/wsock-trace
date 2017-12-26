@@ -15,8 +15,16 @@
   #include <sys/stat.h>
   #include <unistd.h>
   #include <limits.h>
+  #include <wchar.h>
 
+  #if defined(__x86_64__) && !defined(_WIN64)
+  #define _WIN64 1
+  #endif
+
+  #if !defined(_MAX_PATH)
   #define _MAX_PATH   _POSIX_PATH_MAX   /* 256 */
+  #endif
+
 #else
   #include <conio.h>
 #endif
@@ -150,12 +158,12 @@
  *   https://en.wikipedia.org/wiki/64-bit_computing
  */
 #if defined(__CYGWIN__)
-  #define DWORD_CAST(x)   ((unsigned long)(x))
-  #define LONG_CAST(x)    ((long int)(x))
+  #define DWORD_CAST(x)  ((unsigned long)(x))
+  #define LONG_CAST(x)   ((long int)(x))
 
 #else
-  #define DWORD_CAST(x)   x
-  #define LONG_CAST(x)    x
+  #define DWORD_CAST(x)  x
+  #define LONG_CAST(x)   x
 #endif
 
 
@@ -183,9 +191,10 @@
   /*
    * A 'SOCKET' is defined as 'unsigned long long' on Win64.
    * But we hardly ever need to print all bits. Just cast to
-   * silence MinGW-w64.
+   * silence MinGW-w64 / CygWin64.
    */
   #define SOCKET_CAST(s)  ((unsigned int)(s))
+
 #else    /* WIN32 */
   #define ADDR_FMT        "08lX"
   #define ADDR_CAST(x)    ((DWORD_PTR)(x))   /* "cl -Wp64" warns here. Ignore it. */
