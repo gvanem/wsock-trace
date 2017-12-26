@@ -1004,13 +1004,13 @@ struct config_table g_cfg;
   #define W_HELP   ""
 #endif
 
-void usage (void)
+void usage (const char *argv0)
 {
   printf ("%s [-d] %s[-c CP-number] hostname | ip-address\n"
           "   -d debug level, \"-dd\" for more details\n"
           "%s"
           "   -c select codepage (active is CP%d)\n",
-          __argv[0], W_OPT, W_HELP, IDNA_GetCodePage());
+          argv0, W_OPT, W_HELP, IDNA_GetCodePage());
   exit (0);
 }
 
@@ -1142,14 +1142,14 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            usage();
+            usage (argv[0]);
             break;
   }
 
   argc -= optind;
   argv += optind;
   if (!*argv)
-     usage();
+     usage (argv[0]);
 
   sock_init();
   common_init();
