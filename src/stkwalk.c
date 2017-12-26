@@ -51,20 +51,8 @@
 #include <tlhelp32.h>
 #include <imagehlp.h>
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 #include <assert.h>
-
-#if defined(__CYGWIN__)
-  #include <unistd.h>
-#else
-  #include <conio.h>
-#endif
-
-#if defined(__WATCOMC__) || defined(__MINGW32__)
-  #include <stdint.h>   /* 'uintptr_t' */
-#endif
 
 #include "common.h"
 #include "init.h"

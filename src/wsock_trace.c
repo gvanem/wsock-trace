@@ -31,10 +31,10 @@
 #include "bfd_gcc.h"
 #include "in_addr.h"
 #include "init.h"
-#include "dump.h"
 #include "cpu.h"
 #include "stkwalk.h"
 #include "overlap.h"
+#include "dump.h"
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
@@ -56,12 +56,6 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
   static void test_get_caller (const void *from);
 #endif
 
-#if defined(WIN64) || defined(_WIN64)
-  #define SOCK_RC_TYPE SOCKET
-#else
-  #define SOCK_RC_TYPE unsigned
-#endif
-
 /*
  * All 'p_function' pointers below are checked before use with this
  * macro. 'init_ptr()' makes sure 'wsock_trace_init()' is called once
@@ -71,33 +65,6 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
   #define INIT_PTR(ptr)    /* */
 #else
   #define INIT_PTR(ptr) init_ptr ((const void**)&ptr, #ptr)
-#endif
-
-/*
- * There is some difference between some Winsock prototypes in MS-SDK's
- * versus MinGW-w64/MinGW-TDM headers. This is to fit the 'const struct timeval*'
- * parameter in 'select()' etc.
- */
-#if defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)
-  #define CONST_PTIMEVAL   const PTIMEVAL
-#else
-  #define CONST_PTIMEVAL   const struct timeval *
-#endif
-
-/*
- * More hacks for string parameters to 'WSAConnectByNameA()'. According to
- * MSDN:
- *   https://msdn.microsoft.com/en-us/library/windows/desktop/ms741557(v=vs.85).aspx
- *
- * they want an 'LPSTR' for 'node_name' and 'service_name'. Hence so does MinGW.
- * But the <winsock2.h> in the WindowsKit wants an 'LPCSTR'.
- *
- * Funny enough, 'WSAConnectByNameW()' doesn't want a 'const wide-string'.
- */
-#if defined(_MSC_VER) && defined(_CRT_BEGIN_C_HEADER)
-  #define CONST_LPSTR  LPCSTR
-#else
-  #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
 #endif
 
 /*
@@ -179,30 +146,30 @@ static void wstrace_printf (BOOL first_line,
 #define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
                                 static func_##f  p_##f = NULL
 
-DEF_FUNC (SOCKET,  socket,      (int family, int type, int protocol));
-DEF_FUNC (SOCKET,  accept,      (SOCKET s, struct sockaddr *addr, int *addr_len));
-DEF_FUNC (int,     bind,        (SOCKET s, const struct sockaddr *addr, int addr_len));
-DEF_FUNC (int,     shutdown,    (SOCKET s, int how));
-DEF_FUNC (int,     closesocket, (SOCKET s));
-DEF_FUNC (int,     connect,     (SOCKET s, const struct sockaddr *addr, int addr_len));
-DEF_FUNC (int,     ioctlsocket, (SOCKET s, long opt, u_long *arg));
-DEF_FUNC (int,     select,      (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, CONST_PTIMEVAL timeout));
-DEF_FUNC (int,     listen,      (SOCKET s, int backlog));
-DEF_FUNC (int,     recv,        (SOCKET s, char *buf, int buf_len, int flags));
-DEF_FUNC (int,     recvfrom,    (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len));
-DEF_FUNC (int,     send,        (SOCKET s, const char *buf, int buf_len, int flags));
-DEF_FUNC (int,     sendto,      (SOCKET s, const char *buf, int buf_len, int flags, const struct sockaddr *to, int to_len));
-DEF_FUNC (int,     setsockopt,  (SOCKET s, int level, int opt, const char *opt_val, int opt_len));
-DEF_FUNC (int,     getsockopt,  (SOCKET s, int level, int opt, char *opt_val, int *opt_len));
-DEF_FUNC (int,     gethostname, (char *buf, int buf_len));
-DEF_FUNC (int,     getpeername, (SOCKET s, struct sockaddr *name, int *namelen));
-DEF_FUNC (int,     getsockname, (SOCKET s, struct sockaddr *name, int *namelen));
-DEF_FUNC (u_short, htons,       (u_short x));
-DEF_FUNC (u_short, ntohs,       (u_short x));
-DEF_FUNC (u_long,  htonl,       (u_long x));
-DEF_FUNC (u_long,  ntohl,       (u_long x));
-DEF_FUNC (u_long,  inet_addr,   (const char *addr));
-DEF_FUNC (char *,  inet_ntoa,   (struct in_addr addr));
+DEF_FUNC (SOCKET,      socket,      (int family, int type, int protocol));
+DEF_FUNC (SOCKET,      accept,      (SOCKET s, struct sockaddr *addr, int *addr_len));
+DEF_FUNC (int,         bind,        (SOCKET s, const struct sockaddr *addr, int addr_len));
+DEF_FUNC (int,         shutdown,    (SOCKET s, int how));
+DEF_FUNC (int,         closesocket, (SOCKET s));
+DEF_FUNC (int,         connect,     (SOCKET s, const struct sockaddr *addr, int addr_len));
+DEF_FUNC (int,         ioctlsocket, (SOCKET s, __LONG32 opt, __ms_u_long *arg));
+DEF_FUNC (int,         select,      (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, CONST_PTIMEVAL timeout));
+DEF_FUNC (int,         listen,      (SOCKET s, int backlog));
+DEF_FUNC (int,         recv,        (SOCKET s, char *buf, int buf_len, int flags));
+DEF_FUNC (int,         recvfrom,    (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len));
+DEF_FUNC (int,         send,        (SOCKET s, const char *buf, int buf_len, int flags));
+DEF_FUNC (int,         sendto,      (SOCKET s, const char *buf, int buf_len, int flags, const struct sockaddr *to, int to_len));
+DEF_FUNC (int,         setsockopt,  (SOCKET s, int level, int opt, const char *opt_val, int opt_len));
+DEF_FUNC (int,         getsockopt,  (SOCKET s, int level, int opt, char *opt_val, int *opt_len));
+DEF_FUNC (int,         gethostname, (char *buf, int buf_len));
+DEF_FUNC (int,         getpeername, (SOCKET s, struct sockaddr *name, int *namelen));
+DEF_FUNC (int,         getsockname, (SOCKET s, struct sockaddr *name, int *namelen));
+DEF_FUNC (u_short,     htons,       (u_short x));
+DEF_FUNC (u_short,     ntohs,       (u_short x));
+DEF_FUNC (__ms_u_long, htonl,       (__ms_u_long x));
+DEF_FUNC (__ms_u_long, ntohl,       (__ms_u_long x));
+DEF_FUNC (__ULONG32,   inet_addr,   (const char *addr));
+DEF_FUNC (char *,      inet_ntoa,   (struct in_addr addr));
 
 DEF_FUNC (struct servent *,  getservbyport,    (int port, const char *proto));
 DEF_FUNC (struct servent *,  getservbyname,    (const char *serv, const char *proto));
@@ -248,12 +215,12 @@ DEF_FUNC (BOOL,     WSAResetEvent,  (WSAEVENT));
 
 DEF_FUNC (int, WSAEventSelect, (SOCKET   s,
                                 WSAEVENT hnd,
-                                long     net_ev));
+                                __LONG32 net_ev));
 
 DEF_FUNC (int, WSAAsyncSelect, (SOCKET       s,
                                 HWND         wnd,
                                 unsigned int msg,
-                                long         net_ev));
+                                __LONG32     net_ev));
 
 DEF_FUNC (int, WSARecv, (SOCKET                             s,
                          WSABUF                            *bufs,
@@ -531,6 +498,8 @@ void load_ws2_funcs (void)
 
   if (p_inet_ntop == NULL)
       p_inet_ntop = (func_inet_ntop) inet_ntop;
+
+  ARGSUSED (p_WaitForMultipleObjectsEx); /* Silence the warning */
 }
 
 struct LoadTable *find_ws2_func_by_name (const char *func)
@@ -855,7 +824,7 @@ EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   ENTER_CRIT();
 
   WSTRACE ("WSADuplicateSocketA (%u, proc-ID %lu, ...) --> %s",
-           SOCKET_CAST(s), process_id, get_error(rc));
+           SOCKET_CAST(s), DWORD_CAST(process_id), get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
      dump_wsaprotocol_info ('A', proto_info, p_WSCGetProviderPath);
@@ -874,7 +843,7 @@ EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   ENTER_CRIT();
 
   WSTRACE ("WSADuplicateSocketW (%u, proc-ID %lu, ...) --> %s",
-            SOCKET_CAST(s), process_id, get_error(rc));
+            SOCKET_CAST(s), DWORD_CAST(process_id), get_error(rc));
 
   if (!exclude_this && g_cfg.dump_wsaprotocol_info)
      dump_wsaprotocol_info ('W', proto_info, p_WSCGetProviderPath);
@@ -1069,7 +1038,8 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
   {
     if (!tv)
          strcpy (tv_buf, "unspec");
-    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds",
+                   LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     WSTRACE ("WSAConnectByNameA (%u, %s, %s, %s, ...) --> %s",
              SOCKET_CAST(s), node_name, service_name, tv_buf, get_error(rc));
@@ -1202,7 +1172,7 @@ EXPORT BOOL WINAPI WSAResetEvent (WSAEVENT ev)
   return (rc);
 }
 
-EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
+EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, __LONG32 net_ev)
 {
   int rc;
 
@@ -1218,7 +1188,7 @@ EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
   return (rc);
 }
 
-EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, long net_ev)
+EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, __LONG32 net_ev)
 {
   int rc;
 
@@ -1338,7 +1308,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
   return (rc);
 }
 
-EXPORT int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
+EXPORT int WINAPI ioctlsocket (SOCKET s, __LONG32 opt, __ms_u_long *argp)
 {
   char arg[10] = "?";
   int  rc;
@@ -1716,7 +1686,8 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     strcpy (res, get_error(rc));
 
     WSTRACE ("WSARecv (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s",
-             SOCKET_CAST(s), bufs, num_bufs, *num_bytes, flg, ov, func, res);
+             SOCKET_CAST(s), bufs, DWORD_CAST(num_bufs),
+             *num_bytes, flg, ov, func, res);
 
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
@@ -1772,7 +1743,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
     strcpy (res, get_error(rc));
 
     WSTRACE ("WSARecvFrom (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
-             SOCKET_CAST(s), bufs, num_bufs, nbytes, flg,
+             SOCKET_CAST(s), bufs, DWORD_CAST(num_bufs), nbytes, flg,
              sockaddr_str2(from,from_len), ov, func, res);
 
     if (rc > 0 && g_cfg.dump_data)
@@ -1893,7 +1864,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     strcpy (res, get_error(rc));
 
     WSTRACE ("WSASend (%u, 0x%p, %lu, %s, <%s>, 0x%p, 0x%p) --> %s",
-             SOCKET_CAST(s), bufs, num_bufs, nbytes,
+             SOCKET_CAST(s), bufs, DWORD_CAST(num_bufs), nbytes,
              socket_flags(flags), ov, func, res);
 
     if (g_cfg.dump_data)
@@ -1947,7 +1918,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
     strcpy (res, get_error(rc));
 
     WSTRACE ("WSASendTo (%u, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
-             SOCKET_CAST(s), bufs, num_bufs, nbytes, socket_flags(flags),
+             SOCKET_CAST(s), bufs, DWORD_CAST(num_bufs), nbytes, socket_flags(flags),
              sockaddr_str2(to,&to_len), ov, func, res);
 
     if (g_cfg.dump_data)
@@ -2051,7 +2022,7 @@ EXPORT int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_in
   if (do_it)
   {
     if (rc > 0)
-         snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, *buf_len);
+         snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
     else p = (char*) get_error (rc);
   }
 
@@ -2084,7 +2055,7 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
   if (do_it)
   {
     if (rc > 0)
-         snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, *buf_len);
+         snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
     else p = (char*) get_error (rc);
   }
 
@@ -2230,15 +2201,16 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
     {
       if (wait_all)
            strcpy (buf, ", all completed");
-      else snprintf (buf, sizeof(buf), "%lu completed", rc-WSA_WAIT_EVENT_0);
+      else snprintf (buf, sizeof(buf), "%lu completed", DWORD_CAST(rc-WSA_WAIT_EVENT_0));
       err = buf;
     }
 
     if (timeout != WSA_INFINITE)
-       snprintf (time, sizeof(time), "%lu ms", timeout);
+       snprintf (time, sizeof(time), "%lu ms", DWORD_CAST(timeout));
 
     WSTRACE ("WSAWaitForMultipleEvents (%lu, 0x%p, %s, %s, %sALERTABLE) --> %s",
-             num_ev, ev, wait_all ? "TRUE" : "FALSE", time, alertable ? "" : "not ", err);
+             DWORD_CAST(num_ev), ev, wait_all ? "TRUE" : "FALSE",
+             time, alertable ? "" : "not ", err);
 
     /* Update all sockets with overlapped operations that matches this event.
      */
@@ -2458,9 +2430,9 @@ EXPORT u_short WINAPI ntohs (u_short x)
   return (rc);
 }
 
-EXPORT u_long WINAPI htonl (u_long x)
+EXPORT __ms_u_long WINAPI htonl (__ms_u_long x)
 {
-  u_long rc;
+  __ms_u_long rc;
 
   INIT_PTR (p_htonl);
   rc = (*p_htonl) (x);
@@ -2471,9 +2443,9 @@ EXPORT u_long WINAPI htonl (u_long x)
   return (rc);
 }
 
-EXPORT u_long WINAPI ntohl (u_long x)
+EXPORT __ms_u_long WINAPI ntohl (__ms_u_long x)
 {
-  u_long rc;
+  __ms_u_long rc;
 
   INIT_PTR (p_ntohl);
   rc = (*p_ntohl) (x);
@@ -2484,15 +2456,15 @@ EXPORT u_long WINAPI ntohl (u_long x)
   return (rc);
 }
 
-EXPORT u_long WINAPI inet_addr (const char *addr)
+EXPORT __ULONG32 WINAPI inet_addr (const char *addr)
 {
-  u_long rc;
+  __ULONG32 rc;
 
   INIT_PTR (p_inet_addr);
   rc = (*p_inet_addr) (addr);
 
   ENTER_CRIT();
-  WSTRACE ("inet_addr (\"%s\") -> %lu", addr, rc);
+  WSTRACE ("inet_addr (\"%s\") -> %lu", addr, DWORD_CAST(rc));
   LEAVE_CRIT();
   return (rc);
 }
@@ -2947,7 +2919,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          tid = GetCurrentThreadId();
          g_cfg.counts.dll_attach++;
          TRACE (3, "  DLL_THREAD_ATTACH. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-                ADDR_CAST(instDLL), note, tid);
+                ADDR_CAST(instDLL), note, DWORD_CAST(tid));
 
          /* \todo:
           *   Add this 'tid' as a new thread to a 'smartlist_t' and call 'print_thread_times()'
@@ -2959,7 +2931,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          tid = GetCurrentThreadId();
          g_cfg.counts.dll_detach++;
          TRACE (3, "  DLL_THREAD_DETACH. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-               ADDR_CAST(instDLL), note, tid);
+                ADDR_CAST(instDLL), note, DWORD_CAST(tid));
          if (g_cfg.trace_level >= 3)
          {
            HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, tid);

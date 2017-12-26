@@ -1196,7 +1196,7 @@ const char *getnameinfo_flags_decode (int flags)
   return flags_decode (flags, getnameinfo_flgs, DIM(getnameinfo_flgs));
 }
 
-const char *event_bits_decode (long flag)
+const char *event_bits_decode (__LONG32 flag)
 {
   if (flag == 0)
      return ("0");

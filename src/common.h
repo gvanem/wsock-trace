@@ -1,6 +1,8 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include "wsock_defs.h"
+
 /*
  * Because I had problems exporting "__WSAFDIsSet@8" to wsock_trace.dll,
  * I was forced to use a .def-file to export all functions.
@@ -109,152 +111,9 @@
   #define WINSOCK_API_LINKAGE  EXPORT
 #endif
 
-#include <stdio.h>
-#include <malloc.h>
-#include <io.h>
-#include <time.h>
-#include <string.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <objbase.h>
-
-#if defined(__MINGW32__)
-  #include <specstrings.h>
-#endif
-
-#if defined(_MSC_VER) && defined(_DEBUG)  /* use CrtDebug in MSVC debug-mode */
-  #define _CRTDBG_MAP_ALLOC
-  #undef _malloca                         /* Avoid MSVC-9 <malloc.h>/<crtdbg.h> name-clash */
-  #include <crtdbg.h>
-#endif
-
-#if defined(__GNUC__)
-  #define ATTR_PRINTF(_1,_2)   __attribute__((format(printf,_1,_2)))
-#else
-  #define ATTR_PRINTF(_1,_2)   /* nothing */
-#endif
-
-#if defined(__GNUC__) && defined(__MINGW32__)
-  #define WCHAR_FMT      "S"
-  #define S64_FMT        "I64d"
-  #define U64_FMT        "I64u"
-  #define X64_FMT        "I64X"
-  #define S64_SUFFIX(x)  (x##LL)
-  #define U64_SUFFIX(x)  (x##ULL)
-
-#elif defined(_MSC_VER) || defined(_MSC_EXTENSIONS) || defined(__WATCOMC__)
-  #define WCHAR_FMT      "ws"
-  #define S64_FMT        "I64d"
-  #define U64_FMT        "I64u"
-  #define X64_FMT        "I64X"
-  #define S64_SUFFIX(x)  (x##i64)
-  #define U64_SUFFIX(x)  (x##Ui64)
-
-#else
-  #if defined(__CYGWIN__)
-    #define WCHAR_FMT    "S"
-  #else
-    #define WCHAR_FMT    "ws"
-  #endif
-  #define S64_FMT        "Ld"
-  #define U64_FMT        "Lu"
-  #define X64_FMT        "Lx"
-  #define S64_SUFFIX(x)  (x##LL)
-  #define U64_SUFFIX(x)  (x##ULL)
-#endif
-
-#if defined(__GNUC__)
-  #define GCC_VERSION  (10000 * __GNUC__ + 100 * __GNUC_MINOR__ + __GNUC_PATCHLEVEL__)
-#else
-  #define GCC_VERSION  0
-#endif
-
-#if (GCC_VERSION >= 40600) || defined(__clang__)
-  #define GCC_PRAGMA(x)  _Pragma (#x)
-#else
-  #define GCC_PRAGMA(x)
-#endif
-
-
-/*
- * Printing an hex linear address.
- * Printing a decimal value from the address-bus (e.g. a stack-limit)
- * E.g. printf (buf, "0x%"ADDR_FMT, ADDR_CAST(ptr));
- */
-#if defined(WIN64) || defined(_WIN64)
-  #if defined(_MSC_VER) ||   /* MSVC/WIN64 little untested */ \
-      defined(__GNUC__)      /* MinGW64 normally */
-    #define ADDR_FMT     "016I64X"
-    #define ADDR_CAST(x) ((unsigned __int64)(x))
-  #else
-    #error Help me!
-  #endif
-
-  #define IS_WIN64 1
-
-  /*
-   * A 'SOCKET' is defined as 'unsigned long long' on Win64.
-   * But we hardly ever need to print all bits. Just cast to
-   * silence MinGW-w64.
-   */
-  #define SOCKET_CAST(s)  ((unsigned int)(s))
-#else    /* WIN32 */
-  #define ADDR_FMT        "08lX"
-  #define ADDR_CAST(x)    ((DWORD_PTR)(x))   /* "cl -Wp64" warns here. Ignore it. */
-  #define SOCKET_CAST(s)  s
-  #define IS_WIN64        0
-#endif
-
-#if defined(__CYGWIN__)
-  #include <sys/stat.h>
-
-  static inline int FILE_EXISTS (const char *f)
-  {
-    struct stat st;
-    return (stat(f,&st) == 0);
-  }
-#else
-  static __inline int FILE_EXISTS (const char *f)
-  {
-    return (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES);
-  }
-#endif
-
-#define loBYTE(w)       (BYTE)(w)
-#define hiBYTE(w)       (BYTE)((WORD)(w) >> 8)
-#define DIM(x)          (int) (sizeof(x) / sizeof((x)[0]))
-#define SIZEOF(x)       (int) sizeof(x)
-#define ARGSUSED(foo)   (void)foo
-
-#ifndef MAX_HOST_LEN
-#define MAX_HOST_LEN  256
-#endif
-
-#ifndef MAX_HOST_LABELS
-#define MAX_HOST_LABELS  8
-#endif
-
-#if defined(_MSC_VER)
-  #ifndef _CRTDBG_MAP_ALLOC
-  #define strdup       _strdup
-  #endif
-
-  #define strnicmp    _strnicmp
-  #define stricmp     _stricmp
-  #define snprintf    _snprintf
-  #define vsnprintf   _vsnprintf
-  #define fdopen      _fdopen
-  #define tzset()     _tzset()
-  #define isatty(fd)  _isatty (fd)
-  #define fileno(f)   _fileno (f)
-
-#elif defined(__MINGW32__)
-  /*
-   * I want the MSVC version of vsnprintf() since there is some trouble
-   * with MinGW's version in trace_printf(). No idea what.
-   */
-  #define vsnprintf _vsnprintf
-#endif
 
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600) || !defined(POLLRDNORM)
   /*
@@ -311,11 +170,23 @@
                              else ExitProcess (GetCurrentProcessId());  \
                            } while (0)
 
+
 /*
- * Defined in newer <sal.h> for MSVC.
+ * Simple check for file-existence.
+ * Must use 'stat()' foir CygWin in case the file is on a
+ * Posix "/usr/bin/foo" form.
  */
-#ifndef _Printf_format_string_
-#define _Printf_format_string_
+#if defined(__CYGWIN__)
+  static inline int FILE_EXISTS (const char *f)
+  {
+    struct stat st;
+    return (stat(f,&st) == 0);
+  }
+#else
+  static __inline int FILE_EXISTS (const char *f)
+  {
+    return (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES);
+  }
 #endif
 
 extern void debug_printf (const char *file, unsigned line,
@@ -414,12 +285,5 @@ extern char * _strreverse (char *str);
 extern char * _utoa10w (int value, int width, char *buf);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
-
-#if defined(__CYGWIN__)
-  extern char *_itoa (int value, char *buf, int radix);
-
-  #define stricmp(s1, s2)      strcasecmp (s1, s2)
-  #define strnicmp(s1, s2, n)  strncasecmp (s1, s2, n)
-#endif
 
 #endif  /* _COMMON_H */

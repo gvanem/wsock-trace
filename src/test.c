@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <assert.h>
 #include <wchar.h>
 #include <tchar.h>
@@ -22,11 +21,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#include "wsock_defs.h"
 #include "getopt.h"
-
-#if defined(_MSC_VER) && (_MSC_VER <= 1700)
-  #define snprintf _snprintf
-#endif
 
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
@@ -39,22 +35,6 @@
 #else
   #define USE_WSAPoll 0
 #endif
-
-/*
- * To fix the warnings for the use of "%lu" with a DWORD-arg.
- * Or warnings with "%ld" and an 'int' argument.
- * Especially noisy for 'x64' builds since CygWin is a LP64-platform:
- *   https://en.wikipedia.org/wiki/64-bit_computing
- */
-#if defined(__CYGWIN__)
-  #define DWORD_CAST(x)   ((unsigned long)(x))
-  #define LONG_CAST(x)    ((long int)(x))
-
-#else
-  #define DWORD_CAST(x)   x
-  #define LONG_CAST(x)    x
-#endif
-
 
 #if defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -75,23 +55,9 @@
   #pragma warning (disable: 4311)
 #endif
 
-/* Because of:
- *   warning C4007: 'main': must be '__cdecl'
- * when using 'cl -Gr'.
- */
-#if defined(_MSC_VER)
-  #define MS_CDECL __cdecl
-  extern int MS_CDECL getopt (int, char *const *, const char *);
-#else
-  #define MS_CDECL
-#endif
-
 /* Prevent MinGW globbing the cmd-line if we do 'test *'.
  */
 int _CRT_glob = 0;
-
-#define DIM(x)      (sizeof(x) / sizeof((x)[0]))
-#define TOUPPER(c)  toupper ((int)(c))
 
 #if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__WATCOMC__)
   int WSAAPI inet_pton (int Family, PCSTR pszAddrString, void *pAddrBuf);

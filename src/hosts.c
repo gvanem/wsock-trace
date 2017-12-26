@@ -1,11 +1,6 @@
 /*
  * '/etc/hosts' parsing for wsock_trace.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <ctype.h>
-
 #include "common.h"
 #include "init.h"
 #include "smartlist.h"

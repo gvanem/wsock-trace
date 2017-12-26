@@ -6,12 +6,8 @@
  *   Copyright (C) 1997 DJ Delorie, see COPYING.DJ for details
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <signal.h>
-#include <assert.h>
 #include <limits.h>
-#include <ctype.h>
 #include <windows.h>
 #include <fcntl.h>
 #include <sys/stat.h>

@@ -8,22 +8,18 @@
  * 2) exclude-list handling.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <ctype.h>
 #include <limits.h>
 #include <time.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <assert.h>
 #include <math.h>
 
 #include "common.h"
 #include "wsock_trace.h"
 #include "bfd_gcc.h"
-#include "dump.h"
 #include "wsock_trace_lua.h"
+#include "dump.h"
 #include "geoip.h"
 #include "idna.h"
 #include "smartlist.h"
