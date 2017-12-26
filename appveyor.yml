@@ -83,7 +83,7 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
   - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe              www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -wddd www.seoghør.no
-  - cmd: geoip-test.bat
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
 
 artifacts:
   #
