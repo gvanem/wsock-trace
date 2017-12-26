@@ -75,7 +75,6 @@ install:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: cd src
-  - cmd: set USER=AppVeyor
   - cmd: set USE_LUA=1
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
