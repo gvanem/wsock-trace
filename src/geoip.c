@@ -1891,7 +1891,7 @@ static void test_addr_common (const struct in_addr  *a4,
   const char *comment  = NULL;
   const char *remark   = NULL;
   const char *cc;
-  int   save, flag, len, width = 0;
+  int   save, flag, width = 0;
   char  buf1 [100];
   char  buf2 [100];
 
@@ -2160,8 +2160,9 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
        break;
 
-//  strip_nl (buf);
-    while ((p = strpbrk(buf, " \r\n#;")) != NULL)  /* Remove blanks, newlines or comments */
+    /* Remove blanks, newlines or comments
+     */
+    while ((p = strpbrk(buf, " \r\n#;")) != NULL)
        *p = '\0';
     smartlist_add (list, strdup(buf));
   }
@@ -2179,7 +2180,7 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
      return read_file (stdin, list);
 
   if (_argc > 0 && _argv[0][0] == '@')
-     return read_file (fopen(_argv[0]+1,"rt"), list);
+     return read_file (fopen(_argv[0]+1,"rb"), list);
 
   for (i = 0; i < _argc; i++)
       smartlist_add (list, strdup(_argv[i]));
