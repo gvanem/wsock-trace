@@ -37,7 +37,7 @@ int vm_bug_debug = 0;
 
 #if defined(__GNUC__) && defined(__i386__)
   /*
-   * Problems at 'gcc -O0'. Use this hack
+   * Problems with 'gcc -O0'. Use this hack:
    */
   static inline void *_NtCurrentTeb (void)
   {
@@ -150,14 +150,14 @@ static void print_one_address (thread_args *args, DWORD64 addr)
 #endif
 
   if (have_PDB_info && (*args->p_SymFromAddr)(args->proc, addr, &displacement, info))
-     printf (" (%s+%lu)", info->Name, (DWORD)displacement);
+     printf (" (%s+%lu)", info->Name, DWORD_CAST((DWORD)displacement));
 
   if (have_PDB_info)
   {
     memset (&line, 0, sizeof(line));
     line.SizeOfStruct = sizeof(line);
     if ((*args->p_SymGetLineFromAddr64)(args->proc, addr, &tmp, &line))
-       printf ("  %s(%lu)", shorten_path(line.FileName), line.LineNumber);
+       printf ("  %s(%lu)", shorten_path(line.FileName), DWORD_CAST(line.LineNumber));
   }
   else
   {
@@ -279,14 +279,14 @@ static DWORD WINAPI dump_thread (void *arg)
 
     if (recursion || addr == 0 || frame.AddrReturn.Offset == 0)
     {
-      TRACE (2, "addr:                    0x%I64X %s%s\n"
-                "                frame.AddrPC.Offset:     0x%I64X\n"
-                "                frame.AddrReturn.Offset: 0x%I64X.\n",
-             addr,
+      TRACE (2, "addr:                    0x%" ADDR_FMT " %s%s\n"
+                "                frame.AddrPC.Offset:     0x%" ADDR_FMT "\n"
+                "                frame.AddrReturn.Offset: 0x%" ADDR_FMT ".\n",
+             ADDR_CAST(addr),
              recursion ? "recursion" : "",
              recursion ? rec_buf     : "",
-             frame.AddrPC.Offset,
-             frame.AddrReturn.Offset);
+             ADDR_CAST(frame.AddrPC.Offset),
+             ADDR_CAST(frame.AddrReturn.Offset));
       if (!recursion || rec_count >= args.max_recursion)
          break;
     }

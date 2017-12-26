@@ -809,7 +809,8 @@ static void trace_report (void)
   }
 
   if (g_cfg.reentries > 0)
-     trace_printf ("  get_caller() reentered %lu times.\n", g_cfg.reentries);
+     trace_printf ("  get_caller() reentered %lu times.\n",
+                   DWORD_CAST(g_cfg.reentries));
 
 // if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
   {
@@ -861,8 +862,11 @@ static void trace_report (void)
     DWORD num_ip4, num_ip6, num_ip2loc4, num_ip2loc6;
 
     geoip_num_unique_countries (&num_ip4, &num_ip6, &num_ip2loc4, &num_ip2loc6);
-    trace_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n", num_ip4, num_ip2loc4);
-    trace_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n", num_ip6, num_ip2loc6);
+    trace_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n",
+                  DWORD_CAST(num_ip4), DWORD_CAST(num_ip2loc4));
+
+    trace_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n",
+                  DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
   }
 }
 #endif /* !TEST_GEOIP !TEST_NLM */
@@ -1100,7 +1104,7 @@ void wsock_trace_init (void)
     DWORD mode;
 
     GetConsoleMode (console_hnd, &mode);
-    TRACE (3, "GetConsoleMode(): 0x%08lX\n", mode);
+    TRACE (3, "GetConsoleMode(): 0x%08lX\n", DWORD_CAST(mode));
   }
 
   /* These env-var override the actual screen-height and width.

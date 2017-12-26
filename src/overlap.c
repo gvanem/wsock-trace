@@ -71,7 +71,7 @@ void overlap_exit (void)
     {
       ov = smartlist_get (ov_list, i);
       TRACE ("  o: 0x%p, event: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
-             ov->ov, ov->event, (unsigned)ov->sock, ov->is_recv, ov->bytes);
+             ov->ov, ov->event, SOCKET_CAST(ov->sock), ov->is_recv, DWORD_CAST(ov->bytes));
     }
   }
   else if (num_overlaps)
@@ -110,7 +110,7 @@ static void overlap_trace (int i, const struct overlapped *ov)
   }
   else
     TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
-           i, ov->is_recv, ov->event, (unsigned)ov->sock);
+           i, ov->is_recv, ov->event, SOCKET_CAST(ov->sock));
 }
 
 void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
@@ -119,7 +119,8 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
-  TRACE ("o: 0x%p, event: 0x%p, sock: %u\n", o, o ? o->hEvent : NULL, (unsigned)s);
+  TRACE ("o: 0x%p, event: 0x%p, sock: %u\n",
+         o, o ? o->hEvent : NULL, SOCKET_CAST(s));
 
   for (i = 0; i < max; i++)
   {
@@ -175,7 +176,7 @@ void overlap_recall_all (const WSAEVENT *event)
     }
     if (i < smartlist_len(ov_list))
        TRACE ("ov_list[%d]: event: 0x%p, is_recv: %d, rc: %d, got %lu bytes.\n",
-              i, ov->event, ov->is_recv, rc, bytes);
+              i, ov->event, ov->is_recv, rc, DWORD_CAST(bytes));
     else
       TRACE ("ov_list[%d]: is_recv: %d, was recalled.\n", i, ov->is_recv);
   }
@@ -203,13 +204,13 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
     {
       g_cfg.counts.recv_bytes += bytes;
       TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n",
-             i, ov->bytes, bytes);
+             i, DWORD_CAST(ov->bytes), DWORD_CAST(bytes));
     }
     else
     {
       g_cfg.counts.send_bytes += bytes;
       TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n",
-             i, ov->bytes, bytes);
+             i, DWORD_CAST(ov->bytes), DWORD_CAST(bytes));
     }
     free (ov);
     smartlist_del (ov_list, i);

@@ -264,13 +264,15 @@ static DWORD geoip_load_data (int family)
   {
     geoip_ipv4_entries = geoip_smartlist_fixed_ipv4();
     num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
-    TRACE (2, "Using %lu fixed IPv4 records instead of parsing %s.\n", num, g_cfg.geoip4_file);
+    TRACE (2, "Using %lu fixed IPv4 records instead of parsing %s.\n",
+           DWORD_CAST(num), g_cfg.geoip4_file);
   }
   else if (family == AF_INET6)
   {
     geoip_ipv6_entries = geoip_smartlist_fixed_ipv6();
     num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
-    TRACE (2, "Using %lu fixed IPv6 records instead of parsing %s.\n", num, g_cfg.geoip6_file);
+    TRACE (2, "Using %lu fixed IPv6 records instead of parsing %s.\n",
+           DWORD_CAST(num), g_cfg.geoip6_file);
   }
   else
   {
@@ -346,13 +348,15 @@ static DWORD geoip_parse_file (const char *file, int family)
   if (family == AF_INET)
   {
     smartlist_sort (geoip_ipv4_entries, geoip_ipv4_compare_entries);
-    TRACE (2, "Parsed %lu IPv4 records from \"%s\".\n", num4, file);
+    TRACE (2, "Parsed %lu IPv4 records from \"%s\".\n",
+           DWORD_CAST(num4), file);
     return (num4);
   }
   else
   {
     smartlist_sort (geoip_ipv6_entries, geoip_ipv6_compare_entries);
-    TRACE (2, "Parsed %lu IPv6 records from \"%s\".\n", num6, file);
+    TRACE (2, "Parsed %lu IPv6 records from \"%s\".\n",
+           DWORD_CAST(num6), file);
     return (num6);
   }
   return (0);
@@ -409,8 +413,12 @@ static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num)
 {
   char *p = buf;
   char  country[3];
-  DWORD low, high;
   int   rc = 0;
+#ifdef __CYGWIN__
+  unsigned long low, high;
+#else
+  DWORD low, high;
+#endif
 
   for ( ; *p && isspace((int)*p); )
       p++;
@@ -1307,7 +1315,9 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2l
      *num_ip2loc6 = ip2loc_n6;
 
   TRACE (2, "%s() n4: %lu, n6: %lu, ip2loc_n4: %lu, ip2loc_n6: %lu.\n",
-         __FUNCTION__, n4, n6, ip2loc_n4, ip2loc_n6);
+         __FUNCTION__,
+         DWORD_CAST(n4),        DWORD_CAST(n6),
+         DWORD_CAST(ip2loc_n4), DWORD_CAST(ip2loc_n6));
 }
 
 uint64 geoip_get_stats_by_idx (int idx)
@@ -1495,7 +1505,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
   if (!_st_tmp)
   {
     rc = download_file (tmp_file, url);
-    TRACE (1, "download_file (%s) -> rc: %lu\n", tmp_file, rc);
+    TRACE (1, "download_file (%s) -> rc: %lu\n", tmp_file, DWORD_CAST(rc));
     if (rc > 0)
        _st_tmp = (stat(tmp_file, &st_tmp) == 0);
   }
@@ -1544,6 +1554,13 @@ void geoip_update_file (int family, BOOL force_update)
 #if defined(TEST_GEOIP)
 
 #include "getopt.h"
+#include "wsock_trace.rc"
+
+static const char *built_by (void)
+{
+  return (RC_BUILDER);
+}
+
 
 /*
  * Determine length of the network part in an IPv4 address.
@@ -1607,7 +1624,8 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
     }
     else
     {
-      fprintf (out, "%10lu  %10lu %8ld", last->high+1, entry->low-1, diff);
+      fprintf (out, "%10lu  %10lu %8ld",
+               DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
       len = 22;
     }
 
@@ -1671,9 +1689,10 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
     else
     {
       if (raw)
-           fprintf (out, "  { %10lu, %10lu, ", entry->low, entry->high);
+           fprintf (out, "  { %10lu, %10lu, ", DWORD_CAST(entry->low), DWORD_CAST(entry->high));
       else fprintf (out, "%6d: %10lu  %10lu %8ld",
-                    i, entry->low, entry->high, (long)(entry->high - entry->low));
+                    i, DWORD_CAST(entry->low), DWORD_CAST(entry->high),
+                    (long)(entry->high - entry->low));
       len = 30;
     }
     if (raw)
@@ -1721,7 +1740,8 @@ static int check_ipv6_unallocated (FILE *out, int dump_cidr, const struct ipv6_n
     }
     else
     {
-      fprintf (out, "%10lu  %10lu %8ld", last->high+1, entry->low-1, diff);
+      fprintf (out, "%10lu  %10lu %8ld",
+               DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
       len = 22;
     }
     fprintf (out, "%*sUnallocated block\n", 24-len, "");
@@ -1947,9 +1967,9 @@ static void test_addr_common (const struct in_addr  *a4,
     else snprintf (buf1, sizeof(buf1), "%s", comment);
 
     if (a4 && geoip_ipv4_entries)
-         snprintf (buf2, sizeof(buf2), "%lu compares", num_4_compare);
+         snprintf (buf2, sizeof(buf2), "%lu compares", DWORD_CAST(num_4_compare));
     else if (a6 && geoip_ipv6_entries)
-         snprintf (buf2, sizeof(buf2), "%lu compares", num_6_compare);
+         snprintf (buf2, sizeof(buf2), "%lu compares", DWORD_CAST(num_6_compare));
     else strcpy (buf2, "??");
   }
 
@@ -2022,12 +2042,12 @@ static int geoip_generate_array (int family, const char *out_file)
            "/*\n"
            " * This file was generated at %.24s.\n"
            " * by the Makefile command: \"geoip.exe -%cg %s\"\n"
-           " * DO NOT EDIT!\n"
+           " * Built by %s. DO NOT EDIT!\n"
            " */\n"
            "#include \"geoip.h\"\n"
            "\n"
            "GCC_PRAGMA (GCC diagnostic ignored \"-Wmissing-braces\")\n"
-           "\n", ctime(&now), fam, out_file);
+           "\n", ctime(&now), fam, out_file, built_by());
 
   fprintf (out, "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
 
@@ -2126,7 +2146,7 @@ static void rand_test_addr4 (int loops, BOOL use_ip2loc)
     test_addr4 (buf, use_ip2loc);
   }
   geoip_num_unique_countries (&num_ip4, NULL, NULL, NULL);
-  printf ("# of unique IPv4 countries: %lu\n", num_ip4);
+  printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num_ip4));
 }
 
 static void rand_test_addr6 (int loops, BOOL use_ip2loc)
@@ -2147,7 +2167,7 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
     test_addr6 (buf, use_ip2loc);
   }
   geoip_num_unique_countries (NULL, &num_ip6, NULL, NULL);
-  printf ("# of unique IPv6 countries: %lu\n", num_ip6);
+  printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num_ip6));
 }
 
 static smartlist_t *read_file (FILE *f, smartlist_t *list)
@@ -2159,9 +2179,14 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
        break;
 
-    /* Remove blanks, newlines or comments
+    /* Remove blanks, newlines or '#' comments.
      */
-    while ((p = strpbrk(buf, " \r\n#;")) != NULL)
+    strip_nl (buf);
+    p = strchr (buf, ' ');
+    if (p)
+       *p = '\0';
+    p = strchr (buf, '#');
+    if (p)
        *p = '\0';
     smartlist_add (list, strdup(buf));
   }
@@ -2175,11 +2200,11 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
   smartlist_t *list = smartlist_new();
   int          i;
 
+  if (_argc > 0 && _argv[0][0] == '@')
+     return read_file (fopen(_argv[0]+1,"rt"), list);
+
   if (isatty(fileno(stdin)) == 0)
      return read_file (stdin, list);
-
-  if (_argc > 0 && _argv[0][0] == '@')
-     return read_file (fopen(_argv[0]+1,"rb"), list);
 
   for (i = 0; i < _argc; i++)
       smartlist_add (list, strdup(_argv[i]));
@@ -2339,7 +2364,7 @@ int main (int argc, char **argv)
       if (max > 1)
       {
         geoip_num_unique_countries (&num, NULL, NULL, NULL);
-        printf ("# of unique IPv4 countries: %lu\n", num);
+        printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num));
       }
     }
 
@@ -2350,7 +2375,7 @@ int main (int argc, char **argv)
       if (max > 1)
       {
         geoip_num_unique_countries (NULL, &num, NULL, NULL);
-        printf ("# of unique IPv6 countries: %lu\n", num);
+        printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num));
       }
     }
 

@@ -1212,7 +1212,7 @@ const char *get_sio_name (DWORD code)
   for (i = 0; i < DIM(sio_codes); i++, sl++)
       if (code == sl->value)
          return (sl->name);
-  snprintf (buf, sizeof(buf), "code 0x%08lX", code);
+  snprintf (buf, sizeof(buf), "code 0x%08lX", DWORD_CAST(code));
   return (buf);
 }
 
@@ -1290,7 +1290,7 @@ const char *sockopt_value (const char *opt_val, int opt_len)
          val = *(DWORD*) opt_val;
          if (val == ULONG_MAX)
               strcpy (buf, "ULONG_MAX");
-         else snprintf (buf, sizeof(buf), "%lu", val);
+         else snprintf (buf, sizeof(buf), "%lu", DWORD_CAST(val));
          break;
 
     case sizeof(ULONG64):
@@ -1677,6 +1677,8 @@ void dump_one_proto_info (const char *prefix, const char *buf)
   trace_printf ("%s%s\n", prefix ? prefix : proto_padding, buf);
 }
 
+void dump_one_proto_infof (_Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (1,2);
+
 void dump_one_proto_infof (const char *fmt, ...)
 {
   va_list args;
@@ -1752,9 +1754,9 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   trace_puts (buf1);
   print_long_flags (buf2, g_cfg.trace_indent + strlen(buf1) + sizeof("dwServiceFlags1:   "), '|');
 
-  dump_one_proto_infof ("dwServiceFlags2:    0x%08lX (reserved)\n", pi_a->dwServiceFlags2);
-  dump_one_proto_infof ("dwServiceFlags3:    0x%08lX (reserved)\n", pi_a->dwServiceFlags3);
-  dump_one_proto_infof ("dwServiceFlags4:    0x%08lX (reserved)\n", pi_a->dwServiceFlags4);
+  dump_one_proto_infof ("dwServiceFlags2:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags2));
+  dump_one_proto_infof ("dwServiceFlags3:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags3));
+  dump_one_proto_infof ("dwServiceFlags4:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags4));
 
   flags = pi_a->dwProviderFlags;
   if (flags == 0)
@@ -1763,7 +1765,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
                                  DIM(wsaprotocol_info_ProviderFlags));
 
   dump_one_proto_infof ("dwProviderFlags:    %s\n", flags_str);
-  dump_one_proto_infof ("dwCatalogEntryId:   %lu\n", pi_a->dwCatalogEntryId);
+  dump_one_proto_infof ("dwCatalogEntryId:   %lu\n", DWORD_CAST(pi_a->dwCatalogEntryId));
   dump_one_proto_infof ("ProtocolChain:      len: %d, %s\n", pi_a->ProtocolChain.ChainLen,
                                                              (pi_a->ProtocolChain.ChainLen == 1) ?
                                                              "Base Service Provider" : "Layered Chain Entry");
@@ -1779,8 +1781,8 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   dump_one_proto_infof ("iNetworkByteOrder:  %d = %s\n", pi_a->iNetworkByteOrder,
                                                          pi_a->iNetworkByteOrder == 0 ? "BIGENDIAN" : "LITTLEENDIAN");
   dump_one_proto_infof ("iSecurityScheme:    %d\n",      pi_a->iSecurityScheme);
-  dump_one_proto_infof ("dwMessageSize:      %lu\n",     pi_a->dwMessageSize);
-  dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", pi_a->dwProviderReserved);
+  dump_one_proto_infof ("dwMessageSize:      %lu\n",     DWORD_CAST(pi_a->dwMessageSize));
+  dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwProviderReserved));
 
   if (ascii_or_wide == 'A')
        dump_one_proto_infof ("szProtocol:         \"%.*s\"\n", WSAPROTOCOL_LEN, pi_a->szProtocol);

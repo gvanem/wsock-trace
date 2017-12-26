@@ -590,7 +590,8 @@ static DWORD enum_and_load_symbols (const char *module)
   is_last = (stricmp(module,me->module_name) == 0);
   num     = enum_module_symbols (g_symbols_list, module, is_last, g_cfg.pdb_report == 0);
 
-  TRACE (2, "num: %5lu, sym_len: %5d, num+sym_len: %5lu.\n", num, sym_len, num+sym_len);
+  TRACE (2, "num: %5lu, sym_len: %5d, num+sym_len: %5lu.\n",
+         DWORD_CAST(num), sym_len, DWORD_CAST(num+sym_len));
 
  // assert (num + len == smartlist_len(g_symbols_list));
 
@@ -745,7 +746,7 @@ static int GetModuleListTH32 (void)
       {
         if (te.th32OwnerProcessID == g_proc_id)
            TRACE (4, "  %d: thread-info for this process: TID: %lu, PID: %lu\n",
-                  i, te.th32ThreadID, te.th32OwnerProcessID);
+                  i, DWORD_CAST(te.th32ThreadID), DWORD_CAST(te.th32OwnerProcessID));
         if (!(*p_Thread32Next)(thr_snap,&te))
            break;
       }
@@ -888,7 +889,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
     smartlist_append (modules_copy, g_modules_list);
     g_num_compares = 0;
     smartlist_sort (modules_copy, compare_on_baseaddr);
-    TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
+    TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
     g_num_compares = 0;
     orig_modules = g_modules_list;
     g_modules_list = modules_copy;
@@ -909,7 +910,10 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
     if (do_pdb)
     {
       trace_printf ("      %5lu %5lu %5lu %5lu",
-                    me->stat.num_syms, me->stat.num_data_syms, me->stat.num_cpp_syms, me->stat.num_junk_syms);
+                    DWORD_CAST(me->stat.num_syms),
+                    DWORD_CAST(me->stat.num_data_syms),
+                    DWORD_CAST(me->stat.num_cpp_syms),
+                    DWORD_CAST(me->stat.num_junk_syms));
       total_text += me->stat.num_syms;
       total_data += me->stat.num_data_syms;
       total_cpp  += me->stat.num_cpp_syms;
@@ -941,7 +945,11 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
                    "%*s  = %5lu %5lu %5lu %5lu\n",
                    76+8*IS_WIN64, "",
                    _strrepeat('-',  25),
-                   76+8*IS_WIN64, "", total_text, total_data, total_cpp, total_junk);
+                   76+8*IS_WIN64, "",
+                   DWORD_CAST(total_text),
+                   DWORD_CAST(total_data),
+                   DWORD_CAST(total_cpp),
+                   DWORD_CAST(total_junk));
 }
 
 /*
@@ -1515,7 +1523,7 @@ check_mingw_map_file:
   {
     g_num_compares = 0;
     smartlist_sort (sl, compare_on_addr);
-    TRACE (3, "g_num_compares: %lu.\n", g_num_compares);
+    TRACE (3, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
     g_num_compares = 0;
   }
 
@@ -1527,8 +1535,10 @@ check_mingw_map_file:
 
   TRACE (3, " num_our_syms: %lu, num_other_syms: %lu, num_cpp_syms: %lu, num_junk_syms: %lu,\n"
          "                    num_data_syms: %lu, num_syms_lines: %lu, is_last: %d, g_quit_count: %d.\n",
-         me->stat.num_our_syms, me->stat.num_other_syms, me->stat.num_cpp_syms, me->stat.num_junk_syms,
-         me->stat.num_data_syms, me->stat.num_syms_lines, is_last, g_quit_count);
+         DWORD_CAST(me->stat.num_our_syms), DWORD_CAST(me->stat.num_other_syms),
+         DWORD_CAST(me->stat.num_cpp_syms), DWORD_CAST(me->stat.num_junk_syms),
+         DWORD_CAST(me->stat.num_data_syms), DWORD_CAST(me->stat.num_syms_lines),
+         is_last, g_quit_count);
 
   return (me->stat.num_syms);
 }
@@ -1737,7 +1747,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
 
   str += snprintf (str, left, "~2%s(%lu)~1 (",
                    shorten_path(Line.FileName),
-                   Line.LineNumber);
+                   DWORD_CAST(Line.LineNumber));
   left = end - str;
 
   /* If 'undec_name[]' contains a "~" (a C++ destructor),
@@ -1756,7 +1766,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   *str = '\0';
 
   if (displacement)
-     snprintf (str, left, "+%lu)", displacement);
+     snprintf (str, left, "+%lu)", DWORD_CAST(displacement));
   else if (ofs_from_symbol && undec_name[0])
   {
     /* The 'ofs_from_symbol' is the address past the call (the return address). E.g.:
