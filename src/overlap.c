@@ -71,7 +71,7 @@ void overlap_exit (void)
     {
       ov = smartlist_get (ov_list, i);
       TRACE ("  o: 0x%p, event: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
-             ov->ov, ov->event, ov->sock, ov->is_recv, ov->bytes);
+             ov->ov, ov->event, (unsigned)ov->sock, ov->is_recv, ov->bytes);
     }
   }
   else if (num_overlaps)
@@ -105,12 +105,12 @@ static void overlap_trace (int i, const struct overlapped *ov)
     {
       ov = smartlist_get (ov_list, i);
       TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
-             i, ov->is_recv, ov->event, ov->sock);
+             i, ov->is_recv, ov->event, (unsigned)ov->sock);
     }
   }
   else
     TRACE ("ov_list[%d]: is_recv: %d, event: 0x%p, sock: %u\n",
-           i, ov->is_recv, ov->event, ov->sock);
+           i, ov->is_recv, ov->event, (unsigned)ov->sock);
 }
 
 void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
@@ -119,7 +119,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
-  TRACE ("o: 0x%p, event: 0x%p, sock: %u\n", o, o ? o->hEvent : NULL, s);
+  TRACE ("o: 0x%p, event: 0x%p, sock: %u\n", o, o ? o->hEvent : NULL, (unsigned)s);
 
   for (i = 0; i < max; i++)
   {
