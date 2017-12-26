@@ -407,9 +407,9 @@ BOOL exclude_list_add (const char *name)
 /*
  * Open the config-file given by 'base_name'.
  *
- * First try file pointed to by %WSOCK_TRACE,
+ * First try file pointed to by %WSOCK_TRACE%,
  * then in current_dir.
- * then in %HOME or %APPDATA.
+ * then in %APPDATA% or %HOME%.
  */
 static char fname [MAX_PATH];
 
@@ -434,9 +434,9 @@ static FILE *open_config_file (const char *base_name)
   fil = fopen (fname, "r");
   if (!fil)
   {
-    home = getenv ("HOME");
+    home = getenv ("APPDATA");
     if (!home)
-       home = getenv ("APPDATA");
+       home = getenv ("HOME");
     if (home)
     {
       snprintf (fname, sizeof(fname), "%s\\%s", home, base_name);
