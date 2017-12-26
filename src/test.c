@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <wchar.h>
 #include <tchar.h>
 #include <malloc.h>
 #include <windows.h>
