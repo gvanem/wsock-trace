@@ -77,7 +77,7 @@ build_script:
   - cmd: cd src
   - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6 USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU% PLATFORM=%CPU%
   - cmd: if "%BUILDER%"=="mingw"  make -f Makefile.MinGW        USER=AppVeyor USE_LUA=1 USE_IP2LOCATION=1 CPU=%CPU%
-  - cmd: if "%BUILDER%"=="cygwin" (set WSOCK_TRACE_LEVEL=4 & make -f Makefile.CygWin USE_IP2LOCATION=1)
+  - cmd: if "%BUILDER%"=="cygwin" (echo "WSOCK_TRACE=%WSOCK_TRACE%" & set WSOCK_TRACE_LEVEL=4 & make -f Makefile.CygWin USE_IP2LOCATION=1)
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
