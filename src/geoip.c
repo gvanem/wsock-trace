@@ -2182,10 +2182,10 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
     /* Remove blanks, newlines or '#' comments.
      */
     strip_nl (buf);
-    p = strchr (buf, ' ');
+    p = strchr (buf, '#');
     if (p)
        *p = '\0';
-    p = strchr (buf, '#');
+    p = strchr (buf, ' ');
     if (p)
        *p = '\0';
     smartlist_add (list, strdup(buf));
