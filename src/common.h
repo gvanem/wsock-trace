@@ -173,13 +173,17 @@
 
 /*
  * Simple check for file-existence.
- * Must use 'stat()' foir CygWin in case the file is on a
- * Posix "/usr/bin/foo" form.
+ * Use 'stat()' for CygWin in case the file is on a
+ * Posix "/usr/bin/foo" form. But try 'GetFileAttributes()'
+ * first in case it's on Windows form.
  */
 #if defined(__CYGWIN__)
   static inline int FILE_EXISTS (const char *f)
   {
     struct stat st;
+
+    if (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES)
+       return (1);
     return (stat(f,&st) == 0);
   }
 #else

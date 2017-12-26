@@ -64,11 +64,13 @@ echo #                                              >> hosts
 echo 10.0.0.20   www.no-such-host.com               >> hosts
 
 ::
-:: These should survive until 'msvc' + 'mingw' gets run.
+:: These should survive until 'msvc' + 'mingw' + 'cygwin' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
 set COLUMNS=120
+
+if "%BUILDER%" == "cygwin" set WSOCK_TRACE_LEVEL=4
 exit /b 0
 
 ::
