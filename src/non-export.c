@@ -8,10 +8,10 @@
  * declaration, this non-export.obj is simply added to the imp-lib.
  */
 
-#if defined(__MINGW32__)
+#if defined(__MINGW32__) || defined(__CYGWIN__)
   /*
-   * A hack to hide the different MinGW's prototype of 'gai_strerror[A|W]'
-   * in <ws2tcpip.h>.
+   * A hack to hide the different MinGW/CygWin's prototype of
+   * 'gai_strerror[A|W]' in <ws2tcpip.h>.
    */
   #define gai_strerrorA orig_gai_strerrorA
   #define gai_strerrorW orig_gai_strerrorW
@@ -88,13 +88,17 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
       0x3F,0xFE,0x83,0x1F,0,0,0,0,0,0,0,0,0,0,0,0
     }};
 
-#if defined(__MINGW32__)  /* Rest of file */
+#if defined(__MINGW32__) || defined(__CYGWIN__) /* Rest of file */
 /*
  * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
- * But in other MinGW distribution they are not. In any case they are part
- * of 'libws2_32.a' even though 'gai_strerror[A|W]' is not part of the
- * system 'ws2_32.dll'. So for 'libwsock_trace.a' to be a replacement for
- * 'libws2_32.a', we must also add these functions to it.
+ * But in other MinGW distribution they are not.
+ *
+ * Under CygWin these functions seems to be in several places:
+ * libc.a, libcygwin.a and libg.a.
+ *
+ * In any case, they are part of 'libws2_32.a' even though 'gai_strerror[A|W]'
+ * is not part of the system 'ws2_32.dll'. So for 'libwsock_trace.a' to be a
+ * replacement for 'libws2_32.a', we must also add these functions to it.
  *
  * But tracing these calls would be difficult since the needed functions
  * for that is in wsock_trace.c.
@@ -148,5 +152,5 @@ wchar_t *str_ripw (wchar_t *s)
   if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
   return (s);
 }
-#endif  /* __MINGW32__ */
+#endif  /* __MINGW32__ || __CYGWIN__ */
 
