@@ -136,6 +136,10 @@ DWORD ip2loc_num_ipv6_entries (void)
 #undef  inet_pton
 #define inet_pton(family, addr, dst)  wsock_trace_inet_pton (family, addr, dst)
 
+#if defined(__CYGWIN__) && !defined(_WIN32)
+#define _WIN32   /* Checks on '_WIN32' in "IP2Location.c" */
+#endif
+
 /*
  * This assumes the IP2Location .c/.h files are in the %INCLUDE% or
  * %C_INCLUDE_PATH% path. Or the '$(IP2LOCATION_ROOT)' is set in
