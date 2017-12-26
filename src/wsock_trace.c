@@ -478,10 +478,10 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
            // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
 
-#if 0  /* to-do? Allthough 'WSASendMsg()' seems to be an 'extension-function'
-        * accessible only (?) via the 'WSAID_WSASENDMSG' GUID, it is present in
-        * libws2_32.a in some MinGW distros
-        */
+#if 0        /* to-do? Allthough 'WSASendMsg()' seems to be an 'extension-function'
+              * accessible only (?) via the 'WSAID_WSASENDMSG' GUID, it is present in
+              * libws2_32.a in some MinGW distros
+              */
               ADD_VALUE (1, "ws2_32.dll", WSASendMsg),
 #endif
             };
@@ -1072,7 +1072,8 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
   {
     if (!tv)
          strcpy (tv_buf, "unspec");
-    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds",
+                   LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     WSTRACE ("WSAConnectByNameW (%u, %" WCHAR_FMT ", %" WCHAR_FMT ", %s, ...) --> %s",
              SOCKET_CAST(s), node_name, service_name, tv_buf, get_error(rc));
@@ -1104,7 +1105,8 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
   {
     if (!tv)
          strcpy (tv_buf, "unspec");
-    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds",
+                   LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     WSTRACE ("WSAConnectByList (%u, %s, ...) --> %s", SOCKET_CAST(s), tv_buf, get_error(rc));
   }
@@ -1353,7 +1355,8 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
     if (!tv)
          strcpy (tv_buf, "unspec");
-    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds", tv->tv_sec, tv->tv_usec);
+    else snprintf (tv_buf, sizeof(tv_buf), "tv=%ld.%06lds",
+                   LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     if (g_cfg.dump_select)
     {
@@ -1687,7 +1690,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
     WSTRACE ("WSARecv (%u, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s",
              SOCKET_CAST(s), bufs, DWORD_CAST(num_bufs),
-             *num_bytes, flg, ov, func, res);
+             DWORD_CAST(*num_bytes), flg, ov, func, res);
 
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
@@ -2125,7 +2128,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
     else strcpy (tbuf, "wait indef.");
 
     WSTRACE ("WSAPoll (0x%" ADDR_FMT ", %lu, %s) -> %s",
-             ADDR_CAST(fd_array), fds, tbuf, socket_or_error(rc));
+             ADDR_CAST(fd_array), DWORD_CAST(fds), tbuf, socket_or_error(rc));
 
     trace_indent (g_cfg.trace_indent+2);
     trace_puts ("~4" FD_INPUT " ");
@@ -2438,7 +2441,7 @@ EXPORT __ms_u_long WINAPI htonl (__ms_u_long x)
   rc = (*p_htonl) (x);
 
   ENTER_CRIT();
-  WSTRACE ("htonl (%lu) --> %lu", x, rc);
+  WSTRACE ("htonl (%lu) --> %lu", DWORD_CAST(x), DWORD_CAST(rc));
   LEAVE_CRIT();
   return (rc);
 }
@@ -2451,7 +2454,7 @@ EXPORT __ms_u_long WINAPI ntohl (__ms_u_long x)
   rc = (*p_ntohl) (x);
 
   ENTER_CRIT();
-  WSTRACE ("ntohl (%lu) --> %lu", x, rc);
+  WSTRACE ("ntohl (%lu) --> %lu", DWORD_CAST(x), DWORD_CAST(rc));
   LEAVE_CRIT();
   return (rc);
 }

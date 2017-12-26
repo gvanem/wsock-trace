@@ -212,11 +212,11 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
       if (err == el->err)
       {
         if (g_cfg.short_errors)
-             snprintf (buf, len, "%s (%lu)", el->short_name, err);
-        else snprintf (buf, len, "%s: %s (%lu)", el->short_name, el->full_name, err);
+             snprintf (buf, len, "%s (%lu)", el->short_name, DWORD_CAST(err));
+        else snprintf (buf, len, "%s: %s (%lu)", el->short_name, el->full_name, DWORD_CAST(err));
         return (buf);
       }
-  snprintf (buf, len, "Unknown error: %lu", err);
+  snprintf (buf, len, "Unknown error: %lu", DWORD_CAST(err));
   return (buf);
 }
 
@@ -430,7 +430,7 @@ const char *flags_decode (DWORD flags, const struct search_list *list, int num)
         flags &= ~list->value;
       }
   if (flags)           /* print unknown flag-bits */
-     ret += snprintf (ret, left, "0x%08lX|", flags);
+     ret += snprintf (ret, left, "0x%08lX|", DWORD_CAST(flags));
   if (ret > buf)
      *(--ret) = '\0';   /* remove '|' */
   return (buf);
@@ -867,7 +867,8 @@ static void fname_cache_dump (void)
 
     trace_printf ("%2d: orig: '%s'\n"
                   "    real: '%s',   CRC32: 0x%08lX\n",
-                  i, fn->orig_name, fn->real_name, fn->crc32);
+                  i, fn->orig_name, fn->real_name,
+                  DWORD_CAST(fn->crc32));
   }
 }
 
