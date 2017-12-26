@@ -9,6 +9,8 @@
 #include <malloc.h>
 #include <io.h>
 #include <assert.h>
+#include <sys/utime.h>
+#include <sys/stat.h>
 
 #if defined(__CYGWIN__)
   /* We use a local "getopt.h" which is slightly
@@ -262,6 +264,7 @@
   #define _atoi64(str)             strtoull (str, NULL, 10)
   #define stricmp(str1, str2)      strcasecmp (str1, str2)
   #define strnicmp(str1, str2, n)  strncasecmp (str1, str2, n)
+  #define _utime(path, buf)        utime (path, buf)
 #endif
 
 #endif /* _WSOCK_DEFS_H */

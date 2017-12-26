@@ -7,8 +7,6 @@
  */
 
 #include <assert.h>
-#include <sys/stat.h>
-#include <sys/utime.h>
 #include <limits.h>
 #include <errno.h>
 #include <windows.h>
@@ -24,10 +22,6 @@
 #include "init.h"
 #include "in_addr.h"
 #include "geoip.h"
-
-#if defined(__CYGWIN__)
-  #define _utime(path, buf) utime (path, buf)
-#endif
 
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
