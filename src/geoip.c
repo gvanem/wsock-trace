@@ -1964,6 +1964,10 @@ static void test_addr_common (const struct in_addr  *a4,
      width = 29;
 
   printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
+
+#ifndef USE_IP2LOCATION
+  ARGSUSED (use_ip2loc);
+#endif
 }
 
 static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
@@ -2345,7 +2349,7 @@ int main (int argc, char **argv)
            test_addr6 (smartlist_get(list, i), use_ip2loc);
       if (max > 1)
       {
-        geoip_num_unique_countries (NULL, &num, NULL, NULL, NULL);
+        geoip_num_unique_countries (NULL, &num, NULL, NULL);
         printf ("# of unique IPv6 countries: %lu\n", num);
       }
     }
