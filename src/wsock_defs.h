@@ -226,6 +226,13 @@
   #define fileno(f)   _fileno (f)
   #define access(f,m) _access (f,m)
 
+#elif defined(__CYGWIN__)
+  #define _fileno(fil)            fileno (fil)
+  #define _atoi64(str)            strtoull (str, NULL, 10)
+  #define stricmp(str1, str2)     strcasecmp (str1, str2)
+  #define strnicmp(str1, str2, n) strncasecmp (str1, str2, n)
+  #define _utime(path, buf)       utime (path, buf)
+
 #elif defined(__MINGW32__)
   /*
    * I want the MSVC version of vsnprintf() since there is some trouble
@@ -257,21 +264,6 @@
   #define ATTR_PRINTF(_1,_2)   __attribute__((format(printf,_1,_2)))
 #else
   #define ATTR_PRINTF(_1,_2)   /* nothing */
-#endif
-
-#if defined(__CYGWIN__)
-  /*
-   * These are coded in common.c:
-   */
-  extern char *_itoa (int value, char *buf, int radix);
-  extern int   _kbhit (void);
-  extern int   _getch (void);
-
-  #define _fileno(fil)             fileno (fil)
-  #define _atoi64(str)             strtoull (str, NULL, 10)
-  #define stricmp(str1, str2)      strcasecmp (str1, str2)
-  #define strnicmp(str1, str2, n)  strncasecmp (str1, str2, n)
-  #define _utime(path, buf)        utime (path, buf)
 #endif
 
 #endif /* _WSOCK_DEFS_H */
