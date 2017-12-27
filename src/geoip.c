@@ -1375,7 +1375,7 @@ static const char *wininet_strerror (DWORD err)
     static char err_buf[512];
     char  *p;
 
-    strip_nl (buf);
+    str_rip (buf);
     p = strrchr (buf, '.');
     if (p && p[1] == '\0')
        *p = '\0';
@@ -2116,6 +2116,23 @@ static void show_help (const char *my_name)
   exit (0);
 }
 
+typedef void (*test_func) (const char *addr, BOOL use_ip2loc);
+
+static void test_addr_list (smartlist_t *list, BOOL use_ip2loc, test_func func)
+{
+  int   i, max = smartlist_len (list);
+  DWORD num;
+
+  for (i = 0; i < max; i++)
+      (*func) (smartlist_get(list, i), use_ip2loc);
+  if (max > 1)
+  {
+    geoip_num_unique_countries (&num, NULL, NULL, NULL);
+    printf ("# of unique IPv%c countries: %lu\n",
+            (func == test_addr4 ? '4' : '6'), DWORD_CAST(num));
+  }
+}
+
 static void rand_test_addr4 (int loops, BOOL use_ip2loc)
 {
   DWORD num_ip4;
@@ -2158,6 +2175,9 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
   printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num_ip6));
 }
 
+/*
+ * This accepts only address per line.
+ */
 static smartlist_t *read_file (FILE *f, smartlist_t *list)
 {
   while (f && !feof(f))
@@ -2169,7 +2189,7 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
 
     /* Remove blanks, newlines or '#' comments.
      */
-    strip_nl (buf);
+    str_rip (buf);
     p = strchr (buf, '#');
     if (p)
        *p = '\0';
@@ -2188,8 +2208,14 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
   smartlist_t *list = smartlist_new();
   int          i;
 
+  /*
+   * Since Cygwin already converts a '@file' on the cmd-line into an
+   * 'argv[]', this is of no use. And I found no way to disable this.
+   */
+#if !defined(__CYGWIN__)
   if (_argc > 0 && _argv[0][0] == '@')
      return read_file (fopen(_argv[0]+1,"rb"), list);
+#endif
 
   if (isatty(fileno(stdin)) == 0)
      return read_file (stdin, list);
@@ -2342,31 +2368,11 @@ int main (int argc, char **argv)
   else
   {
     smartlist_t *list = make_argv_list (argc, argv);
-    int          i, max = smartlist_len (list);
-    DWORD        num;
 
     if (do_4)
-    {
-      for (i = 0; i < max; i++)
-          test_addr4 (smartlist_get(list, i), use_ip2loc);
-      if (max > 1)
-      {
-        geoip_num_unique_countries (&num, NULL, NULL, NULL);
-        printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num));
-      }
-    }
-
+       test_addr_list (list, use_ip2loc, test_addr4);
     if (do_6)
-    {
-      for (i = 0; i < max; i++)
-           test_addr6 (smartlist_get(list, i), use_ip2loc);
-      if (max > 1)
-      {
-        geoip_num_unique_countries (NULL, &num, NULL, NULL);
-        printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num));
-      }
-    }
-
+       test_addr_list (list, use_ip2loc, test_addr6);
     free_argv_list (list);
   }
 
