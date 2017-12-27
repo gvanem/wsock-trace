@@ -1314,7 +1314,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
   }
 
   rc = env ? _strlcpy(buf,env,size) : orig_var;
-  TRACE (2, "env: '%s', expanded: '%s'\n", orig_var, rc);
+  TRACE (3, "env: '%s', expanded: '%s'\n", orig_var, rc);
   return (rc);
 }
 
