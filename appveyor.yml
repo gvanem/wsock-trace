@@ -86,7 +86,7 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="cygwin" make          -f Makefile.CygWin
+  - cmd: if "%BUILDER%"=="cygwin" (echo WSOCK_TRACE="%WSOCK_TRACE%" & make -f Makefile.CygWin)
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
