@@ -1390,7 +1390,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
     if (!found_load)
        continue;
 
-    p = 1 + strip_nl (buf);
+    p = 1 + str_rip (buf);
 
 #define TEXT_SECTION   ".text          0x"
 #define TEXT_CONTINUE  "               0x"

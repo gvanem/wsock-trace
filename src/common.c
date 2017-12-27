@@ -223,27 +223,29 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
   return (buf);
 }
 
-/**
- * Removes end-of-line termination from a string.
+/*
+ * Removes the 1st end-of-line termination from a string.
+ * Removes "\n" (Unix), "\r" (MacOS) or "\r\n" (DOS) terminations.
  */
 char *str_rip (char *s)
 {
   char *p;
 
-  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
-  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
+  if ((p = strchr(s,'\n')) != NULL) *p = '\0';
+  if ((p = strchr(s,'\r')) != NULL) *p = '\0';
   return (s);
 }
 
 /**
- * Removes end-of-line termination from a wide-string.
+ * Removes the 1st end-of-line termination from a wide-string.
+ * Removes "\n" (Unix), "\r" (MacOS) or "\r\n" (DOS) terminations.
  */
 wchar_t *str_ripw (wchar_t *s)
 {
   wchar_t *p;
 
-  if ((p = wcsrchr(s,L'\n')) != NULL) *p = L'\0';
-  if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
+  if ((p = wcschr(s,L'\n')) != NULL) *p = L'\0';
+  if ((p = wcschr(s,L'\r')) != NULL) *p = L'\0';
   return (s);
 }
 
@@ -392,6 +394,7 @@ struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size, const
     rc = (bytes_waiting > 0);
     disable_raw_mode();
     tcflush (STDIN_FILENO, TCIFLUSH);
+    TRACE (2, "rc: %d, bytes_waiting: %d\n", rc, bytes_waiting);
     return (rc);
   }
 
@@ -803,19 +806,6 @@ char *str_replace (int ch1, int ch2, char *str)
     s++;
   }
   return (str);
-}
-
-/*
- * Removes end-of-line termination from a string.
- * Removes "\n" (Unix), "\r" (MacOS) or "\r\n" (DOS) terminations.
- */
-char *strip_nl (char *s)
-{
-  char *p;
-
-  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
-  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
-  return (s);
 }
 
 /*

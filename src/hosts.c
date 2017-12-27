@@ -89,7 +89,7 @@ static void parse_hosts (FILE *fil)
     if (!fgets(buf,sizeof(buf)-1,fil))   /* EOF */
        break;
 
-    strip_nl (buf);
+    str_rip (buf);
     for (p = buf ; *p && isspace((int)*p); )
         p++;
 

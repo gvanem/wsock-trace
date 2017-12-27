@@ -238,7 +238,6 @@ extern char       *dirname (const char *fname);
 extern char       *fix_path (const char *path);
 extern char       *copy_path (char *out_path, const char *in_path, char use);
 extern char       *str_replace (int ch1, int ch2, char *str);
-extern char       *strip_nl (char *s);
 extern const char *shorten_path (const char *path);
 extern const char *list_lookup_name (unsigned value, const struct search_list *list, int num);
 extern unsigned    list_lookup_value (const char *name, const struct search_list *list, int num);
@@ -270,5 +269,11 @@ extern int    file_exists (const char *fname);
 
 extern const char *get_dll_name (void);
 extern const char *get_builder (void);
+
+#if defined(__CYGWIN__)
+  extern char *_itoa (int value, char *buf, int radix);
+  extern int   _kbhit (void);
+  extern int   _getch (void);
+#endif
 
 #endif  /* _COMMON_H */
