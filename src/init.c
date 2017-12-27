@@ -1480,7 +1480,7 @@ static const void *make_ip_hdr (size_t data_len)
   return (&ip);
 }
 
-static const void *make_udp_hdr (size_t data_len)
+const void *make_udp_hdr (size_t data_len)
 {
   static struct udp_header uh;
 
@@ -1488,7 +1488,7 @@ static const void *make_udp_hdr (size_t data_len)
   return (&uh);
 }
 
-static const void *make_tcp_hdr (size_t data_len)
+const void *make_tcp_hdr (size_t data_len)
 {
   static struct tcp_header th;
 
