@@ -29,6 +29,8 @@
 
 #if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
   #define USE_WSAPoll 0
+#elif defined(__CYGWIN__) && defined(__i386__)
+  #define USE_WSAPoll 0
 #elif defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
   #define USE_WSAPoll 1
 #else
