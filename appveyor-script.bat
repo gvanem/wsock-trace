@@ -64,7 +64,8 @@ echo #                                              >> hosts
 echo 10.0.0.20   www.no-such-host.com               >> hosts
 
 ::
-:: These should survive until 'build_script' for 'msvc', 'mingw', 'cygwin32' or 'cygwin64' gets run.
+:: These should survive until 'build_script' for 'msvc', 'mingw32', 'mingw64,
+:: 'cygwin32' or 'cygwin64' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
