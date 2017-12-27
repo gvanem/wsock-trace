@@ -79,22 +79,22 @@ install:
   - cmd: 7z.exe x IP4-COUNTRY.BIN.xz > NUL
 
 build_script:
-  - cmd: >- appveyor-script.bat init
-            cd src
-            set USE_LUA=1
-            set USE_IP2LOCATION=1
-            set PLATFORM=%CPU%
-            set CYGWIN=nodosfilewarning
-            set DISABLEDELAYEDEXPANSION=0
-            if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
-            if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW
-            if "%BUILDER%"=="cygwin" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
+  - cmd: appveyor-script.bat init
+  - cmd: cd src
+  - cmd: set USE_LUA=1
+  - cmd: set USE_IP2LOCATION=1
+  - cmd: set PLATFORM=%CPU%
+  - cmd: set CYGWIN=nodosfilewarning
+  - cmd: set DISABLEDELAYEDEXPANSION=0
+  - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
+  - cmd: if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="cygwin" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
 test_script:
-  - cmd: >- set WSOCK_TRACE_LEVEL=2 & test.exe
-            set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
-            set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
-            set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
+  - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
+  - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
 
 artifacts:
   # To push all *.zip/exe... files.
