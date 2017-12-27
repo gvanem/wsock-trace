@@ -161,7 +161,7 @@ const char *get_timestamp (void)
 }
 
 /*
- * Return only a TS_DELTA time-stamp as " xxxx usec".
+ * Return only a TS_DELTA time-stamp as "xx.yyy usec".
  * Works independently of whether 'init_timestamp()' was called or not.
  */
 const char *get_timestamp2 (void)
