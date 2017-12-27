@@ -90,11 +90,6 @@ vclean realclean: clean
 	      test.exe test.map .depend.CygWin
 	- rmdir $(OBJ_DIR)
 
-#
-# <tchar.h> is not in the normal place!
-#
-$(OBJ_DIR)/test.o: CFLAGS += -I/usr/i686-pc-mingw32/sys-root/mingw/include
-
 $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 	@echo
