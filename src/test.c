@@ -35,18 +35,20 @@
   #define USE_WSAPoll 0
 #endif
 
-#if defined(__GNUC__)
-  #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-  #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-  #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
+GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
 
-  /* Because of warning:
-   *   test.c:46:14: warning: 'inet_pton' redeclared without dllimport attribute:
-   *                          previous dllimport ignored [-Wattributes]
-   */
-  #pragma GCC diagnostic ignored "-Wattributes"
+#if (GCC_VERSION >= 50100)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wincompatible-pointer-types")
+#endif
 
-#elif defined(_MSC_VER) && defined(_WIN64)
+/* Because of warning:
+ *   test.c:46:14: warning: 'inet_pton' redeclared without dllimport attribute:
+ *                          previous dllimport ignored [-Wattributes]
+ */
+GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
+
+#if defined(_MSC_VER) && defined(_WIN64)
   /*
    * Ignore warnings like:
    *   'type cast': pointer truncation from 'hostent *' to 'int'
