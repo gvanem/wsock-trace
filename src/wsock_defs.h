@@ -122,7 +122,7 @@
    * parameter in 'select()' etc.
    */
   #if (defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)) || \
-      (defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 11)) /* Not sure about this value */
+      (defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 2002001)) /* Not sure about this value */
     #define CONST_PTIMEVAL   const PTIMEVAL
   #else
     #define CONST_PTIMEVAL   const struct timeval *
@@ -207,8 +207,8 @@
   #define __LONG32  long  /* Several <winsock2.h> functions for CygWin uses this */
 #endif
 
-#if !defined(__CYGWIN__)
-  #define __ms_u_long  u_long
+#if !defined(__CYGWIN__) || !defined(__ms_u_long)
+  #define __ms_u_long  u_long  /* Not all CygWin32 do have this */
 #endif
 
 #if defined(_MSC_VER)
