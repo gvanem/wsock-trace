@@ -1772,7 +1772,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   dump_one_proto_infof ("iVersion:           %d\n",      pi_a->iVersion);
 
   af_str = socket_family (pi_a->iAddressFamily);
-  dump_one_proto_infof ("iAddressFamily:     %d = %s\n", pi_a->iAddressFamily, isdigit(*af_str) ? "Unknown" : af_str);
+  dump_one_proto_infof ("iAddressFamily:     %d = %s\n", pi_a->iAddressFamily, isdigit((int)*af_str) ? "Unknown" : af_str);
   dump_one_proto_infof ("iMaxSockAddr:       %d\n",      pi_a->iMaxSockAddr);
   dump_one_proto_infof ("iMinSockAddr:       %d\n",      pi_a->iMinSockAddr);
   dump_one_proto_infof ("iSocketType:        %d = %s\n", pi_a->iSocketType, socket_type(pi_a->iSocketType));
@@ -1882,7 +1882,7 @@ static int trace_printf_cc (const char            *country_code,
 {
   const char *remark = NULL;
 
-  if (country_code && isalpha(*country_code))
+  if (country_code && isalpha((int)*country_code))
   {
    /* Print Country-code (and location) only once for a host with multiple addresses.
     * Like with 'www.google.no':

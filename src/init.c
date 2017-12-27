@@ -271,7 +271,7 @@ static int config_get_line (FILE        *fil,
     if (!fgets(buf,sizeof(buf)-1,fil))   /* EOF */
        return (0);
 
-    for (p = buf; *p && isspace(*p); )
+    for (p = buf; *p && isspace((int)*p); )
         p++;
 
     if (*p == '#' || *p == ';')
@@ -379,7 +379,7 @@ static BOOL _exclude_list_add (const char *name)
 {
   struct exclude *ex;
 
-  if (!isalpha(*name))
+  if (!isalpha((int)*name))
      return (FALSE);
 
   ex = malloc (sizeof(*ex)+strlen(name)+1);
@@ -713,7 +713,7 @@ static enum cfg_sections lookup_section (const char *section)
 }
 
 /*
- * Parse the config-file give in 'file'.
+ * Parse the config-file given in 'file'.
  */
 static void parse_config_file (FILE *file)
 {
@@ -959,7 +959,7 @@ void wsock_trace_init (void)
 
   /* Set trace-level before config-file could reset it.
    */
-  if (env && isdigit(*env))
+  if (env && isdigit((int)*env))
   {
     g_cfg.trace_level = (*env - '0');
     g_cfg.show_caller = 1;

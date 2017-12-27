@@ -1201,8 +1201,8 @@ static void geoip_stats_init (void)
   {
     const char *c_A2 = geoip_get_short_name_by_idx ((int)i);
 
-    geoip_stats_buf[i].country[0] = toupper (c_A2[0]);
-    geoip_stats_buf[i].country[1] = toupper (c_A2[1]);
+    geoip_stats_buf[i].country[0] = TOUPPER (c_A2[0]);
+    geoip_stats_buf[i].country[1] = TOUPPER (c_A2[1]);
   }
   TRACE (2, "Allocated %u bytes for geoip_stats_buf needed for %u countries.\n",
          (unsigned)size, (unsigned)num);
@@ -1861,7 +1861,7 @@ static void dump_num_ip_blocks_by_country (void)
 
   for (i = 0; i < num_c; i++, list++)
       printf (" %3d: %c%c, %-28.28s %5u  %5u\n",
-              (int)i, toupper(list->short_name[0]), toupper(list->short_name[1]),
+              (int)i, TOUPPER(list->short_name[0]), TOUPPER(list->short_name[1]),
               list->long_name, (unsigned)counts4[i], (unsigned)counts6[i]);
   puts ("");
 }
