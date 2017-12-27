@@ -1994,6 +1994,18 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
   else printf ("Invalid address: %s.\n", get_ws_error());
 }
 
+/*
+ * Called on 'geoip.exe -g4 <file>' or
+ *           'geoip.exe -g6 <file>' to generate a '<file>' with
+ * fixed IPv4 or IPv6 arrays:
+ *   static struct ipv4_node ipv4_gen_array [NNN] and
+ *   static struct ipv6_node ipv6_gen_array [NNN].
+ *
+ * These files are then compiled into normal obj-files and the arrays are
+ * accessed via these functions (also generated):
+ *   smartlist_t *geoip_smartlist_fixed_ipv4 (void);
+ *   smartlist_t *geoip_smartlist_fixed_ipv6 (void);
+ */
 static int geoip_generate_array (int family, const char *out_file)
 {
   int    len, fam;
