@@ -2878,27 +2878,13 @@ static void test_get_caller (const void *from)
 }
 #endif  /* USE_BFD */
 
-#include "wsock_trace.rc"
-
-static const char *set_dll_name (void)
-{
-#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__ia64__)
-  #define X_SUFFIX "_x64"
-#else
-  #define X_SUFFIX ""
-#endif
-
-  return (RC_BASENAME X_SUFFIX ".dll");
-}
-
-
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
   char  note[30] = "";
   DWORD tid;
 
   if (reason == DLL_PROCESS_ATTACH)
-     wsock_trace_dll_name = set_dll_name();
+     wsock_trace_dll_name = get_dll_name();
 
   if (ws_trace_base && instDLL == ws_trace_base)
      snprintf (note, sizeof(note), " (%s)", wsock_trace_dll_name);

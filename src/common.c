@@ -383,7 +383,7 @@ struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size, const
     tcsetattr (STDIN_FILENO, TCSANOW, &old_term);
   }
 
-  BOOL _kbhit (void)
+  int _kbhit (void)
   {
     BOOL rc;
 
@@ -1398,4 +1398,23 @@ static DWORD crc_bytes (const char *buf, size_t len)
   return (accum);
 }
 
+#include "wsock_trace.rc"
+
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__ia64__)
+  #define X_SUFFIX "_x64"
+  #define BITNESS  "64-bit"
+#else
+  #define X_SUFFIX ""
+  #define BITNESS  "32-bit"
+#endif
+
+const char *get_dll_name (void)
+{
+  return (RC_BASENAME X_SUFFIX ".dll");
+}
+
+const char *get_builder (void)
+{
+  return (RC_BUILDER " (" BITNESS ")");
+}
 

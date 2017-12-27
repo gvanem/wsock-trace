@@ -290,4 +290,7 @@ extern char * _utoa10w (int value, int width, char *buf);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
 
+extern const char *get_dll_name (void);
+extern const char *get_builder (void);
+
 #endif  /* _COMMON_H */

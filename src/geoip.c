@@ -1548,13 +1548,6 @@ void geoip_update_file (int family, BOOL force_update)
 #if defined(TEST_GEOIP)
 
 #include "getopt.h"
-#include "wsock_trace.rc"
-
-static const char *built_by (void)
-{
-  return (RC_BUILDER);
-}
-
 
 /*
  * Determine length of the network part in an IPv4 address.
@@ -2041,7 +2034,7 @@ static int geoip_generate_array (int family, const char *out_file)
            "#include \"geoip.h\"\n"
            "\n"
            "GCC_PRAGMA (GCC diagnostic ignored \"-Wmissing-braces\")\n"
-           "\n", ctime(&now), fam, out_file, built_by());
+           "\n", ctime(&now), fam, out_file, get_builder());
 
   fprintf (out, "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
 
@@ -2195,7 +2188,7 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
   int          i;
 
   if (_argc > 0 && _argv[0][0] == '@')
-     return read_file (fopen(_argv[0]+1,"rt"), list);
+     return read_file (fopen(_argv[0]+1,"rb"), list);
 
   if (isatty(fileno(stdin)) == 0)
      return read_file (stdin, list);
