@@ -292,7 +292,7 @@ static DWORD geoip_parse_file (const char *file, int family)
 
   TRACE (4, "address-family: %d, file: %s.\n", family, file);
 
-  if (!file || !FILE_EXISTS(file))
+  if (!file || !file_exists(file))
   {
     TRACE (2, "Geoip-file \"%s\" does not exist.\n", file);
     return (0);
@@ -2210,12 +2210,12 @@ static void free_argv_list (smartlist_t *sl)
 
 static int check_requirements (BOOL check_geoip4, BOOL check_geoip6)
 {
-  if (check_geoip4 && (!g_cfg.geoip4_file || !FILE_EXISTS(g_cfg.geoip4_file)))
+  if (check_geoip4 && (!g_cfg.geoip4_file || !file_exists(g_cfg.geoip4_file)))
   {
     printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip4_file);
     return (0);
   }
-  if (check_geoip6 && (!g_cfg.geoip6_file || !FILE_EXISTS(g_cfg.geoip6_file)))
+  if (check_geoip6 && (!g_cfg.geoip6_file || !file_exists(g_cfg.geoip6_file)))
   {
     printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip6_file);
     return (0);

@@ -421,7 +421,7 @@ static FILE *open_config_file (const char *base_name)
 
   if (env == fname)
   {
-    if (!FILE_EXISTS(fname))
+    if (!file_exists(fname))
     {
       WARNING ("%%WSOCK_TRACE=\"%s\" does not exist.\nRunning with default values.\n", env);
       return (NULL);
@@ -1041,7 +1041,7 @@ void wsock_trace_init (void)
     g_cfg.trace_file_okay   = (g_cfg.trace_stream != NULL);
     g_cfg.trace_file_device = FALSE;
 
-    if (!g_cfg.trace_stream || !FILE_EXISTS(g_cfg.trace_file))
+    if (!g_cfg.trace_stream || !file_exists(g_cfg.trace_file))
     {
       const char *fname = g_cfg.trace_file;
 

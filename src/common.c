@@ -366,7 +366,7 @@ struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size, const
    *   https://stackoverflow.com/questions/29335758/using-kbhit-and-getch-on-linux
    */
   static int ch, bytes_waiting;
-  static struct termios old_term, term;
+  static struct termios old_term;
 
   static void enable_raw_mode (void)
   {
@@ -657,7 +657,7 @@ char *fix_path (const char *path)
   * '/' in 'path'. Convert to '\\'.
   *
   * Note: the 'result' file or path may not exists.
-  *       Use 'FILE_EXISTS()' to test.
+  *       Use 'file_exists()' to test.
   */
   copy_path (result, path, '\\');
   if (!GetFullPathName(result, sizeof(result), result, NULL))
@@ -1396,6 +1396,20 @@ static DWORD crc_bytes (const char *buf, size_t len)
   for (accum = 0; len > 0; len--)
       accum = (accum << 8) ^ crc_table[(BYTE)(accum >> CRC_SHIFTS) ^ *buf++];
   return (accum);
+}
+
+/*
+ * Simple check for file-existence.
+ * Using 'access()' for CygWin in case the file is on a
+ * Posix "/usr/bin/foo" form. But try 'GetFileAttributes()'
+ * also in case it's on Windows form (but that would match a directory
+ * too).
+ */
+int file_exists (const char *fname)
+{
+  DWORD attr = GetFileAttributes (fname);
+
+  return (attr != INVALID_FILE_ATTRIBUTES || access(fname,0) == 0);
 }
 
 #include "wsock_trace.rc"

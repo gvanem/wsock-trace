@@ -170,29 +170,6 @@
                              else ExitProcess (GetCurrentProcessId());  \
                            } while (0)
 
-
-/*
- * Simple check for file-existence.
- * Use 'stat()' for CygWin in case the file is on a
- * Posix "/usr/bin/foo" form. But try 'GetFileAttributes()'
- * first in case it's on Windows form.
- */
-#if defined(__CYGWIN__)
-  static inline int FILE_EXISTS (const char *f)
-  {
-    struct stat st;
-
-    if (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES)
-       return (1);
-    return (stat(f,&st) == 0);
-  }
-#else
-  static __inline int FILE_EXISTS (const char *f)
-  {
-    return (GetFileAttributes(f) != INVALID_FILE_ATTRIBUTES);
-  }
-#endif
-
 extern void debug_printf (const char *file, unsigned line,
                           _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (3,4);
 
@@ -289,6 +266,7 @@ extern char * _strreverse (char *str);
 extern char * _utoa10w (int value, int width, char *buf);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
+extern int    file_exists (const char *fname);
 
 extern const char *get_dll_name (void);
 extern const char *get_builder (void);

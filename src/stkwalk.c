@@ -1178,7 +1178,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
       {
         _strlcpy (pdb_file, module, dot-module+1);
         strcat (pdb_file, ".pdb");
-        have_PDB = FILE_EXISTS (pdb_file);
+        have_PDB = file_exists (pdb_file);
       }
     }
 #endif
@@ -1353,7 +1353,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
 
   _strlcpy (map_file, module, dot-module+1);
   strcat (map_file, ".map");
-  if (!FILE_EXISTS(map_file))
+  if (!file_exists(map_file))
   {
     TRACE (2, "No %s file.\n", map_file);
     return (0);

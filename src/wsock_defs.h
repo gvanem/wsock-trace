@@ -224,6 +224,7 @@
   #define tzset()     _tzset()
   #define isatty(fd)  _isatty (fd)
   #define fileno(f)   _fileno (f)
+  #define access(f,m) _access (f,m)
 
 #elif defined(__MINGW32__)
   /*
