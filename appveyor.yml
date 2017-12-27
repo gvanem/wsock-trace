@@ -36,7 +36,9 @@ environment:
     - BUILDER: mingw
       CPU:     x64
       MSYSTEM: MINGW64
-    - BUILDER: cygwin
+    - BUILDER: cygwin32
+      CPU:     x86
+    - BUILDER: cygwin64
       CPU:     x64
 
 matrix:
@@ -45,7 +47,9 @@ matrix:
   #
   fast_finish: true
   allow_failures:
-    - BUILDER: cygwin
+    - BUILDER: cygwin32
+      CPU:     x86
+    - BUILDER: cygwin64
       CPU:     x64
 
 #
@@ -64,8 +68,9 @@ install:
   # add a few locations to our path
   #
   - cmd: set PATH=%CD%\src;%PATH%
-  - cmd: if "%BUILDER%"=="mingw"  set PATH=C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="cygwin" set PATH=C:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="mingw"    set PATH=C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="cygwin64" set PATH=C:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe -qgnNdO -l C:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com & set PATH=C:\msys64\usr\bin;c:\cygwin\bin;%PATH%
 
   #
   # set compiler environment
@@ -88,7 +93,7 @@ build_script:
   - cmd: set DISABLEDELAYEDEXPANSION=0
   - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="cygwin" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
+  - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
