@@ -203,12 +203,18 @@
  */
 #define __ULONG32  unsigned __LONG32
 
-#if !defined(__CYGWIN__) && !defined(__MINGW32__)
-  #define __LONG32  long  /* Several <winsock2.h> functions for CygWin uses this */
-#endif
-
 #if !defined(__CYGWIN__)
+  #if !defined(__MINGW32__)
+  #define __LONG32  long  /* Several <winsock2.h> functions for CygWin uses this */
+  #endif
+
   #define __ms_u_long  u_long
+
+#elif !defined(__x86_64__) && (CYGWIN_VERSION_DLL_COMBINED <= 2002001)
+   /*
+    * Not sure about the above CYGWIN_VERSION_DLL_COMBINED value
+    */
+  #define __ms_u_long u_long
 #endif
 
 #if defined(_MSC_VER)
@@ -248,7 +254,7 @@
    * var-arg functions must be defined as cdecl. This is only an issue if a program
    * is using 'fastcall' globally (cl option '-Gr').
    */
-  #define MS_CDECL cdecl
+  #define MS_CDECL __cdecl
 #else
   #define MS_CDECL
 #endif
