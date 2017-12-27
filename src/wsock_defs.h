@@ -258,7 +258,12 @@
 #endif
 
 #if defined(__CYGWIN__)
+  /*
+   * These are coded in common.c:
+   */
   extern char *_itoa (int value, char *buf, int radix);
+  extern BOOL  _kbhit (void);
+  extern int   _getch (void);
 
   #define _fileno(fil)             fileno (fil)
   #define _atoi64(str)             strtoull (str, NULL, 10)

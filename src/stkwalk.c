@@ -961,13 +961,6 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
  */
 static BOOL check_quit (void)
 {
-#if defined(__CYGWIN__)
-  if (getc(STDIN_FILENO))
-  {
-    g_quit_count++;
-    return (1);
-  }
-#else
   if (_kbhit())
   {
     int ch = _getch();
@@ -976,7 +969,6 @@ static BOOL check_quit (void)
        g_quit_count++;
     return (1);
   }
-#endif
   return (0);
 }
 #endif /* USE_SymEnumSymbolsEx */

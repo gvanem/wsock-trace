@@ -12,7 +12,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#if !defined(__CYGWIN__)
+#if defined(__CYGWIN__)
+  #include <sys/ioctl.h>
+  #include <termios.h>
+#else
   #include <share.h>
 #endif
 
@@ -356,6 +359,50 @@ struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size, const
     assert (radix == 8 || radix == 10);
     sprintf (buf, (radix == 8) ? "%o" : "%d", value);
     return (buf);
+  }
+
+  /*
+   * '_kbhit()' and '_getch()' for CygWin based on:
+   *   https://stackoverflow.com/questions/29335758/using-kbhit-and-getch-on-linux
+   */
+  static int ch, bytes_waiting;
+  static struct termios old_term, term;
+
+  static void enable_raw_mode (void)
+  {
+    struct termios term;
+
+    tcgetattr (STDIN_FILENO, &old_term);
+    memcpy (&term, &old_term, sizeof(term));
+    term.c_lflag &= ~(ICANON | ECHO);   /* Disable echo as well */
+    tcsetattr (STDIN_FILENO, TCSANOW, &term);
+  }
+
+  static void disable_raw_mode (void)
+  {
+    tcsetattr (STDIN_FILENO, TCSANOW, &old_term);
+  }
+
+  BOOL _kbhit (void)
+  {
+    BOOL rc;
+
+    enable_raw_mode();
+    ch = ioctl (STDIN_FILENO, FIONREAD, &bytes_waiting);
+    rc = (bytes_waiting > 0);
+    disable_raw_mode();
+    tcflush (STDIN_FILENO, TCIFLUSH);
+    return (rc);
+  }
+
+  int _getch (void)
+  {
+    if (bytes_waiting)
+    {
+      bytes_waiting = 0;
+      return (ch);
+    }
+    return (0);
   }
 #endif
 
