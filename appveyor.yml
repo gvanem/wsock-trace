@@ -86,7 +86,7 @@ install:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: cd src
-  - cmd: set USE_LUA=1
+  - cmd: set USE_LUA=0
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
