@@ -77,10 +77,12 @@ void ws_sema_release (void)
 static void init_timestamp (void)
 {
   LARGE_INTEGER rc;
+  uint64        frequency;
 
   QueryPerformanceFrequency (&rc);
-  g_cfg.clocks_per_usec = rc.QuadPart / 1000000ULL;
-  TRACE (2, "CPU speed: %.3f MHz\n", (double)rc.QuadPart / 1E6);
+  frequency = rc.QuadPart;
+  g_cfg.clocks_per_usec = frequency / 1000000ULL;
+  TRACE (2, "CPU speed: %.0f MHz\n", (double)frequency / 1E3);
 
   QueryPerformanceCounter (&rc);
   g_cfg.start_ticks = rc.QuadPart;
