@@ -13,7 +13,8 @@
 #include <sys/stat.h>
 
 #if defined(__CYGWIN__)
-  /* We use a local "getopt.h" which is slightly
+  /*
+   * We use a local "getopt.h" which is slightly
    * incompatible with CygWin's standard getopt.h.
    * So do not include it via <unistd.h>.
    */
@@ -262,7 +263,7 @@
    * These are coded in common.c:
    */
   extern char *_itoa (int value, char *buf, int radix);
-  extern BOOL  _kbhit (void);
+  extern int   _kbhit (void);
   extern int   _getch (void);
 
   #define _fileno(fil)             fileno (fil)
