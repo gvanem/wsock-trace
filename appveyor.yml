@@ -88,7 +88,7 @@ build_script:
   - cmd: set DISABLEDELAYEDEXPANSION=0
   - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="cygwin" (echo HOME="%HOME%" & copy ..\wsock_trace.appveyor %HOME%\wsock_trace & make -f Makefile.CygWin)
+  - cmd: if "%BUILDER%"=="cygwin" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
