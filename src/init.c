@@ -171,7 +171,7 @@ const char *get_timestamp2 (void)
   static char          buf [100];
   LARGE_INTEGER        ticks;
   int64                clocks;
-  double               usec;
+  double               sec;
 
   if (frequency == U64_SUFFIX(0))
      QueryPerformanceFrequency ((LARGE_INTEGER*)&frequency);
@@ -181,9 +181,8 @@ const char *get_timestamp2 (void)
        clocks = 0;
   else clocks = (int64) (ticks.QuadPart - last.QuadPart);
   last = ticks;
-  usec = (double)clocks / (double)frequency;
-  usec *= 1E6;
-  sprintf (buf, "%6.3f usec", usec);
+  sec  = (double)clocks / (double)frequency;
+  sprintf (buf, "%6.3f usec", 1E6 * sec);
   return (buf);
 }
 
