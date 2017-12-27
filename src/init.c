@@ -104,15 +104,17 @@ static void set_time_format (TS_TYPE *ret, const char *val)
 /*
  * Return the prefered time-stamp string.
  */
-#if (defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 11)) /* Not sure about this value */
-  #define HAVE_FMODL
+#if defined(__CYGWIN__)
+  #if (CYGWIN_VERSION_DLL_COMBINED >= 2009000)
+    #define HAVE_FMODL
+  #endif
 #elif !defined(__WATCOMC__)
   #define HAVE_FMODL
 #endif
 
 const char *get_timestamp (void)
 {
-  static LARGE_INTEGER last = { S64_SUFFIX(0) };
+  static LARGE_INTEGER last = {{ S64_SUFFIX(0) }};
   static char          buf [40];
   SYSTEMTIME           now;
   LARGE_INTEGER        ticks;
@@ -168,7 +170,7 @@ const char *get_timestamp (void)
  */
 const char *get_timestamp2 (void)
 {
-  static LARGE_INTEGER last = { S64_SUFFIX(0) };
+  static LARGE_INTEGER last = {{ S64_SUFFIX(0) }};
   static uint64 frequency = U64_SUFFIX(0);
   static char          buf [100];
   LARGE_INTEGER        ticks;
