@@ -1463,7 +1463,7 @@ void print_long_flags (const char *start, size_t indent, int brk_ch)
       if (left <= 2 || (left <= next - c))
       {
         trace_printf ("%c\n%*c", *c++, (int)indent, ' ');
-        left  = g_cfg.screen_width - indent;
+        left  = (int)(g_cfg.screen_width - indent);
         start = c;
         continue;
       }
