@@ -2110,7 +2110,8 @@ static void show_help (const char *my_name)
           "       -h:      this help.\n",
           my_name, I_OPT, I_HELP);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
-          "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\"\n");
+          "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\".\n"
+          "   Built by %s\n", get_builder());
   wsock_trace_exit();
   exit (0);
 }
