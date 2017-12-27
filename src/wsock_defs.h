@@ -210,9 +210,10 @@
 
   #define __ms_u_long  u_long
 
-#elif !defined(__x86_64__) && (CYGWIN_VERSION_DLL_COMBINED <= 2002001)
+#elif defined(__i386__) // && (CYGWIN_VERSION_DLL_COMBINED <= 2882000)
    /*
-    * Not sure about the above CYGWIN_VERSION_DLL_COMBINED value
+    * Not sure about the above CYGWIN_VERSION_DLL_COMBINED value.
+    * Never mind this shit. Add it for all 32-bit CygWin.
     */
   #define __ms_u_long u_long
 #endif
@@ -233,7 +234,9 @@
   #define access(f,m) _access (f,m)
 
 #elif defined(__CYGWIN__)
+  #ifndef _filnoe
   #define _fileno(fil)            fileno (fil)
+  #endif
   #define _atoi64(str)            strtoull (str, NULL, 10)
   #define stricmp(str1, str2)     strcasecmp (str1, str2)
   #define strnicmp(str1, str2, n) strncasecmp (str1, str2, n)
