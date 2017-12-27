@@ -207,8 +207,8 @@
   #define __LONG32  long  /* Several <winsock2.h> functions for CygWin uses this */
 #endif
 
-#if !defined(__CYGWIN__) || !defined(__ms_u_long)
-  #define __ms_u_long  u_long  /* Not all CygWin32 do have this */
+#if !defined(__CYGWIN__)
+  #define __ms_u_long  u_long
 #endif
 
 #if defined(_MSC_VER)

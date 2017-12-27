@@ -67,6 +67,14 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
   #define INIT_PTR(ptr) init_ptr ((const void**)&ptr, #ptr)
 #endif
 
+#if defined(__CYGWIN__) && !defined(__x86_64__) && \
+    (CYGWIN_VERSION_DLL_COMBINED <= 2002001)
+   /*
+    * Not sure about the above CYGWIN_VERSION_DLL_COMBINED value
+    */
+  #define __ms_u_long u_long
+#endif
+
 /*
  * A WSTRACE() macro for the WinSock calls we support.
  * This macro is used like 'WSTRACE ("WSAStartup (%u.%u) --> %s", args).'
