@@ -1676,7 +1676,7 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
     else
     {
       if (raw)
-           fprintf (out, "  { %10lu, %10lu, ", DWORD_CAST(entry->low), DWORD_CAST(entry->high));
+           fprintf (out, "  { %10luU, %10luU, ", DWORD_CAST(entry->low), DWORD_CAST(entry->high));
       else fprintf (out, "%6d: %10lu  %10lu %8ld",
                     i, DWORD_CAST(entry->low), DWORD_CAST(entry->high),
                     (long)(entry->high - entry->low));
