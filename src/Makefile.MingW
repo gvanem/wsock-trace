@@ -20,6 +20,7 @@ IP2LOCATION_ROOT = ../IP2Location-C-Library
 #
 USE_LUA     ?= 0
 LUAJIT_ROOT ?= ../LuaJIT
+LUAJIT_ROOT := $(subst \,/,$(LUAJIT_ROOT))
 
 BIN_TARGET  = $(realpath $(MINGW32))/bin
 LIB_TARGET  = $(realpath $(MINGW32))/lib
@@ -126,6 +127,10 @@ ifeq ($(USE_DEF_FILE),1)
   WSOCK_DEPS += $(DEF_FILE)
 endif
 
+ifeq ($(USE_LUA),1)
+  WSOCK_DEPS += $(LUAJIT_ROOT)/src/libluajit.a
+endif
+
 libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
 
 wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
@@ -172,9 +177,6 @@ compile_luajit_0:
 # and that 'BUILDMODE = static'.
 #
 compile_luajit_1:
-#
-# XXX - luajit's all target depends on libluajit.a which is not build by all.
-# Inform Upstream?
 	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
 	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows
 
