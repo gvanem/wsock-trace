@@ -33,6 +33,20 @@ struct pcap_cfg {
        FILE   *dump_stream;
      };
 
+struct lua_cfg {
+       BOOL    enable;
+       int     trace_level;
+       WORD    color_head;
+       WORD    color_body;
+
+       /*
+        * Path-names for the Lua init/exit script-files.
+        * These are effective only if built with 'USE_LUA'.
+        */
+       char   *init_script;
+       char   *exit_script;
+     };
+
 struct config_table {
        char   *trace_file;
        FILE   *trace_stream;
@@ -105,12 +119,7 @@ struct config_table {
        WORD    screen_width;
        WORD    screen_heigth;
 
-       /* Path-names for the Lua init/exit script-files.
-        * These are effective only if built with 'USE_LUA'.
-        */
-       char   *lua_init_script;
-       char   *lua_exit_script;
-
+       struct lua_cfg     lua;
        struct pcap_cfg    pcap;
        struct statistics  counts;
        DWORD  reentries;

@@ -622,11 +622,23 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
  */
 static void parse_lua_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"lua_init"))
-       g_cfg.lua_init_script = strdup (val);
+  if (!stricmp(key,"enable"))
+       g_cfg.lua.enable = atoi (val);
+
+  else if (!stricmp(key,"trace_level"))
+       g_cfg.lua.trace_level = atoi (val);
+
+  else if (!stricmp(key,"color_head"))
+       get_color (val, &g_cfg.lua.color_head);
+
+  else if (!stricmp(key,"color_body"))
+       get_color (val, &g_cfg.lua.color_body);
+
+  else if (!stricmp(key,"lua_init"))
+       g_cfg.lua.init_script = strdup (val);
 
   else if (!stricmp(key,"lua_exit"))
-       g_cfg.lua_exit_script = strdup (val);
+       g_cfg.lua.exit_script = strdup (val);
 
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -772,7 +784,7 @@ static void parse_config_file (FILE *file)
   }
 }
 
-#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
+#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 static void trace_report (void)
 {
   const struct exclude *ex;
@@ -872,7 +884,7 @@ static void trace_report (void)
                   DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
   }
 }
-#endif /* !TEST_GEOIP !TEST_NLM */
+#endif /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
 /*
  * Called from DllMain(): dwReason == DLL_PROCESS_DETACH
@@ -884,7 +896,7 @@ void wsock_trace_exit (void)
   if (fatal_error)
      g_cfg.trace_report = FALSE;
 
-#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
+#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 #if 0
   if (!cleaned_up || startup_count > 0)
@@ -900,7 +912,8 @@ void wsock_trace_exit (void)
   hosts_file_exit();
 
 #if defined(USE_LUA)
-  wstrace_exit_lua (g_cfg.lua_exit_script);
+  if (g_cfg.lua.enable)
+     wstrace_exit_lua (g_cfg.lua.exit_script);
 #endif
 
 #if 0
@@ -910,7 +923,7 @@ void wsock_trace_exit (void)
     print_process_times();
   }
 #endif
-#endif  /* !TEST_GEOIP && !TEST_NLM */
+#endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
   common_exit();
 
@@ -923,8 +936,8 @@ void wsock_trace_exit (void)
   FREE (g_cfg.trace_file);
   FREE (g_cfg.hosts_file);
   FREE (g_cfg.pcap.dump_fname);
-  FREE (g_cfg.lua_init_script);
-  FREE (g_cfg.lua_exit_script);
+  FREE (g_cfg.lua.init_script);
+  FREE (g_cfg.lua.exit_script);
   FREE (g_cfg.geoip4_file);
   FREE (g_cfg.geoip6_file);
   FREE (g_cfg.geoip4_url);
@@ -1198,13 +1211,14 @@ void wsock_trace_init (void)
   ws_lwip_init();
 #endif
 
-#if defined(USE_LUA)
-  wstrace_init_lua (g_cfg.lua_init_script);
+#if defined(USE_LUA) && !defined(TEST_BACKTRACE)
+  if (g_cfg.lua.enable)
+     wstrace_init_lua (g_cfg.lua.init_script);
 #endif
 #endif  /* !TEST_GEOIP && !TEST_NLM */
 }
 
-#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
+#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 /*
  * Used as e.g. 'INIT_PTR (p_WSAStartup)' which expands to
@@ -1230,7 +1244,7 @@ void init_ptr (const void **ptr, const char *ptr_name)
   if (cleaned_up)
      TRACE (0, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
-#endif  /* !TEST_GEOIP && !TEST_NLM */
+#endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
 static const struct search_list colors[] = {
                               { 0, "black"   },
@@ -1531,7 +1545,7 @@ static void _gettimeofday (struct pcap_timeval *tv)
   FILETIME ft;
   uint64   tim;
 
-#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
+#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
   if (p_GetSystemTimePreciseAsFileTime)
     (*p_GetSystemTimePreciseAsFileTime) (&ft);
   else
