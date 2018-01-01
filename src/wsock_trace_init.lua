@@ -19,5 +19,7 @@ else
   ws = require ("wsock_trace")
 end
 
-ws.trace_puts (string.format("  Hello from '~1%s~0': ~2%s~0\n", who_am_I, os_details()))
+ws.trace_puts (string.format("  Hello from '~1%s~0': ~2%s~0.\n", who_am_I, os_details()))
+ws.trace_puts (string.format("  I am importing from '~1%s~0'\n", ws.get_dll_name()))
+
 ws.trace_puts ("  ~1package.path[]: " .. package.path .. '.~0\n')

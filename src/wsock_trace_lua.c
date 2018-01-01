@@ -104,6 +104,12 @@ static int l_trace_puts (lua_State *l)
   return (1);
 }
 
+static int l_get_dll_name (lua_State *l)
+{
+  lua_pushstring (l,get_dll_name());
+  return (1);
+}
+
 static void wstrace_lua_print_stack (void)
 {
   lua_Debug ar;
@@ -210,6 +216,7 @@ void wstrace_exit_lua (const char *script)
 static const struct luaL_reg wstrace_lua_table[] = {
   { "register_hook", l_register_hook },
   { "trace_puts",    l_trace_puts    },
+  { "get_dll_name",  l_get_dll_name },
   { NULL,            NULL }
 };
 
