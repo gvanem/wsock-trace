@@ -180,9 +180,6 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
  */
 void wstrace_init_lua (const char *script)
 {
-  if (!g_cfg.lua.enable)
-     return;
-
   assert (L == NULL);
   L = luaL_newstate();
   luaL_openlibs (L);    /* Load Lua libraries */
@@ -203,9 +200,6 @@ void wstrace_init_lua (const char *script)
  */
 void wstrace_exit_lua (const char *script)
 {
-  if (!g_cfg.lua.enable)
-     return;
-
   lua_sethook (L, NULL, 0, 0);
   assert (L != NULL);
   wstrace_lua_run_script (L, script);
