@@ -1,3 +1,5 @@
 -- wsock_trace_exit.lua
 --
-io.write ("Bye from 'wsock_trace_exit.lua'.\n");
+
+who_am_I = __FILE__()
+io.write ("Bye from '" .. who_am_I .. "\n");
