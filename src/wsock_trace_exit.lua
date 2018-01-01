@@ -2,4 +2,5 @@
 --
 
 who_am_I = __FILE__()
-io.write ("Bye from '" .. who_am_I .. "\n");
+ws.trace_puts (string.format("  Bye from ~1%s~0\n", who_am_I))
+

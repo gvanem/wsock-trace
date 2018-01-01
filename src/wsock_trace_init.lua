@@ -13,5 +13,7 @@ end
 
 who_am_I = __FILE__()
 
-io.write (string.format("Hello from '%s': %s\n", who_am_I, os_details()))
-io.write ("package.path[]: " .. package.path .. '.\n')
+ws  = require ("wsock_trace")
+
+ws.trace_puts (string.format("  Hello from '~1%s~0': ~2%s~0\n", who_am_I, os_details()))
+ws.trace_puts ("  ~1package.path[]: " .. package.path .. '.~0\n')
