@@ -91,8 +91,9 @@ LDFLAGS_DEF = -def:$(WSOCK_DEF)
 !endif
 
 !if "$(USE_LUA)" == "1"
-CFLAGS = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
-EX_LIBS = $(LUAJIT_ROOT)/src/lua51_static.lib
+CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
+EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
+WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 !if "$(USE_IP2LOCATION)" == "1"
@@ -143,7 +144,7 @@ all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idn
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) $(WSOCK_DEP)
 	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS) > link.tmp
 	lib -nologo $(WSOCK_LIB) $(NON_EXPORT_OBJ)
 	@type link.tmp >> $(WSOCK_MAP)
