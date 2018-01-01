@@ -48,7 +48,12 @@ echo geoip6_file            = %CD%\geoip6           >> wsock_trace.appveyor
 echo ip2location_bin_file   = %CD%\IP4-COUNTRY.BIN  >> wsock_trace.appveyor
 echo [idna]                                         >> wsock_trace.appveyor
 echo enable                 = 1                     >> wsock_trace.appveyor
-
+echo [lua]                                          >> wsock_trace.appveyor
+echo enable      = %%WSOCK_LUA_ENABLE%%             >> wsock_trace.appveyor
+echo trace_level = 1                                >> wsock_trace.appveyor
+echo lua_init    = %CD%\src\wsock_trace_init.lua    >> wsock_trace.appveyor
+echo lua_exit    = %CD%\src\wsock_trace_exit.lua    >> wsock_trace.appveyor
+                                                    >> wsock_trace.appveyor
 echo Generating hosts file...
 echo #                                               > hosts
 echo # This file was generated from %0.             >> hosts
