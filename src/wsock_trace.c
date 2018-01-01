@@ -720,7 +720,7 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   WSTRACE ("WSAStartup (%u.%u) --> %s",
            loBYTE(data->wVersion), hiBYTE(data->wVersion), get_error(rc));
 
-  LUA_HOOK (rc, WSAStartup(ver,data));
+  LUA_HOOK (rc, l_WSAStartup(ver,data));
   LEAVE_CRIT();
   return (rc);
 }
@@ -740,6 +740,7 @@ EXPORT int WINAPI WSACleanup (void)
     startup_count--;
     cleaned_up = (startup_count == 0);
   }
+  LUA_HOOK (rc, l_WSACleanup());
   LEAVE_CRIT();
   return (rc);
 }
@@ -2737,7 +2738,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     ret_addr = (ULONG_PTR) frames [2];
 #endif
 
-#else
+#else  /* USE_BFD */
     WSAERROR_PUSH();
 #endif
 

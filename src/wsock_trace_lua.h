@@ -18,15 +18,16 @@
   extern void wstrace_exit_lua (const char *script);
 
   extern int l_WSAStartup (WORD ver, WSADATA *data);
+  extern int l_WSACleanup (void);
 
   #if defined(_MSC_VER) && defined(__FUNCSIG__)
    /*
     * MSVC supports '__FUNCSIG__' and includes full list of arguments.
     * E.g. in 'void foo(int bar)', __FUNCSIG__' gives "void foo(int bar)".
     */
-    #define LUA_HOOK(rc, func)  func_sig = ## __FUNCSIG__, rc = l_ ## func
+    #define LUA_HOOK(rc, func)  func_sig = __FUNCSIG__, rc = func
   #else
-    #define LUA_HOOK(rc, func)  rc = l_ ## func
+    #define LUA_HOOK(rc, func)  func_sig = __FUNCTION__, rc = func
   #endif
 
 #else
