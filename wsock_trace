@@ -133,6 +133,15 @@ exclude = FD_ISSET
 #
 [lua]
 
+enable      = 1
+trace_level = 1              # The level for LUA_TRACE().
+
+#
+# The colors used in LUA_TRACE() and LUA_WARNING():
+#
+color_head = bright magenta  # color of the start. E.g. "wsock_trace_lua.c(238):"
+color_body = bright white    # color of the body. E.g. "func_sig: 'WSACleanup()'"
+
 lua_init = %HOME%\wsock_trace_init.lua
 lua_exit = %HOME%\wsock_trace_exit.lua
 
