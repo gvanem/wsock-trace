@@ -11,13 +11,24 @@
 #include "init.h"
 #include "wsock_trace_lua.h"
 
+#include "lj_arch.h"
+
+#if !defined(LJ_HASFFI) || (LJ_HASFFI == 0)
+#error "LuaJIT needs to be built with 'LJ_HASFFI=1'."
+#endif
+
+
 #define LUA_TRACE(level, fmt, ...)                  \
         do {                                        \
-          if (g_cfg.trace_level >= level)           \
-             trace_printf ("~2%s(%u): ~4" fmt "~0", \
+          if (g_cfg.lua.trace_level >= level)       \
+             trace_printf ("~8%s(%u): ~9" fmt "~0", \
                            __FILE__, __LINE__,      \
                            ## __VA_ARGS__);         \
         } while (0)
+
+#define LUA_WARNING(fmt, ...)               \
+        trace_printf ("~8LUA: ~9" fmt "~0", \
+                      ## __VA_ARGS__)
 
 /* There is only one Lua-state variable.
  */
@@ -27,22 +38,55 @@ static lua_State *L = NULL;
  */
 const char *func_sig = NULL;
 
+const char *get_func_sig (void)
+{
+  static char buf [100];
+
+  if (!func_sig)
+     return ("None");
+
+  strcpy (buf, func_sig);
+
+#if !(defined(_MSC_VER) && defined(__FUNCSIG__))
+  strcat (buf, "()");
+#endif
+  return (buf);
+}
+
 /*
  * Inspired from the example in Swig:
  * <Swig-Root>/Examples/lua/embed/embed.c
  */
-static void run_lua_script (lua_State *l, const char *script)
+static void wstrace_lua_run_script (lua_State *l, const char *script)
 {
+  const char *msg;
+  int   rc;
+
+  LUA_TRACE (1, "Launching script: %s\n", script ? script : "<none>");
+
   if (!script)
      return;
 
   if (luaL_loadfile(l, script))
   {
-    WARNING ("Failed to load script: %s\n", script);
+    LUA_WARNING ("~1Failed to load script:~0\n  %s\n", script);
     return;
   }
-  if (lua_pcall(l, 0, LUA_MULTRET, 0))
-     WARNING ("Failure in script:\n    %s\n", lua_tostring(l, -1));
+
+  rc = lua_pcall (l, 0, LUA_MULTRET, 0);
+  if (rc == 0)
+     return;
+
+  if (!lua_isnil(l, -1))
+  {
+    msg = lua_tostring (l, -1);
+    if (!msg)
+       msg = "(error object is not a string)";
+    LUA_WARNING ("~1%s:\n  ~0%s\n", script, msg);
+    lua_pop (l, 1);
+  }
+  else
+    LUA_WARNING ("~1%s: rc: %d\n", script, rc);
 }
 
 static int l_register_hook (lua_State *l)
@@ -90,15 +134,22 @@ static int wstrace_lua_panic (lua_State *l)
 {
   const char *err_msg = lua_tostring (l, 1);
 
-  WARNING ("Unprotected error from LUA runtime: %s\n", err_msg);
+  LUA_WARNING ("~1Panic: %s\n", err_msg);
   wstrace_lua_print_stack();
   lua_close (L);
   L = NULL;
   return (0);
 }
 
+/*
+ * Called from 'wsock_trace_init()' to setup Lua and
+ * optionally run the 'script'.
+ */
 void wstrace_init_lua (const char *script)
 {
+  if (!g_cfg.lua.enable)
+     return;
+
   assert (L == NULL);
   L = luaL_newstate();
   luaL_openlibs (L);    /* Load Lua libraries */
@@ -107,14 +158,21 @@ void wstrace_init_lua (const char *script)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
-  luaopen_wsock_trace (L);
-  run_lua_script (L, script);
+//luaopen_wsock_trace (L);
+  wstrace_lua_run_script (L, script);
 }
 
+/*
+ * Called from 'wsock_trace_exit()' to tear down Lua and
+ * optionally run the 'script'.
+ */
 void wstrace_exit_lua (const char *script)
 {
+  if (!g_cfg.lua.enable)
+     return;
+
   assert (L != NULL);
-  run_lua_script (L, script);
+  wstrace_lua_run_script (L, script);
   lua_close (L);
   L = NULL;
 }
@@ -142,7 +200,18 @@ int luaopen_wsock_trace (lua_State *l)
 
   *dot = '\0';
   LUA_TRACE (2, "In %s()\n", __FUNCTION__);
+
+#if (LUA_VERSION_NUM >= 502)
+  /*
+   * From:
+   *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
+   */
+  lua_newtable (l);
+  luaL_setfuncs (l, wstrace_lua_table, 0);
+  lua_setglobal (l, dll);
+#else
   luaL_register (l, dll, wstrace_lua_table);
+#endif
 
 //wstrace_lua_print_stack(); // test!
   free (dll);
@@ -151,6 +220,7 @@ int luaopen_wsock_trace (lua_State *l)
 
 /*
  * The open() function for Lua-JIT.
+ * Also marked as a DLL-export.
  */
 int luaJIT_BC_wsock_trace (lua_State *l)
 {
@@ -159,7 +229,13 @@ int luaJIT_BC_wsock_trace (lua_State *l)
 
 int l_WSAStartup (WORD ver, WSADATA *data)
 {
-  LUA_TRACE (1, "func_sig: ~5'%s'\n", func_sig);
+  LUA_TRACE (1, "func_sig: ~9'%s'\n", get_func_sig());
+  return (0);
+}
+
+int l_WSACleanup (void)
+{
+  LUA_TRACE (1, "func_sig: ~9'%s'\n", get_func_sig());
   return (0);
 }
 #endif /* USE_LUA */
