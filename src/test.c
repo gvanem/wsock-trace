@@ -10,15 +10,11 @@
 #undef  _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <tchar.h>
-#include <malloc.h>
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <signal.h>
+#include <tchar.h>
 
 #include "wsock_defs.h"
 #include "getopt.h"
@@ -683,9 +679,18 @@ static int list_tests (void)
   return (0);
 }
 
+static void quit (int sig)
+{
+  fputs ("Got ^C.\n", stderr);
+  fflush (stderr);
+  exit (1);
+}
+
 int MS_CDECL main (int argc, char **argv)
 {
   int i, c, num = 0;
+
+  signal (SIGINT, quit);
 
   while ((c = getopt (argc, argv, "h?dlt::")) != EOF)
     switch (c)
