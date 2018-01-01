@@ -90,7 +90,7 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
   - cmd: set DISABLEDELAYEDEXPANSION=0
-  - cmd: if "%BUILDER%"=="msvc"    nmake -nologo -f Makefile.vc6
+  - cmd: if "%BUILDER%"=="msvc"    nmake -nologo -f Makefile.vc6 USE_LUA=1
   - cmd: if "%BUILDER%"=="mingw32" make          -f Makefile.MinGW
   - cmd: if "%BUILDER%"=="mingw64" make          -f Makefile.MinGW
   - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
@@ -98,10 +98,10 @@ build_script:
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
-  - cmd: set WSOCK_LUA_ENABLE=1  & test.exe WSAStartup
   - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
+  - cmd: set WSOCK_TRACE_LEVEL=0 & set WSOCK_LUA_ENABLE=1 & test.exe WSAStartup
 
 artifacts:
   # To push all *.zip/exe... files.
