@@ -9,9 +9,6 @@
   #include <lualib.h>
   #include <lauxlib.h>
 
-  __declspec(dllexport) int luaopen_wsock_trace (lua_State *L);
-  __declspec(dllexport) int luaJIT_BC_wsock_trace (lua_State *L);
-
   extern const char *func_sig;
 
   extern void wstrace_init_lua (const char *script);

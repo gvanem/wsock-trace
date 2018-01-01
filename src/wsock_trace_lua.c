@@ -141,6 +141,39 @@ static int wstrace_lua_panic (lua_State *l)
   return (0);
 }
 
+
+/*
+ * The 'lua_sethook()' callback.
+ */
+static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
+{
+  switch (_ld->event)
+  {
+    case LUA_HOOKCALL:
+         printf ("LUA_HOOKCALL");
+         break;
+    case LUA_HOOKRET:
+         printf ("LUA_HOOKRET");
+         break;
+    case LUA_HOOKLINE:
+         printf ("LUA_HOOKLINE at %d", _ld->currentline);
+         break;
+  }
+  putchar ('\n');
+
+#if 0   /* to-do */
+  if (_ld->event == LUA_HOOKCALL)
+  {
+    lua_Debug ld;
+
+    memset (&ld, '\0', sizeof(ld));
+    lua_getinfo (L, ">nl", &ld);
+    printf ("ld.name:        %s\n", ld.name);
+    printf ("ld.short_src:   %s\n", ld.short_src);
+  }
+#endif
+}
+
 /*
  * Called from 'wsock_trace_init()' to setup Lua and
  * optionally run the 'script'.
@@ -158,7 +191,9 @@ void wstrace_init_lua (const char *script)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
-//luaopen_wsock_trace (L);
+  if (g_cfg.lua.trace_level >= 3)
+     lua_sethook (L, wstrace_lua_hook, LUA_MASKCALL | LUA_HOOKRET | LUA_MASKLINE, 0);
+
   wstrace_lua_run_script (L, script);
 }
 
@@ -171,6 +206,7 @@ void wstrace_exit_lua (const char *script)
   if (!g_cfg.lua.enable)
      return;
 
+  lua_sethook (L, NULL, 0, 0);
   assert (L != NULL);
   wstrace_lua_run_script (L, script);
   lua_close (L);
@@ -184,6 +220,21 @@ static const struct luaL_reg wstrace_lua_table[] = {
 };
 
 /*
+ * The open() function names depends on wsock_trace RC_BASENAME and bitness.
+ * Only MSVC supported at the moment.
+ */
+#if defined(_M_X64)
+  #define OPEN_FUNC1   luaopen_wsock_trace_x64
+  #define OPEN_FUNC2 luaJIT_BC_wsock_trace_x64
+#else
+  #define OPEN_FUNC1   luaopen_wsock_trace
+  #define OPEN_FUNC2 luaJIT_BC_wsock_trace
+#endif
+
+__declspec(dllexport) int OPEN_FUNC1 (lua_State *L);
+__declspec(dllexport) int OPEN_FUNC2 (lua_State *L);
+
+/*
  * The open() function for normal Lua-5.x.
  * This function is marked as a DLL-export.
  *
@@ -193,7 +244,7 @@ static const struct luaL_reg wstrace_lua_table[] = {
  * and the running program is linked to e.g. "wsock_trace_mw.dll", we
  * gets re-entered here.
  */
-int luaopen_wsock_trace (lua_State *l)
+int OPEN_FUNC1 (lua_State *l)
 {
   char *dll = strdup (wsock_trace_dll_name);
   char *dot = strrchr (dll, '.');
@@ -222,9 +273,9 @@ int luaopen_wsock_trace (lua_State *l)
  * The open() function for Lua-JIT.
  * Also marked as a DLL-export.
  */
-int luaJIT_BC_wsock_trace (lua_State *l)
+int OPEN_FUNC2 (lua_State *l)
 {
-  return luaopen_wsock_trace (l);
+  return OPEN_FUNC1 (l);
 }
 
 int l_WSAStartup (WORD ver, WSADATA *data)
