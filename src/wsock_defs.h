@@ -166,6 +166,9 @@
  * Printing an hex linear address.
  * Printing a decimal value from the address-bus (e.g. a stack-limit)
  * E.g. printf (buf, "0x%"ADDR_FMT, ADDR_CAST(ptr));
+ *
+ * todo: Maybe print a 64-bit address as 'cdb' does:
+ *       "00000001`0040175a"
  */
 #if defined(WIN64) || defined(_WIN64)
   #if defined(_MSC_VER) ||   /* MSVC/WIN64 little tested */ \
