@@ -679,7 +679,7 @@ static int list_tests (void)
   return (0);
 }
 
-static void quit (int sig)
+static void MS_CDECL quit (int sig)
 {
   fputs ("Got ^C.\n", stderr);
   fflush (stderr);
