@@ -720,7 +720,7 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   WSTRACE ("WSAStartup (%u.%u) --> %s",
            loBYTE(data->wVersion), hiBYTE(data->wVersion), get_error(rc));
 
-  LUA_HOOK (rc, l_WSAStartup(ver,data));
+  WSLUA_HOOK (rc, wslua_WSAStartup(ver,data));
   LEAVE_CRIT();
   return (rc);
 }
@@ -740,7 +740,7 @@ EXPORT int WINAPI WSACleanup (void)
     startup_count--;
     cleaned_up = (startup_count == 0);
   }
-  LUA_HOOK (rc, l_WSACleanup());
+  WSLUA_HOOK (rc, wslua_WSACleanup());
   LEAVE_CRIT();
   return (rc);
 }
@@ -2882,7 +2882,8 @@ static void test_get_caller (const void *from)
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
   char  note[30] = "";
-  DWORD tid;
+  const char *reason_str = NULL;
+  DWORD tid = 0;
 
   if (reason == DLL_PROCESS_ATTACH)
      wsock_trace_dll_name = get_dll_name();
@@ -2893,6 +2894,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   switch (reason)
   {
     case DLL_PROCESS_ATTACH:
+         tid = GetCurrentThreadId();
+         reason_str = "DLL_PROCESS_ATTACH";
          crtdbg_init();
          wsock_trace_init();
 #if 0
@@ -2901,6 +2904,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          break;
 
     case DLL_PROCESS_DETACH:
+         tid = GetCurrentThreadId();
+         reason_str = "DLL_PROCESS_DETACH";
          wsock_trace_exit();
          crtdbg_exit();
          break;
@@ -2908,8 +2913,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
     case DLL_THREAD_ATTACH:
          tid = GetCurrentThreadId();
          g_cfg.counts.dll_attach++;
-         TRACE (3, "  DLL_THREAD_ATTACH. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-                ADDR_CAST(instDLL), note, DWORD_CAST(tid));
+         reason_str = "DLL_THREAD_ATTACH";
 
          /* \todo:
           *   Add this 'tid' as a new thread to a 'smartlist_t' and call 'print_thread_times()'
@@ -2920,8 +2924,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
     case DLL_THREAD_DETACH:
          tid = GetCurrentThreadId();
          g_cfg.counts.dll_detach++;
-         TRACE (3, "  DLL_THREAD_DETACH. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu.\n",
-                ADDR_CAST(instDLL), note, DWORD_CAST(tid));
+         reason_str = "DLL_THREAD_DETACH";
          if (g_cfg.trace_level >= 3)
          {
            HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, tid);
@@ -2936,6 +2939,13 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          break;
   }
 
+  if (reason_str && g_cfg.trace_level >= 2)
+  {
+    char buf [100];
+    int len = snprintf (buf, sizeof(buf), "  %s. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu, ws_sema_inherited: %d.\n",
+                        reason_str, ADDR_CAST(instDLL), note, DWORD_CAST(tid), ws_sema_inherited);
+    _write (1, buf, len); /* to STDOUT_FILENO */
+  }
   ARGSUSED (reserved);
   return (TRUE);
 }

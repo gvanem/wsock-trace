@@ -925,7 +925,7 @@ void wsock_trace_exit (void)
 
 #if defined(USE_LUA)
   if (g_cfg.lua.enable)
-     wstrace_exit_lua (g_cfg.lua.exit_script);
+     wslua_exit (g_cfg.lua.exit_script);
 #endif
 
 #if 0
@@ -1225,7 +1225,7 @@ void wsock_trace_init (void)
 
 #if defined(USE_LUA) && !defined(TEST_BACKTRACE)
   if (g_cfg.lua.enable)
-     wstrace_init_lua (g_cfg.lua.init_script);
+     wslua_init (g_cfg.lua.init_script);
 #endif
 #endif  /* !TEST_GEOIP && !TEST_NLM */
 }
@@ -1687,6 +1687,13 @@ static void set_invalid_handler (void)
 #endif
 }
 
+static void reset_invalid_handler (void)
+{
+#if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
+  _set_invalid_parameter_handler (NULL);
+#endif
+}
+
 #if defined(_MSC_VER) && defined(_DEBUG)
   static _CrtMemState last_state;
 
@@ -1711,6 +1718,7 @@ static void set_invalid_handler (void)
     _CrtMemDumpStatistics (&last_state);
     _CrtCheckMemory();
     _CrtDumpMemoryLeaks();
+    reset_invalid_handler();
   }
 
 #else
@@ -1720,5 +1728,6 @@ static void set_invalid_handler (void)
   }
   void crtdbg_exit (void)
   {
+    reset_invalid_handler();
   }
 #endif

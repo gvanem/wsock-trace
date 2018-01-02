@@ -1,13 +1,10 @@
 /*
  * A Lua interface for WSock-Trace.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include "common.h"
 
 #if defined(USE_LUA)  /* Rest of file */
 
-#include "common.h"
 #include "init.h"
 #include "wsock_trace_lua.h"
 
@@ -36,16 +33,18 @@ static lua_State *L = NULL;
 
 /* The function-signature of currently hooking function.
  */
-const char *func_sig = NULL;
+const char *wslua_func_sig = NULL;
 
-const char *get_func_sig (void)
+static BOOL init_script_ok;
+
+static const char *get_func_sig (void)
 {
   static char buf [100];
 
-  if (!func_sig)
+  if (!wslua_func_sig)
      return ("None");
 
-  strcpy (buf, func_sig);
+  strcpy (buf, wslua_func_sig);
 
 #if !(defined(_MSC_VER) && defined(__FUNCSIG__))
   strcat (buf, "()");
@@ -54,10 +53,27 @@ const char *get_func_sig (void)
 }
 
 /*
+ * The Lua-hooks
+ */
+int wslua_WSAStartup (WORD ver, WSADATA *data)
+{
+  if (g_cfg.lua.enable)
+     LUA_TRACE (1, "wslua_func_sig: ~9'%s'\n", get_func_sig());
+  return (0);
+}
+
+int wslua_WSACleanup (void)
+{
+  if (g_cfg.lua.enable)
+     LUA_TRACE (1, "wslua_func_sig: ~9'%s'\n", get_func_sig());
+  return (0);
+}
+
+/*
  * Inspired from the example in Swig:
  * <Swig-Root>/Examples/lua/embed/embed.c
  */
-static void wstrace_lua_run_script (lua_State *l, const char *script)
+static BOOL wslua_run_script (lua_State *l, const char *script)
 {
   const char *msg;
   int   rc;
@@ -65,17 +81,17 @@ static void wstrace_lua_run_script (lua_State *l, const char *script)
   LUA_TRACE (1, "Launching script: %s\n", script ? script : "<none>");
 
   if (!script)
-     return;
+     return (FALSE);
 
   if (luaL_loadfile(l, script))
   {
     LUA_WARNING ("~1Failed to load script:~0\n  %s\n", script);
-    return;
+    return (FALSE);
   }
 
   rc = lua_pcall (l, 0, LUA_MULTRET, 0);
   if (rc == 0)
-     return;
+     return (TRUE);
 
   if (!lua_isnil(l, -1))
   {
@@ -87,9 +103,10 @@ static void wstrace_lua_run_script (lua_State *l, const char *script)
   }
   else
     LUA_WARNING ("~1%s: rc: %d\n", script, rc);
+  return (FALSE);
 }
 
-static int l_register_hook (lua_State *l)
+static int wslua_register_hook (lua_State *l)
 {
   const lua_CFunction func1 = lua_tocfunction (L,1);
   const lua_CFunction func2 = lua_tocfunction (L,2);
@@ -98,13 +115,13 @@ static int l_register_hook (lua_State *l)
   return (1);
 }
 
-static int l_trace_puts (lua_State *l)
+static int wslua_trace_puts (lua_State *l)
 {
   trace_puts (lua_tostring(l,1));
   return (1);
 }
 
-static int l_get_dll_name (lua_State *l)
+static int wslua_get_dll_name (lua_State *l)
 {
   lua_pushstring (l,get_dll_name());
   return (1);
@@ -184,9 +201,11 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
  * Called from 'wsock_trace_init()' to setup Lua and
  * optionally run the 'script'.
  */
-void wstrace_init_lua (const char *script)
+void wslua_init (const char *script)
 {
-  assert (L == NULL);
+  if (L)
+     return;
+
   L = luaL_newstate();
   luaL_openlibs (L);    /* Load Lua libraries */
 
@@ -197,26 +216,29 @@ void wstrace_init_lua (const char *script)
   if (g_cfg.lua.trace_level >= 3)
      lua_sethook (L, wstrace_lua_hook, LUA_MASKCALL | LUA_HOOKRET | LUA_MASKLINE, 0);
 
-  wstrace_lua_run_script (L, script);
+  init_script_ok = wslua_run_script (L, script);
 }
 
 /*
  * Called from 'wsock_trace_exit()' to tear down Lua and
  * optionally run the 'script'.
  */
-void wstrace_exit_lua (const char *script)
+void wslua_exit (const char *script)
 {
+  if (!L)
+     return;
+
   lua_sethook (L, NULL, 0, 0);
-  assert (L != NULL);
-  wstrace_lua_run_script (L, script);
+  if (init_script_ok)
+     wslua_run_script (L, script);
   lua_close (L);
   L = NULL;
 }
 
 static const struct luaL_reg wstrace_lua_table[] = {
-  { "register_hook", l_register_hook },
-  { "trace_puts",    l_trace_puts    },
-  { "get_dll_name",  l_get_dll_name },
+  { "register_hook", wslua_register_hook },
+  { "trace_puts",    wslua_trace_puts    },
+  { "get_dll_name",  wslua_get_dll_name },
   { NULL,            NULL }
 };
 
@@ -286,8 +308,8 @@ __declspec(dllexport) int OPEN_FUNC2 (lua_State *L);
  * Note: It is possible that if a script says:
  *  local ws = require "wsock_trace"
  *
- * and the running program is linked to e.g. "wsock_trace_mw.dll", we
- * gets re-entered here.
+ * and if the running program is linked to e.g. "wsock_trace_mw.dll",
+ * we will get re-entered here.
  */
 int OPEN_FUNC1 (lua_State *l)
 {
@@ -301,18 +323,6 @@ int OPEN_FUNC1 (lua_State *l)
 int OPEN_FUNC2 (lua_State *l)
 {
   return common_open (l, __FUNCTION__);
-}
-
-int l_WSAStartup (WORD ver, WSADATA *data)
-{
-  LUA_TRACE (1, "func_sig: ~9'%s'\n", get_func_sig());
-  return (0);
-}
-
-int l_WSACleanup (void)
-{
-  LUA_TRACE (1, "func_sig: ~9'%s'\n", get_func_sig());
-  return (0);
 }
 #endif /* USE_LUA */
 
