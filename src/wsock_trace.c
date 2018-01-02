@@ -2905,7 +2905,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
     case DLL_PROCESS_DETACH:
          tid = GetCurrentThreadId();
-         reason_str = "DLL_PROCESS_DETACH";
+      // reason_str = "DLL_PROCESS_DETACH";
          wsock_trace_exit();
          crtdbg_exit();
          break;
