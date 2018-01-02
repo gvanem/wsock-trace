@@ -176,7 +176,7 @@ compile_luajit_0:
 #
 # and that 'BUILDMODE = static'.
 #
-compile_luajit_1:
+compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
 	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
 	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows
 
