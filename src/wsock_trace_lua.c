@@ -118,7 +118,7 @@ static void wstrace_lua_print_stack (void)
   while (lua_getstack(L, level++, &ar))
   {
     lua_getinfo (L, "Snl", &ar);
-    printf ("\t%s:", ar.short_src);
+    printf ("  %s:", ar.short_src);
     if (ar.currentline > 0)
        printf ("%d:", ar.currentline);
     if (*ar.namewhat != '\0')    /* is there a name? */
@@ -131,7 +131,7 @@ static void wstrace_lua_print_stack (void)
            printf (" ?");   /* C function or tail call */
       else printf (" in function <%s:%d>", ar.short_src, ar.linedefined);
     }
-    printf ("\n");
+    putchar ('\n');
   }
   printf ("Lua stack depth: %d\n", level-1);
 }
@@ -220,16 +220,60 @@ static const struct luaL_reg wstrace_lua_table[] = {
   { NULL,            NULL }
 };
 
+static int common_open (lua_State *l, const char *my_name)
+{
+  char *dll = strdup (get_dll_name());
+  char *dot = strrchr (dll, '.');
+
+  *dot = '\0';
+
+#if (LUA_VERSION_NUM >= 502)
+  /*
+   * From:
+   *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
+   */
+  lua_newtable (l);
+  luaL_setfuncs (l, wstrace_lua_table, 0);
+  lua_setglobal (l, dll);
+#else
+  luaL_register (l, dll, wstrace_lua_table);
+#endif
+
+  LUA_TRACE (1, "%s(), dll: %s\n", my_name, dll);
+  free (dll);
+  return (1);
+}
+
 /*
  * The open() function names depends on wsock_trace RC_BASENAME and bitness.
  * Only MSVC supported at the moment.
  */
-#if defined(_M_X64)
-  #define OPEN_FUNC1   luaopen_wsock_trace_x64
-  #define OPEN_FUNC2 luaJIT_BC_wsock_trace_x64
-#else
-  #define OPEN_FUNC1   luaopen_wsock_trace
-  #define OPEN_FUNC2 luaJIT_BC_wsock_trace
+#if defined(_MSC_VER)
+  #if defined(_M_X64) || defined(_M_AMD64)
+    #define OPEN_FUNC1   luaopen_wsock_trace_x64
+    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_x64
+  #else
+    #define OPEN_FUNC1   luaopen_wsock_trace
+    #define OPEN_FUNC2 luaJIT_BC_wsock_trace
+  #endif
+
+#elif defined(__MINGW32__)
+  #if defined(__x86_64__) || defined(__ia64__)
+    #define OPEN_FUNC1   luaopen_wsock_trace_mw_x64
+    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_mw_x64
+  #else
+    #define OPEN_FUNC1   luaopen_wsock_trace_mw
+    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_mw
+  #endif
+
+#elif defined(__CYGWIN__)
+  #if defined(__x86_64__) || defined(__ia64__)
+    #define OPEN_FUNC1   luaopen_wsock_trace_cyg_x64
+    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_cyg_x64
+  #else
+    #define OPEN_FUNC1   luaopen_wsock_trace_cyg
+    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_cyg
+  #endif
 #endif
 
 __declspec(dllexport) int OPEN_FUNC1 (lua_State *L);
@@ -247,27 +291,7 @@ __declspec(dllexport) int OPEN_FUNC2 (lua_State *L);
  */
 int OPEN_FUNC1 (lua_State *l)
 {
-  char *dll = strdup (wsock_trace_dll_name);
-  char *dot = strrchr (dll, '.');
-
-  *dot = '\0';
-  LUA_TRACE (2, "In %s()\n", __FUNCTION__);
-
-#if (LUA_VERSION_NUM >= 502)
-  /*
-   * From:
-   *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
-   */
-  lua_newtable (l);
-  luaL_setfuncs (l, wstrace_lua_table, 0);
-  lua_setglobal (l, dll);
-#else
-  luaL_register (l, dll, wstrace_lua_table);
-#endif
-
-//wstrace_lua_print_stack(); // test!
-  free (dll);
-  return (1);
+  return common_open (l, __FUNCTION__);
 }
 
 /*
@@ -276,7 +300,7 @@ int OPEN_FUNC1 (lua_State *l)
  */
 int OPEN_FUNC2 (lua_State *l)
 {
-  return OPEN_FUNC1 (l);
+  return common_open (l, __FUNCTION__);
 }
 
 int l_WSAStartup (WORD ver, WSADATA *data)
