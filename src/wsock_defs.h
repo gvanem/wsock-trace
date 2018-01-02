@@ -237,13 +237,14 @@
   #define access(f,m) _access (f,m)
 
 #elif defined(__CYGWIN__)
-  #ifndef _filnoe
+  #ifndef _fileno
   #define _fileno(fil)            fileno (fil)
   #endif
   #define _atoi64(str)            strtoull (str, NULL, 10)
   #define stricmp(str1, str2)     strcasecmp (str1, str2)
   #define strnicmp(str1, str2, n) strncasecmp (str1, str2, n)
   #define _utime(path, buf)       utime (path, buf)
+  #define _write(fd, buf, len)    write (fd, buf, len)
 
 #elif defined(__MINGW32__)
   /*
