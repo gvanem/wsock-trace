@@ -37,11 +37,11 @@ CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
-/* Use CreateSemaphore() to verify of there are multiple instances of outself.
+/* Use CreateSemaphore() to check for multiple instances of ourself.
  */
-static HANDLE      ws_sema;
-static BOOL        ws_sema_inherited;
-static const char *ws_sema_name = "Global\\wsock_trace-semaphore";
+HANDLE      ws_sema;
+BOOL        ws_sema_inherited;
+const char *ws_sema_name = "Global\\wsock_trace-semaphore";
 
 /*
  * Structure for 'exclude_list*()' functions.
@@ -55,6 +55,9 @@ struct exclude {
  */
 static smartlist_t *exclude_list = NULL;
 
+/*
+ * Wait on the global semaphore to get freed.
+ */
 void ws_sema_wait (void)
 {
   while (ws_sema)
@@ -68,12 +71,18 @@ void ws_sema_wait (void)
   }
 }
 
+/*
+ * Release the global semaphore.
+ */
 void ws_sema_release (void)
 {
   if (ws_sema)
      ReleaseSemaphore (ws_sema, 1, NULL);
 }
 
+/*
+ * Get the CPU frequency needed for showing time-stamps.
+ */
 static void init_timestamp (void)
 {
   LARGE_INTEGER rc;
@@ -102,7 +111,7 @@ static void set_time_format (TS_TYPE *ret, const char *val)
 }
 
 /*
- * Return the prefered time-stamp string.
+ * Return the preferred time-stamp string.
  */
 #if defined(__CYGWIN__)
   #if (CYGWIN_VERSION_DLL_COMBINED >= 2009000)
@@ -309,7 +318,7 @@ static int config_get_line (FILE        *fil,
      */
     if (p > q)
        *p = '\0';
-    p = strchr (val,'#');
+    p = strchr (val, '#');
     if (p > q)
        *p = '\0';
 
@@ -337,7 +346,7 @@ BOOL exclude_list_get (const char *fmt)
   size_t len;
   int    i, max;
 
-  /* If no tracing of callers, that should exclude everything.
+  /* If no tracing of any callers, that should exclude everything.
    */
   if (g_cfg.trace_caller <= 0)
      return (TRUE);
@@ -713,6 +722,9 @@ enum cfg_sections {
      CFG_IDNA
    };
 
+/*
+ * Give a section-name, lookup the 'enum cfg_section' for the name.
+ */
 static enum cfg_sections lookup_section (const char *section)
 {
   if (!section || !stricmp(section,"core"))
@@ -770,8 +782,8 @@ static void parse_config_file (FILE *file)
            strcpy (last_section,"idna");
            break;
 
-      /* \todo: handle more 'key' / 'val' here by extending lookup_section(). */
-
+      /* \todo: handle more 'key' / 'val' here by extending lookup_section().
+       */
       default:
            if (section[0] && stricmp(section,last_section))
            {

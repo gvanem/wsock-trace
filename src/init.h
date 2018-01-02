@@ -133,6 +133,10 @@ extern struct config_table g_cfg;
 extern int                 fatal_error;
 extern const char         *wsock_trace_dll_name;
 
+extern HANDLE      ws_sema;
+extern BOOL        ws_sema_inherited;
+extern const char *ws_sema_name;
+
 extern CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 extern void wsock_trace_init (void);
