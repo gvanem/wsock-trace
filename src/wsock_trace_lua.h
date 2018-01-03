@@ -13,6 +13,7 @@
 
   extern void wslua_init (const char *script);
   extern void wslua_exit (const char *script);
+  extern void wslua_print_stack (void);
 
   extern int wslua_WSAStartup (WORD ver, WSADATA *data);
   extern int wslua_WSACleanup (void);

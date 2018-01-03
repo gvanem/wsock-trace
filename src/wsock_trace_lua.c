@@ -6,6 +6,7 @@
 #if defined(USE_LUA)  /* Rest of file */
 
 #include "init.h"
+#include "wsock_trace.rc"
 #include "wsock_trace_lua.h"
 
 #include "lj_arch.h"
@@ -83,9 +84,19 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
   if (!script)
      return (FALSE);
 
-  if (luaL_loadfile(l, script))
+  if (luaL_loadfile(l, script) != 0)
   {
-    LUA_WARNING ("~1Failed to load script:~0\n  %s\n", script);
+    if (!lua_isnil(l, -1))
+    {
+      msg = lua_tostring (l, -1);
+      if (!msg)
+         msg = "(error object is not a string)";
+      LUA_WARNING ("Failed to load script:~0\n  %s\n", msg);
+      lua_pop (l, 1);
+    }
+    else
+      LUA_WARNING ("Failed to load script:~0\n  %s\n", script);
+    wslua_print_stack();
     return (FALSE);
   }
 
@@ -93,16 +104,7 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
   if (rc == 0)
      return (TRUE);
 
-  if (!lua_isnil(l, -1))
-  {
-    msg = lua_tostring (l, -1);
-    if (!msg)
-       msg = "(error object is not a string)";
-    LUA_WARNING ("~1%s:\n  ~0%s\n", script, msg);
-    lua_pop (l, 1);
-  }
-  else
-    LUA_WARNING ("~1%s: rc: %d\n", script, rc);
+  LUA_WARNING ("%s: rc: %d\n", script, rc);
   return (FALSE);
 }
 
@@ -127,7 +129,7 @@ static int wslua_get_dll_name (lua_State *l)
   return (1);
 }
 
-static void wstrace_lua_print_stack (void)
+void wslua_print_stack (void)
 {
   lua_Debug ar;
   int level = 0;
@@ -150,15 +152,15 @@ static void wstrace_lua_print_stack (void)
     }
     putchar ('\n');
   }
-  printf ("Lua stack depth: %d\n", level-1);
+  // printf ("Lua stack depth: %d\n", level-1);
 }
 
 static int wstrace_lua_panic (lua_State *l)
 {
   const char *err_msg = lua_tostring (l, 1);
 
-  LUA_WARNING ("~1Panic: %s\n", err_msg);
-  wstrace_lua_print_stack();
+  LUA_WARNING ("Panic: %s\n", err_msg);
+  wslua_print_stack();
   lua_close (L);
   L = NULL;
   return (0);
@@ -248,6 +250,18 @@ static int common_open (lua_State *l, const char *my_name)
   char *dot = strrchr (dll, '.');
 
   *dot = '\0';
+
+  if (ws_sema_inherited)
+  {
+    LUA_WARNING ("require (\"%s\") seems to be mixing .dll basenames~0\n", dll);
+  //return (-1);
+  }
+
+  if (stricmp(dll, RC_BASENAME))
+  {
+    LUA_WARNING ("require (\"%s\") does not match our .dll basename: \"%s\"~0\n", dll, RC_BASENAME);
+  //return (-1);
+  }
 
 #if (LUA_VERSION_NUM >= 502)
   /*
