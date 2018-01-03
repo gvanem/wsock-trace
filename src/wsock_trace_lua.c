@@ -129,6 +129,12 @@ static int wslua_get_dll_name (lua_State *l)
   return (1);
 }
 
+static int wslua_get_builder (lua_State *l)
+{
+  lua_pushstring (l,get_builder());
+  return (1);
+}
+
 void wslua_print_stack (void)
 {
   lua_Debug ar;
@@ -241,6 +247,7 @@ static const struct luaL_reg wstrace_lua_table[] = {
   { "register_hook", wslua_register_hook },
   { "trace_puts",    wslua_trace_puts    },
   { "get_dll_name",  wslua_get_dll_name },
+  { "get_builder",   wslua_get_builder },
   { NULL,            NULL }
 };
 
