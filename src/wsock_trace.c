@@ -2905,7 +2905,6 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
     case DLL_PROCESS_DETACH:
          tid = GetCurrentThreadId();
-      // reason_str = "DLL_PROCESS_DETACH";
          wsock_trace_exit();
          crtdbg_exit();
          break;
@@ -2939,13 +2938,10 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          break;
   }
 
-  if (reason_str && g_cfg.trace_level >= 2)
-  {
-    char buf [100];
-    int len = snprintf (buf, sizeof(buf), "  %s. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu, ws_sema_inherited: %d.\n",
-                        reason_str, ADDR_CAST(instDLL), note, DWORD_CAST(tid), ws_sema_inherited);
-    _write (1, buf, len); /* to STDOUT_FILENO */
-  }
+  if (reason_str)
+     TRACE (2, "%s. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu, ws_sema_inherited: %d.\n",
+            reason_str, ADDR_CAST(instDLL), note, DWORD_CAST(tid), ws_sema_inherited);
+
   ARGSUSED (reserved);
   return (TRUE);
 }
