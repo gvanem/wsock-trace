@@ -66,17 +66,15 @@ static DWORD crc_bytes (const char *buf, size_t len);
 #define TRACE_BUF_SIZE (2*1024)
 
 static char *trace_ptr, *trace_end;
-static char *trace_buf = NULL;
+static char  trace_buf [TRACE_BUF_SIZE];
 
 static BOOL tilde_escape = TRUE;
 
 void common_init (void)
 {
   tilde_escape = TRUE;
-  trace_buf = malloc (TRACE_BUF_SIZE);
   trace_ptr = trace_buf;
   trace_end = trace_ptr + TRACE_BUF_SIZE - 1;
-
 }
 
 void common_exit (void)
@@ -85,9 +83,7 @@ void common_exit (void)
      fname_cache_dump();
 
   fname_cache_free();
-
-  free (trace_buf);
-  trace_buf = trace_ptr = trace_end = NULL;
+  trace_ptr = trace_end = NULL;
 }
 
 #define ADD_VALUE(code,str) { code, #code, str }
@@ -1033,8 +1029,9 @@ int trace_putc (int ch)
   static BOOL get_color = FALSE;
   int    rc = 0;
 
-  assert (trace_ptr);
-  assert (trace_end);
+  if (!trace_ptr || !trace_end)
+     return (0);
+
   assert (trace_ptr >= trace_buf);
   assert (trace_ptr < trace_end-1);
 
