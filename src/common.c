@@ -978,7 +978,7 @@ size_t trace_flush (void)
     *trace_ptr = '\0';
     OutputDebugStringA (trace_buf);
   }
-  else
+  else if (g_cfg.trace_stream)
   {
     /*
      * Use 'fwrite()' (a bit slower than '_write()') so the Lua-output
