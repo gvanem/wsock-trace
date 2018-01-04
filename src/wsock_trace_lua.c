@@ -107,27 +107,22 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
   if (!script)
      return (FALSE);
 
-  if (luaL_loadfile(l, script) != 0)
+  if (luaL_loadfile(l, script) == 0)
   {
-    if (!lua_isnil(l, -1))
-    {
-      msg = lua_tostring (l, -1);
-      if (!msg)
-         msg = "(error object is not a string)";
-      LUA_WARNING ("Failed to load script:~0\n  %s\n", msg);
-      lua_pop (l, 1);
-    }
-    else
-      LUA_WARNING ("Failed to load script:~0\n  %s\n", script);
-    wslua_print_stack();
-    return (FALSE);
+    rc = lua_pcall (l, 0, LUA_MULTRET, 0);
+    if (rc == 0)
+       return (TRUE);
   }
 
-  rc = lua_pcall (l, 0, LUA_MULTRET, 0);
-  if (rc == 0)
-     return (TRUE);
-
-  LUA_WARNING ("%s: rc: %d\n", script, rc);
+  msg = "";
+  if (!lua_isnil(l, -1))
+  {
+    msg = lua_tostring (l, -1);
+    if (!msg)
+       msg = "(error object is not a string)";
+     lua_pop (l, 1);
+  }
+  LUA_WARNING ("Failed to load script (rc:%d):~0\n  %s\n", rc, msg);
   wslua_print_stack();
   return (FALSE);
 }
@@ -165,6 +160,10 @@ static int wslua_trace_puts (lua_State *l)
   return (1);
 }
 
+/*
+ * This function is broken.
+ * Accepts only strings passed from Lua-land.
+ */
 static int wslua_trace_printf (lua_State *l)
 {
   va_list    args1, args2;
@@ -290,9 +289,12 @@ void wslua_init (const char *script)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
-#if 0
+#if 1
   lua_pushcfunction (L, wslua_get_trace_level);
+  lua_setglobal (L, "get_trace_level");
+
   lua_pushcfunction (L, wslua_set_trace_level);
+  lua_setglobal (L, "set_trace_level");
 #endif
 
   if (g_cfg.lua.trace_level >= 3)
