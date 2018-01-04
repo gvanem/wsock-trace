@@ -50,6 +50,12 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
   if (reason == DLL_PROCESS_ATTACH)
   {
+    if (!g_cfg.lua.color_head)
+       get_color (NULL, &g_cfg.lua.color_head);
+
+    if (!g_cfg.lua.color_body)
+       get_color (NULL, &g_cfg.lua.color_body);
+
     if (stricmp(base,get_dll_short_name()))
        rc = FALSE;
     else
@@ -103,7 +109,7 @@ int wslua_WSACleanup (void)
 static BOOL wslua_run_script (lua_State *l, const char *script)
 {
   const char *msg;
-  int   rc = 0;
+  int         rc = 0;
 
   LUA_TRACE (1, "Launching script: %s\n", script ? script : "<none>");
 
@@ -125,7 +131,8 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
        msg = "(error object is not a string)";
      lua_pop (l, 1);
   }
-  LUA_WARNING ("Failed to load script (rc:%d):~0\n  %s\n", rc, msg);
+
+  LUA_WARNING ("Failed to load script (rc = %d):~0\n  %s\n", rc, msg);
   wslua_print_stack();
   return (FALSE);
 }
@@ -212,7 +219,7 @@ static int wslua_get_builder (lua_State *l)
 void wslua_print_stack (void)
 {
   lua_Debug ar;
-  int level = 0;
+  int       level = 0;
 
   while (lua_getstack(L, level++, &ar))
   {
@@ -224,7 +231,7 @@ void wslua_print_stack (void)
        trace_printf (" in function " LUA_QS, ar.name);
     else
     {
-      if (*ar.what == 'm')  /* main? */
+      if (*ar.what == 'm')       /* main? */
            trace_puts (" in main chunk");
       else if (*ar.what == 'C' || *ar.what == 't')
            trace_puts (" ?");   /* C function or tail call */
@@ -232,14 +239,14 @@ void wslua_print_stack (void)
     }
     trace_putc ('\n');
   }
-  trace_printf ("Lua stack depth: %d.\n", level-1);
+//trace_printf ("Lua stack depth: %d.\n", level-1);
 }
 
 static int wstrace_lua_panic (lua_State *l)
 {
-  const char *err_msg = lua_tostring (l, 1);
+  const char *msg = lua_tostring (l, 1);
 
-  LUA_WARNING ("Panic: %s\n", err_msg);
+  LUA_WARNING ("Panic: %s\n", msg);
   wslua_print_stack();
   lua_close (L);
   L = NULL;
@@ -254,16 +261,15 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
   switch (_ld->event)
   {
     case LUA_HOOKCALL:
-         printf ("LUA_HOOKCALL");
+         trace_printf ("~9LUA_HOOKCALL");
          break;
     case LUA_HOOKRET:
-         printf ("LUA_HOOKRET");
+         trace_printf ("~9LUA_HOOKRET");
          break;
     case LUA_HOOKLINE:
-         printf ("LUA_HOOKLINE at %d", _ld->currentline);
+         trace_printf ("~9LUA_HOOKLINE at %d", _ld->currentline);
          break;
   }
-  putchar ('\n');
 
 #if 0   /* to-do */
   if (_ld->event == LUA_HOOKCALL)
@@ -272,10 +278,11 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
 
     memset (&ld, '\0', sizeof(ld));
     lua_getinfo (L, ">nl", &ld);
-    printf ("ld.name:        %s\n", ld.name);
-    printf ("ld.short_src:   %s\n", ld.short_src);
+    trace_printf ("ld.name:        %s\n", ld.name);
+    trace_printf ("ld.short_src:   %s\n", ld.short_src);
   }
 #endif
+  trace_puts ("~0\n");
 }
 
 /*
