@@ -13,13 +13,13 @@ LIB_TARGET = /usr/lib
 
 CC      = gcc
 CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS
-LDFLAGS = -Wl,--print-map,--sort-common -t # -v
+LDFLAGS = -Wl,--print-map,--sort-common -t
 
 ifeq ($(USE_DEBUG),1)
-  CFLAGS += -O2 -g
+  CFLAGS += -O2 -ggdb
 else
   CFLAGS  += -O3 -fomit-frame-pointer
-  LDFLAGS += # -s
+  LDFLAGS += -s
 endif
 
 ifeq ($(USE_BFD),1)
