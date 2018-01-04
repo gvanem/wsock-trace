@@ -18,7 +18,6 @@
 #include "common.h"
 #include "wsock_trace.h"
 #include "bfd_gcc.h"
-#include "wsock_trace_lua.h"
 #include "dump.h"
 #include "geoip.h"
 #include "idna.h"
@@ -922,11 +921,6 @@ void wsock_trace_exit (void)
   StackWalkExit();
   overlap_exit();
   hosts_file_exit();
-
-#if defined(USE_LUA)
-  if (g_cfg.lua.enable)
-     wslua_exit (g_cfg.lua.exit_script);
-#endif
 
 #if 0
   if (g_cfg.trace_level >= 3)

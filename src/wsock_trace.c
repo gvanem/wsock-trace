@@ -38,11 +38,6 @@
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
-/* This used to be set in the Makefiles to '-DWSOCK_TRACE_DLL="..."'.
- * It was not so reliable. Hence hardcode it in DllMain() below.
- */
-const char *wsock_trace_dll_name = NULL;
-
 /* Keep track of number of calls to WSAStartup() and WSACleanup().
  */
 int volatile cleaned_up = 0;
@@ -2881,19 +2876,14 @@ static void test_get_caller (const void *from)
 
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
-  char  note[30] = "";
   const char *reason_str = NULL;
   DWORD tid = 0;
-
-  if (reason == DLL_PROCESS_ATTACH)
-     wsock_trace_dll_name = get_dll_name();
-
-  if (ws_trace_base && instDLL == ws_trace_base)
-     snprintf (note, sizeof(note), " (%s)", wsock_trace_dll_name);
+  BOOL  rc = TRUE;
 
   switch (reason)
   {
     case DLL_PROCESS_ATTACH:
+         set_dll_full_name (instDLL);
          tid = GetCurrentThreadId();
          reason_str = "DLL_PROCESS_ATTACH";
          crtdbg_init();
@@ -2901,9 +2891,17 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 #if 0
          smartlist_add (thread_list, GetCurrentThreadId());
 #endif
+#ifdef USE_LUA
+         if (g_cfg.lua.enable && (rc = wslua_DllMain(instDLL, reason)) == TRUE)
+            wslua_init (g_cfg.lua.init_script);
+#endif
          break;
 
     case DLL_PROCESS_DETACH:
+#if defined(USE_LUA)
+         if (g_cfg.lua.enable)
+            wslua_exit (g_cfg.lua.exit_script);
+#endif
          tid = GetCurrentThreadId();
          wsock_trace_exit();
          crtdbg_exit();
@@ -2939,11 +2937,11 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   }
 
   if (reason_str)
-     TRACE (2, "%s. instDLL: 0x%" ADDR_FMT "%s, thr-id: %lu, ws_sema_inherited: %d.\n",
-            reason_str, ADDR_CAST(instDLL), note, DWORD_CAST(tid), ws_sema_inherited);
+     TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", thr-id: %lu, ws_sema_inherited: %d.\n",
+            rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
 
   ARGSUSED (reserved);
-  return (TRUE);
+  return (rc);
 }
 
 
