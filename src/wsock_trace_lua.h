@@ -11,6 +11,7 @@
 
   extern const char *wslua_func_sig;
 
+  extern BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason);
   extern void wslua_init (const char *script);
   extern void wslua_exit (const char *script);
   extern void wslua_print_stack (void);

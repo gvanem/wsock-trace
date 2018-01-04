@@ -6,7 +6,6 @@
 #if defined(USE_LUA)  /* Rest of file */
 
 #include "init.h"
-#include "wsock_trace.rc"
 #include "wsock_trace_lua.h"
 
 #include "lj_arch.h"
@@ -36,7 +35,30 @@ static lua_State *L = NULL;
  */
 const char *wslua_func_sig = NULL;
 
-static BOOL init_script_ok;
+static BOOL init_script_ok = FALSE;
+static BOOL open_ok        = TRUE;
+
+BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
+{
+  const char *dll  = get_dll_full_name();
+  const char *base = basename (dll);
+  char        cpath [_MAX_PATH] = { "?" };
+  BOOL        rc = TRUE;
+
+  if (reason == DLL_PROCESS_ATTACH)
+  {
+    if (stricmp(base,get_dll_short_name()))
+       rc = FALSE;
+    else
+    {
+      snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", base-dll-1, dll);
+      _setenv ("LUA_CPATH", cpath, 1);
+    }
+  }
+  LUA_TRACE (1, "rc: %d, dll: %s\n"
+                 "                       %s.\n", rc, dll, cpath);
+  return (rc);
+}
 
 static const char *get_func_sig (void)
 {
@@ -54,7 +76,8 @@ static const char *get_func_sig (void)
 }
 
 /*
- * The Lua-hooks
+ * The Lua-hooks.
+ * For the moment these does nothing.
  */
 int wslua_WSAStartup (WORD ver, WSADATA *data)
 {
@@ -105,13 +128,32 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
      return (TRUE);
 
   LUA_WARNING ("%s: rc: %d\n", script, rc);
+  wslua_print_stack();
   return (FALSE);
+}
+
+static int wslua_get_trace_level (lua_State *l)
+{
+  lua_pushnumber (l, g_cfg.lua.trace_level);
+  return (1);
+}
+
+static int wslua_set_trace_level (lua_State *l)
+{
+  if (!lua_isnumber(L, 1))
+  {
+    lua_pushstring (L, "incorrect argument to 'g_cfg.lua.trace_level'");
+    lua_error (L);
+  }
+  else
+    g_cfg.lua.trace_level = (int) lua_tonumber (L, 1);
+  return (1);
 }
 
 static int wslua_register_hook (lua_State *l)
 {
-  const lua_CFunction func1 = lua_tocfunction (L,1);
-  const lua_CFunction func2 = lua_tocfunction (L,2);
+  const lua_CFunction func1 = lua_tocfunction (L, LUA_ENVIRONINDEX);
+  const lua_CFunction func2 = lua_tocfunction (L, 2);
 
   LUA_TRACE (1, "func1=%p, func2=%p\n", func1, func2);
   return (1);
@@ -123,15 +165,43 @@ static int wslua_trace_puts (lua_State *l)
   return (1);
 }
 
-static int wslua_get_dll_name (lua_State *l)
+static int wslua_trace_printf (lua_State *l)
 {
-  lua_pushstring (l,get_dll_name());
+  va_list    args1, args2;
+  const char *fmt = lua_tostring (l, 1);
+  const char *arg = lua_tostring (l, 2);
+  int         i, n = lua_gettop (l);    /* number of arguments */
+
+  va_start (args1, fmt);
+  va_copy (args2, args1);
+
+  for (i = 2; i <= n; i++)
+  {
+    arg = lua_tostring (l, i);
+    va_arg (args2, const char*) = arg;
+  }
+
+  va_start (args1, fmt);
+  trace_vprintf (fmt, args1);
+  va_end (args2);
+  return (n);
+}
+
+static int wslua_get_dll_short_name (lua_State *l)
+{
+  lua_pushstring (l, get_dll_short_name());
+  return (1);
+}
+
+static int wslua_get_dll_full_name (lua_State *l)
+{
+  lua_pushstring (l, get_dll_full_name());
   return (1);
 }
 
 static int wslua_get_builder (lua_State *l)
 {
-  lua_pushstring (l,get_builder());
+  lua_pushstring (l, get_builder());
   return (1);
 }
 
@@ -143,22 +213,22 @@ void wslua_print_stack (void)
   while (lua_getstack(L, level++, &ar))
   {
     lua_getinfo (L, "Snl", &ar);
-    printf ("  %s:", ar.short_src);
+    trace_printf ("  %s:", ar.short_src);
     if (ar.currentline > 0)
-       printf ("%d:", ar.currentline);
+       trace_printf ("%d:", ar.currentline);
     if (*ar.namewhat != '\0')    /* is there a name? */
-       printf (" in function " LUA_QS, ar.name);
+       trace_printf (" in function " LUA_QS, ar.name);
     else
     {
       if (*ar.what == 'm')  /* main? */
-           printf (" in main chunk");
+           trace_puts (" in main chunk");
       else if (*ar.what == 'C' || *ar.what == 't')
-           printf (" ?");   /* C function or tail call */
-      else printf (" in function <%s:%d>", ar.short_src, ar.linedefined);
+           trace_puts (" ?");   /* C function or tail call */
+      else trace_printf (" in function <%s:%d>", ar.short_src, ar.linedefined);
     }
-    putchar ('\n');
+    trace_putc ('\n');
   }
-  // printf ("Lua stack depth: %d\n", level-1);
+  trace_printf ("Lua stack depth: %d.\n", level-1);
 }
 
 static int wstrace_lua_panic (lua_State *l)
@@ -171,7 +241,6 @@ static int wstrace_lua_panic (lua_State *l)
   L = NULL;
   return (0);
 }
-
 
 /*
  * The 'lua_sethook()' callback.
@@ -206,8 +275,8 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
 }
 
 /*
- * Called from 'wsock_trace_init()' to setup Lua and
- * optionally run the 'script'.
+ * Called from 'DllMain()' / 'DLL_PROCESS_ATTATACH' to setup Lua
+ * and optionally run the 'script'.
  */
 void wslua_init (const char *script)
 {
@@ -221,6 +290,11 @@ void wslua_init (const char *script)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
+#if 0
+  lua_pushcfunction (L, wslua_get_trace_level);
+  lua_pushcfunction (L, wslua_set_trace_level);
+#endif
+
   if (g_cfg.lua.trace_level >= 3)
      lua_sethook (L, wstrace_lua_hook, LUA_MASKCALL | LUA_HOOKRET | LUA_MASKLINE, 0);
 
@@ -228,103 +302,91 @@ void wslua_init (const char *script)
 }
 
 /*
- * Called from 'wsock_trace_exit()' to tear down Lua and
- * optionally run the 'script'.
+ * Called from 'DllMain()' / 'DLL_PROCESS_DETACH' to tear down
+ * Lua and optionally run the 'script'.
+ * Provided the 'script' in 'wslua_init()' ran okay.
  */
 void wslua_exit (const char *script)
 {
   if (!L)
      return;
 
-  lua_sethook (L, NULL, 0, 0);
-  if (init_script_ok)
+  if (init_script_ok && open_ok)
      wslua_run_script (L, script);
+  lua_sethook (L, NULL, 0, 0);
   lua_close (L);
   L = NULL;
 }
 
-static const struct luaL_reg wstrace_lua_table[] = {
-  { "register_hook", wslua_register_hook },
-  { "trace_puts",    wslua_trace_puts    },
-  { "get_dll_name",  wslua_get_dll_name },
-  { "get_builder",   wslua_get_builder },
-  { NULL,            NULL }
+static const struct luaL_reg wslua_table[] = {
+  { "register_hook",       wslua_register_hook },
+  { "trace_puts",          wslua_trace_puts },
+  { "trace_printf",        wslua_trace_printf },
+  { "get_dll_full_name",   wslua_get_dll_full_name },
+  { "get_dll_short_name",  wslua_get_dll_short_name },
+  { "get_builder",         wslua_get_builder },
+  { "set_trace_level",     wslua_set_trace_level },
+  { "get_trace_level",     wslua_get_trace_level },
+  { NULL,                  NULL }
 };
 
-static int common_open (lua_State *l, const char *my_name)
+static int common_open (lua_State *l, const char *func, BOOL is_ours)
 {
-  char *dll = strdup (get_dll_name());
-  char *dot = strrchr (dll, '.');
+  char       *dll = strdup (get_dll_short_name());
+  char       *dot = strrchr (dll, '.');
+  const char *my_name = func + sizeof("luaopen_") - 1;
+
+  assert (!strncmp(func,"luaopen_",8));
 
   *dot = '\0';
 
-  if (ws_sema_inherited)
+  if (stricmp(dll, my_name))
   {
-    LUA_WARNING ("require (\"%s\") seems to be mixing .dll basenames~0\n", dll);
-  //return (-1);
+    LUA_WARNING ("require (\"%s\") does not match our .dll basename: \"%s\"~0\n", dll, my_name);
+    open_ok = FALSE;
+    is_ours = FALSE;
   }
 
-  if (stricmp(dll, RC_BASENAME))
+  if (is_ours)
   {
-    LUA_WARNING ("require (\"%s\") does not match our .dll basename: \"%s\"~0\n", dll, RC_BASENAME);
-  //return (-1);
-  }
-
 #if (LUA_VERSION_NUM >= 502)
-  /*
-   * From:
-   *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
-   */
-  lua_newtable (l);
-  luaL_setfuncs (l, wstrace_lua_table, 0);
-  lua_setglobal (l, dll);
+    /*
+     * From:
+     *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
+     */
+    lua_newtable (l);
+    luaL_setfuncs (l, wslua_table, 0);
+    lua_setglobal (l, dll);
 #else
-  luaL_register (l, dll, wstrace_lua_table);
+    luaL_register (l, dll, wslua_table);
 #endif
+  }
 
-  LUA_TRACE (1, "%s(), dll: %s\n", my_name, dll);
+  LUA_TRACE (1, "%s(), is_ours: %d, dll: \"%s\".\n", func, is_ours, dll);
   free (dll);
-  return (1);
+  return (is_ours ? 1 : 0);
 }
 
-/*
- * The open() function names depends on wsock_trace RC_BASENAME and bitness.
- * Only MSVC supported at the moment.
- */
-#if defined(_MSC_VER)
-  #if defined(_M_X64) || defined(_M_AMD64)
-    #define OPEN_FUNC1   luaopen_wsock_trace_x64
-    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_x64
-  #else
-    #define OPEN_FUNC1   luaopen_wsock_trace
-    #define OPEN_FUNC2 luaJIT_BC_wsock_trace
-  #endif
+#define IS_MSVC   0
+#define IS_MINGW  0
+#define IS_CYGWIN 0
+
+#if defined(_MSC_VER) || defined(__clang__)
+  #undef  IS_MSVC
+  #define IS_MSVC 1
 
 #elif defined(__MINGW32__)
-  #if defined(__x86_64__) || defined(__ia64__)
-    #define OPEN_FUNC1   luaopen_wsock_trace_mw_x64
-    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_mw_x64
-  #else
-    #define OPEN_FUNC1   luaopen_wsock_trace_mw
-    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_mw
-  #endif
+  #undef  IS_MINGW
+  #define IS_MINGW 1
 
 #elif defined(__CYGWIN__)
-  #if defined(__x86_64__) || defined(__ia64__)
-    #define OPEN_FUNC1   luaopen_wsock_trace_cyg_x64
-    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_cyg_x64
-  #else
-    #define OPEN_FUNC1   luaopen_wsock_trace_cyg
-    #define OPEN_FUNC2 luaJIT_BC_wsock_trace_cyg
-  #endif
+  #undef  IS_CYGWIN
+  #define IS_CYGWIN 1
 #endif
 
-__declspec(dllexport) int OPEN_FUNC1 (lua_State *L);
-__declspec(dllexport) int OPEN_FUNC2 (lua_State *L);
-
 /*
- * The open() function for normal Lua-5.x.
- * This function is marked as a DLL-export.
+ * The open() functions for Lua-5.x.
+ * These functions are marked as a DLL-export.
  *
  * Note: It is possible that if a script says:
  *  local ws = require "wsock_trace"
@@ -332,18 +394,19 @@ __declspec(dllexport) int OPEN_FUNC2 (lua_State *L);
  * and if the running program is linked to e.g. "wsock_trace_mw.dll",
  * we will get re-entered here.
  */
-int OPEN_FUNC1 (lua_State *l)
-{
-  return common_open (l, __FUNCTION__);
-}
+#define OPEN_EXPORT(func, ours)                                  \
+        __declspec(dllexport) int luaopen_##func (lua_State *L); \
+        int luaopen_##func (lua_State *L)                        \
+        {                                                        \
+          return common_open (L, __FUNCTION__, ours);            \
+        }
 
-/*
- * The open() function for Lua-JIT.
- * Also marked as a DLL-export.
- */
-int OPEN_FUNC2 (lua_State *l)
-{
-  return common_open (l, __FUNCTION__);
-}
+OPEN_EXPORT (wsock_trace,         IS_WIN64 == 0 && IS_MSVC)
+OPEN_EXPORT (wsock_trace_x64,     IS_WIN64 == 1 && IS_MSVC)
+OPEN_EXPORT (wsock_trace_mw,      IS_WIN64 == 0 && IS_MINGW)
+OPEN_EXPORT (wsock_trace_mw_x64,  IS_WIN64 == 1 && IS_MINGW)
+OPEN_EXPORT (wsock_trace_cyg,     IS_WIN64 == 0 && IS_CYGWIN)
+OPEN_EXPORT (wsock_trace_cyg_x64, IS_WIN64 == 1 && IS_CYGWIN)
+
 #endif /* USE_LUA */
 
