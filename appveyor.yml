@@ -95,7 +95,7 @@ build_script:
   - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=2 & test.exe
+  - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe
   - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
