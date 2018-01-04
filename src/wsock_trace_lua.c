@@ -54,7 +54,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
        rc = FALSE;
     else
     {
-      snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", base-dll-1, dll);
+      snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", (int)(base-dll-1), dll);
       _setenv ("LUA_CPATH", cpath, 1);
     }
   }
@@ -103,7 +103,7 @@ int wslua_WSACleanup (void)
 static BOOL wslua_run_script (lua_State *l, const char *script)
 {
   const char *msg;
-  int   rc;
+  int   rc = 0;
 
   LUA_TRACE (1, "Launching script: %s\n", script ? script : "<none>");
 
