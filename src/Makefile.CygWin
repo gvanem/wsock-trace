@@ -7,7 +7,6 @@
 
 USE_CRT_DEBUG ?= 1
 USE_BFD       ?= 0
-USE_DEF_FILE   = 0
 
 #
 # Use the IP2Location library?
@@ -48,10 +47,6 @@ endif
 ifeq ($(USE_LUA),1)
   CFLAGS  += -DUSE_LUA -I$(LUAJIT_ROOT)/src
   EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
-endif
-
-ifeq ($(USE_DEF_FILE),1)
-  CFLAGS += -DUSE_DEF_FILE
 endif
 
 EX_LIBS += -lole32
