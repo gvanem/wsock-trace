@@ -1064,14 +1064,12 @@ int trace_putc (int ch)
       case 5:
            color = &g_cfg.color_func;
            break;
-#ifdef USE_LUA
       case 8:
            color = &g_cfg.lua.color_head;
            break;
       case 9:
            color = &g_cfg.lua.color_body;
            break;
-#endif
       default:
            FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
                   ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
