@@ -267,7 +267,9 @@ extern char * getenv_expand (const char *variable, char *buf, size_t size);
 extern FILE * fopen_excl (const char *file, const char *mode);
 extern int    file_exists (const char *fname);
 
-extern const char *get_dll_name (void);
+extern const char *get_dll_full_name (void);
+extern void        set_dll_full_name (HINSTANCE inst_dll);
+extern const char *get_dll_short_name (void);
 extern const char *get_builder (void);
 
 #if defined(__CYGWIN__)

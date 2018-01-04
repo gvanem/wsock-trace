@@ -995,12 +995,12 @@ size_t trace_flush (void)
 
 int trace_printf (const char *fmt, ...)
 {
-  char    buf [500];
+  char    buf [800];
   int     l1, l2;
   va_list args;
 
   va_start (args, fmt);
-  l2 = vsnprintf (buf, sizeof(buf), fmt, args);
+  l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
   l1 = trace_puts (buf);
 
   if (l1 < l2)
@@ -1014,7 +1014,7 @@ int trace_printf (const char *fmt, ...)
 int trace_vprintf (const char *fmt, va_list args)
 {
   char buf [800];
-  int  l1, l2 = vsnprintf (buf, sizeof(buf), fmt, args);
+  int  l1, l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
 
   l1 = trace_puts (buf);
   if (l1 < l2)
@@ -1417,7 +1417,20 @@ int file_exists (const char *fname)
   #define BITNESS  "32-bit"
 #endif
 
-const char *get_dll_name (void)
+static char full_name [_MAX_PATH];
+
+void set_dll_full_name (HINSTANCE inst_dll)
+{
+  if (!full_name[0])  /* prevent reentey from the same .dll */
+      GetModuleFileName (inst_dll, full_name, sizeof(full_name));
+}
+
+const char *get_dll_full_name (void)
+{
+  return (full_name);
+}
+
+const char *get_dll_short_name (void)
 {
   return (RC_BASENAME X_SUFFIX ".dll");
 }
