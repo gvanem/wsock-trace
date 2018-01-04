@@ -163,6 +163,7 @@ static int wslua_trace_puts (lua_State *l)
   return (1);
 }
 
+#if 0
 /*
  * This function is broken.
  * Accepts only strings passed from Lua-land.
@@ -188,6 +189,7 @@ static int wslua_trace_printf (lua_State *l)
   va_end (args2);
   return (n);
 }
+#endif
 
 static int wslua_get_dll_short_name (lua_State *l)
 {
@@ -326,7 +328,7 @@ void wslua_exit (const char *script)
 static const struct luaL_reg wslua_table[] = {
   { "register_hook",       wslua_register_hook },
   { "trace_puts",          wslua_trace_puts },
-  { "trace_printf",        wslua_trace_printf },
+//{ "trace_printf",        wslua_trace_printf },
   { "get_dll_full_name",   wslua_get_dll_full_name },
   { "get_dll_short_name",  wslua_get_dll_short_name },
   { "get_builder",         wslua_get_builder },
