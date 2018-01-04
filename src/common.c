@@ -1326,6 +1326,13 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
 
 int _setenv (const char *env, const char *val, int overwrite)
 {
+#if defined(__CYGWIN__)
+  int rc = setenv (env,  val, overwrite);
+
+  TRACE (3, "getenv(env): '%s'.\n", getenv(env));
+  return (rc);
+
+#else
   size_t len, i = 0;
   char *e, value [_MAX_PATH] = { "?" };
 
@@ -1370,6 +1377,7 @@ int _setenv (const char *env, const char *val, int overwrite)
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
   return (0);
+#endif
 }
 
 /*
