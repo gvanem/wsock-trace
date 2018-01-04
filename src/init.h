@@ -131,7 +131,6 @@ struct config_table {
 
 extern struct config_table g_cfg;
 extern int                 fatal_error;
-extern const char         *wsock_trace_dll_name;
 
 extern HANDLE      ws_sema;
 extern BOOL        ws_sema_inherited;

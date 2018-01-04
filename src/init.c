@@ -1042,8 +1042,6 @@ void wsock_trace_init (void)
   }
 
 
-  /* Should test on 'wsock_trace_dll_name' too.
-   */
   if ((g_cfg.msvc_only   && !is_msvc)  ||
       (g_cfg.mingw_only  && !is_mingw) ||
       (g_cfg.cygwin_only && !is_cygwin) )
@@ -1221,11 +1219,6 @@ void wsock_trace_init (void)
 
 #if defined(USE_LWIP)
   ws_lwip_init();
-#endif
-
-#if defined(USE_LUA) && !defined(TEST_BACKTRACE)
-  if (g_cfg.lua.enable)
-     wslua_init (g_cfg.lua.init_script);
 #endif
 #endif  /* !TEST_GEOIP && !TEST_NLM */
 }
