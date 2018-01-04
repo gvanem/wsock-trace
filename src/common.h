@@ -264,6 +264,7 @@ extern char * _strrepeat (int ch, size_t num);
 extern char * _strreverse (char *str);
 extern char * _utoa10w (int value, int width, char *buf);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
+extern int    _setenv (const char *env, const char *val, int overwrite);
 extern FILE * fopen_excl (const char *file, const char *mode);
 extern int    file_exists (const char *fname);
 

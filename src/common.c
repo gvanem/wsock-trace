@@ -1323,6 +1323,54 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
   return (rc);
 }
 
+int _setenv (const char *env, const char *val, int overwrite)
+{
+  size_t len, i = 0;
+  char *e, value [_MAX_PATH] = { "?" };
+
+  if (strchr(env,'='))
+  {
+    errno = EINVAL;
+    return (-1);
+  }
+
+  for (e = _environ[i]; e; e = _environ[++i])
+  {
+    len = strchr (e,'=') - e;
+    TRACE (3, "e: '%s'.\n", e);
+    if (!strnicmp(env,e,len))
+       break;
+  }
+
+  if (!e)
+  {
+    snprintf (value, sizeof(value), "%s=%s", env, val);
+    e = strdup (value);
+    if (!e)
+    {
+      errno = ENOMEM;
+      return (-1);
+    }
+    _environ[i++] = e;
+    _environ[i] = NULL;
+  }
+  else if (overwrite)
+  {
+    snprintf (value, sizeof(value), "%s=%s;%s", env, e, val);
+    e = strdup (value);
+    if (!e)
+    {
+      errno = ENOMEM;
+      return (-1);
+    }
+    free (_environ[i]);
+    _environ[i] = e;
+  }
+
+  TRACE (3, "getenv(env): '%s'.\n", getenv(env));
+  return (0);
+}
+
 /*
  *  These CRC functions are derived from code in chapter 19 of the book
  *  "C Programmer's Guide to Serial Communications", by Joe Campbell.
