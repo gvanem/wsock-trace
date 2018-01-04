@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #if defined(__CYGWIN__)
   #include <sys/ioctl.h>
