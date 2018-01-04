@@ -2941,9 +2941,13 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          break;
   }
 
+#if !defined(__CYGWIN__)
   if (reason_str)
      TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", thr-id: %lu, ws_sema_inherited: %d.\n",
             rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
+#else
+  ARGSUSED (reason_str);
+#endif
 
   ARGSUSED (reserved);
   return (rc);
