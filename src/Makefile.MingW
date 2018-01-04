@@ -2,7 +2,7 @@
 # Wsock-trace makefile for MinGW, MinGW64-w64 or TDM-gcc.
 # This requires GNU make v4 or later.
 #
-# G. Vanem <gvanem@yahoo.no> 2011.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2017.
 #
 
 USE_CRT_DEBUG = 0
@@ -12,8 +12,8 @@ USE_DEF_FILE  = 0
 #
 # Use the IP2Location library?
 #
-USE_IP2LOCATION ?= 1
-IP2LOCATION_ROOT = ../IP2Location-C-Library
+USE_IP2LOCATION  ?= 1
+IP2LOCATION_ROOT ?= ../IP2Location-C-Library
 
 #
 # If you want Lua-script support, change these:
