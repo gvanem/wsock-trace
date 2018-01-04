@@ -1274,6 +1274,12 @@ void get_color (const char *val, WORD *col)
   char        bg_str [20] = "";
   int         num1, num2;
 
+  if (!val)
+  {
+    *col = 0xFF00 | (console_info.wAttributes & 7);
+    return;
+  }
+
   if (!strnicmp(val,"bright ",7))
   {
     fg |= FOREGROUND_INTENSITY;
