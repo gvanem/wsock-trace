@@ -13,17 +13,15 @@ skip_commits:
 # setting up etc\hosts file
 # XXX - use this instead of batch file generated one
 #
-hosts:
-  localhost: 127.0.0.1
-# localhost: ::1 # appveyor doesn't like "duplicates"
-  mpa.one.microsoft.com: 127.0.0.1
-  google-public-dns-a.google.com: 8.8.8.8
-  www.no-such-host.com: 10.0.0.20
+# hosts:
+#   localhost: 127.0.0.1
+# # localhost: ::1 # appveyor doesn't like "duplicates"
+#   mpa.one.microsoft.com: 127.0.0.1
+#   google-public-dns-a.google.com: 8.8.8.8
+#   www.no-such-host.com: 10.0.0.20
 
 environment:
   global:
-    # CFLAGS: '-Wall --coverage'
-    # LDFLAGS: '-lgcov --coverage'
     CL: -nologo -MP
   matrix:
     - BUILDER: msvc
@@ -66,15 +64,15 @@ install:
   # add a few locations to our path
   #
   - cmd: set PATH=%CD%\src;%PATH%
-  - cmd: if "%BUILDER%"=="mingw32"  set PATH=C:\msys64\MinGW32\bin;C:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="mingw64"  set PATH=C:\msys64\MinGW64\bin;C:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="cygwin64" set PATH=C:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe -qgnNdO -l C:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com & set PATH=c:\cygwin\bin;C:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="mingw32"  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="mingw64"  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="cygwin64" set PATH=c:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe -qgnNdO -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
 
   #
   # set compiler environment
   #
-  - cmd: if "%BUILDER%"=="msvc" call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
+  - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
 
   #
   # Download IP2Loca Database and the 'xz' program to decompress it.
@@ -104,7 +102,9 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & set WSOCK_LUA_ENABLE=1 & test.exe WSAStartup WSACleanup
 
 artifacts:
+  #
   # To push all *.zip/exe... files.
+  #
   - path: '**\*.dll'
   - path: '**\*.lib'
   - path: '**\*.a'
