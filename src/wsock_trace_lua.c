@@ -14,6 +14,9 @@
 #error "LuaJIT needs to be built with 'LJ_HASFFI=1'."
 #endif
 
+#ifndef va_copy
+#define va_copy(dst,src) ((dst) = (src))
+#endif
 
 #define LUA_TRACE(level, fmt, ...)                  \
         do {                                        \
