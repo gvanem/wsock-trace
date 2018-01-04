@@ -2845,8 +2845,13 @@ static void test_get_caller (const void *from)
     ret = "<none>";
     if (i == 0)
     {
+#ifdef _WIN64
+      ctx.Rip = (ULONG_PTR) frames [i];
+      ctx.Rbp = 0;
+#else
       ctx.Eip = (DWORD) frames[i];
       ctx.Ebp = 0;
+#endif
       ret = StackWalkShow (thr, &ctx);
     }
     TRACE (1, "frames[%d]: 0x%" ADDR_FMT ", ret: %s\n", i, ADDR_CAST(frames[i]), ret);
