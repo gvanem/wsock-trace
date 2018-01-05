@@ -47,6 +47,7 @@ CC      = gcc
 CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces \
           -Wno-unused-variable -Wno-unused-function
 RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__
+OBJ_DIR = MinGW_obj
 
 ifeq ($(CPU),x64)
   CFLAGS  += -m64
@@ -96,8 +97,6 @@ ifeq ($(USE_DEF_FILE),1)
 endif
 
 EX_LIBS += -lole32
-
-OBJ_DIR = MinGW_obj
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c init.c common.c \
           cpu.c dump.c geoip.c geoip-gen4.c geoip-gen6.c overlap.c \

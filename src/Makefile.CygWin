@@ -27,6 +27,8 @@ LIB_TARGET = /usr/lib
 CC      = gcc
 CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS
 LDFLAGS = -Wl,--print-map,--sort-common -t
+RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
+OBJ_DIR = Cygwin_obj
 
 ifeq ($(USE_CRT_DEBUG),1)
   CFLAGS += -O2 -ggdb
@@ -50,7 +52,6 @@ ifeq ($(USE_LUA),1)
 endif
 
 EX_LIBS += -lole32
-OBJ_DIR = Cygwin_obj
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c init.c common.c \
           cpu.c dump.c geoip.c geoip-gen4.c geoip-gen6.c in_addr.c ip2loc.c \
@@ -135,7 +136,7 @@ $(OBJ_DIR)/%.o: %.c
 	@echo
 
 $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
-	windres -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__ -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
 
 REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
