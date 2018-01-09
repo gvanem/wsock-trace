@@ -83,14 +83,14 @@ install:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: cd src
-  - cmd: set USE_LUA=0
+  - cmd: set USE_LUA=1
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
   - cmd: set DISABLEDELAYEDEXPANSION=0
-  - cmd: if "%BUILDER%"=="msvc"    nmake -nologo -f Makefile.vc6   USE_LUA=1
-  - cmd: if "%BUILDER%"=="mingw32" make          -f Makefile.MinGW USE_LUA=1
-  - cmd: if "%BUILDER%"=="mingw64" make          -f Makefile.MinGW USE_LUA=1
+  - cmd: if "%BUILDER%"=="msvc"    nmake -nologo -f Makefile.vc6
+  - cmd: if "%BUILDER%"=="mingw32" make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="mingw64" make          -f Makefile.MinGW
   - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
   - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
