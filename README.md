@@ -17,21 +17,21 @@ Geo-IP information from **[MaxMind](http://www.maxmind.com)** and **[IP2Location
 well-known location provided by the *IP2Location* data-base). Thanks to the
 **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
 for a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind
-and IP2Location [[3]](#footnotes) for their data-bases.
+and IP2Location [**[3]**](#footnotes) for their data-bases.
 
 ### Installation (all):
 
 To be able to get more precise Geo-IP information for addresses (city and
 region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.
 Do this:
-   * Sign-up for an account and download the free IP2Location LITE databases [here](http://lite.ip2location.com).
+   * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
    * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%`
      or `%APPDATA%` directory.
    * Clone this repo along with its submodules:<br>
-   `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`<br>
-   If you have already cloned this repository, you can initialize and update
-   the submodules like so:<br>
-   `git submodule update --init --recursive`
+     `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`<br>
+     If you have already cloned this repository, you can initialize and update
+     the submodules like so:<br>
+     `git submodule update --init --recursive`
    * Edit the respective makefile to say `USE_IP2LOCATION = 1`
    * Then do the specific installation for your compiler (see below).
 
@@ -121,7 +121,7 @@ Example output from src/test.exe (built with MSVC):
   ```
 
 Here is a more realistic and useful example with wsock_trace.lib linked to
-Nmap [[1]](#footnotes):
+Nmap [**[1]**](#footnotes):
 ```c
   c:\> nmap -sT -P0 -p23,80 10.0.0.1
      * mswin32/winfix.cc(134) (win_pre_init+68):   WSAStartup (2.2) --> No error.
@@ -177,7 +177,7 @@ Notes:
   (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
 
 
-And another example from C-ares adig [[2]](#footnotes):
+And another example from C-ares adig [**[2]**](#footnotes):
 ```c
     c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
@@ -252,9 +252,9 @@ Note that some virus scanners may find the behaviour of programs linked to
       functions to trace.
 
    3. Injecting `wsock_trace.dll` into a remote process. Ref:
-      http://www.viksoe.dk/code/wepmetering.htm
+      ** http://www.viksoe.dk/code/wepmetering.htm **
 
-   4. Optionally load [Wireshark's](https://www.wireshark.org) `libwireshark.dll` to dissect
+   4. Optionally load [**Wireshark's**](https://www.wireshark.org) `libwireshark.dll` to dissect
       transport and application protocols. <br>
       Do it for selected processes only.
 
@@ -282,7 +282,7 @@ Note that some virus scanners may find the behaviour of programs linked to
       ```
 
    7. Make a GUI trace viewer for it. Ref:
-      http://www.viksoe.dk/code/windowless1.htm
+      ** http://www.viksoe.dk/code/windowless1.htm **
 
    8. Make it possible to switch network stacks at run-time (select amongst Winsock2,
       **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
@@ -297,13 +297,13 @@ G. Vanem <gisle.vanem@gmail.com> 2013 - 2017.
 
    * [1] Nmap; "Network Mapper" is a free and open source (license) utility for
        network  discovery and security auditing.
-       Ref. http://nmap.org/download.html
+       Ref. ** http://nmap.org/download.html **
 
    * [2] A C library for asynchronous DNS requests (including name resolves)
-       Ref. http://c-ares.haxx.se/
+       Ref. ** http://c-ares.haxx.se/ **
 
    * [3] This site or product includes IP2Location LITE data available from
-       http://lite.ip2location.com.
+       ** http://lite.ip2location.com.**
 
 *PS*. This file is written with the aid of the **[Atom](https://atom.io/)**
       editor and it's **[Markdown-Preview](https://atom.io/packages/markdown-preview)**.
