@@ -29,7 +29,6 @@ if %1. == --ip2loc_4. (
 )
 
 if %1. == --ip2loc_6. (
-  shift
   grep.exe -o "[0-9a-f\:]*" ..\IP2Location-C-Library\test\country_test_ipv6_data.txt > %TEST_INPUT%
   %~dp0geoip.exe -6 %2 %3 %4 @%TEST_INPUT%
   exit /b 0
