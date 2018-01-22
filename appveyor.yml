@@ -75,10 +75,10 @@ install:
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
 
   #
-  # Download IP2Loca Database and the 'xz' program to decompress it.
+  # Download IP2Location Database (with IPv4+IP6 addresses) and the 'xz' program to decompress it.
   #
-  - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP4-COUNTRY.BIN.xz
-  - cmd: 7z.exe x IP4-COUNTRY.BIN.xz > NUL
+  - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  - cmd: 7z.exe x IP46-COUNTRY.BIN.xz > NUL
 
 build_script:
   - cmd: appveyor-script.bat init
@@ -99,6 +99,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
   - cmd: set WSOCK_TRACE_LEVEL=0 & set WSOCK_LUA_ENABLE=1 & test.exe WSAStartup WSACleanup
 
 artifacts:

@@ -45,7 +45,7 @@ echo use_generated          = 0                     >> wsock_trace.appveyor
 echo max_days               = 10                    >> wsock_trace.appveyor
 echo geoip4_file            = %CD%\geoip            >> wsock_trace.appveyor
 echo geoip6_file            = %CD%\geoip6           >> wsock_trace.appveyor
-echo ip2location_bin_file   = %CD%\IP4-COUNTRY.BIN  >> wsock_trace.appveyor
+echo ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN >> wsock_trace.appveyor
 echo [idna]                                         >> wsock_trace.appveyor
 echo enable                 = 1                     >> wsock_trace.appveyor
 echo [lua]                                          >> wsock_trace.appveyor
@@ -82,6 +82,6 @@ exit /b 0
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
-del /Q IP4-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
+del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
 echo Cleaning done.
 exit /b 0
