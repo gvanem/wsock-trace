@@ -41,6 +41,7 @@ src/compile_lua_*bit.bat
 src/cyg-ver.c
 src/init.lua
 src/luac.out
+src/iso3166-countrycodes.txt
 src/libbacktrace/*
 cpp_filter.py
 backup/*
