@@ -133,8 +133,24 @@ DWORD ip2loc_num_ipv6_entries (void)
  */
 #include "in_addr.h"
 
+/*
+ * Since 'IP2Location_parse_addr()' does a lot of calls to
+ * 'IP2Location_ip_is_ipv4()' and 'IP2Location_ip_is_ipv6()', keep
+ * the noise-level down ny not calling 'WSASetLastError()' in in_addr.c.
+*/
+static int ip2loc_inet_pton (int family, const char *addr, void *result)
+{
+  BOOL save = call_WSASetLastError;
+  int  rc;
+
+  call_WSASetLastError = FALSE;
+  rc = wsock_trace_inet_pton (family, addr, result);
+  call_WSASetLastError = save;
+  return (rc);
+}
+
 #undef  inet_pton
-#define inet_pton(family, addr, dst)  wsock_trace_inet_pton (family, addr, dst)
+#define inet_pton(family, addr, result)  ip2loc_inet_pton (family, addr, result)
 
 #if defined(__CYGWIN__) && !defined(_WIN32)
 #define _WIN32   /* Checks on '_WIN32' in "IP2Location.c" */
@@ -160,7 +176,7 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
   TRACE (3, "Record for %s; country_short: \"%.2s\"\n", addr, r->country_short);
 
   if (r->country_short[0] == '-' ||                   /* is "-" for unallocated addr */
-      !strncmp(r->country_short,"INVALID",7) ||       /* INVALID_IPV4_ADDRESS */
+      !strncmp(r->country_short,"INVALID",7) ||       /* INVALID_IPV4_ADDRESS/INVALID IPV4 ADDRESS */
       !strncmp(r->country_short,"This parameter",14)) /* NOT_SUPPORTED */
   {
     IP2Location_free_record (r);
