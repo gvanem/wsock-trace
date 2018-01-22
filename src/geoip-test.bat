@@ -42,4 +42,4 @@ echo 226.212.139.179     >> %TEST_INPUT%
 echo 247.140.100.112     >> %TEST_INPUT%
 
 @echo on
-type %TEST_INPUT% | %~dp0\geoip.exe -4 %1 %2 %3
+type %TEST_INPUT% | %~dp0geoip.exe -4 %1 %2 %3
