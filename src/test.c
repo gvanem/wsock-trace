@@ -307,6 +307,11 @@ static void test_getnameinfo (void)
   sa = (const struct sockaddr*) &sa6;
   TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa6), host, sizeof(host), NULL, 0, flags));
 #endif
+
+  /* Should be Finland (Lappeenranta/Etela-Karjala)
+   */
+  TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:4010:C07::63", &sa6.sin6_addr));
+  TEST_CONDITION (== 0, getnameinfo (sa, sizeof(sa6), host, sizeof(host), NULL, 0, flags));
 }
 
 static void test_getaddrinfo (void)
