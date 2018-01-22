@@ -136,7 +136,7 @@ DWORD ip2loc_num_ipv6_entries (void)
 /*
  * Since 'IP2Location_parse_addr()' does a lot of calls to
  * 'IP2Location_ip_is_ipv4()' and 'IP2Location_ip_is_ipv6()', keep
- * the noise-level down ny not calling 'WSASetLastError()' in in_addr.c.
+ * the noise-level down by not calling 'WSASetLastError()' in in_addr.c.
 */
 static int ip2loc_inet_pton (int family, const char *addr, void *result)
 {
