@@ -865,13 +865,15 @@ static int geoip_get_num_addr (DWORD *num4, DWORD *num6)
 }
 
 struct country_list {
-       int         country_number; /* ISO-3166 country number */
+       int         country_number; /* ISO-3166-2 country number */
        char        short_name[3];  /* A2 short country code */
        const char *long_name;      /* normal country name */
      };
 
 /*
- * Ref: ftp://ftp.ripe.net/iso3166-countrycodes.txt
+ * Refs:
+ *  ftp://ftp.ripe.net/iso3166-countrycodes.txt
+ *  https://en.wikipedia.org/wiki/ISO_3166-2
  */
 static const struct country_list c_list[] = {
        {   4, "af", "Afghanistan"                          },
@@ -1338,6 +1340,10 @@ typedef HINTERNET (WINAPI *func_InternetOpenUrlA) (HINTERNET   hnd,
                                                    DWORD       flags,
                                                    DWORD_PTR   context);
 
+typedef BOOL (WINAPI *func_InternetGetLastResponseInfoA) (DWORD *err_code,
+                                                          char  *err_buff,
+                                                          DWORD *err_buff_len);
+
 typedef BOOL (WINAPI *func_InternetReadFile) (HINTERNET hnd,
                                               VOID     *buffer,
                                               DWORD     num_bytes_to_read,
@@ -1345,22 +1351,27 @@ typedef BOOL (WINAPI *func_InternetReadFile) (HINTERNET hnd,
 
 typedef BOOL (WINAPI *func_InternetCloseHandle) (HINTERNET handle);
 
-static func_InternetOpenA        p_InternetOpenA;
-static func_InternetOpenUrlA     p_InternetOpenUrlA;
-static func_InternetReadFile     p_InternetReadFile;
-static func_InternetCloseHandle  p_InternetCloseHandle;
+static func_InternetOpenA                p_InternetOpenA;
+static func_InternetOpenUrlA             p_InternetOpenUrlA;
+static func_InternetGetLastResponseInfoA p_InternetGetLastResponseInfoA;
+static func_InternetReadFile             p_InternetReadFile;
+static func_InternetCloseHandle          p_InternetCloseHandle;
 
 #define ADD_VALUE(func)   { 0, NULL, "wininet.dll", #func, (void**)&p_##func }
 
 static struct LoadTable funcs[] = {
                         ADD_VALUE (InternetOpenA),
                         ADD_VALUE (InternetOpenUrlA),
+                        ADD_VALUE (InternetGetLastResponseInfoA),
                         ADD_VALUE (InternetReadFile),
                         ADD_VALUE (InternetCloseHandle)
                       };
 
 /**
  * Return error-string for 'err' from wininet.dll.
+ *
+ * Try to get a more detailed error-code and text from
+ * the server response using 'InternetGetLastResponseInfoA()'.
  */
 static const char *wininet_strerror (DWORD err)
 {
@@ -1373,14 +1384,29 @@ static const char *wininet_strerror (DWORD err)
                       buf, sizeof(buf), NULL))
   {
     static char err_buf[512];
+    char   wininet_err_buf[200];
     char  *p;
+    DWORD  wininet_err = 0;
+    DWORD  wininet_err_len = sizeof(wininet_err_buf)-1;
 
     str_rip (buf);
     p = strrchr (buf, '.');
     if (p && p[1] == '\0')
        *p = '\0';
-     snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
-     return (err_buf);
+
+    p = err_buf;
+    p += snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
+
+    if (p_InternetGetLastResponseInfoA &&
+        (p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
+        wininet_err > INTERNET_ERROR_BASE && wininet_err <= INTERNET_ERROR_LAST)
+    {
+      snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", wininet_err, wininet_err_buf);
+      p = strrchr (p, '.');
+      if (p && p[1] == '\0')
+         *p = '\0';
+    }
+    return (err_buf);
   }
   return win_strerror (err);
 }
@@ -1496,7 +1522,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
     return (rc);
   }
 
-  if (!_st_tmp)
+  if (!_st_tmp || force_update)
   {
     rc = download_file (tmp_file, url);
     TRACE (1, "download_file (%s) -> rc: %lu\n", tmp_file, DWORD_CAST(rc));
