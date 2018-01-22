@@ -168,10 +168,15 @@ proxy =
 
 #
 # IP2Location settings.
+#
+# To enable retrieving locations for both IPv4 and IPv6 addresses, download
+# and use a file named like IP2LOCATION-LITE-DBx.IPV6.BIN.
+# This files contains both IPv4 and IPv6 records.
+#
 # Ref. https://github.com/chrislim2888/IP2Location-C-Library
 #      http://lite.ip2location.com
 #
-ip2location_bin_file = %HOME%\IP2LOCATION-LITE-DB3.BIN
+ip2location_bin_file = %HOME%\IP2LOCATION-LITE-DB11.IPV6.BIN
 
 #
 # IDNA settings. Internationalizing Domain Names in Applications.
