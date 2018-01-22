@@ -1566,7 +1566,7 @@ fd_set *copy_fd_set_to (const fd_set *fd, fd_set *dst)
   return (dst);
 }
 
-static void dump_one_fd (const fd_set *fd, int indent)
+static void dump_one_fd_set (const fd_set *fd, int indent)
 {
   u_int i, max_len, len = indent;
   int   j;
@@ -1624,7 +1624,7 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
     trace_puts (info[i].which);
 
     if (info[i].fd)
-         dump_one_fd (info[i].fd, indent+5);
+         dump_one_fd_set (info[i].fd, indent+5);
     else trace_puts ( "<not set>\n");
 
     if (i < DIM(info)-1)
