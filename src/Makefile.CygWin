@@ -117,7 +117,7 @@ compile_luajit_0:
 # and that 'BUILDMODE = static'.
 #
 compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
-	$(MAKE) -C $(LUAJIT_ROOT)/src
+	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
