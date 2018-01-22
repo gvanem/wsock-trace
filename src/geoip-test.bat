@@ -5,13 +5,36 @@
 ::
 setlocal
 
+if %1. == -h. (
+  echo Usage: %0 [-h ^| -d ^| --ip2loc_4 ^| --ip2loc_6]
+  echo ^    -h:         this help.
+  echo ^    -d:         sets "WSOCK_TRACE_LEVEL=2".
+  echo ^    --ip2loc_4: test using addresses in "..\IP2Location-C-Library\test\country_test_ipv4_data.txt".
+  echo ^    --ip2loc_6: test using addresses in "..\IP2Location-C-Library\test\country_test_ipv6_data.txt".
+  exit /b 0
+)
+
 if %1. == -d. (
   set WSOCK_TRACE_LEVEL=2
   shift
 )
 
-set TEST_INPUT=%TEMP%\geoip-addr4.test
+set TEST_INPUT=%TEMP%\geoip-addr.test
 echo Generating %TEST_INPUT%...
+
+if %1. == --ip2loc_4. (
+  grep.exe -o "[0-9\.]*" ..\IP2Location-C-Library\test\country_test_ipv4_data.txt > %TEST_INPUT%
+  %~dp0geoip.exe -4 %2 %3 %4 @%TEST_INPUT%
+  exit /b 0
+)
+
+if %1. == --ip2loc_6. (
+  shift
+  grep.exe -o "[0-9a-f\:]*" ..\IP2Location-C-Library\test\country_test_ipv6_data.txt > %TEST_INPUT%
+  %~dp0geoip.exe -6 %2 %3 %4 @%TEST_INPUT%
+  exit /b 0
+)
+
 echo 19.5.10.1      # US  > %TEST_INPUT%
 echo 25.5.10.2      # GB >> %TEST_INPUT%
 echo 43.5.10.3      # JP >> %TEST_INPUT%
