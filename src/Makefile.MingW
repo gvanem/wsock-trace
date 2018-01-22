@@ -181,6 +181,9 @@ compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
+ifeq ($(USE_LUA),1)
+	 - rm -fR $(LUAJIT_ROOT)/src/*.o
+endif
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
