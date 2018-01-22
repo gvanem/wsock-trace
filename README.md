@@ -25,15 +25,20 @@ To be able to get more precise Geo-IP information for addresses (city and
 region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.
 Do this:
    * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
-   * Put the `IP2LOCATION-LITE-DB3.BIN` file (or similar) into your `%HOME%`
-     or `%APPDATA%` directory.
-   * Clone this repo along with its submodules:<br>
+   * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see **[*]** below)
+     into your `%HOME%` or `%APPDATA%` directory.
+
+   * Clone this repository along with its submodules:<br>
      `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`<br>
      If you have already cloned this repository, you can initialize and update
      the submodules like so:<br>
      `git submodule update --init --recursive`
    * Edit the respective makefile to say `USE_IP2LOCATION = 1`
    * Then do the specific installation for your compiler (see below).
+
+  **[*]**: to enable locations for both IPv4 and IPv6 addresses, download and use a
+file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`.<br>
+These files contains both IPv4 and IPv6 records.
 
 ### Installation (MSVC):
 
