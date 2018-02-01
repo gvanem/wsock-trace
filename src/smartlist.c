@@ -422,3 +422,43 @@ void *smartlist_bsearch (const smartlist_t *sl, const void *key,
   return (found ? smartlist_get(sl, idx) : NULL);
 }
 
+/**
+ * Trim leading blanks (space/tab) from a string.
+ */
+char *str_ltrim (char *s)
+{
+  assert (s != NULL);
+
+  while (s[0] && s[1] && isspace((int)s[0]))
+       s++;
+  return (s);
+}
+
+/*
+ * Open a file and return parsed lines as a smartlist.
+ */
+smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse)
+{
+  smartlist_t *sl;
+  FILE *f = fopen (file, "r");
+
+  if (!f)
+     return (NULL);
+
+  sl = smartlist_new();
+
+  while (sl)
+  {
+    char buf[500], *p;
+
+    if (!fgets(buf,sizeof(buf)-1,f))   /* EOF */
+       break;
+
+    p = str_ltrim (buf);
+    if (*p != '#' && *p != ';')
+       (*parse) (sl, buf);
+  }
+  fclose (f);
+  return (sl);
+}
+
