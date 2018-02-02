@@ -2004,11 +2004,15 @@ static void test_addr_common (const struct in_addr  *a4,
   {
     const char *sbl_ref  = NULL;
     BOOL        rc = DNSBL_check_ipv4 (a4, &sbl_ref);
+    char        addr [20];
 
     if (!sbl_ref)
        sbl_ref = " <none>";
     if (rc)
-       printf ("  listed in SpamHaus: SBL%s\n", sbl_ref);
+    {
+      wsock_trace_inet_ntop4 ((const u_char*)a4, addr, sizeof(addr));
+      printf ("  %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
+    }
   }
 
 #ifndef USE_IP2LOCATION
