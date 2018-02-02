@@ -1401,7 +1401,7 @@ static const char *wininet_strerror (DWORD err)
         (p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
         wininet_err > INTERNET_ERROR_BASE && wininet_err <= INTERNET_ERROR_LAST)
     {
-      snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", wininet_err, wininet_err_buf);
+      snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", (u_long)wininet_err, wininet_err_buf);
       p = strrchr (p, '.');
       if (p && p[1] == '\0')
          *p = '\0';

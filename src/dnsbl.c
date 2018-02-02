@@ -96,7 +96,7 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
   wsock_trace_inet_ntop4 ((const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
 
   TRACE (3, "ip: %-15s net: %-15s (%-15s - %-15s) mask: 0x%08lX rc: %d\n",
-         ip_str, net_str, start_ip_str, end_ip_str, mask, rc);
+         ip_str, net_str, start_ip_str, end_ip_str, (u_long)mask, rc);
 
   return (rc);
 }
