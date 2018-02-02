@@ -186,3 +186,15 @@ ip2location_bin_file = %HOME%\IP2LOCATION-LITE-DB11.IPV6.BIN
 enable = 1
 winidn = 0
 codepage = 0
+
+#
+# DNSBL (Domain Name System Blacklists) settings
+#
+[DNSBL]
+enable      = 0
+drop_file   = %HOME%\drop.txt
+edrop_file  = %HOME%\edrop.txt
+dropv6_file = %HOME%\dropv6.txt
+
+
+

@@ -47,6 +47,13 @@ struct lua_cfg {
        char   *exit_script;
      };
 
+struct DNSBL_cfg {
+       BOOL    enable;
+       char   *drop_file;
+       char   *edrop_file;
+       char   *dropv6_file;
+     };
+
 struct config_table {
        char   *trace_file;
        FILE   *trace_stream;
@@ -121,6 +128,7 @@ struct config_table {
 
        struct lua_cfg     lua;
        struct pcap_cfg    pcap;
+       struct DNSBL_cfg   DNSBL;
        struct statistics  counts;
        DWORD  reentries;
 

@@ -26,6 +26,7 @@
 #include "overlap.h"
 #include "hosts.h"
 #include "cpu.h"
+#include "dnsbl.h"
 #include "init.h"
 
 #define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
@@ -713,12 +714,34 @@ static void parse_idna_settings (const char *key, const char *val, unsigned line
               fname, line, key, val);
 }
 
+/*
+ * Handler for '[DNSBL]' section.
+ */
+static void parse_DNSBL_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key,"enable"))
+       g_cfg.DNSBL.enable = atoi (val);
+
+  else if (!stricmp(key,"drop_file"))
+       g_cfg.DNSBL.drop_file = strdup (val);
+
+  else if (!stricmp(key,"dropv6_file"))
+       g_cfg.DNSBL.dropv6_file = strdup (val);
+
+  else if (!stricmp(key,"edrop_file"))
+       g_cfg.DNSBL.edrop_file = strdup (val);
+
+  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
 enum cfg_sections {
      CFG_NONE = 0,
      CFG_CORE,
      CFG_LUA,
      CFG_GEOIP,
-     CFG_IDNA
+     CFG_IDNA,
+     CFG_DNSBL
    };
 
 /*
@@ -734,6 +757,8 @@ static enum cfg_sections lookup_section (const char *section)
      return (CFG_GEOIP);
   if (section && !stricmp(section,"idna"))
      return (CFG_IDNA);
+  if (section && !stricmp(section,"dnsbl"))
+     return (CFG_DNSBL);
   return (CFG_NONE);
 }
 
@@ -766,19 +791,23 @@ static void parse_config_file (FILE *file)
     {
       case CFG_CORE:
            parse_core_settings (key, val, line);
-           strcpy (last_section,"core");
+           strcpy (last_section, "core");
            break;
       case CFG_LUA:
            parse_lua_settings (key, val, line);
-           strcpy (last_section,"lua");
+           strcpy (last_section, "lua");
            break;
       case CFG_GEOIP:
            parse_geoip_settings (key, val, line);
-           strcpy (last_section,"geoip");
+           strcpy (last_section, "geoip");
            break;
       case CFG_IDNA:
            parse_idna_settings (key, val, line);
-           strcpy (last_section,"idna");
+           strcpy (last_section, "idna");
+           break;
+      case CFG_DNSBL:
+           parse_DNSBL_settings (key, val, line);
+           strcpy (last_section, "dnsbl");
            break;
 
       /* \todo: handle more 'key' / 'val' here by extending lookup_section().
@@ -950,7 +979,11 @@ void wsock_trace_exit (void)
   FREE (g_cfg.geoip6_url);
   FREE (g_cfg.geoip_proxy);
   FREE (g_cfg.ip2location_bin_file);
+  FREE (g_cfg.DNSBL.drop_file);
+  FREE (g_cfg.DNSBL.dropv6_file);
+  FREE (g_cfg.DNSBL.edrop_file);
 
+  DNSBL_exit();
   geoip_exit();
   IDNA_exit();
 
@@ -1098,6 +1131,7 @@ void wsock_trace_init (void)
   }
 
   geoip_init (NULL, NULL);
+  DNSBL_init();
 
   now = get_time_now();
 

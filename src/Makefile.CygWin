@@ -54,13 +54,13 @@ endif
 EX_LIBS += -lole32
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c init.c common.c \
-          cpu.c dump.c geoip.c geoip-gen4.c geoip-gen6.c in_addr.c ip2loc.c \
-          overlap.c smartlist.c stkwalk.c bfd_gcc.c
+          cpu.c dnsbl.c dump.c geoip.c geoip-gen4.c geoip-gen6.c in_addr.c \
+          ip2loc.c overlap.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c dnsbl.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe
@@ -130,6 +130,9 @@ vclean realclean: clean
 	      geoip-gen4.c geoip-gen6.c idna.exe idna.map geoip.exe geoip.map \
 	      test.exe test.map .depend.CygWin
 	- rmdir $(OBJ_DIR)
+ifeq ($(USE_LUA),1)
+	- rm -f $(LUAJIT_ROOT)/src/libluajit.a
+endif
 
 $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<

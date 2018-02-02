@@ -24,27 +24,29 @@ CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
 
 LINK_ARG = $(OBJ_DIR)\wlink.arg
 
-OBJS = $(OBJ_DIR)\wsock_trace.obj     &
-       $(OBJ_DIR)\wsock_trace_lua.obj &
-       $(OBJ_DIR)\hosts.obj           &
-       $(OBJ_DIR)\idna.obj            &
-       $(OBJ_DIR)\init.obj            &
-       $(OBJ_DIR)\in_addr.obj         &
-       $(OBJ_DIR)\ip2loc.obj          &
-       $(OBJ_DIR)\common.obj          &
-       $(OBJ_DIR)\cpu.obj             &
-       $(OBJ_DIR)\dump.obj            &
-       $(OBJ_DIR)\geoip.obj           &
-       $(OBJ_DIR)\geoip-null.obj      &
-       $(OBJ_DIR)\overlap.obj         &
-       $(OBJ_DIR)\smartlist.obj       &
-       $(OBJ_DIR)\stkwalk.obj
+WSOCK_TRACE_OBJS = $(OBJ_DIR)\wsock_trace.obj     &
+                   $(OBJ_DIR)\wsock_trace_lua.obj &
+                   $(OBJ_DIR)\hosts.obj           &
+                   $(OBJ_DIR)\idna.obj            &
+                   $(OBJ_DIR)\init.obj            &
+                   $(OBJ_DIR)\in_addr.obj         &
+                   $(OBJ_DIR)\ip2loc.obj          &
+                   $(OBJ_DIR)\common.obj          &
+                   $(OBJ_DIR)\cpu.obj             &
+                   $(OBJ_DIR)\dnsbl.obj           &
+                   $(OBJ_DIR)\dump.obj            &
+                   $(OBJ_DIR)\geoip.obj           &
+                   $(OBJ_DIR)\geoip-null.obj      &
+                   $(OBJ_DIR)\overlap.obj         &
+                   $(OBJ_DIR)\smartlist.obj       &
+                   $(OBJ_DIR)\stkwalk.obj
 
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
 GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
             $(OBJ_DIR)\geoip-null.obj &
             $(OBJ_DIR)\common.obj     &
+            $(OBJ_DIR)\dnsbl.obj      &
             $(OBJ_DIR)\idna.obj       &
             $(OBJ_DIR)\in_addr.obj    &
             $(OBJ_DIR)\init.obj       &
@@ -81,7 +83,7 @@ vclean realclean: clean .SYMBOLIC
 	*$(CC) $(CFLAGS) -fo=$@ $[@
 	@echo
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
 	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
 	wlib $(WSOCK_LIB) +-$(NON_EXPORT_OBJ)
 
@@ -116,7 +118,7 @@ $(LINK_ARG): $(__MAKEFILES__)
 	%create $^@
 	@%append $^@ option implib=$(WSOCK_LIB), map, verbose,
 	@%append $^@ caseexact, map=$(WSOCK_DLL:.dll=.map), res=$(OBJ_DIR)\wsock_trace.res
-	@%append $^@ file { $(OBJS) } library clib3$(STACK_OR_REG).lib
+	@%append $^@ file { $(WSOCK_TRACE_OBJS) } library clib3$(STACK_OR_REG).lib
 
 
 #
