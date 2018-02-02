@@ -63,5 +63,11 @@ echo 201.227.72.250      >> %TEST_INPUT%
 echo 226.212.139.179     >> %TEST_INPUT%
 echo 247.140.100.112     >> %TEST_INPUT%
 
+::
+:: Add some IPv4 addresses from SpamHaus' DROP.txt too:
+::
+echo 23.226.48.10  # part of 23.226.48.0/20 ; SBL322605  >> %TEST_INPUT%
+echo 84.238.160.4  # part of 84.238.160.0/22 ; SBL339089 >> %TEST_INPUT%
+
 @echo on
 type %TEST_INPUT% | %~dp0geoip.exe -4 %1 %2 %3

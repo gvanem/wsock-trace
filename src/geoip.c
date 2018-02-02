@@ -1574,6 +1574,7 @@ void geoip_update_file (int family, BOOL force_update)
 #if defined(TEST_GEOIP)
 
 #include "getopt.h"
+#include "dnsbl.h"
 
 /*
  * Determine length of the network part in an IPv4 address.
@@ -1996,6 +1997,19 @@ static void test_addr_common (const struct in_addr  *a4,
      width = 29;
 
   printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
+
+  /* Check the global IPv4 address for membership in a SpamHaus DROP / EDROP list
+   */
+  if (geoip_addr_is_global(a4, NULL))
+  {
+    const char *sbl_ref  = NULL;
+    BOOL        rc = DNSBL_check_ipv4 (a4, &sbl_ref);
+
+    if (!sbl_ref)
+       sbl_ref = " <none>";
+    if (rc)
+       printf ("  listed in SpamHaus: SBL%s\n", sbl_ref);
+  }
 
 #ifndef USE_IP2LOCATION
   ARGSUSED (use_ip2loc);
