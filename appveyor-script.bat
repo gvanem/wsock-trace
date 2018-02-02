@@ -53,6 +53,11 @@ echo enable      = %%WSOCK_LUA_ENABLE%%             >> wsock_trace.appveyor
 echo trace_level = 1                                >> wsock_trace.appveyor
 echo lua_init    = %CD%\src\wsock_trace_init.lua    >> wsock_trace.appveyor
 echo lua_exit    = %CD%\src\wsock_trace_exit.lua    >> wsock_trace.appveyor
+echo [dnsbl]                                        >> wsock_trace.appveyor
+echo enable      = 1                                >> wsock_trace.appveyor
+echo drop_file   = %CD%\drop.txt                    >> wsock_trace.appveyor
+echo edrop_file  = %CD%\edrop.txt                   >> wsock_trace.appveyor
+echo dropv6_file = %CD%\dropv6.txt                  >> wsock_trace.appveyor
 
 echo Generating hosts file...
 echo #                                               > hosts
