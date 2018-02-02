@@ -252,7 +252,8 @@ void DNSBL_init (void)
   /* Each of the 'drop.txt' and 'edrop.txt' should be sorted.
    * But after merging them into one list, we must sort them ourself.
    */
-  smartlist_sort (DNSBL_list, DNSBL_compare_net);
+  if (DNSBL_list)
+     smartlist_sort (DNSBL_list, DNSBL_compare_net);
 
   if (g_cfg.trace_level >= 2)
   {
