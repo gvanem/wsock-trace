@@ -247,6 +247,18 @@ wchar_t *str_ripw (wchar_t *s)
 }
 
 /**
+ * Trim leading blanks (space/tab) from a string.
+ */
+char *str_ltrim (char *s)
+{
+  assert (s != NULL);
+
+  while (s[0] && s[1] && isspace((int)s[0]))
+       s++;
+  return (s);
+}
+
+/**
  * Return err-number and string for 'err'. Only use this with
  * GetLastError(). Remove trailing [\r\n.]
  */

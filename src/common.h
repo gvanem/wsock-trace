@@ -249,6 +249,7 @@ extern const char *str_hex_word (WORD val);
 extern const char *str_hex_dword (DWORD val);
 extern char       *str_rip  (char *s);
 extern wchar_t    *str_ripw (wchar_t *s);
+extern char       *str_ltrim (char *s);
 
 extern unsigned long  swap32 (DWORD val);
 extern unsigned short swap16 (WORD val);
