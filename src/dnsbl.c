@@ -95,7 +95,7 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
   wsock_trace_inet_ntop4 ((const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
   wsock_trace_inet_ntop4 ((const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
 
-  TRACE (2, "ip: %-15s net: %-15s (%-15s - %-15s) mask: 0x%08lX rc: %d\n",
+  TRACE (3, "ip: %-15s net: %-15s (%-15s - %-15s) mask: 0x%08lX rc: %d\n",
          ip_str, net_str, start_ip_str, end_ip_str, mask, rc);
 
   return (rc);
@@ -174,7 +174,7 @@ static void DNSBL_dump (void)
     wsock_trace_inet_ntop4 ((const u_char*)&dnsbl->mask, mask, sizeof(mask));
 
     snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->suffix);
-    TRACE (2, "%3d: SBL%-6s  %-18s %-18s type: %d.\n",
+    TRACE (3, "%3d: SBL%-6s  %-18s %-18s type: %d.\n",
             i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>", cidr, mask, dnsbl->type);
   }
   call_WSASetLastError = save;
@@ -218,7 +218,7 @@ static void DNSBL_test (void)
     rc = DNSBL_check_ipv4 (&ip, &sbl_ref);
     if (!sbl_ref)
        sbl_ref = " <none>";
-    TRACE (2, "%-15s -> %d, SBL %-7s country: %s, location: %s\n",
+    TRACE (3, "%-15s -> %d, SBL %-7s country: %s, location: %s\n",
            addr[i], rc, sbl_ref, country_code, location);
   }
   call_WSASetLastError = save;
@@ -255,7 +255,7 @@ void DNSBL_init (void)
   if (DNSBL_list)
      smartlist_sort (DNSBL_list, DNSBL_compare_net);
 
-  if (g_cfg.trace_level >= 2)
+  if (g_cfg.trace_level >= 3)
   {
     DNSBL_dump();
     DNSBL_test();
@@ -317,7 +317,7 @@ static BOOL DNSBL_parse_expiry (const char *line, DNSBL_type type)
       assert (type < DNSBL_MAX);
       line += strlen (expires);
       DNSBL_expiry [type] = strdup (line);
-      TRACE (2, "expiry: '%s', type: %d\n", DNSBL_expiry [type], type);
+      TRACE (3, "expiry: '%s', type: %d\n", DNSBL_expiry [type], type);
     }
     return (TRUE);
   }
