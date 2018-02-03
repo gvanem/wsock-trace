@@ -731,6 +731,15 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
   else if (!stricmp(key,"edrop_file"))
        g_cfg.DNSBL.edrop_file = strdup (val);
 
+  else if (!stricmp(key,"drop_url"))
+       g_cfg.DNSBL.drop_url = strdup (val);
+
+  else if (!stricmp(key,"dropv6_url"))
+       g_cfg.DNSBL.dropv6_url = strdup (val);
+
+  else if (!stricmp(key,"edrop_url"))
+       g_cfg.DNSBL.edrop_url = strdup (val);
+
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
@@ -982,6 +991,9 @@ void wsock_trace_exit (void)
   FREE (g_cfg.DNSBL.drop_file);
   FREE (g_cfg.DNSBL.dropv6_file);
   FREE (g_cfg.DNSBL.edrop_file);
+  FREE (g_cfg.DNSBL.drop_url);
+  FREE (g_cfg.DNSBL.dropv6_url);
+  FREE (g_cfg.DNSBL.edrop_url);
 
   DNSBL_exit();
   geoip_exit();

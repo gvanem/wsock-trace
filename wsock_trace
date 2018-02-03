@@ -196,5 +196,7 @@ drop_file   = %HOME%\drop.txt
 edrop_file  = %HOME%\edrop.txt
 dropv6_file = %HOME%\dropv6.txt
 
-
+drop_url   = http://www.spamhaus.org/drop/drop.txt
+edrop_url  = http://www.spamhaus.org/drop/edrop.txt
+dropv6_url = https://www.spamhaus.org/drop/dropv6.txt
 

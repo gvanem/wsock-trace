@@ -52,6 +52,9 @@ struct DNSBL_cfg {
        char   *drop_file;
        char   *edrop_file;
        char   *dropv6_file;
+       char   *drop_url;
+       char   *edrop_url;
+       char   *dropv6_url;
      };
 
 struct config_table {
