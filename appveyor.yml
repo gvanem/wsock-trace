@@ -69,9 +69,12 @@ install:
   #
   # Download OpenWatcom 2.0 and setup compiler environment
   #
-  - cmd: if "%BUILDER%"=="watcom" (wget --progress=bar http://www.watt-32.net/CI/watcom20.zip & 7z x -oc:\watcom watcom20.zip)
-  - cmd: if "%BUILDER%"=="watcom" (set PATH=c:\watcom\binnt;c:\Windows\system32;%CD%\src & set WATCOM=c:\watcom & set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt;c:\watcom\h\nt\directX;c:\watcom\h\nt\ddk)
-  - cmd: if "%BUILDER%"=="watcom" dir /b /s c:\watcom\wmake.exe
+  - cmd: if "%BUILDER%"=="watcom" (wget --progress=bar http://www.watt-32.net/CI/watcom20.zip & ^
+                                   7z x -oc:\watcom watcom20.zip > NUL                        & ^
+                                   set PATH=c:\watcom\binnt;c:\Windows\system32;%CD%\src      & ^
+                                   set WATCOM=c:\watcom                                       & ^
+                                   set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt                  & ^
+                                   dir /b /s c:\watcom\wmake.exe)
 
   #
   # Download IP2Location Database (with IPv4+IP6 addresses) and the 'xz' program to decompress it.
