@@ -87,6 +87,6 @@ exit /b 0
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
-del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
+del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts watcom20.zip 2> NUL
 echo Cleaning done.
 exit /b 0

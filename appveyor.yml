@@ -9,17 +9,6 @@ skip_commits:
     - '**/*.png'
     - '**/*.jpg'
 
-#
-# setting up etc\hosts file
-# XXX - use this instead of batch file generated one
-#
-# hosts:
-#   localhost: 127.0.0.1
-# # localhost: ::1 # appveyor doesn't like "duplicates"
-#   mpa.one.microsoft.com: 127.0.0.1
-#   google-public-dns-a.google.com: 8.8.8.8
-#   www.no-such-host.com: 10.0.0.20
-
 environment:
   global:
     CL: -nologo -MP
@@ -36,6 +25,8 @@ environment:
       CPU:     x86
     - BUILDER: cygwin64
       CPU:     x64
+    - BUILDER: watcom
+      CPU:     x86
 
 matrix:
   #
@@ -43,10 +34,11 @@ matrix:
   #
   fast_finish: true
   allow_failures:
-    - BUILDER: cygwin32
-      CPU:     x86
-    - BUILDER: cygwin64
-      CPU:     x64
+     - BUILDER: watcom
+  #  - BUILDER: cygwin32
+  #    CPU:     x86
+  #  - BUILDER: cygwin64
+  #    CPU:     x64
 
 #
 # Get better version string. Maybe output of "git describe --tags --long"
@@ -75,10 +67,15 @@ install:
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
 
   #
+  # Download OpenWatcom 2.0 and setup compiler environment
+  #
+  - cmd: if "%BUILDER%"=="watcom" (appveyor DownloadFile http://www.watt-32.net/CI/watcom20.zip & 7z x watcom20.zip & owsetenv.bat)
+
+  #
   # Download IP2Location Database (with IPv4+IP6 addresses) and the 'xz' program to decompress it.
   #
   - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
-  - cmd: 7z.exe x IP46-COUNTRY.BIN.xz > NUL
+  - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
 
 build_script:
   - cmd: appveyor-script.bat init
@@ -91,6 +88,7 @@ build_script:
   - cmd: if "%BUILDER%"=="msvc"    nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw32" make          -f Makefile.MinGW
   - cmd: if "%BUILDER%"=="mingw64" make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="watcom"  wmake         -f Makefile.Watcom
   - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
   - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
