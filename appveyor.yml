@@ -69,11 +69,11 @@ install:
   #
   # Download OpenWatcom 2.0 and setup compiler environment
   #
-  - cmd: if "%BUILDER%"=="watcom" (wget --progress=bar http://www.watt-32.net/CI/watcom20.zip & ^
-                                   7z x -oc:\watcom watcom20.zip > NUL                        & ^
-                                   set PATH=c:\watcom\binnt;c:\Windows\system32;%CD%\src      & ^
-                                   set WATCOM=c:\watcom                                       & ^
-                                   set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt                  & ^
+  - cmd: if "%BUILDER%"=="watcom" (curl -O -# http://www.watt-32.net/CI/watcom20.zip     &
+                                   7z x -oc:\watcom watcom20.zip > NUL                   &
+                                   set PATH=c:\watcom\binnt;c:\Windows\system32;%CD%\src &
+                                   set WATCOM=c:\watcom                                  &
+                                   set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt             &
                                    dir /b /s c:\watcom\wmake.exe)
 
   #
