@@ -30,8 +30,8 @@ static void add_entry (smartlist_t *sl, const char *name, const char *ip, const 
   struct host_entry *he;
 
   assert (size <= sizeof(struct in6_addr));
-  he = calloc (1, sizeof(*he));
 
+  he = calloc (1, sizeof(*he));
   if (he)
   {
     he->addr_type = af_type;
@@ -77,7 +77,7 @@ static int hosts_bsearch_name (const void *key, const void **member)
  * Do not care about aliases.
  *
  * \note the Windows 'hosts' file support both AF_INET and AF_INET6 addresses.
- *       That's the reason we set 'call_WSASetLastError = FALSE'. Since passing
+ *       That's the reason we call '_wsock_trace_pton(). Since passing
  *       an IPv6-addresses to 'wsock_trace_inet_pton4()' will call 'WSASetLastError()'.
  *       And vice-versa.
  */
@@ -94,9 +94,9 @@ static void parse_hosts (smartlist_t *sl, const char *line)
   if (!name || !ip)
      return;
 
-  if (wsock_trace_inet_pton4(ip, (u_char*)&in4) == 1)
+  if (_wsock_trace_inet_pton(AF_INET, ip, (u_char*)&in4) == 1)
        add_entry (sl, name, ip, &in4, sizeof(in4), AF_INET);
-  else if (wsock_trace_inet_pton6(ip, (u_char*)&in6) == 1)
+  else if (_wsock_trace_inet_pton(AF_INET6, ip, (u_char*)&in6) == 1)
        add_entry (sl, name, ip, &in6, sizeof(in6), AF_INET6);
 }
 
@@ -146,16 +146,8 @@ void hosts_file_exit (void)
  */
 void hosts_file_init (void)
 {
-  BOOL save = call_WSASetLastError;
-
-  if (!g_cfg.hosts_file)
-     return;
-
-  /* Cannot call 'WSASetLastError()' in in_addr.c before we're fully initialised.
-   */
-  call_WSASetLastError = FALSE;
-
-  hosts_list = smartlist_read_file (g_cfg.hosts_file, parse_hosts, FALSE);
+  hosts_list = g_cfg.hosts_file ?
+                 smartlist_read_file (g_cfg.hosts_file, parse_hosts, FALSE) : NULL;
   if (hosts_list)
   {
     smartlist_sort (hosts_list, hosts_compare_name);
@@ -163,7 +155,6 @@ void hosts_file_init (void)
     if (g_cfg.trace_level >= 3)
        hosts_file_dump();
   }
-  call_WSASetLastError = save;
 }
 
 /*
