@@ -3,8 +3,6 @@
  *
  * \brief '/etc/hosts' parsing for wsock_trace.
  *
- * This file is part of envtool.
- *
  * By Gisle Vanem <gvanem@yahoo.no> August 2017.
  */
 #include "common.h"
