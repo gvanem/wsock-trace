@@ -79,8 +79,7 @@ install:
                                    7z x -oc:\watcom watcom20.zip > NUL                   &
                                    set PATH=c:\watcom\binnt;%CD%\src;c:\Windows\system32 &
                                    set WATCOM=c:\watcom                                  &
-                                   set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt             &
-                                   dir /b /s c:\watcom\h\windows.h)
+                                   set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt)
 
 build_script:
   - cmd: appveyor-script.bat init
@@ -90,10 +89,10 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
   - cmd: set DISABLEDELAYEDEXPANSION=0
-  - cmd: if "%BUILDER%"=="msvc"    nmake -nologo -f Makefile.vc6
-  - cmd: if "%BUILDER%"=="mingw32" make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="mingw64" make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="watcom"  wmake         -f Makefile.Watcom
+  - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
+  - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="watcom"   (echo %WATCOM% & echo %NT_INCLUDE% & wmake -f Makefile.Watcom)
   - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
   - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
