@@ -25,6 +25,10 @@ extern void dump_countries          (int type, const char **addresses);
 extern void dump_countries_sockaddr (const struct sockaddr *sa);
 extern void dump_countries_addrinfo (const struct addrinfo *ai);
 
+extern void dump_DNSBL          (int type, const char **addresses);
+extern void dump_DNSBL_sockaddr (const struct sockaddr *sa);
+extern void dump_DNSBL_addrinfo (const struct addrinfo *ai);
+
 extern const char *socket_family (int family);
 extern const char *socket_type (int type);
 extern const char *socket_flags (int flags);

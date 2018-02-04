@@ -2155,6 +2155,77 @@ void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out
   _dump_events (TRUE, out_events);
 }
 
+void dump_DNSBL (int type, const char **addresses)
+{
+  int i;
+
+  for (i = 0; addresses && addresses[i]; i++)
+  {
+    const struct in_addr  *a4 = (const struct in_addr*) addresses[i];
+    const struct in6_addr *a6 = (const struct in6_addr*) addresses[i];
+    const char            *sbl_ref = NULL;
+
+    if (type == AF_INET && geoip_addr_is_global(a4, NULL))
+         DNSBL_check_ipv4 (a4, &sbl_ref);
+    else if (type == AF_INET6 && geoip_addr_is_global(NULL,a6))
+         DNSBL_check_ipv6 (a6, &sbl_ref);
+    if (sbl_ref)
+       trace_printf ("%*s~4DNSBL: SBLs~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+  }
+}
+
+void dump_DNSBL_sockaddr (const struct sockaddr *sa)
+{
+  const char                *addr[2];
+  const struct sockaddr_in  *sa4;
+  const struct sockaddr_in6 *sa6;
+
+  if (!sa)
+     return;
+
+  if (sa->sa_family == AF_INET)
+  {
+    sa4 = (const struct sockaddr_in*) sa;
+    addr[0] = (const char*) &sa4->sin_addr;
+    addr[1] = NULL;
+    dump_DNSBL (AF_INET, addr);
+  }
+  else if (sa->sa_family == AF_INET6)
+  {
+    sa6 = (const struct sockaddr_in6*) sa;
+    addr[0] = (const char*) &sa6->sin6_addr;
+    addr[1] = NULL;
+    dump_DNSBL (AF_INET6, addr);
+  }
+}
+
+void dump_DNSBL_addrinfo (const struct addrinfo *ai)
+{
+  int num;
+
+  for (num = 0; ai; ai = ai->ai_next, num++)
+  {
+    const struct sockaddr_in  *sa4;
+    const struct sockaddr_in6 *sa6;
+    const char                *sbl_ref = NULL;
+
+    if (ai->ai_family == AF_INET)
+    {
+      sa4 = (const struct sockaddr_in*) ai->ai_addr;
+      if (geoip_addr_is_global(&sa4->sin_addr, NULL))
+         DNSBL_check_ipv4 (&sa4->sin_addr, &sbl_ref);
+    }
+    else if (ai->ai_family == AF_INET6)
+    {
+      sa6 = (const struct sockaddr_in6*) ai->ai_addr;
+      if (geoip_addr_is_global(NULL, &sa6->sin6_addr))
+         DNSBL_check_ipv6 (&sa6->sin6_addr, &sbl_ref);
+    }
+    if (sbl_ref)
+       trace_printf ("%*s~4DNSBL: SBLs~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+  }
+}
+
 /*
  * Dump the GUIDs and the address of the assosiated extension-function.
  * Called from 'WSAIoctl()' when 'code == SIO_GET_EXTENSION_FUNCTION_POINTER'.
