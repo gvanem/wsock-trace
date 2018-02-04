@@ -10,10 +10,6 @@
  *
  * Refs:
  *   http://www.spamhaus.org/drop/
- *   https://www.spamhaus.org/drop/dropv6.txt
- *   https://www.spamhaus.org/drop/asndrop.txt
- *
- * This file is part of envtool.
  *
  * By Gisle Vanem <gvanem@yahoo.no> August 2018.
  */
@@ -41,13 +37,27 @@ struct DNSBL_info {
        char           SBL_ref[10];
      };
 
-static smartlist_t *DNSBL_list = NULL;
-static char        *DNSBL_expiry [DNSBL_MAX];
+typedef struct DNS_expiry_info {
+               time_t      time;
+               const char *file;
+             } DNS_expiry_info;
+
+static smartlist_t     *DNSBL_list = NULL;
+static DNS_expiry_info  DNSBL_expiry [DNSBL_MAX];
+static const char      *current_file;  /* The DROP-file we're currently parsing */
 
 static void MS_CDECL DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
 static DWORD         get_mask4 (unsigned suffix);
+
+static const char *DNSBL_type_name (DNSBL_type type)
+{
+  return (type == DNSBL_DROP   ? "DROP"   :
+          type == DNSBL_EDROP  ? "EDROP"  :
+          type == DNSBL_DROPv6 ? "DROPv6" :
+          "?");
+}
 
 /*
  * smartlist_sort() helper; compare on network.
@@ -73,10 +83,6 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
 {
   const struct DNSBL_info *dnsbl = *member;
   const struct in_addr    *ia    = key;
-  char  ip_str      [25];
-  char  start_ip_str[25];
-  char  end_ip_str  [25];
-  char  net_str     [25];
   DWORD mask     = dnsbl->mask;
   DWORD netw     = dnsbl->network.s_addr;
   DWORD ip       = ia->s_addr;
@@ -90,19 +96,27 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
        rc = 1;
   else rc = 0;
 
-  wsock_trace_inet_ntop4 ((const u_char*)&dnsbl->network, net_str, sizeof(net_str));
-  wsock_trace_inet_ntop4 ((const u_char*)&ip, ip_str, sizeof(ip_str));
-  wsock_trace_inet_ntop4 ((const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-  wsock_trace_inet_ntop4 ((const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+  if (g_cfg.trace_level >= 3)
+  {
+    char ip_str      [25];
+    char start_ip_str[25];
+    char end_ip_str  [25];
+    char net_str     [25];
 
-  TRACE (3, "ip: %-15s net: %-15s (%-15s - %-15s) mask: 0x%08lX rc: %d\n",
-         ip_str, net_str, start_ip_str, end_ip_str, (u_long)mask, rc);
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->network, net_str, sizeof(net_str));
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&ip, ip_str, sizeof(ip_str));
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+
+    TRACE (3, "ip: %-15s net: %-15s (%-12s - %-15s) mask: 0x%08lX rc: %d\n",
+           ip_str, net_str, start_ip_str, end_ip_str, (u_long)mask, rc);
+  }
 
   return (rc);
 }
 
 /*
- * \todo
+ * \todo:
  * smartlist_bsearch() helper; compare on IPv6 network range.
  */
 static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
@@ -114,70 +128,51 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
 
 /*
  * Do a binary search in the 'DNSBL_list' to figure out if
- * 'ip4' is a member of a "spam group".
+ * 'ip4' or 'ip6' address is a member of a "spam group".
  */
-BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
+static BOOL DNSBL_check_addr (const struct in_addr *ip4, const struct in6_addr *ip6, const char **sbl_ref)
 {
   const struct DNSBL_info *dnsbl;
-  BOOL  save = call_WSASetLastError;
-
-  if (sbl_ref)
-     *sbl_ref = NULL;
 
   if (!DNSBL_list)
      return (FALSE);
 
-  dnsbl = smartlist_bsearch (DNSBL_list, ip4, DNSBL_compare_is_on_net4);
+  dnsbl = smartlist_bsearch (DNSBL_list, ip4 ? (const void*)ip4 : (const void*)ip6,
+                             ip4 ? DNSBL_compare_is_on_net4 : DNSBL_compare_is_on_net6);
   if (sbl_ref && dnsbl)
      *sbl_ref = dnsbl->SBL_ref;
 
-  call_WSASetLastError = save;
   return (dnsbl ? TRUE : FALSE);
 }
 
-/*
- * Do a binary search in the 'DNSBL_list' to figure out if
- * 'ip6' is a member of a "spam group".
- */
+BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
+{
+  return DNSBL_check_addr (ip4, NULL, sbl_ref);
+}
+
 BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
 {
-  const struct DNSBL_info *dnsbl;
-  BOOL  save = call_WSASetLastError;
-
-  if (sbl_ref)
-     *sbl_ref = NULL;
-
-  if (!DNSBL_list)
-     return (FALSE);
-
-  dnsbl = smartlist_bsearch (DNSBL_list, ip6, DNSBL_compare_is_on_net6);
-  if (sbl_ref && dnsbl)
-     *sbl_ref = dnsbl->SBL_ref;
-
-  call_WSASetLastError = save;
-  return (dnsbl ? TRUE : FALSE);
+  return DNSBL_check_addr (NULL, ip6, sbl_ref);
 }
 
 static void DNSBL_dump (void)
 {
   int  i, max = DNSBL_list ? smartlist_len(DNSBL_list) : 0;
-  BOOL save = call_WSASetLastError;
 
   for (i = 0; i < max; i++)
   {
     const struct DNSBL_info *dnsbl = smartlist_get (DNSBL_list, i);
-    char  addr[25];
-    char  mask[25];
-    char  cidr[60];
+    char  addr [MAX_IP6_SZ];
+    char  mask [MAX_IP6_SZ];
+    char  cidr [60];
 
-    wsock_trace_inet_ntop4 ((const u_char*)&dnsbl->network, addr, sizeof(addr));
-    wsock_trace_inet_ntop4 ((const u_char*)&dnsbl->mask, mask, sizeof(mask));
+    _wsock_trace_inet_ntop (dnsbl->family, (const u_char*)&dnsbl->network, addr, sizeof(addr));
+    _wsock_trace_inet_ntop (dnsbl->family, (const u_char*)&dnsbl->mask, mask, sizeof(mask));
 
     snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->suffix);
-    TRACE (3, "%3d: SBL%-6s  %-18s %-18s type: %d.\n",
-            i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>", cidr, mask, dnsbl->type);
+    trace_printf ("%3d: SBL%-6s  %-18s %-18s type: %d.\n",
+                  i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>", cidr, mask, dnsbl->type);
   }
-  call_WSASetLastError = save;
 }
 
 /*
@@ -185,22 +180,28 @@ static void DNSBL_dump (void)
  *   108.166.224.0/19 ; SBL235333
  *   24.51.0.0/19     ; SBL293696
  *   193.25.48.0/20   ; SBL211796
- *   8.8.8.8/xx       ; should not be in DNSBL
+ *
+ * Verify that Google's NS is not in any DNSBL
+ *   8.8.8.8/xx
  *
  * Test some lines from edrop.txt:
  *   120.46.0.0/15  ; SBL262362
  *   208.12.64.0/19 ; SBL201196
  *
- *  Further details for the SBL-reference is found from:
- *    https://www.spamhaus.org/sbl/query/SBL<xxx>
+ * \todo: Test some lines from dropv6.txt:
+ *   2a06:5280::/29 ; SBL334219
+ *   2607:d100::/32 ; SBL347495
+ *
+ * Further details for the SBL-reference is found from:
+ *   https://www.spamhaus.org/sbl/query/SBL<xxx>
  */
-static void DNSBL_test (void)
+int DNSBL_test (void)
 {
   struct in_addr     ip;
   int                i;
   const char        *sbl_ref  = NULL;
   const char        *country_code, *location;
-  BOOL               rc, save = call_WSASetLastError;
+  BOOL               rc;
   static const char *addr[] = {
                     "108.166.224.2", /* in drop.txt */
                     "24.51.0.2",
@@ -210,18 +211,24 @@ static void DNSBL_test (void)
                     "208.12.64.5"
                   };
 
-  for (i = 0; i < DIM(addr); i++)
+  if (g_cfg.trace_level < 3)
+     return (0);
+
+  DNSBL_dump();
+
+  trace_puts ("DNSBL_test():\n");
+  for (i = rc = 0; i < DIM(addr); i++)
   {
-    wsock_trace_inet_pton4 (addr[i], (u_char*)&ip);
+    _wsock_trace_inet_pton (AF_INET, addr[i], (u_char*)&ip);
     country_code = geoip_get_country_by_ipv4 (&ip);
     location     = geoip_get_location_by_ipv4 (&ip);
-    rc = DNSBL_check_ipv4 (&ip, &sbl_ref);
+    rc += DNSBL_check_ipv4 (&ip, &sbl_ref);
     if (!sbl_ref)
        sbl_ref = " <none>";
-    TRACE (3, "%-15s -> %d, SBL %-7s country: %s, location: %s\n",
-           addr[i], rc, sbl_ref, country_code, location);
+    trace_printf ("%-15s -> %d, SBL %-7s country: %s, location: %s\n",
+                  addr[i], rc, sbl_ref, country_code, location);
   }
-  call_WSASetLastError = save;
+  return (rc);
 }
 
 static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist_parse_func parser)
@@ -230,6 +237,7 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
   {
     smartlist_t *sl = smartlist_read_file (file, parser, TRUE);
 
+    current_file = file;
     if (*prev)
     {
       smartlist_append (*prev, sl);
@@ -241,7 +249,16 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
 }
 
 /*
- * called from init.c /  wsock_trace_init().
+ * Called from init.c /  wsock_trace_init().
+ *
+ * This function is called before 'load_ws2_funcs()' that dynamically loads
+ * all Winsock functions. That means we must NOT call any true Winsock functions.
+ * But instead use private functions like '_wsock_trace_inet_pton()' that sets
+ * 'call_WSASetLastError == FALSE'.
+ *
+ * Since the 'DNSBL_test()' test function will call 'inet_addr()' (at trace_level >= 3)
+ * via 'IP2Location_get_record()', the 'DNSBL_test()' must be postponed to a later
+ * stage in 'wsock_trace_init()'.
  */
 void DNSBL_init (void)
 {
@@ -254,12 +271,6 @@ void DNSBL_init (void)
    */
   if (DNSBL_list)
      smartlist_sort (DNSBL_list, DNSBL_compare_net);
-
-  if (g_cfg.trace_level >= 3)
-  {
-    DNSBL_dump();
-    DNSBL_test();
-  }
 }
 
 void DNSBL_exit (void)
@@ -274,40 +285,54 @@ void DNSBL_exit (void)
   }
   smartlist_free (DNSBL_list);
   DNSBL_list = NULL;
-
-  for (i = 0; i < DNSBL_MAX; i++)
-  {
-    if (DNSBL_expiry[i])
-       free (DNSBL_expiry[i]);
-  }
 }
 
-/*
+/**
+ * \todo: Use WinInet.dll similar as in geoip.c
+ */
+static int update_file (const char *fname, time_t expiry)
+{
+  ARGSUSED (fname);
+  ARGSUSED (expiry);
+  return (0);
+}
+
+/**
  * \todo: check and download '*drop*.txt' files based on expiriry in the file header.
  *        Use WinInet.dll similar as in geoip.c
  */
 int DNSBL_update_files (void)
 {
-#if 0
   time_t now = time (NULL);
   time_t expiry;
-  int    i;
+  int    i, num;
 
-  for (i = 0; i < DNSBL_MAX; i++)
+  for (i = num = 0; i < DNSBL_MAX; i++)
   {
-    if (!DNSBL_expiry[i])
-       continue;
-    expiry = parse_date (DNSBL_expiry[i]);
-    if (expiry <= now)
-       update_file (i);
+    expiry = DNSBL_expiry[i].time;
+    if (expiry > 0 && expiry <= now)
+    {
+      update_file (DNSBL_expiry[i].file, expiry);
+      num++;
+    }
   }
-#endif
+  return (num);
+}
+
+/**
+ * \todo: Take the 'parse_date()' from libcurl's parsedate.c
+ *        and simplify it.
+ */
+static time_t parse_date (const char *time)
+{
+  ARGSUSED (time);
   return (0);
 }
 
 static BOOL DNSBL_parse_expiry (const char *line, DNSBL_type type)
 {
   const char *expires = "; Expires: ";
+  time_t      expiry;
 
   if (*line == ';')
   {
@@ -316,8 +341,10 @@ static BOOL DNSBL_parse_expiry (const char *line, DNSBL_type type)
       assert (type >= 0);
       assert (type < DNSBL_MAX);
       line += strlen (expires);
-      DNSBL_expiry [type] = strdup (line);
-      TRACE (3, "expiry: '%s', type: %d\n", DNSBL_expiry [type], type);
+      expiry = parse_date (line);
+      TRACE (3, "expiry: '%s', type: %s\n", line, DNSBL_type_name(type));
+      DNSBL_expiry [type].time = expiry;
+      DNSBL_expiry [type].file = current_file;
     }
     return (TRUE);
   }
@@ -354,17 +381,6 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   smartlist_add (sl, dnsbl);
 }
 
-/*
- * \todo Parse a "dropv6.txt" file.
- */
-static void DNSBL_parse6 (smartlist_t *sl, const char *line, DNSBL_type type)
-{
-  if (DNSBL_parse_expiry(line,type))
-     return;
-
-  TRACE (3, "%s, type: %d\n", line, type);
-}
-
 static void MS_CDECL DNSBL_parse_DROP (smartlist_t *sl, const char *line)
 {
   DNSBL_parse4 (sl, line, DNSBL_DROP);
@@ -375,9 +391,15 @@ static void MS_CDECL DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
   DNSBL_parse4 (sl, line, DNSBL_EDROP);
 }
 
-static void MS_CDECL DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
+/*
+ * \todo Parse a "dropv6.txt" file.
+ */
+static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 {
-  DNSBL_parse6 (sl, line, DNSBL_DROPv6);
+  if (DNSBL_parse_expiry(line,type))
+     return;
+
+  TRACE (3, "%s, type: %s\n", line, DNSBL_type_name(DNSBL_DROPv6));
 }
 
 /*
