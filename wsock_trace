@@ -192,6 +192,7 @@ codepage = 0
 #
 [DNSBL]
 enable      = 0
+max_days    = 10                # max allowed age before forcing an update
 drop_file   = %HOME%\drop.txt
 edrop_file  = %HOME%\edrop.txt
 dropv6_file = %HOME%\dropv6.txt
