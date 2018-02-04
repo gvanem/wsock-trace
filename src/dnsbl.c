@@ -123,7 +123,7 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
 {
   ARGSUSED (key);
   ARGSUSED (member);
-  return (0);
+  return (1);
 }
 
 /*
