@@ -12,13 +12,14 @@
 #endif
 
 #include <sys/stat.h>
+#include <stdint.h>
 
 #include "common.h"
 #include "init.h"
+#include "in_addr.h"
 #include "geoip.h"
 
 #if defined(USE_IP2LOCATION)
-#include <stdint.h>
 #include <IP2Location.h>
 
 static IP2Location *handle;
@@ -93,7 +94,7 @@ void ip2loc_exit (void)
   if (handle)
      IP2Location_close (handle);
 
-  IP2Location_delete_shm();
+  IP2Location_delete_shm(); /* Currently does nothing for '_WIN32' */
   handle = NULL;
 }
 
@@ -129,28 +130,17 @@ DWORD ip2loc_num_ipv6_entries (void)
 #endif
 
 /*
- * For 'inet_pton()' in below "IP2Location.c"
- */
-#include "in_addr.h"
-
-/*
  * Since 'IP2Location_parse_addr()' does a lot of calls to
  * 'IP2Location_ip_is_ipv4()' and 'IP2Location_ip_is_ipv6()', keep
  * the noise-level down by not calling 'WSASetLastError()' in in_addr.c.
-*/
-static int ip2loc_inet_pton (int family, const char *addr, void *result)
-{
-  BOOL save = call_WSASetLastError;
-  int  rc;
-
-  call_WSASetLastError = FALSE;
-  rc = wsock_trace_inet_pton (family, addr, result);
-  call_WSASetLastError = save;
-  return (rc);
-}
-
+ */
 #undef  inet_pton
-#define inet_pton(family, addr, result)  ip2loc_inet_pton (family, addr, result)
+#define inet_pton(family, addr, result)  _wsock_trace_inet_pton (family, addr, result)
+
+/* \todo */
+#if 0
+  #define inet_addr(str)                   _wsock_trace_inet_addr (str)
+#endif
 
 #if defined(__CYGWIN__) && !defined(_WIN32)
 #define _WIN32   /* Checks on '_WIN32' in "IP2Location.c" */
