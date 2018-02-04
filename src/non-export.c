@@ -88,7 +88,7 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
       0x3F,0xFE,0x83,0x1F,0,0,0,0,0,0,0,0,0,0,0,0
     }};
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) /* Rest of file */
+#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__WATCOMC__) /* Rest of file */
 /*
  * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
  * But in other MinGW distribution they are not.
@@ -152,5 +152,5 @@ wchar_t *str_ripw (wchar_t *s)
   if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
   return (s);
 }
-#endif  /* __MINGW32__ || __CYGWIN__ */
+#endif  /* __MINGW32__ || __CYGWIN__ || __WATCOMC__ */
 
