@@ -69,7 +69,7 @@ install:
   #
   # Download OpenWatcom 2.0 and setup compiler environment
   #
-  - cmd: if "%BUILDER%"=="watcom" (appveyor DownloadFile http://www.watt-32.net/CI/watcom20.zip & 7z x watcom20.zip & owsetenv.bat)
+  - cmd: if "%BUILDER%"=="watcom" (appveyor DownloadFile http://www.watt-32.net/CI/watcom20.zip & owsetenv.bat)
 
   #
   # Download IP2Location Database (with IPv4+IP6 addresses) and the 'xz' program to decompress it.
