@@ -1255,8 +1255,13 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
   WSTRACE ("accept (%s, %s) --> %s",
            socket_number(s), sockaddr_str2(addr,addr_len), socket_or_error(rc));
 
-  if (!exclude_this && g_cfg.geoip_enable)
-     dump_countries_sockaddr (addr);
+  if (!exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (addr);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (addr);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -1274,8 +1279,13 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   WSTRACE ("bind (%s, %s) --> %s",
            socket_number(s), sockaddr_str2(addr,&addr_len), get_error(rc));
 
-  if (!exclude_this && g_cfg.geoip_enable)
-     dump_countries_sockaddr (addr);
+  if (exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (addr);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (addr);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -1315,9 +1325,13 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
            socket_number(s), sockaddr_str2(addr, &addr_len),
            socket_family(sa->sin_family), get_error(rc));
 
-  if (!exclude_this && g_cfg.geoip_enable)
-     dump_countries_sockaddr (addr);
-
+  if (!exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (addr);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (addr);
+  }
   LEAVE_CRIT();
   return (rc);
 }
@@ -1557,6 +1571,8 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (from);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (from);
   }
 
   if (g_cfg.pcap.enable)
@@ -1643,6 +1659,9 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (to);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (to);
   }
 
   if (g_cfg.pcap.enable)
@@ -1766,6 +1785,9 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (from);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (from);
 
     if (ov)
        overlap_store (s, ov, size, TRUE);
@@ -1941,6 +1963,9 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (to);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (to);
 
     if (ov)
        overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
@@ -2368,9 +2393,13 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
   if (rc && !exclude_this && g_cfg.dump_hostent)
      dump_hostent (name, rc);
 
-  if (rc && !exclude_this && g_cfg.geoip_enable)
-     dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
-
+  if (rc && !exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL (rc->h_addrtype, (const char**)rc->h_addr_list);
+  }
   LEAVE_CRIT();
   return (rc);
 }
@@ -2411,6 +2440,19 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
         a[0] = addr;
         a[1] = NULL;
         dump_countries (type, a);
+      }
+    }
+    if (g_cfg.DNSBL.enable)
+    {
+      if (rc)
+         dump_DNSBL (rc->h_addrtype, (const char**)rc->h_addr_list);
+      else
+      {
+        const char *a[2];
+
+        a[0] = addr;
+        a[1] = NULL;
+        dump_DNSBL (type, a);
       }
     }
   }
@@ -2514,8 +2556,13 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
   WSTRACE ("getpeername (%s, %s) --> %s",
            socket_number(s), sockaddr_str2(name,name_len), get_error(rc));
 
-  if (!exclude_this && g_cfg.geoip_enable)
-     dump_countries_sockaddr (name);
+  if (!exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (name);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (name);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -2533,8 +2580,13 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
   WSTRACE ("getsockname (%s, %s) --> %s",
            socket_number(s), sockaddr_str2(name,name_len), get_error(rc));
 
-  if (!exclude_this && g_cfg.geoip_enable)
-     dump_countries_sockaddr (name);
+  if (!exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (name);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (name);
+  }
 
   LEAVE_CRIT();
   return (rc);
@@ -2597,6 +2649,9 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
 
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (sa);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (sa);
   }
 
   LEAVE_CRIT();
@@ -2643,6 +2698,9 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
     if (g_cfg.geoip_enable)
        dump_countries_addrinfo (*res);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_addrinfo (*res);
   }
 
   LEAVE_CRIT();
