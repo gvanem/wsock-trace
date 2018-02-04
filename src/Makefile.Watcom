@@ -83,9 +83,11 @@ vclean realclean: clean .SYMBOLIC
 	*$(CC) $(CFLAGS) -fo=$@ $[@
 	@echo
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
-	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
-	wlib $(WSOCK_LIB) +-$(NON_EXPORT_OBJ)
+$(WSOCK_LIB): $(WSOCK_DLL)
+
+$(WSOCK_DLL): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
+	wlink system nt dll name $@ @$(LINK_ARG)
+	wlib -q -b -c $(WSOCK_LIB) +-$(NON_EXPORT_OBJ)
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@
@@ -116,7 +118,7 @@ run_test: test.exe .SYMBOLIC
 
 $(LINK_ARG): $(__MAKEFILES__)
 	%create $^@
-	@%append $^@ option implib=$(WSOCK_LIB), map, verbose,
+	@%append $^@ option implib=$(WSOCK_LIB), map, verbose, quiet,
 	@%append $^@ caseexact, map=$(WSOCK_DLL:.dll=.map), res=$(OBJ_DIR)\wsock_trace.res
 	@%append $^@ file { $(WSOCK_TRACE_OBJS) } library clib3$(STACK_OR_REG).lib
 
