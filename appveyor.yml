@@ -79,7 +79,7 @@ install:
                                    7z x -oc:\watcom watcom20.zip > NUL                   &
                                    set PATH=c:\watcom\binnt;%CD%\src;c:\Windows\system32 &
                                    set WATCOM=c:\watcom                                  &
-                                   set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt             &
+                                   set INCLUDE=c:\watcom\h;c:\watcom\h\nt                &
                                    dir /b /s c:\watcom\wmake.exe)
 
 build_script:
