@@ -740,6 +740,9 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
   else if (!stricmp(key,"edrop_url"))
        g_cfg.DNSBL.edrop_url = strdup (val);
 
+  else if (!stricmp(key,"max_days"))
+       g_cfg.DNSBL.max_days = atoi (val);
+
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }

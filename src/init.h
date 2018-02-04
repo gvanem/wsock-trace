@@ -55,6 +55,7 @@ struct DNSBL_cfg {
        char   *drop_url;
        char   *edrop_url;
        char   *dropv6_url;
+       int     max_days;
      };
 
 struct config_table {
