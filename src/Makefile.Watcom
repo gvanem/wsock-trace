@@ -6,7 +6,7 @@ LIB_TARGET = $(%WATCOM)\lib386\nt
 BIN_TARGET = $(%WATCOM)\binnt
 
 STACK_OR_REG    = r
-USE_IP2LOCATION = 1
+USE_IP2LOCATION = 0
 
 CC = wcc386
 
@@ -75,7 +75,7 @@ clean: .SYMBOLIC
 	- rm -f $(OBJ_DIR)/*.*
 
 vclean realclean: clean .SYMBOLIC
-	- rm -f $(TARGETS) geoip.exe geoip.map
+	- rm -f $(TARGETS) geoip.map
 	- rmdir $(OBJ_DIR)
 
 .ERASE

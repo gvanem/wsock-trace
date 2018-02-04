@@ -26,6 +26,7 @@
   #define _WINSOCK2API_
   #define _WS2IPDEF_
   #define _WS2TCPIP_H_
+  #define _MSWSOCK_
   #define SOCKET  UINT_PTR
   #define WSAAPI  PASCAL
 
