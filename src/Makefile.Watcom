@@ -83,23 +83,21 @@ vclean realclean: clean .SYMBOLIC
 	*$(CC) $(CFLAGS) -fo=$@ $[@
 	@echo
 
-$(WSOCK_LIB): $(WSOCK_DLL)
-
-$(WSOCK_DLL): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
-	wlink system nt dll name $@ @$(LINK_ARG)
+$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
+	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
 	wlib -q -b -c $(WSOCK_LIB) +-$(NON_EXPORT_OBJ)
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@
 	@echo
 
-install: .SYMBOLIC
+install: $(WSOCK_LIB) $(WSOCK_DLL)
 	copy $(WSOCK_LIB) $(LIB_TARGET)
 	copy $(WSOCK_DLL) $(BIN_TARGET)
 
 uninstall: .SYMBOLIC
-	-del $(LIB_TARGET)\\$(WSOCK_LIB)
-	-del $(BIN_TARGET)\\$(WSOCK_DLL)
+	- rm $(LIB_TARGET)/$(WSOCK_LIB)
+	- rm $(BIN_TARGET)/$(WSOCK_DLL)
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
