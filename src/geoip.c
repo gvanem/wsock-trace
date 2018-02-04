@@ -1998,7 +1998,7 @@ static void test_addr_common (const struct in_addr  *a4,
 
   printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
 
-  /* Check the global IPv4 address for membership in a SpamHaus DROP / EDROP list
+  /* Check the global IPv4 / IPv6 address for membership in a SpamHaus DROP / EDROP list
    */
   if (geoip_addr_is_global(a4, NULL))
   {
@@ -2011,6 +2011,20 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       wsock_trace_inet_ntop4 ((const u_char*)a4, addr, sizeof(addr));
+      printf ("  %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
+    }
+  }
+  else if (geoip_addr_is_global(NULL, a6))
+  {
+    const char *sbl_ref  = NULL;
+    BOOL        rc = DNSBL_check_ipv6 (a6, &sbl_ref);
+    char        addr [MAX_IP6_SZ];
+
+    if (!sbl_ref)
+       sbl_ref = " <none>";
+    if (rc)
+    {
+      wsock_trace_inet_ntop6 ((const u_char*)a6, addr, sizeof(addr));
       printf ("  %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
