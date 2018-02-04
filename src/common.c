@@ -1336,7 +1336,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
 
 int _setenv (const char *env, const char *val, int overwrite)
 {
-#if defined(__CYGWIN__)
+#if defined(__CYGWIN__) || defined(__WATCOMC__)
   int rc = setenv (env,  val, overwrite);
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
