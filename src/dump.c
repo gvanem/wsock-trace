@@ -15,6 +15,7 @@
 #include "idna.h"
 #include "hosts.h"
 #include "wsock_trace.h"
+#include "dnsbl.h"
 #include "dump.h"
 
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
@@ -2170,7 +2171,7 @@ void dump_DNSBL (int type, const char **addresses)
     else if (type == AF_INET6 && geoip_addr_is_global(NULL,a6))
          DNSBL_check_ipv6 (a6, &sbl_ref);
     if (sbl_ref)
-       trace_printf ("%*s~4DNSBL: SBLs~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+       trace_printf ("%*s~4DNSBL: SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }
 }
 
@@ -2222,7 +2223,7 @@ void dump_DNSBL_addrinfo (const struct addrinfo *ai)
          DNSBL_check_ipv6 (&sa6->sin6_addr, &sbl_ref);
     }
     if (sbl_ref)
-       trace_printf ("%*s~4DNSBL: SBLs~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+       trace_printf ("%*s~4DNSBL: SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }
 }
 
