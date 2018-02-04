@@ -1260,6 +1260,8 @@ void wsock_trace_init (void)
 #if defined(USE_LWIP)
   ws_lwip_init();
 #endif
+
+  DNSBL_test();
 #endif  /* !TEST_GEOIP && !TEST_NLM */
 }
 
