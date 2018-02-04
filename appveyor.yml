@@ -92,7 +92,7 @@ build_script:
   - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW
   - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="watcom"   (set WATCOM=c:\watcom & wmake -f Makefile.Watcom)
+  - cmd: if "%BUILDER%"=="watcom"   wmake -f Makefile.Watcom
   - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
   - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
 
