@@ -396,7 +396,7 @@ static void MS_CDECL DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
  */
 static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 {
-  if (DNSBL_parse_expiry(line,type))
+  if (DNSBL_parse_expiry(line,DNSBL_DROPv6))
      return;
 
   TRACE (3, "%s, type: %s\n", line, DNSBL_type_name(DNSBL_DROPv6));
