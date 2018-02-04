@@ -105,6 +105,28 @@ int wsock_trace_inet_pton (int family, const char *addr, void *result)
   return inet_pton (family, addr, result);
 }
 
+char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
+{
+  BOOL save = call_WSASetLastError;
+  char *rc;
+
+  call_WSASetLastError = FALSE;
+  rc = (char*) inet_ntop (family, (INET_NTOP_ADDR)addr, result, result_size);
+  call_WSASetLastError = save;
+  return (rc);
+}
+
+int _wsock_trace_inet_pton (int family, const char *addr, void *result)
+{
+  BOOL save = call_WSASetLastError;
+  int  rc;
+
+  call_WSASetLastError = FALSE;
+  rc = inet_pton (family, addr, result);
+  call_WSASetLastError = save;
+  return (rc);
+}
+
 /**
  * Format an IPv4 address, more or less like inet_ntoa().
  *
