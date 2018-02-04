@@ -53,6 +53,12 @@ install:
   - cmd: git submodule update --init --recursive
 
   #
+  # Download IP2Location Database (with IPv4+IP6 addresses) and the 'xz' program to decompress it.
+  #
+  - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
+
+  #
   # add a few locations to our PATH
   #
   - cmd: set PATH=%CD%\src;%PATH%
@@ -75,12 +81,6 @@ install:
                                    set WATCOM=c:\watcom                              &
                                    set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt         &
                                    dir /b /s c:\watcom\wmake.exe)
-
-  #
-  # Download IP2Location Database (with IPv4+IP6 addresses) and the 'xz' program to decompress it.
-  #
-  - cmd: appveyor DownloadFile http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
-  - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
 
 build_script:
   - cmd: appveyor-script.bat init
