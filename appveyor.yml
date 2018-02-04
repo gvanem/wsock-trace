@@ -53,7 +53,7 @@ install:
   - cmd: git submodule update --init --recursive
 
   #
-  # add a few locations to our path
+  # add a few locations to our PATH
   #
   - cmd: set PATH=%CD%\src;%PATH%
   - cmd: if "%BUILDER%"=="mingw32"  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
@@ -69,7 +69,8 @@ install:
   #
   # Download OpenWatcom 2.0 and setup compiler environment
   #
-  - cmd: if "%BUILDER%"=="watcom" (appveyor DownloadFile http://www.watt-32.net/CI/watcom20.zip & 7z x -oc:\watcom watcom20.zip & set PATH=c:\watcom\binnt;%PATH% & set WATCOM=c:\watcom & set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt;c:\watcom\h\nt\directX;c:\watcom\h\nt\ddk)
+  - cmd: if "%BUILDER%"=="watcom" (appveyor DownloadFile http://www.watt-32.net/CI/watcom20.zip & 7z x -oc:\watcom watcom20.zip)
+  - cmd: if "%BUILDER%"=="watcom" (set PATH=c:\watcom\binnt;c:\Windows\system32;%CD%\src & set WATCOM=c:\watcom & set NT_INCLUDE=c:\watcom\h;c:\watcom\h\nt;c:\watcom\h\nt\directX;c:\watcom\h\nt\ddk)
   - cmd: if "%BUILDER%"=="watcom" dir /b /s wmake.exe
 
   #
