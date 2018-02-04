@@ -2389,7 +2389,7 @@ int main (int argc, char **argv)
 
   /* Possibly call 'ip2loc_init()' again.
    */
-  use_ip2loc ? ip2loc_init() : ip2loc_exit();
+  use_ip2loc ? (void)ip2loc_init() : (void)ip2loc_exit();
 
   if (do_update)
   {
