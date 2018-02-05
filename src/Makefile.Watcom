@@ -63,7 +63,7 @@ GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
 WSOCK_LIB = wsock_trace_ow.lib
 WSOCK_DLL = wsock_trace_ow.dll
 
-TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe geoip.exe
+TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe geoip.exe idna.exe
 
 all: $(OBJ_DIR) $(TARGETS) .SYMBOLIC
 	@echo Welcome to Wsock_trace library and example.
@@ -75,7 +75,7 @@ clean: .SYMBOLIC
 	- rm -f $(OBJ_DIR)/*.*
 
 vclean realclean: clean .SYMBOLIC
-	- rm -f $(TARGETS) geoip.map
+	- rm -f $(TARGETS) wsock_trace_ow.map test.map geoip.map idna.map
 	- rmdir $(OBJ_DIR)
 
 .ERASE
@@ -103,12 +103,25 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
 	@echo
 
+#
+# Note:
+#   Watcom is unable to compile the large generated files
+#   geoip-gen4.c qand geoip-gen6.c. Therefore it uses only
+#   geoip-null.c.
+#
 geoip.exe: geoip.c init.c $(GEOIP_OBJ)
 	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\geoip.obj geoip.c
 	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\init.obj  init.c
 	wlink $(LDFLAGS) name $@ file { $(GEOIP_OBJ) } &
 	                         library clib3$(STACK_OR_REG).lib, ws2_32.lib
 	rm -f $(OBJ_DIR)\init.obj $(OBJ_DIR)\geoip.obj
+	@echo
+
+idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
+	*$(CC) $(CFLAGS) -DTEST_IDNA -fo=$(OBJ_DIR)\idna.obj idna.c
+	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\idna.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj } &
+	                         library clib3$(STACK_OR_REG).lib,$(WSOCK_LIB)
+	rm -f $(OBJ_DIR)\idna.obj
 	@echo
 
 run_test: test.exe .SYMBOLIC
@@ -124,3 +137,38 @@ $(LINK_ARG): $(__MAKEFILES__)
 #
 # Dependencies based on "gcc -MM .."
 #
+common.h:                   wsock_defs.h
+$(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
+$(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h
+$(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h geoip.h smartlist.h &
+                            idna.h hosts.h wsock_trace.h dnsbl.h dump.h
+$(OBJ_DIR)\dnsbl.obj:       dnsbl.c dnsbl.h common.h init.h in_addr.h smartlist.h wsock_defs.h
+$(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h in_addr.h hosts.h
+$(OBJ_DIR)\geoip.obj:       geoip.c common.h smartlist.h init.h in_addr.h geoip.h
+$(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h common.h smartlist.h
+$(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h common.h smartlist.h
+$(OBJ_DIR)\idna.obj:        idna.c common.h init.h smartlist.h idna.h
+$(OBJ_DIR)\init.obj:        init.c common.h wsock_trace.h wsock_trace_lua.h &
+                            dnsbl.h dump.h geoip.h smartlist.h idna.h stkwalk.h &
+                            overlap.h hosts.h cpu.h init.h
+$(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
+$(OBJ_DIR)\overlap.obj:     overlap.c common.h init.h smartlist.h overlap.h
+$(OBJ_DIR)\smartlist.obj:   smartlist.c common.h vm_dump.h smartlist.h
+$(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h smartlist.h
+$(OBJ_DIR)\test.obj:        test.c getopt.h wsock_defs.h
+$(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
+$(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h &
+                            init.h cpu.h stkwalk.h smartlist.h &
+                            overlap.h dump.h wsock_trace_lua.h &
+                            wsock_trace.h ws_hooks.c
+
+!if "$(USE_IP2LOCATION)" == "1"
+$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h &
+                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.h &
+                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Loc_DBInterface.h in_addr.h &
+                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.c &
+                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.h &
+                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Loc_DBInterface.c
+!else
+$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h
+!endif
