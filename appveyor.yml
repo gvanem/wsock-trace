@@ -113,11 +113,11 @@ test_script:
 # Prevent the 'watcom' directory to end up in 'artifacts'.
 # Create a .zip of the whole thing.
 #
-after_build:
-  - cmd: cd c:\projects\wsock-trace & echo %CD%
+after_test:
+  - cmd: cd c:\projects\wsock-trace
   - cmd: if "BUILDER"=="watcom" (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)
-  - cmd: 7z a wsock_trace.zip src\*.dll src\*.dll src\*.lib src\*.a src\*.exe src\*.c src\*.h src\*.lua
-  - cmd: 7z a wsock_trace.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt
+  - cmd: 7z a wsock_trace.zip src\*.dll src\*.dll src\*.lib src\*.a src\*.exe src\*.c src\*.h src\*.lua > NUL
+  - cmd: 7z a wsock_trace.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt        > NUL
 
 artifacts:
   #
@@ -139,7 +139,9 @@ artifacts:
 #     symbol_server: https://your.symbol.server/feed
 #     artifact: MyPackage.nupkg
 
+#
 #   Deploy to GitHub Releases
+#
 #   - provider: GitHub
 #     artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
 #     draft: false
