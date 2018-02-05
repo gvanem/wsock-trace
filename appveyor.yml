@@ -110,24 +110,20 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & set WSOCK_LUA_ENABLE=1 & test.exe WSAStartup WSACleanup
 
 #
-# Prevent the 'watcom' directory to end up in 'artifacts'
+# Prevent the 'watcom' directory to end up in 'artifacts'.
+# Create a .zip of the whole thing.
 #
-after_test:
-  - cmd: if "BUILDER"=="watcom" (del /S /Q watcom\* & rd watcom)
+after_build:
+  - cmd: if "BUILDER"=="watcom" (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)
+  - cmd: 7z a wsock_trace.zip src\*.dll src\*.dll src\*.lib src\*.a src\*.exe src\*.c src\*.h src\*.lua
+  - cmd: 7z a wsock_trace.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt
 
 artifacts:
   #
-  # To push all things that one day could be in a distribution .zip-file
+  # Push the .zip-file as an artifact.
   #
-  - path: .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt .\src\wsock_trace_exit.lua .\src\wsock_trace_init.lua
-  - path: 'src\*.dll'
-  - path: 'src\*.lib'
-  - path: 'src\*.a'
-  - path: 'src\*.exe'
-  #
-  # WIP: Push the entire wsock-trace-{build} folder as a single zip archive.
-  #
-  - path: wsock-trace-{build}
+  - path: wsock_trace.zip
+    name: Wsock-Trace
 
 #
 # One day...
