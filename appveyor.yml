@@ -76,7 +76,7 @@ install:
   # set compiler environment
   #
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
-  - cmd: echo "PATH: %PATH%"
+  # - cmd: echo PATH: "%PATH%"
 
 build_script:
   - cmd: appveyor-script.bat init
