@@ -8,7 +8,7 @@ exit /b 0
 
 :init
 ::
-:: The CPU agnostic init-stage.
+:: The "CPU" and "BUILDER" agnostic init-stage.
 ::
 echo Generating %CD%\wsock_trace.appveyor...
 echo #                                                       > wsock_trace.appveyor
