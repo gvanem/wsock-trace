@@ -114,6 +114,7 @@ test_script:
 # Create a .zip of the whole thing.
 #
 after_build:
+  - cmd: cd %CD%
   - cmd: if "BUILDER"=="watcom" (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)
   - cmd: 7z a wsock_trace.zip src\*.dll src\*.dll src\*.lib src\*.a src\*.exe src\*.c src\*.h src\*.lua
   - cmd: 7z a wsock_trace.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt
