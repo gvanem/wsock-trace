@@ -1006,7 +1006,7 @@ static const struct search_list wsaprotocol_info_ProviderFlags[] = {
                     ADD_VALUE (PFL_MATCHES_PROTOCOL_ZERO),
                     ADD_VALUE (PFL_NETWORKDIRECT_PROVIDER)
                   };
-#endif
+#endif /* !__WATCOMC__ */
 
 static const struct search_list wsa_events_flgs[] = {
                     ADD_VALUE (FD_READ),
@@ -1697,6 +1697,7 @@ void dump_one_proto_infof (const char *fmt, ...)
 #if defined(__WATCOMC__)
 void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)
 {
+  trace_puts ("~0");
 }
 #else
 static void dump_provider_path (const GUID *guid, const void *provider_path_func)
