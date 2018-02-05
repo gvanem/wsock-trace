@@ -10,8 +10,6 @@ exit /b 0
 ::
 :: The CPU agnostic init-stage.
 ::
-:: setlocal DISABLEDELAYEDEXPANSION
-
 echo Generating %CD%\wsock_trace.appveyor...
 echo #                                               > wsock_trace.appveyor
 echo # This file was generated from %0.             >> wsock_trace.appveyor
