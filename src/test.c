@@ -52,6 +52,13 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
    *   'type cast': pointer truncation from 'hostent *' to 'int'
    */
   #pragma warning (disable: 4311)
+
+#elif defined(__WATCOMC__)
+  /*
+   * In wsock_trace_ow.lib (non-export.c):
+   */
+  extern char    *gai_strerrorA (int err);
+  extern wchar_t *gai_strerrorW (int err);
 #endif
 
 /* Prevent MinGW globbing the cmd-line if we do 'test *'.
