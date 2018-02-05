@@ -76,7 +76,6 @@ install:
   # set compiler environment
   #
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
-  # - cmd: echo PATH: "%PATH%"
 
 build_script:
   - cmd: appveyor-script.bat init
@@ -92,7 +91,7 @@ build_script:
   - cmd: if "%BUILDER%"=="watcom" (
          echo Downloading watcom20.zip                     &
          curl -O -# http://www.watt-32.net/CI/watcom20.zip &
-         7z x -o%WATCOM% watcom20.zip)
+         7z x -o%WATCOM% watcom20.zip > NUL)
 
   - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW
