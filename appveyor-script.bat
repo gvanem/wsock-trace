@@ -10,6 +10,8 @@ exit /b 0
 ::
 :: The CPU agnostic init-stage.
 ::
+setlocal DISABLEDELAYEDEXPANSION
+
 echo Generating %CD%\wsock_trace.appveyor...
 echo #                                               > wsock_trace.appveyor
 echo # This file was generated from %0.             >> wsock_trace.appveyor
@@ -78,15 +80,15 @@ echo 10.0.0.20   www.no-such-host.com               >> hosts
 ::
 if %BUILDER%. == watcom. (
   echo on
-  set DISABLEDELAYEDEXPANSION=1
   set WSOCK_TRACE_LEVEL=0
   set WATCOM=%CD%\watcom
   echo Downloading watcom20.zip
   curl -O -# http://www.watt-32.net/CI/watcom20.zip
-  7z x -o%WATCOM% watcom20.zip > NUL
+  7z x -o%WATCOM% watcom20.zip
   del /Q watcom20.zip
   set PATH=%WATCOM%\binnt;c:\windows\System32
   set NT_INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
+  echo off
 )
 
 ::
