@@ -2040,6 +2040,8 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
 #if !defined(__WATCOMC__)
   if (rc == 0 && !exclude_this && do_it)
      dump_events (&in_events, events);
+#else
+  ARGSUSED (do_it);
 #endif
 
   LEAVE_CRIT();
