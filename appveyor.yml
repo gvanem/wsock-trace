@@ -35,10 +35,10 @@ matrix:
   fast_finish: true
   allow_failures:
      - BUILDER: watcom
-  #  - BUILDER: cygwin32
-  #    CPU:     x86
-  #  - BUILDER: cygwin64
-  #    CPU:     x64
+     - BUILDER: cygwin32
+       CPU:     x86
+     - BUILDER: cygwin64
+       CPU:     x64
 
 #
 # Get better version string. Maybe output of "git describe --tags --long".
@@ -59,8 +59,9 @@ install:
   - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
 
   #
-  # Add a few locations to our PATH. And setup the compiler environment for Watcom
-  # (it cannot be done in 'appveyor-script.bat init')
+  # Add a few locations to our PATH.
+  # And setup the compiler environment for Watcom
+  # (it seems it cannot be done in 'appveyor-script.bat init')
   #
   - cmd: set WATCOM=%CD%\watcom
   - cmd: set PATH=%CD%\src;%WATCOM%\binnt;%PATH%
@@ -73,7 +74,7 @@ install:
   - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe -qgnNdO -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
 
   #
-  # set compiler environment
+  # Set compiler environment for MSVC.
   #
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
 
@@ -84,8 +85,8 @@ build_script:
   # Download and extract OpenWatcom 2.0 using 'curl'
   #
   - cmd: if "%BUILDER%"=="watcom" (
-         curl -O -# http://www.watt-32.net/CI/watcom20.zip &
-         7z x -o%WATCOM% watcom20.zip > NUL)
+            curl -O -# http://www.watt-32.net/CI/watcom20.zip &
+            7z x -o%WATCOM% watcom20.zip > NUL)
 
   - cmd: cd src
   - cmd: set USE_LUA=1
