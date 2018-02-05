@@ -13,8 +13,6 @@ environment:
   global:
     CL: -nologo -MP
   matrix:
-    - BUILDER: watcom
-      CPU:     x86
     - BUILDER: msvc
       CPU:     x86
     - BUILDER: msvc
@@ -27,6 +25,8 @@ environment:
       CPU:     x86
     - BUILDER: cygwin64
       CPU:     x64
+    - BUILDER: watcom
+      CPU:     x86
 
 matrix:
   #
