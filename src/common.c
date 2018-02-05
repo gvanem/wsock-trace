@@ -998,6 +998,9 @@ size_t trace_flush (void)
      * written using 'io.write()' is in sync with our trace-output.
      */
     written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
+#if defined(__WATCOMC__)
+    fflush (g_cfg.trace_stream);
+#endif
   }
   trace_ptr = trace_buf;   /* restart buffer */
 
