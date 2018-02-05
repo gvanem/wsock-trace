@@ -74,12 +74,27 @@ echo #                                              >> hosts
 echo 10.0.0.20   www.no-such-host.com               >> hosts
 
 ::
+:: Download OpenWatcom 2.0 using 'curl' and setup compiler environment
+::
+if %BUILDER%. == watcom. (
+  set WSOCK_TRACE_LEVEL=0
+  set WATCOM=%CD%\watcom
+  echo Downloading watcom20.zip
+  curl -O -# http://www.watt-32.net/CI/watcom20.zip
+  7z x -o%WATCOM% watcom20.zip > NUL
+  del /Q watcom20.zip
+  set PATH=%WATCOM%\binnt;c:\windows\System32
+  set NT_INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
+)
+
+::
 :: These should survive until 'build_script' for 'msvc', 'mingw32', 'mingw64,
-:: 'cygwin32' or 'cygwin64' gets run.
+:: 'cygwin32', 'cygwin64' or 'watcom' gets run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
 set COLUMNS=120
+
 exit /b 0
 
 ::
@@ -87,6 +102,6 @@ exit /b 0
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
-del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts watcom20.zip 2> NUL
+del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts 2> NUL
 echo Cleaning done.
 exit /b 0
