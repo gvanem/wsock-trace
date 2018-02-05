@@ -77,6 +77,8 @@ echo 10.0.0.20   www.no-such-host.com               >> hosts
 :: Download OpenWatcom 2.0 using 'curl' and setup compiler environment
 ::
 if %BUILDER%. == watcom. (
+  echo on
+  set DISABLEDELAYEDEXPANSION=1
   set WSOCK_TRACE_LEVEL=0
   set WATCOM=%CD%\watcom
   echo Downloading watcom20.zip
