@@ -97,8 +97,7 @@
          char  **h_addr_list;
        };
 
-  /* Quality of Service */
-  #include <qos.h>
+  #include <qos.h> /* Quality of Service */
 
   typedef struct _QualityOfService {
           FLOWSPEC    SendingFlowspec;
