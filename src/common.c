@@ -1261,7 +1261,7 @@ char *_strtok_r (char *ptr, const char *sep, char **end)
     *end = start + 1;
 
     /* scan through the string to find where it ends, it ends on a
-     *  null byte or a character that exists in the separator string.
+     * null byte or a character that exists in the separator string.
      */
     while (**end && !strchr(sep, **end))
       ++*end;
