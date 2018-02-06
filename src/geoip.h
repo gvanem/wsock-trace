@@ -32,13 +32,8 @@ extern const char *geoip_get_long_name_by_A2 (const char *short_name);
 extern const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4);
 extern const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6);
 
-extern int         geoip_addr_is_zero (const struct in_addr *ip4, const struct in6_addr *ip6);
-extern int         geoip_addr_is_multicast (const struct in_addr *ip4, const struct in6_addr *ip6);
-extern int         geoip_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6, const char **remark);
-extern int         geoip_addr_is_global (const struct in_addr *ip4, const struct in6_addr *ip6);
-
-extern void        geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
-                                               DWORD *num_ip2loc4, DWORD *num_ip2loc6);
+extern void geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
+                                        DWORD *num_ip2loc4, DWORD *num_ip2loc6);
 
 /*
  * To build a version of geoip.exe that should support 'g_cfg.geoip_use_generated',

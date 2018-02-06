@@ -15,6 +15,7 @@
 #include "idna.h"
 #include "hosts.h"
 #include "wsock_trace.h"
+#include "inet_util.h"
 #include "dnsbl.h"
 #include "dump.h"
 
@@ -1905,7 +1906,7 @@ static int trace_printf_cc (const char            *country_code,
     cc_last  = country_code;
     loc_last = location;
   }
-  else if (geoip_addr_is_special(a4,a6,&remark))
+  else if (INET_util_addr_is_special(a4,a6,&remark))
   {
     trace_puts ("Special");
     if (remark)
@@ -1913,11 +1914,11 @@ static int trace_printf_cc (const char            *country_code,
   }
   else if (country_code && *country_code == '-')
        trace_puts ("Private");
-  else if (geoip_addr_is_zero(a4,a6))
+  else if (INET_util_addr_is_zero(a4,a6))
        trace_puts ("NULL-addr");
-  else if (geoip_addr_is_multicast(a4,a6))
+  else if (INET_util_addr_is_multicast(a4,a6))
        trace_puts ("Multicast");
-  else if (!geoip_addr_is_global(a4,a6))
+  else if (!INET_util_addr_is_global(a4,a6))
        trace_puts ("Not global");
   else trace_puts ("None");
 
@@ -2167,9 +2168,9 @@ void dump_DNSBL (int type, const char **addresses)
     const struct in6_addr *a6 = (const struct in6_addr*) addresses[i];
     const char            *sbl_ref = NULL;
 
-    if (type == AF_INET && geoip_addr_is_global(a4, NULL))
+    if (type == AF_INET && INET_util_addr_is_global(a4, NULL))
          DNSBL_check_ipv4 (a4, &sbl_ref);
-    else if (type == AF_INET6 && geoip_addr_is_global(NULL,a6))
+    else if (type == AF_INET6 && INET_util_addr_is_global(NULL,a6))
          DNSBL_check_ipv6 (a6, &sbl_ref);
     if (sbl_ref)
        trace_printf ("%*s~4DNSBL: SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
@@ -2214,13 +2215,13 @@ void dump_DNSBL_addrinfo (const struct addrinfo *ai)
     if (ai->ai_family == AF_INET)
     {
       sa4 = (const struct sockaddr_in*) ai->ai_addr;
-      if (geoip_addr_is_global(&sa4->sin_addr, NULL))
+      if (INET_util_addr_is_global(&sa4->sin_addr, NULL))
          DNSBL_check_ipv4 (&sa4->sin_addr, &sbl_ref);
     }
     else if (ai->ai_family == AF_INET6)
     {
       sa6 = (const struct sockaddr_in6*) ai->ai_addr;
-      if (geoip_addr_is_global(NULL, &sa6->sin6_addr))
+      if (INET_util_addr_is_global(NULL, &sa6->sin6_addr))
          DNSBL_check_ipv6 (&sa6->sin6_addr, &sbl_ref);
     }
     if (sbl_ref)
