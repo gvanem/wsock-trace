@@ -105,6 +105,7 @@
     <ClCompile Include="idna.c" />
     <ClCompile Include="init.c" />
     <ClCompile Include="in_addr.c" />
+    <ClCompile Include="inet_util.c" />
     <ClCompile Include="ip2loc.c" />
     <ClCompile Include="non-export.c" />
     <ClCompile Include="overlap.c" />
