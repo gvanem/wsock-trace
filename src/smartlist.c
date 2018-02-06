@@ -426,7 +426,7 @@ void *smartlist_bsearch (const smartlist_t *sl, const void *key,
  * Open a file and return parsed lines as a smartlist.
  * If 'parse_raw == TRUE', do NOT ignore comment lines.
  */
-smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse, BOOL parse_raw)
+smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse)
 {
   smartlist_t *sl;
   FILE *f = fopen (file, "r");
@@ -445,10 +445,8 @@ smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse, 
 
     str_rip (buf);
     p = str_ltrim (buf);
-    if (parse_raw)
-       (*parse) (sl, buf);
-    else if (*p != '#' && *p != ';')
-       (*parse) (sl, buf);
+    if (*p && *p != '#' && *p != ';')
+       (*parse) (sl, p);
   }
   fclose (f);
   return (sl);

@@ -89,6 +89,8 @@ static void parse_hosts (smartlist_t *sl, const char *line)
   char           *ip   = _strtok_r (p, " \t", &tok_buf);
   char           *name = _strtok_r (NULL, " \t", &tok_buf);
 
+  TRACE (2, "ip: '%s', name: '%s'\n", ip, name);
+
   if (!name || !ip)
      return;
 
@@ -145,7 +147,7 @@ void hosts_file_exit (void)
 void hosts_file_init (void)
 {
   hosts_list = g_cfg.hosts_file ?
-                 smartlist_read_file (g_cfg.hosts_file, parse_hosts, FALSE) : NULL;
+                 smartlist_read_file (g_cfg.hosts_file, parse_hosts) : NULL;
   if (hosts_list)
   {
     smartlist_sort (hosts_list, hosts_compare_name);
