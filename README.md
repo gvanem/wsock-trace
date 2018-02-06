@@ -2,27 +2,68 @@
 
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/gvanem/wsock-trace?branch=master&svg=true)](https://ci.appveyor.com/project/gvanem/wsock-trace)
 
-A drop-in tracing library for most normal Winsock calls. It sits between your program
-and the real Winsock library (`ws2_32.dll`). It works best for MSVC since the stack-
-walking code requires the program's **PDB** symbol-file to be present. And
-unfortunately MinGW/CygWin doesn't produce PDB-symbols (GNU-debugger instead relies
-on the archaic **BFD** library).<br>
-Example output from `c:\> ahost msdn.com` (ahost is part of the DNS library
-**[C-ares](http://c-ares.haxx.se/)**):
+A drop-in tracing library / DLL for most normal Winsock calls.
+It sits between your program and the Winsock library (`ws2_32.dll`).
+It works best for MSVC since the stack-walking code requires the program's
+**PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't produce
+PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library).<br>
+Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com`
+(`ahost` is part of the DNS library **[C-ares](http://c-ares.haxx.se/)**) :
 
-[![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)](screenshot_ahost-msdn-com-win10.png?raw=true)
+[![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)]
+(screenshot_ahost-msdn-com-win10.png?raw=true)
 
-Geo-IP information from **[MaxMind](http://www.maxmind.com)** and **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**
-(an option) is built-in (the above `Mountain View/California` is Google's
-well-known location provided by the *IP2Location* data-base). Thanks to the
-**[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
-for a simplified version of the MaxMind GeoIP-databases. Also many thanks to MaxMind
-and IP2Location [**[3]**](#footnotes) for their data-bases.
+### Features
 
-### Installation (all):
+* *Colourised trace* of the Winsock calls with function parameters and return
+  values. The colours are configurable.
+
+* *Runtime caller information*: Using Microsoft's *dbghelp* (or *psapi*) APIs
+   together with the programs *PDB*-file, the filename, line-number of the calling
+	 function-name is shown. In the above example, `WSAStartup()` is called from
+	 `ahost.c`, line 67. Which should be 59 bytes into the `main()` function.
+	 This should be **[here](https://github.com/c-ares/c-ares/blob/master/ahost.c#L67)**.
+
+* *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
+  from `QueryPerformanceCounter()`.<br>
+	The timestamp is controlled by `trace_time`	in the [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
+	config-file.
+
+* *Extension functions*: Winsock has several Microsoft-specific extension functions
+  (like [`AcceptEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524.aspx)
+	and [`ConnectEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).
+	<br>Winsock-Trace is able to trace these too.
+
+* *IP-Country* information from **[MaxMind](http://www.maxmind.com)**.
+  (using the CSV files [`geoip`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L157)
+	and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L158)
+	are always enabled).<br>
+	Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+	for a simplified version of these MaxMind GeoIP-databases.<br>
+	Also many thanks to MaxMind and IP2Location [**[3]**](#footnotes) for their
+	data-bases.
+
+* *IP-Location* information from   **[IP2Location](
+	https://github.com/chrislim2888/IP2Location-C-Library)**.
+  (this is contolled by `USE_IP2LOCATION = 1` in the makefiles).<br>
+  The above `Mountain View/California` is Google's well-known location.<br>
+  Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
+
+* *Domain Name System-based Blackhole List*
+  (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of
+  DROP-files from the **[Spamhaus](http://www.spamhaus.org/drop/)** project,
+	it can detect	IPv4 / IPv6-addresses uses by spammers and cyber-criminals.
+	The more potent	Spamhaus **[BGPCC](https://www.spamhaus.org/bgpf/)** is
+	on the *to-do* list.
+
+* **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support: very
+  preliminary at the moment. The idea is that `.lua` scripts could change the
+	behaviour of Wsock-trace at runtime without rebuilding it.
+
+### Installation (all)
 
 To be able to get more precise Geo-IP information for addresses (city and
-region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.
+region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.<br>
 Do this:
    * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
    * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see **[*]** below)
@@ -40,7 +81,7 @@ Do this:
 file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`.<br>
 These files contains both IPv4 and IPv6 records.
 
-### Installation (MSVC):
+### Installation (MSVC)
 
 Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
 This produces a `wsock_trace.lib` that you'll need to use to
@@ -48,7 +89,7 @@ link your project(s) with. This lib would then trace the normal
 Winsock calls. Example screen-shot above or details in
 **[Running samples](#running-samples)** below.
 
-### Usage (MSVC):
+### Usage (MSVC)
 
 Link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
 most normal Winsock calls are traced on entry and exit. Remember to
@@ -58,13 +99,13 @@ It is not adviced to use option `/Oy` (*enable frame pointer omission*)
 since that will make it difficult for `StackWalk64()` to  figure out the
 filename and line of the calling function.
 
-### Installation (MinGW/CygWin):
+### Installation (MinGW/CygWin)
 
 Enter the `src` sub-directory and do a *make -f Makefile.MinGW* or
 *make -f Makefile.Cygwin*.
 
 
-### Usage (MinGW/CygWin):
+### Usage (MinGW/CygWin)
 
 Link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e.
 `-lws32_2`). So copy this library to a directory in `$(LIBRARY_PATH)` and
@@ -80,29 +121,32 @@ The trace-level and other settings are controlled by a config-file
   *  The `%HOME` directory.
   *  Then finally the `%APPDATA` directory.
 
-   `wsock_trace` is read in **[init.c](src/init.c)** at startup. Read it's contents;
-   the comments therein should be self-explanatory.<br>
-   If `wsock_trace` is not found in one of the above directories, the default
-   `trace_level` is set to 1.
+`wsock_trace` is read in **[init.c](https://github.com/gvanem/wsock-trace/blob/master/src/init.c)**
+at startup. Read it's contents; the comments therein should be self-explanatory.<br>
+If `wsock_trace` is not found in one of the above directories, the default
+`trace_level` is set to 1.
 
-   You should copy the following files (here at GitHub) to your `%HOME` or `%APPDATA`
-   directory:
+There is no `install.bat` file for Wsock-Trace. So you should copy the
+following files (here at GitHub) to your `%HOME` or `%APPDATA` directory:
 ```
-    wsock_trace
-    geoip
-    geoip6
+  wsock_trace
+  geoip
+  geoip6
+  drop.txt
+  edrop.txt
+  dropv6.txt
 ```
 
-    These environment variables are on the form:
+These environment variables are on the form:
   * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
   * `<drive>:\Users\<User Name>\AppData\Roaming`.               (Win-Vista+)
 
-    (Since it's a confusing subject what a program's configuration directory should be,
-    it's best to define a `%HOME%` to point to the excact place for such config-files).
+Since it's a confusing subject what a program's configuration directory should be,
+it's best to define a `%HOME%` to point to the excact place for such config-files.
 
 ### Running samples
 
-Example output from src/test.exe (built with MSVC):
+Example output from `src/test.exe` (built with MSVC):
  ```c
    * ws_trace/test.c(45) (main+50):              WSAStartup (2.2) --> No error.
    * ws_trace/test.c(24) (do_wsock_tests+125):   gethostbyaddr (127.0.0.1, 4, AF_INET) --> 0x003C8780.
@@ -125,7 +169,7 @@ Example output from src/test.exe (built with MSVC):
 
   ```
 
-Here is a more realistic and useful example with wsock_trace.lib linked to
+Here is a more realistic and useful example with `wsock_trace.lib` linked to
 Nmap [**[1]**](#footnotes):
 ```c
   c:\> nmap -sT -P0 -p23,80 10.0.0.1
@@ -182,7 +226,7 @@ Notes:
   (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
 
 
-And another example from C-ares adig [**[2]**](#footnotes):
+And another example from [**C-ares**](#footnotes)'s' **[adig.c](https://github.com/c-ares/c-ares/blob/master/adig.c)**:
 ```c
     c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
@@ -236,7 +280,7 @@ The names of the import libraries and the names of the 32-bit .DLLs are:
 And the 64-bit equivalents:
   * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
   * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
-  * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`  (*not yet*).
+  * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`.
 
 These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications
@@ -251,9 +295,10 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 ### Future plans:
 
-   1. Get the MinGW/CygWin ports working.
+   1. Get the decoding of calling function, file-name and lines in the MinGW/CygWin
+	    ports working.
 
-   2. Lua-script integration; use a *.lua file to exclude/include processes and/or
+   2. Lua-script integration; use a `*.lua` file to exclude/include processes and/or
       functions to trace.
 
    3. Injecting `wsock_trace.dll` into a remote process. Ref:
@@ -274,20 +319,20 @@ Note that some virus scanners may find the behaviour of programs linked to
       }
 
       exclude_trace {
-        curl.exe, wget.exe: select   # Exclude trace of `select()` and `inet_ntoa()` in curl/wget.
-        curl.exe, wget.exe: inet_ntoa
-        *                 : htons    # Exclude trace of `htons` globally.
+        select:    [curl.exe, wget.exe]  # Exclude trace of `select()` and `inet_ntoa()` in curl/wget.
+        inet_ntoa: [curl.exe, wget.exe]
+        htons:     [ * ]    # Exclude trace of `htons` globally.
       }
 
       deny_ipv6 {
-        pycurl.pyd : 1      # Deny AF_INET6 sockets in scripts using the PyCurl module.
-        python27.dll : 1    # And in other Python scripts too.
+        pycurl.pyd : 1     # Deny AF_INET6 sockets in scripts using the PyCurl module.
+        python27.dll : 1   # And in other Python scripts too.
 
       }
       ```
 
    7. Make a GUI trace viewer for it. Ref:
-      ** http://www.viksoe.dk/code/windowless1.htm **
+      http://www.viksoe.dk/code/windowless1.htm
 
    8. Make it possible to switch network stacks at run-time (select amongst Winsock2,
       **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
@@ -296,19 +341,19 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem <gisle.vanem@gmail.com> 2013 - 2017.
+G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2018.
 
 ### Footnotes:
 
    * [1] Nmap; "Network Mapper" is a free and open source (license) utility for
        network  discovery and security auditing.
-       Ref. ** http://nmap.org/download.html **
+       Ref. http://nmap.org/download.html
 
    * [2] A C library for asynchronous DNS requests (including name resolves)
-       Ref. ** http://c-ares.haxx.se/ **
+       Ref. http://c-ares.haxx.se/
 
    * [3] This site or product includes IP2Location LITE data available from
-       ** http://lite.ip2location.com.**
+       http://lite.ip2location.com.
 
 *PS*. This file is written with the aid of the **[Atom](https://atom.io/)**
       editor and it's **[Markdown-Preview](https://atom.io/packages/markdown-preview)**.
