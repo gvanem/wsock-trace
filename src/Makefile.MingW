@@ -98,14 +98,15 @@ endif
 
 EX_LIBS += -lole32
 
-SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c init.c common.c \
-          cpu.c dnsbl.c dump.c geoip.c geoip-gen4.c geoip-gen6.c overlap.c \
-          in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c
+SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
+          common.c cpu.c dnsbl.c dump.c geoip.c geoip-gen4.c geoip-gen6.c \
+          overlap.c in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c dnsbl.c idna.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c \
+            ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe
