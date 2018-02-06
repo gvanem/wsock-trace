@@ -42,10 +42,10 @@ matrix:
        CPU:     x64
 
 #
-# Get better version string. Maybe output of "git describe --tags --long".
+# todo: Get better version string.
 #
 cache:
-  - wsock-trace-{build}
+  - wsock-trace-%APPVEYOR_BUILD_NUMBER%
 
 install:
   #
@@ -129,7 +129,7 @@ artifacts:
     name: Wsock-Trace
 
 #
-# One day...
+# todo: One day...
 #
 # deploy:
 #   Deploying to NuGet feed
