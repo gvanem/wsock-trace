@@ -19,6 +19,7 @@
 #include "in_addr.h"
 #include "smartlist.h"
 #include "geoip.h"
+#include "inet_util.h"
 #include "dnsbl.h"
 
 typedef enum {
@@ -37,14 +38,8 @@ struct DNSBL_info {
        char           SBL_ref[10];
      };
 
-typedef struct DNS_expiry_info {
-               time_t      time;
-               const char *file;
-             } DNS_expiry_info;
-
-static smartlist_t     *DNSBL_list = NULL;
-static DNS_expiry_info  DNSBL_expiry [DNSBL_MAX];
-static const char      *current_file;  /* The DROP-file we're currently parsing */
+static smartlist_t *DNSBL_list = NULL;
+static const char  *current_file;   /* The DROP-file we're currently parsing */
 
 static void MS_CDECL DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
@@ -238,7 +233,7 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
 {
   if (g_cfg.DNSBL.enable && file)
   {
-    smartlist_t *sl = smartlist_read_file (file, parser, TRUE);
+    smartlist_t *sl = smartlist_read_file (file, parser);
 
     current_file = file;
     if (*prev)
@@ -265,11 +260,12 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
  */
 void DNSBL_init (void)
 {
+  DNSBL_update_files();
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.drop_file, DNSBL_parse_DROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.edrop_file, DNSBL_parse_EDROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.dropv6_file, DNSBL_parse_DROPv6);
 
-  /* Each of the 'drop.txt' and 'edrop.txt' should be sorted.
+  /* Each of the 'drop.txt', 'edrop.txt' and 'dropv6.txt' should be sorted.
    * But after merging them into one list, we must sort them ourself.
    */
   if (DNSBL_list)
@@ -291,76 +287,58 @@ void DNSBL_exit (void)
 }
 
 /**
- * \todo: Use WinInet.dll similar as in geoip.c
+ * Check if 'fname' needs an update.
+ * If it does, download it using WinInet.dll and 'touch' it.
  */
-static int update_file (const char *fname, time_t expiry)
+static int update_file (const char *fname, const char *url, time_t now, time_t expiry)
 {
-  ARGSUSED (fname);
-  ARGSUSED (expiry);
+  struct stat st;
+  time_t when;
+
+  if (!fname || !url || stat(fname, &st) != 0)
+     return (0);
+
+  if (st.st_mtime > expiry)
+  {
+    when = now + g_cfg.DNSBL.max_days * 24 * 3600;
+    TRACE (1, "Update of \"%s\" not needed until %.24s\"\n",
+           fname, ctime(&when));
+    return (0);
+  }
+
+  TRACE (1, "Updating \"%s\" from \"%s\"\n", fname, url);
+  if (INET_util_download_file(fname, url) > 0)
+  {
+    INET_util_touch_file (fname);
+    return (1);
+  }
   return (0);
 }
 
 /**
- * \todo: check and download '*drop*.txt' files based on expiriry in the file header.
- *        Use WinInet.dll similar as in geoip.c
+ * Check all '*drop*.txt' files based on file's timestamp. The expiriry in the
+ * file header is a bit too hard to parse. Simply use 'g_cfg.DNSBL.max_days'
+ * and download it if it's too old.
  */
 int DNSBL_update_files (void)
 {
-  time_t now = time (NULL);
-  time_t expiry;
-  int    i, num;
+  time_t now, expiry;
+  int    num = 0;
 
-  for (i = num = 0; i < DNSBL_MAX; i++)
-  {
-    expiry = DNSBL_expiry[i].time;
-    if (expiry > 0 && expiry <= now)
-    {
-      update_file (DNSBL_expiry[i].file, expiry);
-      num++;
-    }
-  }
+  tzset();
+  now = time (NULL);
+  expiry = now - g_cfg.DNSBL.max_days * 24 * 3600;
+
+  num += update_file (g_cfg.DNSBL.drop_file, g_cfg.DNSBL.drop_url, now, expiry);
+  num += update_file (g_cfg.DNSBL.edrop_file, g_cfg.DNSBL.edrop_url, now, expiry);
+  num += update_file (g_cfg.DNSBL.dropv6_file, g_cfg.DNSBL.dropv6_url, now, expiry);
   return (num);
-}
-
-/**
- * \todo: Take the 'parse_date()' from libcurl's parsedate.c
- *        and simplify it.
- */
-static time_t parse_date (const char *time)
-{
-  ARGSUSED (time);
-  return (0);
-}
-
-static BOOL DNSBL_parse_expiry (const char *line, DNSBL_type type)
-{
-  const char *expires = "; Expires: ";
-  time_t      expiry;
-
-  if (*line == ';')
-  {
-    if (!strncmp(line,expires,strlen(expires)))
-    {
-      assert (type >= 0);
-      assert (type < DNSBL_MAX);
-      line += strlen (expires);
-      expiry = parse_date (line);
-      TRACE (3, "expiry: '%s', type: %s\n", line, DNSBL_type_name(type));
-      DNSBL_expiry [type].time = expiry;
-      DNSBL_expiry [type].file = current_file;
-    }
-    return (TRUE);
-  }
-  return (FALSE);
 }
 
 static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
 {
   struct DNSBL_info *dnsbl;
   int                b1 = 0, b2 = 0, b3 = 0, b4 = 0, suffix = 0;
-
-  if (DNSBL_parse_expiry(line,type))
-     return;
 
   if (sscanf(line, "%d.%d.%d.%d/%d ; SBL", &b1, &b2, &b3, &b4, &suffix) != 5)
      return;
@@ -399,9 +377,6 @@ static void MS_CDECL DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
  */
 static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 {
-  if (DNSBL_parse_expiry(line,DNSBL_DROPv6))
-     return;
-
   TRACE (3, "%s, type: %s\n", line, DNSBL_type_name(DNSBL_DROPv6));
 }
 
