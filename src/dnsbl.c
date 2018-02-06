@@ -298,6 +298,14 @@ static int update_file (const char *fname, const char *url, time_t now, time_t e
   if (!fname || !url || stat(fname, &st) != 0)
      return (0);
 
+  /* Currently for an AppVeyor build, 'g_cfg.DNSBL.max_days' is '0'.
+   * (max_days = 0 in the "[dnsbl]" section in the "wsock_trace.appveyor" file).
+   * This means these "*drop*.txt" files would be downloaded from SpamHaus's
+   * server immediately after being checked out from GitHub!
+   * Therefore, give a 10 sec time slack.
+   */
+  expiry = -10;
+
   if (st.st_mtime > expiry)
   {
     when = now + g_cfg.DNSBL.max_days * 24 * 3600;
