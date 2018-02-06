@@ -35,6 +35,7 @@ matrix:
   fast_finish: true
   allow_failures:
      - BUILDER: watcom
+       CPU:     x86
      - BUILDER: cygwin32
        CPU:     x86
      - BUILDER: cygwin64
