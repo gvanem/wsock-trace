@@ -162,7 +162,7 @@ static int geoip_ipv6_compare_entries (const void **_a, const void **_b)
 static int geoip_ipv6_compare_key_to_entry (const void *key, const void **member)
 {
   const struct ipv6_node *entry = *member;
-  const struct in6_addr  *addr  = (const struct in6_addr*) key;
+  const struct in6_addr  *addr  = key;
 
   num_6_compare++;
 
