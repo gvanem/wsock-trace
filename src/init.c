@@ -722,6 +722,9 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
   if (!stricmp(key,"enable"))
        g_cfg.DNSBL.enable = atoi (val);
 
+  else if (!stricmp(key,"test"))
+       g_cfg.DNSBL.test = atoi (val);
+
   else if (!stricmp(key,"drop_file"))
        g_cfg.DNSBL.drop_file = strdup (val);
 
@@ -1264,7 +1267,8 @@ void wsock_trace_init (void)
   ws_lwip_init();
 #endif
 
-  DNSBL_test();
+  if (g_cfg.DNSBL.test)
+     DNSBL_test();
 #endif  /* !TEST_GEOIP && !TEST_NLM */
 }
 
