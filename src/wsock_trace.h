@@ -4,8 +4,8 @@
 extern int volatile cleaned_up;
 extern int volatile startup_count;
 
-extern void              load_ws2_funcs (void);
-extern struct LoadTable *find_ws2_func_by_name (const char *func);
+extern void                    load_ws2_funcs (void);
+extern const struct LoadTable *find_ws2_func_by_name (const char *func);
 
 #define WSAERROR_PUSH()  WSAError_save_restore (0)
 #define WSAERROR_POP()   WSAError_save_restore (1)

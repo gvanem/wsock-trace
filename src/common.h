@@ -224,8 +224,8 @@ struct LoadTable {
 extern int load_dynamic_table   (struct LoadTable *tab, int tab_size);
 extern int unload_dynamic_table (struct LoadTable *tab, int tab_size);
 
-extern struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size,
-                                             const char *func_name);
+extern const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab_size,
+                                                   const char *func_name);
 extern char        curr_dir  [MAX_PATH];
 extern char        curr_prog [MAX_PATH];
 extern char        prog_dir  [MAX_PATH];

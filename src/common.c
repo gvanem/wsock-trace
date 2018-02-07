@@ -354,7 +354,7 @@ int unload_dynamic_table (struct LoadTable *tab, int tab_size)
   return (i);
 }
 
-struct LoadTable *find_dynamic_table (struct LoadTable *tab, int tab_size, const char *func_name)
+const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab_size, const char *func_name)
 {
   int i;
 

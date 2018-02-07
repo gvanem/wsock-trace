@@ -497,7 +497,7 @@ void load_ws2_funcs (void)
   ARGSUSED (p_WaitForMultipleObjectsEx); /* Silence the warning */
 }
 
-struct LoadTable *find_ws2_func_by_name (const char *func)
+const struct LoadTable *find_ws2_func_by_name (const char *func)
 {
   return find_dynamic_table (dyn_funcs, DIM(dyn_funcs), func);
 }
