@@ -393,3 +393,19 @@ quit:
   return (128 - bits);
 }
 
+/*
+ * Return a hex-string for an 'in6_addr *mask'.
+ * Should return the same as 'wsock_trace_inet_ntop6()' without
+ * the '::' shorthanding.
+ */
+const char *INET_util_in6_mask_str (const struct in6_addr *mask)
+{
+  static char buf [2*IN6ADDRSZ+1];
+  char *p = buf;
+  int   i;
+
+  for (i = 0; i < 8; i++, p += 4)
+      memcpy (p, str_hex_word(mask->s6_words[i]), 4);
+  *p = '\0';
+  return (buf);
+}
