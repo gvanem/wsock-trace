@@ -10,10 +10,34 @@
 #endif
 
 /*
- * Max size of an IPv6-address string.
+ * Max size of an IPv4-address:port string.
  */
-#define MAX_IP6_SZ   sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")
+#ifndef INET_ADDRSTRLEN
+#define INET_ADDRSTRLEN  sizeof("255.255.255.255:65000")    /* =22 */
+#endif
+
+/*
+ * Max size of an IPv6 "[address%scope]:port" string. Winsock2 claims this to be 65.
+ * But AFAICS "[ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255%65000]:65000\0" is
+ * *only* 61.
+ */
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN  65
+#endif
+
+/*
+ * Max size of an IPv4 / IPv6-address string.
+ */
+#define MAX_IP4_SZ   INET_ADDRSTRLEN
+#define MAX_IP6_SZ   sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")  /* =46 */
 #define MAX_PORT_SZ  sizeof("65000")
+
+/*
+ * Max suffix for an IPv6-address
+ */
+#ifndef MAX_IPV6_CIDR_MASK
+#define MAX_IPV6_CIDR_MASK 128
+#endif
 
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
