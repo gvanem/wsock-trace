@@ -30,6 +30,11 @@ if %1. == --ip2loc_4. (
 
 if %1. == --ip2loc_6. (
   grep.exe -o "[0-9a-f\:]*" ..\IP2Location-C-Library\test\country_test_ipv6_data.txt > %TEST_INPUT%
+  rem
+  rem Add some IPv4 addresses from SpamHaus' DROPv6.txt too:
+  rem
+  echo 2a06:f680::3    # part of 2a06:f680::/29 ; SBL303641  >> %TEST_INPUT%
+  echo 2a07:9b80::33   # part of 2a07:9b80::/29 ; SBL342980  >> %TEST_INPUT%
   %~dp0geoip.exe -6 %2 %3 %4 @%TEST_INPUT%
   exit /b 0
 )
