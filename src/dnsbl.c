@@ -30,12 +30,20 @@ typedef enum {
       } DNSBL_type;
 
 struct DNSBL_info {
-       struct in_addr network;
-       DWORD          mask;
-       unsigned       suffix;
-       DNSBL_type     type;
-       int            family;  /* AF_INET or AF_INET6 */
-       char           SBL_ref[10];
+       union {
+         struct {
+           struct in_addr network;
+           struct in_addr mask;
+         } ip4;
+         struct {
+           struct in6_addr network;
+           struct in6_addr mask;
+         } ip6;
+       } u;
+       unsigned    bits;
+       int         family;  /* AF_INET or AF_INET6 */
+       DNSBL_type  type;
+       char        SBL_ref[10];
      };
 
 static smartlist_t *DNSBL_list = NULL;
@@ -44,7 +52,6 @@ static const char  *current_file;   /* The DROP-file we're currently parsing */
 static void MS_CDECL DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
-static DWORD         get_mask4 (unsigned suffix);
 
 static const char *DNSBL_type_name (DNSBL_type type)
 {
@@ -56,38 +63,63 @@ static const char *DNSBL_type_name (DNSBL_type type)
 
 /*
  * smartlist_sort() helper; compare on network.
+ * This compares both 'DNSBL_info*' nodes with 'family == AF_INET'
+ * and 'family == AF_INET6'.
  */
 static int DNSBL_compare_net (const void **_a, const void **_b)
 {
   const struct DNSBL_info *a = *_a;
   const struct DNSBL_info *b = *_b;
-  DWORD a_net = swap32 (a->network.s_addr);
-  DWORD b_net = swap32 (b->network.s_addr);
 
-  if (a_net < b_net)
-     return (-1);
-  if (a_net > b_net)
-     return (1);
+  if (a->family != b->family)
+  {
+    /* This will force all AF_INET6 addresses after
+     * AF_INET addresses.
+     */
+     return (a->family - b->family);
+   }
+
+  if (a->family == AF_INET)
+  {
+    DWORD a_net = swap32 (a->u.ip4.network.s_addr);
+    DWORD b_net = swap32 (b->u.ip4.network.s_addr);
+
+    if (a_net < b_net)
+       return (-1);
+    if (a_net > b_net)
+       return (1);
+  }
+  else
+  {
+    const struct in6_addr *a_net = &a->u.ip6.network;
+    const struct in6_addr *b_net = &b->u.ip6.network;
+
+    return memcmp (a_net, b_net, sizeof(*a_net));
+  }
   return (0);
 }
 
 /*
  * smartlist_bsearch() helper; compare on IPv4 network range.
+ *
+ * \note: the 'mask, 'start_ip' and 'end_ip' are all on network order.
  */
 static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
 {
   const struct DNSBL_info *dnsbl = *member;
   const struct in_addr    *ia    = key;
-  DWORD mask     = dnsbl->mask;
-  DWORD netw     = dnsbl->network.s_addr;
-  DWORD ip       = ia->s_addr;
+  DWORD mask     = dnsbl->u.ip4.mask.s_addr;
+  DWORD netw     = dnsbl->u.ip4.network.s_addr;
   DWORD start_ip = netw & mask;
   DWORD end_ip   = start_ip | ~mask;
   int   rc;
 
-  if (swap32(ip) < swap32(start_ip))
+  if (dnsbl->family != AF_INET)
+     return (-1);
+
+  if (swap32(ia->s_addr) < swap32(start_ip))
        rc = -1;
-  else if (swap32(ip) > swap32(end_ip))
+  else if (swap32(ia->s_addr) > swap32(end_ip))
        rc = 1;
   else rc = 0;
 
@@ -98,26 +130,82 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
     char end_ip_str  [25];
     char net_str     [25];
 
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->network, net_str, sizeof(net_str));
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&ip, ip_str, sizeof(ip_str));
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.network, net_str, sizeof(net_str));
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&ia->s_addr, ip_str, sizeof(ip_str));
     _wsock_trace_inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
     _wsock_trace_inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
 
-    TRACE (3, "ip: %-15s net: %-15s (%-12s - %-15s) mask: 0x%08lX rc: %d\n",
-           ip_str, net_str, start_ip_str, end_ip_str, (u_long)mask, rc);
+    trace_printf ("ip: %-15s net: %-15s (%-12s - %-15s) mask: 0x%08lX rc: %d\n",
+                  ip_str, net_str, start_ip_str, end_ip_str, (u_long)mask, rc);
   }
-
   return (rc);
 }
 
 /*
- * \todo:
  * smartlist_bsearch() helper; compare on IPv6 network range.
+ *
+ * \note: the 'mask, 'start_ip' and 'end_ip' are all on network order.
  */
 static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
 {
-  ARGSUSED (key);
-  ARGSUSED (member);
+  const struct DNSBL_info *dnsbl = *member;
+  const struct in6_addr   *ia    = key;
+  struct in6_addr start_ip;
+  struct in6_addr end_ip;
+  int    i, rc = 0;
+
+  if (dnsbl->family != AF_INET6)
+     return (-1);
+
+  /* Create the 'start_ip' and 'end_ip' addresses.
+   */
+  for (i = 0; i < IN6ADDRSZ; i++)
+  {
+    start_ip.s6_bytes[i] = dnsbl->u.ip6.network.s6_bytes[i] & dnsbl->u.ip6.mask.s6_bytes[i];
+    end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~dnsbl->u.ip6.mask.s6_bytes[i];
+  }
+
+#if 1
+  for (i = rc = 0; i < IN6ADDRSZ; i++)
+  {
+    if (ia->s6_bytes[i] < start_ip.s6_bytes[i])
+    {
+      rc = -1;
+      break;
+     }
+    else if (ia->s6_bytes[i] > end_ip.s6_bytes[i])
+    {
+      rc = 1;
+      break;
+     }
+  }
+
+#else
+  if (memcmp(ia, &start_ip, sizeof(*ia)) < 0)
+       rc = -1;
+  else if (memcmp(ia, &end_ip, sizeof(*ia)) > 0)
+       rc = 1;
+  else rc = 0;
+#endif
+
+  if (g_cfg.trace_level >= 2)
+  {
+    char ip_str      [MAX_IP6_SZ+1];
+    char start_ip_str[MAX_IP6_SZ+1];
+    char end_ip_str  [MAX_IP6_SZ+1];
+    char net_str     [MAX_IP6_SZ+1];
+    char mask_str    [MAX_IP6_SZ+1];
+
+    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.network, net_str, sizeof(net_str));
+    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&ia->s6_addr, ip_str, sizeof(ip_str));
+    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
+    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.mask, mask_str, sizeof(mask_str));
+
+    trace_printf ("ip: %-30s net: %-30s (%-30s - %-30s)\n"
+                  "                  mask: 0x%s rc: %d\n",
+                  ip_str, net_str, start_ip_str, end_ip_str, mask_str, rc);
+  }
   return (1);
 }
 
@@ -129,11 +217,11 @@ static BOOL DNSBL_check_addr (const struct in_addr *ip4, const struct in6_addr *
 {
   const struct DNSBL_info *dnsbl;
 
-  if (!DNSBL_list)
-     return (FALSE);
-
   if (sbl_ref)
      *sbl_ref = NULL;
+
+  if (!DNSBL_list)
+     return (FALSE);
 
   dnsbl = smartlist_bsearch (DNSBL_list, ip4 ? (const void*)ip4 : (const void*)ip6,
                              ip4 ? DNSBL_compare_is_on_net4 : DNSBL_compare_is_on_net6);
@@ -145,6 +233,8 @@ static BOOL DNSBL_check_addr (const struct in_addr *ip4, const struct in6_addr *
 
 BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
 {
+  if (!INET_util_addr_is_global(ip4,NULL))
+     return (FALSE);
   return DNSBL_check_addr (ip4, NULL, sbl_ref);
 }
 
@@ -153,23 +243,38 @@ BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
   return DNSBL_check_addr (NULL, ip6, sbl_ref);
 }
 
+/*
+ * Called from 'DNSBL_test()'.
+ * Simply prints the 'DNSBL_list' smartlist.
+ */
 static void DNSBL_dump (void)
 {
-  int  i, max = DNSBL_list ? smartlist_len(DNSBL_list) : 0;
+  int i, max = DNSBL_list ? smartlist_len(DNSBL_list) : 0;
+  const char *head_fmt = "%3s  SBL%-6s  %-20s %-20s %s\n";
+  const char *line_fmt = "%3d: SBL%-6s  %-20s %-20s %s\n";
+
+  trace_printf (head_fmt, "Num", "-ref", "Network", "Mask", "Type");
 
   for (i = 0; i < max; i++)
   {
     const struct DNSBL_info *dnsbl = smartlist_get (DNSBL_list, i);
-    char  addr [MAX_IP6_SZ];
-    char  mask [MAX_IP6_SZ];
-    char  cidr [60];
+    char  addr [MAX_IP6_SZ+1];
+    char  mask [MAX_IP6_SZ+1];
+    char  cidr [MAX_IP6_SZ+11];
 
-    _wsock_trace_inet_ntop (dnsbl->family, (const u_char*)&dnsbl->network, addr, sizeof(addr));
-    _wsock_trace_inet_ntop (dnsbl->family, (const u_char*)&dnsbl->mask, mask, sizeof(mask));
-
-    snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->suffix);
-    trace_printf ("%3d: SBL%-6s  %-18s %-18s type: %d.\n",
-                  i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>", cidr, mask, dnsbl->type);
+    if (dnsbl->family == AF_INET)
+    {
+      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.network, addr, sizeof(addr));
+      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.mask, mask, sizeof(mask));
+    }
+    else
+    {
+      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.network, addr, sizeof(addr));
+      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.mask, mask, sizeof(mask));
+    }
+    snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->bits);
+    trace_printf (line_fmt, i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>",
+                  cidr, mask, DNSBL_type_name(dnsbl->type));
   }
 }
 
@@ -186,52 +291,94 @@ static void DNSBL_dump (void)
  *   120.46.0.0/15  ; SBL262362
  *   208.12.64.0/19 ; SBL201196
  *
- * \todo: Test some lines from dropv6.txt:
+ * Test some lines from dropv6.txt:
  *   2a06:5280::/29 ; SBL334219
  *   2607:d100::/32 ; SBL347495
  *
  * Further details for the SBL-reference is found from:
  *   https://www.spamhaus.org/sbl/query/SBL<xxx>
  */
+struct test_list {
+       int         family;
+       const char *addr;
+       const char *sbl_ref;
+     };
+
 int DNSBL_test (void)
 {
-  struct in_addr     ip;
-  int                i;
-  const char        *sbl_ref  = NULL;
-  const char        *country_code, *location;
-  BOOL               rc;
-  static const char *addr[] = {
-                    "108.166.224.2", /* in drop.txt */
-                    "24.51.0.2",
-                    "8.8.8.8",
-                    "193.25.48.3",
-                    "120.46.4.1",    /* in edrop.txt */
-                    "208.12.64.5"
+  int    i;
+  BOOL   rc;
+  static const struct test_list tests[] = {
+                    { AF_INET,  "108.166.224.2", "235333" },  /* in drop.txt */
+                    { AF_INET,  "24.51.0.2",     "293696" },
+                    { AF_INET,  "8.8.8.8",       "<none>" },  /* Google's NS */
+                    { AF_INET,  "193.25.48.3",   "211796" },
+                    { AF_INET,  "120.46.4.1",    "262362" },  /* in edrop.txt */
+                    { AF_INET,  "208.12.64.5",   "201196" },
+                    { AF_INET6, "2a06:5280::ff", "334219" },  /* in dropv6.txt */
+                    { AF_INET6, "2607:d100::1",  "347495" }
                   };
-
-  if (g_cfg.trace_level < 3)
-     return (0);
+  const struct test_list *test = tests + 0;
 
   DNSBL_dump();
 
-  trace_puts ("DNSBL_test():\n");
-  for (i = rc = 0; i < DIM(addr); i++)
+  if (!g_cfg.DNSBL.enable)
   {
-    _wsock_trace_inet_pton (AF_INET, addr[i], (u_char*)&ip);
-    country_code = geoip_get_country_by_ipv4 (&ip);
-    location     = geoip_get_location_by_ipv4 (&ip);
-    rc += DNSBL_check_ipv4 (&ip, &sbl_ref);
+    TRACE (2, "g_cfg.DNSBL.enable = 0\n");
+    return (0);
+  }
+
+  if (g_cfg.DNSBL.drop_file && file_exists(g_cfg.DNSBL.drop_file))
+     INET_util_test_mask4();
+
+  if (g_cfg.DNSBL.dropv6_file && file_exists(g_cfg.DNSBL.dropv6_file))
+     INET_util_test_mask6();
+
+  trace_puts ("DNSBL_test():\n");
+  for (i = rc = 0; i < DIM(tests); i++, test++)
+  {
+    union {
+      struct in_addr  ip4;
+      struct in6_addr ip6;
+    } addr;
+    const char *sbl_ref = NULL;
+    const char *country_code, *location;
+    const char *okay = "~3failed ~0";
+    BOOL        res;
+
+    _wsock_trace_inet_pton (test->family, test->addr, (u_char*)&addr);
+
+    if (test->family == AF_INET)
+    {
+      country_code = geoip_get_country_by_ipv4 (&addr.ip4);
+      location     = geoip_get_location_by_ipv4 (&addr.ip4);
+      res = DNSBL_check_ipv4 (&addr.ip4, &sbl_ref);
+    }
+    else
+    {
+      country_code = geoip_get_country_by_ipv6 (&addr.ip6);
+      location     = geoip_get_location_by_ipv6 (&addr.ip6);
+      res = DNSBL_check_ipv6 (&addr.ip6, &sbl_ref);
+    }
+
     if (!sbl_ref)
-       sbl_ref = " <none>";
-    trace_printf ("%-15s -> %d, SBL %-7s country: %s, location: %s\n",
-                  addr[i], rc, sbl_ref, country_code, location);
+       sbl_ref = "<none>";
+
+    if (!strcmp(sbl_ref, test->sbl_ref))
+       okay = "~4success~0";
+
+    if (res)
+       rc++;
+
+    trace_printf ("~1%-15s~0 -> %d, ~1SBL%-7s~0 %s  country: %s, location: %s~0\n",
+                  test->addr, res, sbl_ref, okay, country_code, location);
   }
   return (rc);
 }
 
 static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist_parse_func parser)
 {
-  if (g_cfg.DNSBL.enable && file)
+  if (file)
   {
     smartlist_t *sl = smartlist_read_file (file, parser);
 
@@ -260,6 +407,12 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
  */
 void DNSBL_init (void)
 {
+  if (!g_cfg.DNSBL.enable)
+  {
+    TRACE (2, "g_cfg.DNSBL.enable = 0\n");
+    return;
+  }
+
   DNSBL_update_files();
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.drop_file, DNSBL_parse_DROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.edrop_file, DNSBL_parse_EDROP);
@@ -288,15 +441,22 @@ void DNSBL_exit (void)
 
 /**
  * Check if 'fname' needs an update.
- * If it does, download it using WinInet.dll and 'touch' it.
+ * If it does (or does not exist), download it using WinInet.dll and 'touch' it.
  */
 static int update_file (const char *fname, const char *url, time_t now, time_t expiry)
 {
   struct stat st;
   time_t when;
 
-  if (!fname || !url || stat(fname, &st) != 0)
+  if (!fname || !url)
      return (0);
+
+  if (stat(fname, &st) != 0)
+  {
+    st.st_mtime = 0;
+    TRACE (2, "File \"%s\" doesn't exist. Forcing a download from \"%s\".\n",
+           fname, url);
+  }
 
   /* Currently for an AppVeyor build, 'g_cfg.DNSBL.max_days' is '0'.
    * (max_days = 0 in the "[dnsbl]" section in the "wsock_trace.appveyor" file).
@@ -304,17 +464,19 @@ static int update_file (const char *fname, const char *url, time_t now, time_t e
    * server immediately after being checked out from GitHub!
    * Therefore, give a 10 sec time slack.
    */
-  expiry = -10;
+  expiry -= 10;
 
   if (st.st_mtime > expiry)
   {
     when = now + g_cfg.DNSBL.max_days * 24 * 3600;
-    TRACE (1, "Update of \"%s\" not needed until %.24s\"\n",
+    TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n",
            fname, ctime(&when));
     return (0);
   }
 
-  TRACE (1, "Updating \"%s\" from \"%s\"\n", fname, url);
+  if (st.st_mtime > 0)
+     TRACE (2, "Updating \"%s\" from \"%s\"\n", fname, url);
+
   if (INET_util_download_file(fname, url) > 0)
   {
     INET_util_touch_file (fname);
@@ -333,6 +495,12 @@ int DNSBL_update_files (void)
   time_t now, expiry;
   int    num = 0;
 
+  if (!g_cfg.DNSBL.enable)
+  {
+    TRACE (2, "g_cfg.DNSBL.enable = 0\n");
+    return (0);
+  }
+
   tzset();
   now = time (NULL);
   expiry = now - g_cfg.DNSBL.max_days * 24 * 3600;
@@ -346,25 +514,25 @@ int DNSBL_update_files (void)
 static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
 {
   struct DNSBL_info *dnsbl;
-  int                b1 = 0, b2 = 0, b3 = 0, b4 = 0, suffix = 0;
+  int    bits = 0;
+  char   addr [MAX_IP6_SZ+1];
 
-  if (sscanf(line, "%d.%d.%d.%d/%d ; SBL", &b1, &b2, &b3, &b4, &suffix) != 5)
+  if (sscanf(line, "%[0-9.]/%d ; SBL", addr, &bits) != 2)
      return;
 
-  if (suffix < 8 || suffix > 32) /* Cannot happen */
+  if (bits < 8 || bits > 32) /* Cannot happen */
      return;
 
   dnsbl = malloc (sizeof(*dnsbl));
   if (!dnsbl)
      return;
 
-  /* Store as big-endian
-   */
-  dnsbl->network.s_addr = (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
-  dnsbl->suffix         = suffix;
-  dnsbl->mask           = get_mask4 (suffix);
-  dnsbl->type           = type;
-  dnsbl->family         = AF_INET;
+  _wsock_trace_inet_pton (AF_INET, addr, &dnsbl->u.ip4.network);
+  INET_util_get_mask4 (&dnsbl->u.ip4.mask, bits);
+
+  dnsbl->bits   = bits;
+  dnsbl->type   = type;
+  dnsbl->family = AF_INET;
 
   _strlcpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
   smartlist_add (sl, dnsbl);
@@ -381,24 +549,32 @@ static void MS_CDECL DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
 }
 
 /*
- * \todo Parse a "dropv6.txt" file.
+ * Parse a "dropv6.txt" file.
  */
 static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 {
-  TRACE (3, "%s, type: %s\n", line, DNSBL_type_name(DNSBL_DROPv6));
-}
+  struct DNSBL_info *dnsbl;
+  int                bits = 0;
+  char               addr [MAX_IP6_SZ+1];
 
-/*
- * https://stackoverflow.com/questions/218604/whats-the-best-way-to-convert-from-network-bitcount-to-netmask
- *
- * Ret-val on network-order
- */
-static DWORD get_mask4 (unsigned suffix)
-{
-  if (suffix == 0)
-     return (0xFFFFFFFF);
-  suffix = 32 - suffix;
-  return swap32 ((0xFFFFFFFF >> suffix) << suffix);
+  if (sscanf(line, "%[a-f0-9:]/%d ; SBL", addr, &bits) != 2)
+     return;
+
+  if (bits < 8)   /* Cannot happen */
+     return;
+
+  dnsbl = calloc (1, sizeof(*dnsbl));
+  if (!dnsbl)
+     return;
+
+  _wsock_trace_inet_pton (AF_INET6, addr, &dnsbl->u.ip6.network);
+  INET_util_get_mask6 (&dnsbl->u.ip6.mask, bits);
+  dnsbl->bits   = bits;
+  dnsbl->type   = DNSBL_DROPv6;
+  dnsbl->family = AF_INET6;
+
+  _strlcpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
+  smartlist_add (sl, dnsbl);
 }
 
 /*
