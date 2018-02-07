@@ -1647,9 +1647,9 @@ static void test_addr_common (const struct in_addr  *a4,
    */
   if (INET_util_addr_is_global(a4, NULL))
   {
-    const char *sbl_ref  = NULL;
+    const char *sbl_ref = NULL;
     BOOL        rc = DNSBL_check_ipv4 (a4, &sbl_ref);
-    char        addr [20];
+    char        addr [MAX_IP4_SZ+1];
 
     if (!sbl_ref)
        sbl_ref = " <none>";
@@ -1659,9 +1659,9 @@ static void test_addr_common (const struct in_addr  *a4,
       printf ("  %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
-  else if (INET_util_addr_is_global(NULL, a6))
+  else if (a6) // (INET_util_addr_is_global(NULL, a6))
   {
-    const char *sbl_ref  = NULL;
+    const char *sbl_ref = NULL;
     BOOL        rc = DNSBL_check_ipv6 (a6, &sbl_ref);
     char        addr [MAX_IP6_SZ+1];
 
@@ -1980,7 +1980,7 @@ int main (int argc, char **argv)
   const char *g_file = NULL;
 
   wsock_trace_init();
-  g_cfg.trace_use_ods = FALSE;
+  g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
 
   while ((c = getopt (argc, argv, "h?cdfGg:" I_OPT "n:ru46")) != EOF)
     switch (c)
