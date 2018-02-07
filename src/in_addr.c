@@ -163,7 +163,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
    * Keep this in mind if you think this function should have been coded
    * to use pointer overlays.  All the world's not a VAX.
    */
-  char  tmp [MAX_IP6_SZ];
+  char  tmp [MAX_IP6_SZ+1];
   char *tp;
   struct {
     long base;

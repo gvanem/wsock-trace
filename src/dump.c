@@ -1817,7 +1817,7 @@ static const char *dump_addr_list (int type, const char **addresses)
 
   for (i = 0; addresses && addresses[i] && left > 0; i++)
   {
-    char  buf [MAX_IP6_SZ];
+    char  buf [MAX_IP6_SZ+1];
     char *addr = wsock_trace_inet_ntop (type, addresses[i], buf, sizeof(buf));
 
     if (!addr)

@@ -112,7 +112,7 @@ static void hosts_file_dump (void)
   for (i = 0; i < max; i++)
   {
     const struct host_entry *he = smartlist_get (hosts_list, i);
-    char  buf [MAX_IP6_SZ];
+    char  buf [MAX_IP6_SZ+1];
 
     wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
     trace_printf ("%3d: %-40s %-20s AF_INET%c\n",
