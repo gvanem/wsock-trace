@@ -138,7 +138,7 @@
    *
    * Funny enough, 'WSAConnectByNameW()' doesn't want a 'const wide-string'.
    */
-  #if defined(_MSC_VER) && defined(_CRT_BEGIN_C_HEADER)
+  #if defined(_MSC_VER) // && defined(_CRT_BEGIN_C_HEADER)
     #define CONST_LPSTR  LPCSTR
   #else
     #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
