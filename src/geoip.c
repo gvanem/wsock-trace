@@ -12,25 +12,12 @@
 #include <windows.h>
 #include <wininet.h>
 
-#if defined(__WATCOMC__)
-  #undef  NTDDI_VERSION
-  #define NTDDI_VERSION 0x05010000
-#endif
-
 #include "common.h"
 #include "smartlist.h"
 #include "init.h"
 #include "in_addr.h"
 #include "inet_util.h"
 #include "geoip.h"
-
-#if !defined(s6_bytes)  /* mingw.org */
-  #define s6_bytes _s6_bytes
-#endif
-
-#if !defined(s6_words)  /* mingw.org */
-  #define s6_words _s6_words
-#endif
 
 /* Number of calls for 'smartlist_bsearch()' to find an IPv4 or IPv6 entry.
  */
@@ -585,7 +572,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
 {
   struct ipv6_node *entry = NULL;
-  char     buf [MAX_IP6_SZ];
+  char     buf [MAX_IP6_SZ+1];
   unsigned num;
 
   IP2LOC_SET_BAD();
@@ -1446,8 +1433,8 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
   for (i = 0; i < max; i++)
   {
     const struct ipv6_node *entry = smartlist_get (geoip_ipv6_entries, i);
-    char  low  [MAX_IP6_SZ] = "?";
-    char  high [MAX_IP6_SZ] = "?";
+    char  low  [MAX_IP6_SZ+1] = "?";
+    char  high [MAX_IP6_SZ+1] = "?";
     int   nw_len;
 
     if (!raw && last)
@@ -1676,7 +1663,7 @@ static void test_addr_common (const struct in_addr  *a4,
   {
     const char *sbl_ref  = NULL;
     BOOL        rc = DNSBL_check_ipv6 (a6, &sbl_ref);
-    char        addr [MAX_IP6_SZ];
+    char        addr [MAX_IP6_SZ+1];
 
     if (!sbl_ref)
        sbl_ref = " <none>";
@@ -1892,7 +1879,7 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
   for (i = 0; i < loops; i++)
   {
     struct in6_addr addr;
-    char   buf [MAX_IP6_SZ];
+    char   buf [MAX_IP6_SZ+1];
 
     make_random_addr (NULL, &addr);
     wsock_trace_inet_ntop6 ((const u_char*)&addr, buf, sizeof(buf));

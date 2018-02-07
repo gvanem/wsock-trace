@@ -15,6 +15,14 @@
 #define MAX_IP6_SZ   sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")
 #define MAX_PORT_SZ  sizeof("65000")
 
+#if !defined(s6_bytes)  /* mingw.org */
+  #define s6_bytes _s6_bytes
+#endif
+
+#if !defined(s6_words)  /* mingw.org */
+  #define s6_words _s6_words
+#endif
+
 /*
  * In MS's <ws2tcpip.h> header, the 'addr' parameter in 'inet_ntop()'
  * sensible is defined as 'const void *'. But in MinGW/CygWin it is 'void *'.
