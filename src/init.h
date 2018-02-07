@@ -49,6 +49,7 @@ struct lua_cfg {
 
 struct DNSBL_cfg {
        BOOL    enable;
+       BOOL    test;
        char   *drop_file;
        char   *edrop_file;
        char   *dropv6_file;
