@@ -1,8 +1,16 @@
-/*
+/**\file inet_util.c
+ *
+ * \brief
+ *   Various functions for downloading files via WinInet.dll and
+ *   checking of address types.
+ *
  * inet_util.c - Part of Wsock-Trace.
  */
-
 #if defined(__WATCOMC__)
+  /*
+   * Required to define 'IN6_IS_ADDR_LOOPBACK()' etc. in
+   * OpenWatcom's <ws2ipdef.h>.
+   */
   #undef  NTDDI_VERSION
   #define NTDDI_VERSION 0x05010000
 #endif
@@ -15,39 +23,38 @@
 #include "in_addr.h"
 #include "inet_util.h"
 
+/* Handy macro to both define and declare the function-pointer.
+ */
+#define INET_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                 static func_##f p_##f = NULL
+
 /*
  * Download a single file using the WinInet API.
  * Load WinInet.dll dynamically.
  */
-typedef HINTERNET (WINAPI *func_InternetOpenA) (const char *user_agent,
-                                                DWORD       access_type,
-                                                const char *proxy_name,
-                                                const char *proxy_bypass,
-                                                DWORD       flags);
+INET_FUNC (HINTERNET, InternetOpenA, (const char *user_agent,
+                                      DWORD       access_type,
+                                      const char *proxy_name,
+                                      const char *proxy_bypass,
+                                      DWORD       flags));
 
-typedef HINTERNET (WINAPI *func_InternetOpenUrlA) (HINTERNET   hnd,
-                                                   const char *url,
-                                                   const char *headers,
-                                                   DWORD       headers_len,
-                                                   DWORD       flags,
-                                                   DWORD_PTR   context);
+INET_FUNC (HINTERNET, InternetOpenUrlA, (HINTERNET   hnd,
+                                         const char *url,
+                                         const char *headers,
+                                         DWORD       headers_len,
+                                         DWORD       flags,
+                                         DWORD_PTR   context));
 
-typedef BOOL (WINAPI *func_InternetGetLastResponseInfoA) (DWORD *err_code,
-                                                          char  *err_buff,
-                                                          DWORD *err_buff_len);
+INET_FUNC (BOOL, InternetGetLastResponseInfoA, (DWORD *err_code,
+                                                char  *err_buff,
+                                                DWORD *err_buff_len));
 
-typedef BOOL (WINAPI *func_InternetReadFile) (HINTERNET hnd,
-                                              VOID     *buffer,
-                                              DWORD     num_bytes_to_read,
-                                              DWORD    *num_bytes_read);
+INET_FUNC (BOOL, InternetReadFile, (HINTERNET hnd,
+                                    VOID     *buffer,
+                                    DWORD     num_bytes_to_read,
+                                    DWORD    *num_bytes_read));
 
-typedef BOOL (WINAPI *func_InternetCloseHandle) (HINTERNET handle);
-
-static func_InternetOpenA                p_InternetOpenA;
-static func_InternetOpenUrlA             p_InternetOpenUrlA;
-static func_InternetGetLastResponseInfoA p_InternetGetLastResponseInfoA;
-static func_InternetReadFile             p_InternetReadFile;
-static func_InternetCloseHandle          p_InternetCloseHandle;
+INET_FUNC (BOOL, InternetCloseHandle, (HINTERNET handle));
 
 #define ADD_VALUE(func)   { 0, NULL, "wininet.dll", #func, (void**)&p_##func }
 
@@ -90,7 +97,7 @@ static const char *wininet_strerror (DWORD err)
     p += snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
 
     if (p_InternetGetLastResponseInfoA &&
-        (p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
+        (*p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
         wininet_err > INTERNET_ERROR_BASE && wininet_err <= INTERNET_ERROR_LAST)
     {
       snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", (u_long)wininet_err, wininet_err_buf);
@@ -112,15 +119,13 @@ static const char *wininet_strerror (DWORD err)
  */
 DWORD INET_util_download_file (const char *file, const char *url)
 {
-  DWORD rc = 0;
-  DWORD flags = INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTP |
-                INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTPS |
-                INTERNET_FLAG_NO_UI;
-  HINTERNET   h1 = NULL;
-  HINTERNET   h2 = NULL;
-  FILE       *fil = NULL;
-  DWORD       access_type = INTERNET_OPEN_TYPE_DIRECT;
-  const char *proxy_name = NULL;
+  DWORD       rc    = 0;
+  DWORD       flags = INTERNET_FLAG_NO_UI;
+  HINTERNET   h1    = NULL;
+  HINTERNET   h2    = NULL;
+  FILE       *fil   = NULL;
+  DWORD       access_type  = INTERNET_OPEN_TYPE_DIRECT;
+  const char *proxy_name   = NULL;
   const char *proxy_bypass = NULL;
 
   if (load_dynamic_table(funcs, DIM(funcs)) != DIM(funcs))
@@ -131,14 +136,15 @@ DWORD INET_util_download_file (const char *file, const char *url)
 
   if (g_cfg.geoip_proxy && g_cfg.geoip_proxy[0])
   {
-    proxy_name = g_cfg.geoip_proxy;
+    proxy_name   = g_cfg.geoip_proxy;
     proxy_bypass = "<local>";
-    access_type = INTERNET_OPEN_TYPE_PROXY;
+    access_type  = INTERNET_OPEN_TYPE_PROXY;
   }
 
-  TRACE (2, "Calling InternetOpenA(): proxy: %s, URL: %s.\n", proxy_name, url);
+  TRACE (2, "Calling InternetOpenA(): proxy: %s, URL: %s.\n",
+         proxy_name ? proxy_name : "<none>", url);
 
-  h1 = (*p_InternetOpenA) ("GeoIP-update", access_type, proxy_name, proxy_bypass, 0);
+  h1 = (*p_InternetOpenA) ("Wsock-trace", access_type, proxy_name, proxy_bypass, 0);
   if (!h1)
   {
     TRACE (0, "InternetOpenA() failed: %s.\n", wininet_strerror(GetLastError()));
@@ -165,7 +171,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
     rc += read;
   }
 
-  TRACE (1, "INET_util_download_file (%s) -> rc: %lu\n", file, DWORD_CAST(rc));
+  TRACE (2, "INET_util_download_file (%s) -> rc: %lu\n", file, DWORD_CAST(rc));
 
 quit:
   if (fil)
@@ -394,6 +400,111 @@ quit:
 }
 
 /*
+ * https://stackoverflow.com/questions/218604/whats-the-best-way-to-convert-from-network-bitcount-to-netmask
+ *
+ * Ret-val on network-order
+ */
+void INET_util_get_mask4a (struct in_addr *out, int bits)
+{
+  if (bits == 0)
+  {
+    out->s_addr = 0xFFFFFFFF;
+    return;
+  }
+  bits = 32 - bits;
+  out->s_addr = swap32 ((0xFFFFFFFF >> bits) << bits);
+}
+
+/*
+ * Taken from libnet
+ */
+void INET_util_get_mask4b (struct in_addr *out, int bits)
+{
+  *(DWORD*)out = bits ? swap32 (~0 << (32 - bits)) : 0;
+}
+
+void INET_util_get_mask4 (struct in_addr *out, int bits)
+{
+  INET_util_get_mask4b (out, bits);
+}
+
+void INET_util_get_mask6a (struct in6_addr *out, int bits)
+{
+  DWORD s;
+  int   i;
+
+  if (bits == 0)
+  {
+    memset (out, 0xFF, sizeof(*out));
+    return;
+  }
+
+  for (i = 0; i < IN6ADDRSZ && bits >= 0; i++)
+  {
+    s = 8 - (bits % 8);
+    if (bits == 0)
+         out->s6_bytes[i] = 0xFF;
+    else out->s6_bytes[i] = (0xFF >> s) << s;
+    bits -= 8;
+  }
+}
+
+/*
+ * Taken from libnet
+ */
+void INET_util_get_mask6b (struct in6_addr *out, int bits)
+{
+  char *p = (char*) out;
+  int   host, net = bits / 8;
+
+  if (net > 0)
+     memset (p, 0xFF, net);
+
+  host = bits % 8;
+  if (host > 0)
+  {
+    p[net] = 0xFF << (8 - host);
+    memset (p+net+1, 0, IN6ADDRSZ-net-1);
+  }
+  else
+    memset (p+net, 0, IN6ADDRSZ-net);
+}
+
+/*
+ * Taken from 2nd answer here:
+ *   https://stackoverflow.com/questions/7683121/validating-ipv6-netmask-prefix
+ */
+void INET_util_get_mask6c (struct in6_addr *out, int bits)
+{
+  int i;
+
+  for (i = 0; i < IN6ADDRSZ; i++)
+  {
+    BYTE mask = 0xFF;
+
+    if (bits >= 8)
+    {
+      bits -= 8;
+    }
+    else if (bits == 0)
+    {
+      mask = 0;
+    }
+    else   /* 'bits' is between 1 and 7, inclusive */
+    {
+      mask <<= (8 - bits);
+      bits = 0;
+    }
+    out->s6_addr[i] = mask;
+  }
+}
+
+void INET_util_get_mask6 (struct in6_addr *out, int bits)
+{
+  INET_util_get_mask6b (out, bits);
+}
+
+/*
  * Return a hex-string for an 'in6_addr *mask'.
  * Should return the same as 'wsock_trace_inet_ntop6()' without
  * the '::' shorthanding.
@@ -401,11 +512,93 @@ quit:
 const char *INET_util_in6_mask_str (const struct in6_addr *mask)
 {
   static char buf [2*IN6ADDRSZ+1];
-  char *p = buf;
-  int   i;
+  char  *p = buf;
+  int    i;
 
-  for (i = 0; i < 8; i++, p += 4)
-      memcpy (p, str_hex_word(mask->s6_words[i]), 4);
+  for (i = 0; i < IN6ADDRSZ; i++)
+  {
+    const char *q = str_hex_byte (mask->s6_bytes[i]);
+
+    *p++ = *q++;
+    *p++ = *q;
+  }
   *p = '\0';
+  strlwr (buf);
   return (buf);
+}
+
+static const char *head_fmt = "%3s  %-*s %-*s %-*s %s\n";
+static const char *line_fmt = "%3d: %-*s %-*s %-*s %s\n";
+
+static void test_mask (int family, int ip_width, int cidr_width)
+{
+  struct in_addr  network4;
+  struct in6_addr network6;
+  int    i, bits, max_bits = (family == AF_INET6 ? 128 : 32);
+
+  memset (&network4, 0, sizeof(network4));
+  memset (&network6, 0, sizeof(network6));
+  network4.s_addr      = 127;              /* 127.0.0.0 */
+  network6.s6_words[0] = swap16 (0x2001);  /* "2001::" */
+
+  printf (head_fmt, "Num", cidr_width, "CIDR", ip_width, "start_ip", ip_width, "end_ip", "mask");
+
+  for (bits = 0; bits <= max_bits; bits++)
+  {
+    char start_ip_str [MAX_IP6_SZ+1];
+    char end_ip_str   [MAX_IP6_SZ+1];
+    char mask_str     [MAX_IP6_SZ+1];
+    char network_str  [MAX_IP6_SZ+1];
+    char cidr         [MAX_IP6_SZ+11];
+
+    if (family == AF_INET6)
+    {
+      struct in6_addr mask, start_ip, end_ip;
+
+      INET_util_get_mask6 (&mask, bits);
+      for (i = 0; i < IN6ADDRSZ; i++)
+      {
+        start_ip.s6_bytes[i] = network6.s6_bytes[i] & mask.s6_bytes[i];
+        end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
+      }
+      inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
+      inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+      inet_ntop (AF_INET6, (const u_char*)&mask, mask_str, sizeof(mask_str));
+      inet_ntop (AF_INET6, (const u_char*)&network6, network_str, sizeof(network_str));
+    }
+    else
+    {
+      struct in_addr mask, start_ip, end_ip;
+
+      INET_util_get_mask4 (&mask, bits);
+      start_ip.s_addr = network4.s_addr & mask.s_addr;
+      end_ip.s_addr   = start_ip.s_addr | ~mask.s_addr;
+
+      inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
+      inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+      inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
+      inet_ntop (AF_INET, (const u_char*)&network4, network_str, sizeof(network_str));
+    }
+
+    snprintf (cidr, sizeof(cidr), "%s/%u", network_str, bits);
+    printf (line_fmt, bits, cidr_width, cidr, ip_width, start_ip_str, ip_width, end_ip_str, mask_str);
+  }
+}
+
+/*
+ * Check that 'INET_util_get_mask4()' is correct.
+ */
+void INET_util_test_mask4 (void)
+{
+  puts ("INET_util_test_mask4()");
+  test_mask (AF_INET, MAX_IP4_SZ, sizeof("127.0.0.255/32"));
+}
+
+/*
+ * Check that 'INET_util_get_mask6()' is correct.
+ */
+void INET_util_test_mask6 (void)
+{
+  puts ("INET_util_test_mask6()");
+  test_mask (AF_INET6, MAX_IP6_SZ-5, sizeof("2000::/128"));
 }
