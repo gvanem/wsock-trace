@@ -561,10 +561,10 @@ static void test_mask (int family, int ip_width, int cidr_width)
         start_ip.s6_bytes[i] = network6.s6_bytes[i] & mask.s6_bytes[i];
         end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
       }
-      inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-      inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
-      inet_ntop (AF_INET6, (const u_char*)&mask, mask_str, sizeof(mask_str));
-      inet_ntop (AF_INET6, (const u_char*)&network6, network_str, sizeof(network_str));
+      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
+      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&mask, mask_str, sizeof(mask_str));
+      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&network6, network_str, sizeof(network_str));
     }
     else
     {
@@ -574,10 +574,10 @@ static void test_mask (int family, int ip_width, int cidr_width)
       start_ip.s_addr = network4.s_addr & mask.s_addr;
       end_ip.s_addr   = start_ip.s_addr | ~mask.s_addr;
 
-      inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-      inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
-      inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
-      inet_ntop (AF_INET, (const u_char*)&network4, network_str, sizeof(network_str));
+      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
+      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
+      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&network4, network_str, sizeof(network_str));
     }
 
     snprintf (cidr, sizeof(cidr), "%s/%u", network_str, bits);
