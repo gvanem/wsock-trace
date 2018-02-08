@@ -276,7 +276,7 @@ extern const char *get_builder (void);
 
 #if defined(__CYGWIN__)
   extern char *_itoa (int value, char *buf, int radix);
-  extern char *_ultoa (unsignd long value, char *buf, int radix);
+  extern char *_ultoa (unsigned long value, char *buf, int radix);
   extern int   _kbhit (void);
   extern int   _getch (void);
 #endif
