@@ -201,8 +201,8 @@ void geoip_ipv6_add_specials (void)
          const char *high;
          const char *remark;
        } priv[] = {
-         { "::",      "::",  "-Z"       },                                   /* IN6_IS_ADDR_UNSPECIFIED() */
-         { "::1",     "::1", "-L"      },                                    /* IN6_IS_ADDR_LOOPBACK() */
+         { "::",      "::",  "-Z" },                                         /* IN6_IS_ADDR_UNSPECIFIED() */
+         { "::1",     "::1", "-L" },                                         /* IN6_IS_ADDR_LOOPBACK() */
       #if 1
          { "2001:0::",    "2001:0000:ffff:ffff:ffff:ffff:ffff:ffff", "-T" }, /* RFC 4380 Teredo, 2001:0::/32 */
          { "3ffe:831f::", "3ffe:831f:ffff:ffff:ffff:ffff:ffff:ffff", "-t" }, /* WinXP Teroedo,   3FFE:831F::/32 */
@@ -216,16 +216,8 @@ void geoip_ipv6_add_specials (void)
   {
     struct in6_addr low, high;
 
-    if (wsock_trace_inet_pton6(priv[i].low, (u_char*)&low) != 1)
-    {
-      TRACE (0, "Illegal low IPv6 address: %s, %s\n", priv[i].low, get_ws_error());
-      continue;
-    }
-    if (wsock_trace_inet_pton6(priv[i].high, (u_char*)&high) != 1)
-    {
-      TRACE (0, "Illegal high IPv6 address: %s, %s\n", priv[i].high, get_ws_error());
-      continue;
-    }
+    wsock_trace_inet_pton6 (priv[i].low, (u_char*)&low);
+    wsock_trace_inet_pton6 (priv[i].high, (u_char*)&high);
     geoip6_add_entry (&low, &high, priv[i].remark);
   }
 }
@@ -357,7 +349,7 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
   open_geoip = TRUE;
 #endif
 
-  if (g_cfg.geoip_enable && (g_cfg.trace_level > 0 || open_geoip))
+  if (g_cfg.geoip_enable || open_geoip)
   {
     if (!open_geoip && g_cfg.geoip_use_generated)
     {
@@ -535,7 +527,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   num = ip2loc_num_ipv4_entries();
   TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
 
-  if (num > 0 && INET_util_addr_is_global(addr,NULL) && ip2loc_get_entry(buf, &g_ip2loc_entry))
+  if (num > 0 && INET_util_addr_is_global(addr,NULL) && ip2loc_get_ipv4_entry(addr, &g_ip2loc_entry))
   {
     if (g_cfg.trace_report)
        geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_VIA_IP2LOC);
@@ -584,7 +576,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   num = ip2loc_num_ipv6_entries();
   TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
 
-  if (num > 0 && INET_util_addr_is_global(NULL,addr) && ip2loc_get_entry(buf, &g_ip2loc_entry))
+  if (num > 0 && INET_util_addr_is_global(NULL,addr) && ip2loc_get_ipv6_entry(addr, &g_ip2loc_entry))
   {
     if (g_cfg.trace_report)
        geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_VIA_IP2LOC);
@@ -592,7 +584,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   }
 #else
   num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
-  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n",  buf, num);
+  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
 #endif
 
   if (geoip_ipv6_entries)
