@@ -437,7 +437,8 @@ void INET_util_get_mask4a (struct in_addr *out, int bits)
 }
 
 /*
- * Taken from libnet
+ * The 'bits' is the suffix from a CIDR notation: "prefix/suffix".
+ * Taken from libnet.
  */
 void INET_util_get_mask4b (struct in_addr *out, int bits)
 {
@@ -548,78 +549,141 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
   return strlwr (buf);
 }
 
-static const char *head_fmt = "%3s  %-*s %-*s %-*s %s\n";
-static const char *line_fmt = "%3d: %-*s %-*s %-*s %s\n";
+static const char *head_fmt = "%3s %-*s %-*s %-*s %-*s %s%s\n";
+static const char *line_fmt = "%3d %-*s %-*s %-*s %-*s %s%s\n";
 
-static void test_mask (int family, int ip_width, int cidr_width)
+#define IP4_NET "69.208.0.0"
+#define IP6_NET "2001:0db8::"
+
+static void test_mask (int family, int start_ip_width, int ip_width, int cidr_width)
 {
   struct in_addr  network4;
   struct in6_addr network6;
-  int    i, bits, max_bits = (family == AF_INET6 ? 128 : 32);
+  int             i, bits, max_bits = (family == AF_INET6 ? 128 : 32);
+  uint64          total_ips;
+  const char     *total_str;
+  const char     *overflow = "";
+  char            network_str [MAX_IP6_SZ+1];
 
-  memset (&network4, 0, sizeof(network4));
-  memset (&network6, 0, sizeof(network6));
-  network4.s_addr      = 127;              /* 127.0.0.0 */
-  network6.s6_words[0] = swap16 (0x2001);  /* "2001::" */
+  leading_zeroes = TRUE;
 
-  trace_printf (head_fmt, "Num", cidr_width, "CIDR", ip_width, "start_ip", ip_width, "end_ip", "mask");
+  trace_printf (head_fmt, "bit",
+                cidr_width,     "CIDR",
+                start_ip_width, "start_ip",
+                ip_width,       "end_ip",
+                ip_width,       "mask",
+                "", "total");
+
+  wsock_trace_inet_pton4 (IP4_NET, (u_char*)&network4);
+  wsock_trace_inet_pton6 (IP6_NET, (u_char*)&network6);
+  _wsock_trace_inet_ntop (family, (family == AF_INET6) ?
+                          (const u_char*)&network6 : (const u_char*)&network4,
+                          network_str, sizeof(network_str));
 
   for (bits = 0; bits <= max_bits; bits++)
   {
     char start_ip_str [MAX_IP6_SZ+1];
     char end_ip_str   [MAX_IP6_SZ+1];
     char mask_str     [MAX_IP6_SZ+1];
-    char network_str  [MAX_IP6_SZ+1];
     char cidr         [MAX_IP6_SZ+11];
+
+    total_ips = 0;
 
     if (family == AF_INET6)
     {
       struct in6_addr mask, start_ip, end_ip;
 
       INET_util_get_mask6 (&mask, bits);
-      for (i = 0; i < IN6ADDRSZ; i++)
+
+      if (bits == 0)
+      {
+        /* A 'mask' from 'INET_util_get_mask6 (&mask, 0)' cannot be used here.
+         */
+        memset (&start_ip, '\0', sizeof(start_ip));
+        memset (&end_ip, 0xFF, sizeof(end_ip));
+        total_ips = ULLONG_MAX;
+      }
+      else for (i = 0; i < IN6ADDRSZ; i++)
       {
         start_ip.s6_bytes[i] = network6.s6_bytes[i] & mask.s6_bytes[i];
         end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
+        if (i < 14)
+             total_ips += (2 << i) * (end_ip.s6_bytes[i] - start_ip.s6_bytes[i]);
+        else if (bits < 13)
+             overflow = ">";
+        else overflow = "";
       }
       _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
       _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
       _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&mask, mask_str, sizeof(mask_str));
-      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&network6, network_str, sizeof(network_str));
     }
     else
     {
       struct in_addr mask, start_ip, end_ip;
 
       INET_util_get_mask4 (&mask, bits);
-      start_ip.s_addr = network4.s_addr & mask.s_addr;
-      end_ip.s_addr   = start_ip.s_addr | ~mask.s_addr;
+
+      if (bits == 0)
+      {
+        /* A 'mask' from 'INET_util_get_mask4 (&mask, 0)' cannot be used here.
+         */
+        start_ip.s_addr = 0;
+        end_ip.s_addr   = ULONG_MAX;
+        total_ips       = ULONG_MAX;
+      }
+      else
+      {
+        start_ip.s_addr = network4.s_addr & mask.s_addr;
+        end_ip.s_addr   = start_ip.s_addr | ~mask.s_addr;
+        total_ips = swap32 (end_ip.s_addr) - swap32 (start_ip.s_addr) + 1;
+      }
 
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
-      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&network4, network_str, sizeof(network_str));
     }
 
+    if (family == AF_INET6)
+    {
+      if (total_ips >= ULLONG_MAX-1)
+           total_str = "Inf";
+      else total_str = qword_str (total_ips);
+    }
+    else
+      total_str = qword_str (total_ips);
+
     snprintf (cidr, sizeof(cidr), "%s/%u", network_str, bits);
-    trace_printf (line_fmt, bits, cidr_width, cidr, ip_width, start_ip_str, ip_width, end_ip_str, mask_str);
+    trace_printf (line_fmt, bits,
+                  cidr_width, cidr,
+                  start_ip_width, start_ip_str,
+                  ip_width, end_ip_str,
+                  ip_width, mask_str,
+                  overflow, total_str);
   }
+  leading_zeroes = FALSE;
 }
 
 /*
  * Check that 'INET_util_get_mask4()' is correct.
+ *
+ * Attempt to create a "Table of sample ranges" similar to this:
+ *   https://www.mediawiki.org/wiki/Help:Range_blocks
  */
 void INET_util_test_mask4 (void)
 {
   trace_puts ("\nINET_util_test_mask4()\n");
-  test_mask (AF_INET, MAX_IP4_SZ, sizeof("127.0.0.255/32"));
+  test_mask (AF_INET, strlen(IP4_NET), strlen("255.255.255.255"), strlen(IP4_NET "/32"));
 }
 
 /*
  * Check that 'INET_util_get_mask6()' is correct.
+ *
+ * Attempt to create a "Range Table" similar to this:
+ *   https://www.mediawiki.org/wiki/Help:Range_blocks/IPv6
  */
 void INET_util_test_mask6 (void)
 {
   trace_puts ("\nINET_util_test_mask6()\n");
-  test_mask (AF_INET6, MAX_IP6_SZ-5, sizeof("2000::/128"));
+  test_mask (AF_INET6, strlen(IP6_NET), MAX_IP6_SZ-7, strlen(IP6_NET "/128"));
 }
+
