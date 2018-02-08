@@ -450,13 +450,14 @@ void INET_util_get_mask6a (struct in6_addr *out, int bits)
 }
 
 /*
- * Taken from libnet
+ * Taken from libnet and modified.
  */
 void INET_util_get_mask6b (struct in6_addr *out, int bits)
 {
   char *p = (char*) out;
   int   host, net = bits / 8;
 
+  memset (p, 0, sizeof(*out));
   if (net > 0)
      memset (p, 0xFF, net);
 
@@ -523,8 +524,7 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
     *p++ = *q;
   }
   *p = '\0';
-  strlwr (buf);
-  return (buf);
+  return strlwr (buf);
 }
 
 static const char *head_fmt = "%3s  %-*s %-*s %-*s %s\n";
@@ -541,7 +541,7 @@ static void test_mask (int family, int ip_width, int cidr_width)
   network4.s_addr      = 127;              /* 127.0.0.0 */
   network6.s6_words[0] = swap16 (0x2001);  /* "2001::" */
 
-  printf (head_fmt, "Num", cidr_width, "CIDR", ip_width, "start_ip", ip_width, "end_ip", "mask");
+  trace_printf (head_fmt, "Num", cidr_width, "CIDR", ip_width, "start_ip", ip_width, "end_ip", "mask");
 
   for (bits = 0; bits <= max_bits; bits++)
   {
@@ -581,7 +581,7 @@ static void test_mask (int family, int ip_width, int cidr_width)
     }
 
     snprintf (cidr, sizeof(cidr), "%s/%u", network_str, bits);
-    printf (line_fmt, bits, cidr_width, cidr, ip_width, start_ip_str, ip_width, end_ip_str, mask_str);
+    trace_printf (line_fmt, bits, cidr_width, cidr, ip_width, start_ip_str, ip_width, end_ip_str, mask_str);
   }
 }
 
@@ -590,7 +590,7 @@ static void test_mask (int family, int ip_width, int cidr_width)
  */
 void INET_util_test_mask4 (void)
 {
-  puts ("INET_util_test_mask4()");
+  trace_puts ("\nINET_util_test_mask4()\n");
   test_mask (AF_INET, MAX_IP4_SZ, sizeof("127.0.0.255/32"));
 }
 
@@ -599,6 +599,6 @@ void INET_util_test_mask4 (void)
  */
 void INET_util_test_mask6 (void)
 {
-  puts ("INET_util_test_mask6()");
+  trace_puts ("\nINET_util_test_mask6()\n");
   test_mask (AF_INET6, MAX_IP6_SZ-5, sizeof("2000::/128"));
 }
