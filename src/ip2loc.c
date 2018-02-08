@@ -175,6 +175,10 @@ static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
   return (TRUE);
 }
 
+/*
+ * This can be passed both IPv4 and IPv6 addresses.
+ * But slower than the below.
+ */
 BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
 {
   IP2LocationRecord *r = IP2Location_get_record (handle, (char*)addr, IP2LOC_FLAGS);
