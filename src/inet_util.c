@@ -365,6 +365,27 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
 }
 
 /*
+ * Return an IP-number as a string.
+ */
+const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_addr *ip6)
+{
+  static char buf [4*sizeof("65535")+1];
+
+  if (ip4)
+      return _ultoa (swap32(ip4->s_addr), buf, 10);
+  if (ip6)
+     snprintf (buf, sizeof(buf), "%lu%lu%lu%lu",
+               *(u_long*)&ip6->s6_bytes[0], *(u_long*)&ip6->s6_bytes[4],
+               *(u_long*)&ip6->s6_bytes[8], *(u_long*)&ip6->s6_bytes[12]);
+  else
+  {
+    buf[0] = '?';
+    buf[1] = '\0';
+  }
+  return (buf);
+}
+
+/*
  * Figure out the prefix length when given an IPv4 "low" and "high" address.
  */
 int INET_util_network_len32 (DWORD hi, DWORD lo)
