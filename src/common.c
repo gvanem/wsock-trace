@@ -1479,6 +1479,15 @@ int file_exists (const char *fname)
   return (attr != INVALID_FILE_ATTRIBUTES || access(fname,0) == 0);
 }
 
+/*
+ * Include the resource-file. This is the only place (besides the makefiles)
+ * where the basenames for 'wsock_trace*.dll' is set. We use these here to
+ * return those short-names and also the fully qualified names when known at
+ * runtime.
+ *
+ * The .lua-scripts needs this information to know which .DLL to integrate with.
+ * Some of these functions are also calle from geoip.c.
+ */
 #include "wsock_trace.rc"
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__ia64__)
@@ -1494,7 +1503,7 @@ static char full_name [_MAX_PATH];
 void set_dll_full_name (HINSTANCE inst_dll)
 {
   if (!full_name[0])  /* prevent reentey from the same .dll */
-      GetModuleFileName (inst_dll, full_name, sizeof(full_name));
+     GetModuleFileName (inst_dll, full_name, sizeof(full_name));
 }
 
 const char *get_dll_full_name (void)
