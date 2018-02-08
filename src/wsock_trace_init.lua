@@ -43,10 +43,18 @@ end
 ---   ws = require (ws_name)
 --- end
 
-if jit.arch == "x64" then
-  ws_name = "wsock_trace_x64"
+if nil then
+  if jit.arch == "x64" then
+    ws_name = "wsock_trace_cyg_x64"
+  else
+    ws_name = "wsock_trace_cyg"
+  end
 else
-  ws_name = "wsock_trace"
+  if jit.arch == "x64" then
+    ws_name = "wsock_trace_x64"
+  else
+    ws_name = "wsock_trace"
+  end
 end
 
 if package.loaded [ws_name] then
@@ -56,34 +64,43 @@ else
 end
 
 function trace_printf (fmt, ...)
-  ws.trace_puts ("\ntrace_printf(): ")
-  str = string.format (fmt, unpack(arg))
-  ws.trace_puts (str)
+  ws.trace_puts ("  trace_printf():\n")
+  ws.trace_puts ("    fmt: " .. string.gsub(fmt,"\n","") .. "\n")
+  tab = {...}
+  for key, val in  pairs(tab) do
+    ws.trace_puts ("    key: " .. key .. ", val: " .. val .. "\n")
+  end
 end
 
 who_am_I = __FILE__()
 
-ws.trace_puts (string.format("  ws.get_trace_level: ~1%d~0.\n", ws.get_trace_level()))
+if ws.get_trace_level() >= 1 then
+  ws.trace_puts (string.format("  ws.get_trace_level: ~1%d~0.\n", ws.get_trace_level()))
 
-if nil then
-  ws.trace_puts ("  ws.set_trace_level(0).\n")
-  ws.set_trace_level (0)
+  if nil then
+    ws.trace_puts ("  get_trace_level:    ~1" .. tostring(get_trace_level()) .. " ~0.\n")
+    ws.trace_puts ("  ws.set_trace_level(0).\n")
+    ws.set_trace_level (0)
+  end
+
+  if nil then
+    trace_printf ("Hello from: ~1%s~0.\nVersion:  ~1%s~0. Arg-1: %d. Another arg: %s\n",
+                  who_am_I, os_details(), 10, "hello")
+  end
+
+  -- ws.trace_printf ("Hello from: ~1%s~0.\nVersion:            ~1%s~0.\n", who_am_I, os_details())
+
+  ws.trace_puts (string.format("  Hello from:         ~1%s~0.\n", who_am_I))
+  ws.trace_puts (string.format("  Version:            ~1%s~0.\n", os_details()))
+  ws.trace_puts (string.format("  This is line:       ~1%d~0.\n", __LINE__()))
+
+  ws.trace_puts ("  package.path[]:     ~1" .. package.path .. "~0.\n")
+  ws.trace_puts ("  package.cpath[]:    ~1" .. package.cpath .. "~0.\n")
+
+  ws.trace_puts (string.format("  I'm importing from: ~1%s~0.\n", ws.get_dll_full_name()))
+  ws.trace_puts (string.format("  ws.get_builder():   ~1%s~0.\n", ws.get_builder()))
 end
 
--- trace_printf ("Hello from: ~1%s~0.\n", who_am_I)
+--ws.register_hook (WSAStartup, "2")
 
--- ws.trace_printf ("Hello from: ~1%s~0.\nVersion:  ~1%s~0. Arg: %s, another arg: %s\n", who_am_I, os_details(), "10", "hello")
--- ws.trace_printf ("Hello from: ~1%s~0.\n", who_am_I)
-
-ws.trace_puts (string.format("  Hello from:         ~1%s~0.\n", who_am_I))
-ws.trace_puts (string.format("  Version:            ~1%s~0.\n", os_details()))
-ws.trace_puts (string.format("  This is line:       ~1%d~0.\n", __LINE__()))
-
-ws.trace_puts ("  package.path[]:     ~1" .. package.path .. "~0.\n")
-ws.trace_puts ("  package.cpath[]:    ~1" .. package.cpath .. "~0.\n")
-
-ws.trace_puts (string.format("  I'm importing from: ~1%s~0. ws.get_builder(): ~1%s~0.\n",
-               ws.get_dll_full_name(), ws.get_builder()))
-
-ws.register_hook (WSAStartup, "2")
 WSAStartup()
