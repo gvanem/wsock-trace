@@ -1842,7 +1842,9 @@ static void test_addr_list (smartlist_t *list, BOOL use_ip2loc, test_func func)
       (*func) (smartlist_get(list, i), use_ip2loc);
   if (max > 1)
   {
-    geoip_num_unique_countries (&num, NULL, NULL, NULL);
+    if (func == test_addr4)
+         geoip_num_unique_countries (&num, NULL, NULL, NULL);
+    else geoip_num_unique_countries (NULL, &num, NULL, NULL);
     printf ("# of unique IPv%c countries: %lu\n",
             (func == test_addr4 ? '4' : '6'), DWORD_CAST(num));
   }
