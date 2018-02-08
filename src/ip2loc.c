@@ -17,6 +17,7 @@
 #include "common.h"
 #include "init.h"
 #include "in_addr.h"
+#include "inet_util.h"
 #include "geoip.h"
 
 #if defined(USE_IP2LOCATION)
@@ -154,17 +155,10 @@ DWORD ip2loc_num_ipv6_entries (void)
 #include "IP2Location.c"
 #include "IP2Loc_DBInterface.c"
 
-BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
+#define IP2LOC_FLAGS  (COUNTRYSHORT | COUNTRYLONG | REGION | CITY)
+
+static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
 {
-  IP2LocationRecord *r = IP2Location_get_record (handle, (char*)addr,
-                                                 COUNTRYSHORT | COUNTRYLONG | REGION | CITY);
-
-  memset (ent, '\0', sizeof(*ent));
-  if (!r)
-     return (FALSE);
-
-  TRACE (3, "Record for %s; country_short: \"%.2s\"\n", addr, r->country_short);
-
   if (r->country_short[0] == '-' ||                   /* is "-" for unallocated addr */
       !strncmp(r->country_short,"INVALID",7) ||       /* INVALID_IPV4_ADDRESS/INVALID IPV4 ADDRESS */
       !strncmp(r->country_short,"This parameter",14)) /* NOT_SUPPORTED */
@@ -173,12 +167,77 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
     return (FALSE);
   }
 
-  _strlcpy (ent->country_short, r->country_short, sizeof(ent->country_short));
-  _strlcpy (ent->country_long, r->country_long, sizeof(ent->country_long));
-  _strlcpy (ent->city, r->city, sizeof(ent->city));
-  _strlcpy (ent->region, r->region, sizeof(ent->region));
+  _strlcpy (out->country_short, r->country_short, sizeof(out->country_short));
+  _strlcpy (out->country_long, r->country_long, sizeof(out->country_long));
+  _strlcpy (out->city, r->city, sizeof(out->city));
+  _strlcpy (out->region, r->region, sizeof(out->region));
   IP2Location_free_record (r);
   return (TRUE);
+}
+
+BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
+{
+  IP2LocationRecord *r = IP2Location_get_record (handle, (char*)addr, IP2LOC_FLAGS);
+
+  memset (out, '\0', sizeof(*out));
+  if (!r)
+     return (FALSE);
+
+  TRACE (3, "Record for %s; country_short: \"%.2s\"\n", addr, r->country_short);
+  return ip2loc_get_common (out, r);
+}
+
+/*
+ * This avoids the call to 'inet_pton()' and 'inet_addr()' since the passed
+ * '*addr' should be valid IPv4-address.
+ */
+BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
+{
+  IP2LocationRecord *r;
+  ipv_t parsed_ipv;
+
+  parsed_ipv.ipversion = 4;
+  parsed_ipv.ipv4 = swap32 (addr->s_addr);
+  r = IP2Location_get_ipv4_record (handle, NULL, IP2LOC_FLAGS, parsed_ipv);
+
+  memset (out, '\0', sizeof(*out));
+  if (!r)
+     return (FALSE);
+
+  TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\"\n",
+         INET_util_get_ip_num(addr, NULL), r->country_short);
+  return ip2loc_get_common (out, r);
+}
+
+/*
+ * This avoids the call to 'inet_pton()' since the passed
+ * '*addr' should be valid IPv6-address.
+ */
+BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
+{
+  IP2LocationRecord *r;
+  ipv_t parsed_ipv;
+
+  if (IN6_IS_ADDR_V4MAPPED(addr))
+  {
+    parsed_ipv.ipversion = 4;
+    parsed_ipv.ipv4 = *(const uint32_t*) addr;
+  }
+  else
+  {
+    parsed_ipv.ipversion = 6;
+    memcpy (&parsed_ipv.ipv6, addr, sizeof(*addr));
+  }
+  r = IP2Location_get_ipv6_record (handle, NULL, IP2LOC_FLAGS, parsed_ipv);
+
+  memset (out, '\0', sizeof(*out));
+  if (!r)
+     return (FALSE);
+
+  TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\"\n",
+         INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),
+         r->country_short);
+  return ip2loc_get_common (out, r);
 }
 
 #else /* USE_IP2LOCATION */
@@ -203,6 +262,20 @@ DWORD ip2loc_num_ipv6_entries (void)
 }
 
 BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
+{
+  ARGSUSED (addr);
+  ARGSUSED (ent);
+  return (FALSE);
+}
+
+BOOL ip2loc_get_ipv4_entry (const in_addr *addr, struct ip2loc_entry *ent)
+{
+  ARGSUSED (addr);
+  ARGSUSED (ent);
+  return (FALSE);
+}
+
+BOOL ip2loc_get_ipv6_entry (const in6_addr *addr, struct ip2loc_entry *ent)
 {
   ARGSUSED (addr);
   ARGSUSED (ent);
