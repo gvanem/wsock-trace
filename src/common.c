@@ -372,6 +372,13 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
     return (buf);
   }
 
+  char *_ultoa (unsigned long value, char *buf, int radix)
+  {
+    assert (radix == 8 || radix == 10);
+    sprintf (buf, (radix == 8) ? "%o" : "%lu", value);
+    return (buf);
+  }
+
   /*
    * '_kbhit()' and '_getch()' for CygWin based on:
    *   https://stackoverflow.com/questions/29335758/using-kbhit-and-getch-on-linux
