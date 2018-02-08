@@ -27,6 +27,7 @@
 #include "in_addr.h"
 
 BOOL call_WSASetLastError = TRUE;
+BOOL leading_zeroes       = FALSE;
 
 static const char hex_chars[] = "0123456789abcdef";
 
@@ -235,7 +236,9 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
       tp += strlen (tp);
       break;
     }
-    tp += sprintf (tp, "%lx", words[i]);
+    if (leading_zeroes)
+         tp += sprintf (tp, "%04lx", words[i]);
+    else tp += sprintf (tp, "%lx", words[i]);
   }
 
   /* Was it a trailing run of 0x00's?

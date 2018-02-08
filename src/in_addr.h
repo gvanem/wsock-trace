@@ -62,7 +62,7 @@
   EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, PVOID addr_buf);
 #endif
 
-extern BOOL       call_WSASetLastError;
+extern BOOL       call_WSASetLastError, leading_zeroes;
 
 extern BOOL       is_ip4_addr (const char *str);
 
