@@ -253,6 +253,7 @@ static void DNSBL_dump (void)
   const char *head_fmt = "%3s  SBL%-6s  %-20s %-20s %s\n";
   const char *line_fmt = "%3d: SBL%-6s  %-20s %-20s %s\n";
 
+  trace_puts ("DNSBL_dump()\n");
   trace_printf (head_fmt, "Num", "-ref", "Network", "Mask", "Type");
 
   for (i = 0; i < max; i++)
