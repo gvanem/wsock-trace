@@ -1648,7 +1648,7 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       wsock_trace_inet_ntop4 ((const u_char*)a4, addr, sizeof(addr));
-      printf ("  %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      printf ("    %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
   else if (a6) // (INET_util_addr_is_global(NULL, a6))
@@ -1662,7 +1662,7 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       wsock_trace_inet_ntop6 ((const u_char*)a6, addr, sizeof(addr));
-      printf ("  %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      printf ("    %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
 
