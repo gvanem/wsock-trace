@@ -23,6 +23,10 @@
 #include "in_addr.h"
 #include "inet_util.h"
 
+#ifndef ULLONG_MAX
+#define ULLONG_MAX 18446744073709551615ULL
+#endif
+
 /* Handy macro to both define and declare the function-pointer.
  */
 #define INET_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
