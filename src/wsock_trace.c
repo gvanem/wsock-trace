@@ -2973,7 +2973,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          smartlist_add (thread_list, GetCurrentThreadId());
 #endif
 #ifdef USE_LUA
-         if (g_cfg.lua.enable && (rc = wslua_DllMain(instDLL, reason)) == TRUE)
+         if (g_cfg.lua.enable &&
+             (rc = wslua_DllMain(instDLL, reason)) == TRUE)
             wslua_init (g_cfg.lua.init_script);
 #endif
          break;
