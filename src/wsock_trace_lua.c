@@ -129,9 +129,6 @@ static BOOL execute_and_report (lua_State *l)
  */
 static BOOL wslua_run_script (lua_State *l, const char *script)
 {
-  const char *msg;
-  int         rc = 0;
-
   LUA_TRACE (1, "Launching script: %s\n", script ? script : "<none>");
 
   if (!script)
