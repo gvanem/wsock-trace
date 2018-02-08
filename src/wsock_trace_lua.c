@@ -333,7 +333,6 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
  *
  *   A better way is maybe to generate an .obj-file:
  *   $(LUAJIT_ROOT)/src/luajit -b wsock_trace_init.lua wsock_trace_init.obj
- *
  *   and simply execute that.
  *
  *  \note:
