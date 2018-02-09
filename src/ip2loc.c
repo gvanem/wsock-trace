@@ -272,14 +272,14 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
   return (FALSE);
 }
 
-BOOL ip2loc_get_ipv4_entry (const in_addr *addr, struct ip2loc_entry *ent)
+BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *ent)
 {
   ARGSUSED (addr);
   ARGSUSED (ent);
   return (FALSE);
 }
 
-BOOL ip2loc_get_ipv6_entry (const in6_addr *addr, struct ip2loc_entry *ent)
+BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ent)
 {
   ARGSUSED (addr);
   ARGSUSED (ent);
