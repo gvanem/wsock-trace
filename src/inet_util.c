@@ -17,6 +17,7 @@
 
 #include <windows.h>
 #include <wininet.h>
+#include <limits.h>
 
 #include "common.h"
 #include "init.h"
