@@ -23,7 +23,7 @@ set TEST_INPUT=%TEMP%\geoip-addr.test
 echo Generating %TEST_INPUT%...
 
 if %1. == --ip2loc_4. (
-  grep.exe -o "[0-9\.]*" ..\IP2Location-C-Library\test\country_test_ipv4_data.txt > %TEST_INPUT%
+  grep --only-matching "[0-9\.]*" ..\IP2Location-C-Library\test\country_test_ipv4_data.txt > %TEST_INPUT%
   rem
   rem Add some IPv4 addresses from SpamHaus' DROP.txt too:
   rem
@@ -34,7 +34,7 @@ if %1. == --ip2loc_4. (
 )
 
 if %1. == --ip2loc_6. (
-  grep.exe -o "[0-9a-f\:]*" ..\IP2Location-C-Library\test\country_test_ipv6_data.txt > %TEST_INPUT%
+  grep --only-matching "[0-9a-f\:]*" ..\IP2Location-C-Library\test\country_test_ipv6_data.txt > %TEST_INPUT%
   rem
   rem Add some IPv6 addresses from SpamHaus' DROPv6.txt too:
   rem
