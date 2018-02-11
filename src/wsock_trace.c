@@ -195,9 +195,9 @@ DEF_FUNC (void, WSASetLastError, (int err));
 
 DEF_FUNC (int,  WSAIoctl, (SOCKET                             s,
                            DWORD                              code,
-                           VOID                              *vals,
+                           void                              *vals,
                            DWORD                              size_in,
-                           VOID                              *out_buf,
+                           void                              *out_buf,
                            DWORD                              out_size,
                            DWORD                             *size_ret,
                            WSAOVERLAPPED                     *ov,
@@ -949,8 +949,8 @@ EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *addressStr,
 }
 
 
-EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, VOID *vals, DWORD size_in,
-                            VOID *out_buf, DWORD out_size, DWORD *size_ret,
+EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, void *vals, DWORD size_in,
+                            void *out_buf, DWORD out_size, DWORD *size_ret,
                             WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   const char *in_out = "";
@@ -2726,7 +2726,7 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
 
 #define UNIMPLEMENTED() FATAL ("Call to unimplemented function %s().\n", __FUNCTION__)
 
-EXPORT VOID WINAPI FreeAddrInfoW (PADDRINFOW addr_info)
+EXPORT void WINAPI FreeAddrInfoW (PADDRINFOW addr_info)
 {
   UNIMPLEMENTED();
 }

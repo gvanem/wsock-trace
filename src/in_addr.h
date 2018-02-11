@@ -59,7 +59,7 @@
 
 #if !defined(NTDDI_VERSION) || (NTDDI_VERSION < NTDDI_VISTA) || defined(__MINGW32__) || defined(__CYGWIN__)
   EXPORT PCSTR WSAAPI inet_ntop (INT family, INET_NTOP_ADDR addr, PSTR string_buf, size_t string_buf_size);
-  EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, PVOID addr_buf);
+  EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, void *addr_buf);
 #endif
 
 extern BOOL       call_WSASetLastError, leading_zeroes;
