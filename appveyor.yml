@@ -118,8 +118,8 @@ test_script:
 after_test:
   - cmd: cd c:\projects\wsock-trace
   - cmd: if "BUILDER"=="watcom" (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)
-  - cmd: 7z a wsock_trace-%APPVEYOR_BUILD_NUMBER%.zip src\*.dll src\*.dll src\*.lib src\*.a src\*.exe src\*.c src\*.h src\*.lua > NUL
-  - cmd: 7z a wsock_trace-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt        > NUL
+  - cmd: 7z a wsock_trace-%APPVEYOR_BUILD_NUMBER%.zip .\README.md src\*.dll src\*.lib src\*.a src\*.exe src\*.lua        > NUL
+  - cmd: 7z a wsock_trace-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt > NUL
 
 artifacts:
   #
