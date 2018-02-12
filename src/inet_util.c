@@ -576,8 +576,8 @@ int INET_util_range6cmp (const struct in6_addr *addr1, const struct in6_addr *ad
   return (rc);
 }
 
-static const char *head_fmt = "%3s %-*s %-*s %-*s %-*s %s%s\n";
-static const char *line_fmt = "%3d %-*s %-*s %-*s %-*s %s%s\n";
+static const char *head_fmt = "%3s %-*s %-*s %-*s %-*s %s\n";
+static const char *line_fmt = "%3d %-*s %-*s %-*s %-*s %s\n";
 
 #define IP4_NET "69.208.0.0"
 #define IP6_NET "2001:0db8::"
@@ -588,7 +588,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
   struct in6_addr network6;
   int             i, bits, max_bits = (family == AF_INET6 ? 128 : 32);
   uint64          total_ips;
-  const char     *total_str, *overflow;
+  const char     *total_str;
   char            network_str [MAX_IP6_SZ+1];
 
   /* Print an IPv6-address chunk like this:
@@ -601,7 +601,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
                 start_ip_width, "start_ip",
                 ip_width,       "end_ip",
                 ip_width,       "mask",
-                "", "total");
+                "total");
 
   wsock_trace_inet_pton4 (IP4_NET, (u_char*)&network4);
   wsock_trace_inet_pton6 (IP6_NET, (u_char*)&network6);
@@ -611,21 +611,17 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
 
   for (bits = 0; bits <= max_bits; bits++)
   {
-    char start_ip_str [MAX_IP6_SZ+1];
-    char end_ip_str   [MAX_IP6_SZ+1];
-    char mask_str     [MAX_IP6_SZ+1];
-    char cidr_str     [MAX_IP6_SZ+11];
+    char   start_ip_str [MAX_IP6_SZ+1];
+    char   end_ip_str   [MAX_IP6_SZ+1];
+    char   mask_str     [MAX_IP6_SZ+1];
+    char   cidr_str     [MAX_IP6_SZ+11];
+    uint64 max64 = U64_SUFFIX(1) << (max_bits - bits);
 
-    if ((U64_SUFFIX(2) << (max_bits - bits)) > 0)
-    {
-      total_ips = (U64_SUFFIX(2) << (max_bits - bits));
-      overflow  = "";
-    }
-    else
-    {
-      total_ips = QWORD_MAX;
-      overflow  = ">";
-    }
+    if (bits == max_bits)
+         total_ips = 1;
+    else if (max64 > U64_SUFFIX(0))
+         total_ips = max64;
+    else total_ips = QWORD_MAX;
 
     if (family == AF_INET6)
     {
@@ -676,7 +672,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
     }
 
-    if (total_ips >= QWORD_MAX-1)
+    if (total_ips >= QWORD_MAX)
          total_str = "Inf";
     else total_str = qword_str (total_ips);
 
@@ -686,7 +682,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
                   start_ip_width, start_ip_str,
                   ip_width, end_ip_str,
                   ip_width, mask_str,
-                  overflow, total_str);
+                  total_str);
   }
   leading_zeroes = FALSE;
 }
