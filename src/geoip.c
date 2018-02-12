@@ -313,15 +313,15 @@ static DWORD geoip_parse_file (const char *file, int family)
   if (family == AF_INET)
   {
     smartlist_sort (geoip_ipv4_entries, geoip_ipv4_compare_entries);
-    TRACE (2, "Parsed %lu IPv4 records from \"%s\".\n",
-           DWORD_CAST(num4), file);
+    TRACE (2, "Parsed %s IPv4 records from \"%s\".\n",
+           dword_str((num4), file);
     return (num4);
   }
   else
   {
     smartlist_sort (geoip_ipv6_entries, geoip_ipv6_compare_entries);
-    TRACE (2, "Parsed %lu IPv6 records from \"%s\".\n",
-           DWORD_CAST(num6), file);
+    TRACE (2, "Parsed %s IPv6 records from \"%s\".\n",
+           dword_str(num6), file);
     return (num6);
   }
   return (0);
