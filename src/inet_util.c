@@ -24,10 +24,6 @@
 #include "in_addr.h"
 #include "inet_util.h"
 
-#ifndef ULLONG_MAX
-#define ULLONG_MAX    U64_SUFFIX (0xFFFFFFFFFFFFFFFF)
-#endif
-
 #ifndef IN4_CLASSD
 #define IN4_CLASSD(i) (((LONG)(i) & 0x000000F0) == 0x000000E0)
 #endif
@@ -586,11 +582,6 @@ static const char *line_fmt = "%3d %-*s %-*s %-*s %-*s %s%s\n";
 #define IP4_NET "69.208.0.0"
 #define IP6_NET "2001:0db8::"
 
-#if defined(__GNUC__) && defined(__NO_INLINE__)   /* -O0 */
-  #define trace_puts(s) printf(s)
-  #define trace_printf  printf
-#endif
-
 static void test_mask (int family, int start_ip_width, int ip_width, int cidr_width)
 {
   struct in_addr  network4;
@@ -632,7 +623,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
     }
     else
     {
-      total_ips = ULLONG_MAX;
+      total_ips = QWORD_MAX;
       overflow  = ">";
     }
 
@@ -685,7 +676,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
     }
 
-    if (total_ips >= ULLONG_MAX-1)
+    if (total_ips >= QWORD_MAX-1)
          total_str = "Inf";
     else total_str = qword_str (total_ips);
 

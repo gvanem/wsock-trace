@@ -72,6 +72,10 @@
 #define DWORD_MAX  0xFFFFFFFF
 #endif
 
+#ifndef QWORD_MAX
+#define QWORD_MAX  U64_SUFFIX (0xFFFFFFFFFFFFFFFF)
+#endif
+
 #if defined(__GNUC__) && defined(__MINGW32__)
   #define WCHAR_FMT      "S"
   #define S64_FMT        "I64d"
