@@ -222,11 +222,6 @@ BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
   return DNSBL_check_common (NULL, ip6, sbl_ref);
 }
 
-#if defined(__GNUC__) && defined(__NO_INLINE__)   /* -O0 */
-  #define trace_puts(s) printf(s)
-  #define trace_printf  printf
-#endif
-
 /*
  * Called from 'DNSBL_test()'.
  * Simply prints the 'DNSBL_list' smartlist.
