@@ -314,7 +314,7 @@ static DWORD geoip_parse_file (const char *file, int family)
   {
     smartlist_sort (geoip_ipv4_entries, geoip_ipv4_compare_entries);
     TRACE (2, "Parsed %s IPv4 records from \"%s\".\n",
-           dword_str((num4), file);
+           dword_str(num4), file);
     return (num4);
   }
   else
