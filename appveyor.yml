@@ -109,7 +109,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=1 & test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=1 &                          test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
 
 #
 # Prevent the 'watcom' directory to end up in 'artifacts'.
