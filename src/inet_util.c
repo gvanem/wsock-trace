@@ -32,6 +32,45 @@
 #define IN4_CLASSD(i) (((LONG)(i) & 0x000000F0) == 0x000000E0)
 #endif
 
+/*
+ * Fix for building with 'gcc -O0' and the GCC 'extern __inline__'
+ * insanity.
+ */
+#if defined(__GNUC__) && defined(__NO_INLINE__)   /* -O0 */
+  int IN6_IS_ADDR_LOOPBACK (const struct in6_addr *a)
+  {
+    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
+            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
+            (a->s6_words[4] == 0) && (a->s6_words[5] == 0) &&
+            (a->s6_words[6] == 0) && (a->s6_words[7] == 0x0100));
+  }
+
+  int IN6_IS_ADDR_LINKLOCAL (const struct in6_addr *a)
+  {
+    return ((a->s6_bytes[0] == 0xFE) && ((a->s6_bytes[1] & 0xC0) == 0x80));
+  }
+
+  int IN6_IS_ADDR_SITELOCAL (const struct in6_addr *a)
+  {
+    return ((a->s6_bytes[0] == 0xFE) && ((a->s6_bytes[1] & 0xC0) == 0xC0));
+  }
+
+  int IN6_IS_ADDR_V4MAPPED (const struct in6_addr *a)
+  {
+    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
+            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
+            (a->s6_words[4] == 0) && (a->s6_words[5] == 0xFFFF));
+  }
+
+  int IN6_IS_ADDR_V4COMPAT (const struct in6_addr *a)
+  {
+    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
+            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
+            (a->s6_words[4] == 0) && (a->s6_words[5] == 0) &&
+            !((a->s6_words[6] == 0) && (a->s6_addr[14] == 0) &&
+             ((a->s6_addr[15] == 0) || (a->s6_addr[15] == 1))));
+  }
+#endif
 
 /* Handy macro to both define and declare the function-pointer.
  */
@@ -546,6 +585,11 @@ static const char *line_fmt = "%3d %-*s %-*s %-*s %-*s %s%s\n";
 
 #define IP4_NET "69.208.0.0"
 #define IP6_NET "2001:0db8::"
+
+#if defined(__GNUC__) && defined(__NO_INLINE__)   /* -O0 */
+  #define trace_puts(s) printf(s)
+  #define trace_printf  printf
+#endif
 
 static void test_mask (int family, int start_ip_width, int ip_width, int cidr_width)
 {
