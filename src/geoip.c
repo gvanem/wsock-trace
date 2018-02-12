@@ -1929,7 +1929,7 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
    * Since Cygwin already converts a '@file' on the cmd-line into an
    * 'argv[]', this is of no use. And I found no way to disable this.
    */
-#if !defined(__CYGWIN__)
+#if !defined(__CYGWIN__) || 1
   if (_argc > 0 && _argv[0][0] == '@')
      return read_file (fopen(_argv[0]+1,"rb"), list);
 #endif
