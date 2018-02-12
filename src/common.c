@@ -975,9 +975,12 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 int trace_indent (size_t indent)
 {
   int rc = 0;
+  int save = tilde_escape;
 
+  tilde_escape = FALSE;  /* never look for '~' now */
   while (indent--)
     rc += trace_putc (' ');
+  tilde_escape = save;
   return (rc);
 }
 
@@ -1061,12 +1064,14 @@ int trace_putc (int ch)
   if (tilde_escape && get_color && !g_cfg.test_trace)
   {
     const WORD *color;
+    int         col_idx;
 
     get_color = FALSE;
     if (ch == '~')
        goto put_it;
 
-    switch (ch - '0')
+    col_idx = ch - '0';
+    switch (col_idx)
     {
       case 0:
            color = NULL;     /* restore to default colour */
@@ -1093,9 +1098,16 @@ int trace_putc (int ch)
            color = &g_cfg.lua.color_body;
            break;
       default:
+#if defined(_DEBUG) || defined(__NO_INLINE__)
+          /*
+           * Some strangness with 'gcc -O0' or 'cl -MDd'
+           */
+           if (ch == ' ')
+              return (1);
+#endif
            trace_flush();
            FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
-                  ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
+                  col_idx, ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
            break;
     }
     trace_flush();
