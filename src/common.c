@@ -1093,6 +1093,7 @@ int trace_putc (int ch)
            color = &g_cfg.lua.color_body;
            break;
       default:
+           trace_flush();
            FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
                   ch - '0', ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
            break;
