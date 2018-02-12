@@ -1206,7 +1206,7 @@ void geoip_update_file (int family, BOOL force_update)
 
 /* Prevent MinGW + Cygwin from globbing the cmd-line.
  */
-#ifdef __MINGW32__
+#ifdef __CYGWIN__
   int _CRT_glob = 0;
 #else
   int _dowildcard = -1;
@@ -1928,11 +1928,10 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
   /*
    * Since Cygwin already converts a '@file' on the cmd-line into an
    * 'argv[]', this is of no use. And I found no way to disable this.
+   * But try anyway.
    */
-#if !defined(__CYGWIN__) || 1
   if (_argc > 0 && _argv[0][0] == '@')
      return read_file (fopen(_argv[0]+1,"rb"), list);
-#endif
 
   if (isatty(fileno(stdin)) == 0)
      return read_file (stdin, list);
