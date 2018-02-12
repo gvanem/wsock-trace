@@ -375,7 +375,7 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
   char *_ultoa (unsigned long value, char *buf, int radix)
   {
     assert (radix == 8 || radix == 10);
-    sprintf (buf, (radix == 8) ? "%o" : "%lu", value);
+    sprintf (buf, (radix == 8) ? "%lo" : "%lu", value);
     return (buf);
   }
 
