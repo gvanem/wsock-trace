@@ -25,8 +25,13 @@
 #include "inet_util.h"
 
 #ifndef ULLONG_MAX
-#define ULLONG_MAX 18446744073709551615ULL
+#define ULLONG_MAX    U64_SUFFIX (0xFFFFFFFFFFFFFFFF)
 #endif
+
+#ifndef IN4_CLASSD
+#define IN4_CLASSD(i) (((LONG)(i) & 0x000000F0) == 0x000000E0)
+#endif
+
 
 /* Handy macro to both define and declare the function-pointer.
  */
@@ -55,7 +60,7 @@ INET_FUNC (BOOL, InternetGetLastResponseInfoA, (DWORD *err_code,
                                                 DWORD *err_buff_len));
 
 INET_FUNC (BOOL, InternetReadFile, (HINTERNET hnd,
-                                    VOID     *buffer,
+                                    void     *buffer,
                                     DWORD     num_bytes_to_read,
                                     DWORD    *num_bytes_read));
 
@@ -238,12 +243,12 @@ int INET_util_addr_is_multicast (const struct in_addr *ip4, const struct in6_add
 {
   if (ip4)
   {
-    if ((ip4->s_addr & 0xF0) == 0xE0)
+    if (IN4_CLASSD(ip4->s_addr))  /* 224.0.0.0/4, Global multicast */
        return (1);
   }
   else if (ip6)
   {
-    if (ip6->s6_bytes[0] == 0xFF)
+    if (ip6->s6_bytes[0] == 0xFF) /* ff00::/8, Global multicast */
        return (1);
   }
   return (0);
@@ -426,60 +431,19 @@ quit:
 }
 
 /*
- * https://stackoverflow.com/questions/218604/whats-the-best-way-to-convert-from-network-bitcount-to-netmask
- *
- * Ret-val on network-order
- */
-void INET_util_get_mask4a (struct in_addr *out, int bits)
-{
-  if (bits == 0)
-  {
-    out->s_addr = 0xFFFFFFFF;
-    return;
-  }
-  bits = 32 - bits;
-  out->s_addr = swap32 ((0xFFFFFFFF >> bits) << bits);
-}
-
-/*
  * The 'bits' is the suffix from a CIDR notation: "prefix/suffix".
  * Taken from libnet.
  */
-void INET_util_get_mask4b (struct in_addr *out, int bits)
+void INET_util_get_mask4 (struct in_addr *out, int bits)
 {
   *(DWORD*)out = bits ? swap32 (~0 << (32 - bits)) : 0;
 }
 
-void INET_util_get_mask4 (struct in_addr *out, int bits)
-{
-  INET_util_get_mask4b (out, bits);
-}
-
-void INET_util_get_mask6a (struct in6_addr *out, int bits)
-{
-  DWORD s;
-  int   i;
-
-  if (bits == 0)
-  {
-    memset (out, 0xFF, sizeof(*out));
-    return;
-  }
-
-  for (i = 0; i < IN6ADDRSZ && bits >= 0; i++)
-  {
-    s = 8 - (bits % 8);
-    if (bits == 0)
-         out->s6_bytes[i] = 0xFF;
-    else out->s6_bytes[i] = (0xFF >> s) << s;
-    bits -= 8;
-  }
-}
-
 /*
- * Taken from libnet and modified.
+ * Taken from libdnet's 'addr_btom()' and modified:
+ *   https://github.com/nmap/nmap/blob/master/libdnet-stripped/src/addr.c?L441#L441-L470
  */
-void INET_util_get_mask6b (struct in6_addr *out, int bits)
+void INET_util_get_mask6 (struct in6_addr *out, int bits)
 {
   char *p = (char*) out;
   int   host, net = bits / 8;
@@ -496,40 +460,6 @@ void INET_util_get_mask6b (struct in6_addr *out, int bits)
   }
   else
     memset (p+net, 0, IN6ADDRSZ-net);
-}
-
-/*
- * Taken from 2nd answer here:
- *   https://stackoverflow.com/questions/7683121/validating-ipv6-netmask-prefix
- */
-void INET_util_get_mask6c (struct in6_addr *out, int bits)
-{
-  int i;
-
-  for (i = 0; i < IN6ADDRSZ; i++)
-  {
-    BYTE mask = 0xFF;
-
-    if (bits >= 8)
-    {
-      bits -= 8;
-    }
-    else if (bits == 0)
-    {
-      mask = 0;
-    }
-    else   /* 'bits' is between 1 and 7, inclusive */
-    {
-      mask <<= (8 - bits);
-      bits = 0;
-    }
-    out->s6_addr[i] = mask;
-  }
-}
-
-void INET_util_get_mask6 (struct in6_addr *out, int bits)
-{
-  INET_util_get_mask6b (out, bits);
 }
 
 /*
@@ -554,6 +484,60 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
   return strlwr (buf);
 }
 
+/**
+ * Compare 2 IPv4-addresses; 'addr1' and 'addr2' considering 'prefix_len'.
+ *
+ * \retval 0  if 'addr1' is inside range of 'addr2' block determined by 'prefix_len'.
+ *         1  if 'addr1' is above the range of 'addr2'.
+ *        -1  if 'addr1' is below the range of 'addr2'.
+ */
+int INET_util_range4cmp (const struct in_addr *addr1, const struct in_addr *addr2, int prefix_len)
+{
+  DWORD mask, start_ip, end_ip;
+
+  if (prefix_len == 0)
+  {
+    start_ip = 0;
+    end_ip   = ULONG_MAX;
+  }
+  else
+  {
+    mask = swap32 (0xFFFFFFFF << (32 - prefix_len));
+    start_ip = addr2->s_addr & mask;
+    end_ip   = start_ip | ~mask;
+  }
+
+  if (swap32(addr1->s_addr) < swap32(start_ip))
+     return (-1);
+  if (swap32(addr1->s_addr) > swap32(end_ip))
+     return (1);
+  return (0);
+}
+
+/**
+ * Compare 2 IPv6-addresses; 'addr1' and 'addr2' considering 'prefix_len'.
+ *
+ * \retval 0  if 'addr1' is inside range of 'addr2' block determined by 'prefix_len'.
+ *         1  if 'addr1' is above the range of 'addr2'.
+ *        -1  if 'addr1' is below the range of 'addr2'.
+ */
+int INET_util_range6cmp (const struct in6_addr *addr1, const struct in6_addr *addr2, int prefix_len)
+{
+  BYTE bytes    = prefix_len / 8;
+  BYTE bits     = prefix_len % 8;
+  BYTE bmask    = 0xFF << (8 - bits);
+  int  diff, rc = memcmp (addr1, addr2, bytes);
+
+  if (rc == 0)
+  {
+    diff = (int)(addr1->s6_bytes[bytes] | bmask) - (int)(addr2->s6_bytes[bytes] | bmask);
+    if (bits == 0 || diff == 0)
+       return (0);
+    rc = diff;
+  }
+  return (rc);
+}
+
 static const char *head_fmt = "%3s %-*s %-*s %-*s %-*s %s%s\n";
 static const char *line_fmt = "%3d %-*s %-*s %-*s %-*s %s%s\n";
 
@@ -566,10 +550,12 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
   struct in6_addr network6;
   int             i, bits, max_bits = (family == AF_INET6 ? 128 : 32);
   uint64          total_ips;
-  const char     *total_str;
-  const char     *overflow = "";
+  const char     *total_str, *overflow;
   char            network_str [MAX_IP6_SZ+1];
 
+  /* Print an IPv6-address chunk like this:
+   * '2001:0800::' (not like '2001:800::' which is default).
+   */
   leading_zeroes = TRUE;
 
   trace_printf (head_fmt, "bit",
@@ -590,9 +576,18 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
     char start_ip_str [MAX_IP6_SZ+1];
     char end_ip_str   [MAX_IP6_SZ+1];
     char mask_str     [MAX_IP6_SZ+1];
-    char cidr         [MAX_IP6_SZ+11];
+    char cidr_str     [MAX_IP6_SZ+11];
 
-    total_ips = 0;
+    if ((U64_SUFFIX(2) << (max_bits - bits)) > 0)
+    {
+      total_ips = (U64_SUFFIX(2) << (max_bits - bits));
+      overflow  = "";
+    }
+    else
+    {
+      total_ips = ULLONG_MAX;
+      overflow  = ">";
+    }
 
     if (family == AF_INET6)
     {
@@ -606,18 +601,13 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
          */
         memset (&start_ip, '\0', sizeof(start_ip));
         memset (&end_ip, 0xFF, sizeof(end_ip));
-        total_ips = ULLONG_MAX;
       }
       else for (i = 0; i < IN6ADDRSZ; i++)
       {
         start_ip.s6_bytes[i] = network6.s6_bytes[i] & mask.s6_bytes[i];
         end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
-        if (i < 14)
-             total_ips += (2 << i) * (end_ip.s6_bytes[i] - start_ip.s6_bytes[i]);
-        else if (bits < 13)
-             overflow = ">";
-        else overflow = "";
       }
+
       _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
       _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
       _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&mask, mask_str, sizeof(mask_str));
@@ -648,18 +638,13 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
     }
 
-    if (family == AF_INET6)
-    {
-      if (total_ips >= ULLONG_MAX-1)
-           total_str = "Inf";
-      else total_str = qword_str (total_ips);
-    }
-    else
-      total_str = qword_str (total_ips);
+    if (total_ips >= ULLONG_MAX-1)
+         total_str = "Inf";
+    else total_str = qword_str (total_ips);
 
-    snprintf (cidr, sizeof(cidr), "%s/%u", network_str, bits);
+    snprintf (cidr_str, sizeof(cidr_str), "%s/%u", network_str, bits);
     trace_printf (line_fmt, bits,
-                  cidr_width, cidr,
+                  cidr_width, cidr_str,
                   start_ip_width, start_ip_str,
                   ip_width, end_ip_str,
                   ip_width, mask_str,
