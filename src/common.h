@@ -175,13 +175,13 @@ extern void debug_printf (const char *file, unsigned line,
 
 extern int    trace_binmode;
 
-extern int    trace_printf  (_Printf_format_string_ const char *fmt, ...)          ATTR_PRINTF (1,2);
-extern int    trace_vprintf (_Printf_format_string_ const char *fmt, va_list args) ATTR_PRINTF (1,0);
-extern int    trace_puts    (const char *str);
-extern int    trace_putc    (int ch);
-extern int    trace_putc_raw(int ch);
-extern int    trace_indent  (size_t indent);
-extern size_t trace_flush   (void);
+extern int    trace_printf   (_Printf_format_string_ const char *fmt, ...)          ATTR_PRINTF (1,2);
+extern int    trace_vprintf  (_Printf_format_string_ const char *fmt, va_list args) ATTR_PRINTF (1,0);
+extern int    trace_puts     (const char *str);
+extern int    trace_putc     (int ch);
+extern int    trace_putc_raw (int ch);
+extern int    trace_indent   (size_t indent);
+extern size_t trace_flush    (void);
 
 /* Init/exit functions for stuff in common.c.
  */
