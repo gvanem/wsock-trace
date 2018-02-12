@@ -104,7 +104,11 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
   }
 
 #elif defined(__GNUC__)
-  extern __inline__ ULONG_PTR get_EBP (void)
+  #if defined(__NO_INLINE__)
+    static ULONG_PTR get_EBP (void)
+  #else
+    extern __inline__ ULONG_PTR get_EBP (void)
+  #endif
   {
     ULONG_PTR ebp;
     __asm__ __volatile__ ("movl %%ebp,%k0" : "=r" (ebp) : );
