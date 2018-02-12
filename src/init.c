@@ -87,11 +87,15 @@ static void init_timestamp (void)
 {
   LARGE_INTEGER rc;
   uint64        frequency;
+  double        MHz;
 
   QueryPerformanceFrequency (&rc);
   frequency = rc.QuadPart;
   g_cfg.clocks_per_usec = frequency / 1000000ULL;
-  TRACE (2, "CPU speed: %.0f MHz\n", (double)frequency / 1E3);
+  MHz = (double)frequency / 1E3;
+  if (MHz > 1000.0)
+       TRACE (2, "CPU speed: %.3f GHz\n", MHz/1000.0);
+  else TRACE (2, "CPU speed: %.0f MHz\n", MHz);
 
   QueryPerformanceCounter (&rc);
   g_cfg.start_ticks = rc.QuadPart;
