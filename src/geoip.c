@@ -88,15 +88,6 @@ struct geoip_stats {
 static struct geoip_stats *geoip_stats_buf = NULL;
 
 /*
- * Simplified version of the one in wsock_trace.c.
- */
-static const char *get_ws_error (void)
-{
-  static char buf[150];
-  return ws_strerror (WSAGetLastError(), buf, sizeof(buf));
-}
-
-/*
  * smartlist_sort() helper: return -1, 1, or 0 based on comparison of two
  * 'ipv4_node'
  */
@@ -1212,6 +1203,15 @@ void geoip_update_file (int family, BOOL force_update)
 
 #include "getopt.h"
 #include "dnsbl.h"
+
+/*
+ * Simplified version of the one in wsock_trace.c.
+ */
+static const char *get_ws_error (void)
+{
+  static char buf[150];
+  return ws_strerror (WSAGetLastError(), buf, sizeof(buf));
+}
 
 /*
  * Determine length of the network part in an IPv4 address.
