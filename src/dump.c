@@ -1290,8 +1290,8 @@ const char *sockopt_value (const char *opt_val, int opt_len)
 
     case sizeof(DWORD):
          val = *(DWORD*) opt_val;
-         if (val == ULONG_MAX)
-              strcpy (buf, "ULONG_MAX");
+         if (val == DWORD_MAX)
+              strcpy (buf, "DWORD_MAX");
          else snprintf (buf, sizeof(buf), "%lu", DWORD_CAST(val));
          break;
 

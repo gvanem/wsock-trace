@@ -68,6 +68,10 @@
 #define MAX_HOST_LABELS  8
 #endif
 
+#ifndef DWORD_MAX
+#define DWORD_MAX  0xFFFFFFFF
+#endif
+
 #if defined(__GNUC__) && defined(__MINGW32__)
   #define WCHAR_FMT      "S"
   #define S64_FMT        "I64d"

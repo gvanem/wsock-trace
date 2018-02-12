@@ -540,7 +540,7 @@ int INET_util_range4cmp (const struct in_addr *addr1, const struct in_addr *addr
   if (prefix_len == 0)
   {
     start_ip = 0;
-    end_ip   = ULONG_MAX;
+    end_ip   = DWORD_MAX;
   }
   else
   {
@@ -670,8 +670,8 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         /* A 'mask' from 'INET_util_get_mask4 (&mask, 0)' cannot be used here.
          */
         start_ip.s_addr = 0;
-        end_ip.s_addr   = ULONG_MAX;
-        total_ips       = ULONG_MAX;
+        end_ip.s_addr   = DWORD_MAX;
+        total_ips       = DWORD_MAX;
       }
       else
       {
