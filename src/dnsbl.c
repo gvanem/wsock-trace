@@ -219,6 +219,8 @@ BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
 
 BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
 {
+  if (!INET_util_addr_is_global(NULL,ip6))
+     return (FALSE);
   return DNSBL_check_common (NULL, ip6, sbl_ref);
 }
 
