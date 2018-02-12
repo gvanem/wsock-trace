@@ -1204,6 +1204,11 @@ void geoip_update_file (int family, BOOL force_update)
 #include "getopt.h"
 #include "dnsbl.h"
 
+/* Prevent MinGW + Cygwin from globbing the cmd-line.
+ */
+int _CRT_glob = 0;
+int _dowildcard = -1;
+
 /*
  * Simplified version of the one in wsock_trace.c.
  */
