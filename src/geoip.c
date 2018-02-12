@@ -1206,8 +1206,11 @@ void geoip_update_file (int family, BOOL force_update)
 
 /* Prevent MinGW + Cygwin from globbing the cmd-line.
  */
-int _CRT_glob = 0;
-int _dowildcard = -1;
+#ifdef __MINGW32__
+  int _CRT_glob = 0;
+#else
+  int _dowildcard = -1;
+#endif
 
 /*
  * Simplified version of the one in wsock_trace.c.
