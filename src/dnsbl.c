@@ -107,31 +107,30 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
 {
   const struct DNSBL_info *dnsbl = *member;
   const struct in_addr    *ia    = key;
-  DWORD mask     = dnsbl->u.ip4.mask.s_addr;
-  DWORD netw     = dnsbl->u.ip4.network.s_addr;
-  DWORD start_ip = netw & mask;
-  DWORD end_ip   = start_ip | ~mask;
   int   rc;
 
   if (dnsbl->family != AF_INET)
   {
+    /* Since AF_INET6 networks are sorted last in 'DNSBL_list', force
+     * 'smartlist_bsearch_idx()' too look closer to index 0.
+     */
     TRACE (3, "Wrong family\n");
     return (-1);
   }
 
-  if (swap32(ia->s_addr) < swap32(start_ip))
-       rc = -1;
-  else if (swap32(ia->s_addr) > swap32(end_ip))
-       rc = 1;
-  else rc = 0;
+  rc = INET_util_range4cmp (ia, &dnsbl->u.ip4.network, dnsbl->bits);
 
   if (g_cfg.trace_level >= 3)
   {
-    char net_str     [MAX_IP4_SZ+1];
-    char mask_str    [MAX_IP4_SZ+1];
-    char ip_str      [MAX_IP4_SZ+1];
-    char start_ip_str[MAX_IP4_SZ+1];
-    char end_ip_str  [MAX_IP4_SZ+1];
+    char  net_str     [MAX_IP4_SZ+1];
+    char  mask_str    [MAX_IP4_SZ+1];
+    char  ip_str      [MAX_IP4_SZ+1];
+    char  start_ip_str[MAX_IP4_SZ+1];
+    char  end_ip_str  [MAX_IP4_SZ+1];
+    DWORD mask     = dnsbl->u.ip4.mask.s_addr;
+    DWORD netw     = dnsbl->u.ip4.network.s_addr;
+    DWORD start_ip = netw & mask;
+    DWORD end_ip   = start_ip | ~mask;
 
     _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.network, net_str, sizeof(net_str));
     _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.mask, mask_str, sizeof(mask_str));
@@ -154,56 +153,22 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
 {
   const struct DNSBL_info *dnsbl = *member;
   const struct in6_addr   *ia    = key;
-  struct in6_addr start_ip;
-  struct in6_addr end_ip;
-  int    i, rc = -1;
-  int    range = min (IN6ADDRSZ-1, 8*(dnsbl->bits/8));
+  int    rc = -1;
 
   if (dnsbl->family != AF_INET6)
   {
     /* Since AF_INET6 networks are sorted last in 'DNSBL_list', force
-     * 'smartlist_bsearch_idx()' too look further down.
+     * 'smartlist_bsearch_idx()' too look closer to the end-index.
      */
-    TRACE (2, "Wrong family\n");
+    TRACE (3, "Wrong family\n");
     return (1);
   }
 
-  /* Create the 'start_ip' and 'end_ip' addresses.
-   */
-  for (i = 0; i < IN6ADDRSZ; i++)
+  rc = INET_util_range6cmp (ia, &dnsbl->u.ip6.network, dnsbl->bits);
+
+  if (g_cfg.trace_level >= 3)
   {
-    start_ip.s6_bytes[i] = dnsbl->u.ip6.network.s6_bytes[i] & dnsbl->u.ip6.mask.s6_bytes[i];
-    end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~dnsbl->u.ip6.mask.s6_bytes[i];
-  }
-
-  for (i = 0; i <= range; i++)
-  {
-    TRACE (4, "ia[%2d]: %02X, start_ip[%2d]: %02X, end_ip[%2d]: %02X\n",
-              i, ia->s6_bytes[i], i, start_ip.s6_bytes[i], i, end_ip.s6_bytes[i]);
-
-    if (ia->s6_bytes[i] < start_ip.s6_bytes[i])
-    {
-      rc = -1;
-      break;
-    }
-    else if (ia->s6_bytes[i] > end_ip.s6_bytes[i])
-    {
-      rc = 1;
-      break;
-    }
-    /* Hit the mask; stop.
-     */
-    if (end_ip.s6_bytes[i] == 0xFF)
-       break;
-
-    /* Could be this one; check the other bytes
-     */
-    if (ia->s6_bytes[i] >= start_ip.s6_bytes[i])
-       rc = 0;
-  }
-
-  if (g_cfg.trace_level >= 2)
-  {
+    struct in6_addr start_ip, end_ip;
     char net_str     [MAX_IP6_SZ+1];
     char mask_str    [MAX_IP6_SZ+1];
     char ip_str      [MAX_IP6_SZ+1];
@@ -216,9 +181,9 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
     _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
     _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
 
-    TRACE (2, "ip: %-20s net: %-20s (%-20s - %-30s)\n"
-               "                mask: 0x%s, i: %d, rc: %d\n",
-           ip_str, net_str, start_ip_str, end_ip_str, mask_str, i, rc);
+    TRACE (3, "ip: %-20s net: %-20s (%-20s - %-30s)\n"
+               "                mask: 0x%s, rc: %d\n",
+           ip_str, net_str, start_ip_str, end_ip_str, mask_str, rc);
   }
   return (rc);
 }
