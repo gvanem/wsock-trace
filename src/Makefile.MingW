@@ -5,9 +5,9 @@
 # G. Vanem <gvanem@yahoo.no> 2011 - 2017.
 #
 
-USE_CRT_DEBUG = 0
-USE_BFD       = 0
-USE_DEF_FILE  = 0
+USE_CRT_DEBUG ?= 0
+USE_BFD        = 0
+USE_DEF_FILE   = 0
 
 #
 # Use the IP2Location library?
