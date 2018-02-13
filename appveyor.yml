@@ -19,8 +19,12 @@ environment:
       CPU:     x64
     - BUILDER: mingw32
       CPU:     x86
+      DEBUG:   0
+      DEBUG:   1
     - BUILDER: mingw64
       CPU:     x64
+      DEBUG:   0
+      DEBUG:   1
     - BUILDER: cygwin32
       CPU:     x86
     - BUILDER: cygwin64
@@ -96,8 +100,8 @@ build_script:
   - cmd: set CYGWIN=nodosfilewarning
 
   - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
-  - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW
-  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW USE_CRT_DEBUG=%DEBUG%
+  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW USE_CRT_DEBUG=%DEBUG%
   - cmd: if "%BUILDER%"=="watcom"   wmake -h      -f Makefile.Watcom
   - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
   - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
