@@ -31,7 +31,7 @@ RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
 OBJ_DIR = Cygwin_obj
 
 ifeq ($(USE_CRT_DEBUG),1)
-  CFLAGS += -O2 -ggdb
+  CFLAGS += -O0 -ggdb
 else
   CFLAGS  += -O3 -fomit-frame-pointer
   LDFLAGS += -s
