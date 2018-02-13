@@ -152,7 +152,6 @@ $(LINK_ARG): $(__MAKEFILES__)
 #
 # Dependencies based on "gcc -MM .."
 #
-common.h:                   wsock_defs.h
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
 $(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h
 $(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h geoip.h smartlist.h &
