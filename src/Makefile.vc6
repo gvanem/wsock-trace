@@ -12,8 +12,13 @@
 # Then cd to this directory and run this makefile with:
 #   nmake -f Makefile.vc6 clean all
 #
+!if "$(USE_CRT_DEBUG)" == ""
 USE_CRT_DEBUG = 0
-USE_DEF_FILE  = 1
+!endif
+
+!if "$(USE_DEF_FILE)" == ""
+USE_DEF_FILE = 1
+!endif
 
 #
 # The IP2Location library:
