@@ -69,7 +69,7 @@ endif
 LDFLAGS += -Wl,--print-map,--sort-common -t
 
 ifeq ($(USE_CRT_DEBUG),1)
-  CFLAGS += -O2 -g -D_DEBUG
+  CFLAGS += -O0 -ggdb -D_DEBUG
 else
   CFLAGS  += -O3 -fomit-frame-pointer
   LDFLAGS += # -s
