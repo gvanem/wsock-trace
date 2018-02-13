@@ -102,8 +102,8 @@ static void print_one_address (thread_args *args, DWORD64 addr)
   DWORD           tmp;
   char            path [MAX_PATH] = { '\0' };
 
-  /* Assume the module is MSVC/clang-cl compiled. Call 'p_SymFromAddr' and
-   * 'p_SymGetLineFromAddr64()' if this is the case. If the '<module>.pdb'
+  /* Assume the module is MSVC/clang-cl compiled. Call 'p_SymFromAddr()'
+   * and 'p_SymGetLineFromAddr64()' if this is the case. If the '<module>.pdb'
    * is present while running a MinGW compiled program, this just returns
    * wrong information from dbghelp.dll.
    */
@@ -144,9 +144,9 @@ static void print_one_address (thread_args *args, DWORD64 addr)
 #if !defined(_MSC_VER) && !defined(__clang__)
   if (path[0] && !stricmp(our_module,path))
      have_PDB_info = FALSE;
- /*
-  * otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
-  */
+  /*
+   * otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
+   */
 #endif
 
   if (have_PDB_info && (*args->p_SymFromAddr)(args->proc, addr, &displacement, info))
@@ -215,6 +215,7 @@ static DWORD WINAPI dump_thread (void *arg)
     TRACE (1, "Failed in OpenThread(): %s.\n", win_strerror(GetLastError()));
     goto sym_cleanup;
   }
+
   if (SuspendThread(thr) == (DWORD)-1)
   {
     TRACE (1, "Failed in SuspendThread(): %s.\n", win_strerror(GetLastError()));
