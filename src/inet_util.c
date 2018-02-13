@@ -457,7 +457,7 @@ int INET_util_network_len128 (const struct in6_addr *a, const struct in6_addr *b
   int  i, j, bits = 0;
   BYTE v;
 
-  for (i = 15; i >= 0; i--)
+  for (i = IN6ADDRSZ-1; i >= 0; i--)
   {
     v = (a->s6_bytes[i] ^ b->s6_bytes[i]);
     for (j = 0; j < 8; j++, bits++)
@@ -465,7 +465,7 @@ int INET_util_network_len128 (const struct in6_addr *a, const struct in6_addr *b
            goto quit;
   }
 quit:
-  return (128 - bits);
+  return (MAX_IPV6_CIDR_MASK - bits);
 }
 
 /*
@@ -590,6 +590,20 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
   uint64          total_ips;
   const char     *total_str;
   char            network_str [MAX_IP6_SZ+1];
+  BOOL lshift_prob = FALSE;
+
+#if defined(__GNUC__) || defined(__WATCOMC__)
+  /*
+   * The below code for 'total_ips' shows some stange issues with
+   * GCC/Watcom and left shifts > 32. So just drop showing 'total_ips'
+   * for IPv6.
+   */
+  if (max_bits == 128)
+     lshift_prob = TRUE;
+  total_str = "";
+#else
+  total_str = "total";
+#endif
 
   /* Print an IPv6-address chunk like this:
    * '2001:0800::' (not like '2001:800::' which is default).
@@ -601,7 +615,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
                 start_ip_width, "start_ip",
                 ip_width,       "end_ip",
                 ip_width,       "mask",
-                "total");
+                total_str);
 
   wsock_trace_inet_pton4 (IP4_NET, (u_char*)&network4);
   wsock_trace_inet_pton6 (IP6_NET, (u_char*)&network6);
@@ -611,17 +625,21 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
 
   for (bits = 0; bits <= max_bits; bits++)
   {
-    char   start_ip_str [MAX_IP6_SZ+1];
-    char   end_ip_str   [MAX_IP6_SZ+1];
-    char   mask_str     [MAX_IP6_SZ+1];
-    char   cidr_str     [MAX_IP6_SZ+11];
-    uint64 max64 = U64_SUFFIX(1) << (max_bits - bits);
+    char start_ip_str [MAX_IP6_SZ+1];
+    char end_ip_str   [MAX_IP6_SZ+1];
+    char mask_str     [MAX_IP6_SZ+1];
+    char cidr_str     [MAX_IP6_SZ+11];
 
-    if (bits == max_bits)
-         total_ips = 1;
-    else if (max64 > U64_SUFFIX(0))
-         total_ips = max64;
-    else total_ips = QWORD_MAX;
+    if (!lshift_prob)
+    {
+      uint64 max64 = U64_SUFFIX(1) << (max_bits - bits);
+
+      if (bits == max_bits)
+           total_ips = 1;
+      else if (max64 > U64_SUFFIX(0))
+           total_ips = max64;
+      else total_ips = QWORD_MAX;
+    }
 
     if (family == AF_INET6)
     {
@@ -672,7 +690,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
       _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
     }
 
-    if (total_ips >= QWORD_MAX)
+    if (lshift_prob)
+         total_str = "";
+    else if (total_ips >= QWORD_MAX)
          total_str = "Inf";
     else total_str = qword_str (total_ips);
 
