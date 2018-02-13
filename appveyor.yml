@@ -25,10 +25,22 @@ environment:
       DEBUG:   1
     - BUILDER: mingw64
       CPU:     x64
+      DEBUG:   0
+    - BUILDER: mingw64
+      CPU:     x64
+      DEBUG:   1
     - BUILDER: cygwin32
       CPU:     x86
+      DEBUG:   0
+    - BUILDER: cygwin32
+      CPU:     x86
+      DEBUG:   1
     - BUILDER: cygwin64
       CPU:     x64
+      DEBUG:   0
+    - BUILDER: cygwin64
+      CPU:     x64
+      DEBUG:   1
     - BUILDER: watcom
       CPU:     x86
 
@@ -85,6 +97,7 @@ install:
 
 build_script:
   - cmd: appveyor-script.bat init
+  - cmd: copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace
 
   #
   # Download and extract OpenWatcom 2.0 using 'curl'
@@ -101,10 +114,10 @@ build_script:
 
   - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
   - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW USE_CRT_DEBUG=%DEBUG%
-  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW
+  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW USE_CRT_DEBUG=%DEBUG%
   - cmd: if "%BUILDER%"=="watcom"   wmake -h      -f Makefile.Watcom
-  - cmd: if "%BUILDER%"=="cygwin32" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
-  - cmd: if "%BUILDER%"=="cygwin64" (copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace & make -f Makefile.CygWin)
+  - cmd: if "%BUILDER%"=="cygwin32" make          -f Makefile.CygWin USE_CRT_DEBUG=%DEBUG%
+  - cmd: if "%BUILDER%"=="cygwin64" make          -f Makefile.CygWin USE_CRT_DEBUG=%DEBUG%
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe
