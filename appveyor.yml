@@ -97,7 +97,6 @@ install:
 
 build_script:
   - cmd: appveyor-script.bat init
-  - cmd: copy ..\wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace
 
   #
   # Download and extract OpenWatcom 2.0 using 'curl'
