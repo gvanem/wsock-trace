@@ -1,8 +1,20 @@
-; Spamhaus IPv6 DROP List 2018/02/07 - (c) 2018 The Spamhaus Project
+; Spamhaus IPv6 DROP List 2018/03/07 - (c) 2018 The Spamhaus Project
 ; https://www.spamhaus.org/drop/dropv6.txt
-; Last-Modified: Fri,  1 Dec 2017 14:00:40 GMT
-; Expires: Wed, 07 Feb 2018 09:00:00 GMT
+; Last-Modified: Thu,  1 Mar 2018 00:15:05 GMT
+; Expires: Wed, 07 Mar 2018 22:08:45 GMT
+2a00:4c80::/29 ; SBL303520
 2a0c:c600::/32 ; SBL382543
+2a0b:d900::/29 ; SBL390720
+2a0b:dc0::/29 ; SBL371619
+2a0a:ed40::/29 ; SBL371617
+2a0c:d980::/29 ; SBL390707
+2a0c:da80::/29 ; SBL390705
+2a0a:a6c0::/29 ; SBL390700
+2a0c:cc80::/29 ; SBL390697
+2a0c:a980::/29 ; SBL390694
+2a0c:b680::/29 ; SBL390693
+2a0c:ca80::/29 ; SBL390696
+2a0c:9e80::/29 ; SBL390695
 2a0a:c3c0::/29 ; SBL380805
 2a0b:f500::/29 ; SBL366505
 2a07:7700::/29 ; SBL342975
