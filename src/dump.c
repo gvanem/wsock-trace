@@ -1947,6 +1947,9 @@ void dump_countries (int type, const char **addresses)
 {
   int i;
 
+  if (g_cfg.trace_level <= 0)
+     return;
+
   WSAERROR_PUSH();
 
   trace_indent (g_cfg.trace_indent+2);
@@ -1998,7 +2001,7 @@ void dump_countries_sockaddr (const struct sockaddr *sa)
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
 
-  if (!sa)
+  if (!sa || g_cfg.trace_level <= 0)
      return;
 
   if (sa->sa_family == AF_INET)
@@ -2024,6 +2027,9 @@ void dump_countries_sockaddr (const struct sockaddr *sa)
 void dump_countries_addrinfo (const struct addrinfo *ai)
 {
   int num;
+
+  if (g_cfg.trace_level <= 0)
+     return;
 
   WSAERROR_PUSH();
 
