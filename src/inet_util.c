@@ -196,6 +196,8 @@ DWORD INET_util_download_file (const char *file, const char *url)
     goto quit;
   }
 
+  TRACE (2, "Calling InternetOpenUrlA(): URL: %s.\n", url);
+
   h2 = (*p_InternetOpenUrlA) (h1, url, NULL, 0, flags, (DWORD_PTR)0);
   if (!h2)
   {
