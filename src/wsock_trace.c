@@ -1283,7 +1283,7 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   WSTRACE ("bind (%s, %s) --> %s",
            socket_number(s), sockaddr_str2(addr,&addr_len), get_error(rc));
 
-  if (exclude_this)
+  if (!exclude_this)
   {
     if (g_cfg.geoip_enable)
        dump_countries_sockaddr (addr);
