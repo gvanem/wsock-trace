@@ -612,7 +612,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
    */
   leading_zeroes = TRUE;
 
-  trace_printf (head_fmt, "bit",
+  trace_printf (head_fmt,       "bit",
                 cidr_width,     "CIDR",
                 start_ip_width, "start_ip",
                 ip_width,       "end_ip",
@@ -718,7 +718,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
 void INET_util_test_mask4 (void)
 {
   trace_puts ("\nINET_util_test_mask4()\n");
-  test_mask (AF_INET, strlen(IP4_NET), strlen("255.255.255.255"), strlen(IP4_NET "/32"));
+  test_mask (AF_INET, (int)strlen(IP4_NET), (int)strlen("255.255.255.255"), (int)strlen(IP4_NET "/32"));
 }
 
 /*
@@ -730,6 +730,6 @@ void INET_util_test_mask4 (void)
 void INET_util_test_mask6 (void)
 {
   trace_puts ("\nINET_util_test_mask6()\n");
-  test_mask (AF_INET6, strlen(IP6_NET), MAX_IP6_SZ-7, strlen(IP6_NET "/128"));
+  test_mask (AF_INET6, (int)strlen(IP6_NET), MAX_IP6_SZ-7, (int)strlen(IP6_NET "/128"));
 }
 
