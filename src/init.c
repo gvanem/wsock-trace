@@ -1152,9 +1152,6 @@ void wsock_trace_init (void)
     IDNA_exit();
   }
 
-  geoip_init (NULL, NULL);
-  DNSBL_init();
-
   now = get_time_now();
 
   if (g_cfg.trace_level > 0 &&
@@ -1252,6 +1249,9 @@ void wsock_trace_init (void)
 
   TRACE (3, "curr_prog: '%s', curr_dir: '%s'\n"
             "  prog_dir: '%s'\n", curr_prog, curr_dir, prog_dir);
+
+  geoip_init (NULL, NULL);
+  DNSBL_init();
 
 #if !defined(TEST_GEOIP) && !defined(TEST_NLM)
   if (g_cfg.trace_level >= 3)
