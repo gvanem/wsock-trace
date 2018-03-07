@@ -325,8 +325,7 @@ int DNSBL_test (void)
       struct in6_addr ip6;
     } addr;
     const char *sbl_ref = NULL;
-    const char *country_code, *location;
-    const char *okay = "~3failed ~0";
+    const char *country_code, *location, *okay;
     BOOL        res;
 
     _wsock_trace_inet_pton (test->family, test->addr, (u_char*)&addr);
@@ -348,12 +347,13 @@ int DNSBL_test (void)
        sbl_ref = "<none>";
 
     if (!strcmp(sbl_ref, test->sbl_ref))
-       okay = "~4success~0";
+         okay = "~4success";
+    else okay = "~3failed ";
 
     if (res)
        rc++;
 
-    trace_printf ("~1%-15s~0 -> %d, ~1SBL%-7s~0 %s  country: %s, location: %s~0\n",
+    trace_printf ("~1%-15s~0 -> %d, ~1SBL%-7s~0 %s~0  country: %s, location: %s~0\n",
                   test->addr, res, sbl_ref, okay, country_code, location);
   }
   return (rc);
