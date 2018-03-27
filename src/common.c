@@ -1110,8 +1110,12 @@ int trace_putc (int ch)
                   col_idx, ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
            break;
     }
-    trace_flush();
-    set_color (color);
+
+    if (!g_cfg.trace_use_ods)
+    {
+      trace_flush();
+      set_color (color);
+    }
     return (1);
   }
 
