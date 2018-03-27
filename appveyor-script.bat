@@ -38,7 +38,13 @@ echo dump_data              = 1                             >> wsock_trace.appve
 echo max_data               = 5000                          >> wsock_trace.appveyor
 echo max_displacement       = 1000                          >> wsock_trace.appveyor
 echo exclude                = htons,htonl,inet_addr         >> wsock_trace.appveyor
-echo hosts_file             = %CD%\hosts                    >> wsock_trace.appveyor
+
+::
+:: Windows-Defender thinks generating a 'hosts' file is suspicious.
+:: Ref:
+::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
+::
+echo hosts_file             = %CD%\appveyor-hosts           >> wsock_trace.appveyor
 echo [geoip]                                                >> wsock_trace.appveyor
 echo enable                 = 1                             >> wsock_trace.appveyor
 echo use_generated          = 0                             >> wsock_trace.appveyor
@@ -64,19 +70,19 @@ echo drop_url    = http://www.spamhaus.org/drop/drop.txt    >> wsock_trace.appve
 echo edrop_url   = http://www.spamhaus.org/drop/edrop.txt   >> wsock_trace.appveyor
 echo dropv6_url  = https://www.spamhaus.org/drop/dropv6.txt >> wsock_trace.appveyor
 
-echo Generating hosts file...
-echo #                                               > hosts
-echo # This file was generated from %0.             >> hosts
-echo #                                              >> hosts
-echo 127.0.0.1   localhost                          >> hosts
-echo ::1         localhost                          >> hosts
-echo 127.0.0.1   mpa.one.microsoft.com              >> hosts
-echo 8.8.8.8     google-public-dns-a.google.com     >> hosts
-echo #                                              >> hosts
-echo # This hostname is used in test.exe            >> hosts
-echo # check that it prints "from 'hosts' file".    >> hosts
-echo #                                              >> hosts
-echo 10.0.0.20   www.no-such-host.com               >> hosts
+echo Generating appveyor-hosts file...
+echo #                                               > appveyor-hosts
+echo # This file was generated from %0.             >> appveyor-hosts
+echo #                                              >> appveyor-hosts
+echo 127.0.0.1   localhost                          >> appveyor-hosts
+echo ::1         localhost                          >> appveyor-hosts
+echo 127.0.0.1   mpa.one.microsoft.com              >> appveyor-hosts
+echo 8.8.8.8     google-public-dns-a.google.com     >> appveyor-hosts
+echo #                                              >> appveyor-hosts
+echo # This hostname is used in test.exe            >> appveyor-hosts
+echo # check that it prints "from 'hosts' file".    >> appveyor-hosts
+echo #                                              >> appveyor-hosts
+echo 10.0.0.20   www.no-such-host.com               >> appveyor-hosts
 
 ::
 :: These should survive until 'build_script' for 'msvc', 'mingw32', 'mingw64,
@@ -98,6 +104,6 @@ exit /b 0
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
-del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor hosts watcom20.zip 2> NUL
+del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor appveyor-hosts watcom20.zip 2> NUL
 echo Cleaning done.
 exit /b 0
