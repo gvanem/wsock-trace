@@ -66,7 +66,7 @@ void overlap_exit (void)
 
   if (max >= 1)
   {
-    TRACE ("%d overlapped tranfers not completed:\n", max);
+    TRACE ("%d overlapped transfers not completed:\n", max);
     for (i = 0; i < max; i++)
     {
       ov = smartlist_get (ov_list, i);
@@ -78,7 +78,7 @@ void overlap_exit (void)
   {
     /* Print this only if we stored at least 1 overlap structure.
      */
-    TRACE ("All overlapped tranfers completed.\n");
+    TRACE ("All overlapped transfers completed.\n");
   }
 
   for (i = 0; i < max; i++)
