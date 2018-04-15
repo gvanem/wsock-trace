@@ -296,7 +296,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 ### Future plans:
 
    1. Get the decoding of calling function, file-name and lines in the MinGW/CygWin
-	    ports working.
+      ports working.
 
    2. Lua-script integration; use a `*.lua` file to exclude/include processes and/or
       functions to trace.
