@@ -148,12 +148,12 @@ artifacts:
 #
 # Run build only if one of the following files is modified on commit
 #
-# only_commits:
-#   files:
-#     *.bat
-#     src/*.c
-#     src/*.h
-#     src/Makefile.*
+only_commits:
+  files:
+    '*.bat'
+    'src/*.c'
+    'src/*.h'
+    'src/Makefile.*'
 
 #
 # todo: One day...
