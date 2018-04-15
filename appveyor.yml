@@ -150,7 +150,7 @@ artifacts:
 #
 only_commits:
   files:
-    - '*.bat'
+    - appveyor*
     - src/*.c
     - src/*.h
     - src/Makefile.*
