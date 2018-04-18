@@ -80,8 +80,8 @@ install:
   # And setup the compiler environment for Watcom
   # (it seems it cannot be done in 'appveyor-script.bat init')
   #
-  - cmd: set WATCOM=%CD%\watcom
-  - cmd: set PATH=%CD%\src;%WATCOM%\binnt;%PATH%
+  - cmd: set WATCOM=%APPVEYOR_BUILD_FOLDER%\watcom
+  - cmd: set PATH=%APPVEYOR_BUILD_FOLDER%\src;%WATCOM%\binnt;%PATH%
   - cmd: set NT_INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
   - cmd: set DISABLEDELAYEDEXPANSION=0
 
