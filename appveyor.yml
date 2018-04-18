@@ -105,7 +105,7 @@ build_script:
             curl -O -# http://www.watt-32.net/CI/watcom20.zip &
             7z x -o%WATCOM% watcom20.zip > NUL)
 
-  - cmd: cd c:\projects\wsock-trace\src
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%\src
   - cmd: set USE_LUA=1
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
@@ -133,7 +133,7 @@ test_script:
 # Create a .zip of the whole thing.
 #
 after_test:
-  - cmd: cd c:\projects\wsock-trace
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%
   - cmd: if "%BUILDER%"=="watcom" (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)                                     > NUL
   - cmd: 7z a wsock_trace-%BUILDER%-%APPVEYOR_BUILD_NUMBER%.zip .\README.md src\*.dll src\*.lib src\*.a src\*.exe src\*.lua        > NUL
   - cmd: 7z a wsock_trace-%BUILDER%-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt > NUL
