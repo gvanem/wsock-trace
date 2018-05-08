@@ -265,6 +265,13 @@ DEF_FUNC (int, WSASendTo, (SOCKET                             s,
                            WSAOVERLAPPED                     *ow,
                            LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
 
+DEF_FUNC (int, WSASendMsg, (SOCKET                             s,
+                            WSAMSG                            *msg,
+                            DWORD                              flags,
+                            DWORD                             *num_bytes_sent,
+                            WSAOVERLAPPED                     *ov,
+                            LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
+
 DEF_FUNC (int, WSAConnect, (SOCKET                 s,
                                  const struct sockaddr *name,
                                  int                    namelen,
@@ -477,12 +484,12 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
            // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
 
-#if 0        /* to-do? Allthough 'WSASendMsg()' seems to be an 'extension-function'
+             /* Allthough 'WSASendMsg()' seems to be an 'extension-function'
               * accessible only (?) via the 'WSAID_WSASENDMSG' GUID, it is present in
-              * libws2_32.a in some MinGW distros
+              * libws2_32.a in some MinGW distros.
+              * Add it as an option.
               */
               ADD_VALUE (1, "ws2_32.dll", WSASendMsg),
-#endif
             };
 
 void load_ws2_funcs (void)
@@ -1983,6 +1990,31 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
   if (g_cfg.send_delay)
      SleepEx (g_cfg.send_delay, FALSE);
 
+  return (rc);
+}
+
+EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_bytes_sent,
+                              WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+{
+  int rc;
+
+  INIT_PTR (p_WSASendMsg);
+  rc = (*p_WSASendMsg) (s, msg, flags, num_bytes_sent, ov, func);
+
+  ENTER_CRIT();
+
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendMsg"));
+
+  if (!exclude_this)
+  {
+    char res[100];
+
+    strcpy (res, get_error(rc));
+
+    WSTRACE ("WSASendMsg (%s, 0x%p, ...) --> %s", socket_number(s), msg, res);
+  }
+
+  LEAVE_CRIT();
   return (rc);
 }
 

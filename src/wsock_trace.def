@@ -30,6 +30,7 @@ EXPORTS
  _WSARecvDisconnect@8
  _WSASend@28
  _WSASendTo@36
+ _WSASendMsg@24
 ;_WSASendDisconnect
  _WSAConnect@28
  _WSAConnectByList@32
