@@ -21,12 +21,8 @@ environment:
       CPU:     x86
     - BUILDER: mingw64
       CPU:     x64
-    - BUILDER: mingw64
-      CPU:     x64
     - BUILDER: cygwin32
       CPU:     x86
-    - BUILDER: cygwin64
-      CPU:     x64
     - BUILDER: cygwin64
       CPU:     x64
     - BUILDER: watcom
