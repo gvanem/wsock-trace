@@ -861,6 +861,11 @@ const char *shorten_path (const char *path)
   }
   if (!g_cfg.use_full_path && len >= 3 && !strnicmp(prog_dir,path,len))
      return (real_name + len);
+
+#if 0
+  _fix_drive (real_name);
+#endif
+
   return (real_name);
 }
 
@@ -901,6 +906,10 @@ static const char *fname_cache_add (const char *fname)
 
   fn->crc32     = crc_bytes (fname, fn_len);
   fn->orig_name = str_replace ('\\', '/', strcpy((char*)(fn+1), fname));
+
+#if 0
+  _fix_drive (fn->orig_name);
+#endif
 
   if (GetLongPathName(fname, buf, sizeof(buf)))
        fn->real_name = str_replace ('\\', '/', strdup(buf));
@@ -1514,14 +1523,6 @@ int file_exists (const char *fname)
  */
 #include "wsock_trace.rc"
 
-#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__ia64__)
-  #define X_SUFFIX "_x64"
-  #define BITNESS  "64-bit"
-#else
-  #define X_SUFFIX ""
-  #define BITNESS  "32-bit"
-#endif
-
 static char full_name [_MAX_PATH];
 
 void set_dll_full_name (HINSTANCE inst_dll)
@@ -1530,18 +1531,38 @@ void set_dll_full_name (HINSTANCE inst_dll)
      GetModuleFileName (inst_dll, full_name, sizeof(full_name));
 }
 
+/**
+ * Returns the full name of our `.dll`.
+ */
 const char *get_dll_full_name (void)
 {
+  if (full_name[0]) == '\0')
+     return ("?");
   return (full_name);
 }
 
+/**
+ * Returns the `.dll` basename.
+ *
+ * \retval
+ *   "wsock_trace.dll"          for 32-bit Visual-C
+ *   "wsock_trace_x64.dll"      for 64-bit Visual-C
+ *   "wsock_trace_mw.dll"       for 32-bit MinGW
+ *   "wsock_trace_mw_x64.dll"   for 64-bit MinGW
+ *   "wsock_trace_cyg.dll"      for 32-bit CygWin
+ *   "wsock_trace_cyg_x64.dll"  for 64-bit CygWin
+ *   "wsock_trace_ow.dll"       for 32-bit OpenWatcom
+ */
 const char *get_dll_short_name (void)
 {
-  return (RC_BASENAME X_SUFFIX ".dll");
+  return (RC_BASENAME RC_SUFFIX ".dll");
 }
 
+/*
+ * Returns e.g. "Visual-C, 32-bit"
+ */
 const char *get_builder (void)
 {
-  return (RC_BUILDER " (" BITNESS ")");
+  return (RC_BUILDER " (" RC_BITNESS ")");
 }
 
