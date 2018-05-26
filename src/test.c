@@ -134,7 +134,7 @@ static int name_match (const char *wildcard, const char *string);
 #define NAME_MATCH   1
 #define NAME_NOMATCH 0
 
-#define ADD_TEST(func)  { #func, ## func }
+#define ADD_TEST(func)  { #func, func }
 
 static const struct test_struct tests[] = {
                     ADD_TEST (test_ptr_or_error32),
