@@ -1893,7 +1893,7 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
 }
 
 /*
- * This accepts only address per line.
+ * This accepts only one address per line.
  */
 static smartlist_t *read_file (FILE *f, smartlist_t *list)
 {
