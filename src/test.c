@@ -109,6 +109,7 @@ static void test_getnameinfo (void);
 static void test_getaddrinfo (void);
 static void test_gai_strerror (void);
 static void test_socket (void);
+static void test_socket_unix (void);
 static void test_ioctlsocket (void);
 static void test_connect (void);
 static void test_select (void);
@@ -133,53 +134,59 @@ static int name_match (const char *wildcard, const char *string);
 #define NAME_MATCH   1
 #define NAME_NOMATCH 0
 
-#define ADD_TEST(func)  { #func, test_ ## func }
+#define ADD_TEST(func)  { #func, ## func }
 
 static const struct test_struct tests[] = {
-                    ADD_TEST (ptr_or_error32),
-                    ADD_TEST (ptr_or_error32b),
-                    ADD_TEST (ptr_or_error64),
-                    ADD_TEST (WSAStartup),
-                    ADD_TEST (gethostbyaddr),
-                    ADD_TEST (gethostbyname),
-                    ADD_TEST (IDNA_functions),
-                    ADD_TEST (getprotobyname),
-                    ADD_TEST (getprotobynumber),
-                    ADD_TEST (getservbyname),
-                    ADD_TEST (getservbyport),
-                    ADD_TEST (getnameinfo),
-                    ADD_TEST (getaddrinfo),
-                    ADD_TEST (gai_strerror),
-                    ADD_TEST (socket),
-                    ADD_TEST (ioctlsocket),
-                    ADD_TEST (connect),
-                    ADD_TEST (select),
-                    ADD_TEST (select2),
-                    ADD_TEST (send),
-                    ADD_TEST (WSAPoll),
-                    ADD_TEST (WSAFDIsSet),
-                    ADD_TEST (WSAAddressToStringA),
-                    ADD_TEST (WSAAddressToStringW),
-                    ADD_TEST (WSAAddressToStringWP),
-                    ADD_TEST (WSAStringToAddressA),
-                    ADD_TEST (WSAStringToAddressW),
-                    ADD_TEST (WSAEnumProtocols),
-                    ADD_TEST (WSACleanup)
+                    ADD_TEST (test_ptr_or_error32),
+                    ADD_TEST (test_ptr_or_error32b),
+                    ADD_TEST (test_ptr_or_error64),
+                    ADD_TEST (test_WSAStartup),
+                    ADD_TEST (test_gethostbyaddr),
+                    ADD_TEST (test_gethostbyname),
+                    ADD_TEST (test_IDNA_functions),
+                    ADD_TEST (test_getprotobyname),
+                    ADD_TEST (test_getprotobynumber),
+                    ADD_TEST (test_getservbyname),
+                    ADD_TEST (test_getservbyport),
+                    ADD_TEST (test_getnameinfo),
+                    ADD_TEST (test_getaddrinfo),
+                    ADD_TEST (test_gai_strerror),
+                    ADD_TEST (test_socket),
+                    ADD_TEST (test_socket_unix),
+                    ADD_TEST (test_ioctlsocket),
+                    ADD_TEST (test_connect),
+                    ADD_TEST (test_select),
+                    ADD_TEST (test_select2),
+                    ADD_TEST (test_send),
+                    ADD_TEST (test_WSAPoll),
+                    ADD_TEST (test_WSAFDIsSet),
+                    ADD_TEST (test_WSAAddressToStringA),
+                    ADD_TEST (test_WSAAddressToStringW),
+                    ADD_TEST (test_WSAAddressToStringWP),
+                    ADD_TEST (test_WSAStringToAddressA),
+                    ADD_TEST (test_WSAStringToAddressW),
+                    ADD_TEST (test_WSAEnumProtocols),
+                    ADD_TEST (test_WSACleanup)
                   };
 
 static int run_test (const char *wildcard)
 {
   const struct test_struct *t = tests;
   int   rc = 0, i = DIM(tests) - 1;
+  const char *t_name;
+  size_t      t_len = strlen ("test_");
 
   assert ((t+i)->func == test_WSACleanup);
 
   for (i = 0; i < DIM(tests); i++, t++)
   {
-    if (name_match(wildcard, t->name) != NAME_MATCH)
+    assert (strncmp(t->name,"test_",t_len) == 0);
+    t_name = t->name + t_len;
+
+    if (name_match(wildcard, t_name) != NAME_MATCH)
     {
       if (chatty >= 2)
-         printf ("Skipping test %s().\n", t->name);
+         printf ("Skipping %s().\n", t->name);
       continue;
     }
     rc++;
@@ -369,6 +376,7 @@ static void test_gai_strerror (void)
 }
 
 static SOCKET s1, s2;
+static SOCKET s1_unix, s2_unix;
 
 static void test_socket (void)
 {
@@ -377,6 +385,16 @@ static void test_socket (void)
 
   TEST_CONDITION (!= INVALID_SOCKET, s1);
   TEST_CONDITION (!= INVALID_SOCKET, s2);
+  TEST_CONDITION (== 0, WSAGetLastError());
+}
+
+static void test_socket_unix (void)
+{
+  s1_unix = socket (AF_UNIX, SOCK_STREAM, 0);
+  s2_unix = socket (AF_UNIX, SOCK_DGRAM, 0);
+
+  TEST_CONDITION (!= INVALID_SOCKET, s1_unix);
+  TEST_CONDITION (!= INVALID_SOCKET, s2_unix);
   TEST_CONDITION (== 0, WSAGetLastError());
 }
 
@@ -683,11 +701,15 @@ static int show_help (void)
 static int list_tests (void)
 {
   const struct test_struct *t = tests;
-  int   i;
+  size_t pfx_len = strlen ("test_");
+  int    i;
 
   puts ("List of tests:");
   for (i = 0; i < DIM(tests); i++, t++)
-     printf ("  %s()\n", t->name);
+  {
+    assert (strncmp(t->name,"test_",pfx_len) == 0);
+    printf ("  %s()\n", t->name + pfx_len);
+  }
   return (0);
 }
 
