@@ -86,7 +86,7 @@ OBJ_DIR = MSVC_obj$(X_SUFFIX)
 !if "$(USE_CRT_DEBUG)" == "1"
 CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 !else
-CFLAGS = $(CFLAGS) -MD -Ot -Gs -Zo # -DNDEBUG
+CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
 !endif
 
 !if "$(USE_DEF_FILE)" == "1"
