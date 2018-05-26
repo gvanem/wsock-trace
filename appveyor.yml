@@ -106,7 +106,7 @@ build_script:
             7z x -o%WATCOM% watcom20.zip > NUL)
 
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\src
-  - cmd: set USE_LUA=1
+  - cmd: set USE_LUA=0
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
