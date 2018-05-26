@@ -78,7 +78,7 @@ BIN_TARGET = $(VCINSTALLDIR)bin
 
 CC      = cl
 CFLAGS  = -nologo -I. -W3 -Zi -DWIN32 -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
-LDFLAGS = -nologo -map -debug -verbose -incremental:no -subsystem:console         # -debugtype:cv -fixed:no
+LDFLAGS = -nologo -map -debug -verbose -incremental:no -subsystem:console             # -debugtype:cv -fixed:no
 LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
@@ -86,7 +86,7 @@ OBJ_DIR = MSVC_obj$(X_SUFFIX)
 !if "$(USE_CRT_DEBUG)" == "1"
 CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 !else
-CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
+CFLAGS = $(CFLAGS) -MD -Ot -Gs -Zo # -DNDEBUG
 !endif
 
 !if "$(USE_DEF_FILE)" == "1"
