@@ -38,18 +38,18 @@
 #endif
 
 #if defined(DEBUG) && (DEBUG > 0)
-  #define RC_DBG_REL "(debug"
+  #define RC_DBG_REL "debug"
   #define FILE_FLG   1
 #else
-  #define RC_DBG_REL  "(release"
+  #define RC_DBG_REL  "release"
   #define FILE_FLG    0
 #endif
 
 #if defined(BITNESS) && (BITNESS == 64)
-  #define RC_BITNESS ", 64-bit)"
+  #define RC_BITNESS "64-bit"
   #define RC_SUFFIX  "_x64"
 #else
-  #define RC_BITNESS ", 32-bit)"
+  #define RC_BITNESS "32-bit"
   #define RC_SUFFIX  ""
 #endif
 
@@ -76,14 +76,14 @@ BEGIN
     BLOCK "040904b0"
     BEGIN
       VALUE "CompanyName",      "Wsock_trace DLL v" RC_VER_STR ". Hosted at https://github.com/gvanem/wsock-trace"
-      VALUE "FileDescription",  "Winsock tracing DLL " RC_DBG_REL RC_BITNESS
+      VALUE "FileDescription",  "Winsock tracing DLL (" RC_DBG_REL ", " RC_BITNESS ")"
       VALUE "FileVersion",      RC_VER_STR
       VALUE "InternalName",     RC_DLL_NAME
       VALUE "OriginalFilename", RC_DLL_NAME ".dll"
       VALUE "ProductName",      RC_DLL_NAME " Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR " (" RC_BUILDER ")"
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
-                                "\t\t\tCopyright 2012-2017, Gisle Vanem <gvanem@yahoo.no>."
+                                "\t\t\tCopyright 2012-2018, Gisle Vanem <gvanem@yahoo.no>."
     END
   END
 
