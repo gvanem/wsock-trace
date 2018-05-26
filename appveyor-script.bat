@@ -86,7 +86,7 @@ echo 10.0.0.20   www.no-such-host.com               >> appveyor-hosts
 
 ::
 :: These should survive until 'build_script' for 'msvc', 'mingw32', 'mingw64,
-:: 'cygwin32', 'cygwin64' or 'watcom' gets run.
+:: 'cygwin32', 'cygwin64' or 'watcom' get to run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
@@ -94,7 +94,7 @@ set COLUMNS=120
 
 ::
 :: Some issue with the Cygwin builds forces me to put the generated
-:: 'wsock_trace.appveyor' in AppVeyor's APPDATA directory.
+:: 'wsock_trace.appveyor' in AppVeyor's %APPDATA directory.
 ::
 copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace
 exit /b 0
