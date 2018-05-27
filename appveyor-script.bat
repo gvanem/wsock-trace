@@ -96,7 +96,7 @@ set COLUMNS=120
 :: Some issue with the Cygwin builds forces me to put the generated
 :: 'wsock_trace.appveyor' in AppVeyor's %APPDATA directory.
 ::
-copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace
+copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace > NUL
 exit /b 0
 
 ::
