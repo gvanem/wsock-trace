@@ -65,7 +65,7 @@ An MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `
 This project uses [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git) and
 [**LuaJIT**](https://github.com/LuaJIT/LuaJIT.git) as external projects.
 On GitHub, these are refered to as submodules (refered to in `.gitmodules`).
-To clone this repository along with its submodules, do a:<br>
+To clone this repository along with it's submodules, do a:<br>
   * `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`
 
 If you have already cloned this repository earlier, you can initialize and update
@@ -78,15 +78,15 @@ Do this:
   * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
   * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see last bullet below)
     into your `%HOME%` or `%APPDATA%` directory.
-  * Edit the respective makefile to say `USE_IP2LOCATION = 1`
+  * Edit the respective makefile to say `USE_IP2LOCATION = 1`.
   * Then do the specific installation for your compiler (see below).
   * To enable locations for both IPv4 and IPv6 addresses, download and use a file named like <br>
     `IP2LOCATION-LITE-DBx.IPV6.BIN`. These files contains both IPv4 and IPv6 records.
 
 ### Building
 
-Enter the `src` sub-directory and do the *make* `all`command.<br>
-If the `all` command succeeded, you can do the *make* `install` command:
+Enter the `src` sub-directory and do the respective *make* `all`command.<br>
+If the `all` command succeeded, you can do the respective *make* `install` command:
 
 | Builder    | *make* `all`command | *make* `install` result |
 | :--------- | :--- | :--- |
@@ -94,9 +94,6 @@ If the `all` command succeeded, you can do the *make* `install` command:
 | MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw.a` to  `$(MINGW32)/lib`|
 | MSVC | nmake -f makefile.vc6 | `copy wsock_trace.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
 | OpenWatcom | wmake -f Makefile.Watcom | `copy wsock_trace_ow.dll` to `%WATCOM\binnt` and<br> `copy wsock_trace_ow.lib` to `%WATCOM\lib386\nt`|
-
-The installed .DLL would then trace the normal Winsock calls.<br>
-Example screen-shot above or details in **[Running samples](#running-samples)** below.
 
 
 ### Usage
@@ -112,12 +109,14 @@ Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_3
 
 Thus most normal Winsock calls are traced on entry and exit.
 
+Example screen-shot above or details in **[Running samples](#running-samples)** below.
+
 **MSVC**:  Remember to compile using `-Zi` to produce debug-symbols. For MSVC-2015 (or newer)
-  it is recomended to use option `-Zo` too (which will eases the debug of an optimised
-  program). And remember to use `-debug` when linking your program.
+  it is recomended to use option [`-Zo`](https://docs.microsoft.com/en-gb/cpp/build/reference/zo-enhance-optimized-debugging)
+  too (which will eases the debug of optimised code. And remember to use `-debug` when linking your program.
   See `src/Makefile.vc6` for an example.
-  It is not adviced to use option `-Oy` (*enable frame pointer omission*)
-  since that will make it difficult for `StackWalk64()` to  figure out the
+  It is not adviced to use option [`-Oy`](https://docs.microsoft.com/en-gb/cpp/build/reference/oy-frame-pointer-omission)
+  (*enable frame pointer omission*) since that will make it difficult for `StackWalk64()` to  figure out the
   filename and line of the calling function.
 
 
