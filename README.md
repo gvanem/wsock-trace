@@ -298,7 +298,7 @@ Note that some virus scanners may find the behaviour of programs linked to
       functions to trace.
 
    3. Injecting `wsock_trace.dll` into a remote process. Ref:
-      ** http://www.viksoe.dk/code/wepmetering.htm **
+      [**http://www.viksoe.dk/code/wepmetering.htm**](http://www.viksoe.dk/code/wepmetering.htm).
 
    4. Optionally load [**Wireshark's**](https://www.wireshark.org) `libwireshark.dll` to dissect
       transport and application protocols. <br>
