@@ -81,7 +81,7 @@ WSOCK_DLL = wsock_trace_ow.dll
 TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe geoip.exe idna.exe
 
 all: $(OBJ_DIR) $(TARGETS) .SYMBOLIC
-	@echo Welcome to Wsock_trace library and example.
+	@echo Welcome to Wsock-trace library and example.
 
 $(OBJ_DIR):
 	md $(OBJ_DIR)
