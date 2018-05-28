@@ -71,18 +71,7 @@ echo edrop_url   = http://www.spamhaus.org/drop/edrop.txt   >> wsock_trace.appve
 echo dropv6_url  = https://www.spamhaus.org/drop/dropv6.txt >> wsock_trace.appveyor
 
 echo Generating appveyor-hosts file...
-echo #                                               > appveyor-hosts
-echo # This file was generated from %0.             >> appveyor-hosts
-echo #                                              >> appveyor-hosts
-echo 127.0.0.1   localhost                          >> appveyor-hosts
-echo ::1         localhost                          >> appveyor-hosts
-echo 127.0.0.1   mpa.one.microsoft.com              >> appveyor-hosts
-echo 8.8.8.8     google-public-dns-a.google.com     >> appveyor-hosts
-echo #                                              >> appveyor-hosts
-echo # This hostname is used in test.exe            >> appveyor-hosts
-echo # check that it prints "from 'hosts' file".    >> appveyor-hosts
-echo #                                              >> appveyor-hosts
-echo 10.0.0.20   www.no-such-host.com               >> appveyor-hosts
+type appveyor_host_content.txt > appveyor-hosts
 
 ::
 :: These should survive until 'build_script' for 'msvc', 'mingw32', 'mingw64,
