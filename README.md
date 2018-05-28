@@ -73,32 +73,30 @@ the submodules like so:<br>
   * `git submodule update --init --recursive`
 
 *Optional*: To be able to get more precise Geo-IP information for addresses (city and
-region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.<br>
+region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.
 Do this:
   * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
-  * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see **[*]** below)
-  into your `%HOME%` or `%APPDATA%` directory.
+  * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see last bullet below)
+    into your `%HOME%` or `%APPDATA%` directory.
   * Edit the respective makefile to say `USE_IP2LOCATION = 1`
   * Then do the specific installation for your compiler (see below).
-  * To enable locations for both IPv4 and IPv6 addresses, download and use a
-    file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`.<br>
-    These files contains both IPv4 and IPv6 records.
+  * To enable locations for both IPv4 and IPv6 addresses, download and use a file named like <br>
+    `IP2LOCATION-LITE-DBx.IPV6.BIN`. These files contains both IPv4 and IPv6 records.
 
 ### Building
 
 Enter the `src` sub-directory and do the *make* `all`command.<br>
 If the `all` command succeeded, you can do the *make* `install` command:
 
-| Builder    | *make* `all`command | `install` result |
-| ---------- | --- | --- |
+| Builder    | *make* `all`command | *make* `install` result |
+| :--------- | :--- | :--- |
 | CygWin     | make -f Makefile.CygWin | `cp wsock_trace_cyg.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg.a` to `/usr/lib`  |
 | MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw.a` to  `$(MINGW32)/lib`|
 | MSVC | nmake -f makefile.vc6 | `copy wsock_trace.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
 | OpenWatcom | wmake -f Makefile.Watcom | `copy wsock_trace_ow.dll` to `%WATCOM\binnt` and<br> `copy wsock_trace_ow.lib` to `%WATCOM\lib386\nt`|
 
-The installed .DLL would then trace the normal Winsock calls.
-Example screen-shot above or details in
-**[Running samples](#running-samples)** below.
+The installed .DLL would then trace the normal Winsock calls.<br>
+Example screen-shot above or details in **[Running samples](#running-samples)** below.
 
 
 ### Usage
@@ -106,7 +104,7 @@ Example screen-shot above or details in
 Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_32.lib`):
 
 | Builder    | Library |
-| ---------- | ------- |
+| :--------- | :------ |
 | CygWin     | `libwsock_trace.a` |
 | MinGW      | `libwsock_trace.a` |
 | MSVC       | `wsock_trace.lib` |
@@ -137,7 +135,7 @@ at startup. Read it's contents; the comments therein should be self-explanatory.
 If `wsock_trace` is not found in one of the above directories, the default
 `trace_level` is set to 1.
 
-There is no `install.bat` file for Wsock-trace. So you should copy the
+There is currently no `install.bat` file for Wsock-trace. So you should copy the
 following files (here at GitHub) to your `%HOME` or `%APPDATA` directory:
 ```
   wsock_trace
