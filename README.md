@@ -117,8 +117,8 @@ Example screen-shot above or details in **[Running samples](#running-samples)** 
   too (which will eases the debug of optimised code. And remember to use `-debug` when linking your program.
   See `src/Makefile.vc6` for an example.
   It is not adviced to use option [`-Oy`](https://docs.microsoft.com/en-gb/cpp/build/reference/oy-frame-pointer-omission)
-  (*enable frame pointer omission*) since that will make it difficult for `StackWalk64()` to  figure out the
-  filename and line of the calling function.
+  (*enable frame pointer omission*) since that will make it difficult for [`StackWalk64()`](http://msdn.microsoft.com/library/en-us/debug/base/stackwalk64.asp)
+  to  figure out the filename and line of the calling function.
 
 
 ### Configuration
@@ -230,12 +230,13 @@ Notes:
 * Nmap uses wrong arguments to `setsockopt()`; a *TTL* of *ULONG_MAX*.
 * Nmap also calls `WSAStartup()` before the startup message.
 * Last but not least, notice how `wsock_trace` handles (demangles) C++ symbols just
-  fine  thanks to `dbghelp.dll` and `UnDecorateSymbolName()`. I.e. the destructor
-  `ConnectProbe::~ConnectProbe` above is calling `closesocket()` at offset 37.
+  fine  thanks to `dbghelp.dll` and [`UnDecorateSymbolName()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms681400(v=vs.85).aspx).
+  I.e. the destructor `ConnectProbe::~ConnectProbe` above is calling `closesocket()` at offset 37.
   (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
 
 
-And another example from [**C-ares**](#footnotes)'s' **[adig.c](https://github.com/c-ares/c-ares/blob/master/adig.c)**:
+And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
+**[adig.c](https://github.com/c-ares/c-ares/blob/master/adig.c)**:
 ```c
     c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
@@ -360,15 +361,15 @@ G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2018.
 
 ### Footnotes:
 
-   * [1] Nmap; "Network Mapper" is a free and open source (license) utility for
-       network  discovery and security auditing.
-       Ref. http://nmap.org/download.html
+   * [1] Nmap; "*Network Mapper*" is a free and open source (license) utility for
+       network  discovery and security auditing.<br>
+       Ref. [**http://nmap.org/download.html**](http://nmap.org/download.html)
 
-   * [2] A C library for asynchronous DNS requests (including name resolves)
-       Ref. http://c-ares.haxx.se/
+   * [2] A C library for asynchronous DNS requests (including name resolves)<br>
+       Ref. [**http://c-ares.haxx.se/**](http://c-ares.haxx.se/)
 
    * [3] This site or product includes IP2Location LITE data available from
-       http://lite.ip2location.com.
+       [**http://lite.ip2location.com**](http://lite.ip2location.com).
 
 *PS*. This file is written with the aid of the **[Atom](https://atom.io/)**
       editor and it's **[Markdown-Preview](https://atom.io/packages/markdown-preview)**.
