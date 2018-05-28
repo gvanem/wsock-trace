@@ -111,8 +111,9 @@ Thus most normal Winsock calls are traced on entry and exit.
 
 Example screen-shot above or details in **[Running samples](#running-samples)** below.
 
-**MSVC**:  Remember to compile using `-Zi` to produce debug-symbols. For MSVC-2015 (or newer)
-  it is recomended to use option [`-Zo`](https://docs.microsoft.com/en-gb/cpp/build/reference/zo-enhance-optimized-debugging)
+**MSVC**:  Remember to compile using [`-Zi`](https://docs.microsoft.com/en-gb/cpp/build/reference/z7-zi-zi-debug-information-format)
+  to produce debug-symbols. For MSVC-2015 (or newer) it is recomended to use option
+  [`-Zo`](https://docs.microsoft.com/en-gb/cpp/build/reference/zo-enhance-optimized-debugging)
   too (which will eases the debug of optimised code. And remember to use `-debug` when linking your program.
   See `src/Makefile.vc6` for an example.
   It is not adviced to use option [`-Oy`](https://docs.microsoft.com/en-gb/cpp/build/reference/oy-frame-pointer-omission)
