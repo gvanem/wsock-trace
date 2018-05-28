@@ -34,16 +34,14 @@ Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com
   and [`ConnectEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).<br>
   Wsock-trace is able to trace these too.
 
-* *IP-Country* information from **[MaxMind](http://www.maxmind.com)**.
+* *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
+  Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+  for a simplified CSV version of these MaxMind GeoIP-databases.
   (using the CSV files [`geoip`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L157)
   and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L158)
-  are always enabled).<br>
-  Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
-  for a simplified version of these MaxMind GeoIP-databases.<br>
-  Also many thanks to MaxMind and IP2Location [**[3]**](#footnotes) for their
-  data-bases.
+  are always enabled).
 
-* *IP-Location* information from   **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
+* *IP-Location* information from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
   (this is contolled by `USE_IP2LOCATION = 1` in the makefiles).<br>
   The above `Mountain View/California` is Google's well-known location.<br>
   Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
