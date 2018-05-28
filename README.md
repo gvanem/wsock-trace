@@ -20,31 +20,30 @@ Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com
 
 * *Runtime caller information*: Using Microsoft's *dbghelp* (or *psapi*) APIs
    together with the programs *PDB*-file, the filename, line-number of the calling
-	 function-name is shown. In the above example, `WSAStartup()` is called from
-	 `ahost.c`, line 67. Which should be 59 bytes into the `main()` function.
-	 This should be **[here](https://github.com/c-ares/c-ares/blob/master/ahost.c#L67)**.
+   function-name is shown. In the above example, `WSAStartup()` is called from
+   `ahost.c`, line 67. Which should be 59 bytes into the `main()` function.
+   This should be **[here](https://github.com/c-ares/c-ares/blob/master/ahost.c#L67)**.
 
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
   from `QueryPerformanceCounter()`.<br>
-	The timestamp is controlled by `trace_time`	in the [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
-	config-file.
+  The timestamp is controlled by `trace_time`	in the [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
+  config-file.
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
   (like [`AcceptEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524.aspx)
-	and [`ConnectEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).
-	<br>Winsock-Trace is able to trace these too.
+  and [`ConnectEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).<br>
+  Wsock-trace is able to trace these too.
 
 * *IP-Country* information from **[MaxMind](http://www.maxmind.com)**.
   (using the CSV files [`geoip`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L157)
-	and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L158)
-	are always enabled).<br>
-	Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
-	for a simplified version of these MaxMind GeoIP-databases.<br>
-	Also many thanks to MaxMind and IP2Location [**[3]**](#footnotes) for their
-	data-bases.
+  and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L158)
+  are always enabled).<br>
+  Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+  for a simplified version of these MaxMind GeoIP-databases.<br>
+  Also many thanks to MaxMind and IP2Location [**[3]**](#footnotes) for their
+  data-bases.
 
-* *IP-Location* information from   **[IP2Location](
-	https://github.com/chrislim2888/IP2Location-C-Library)**.
+* *IP-Location* information from   **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
   (this is contolled by `USE_IP2LOCATION = 1` in the makefiles).<br>
   The above `Mountain View/California` is Google's well-known location.<br>
   Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
@@ -52,13 +51,12 @@ Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com
 * *Domain Name System-based Blackhole List*
   (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of
   DROP-files from the **[Spamhaus](http://www.spamhaus.org/drop/)** project,
-	it can detect	IPv4 / IPv6-addresses uses by spammers and cyber-criminals.
-	The more potent	Spamhaus **[BGPCC](https://www.spamhaus.org/bgpf/)** is
-	on the *to-do* list.
+  it can detect IPv4 / IPv6-addresses uses by spammers and cyber-criminals.
+  The more potent Spamhaus **[BGPCC](https://www.spamhaus.org/bgpf/)** is on the *to-do* list.
 
 * **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support: very
   preliminary at the moment. The idea is that `.lua` scripts could change the
-	behaviour of Wsock-trace at runtime without rebuilding it.
+  behaviour of Wsock-trace at runtime without rebuilding it.
 
 ### Installation (all)
 
@@ -126,7 +124,7 @@ at startup. Read it's contents; the comments therein should be self-explanatory.
 If `wsock_trace` is not found in one of the above directories, the default
 `trace_level` is set to 1.
 
-There is no `install.bat` file for Wsock-Trace. So you should copy the
+There is no `install.bat` file for Wsock-trace. So you should copy the
 following files (here at GitHub) to your `%HOME` or `%APPDATA` directory:
 ```
   wsock_trace
