@@ -6,8 +6,11 @@ A drop-in tracing library / DLL for most normal Winsock calls.
 It sits between your program and the Winsock library (`ws2_32.dll`).
 It works best for MSVC since the stack-walking code requires the program's
 **PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't produce
-PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library).<br>
-Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com`
+PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library). So currently,
+the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
+functions.
+
+An MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com`
 (`ahost` is part of the DNS library **[C-ares](http://c-ares.haxx.se/)**) :
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)]
@@ -26,7 +29,8 @@ Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com
 
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
   from `QueryPerformanceCounter()`.<br>
-  The timestamp is controlled by `trace_time`	in the [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
+  The timestamp is controlled by `trace_time` in the
+  [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
   config-file.
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
@@ -52,61 +56,72 @@ Example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com
   it can detect IPv4 / IPv6-addresses uses by spammers and cyber-criminals.
   The more potent Spamhaus **[BGPCC](https://www.spamhaus.org/bgpf/)** is on the *to-do* list.
 
-* **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support: very
+* **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
   behaviour of Wsock-trace at runtime without rebuilding it.
 
-### Installation (all)
+### Installation
 
-To be able to get more precise Geo-IP information for addresses (city and
+This project uses [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git) and
+[**LuaJIT**](https://github.com/LuaJIT/LuaJIT.git) as external projects.
+On GitHub, these are refered to as submodules (refered to in `.gitmodules`).
+To clone this repository along with its submodules, do a:<br>
+  * `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`
+
+If you have already cloned this repository earlier, you can initialize and update
+the submodules like so:<br>
+  * `git submodule update --init --recursive`
+
+*Optional*: To be able to get more precise Geo-IP information for addresses (city and
 region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.<br>
 Do this:
-   * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
-   * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see **[*]** below)
-     into your `%HOME%` or `%APPDATA%` directory.
+  * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
+  * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see **[*]** below)
+  into your `%HOME%` or `%APPDATA%` directory.
+  * Edit the respective makefile to say `USE_IP2LOCATION = 1`
+  * Then do the specific installation for your compiler (see below).
+  * To enable locations for both IPv4 and IPv6 addresses, download and use a
+    file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`.<br>
+    These files contains both IPv4 and IPv6 records.
 
-   * Clone this repository along with its submodules:<br>
-     `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`<br>
-     If you have already cloned this repository, you can initialize and update
-     the submodules like so:<br>
-     `git submodule update --init --recursive`
-   * Edit the respective makefile to say `USE_IP2LOCATION = 1`
-   * Then do the specific installation for your compiler (see below).
+### Building
 
-  **[*]**: to enable locations for both IPv4 and IPv6 addresses, download and use a
-file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`.<br>
-These files contains both IPv4 and IPv6 records.
+Enter the `src` sub-directory and do the *make* `all`command.<br>
+If the `all` command succeeded, you can do the *make* `install` command:
 
-### Installation (MSVC)
+| Builder    | *make* `all`command | `install` result |
+| ---------- | --- | --- |
+| CygWin     | make -f Makefile.CygWin | `cp wsock_trace_cyg.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg.a` to `/usr/lib`  |
+| MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw.a` to  `$(MINGW32)/lib`|
+| MSVC | nmake -f makefile.vc6 | `copy wsock_trace.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
+| OpenWatcom | wmake -f Makefile.Watcom | `copy wsock_trace_ow.dll` to `%WATCOM\binnt` and<br> `copy wsock_trace_ow.lib` to `%WATCOM\lib386\nt`|
 
-Enter the `src` sub-directory and do a *nmake -f Makefile.vc6*.
-This produces a `wsock_trace.lib` that you'll need to use to
-link your project(s) with. This lib would then trace the normal
-Winsock calls. Example screen-shot above or details in
+The installed .DLL would then trace the normal Winsock calls.
+Example screen-shot above or details in
 **[Running samples](#running-samples)** below.
 
-### Usage (MSVC)
 
-Link with `wsock_trace.lib` instead of the system's `ws32_2.lib`. Thus
-most normal Winsock calls are traced on entry and exit. Remember to
-compile using `-Zi` to produce debug-symbols. And remember to use `-debug`
-when linking your program. See `src/Makefile.vc6` for an example.
-It is not adviced to use option `/Oy` (*enable frame pointer omission*)
-since that will make it difficult for `StackWalk64()` to  figure out the
-filename and line of the calling function.
+### Usage
 
-### Installation (MinGW/CygWin)
+Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_32.lib`):
 
-Enter the `src` sub-directory and do a *make -f Makefile.MinGW* or
-*make -f Makefile.Cygwin*.
+| Builder    | Library |
+| ---------- | ------- |
+| CygWin     | `libwsock_trace.a` |
+| MinGW      | `libwsock_trace.a` |
+| MSVC       | `wsock_trace.lib` |
+| OpenWatcom | `wsock_trace_ow.lib` |
 
+Thus most normal Winsock calls are traced on entry and exit.
 
-### Usage (MinGW/CygWin)
+**MSVC**:  Remember to compile using `-Zi` to produce debug-symbols. For MSVC-2015 (or newer)
+  it is recomended to use option `-Zo` too (which will eases the debug of an optimised
+  program). And remember to use `-debug` when linking your program.
+  See `src/Makefile.vc6` for an example.
+  It is not adviced to use option `-Oy` (*enable frame pointer omission*)
+  since that will make it difficult for `StackWalk64()` to  figure out the
+  filename and line of the calling function.
 
-Link with `libwsock_trace.a` instead of the system's `libws32_2.a` (i.e.
-`-lws32_2`). So copy this library to a directory in `$(LIBRARY_PATH)` and
-use `-lwsock_trace` to link. The `Makefile.MinGW` already does the copying
-to `$(MINGW32)/lib`.
 
 ### Configuration
 
@@ -272,11 +287,13 @@ The names of the import libraries and the names of the 32-bit .DLLs are:
   * For MSVC:      `wsock_trace.lib` and `wsock_trace.dll` .
   * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw.dll` .
   * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
+  * For OpenWatcom: `wsock_trace_ow.lib` and `wsock_trace_ow.dll`.
 
 And the 64-bit equivalents:
   * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
   * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
   * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`.
+  * For OpenWatcom: not possible (no way AFAIK to create `x64` on OpenWatcom).
 
 These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications
@@ -307,7 +324,15 @@ Note that some virus scanners may find the behaviour of programs linked to
    5. Deny certain applications to use `AF_INET6` protocols (return `-1` on
       `socket(AF_INET6,...)`.
 
-   6. Add a Json type config feature to support the above features. E.g.:
+   6. Make it possible to switch network stacks at run-time:
+      select amongst Winsock2, **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
+      **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or
+      **[Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html)**.
+
+   7. Make a GUI trace viewer for it. Ref:
+      [**http://www.viksoe.dk/code/windowless1.htm**](http://www.viksoe.dk/code/windowless1.htm)
+
+   8. Add a Json type config feature to support the above features. E.g.:
       ```
       wireshark_dissect {
         wget.exe : 1    # Wireshark dissection in wget and curl only.
@@ -325,15 +350,11 @@ Note that some virus scanners may find the behaviour of programs linked to
         python27.dll : 1   # And in other Python scripts too.
 
       }
+
+      stack_mux {
+        use_lwip: [wget.2exe, curl.exe]  # Force wget2.exe and curl.exe to use lwIP.dll
+      }
       ```
-
-   7. Make a GUI trace viewer for it. Ref:
-      http://www.viksoe.dk/code/windowless1.htm
-
-   8. Make it possible to switch network stacks at run-time (select amongst Winsock2,
-      **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
-      **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or
-      **[Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html)** (ported to Win32)).
 
 -------------
 
