@@ -10,11 +10,10 @@ PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library). So cur
 the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
 functions.
 
-An MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com`
-(`ahost` is part of the DNS library **[C-ares](http://c-ares.haxx.se/)**) :
+A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com`
+(`ahost` is part of the DNS library **[C-ares](http://c-ares.haxx.se/)**):
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)]
-(screenshot_ahost-msdn-com-win10.png?raw=true)
 
 ### Features
 
@@ -22,20 +21,20 @@ An MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `
   values. The colours are configurable.
 
 * *Runtime caller information*: Using Microsoft's *dbghelp* (or *psapi*) APIs
-   together with the programs *PDB*-file, the filename, line-number of the calling
-   function-name is shown. In the above example, `WSAStartup()` is called from
-   `ahost.c`, line 67. Which should be 59 bytes into the `main()` function.
-   This should be **[here](https://github.com/c-ares/c-ares/blob/master/ahost.c#L67)**.
+  together with the programs *PDB*-file, the filename, line-number of the calling
+  function-name is shown. In the above example, [`WSAStartup()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms742213(v=vs.85).aspx)
+  is called from `ahost.c`, line 67. Which should be 59 bytes into the `main()` function.
+  This should be **[here](https://github.com/c-ares/c-ares/blob/master/ahost.c#L67)**.
 
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
-  from `QueryPerformanceCounter()`.<br>
+  from [`QueryPerformanceCounter()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms644904(v=vs.85).aspx).<br>
   The timestamp is controlled by `trace_time` in the
   [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
   config-file.
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
-  (like [`AcceptEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524.aspx)
-  and [`ConnectEx`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).<br>
+  (like [`AcceptEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524.aspx)
+  and [`ConnectEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).<br>
   Wsock-trace is able to trace these too.
 
 * *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
@@ -73,9 +72,9 @@ the submodules like so:<br>
   * `git submodule update --init --recursive`
 
 *Optional*: To be able to get more precise Geo-IP information for addresses (city and
-region), Wsock-trace can use the **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** library.
-Do this:
-  * Sign-up for an account and download the free IP2Location LITE databases [**here**](http://lite.ip2location.com).
+region), Wsock-trace can use the **[IP2Location-C-Library](https://github.com/chrislim2888/IP2Location-C-Library)**
+library. To make best use of it, do this:
+  * Sign-up for an account and download the free IP2Location LITE [**databases**](http://lite.ip2location.com).
   * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see last bullet below)
     into your `%HOME%` or `%APPDATA%` directory.
   * Edit the respective makefile to say `USE_IP2LOCATION = 1`.
@@ -115,7 +114,7 @@ Example screen-shot above or details in **[Running samples](#running-samples)** 
   to produce debug-symbols. For MSVC-2015 (or newer) it is recomended to use option
   [`-Zo`](https://docs.microsoft.com/en-gb/cpp/build/reference/zo-enhance-optimized-debugging)
   too (which will eases the debug of optimised code. And remember to use `-debug` when linking your program.
-  See `src/Makefile.vc6` for an example.
+  See [`src/Makefile.vc6`](https://github.com/gvanem/wsock-trace/blob/master/src/Makefile.vc6) for an example.
   It is not adviced to use option [`-Oy`](https://docs.microsoft.com/en-gb/cpp/build/reference/oy-frame-pointer-omission)
   (*enable frame pointer omission*) since that will make it difficult for [`StackWalk64()`](http://msdn.microsoft.com/library/en-us/debug/base/stackwalk64.asp)
   to  figure out the filename and line of the calling function.
@@ -135,8 +134,8 @@ at startup. Read it's contents; the comments therein should be self-explanatory.
 If `wsock_trace` is not found in one of the above directories, the default
 `trace_level` is set to 1.
 
-There is currently no `install.bat` file for Wsock-trace. So you should copy the
-following files (here at GitHub) to your `%HOME` or `%APPDATA` directory:
+There is currently no `install.bat` file for Wsock-trace. So you should copy the following files (here at GitHub) to your <br>
+`%HOME` or `%APPDATA` directory:
 ```
   wsock_trace
   geoip
@@ -227,12 +226,14 @@ Nmap [**[1]**](#footnotes):
 ```
 
 Notes:
-* Nmap uses wrong arguments to `setsockopt()`; a *TTL* of *ULONG_MAX*.
-* Nmap also calls `WSAStartup()` before the startup message.
-* Last but not least, notice how `wsock_trace` handles (demangles) C++ symbols just
+* Nmap uses wrong arguments to [`setsockopt()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms740476(v=vs.85).aspx);
+  a *TTL* of *ULONG_MAX*.
+* Nmap also calls [`WSAStartup()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms742213(v=vs.85).aspx)
+  before the startup message.
+* Last but not least, notice how Wsock-trace handles (demangles) C++ symbols just
   fine  thanks to `dbghelp.dll` and [`UnDecorateSymbolName()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms681400(v=vs.85).aspx).
-  I.e. the destructor `ConnectProbe::~ConnectProbe` above is calling `closesocket()` at offset 37.
-  (you can turn off C++ demangling by `cpp_demangle = 0` in the config-file).
+  I.e. the destructor `ConnectProbe::~ConnectProbe` above is calling [`closesocket()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737582(v=vs.85).aspx)
+  at offset 37. (you can turn off C++ demangling by `cpp_demangle = 0` in the `wsock_trace` config-file).
 
 
 And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
@@ -268,8 +269,8 @@ By default, the tracing of `htons()`,`htonl()`, `ntohs()` and `ntohl()` are
 excluded from the trace.<br>
 You can edit the `%HOME/wsock_trace` file and exclude whatever calls you like.
 
-A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** programs (a client and a server linked to
-`wsock_trace.lib`) running a simple test (in OpenVPN's root-dir):
+A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** programs; a client and a
+server running a simple test (in OpenVPN's root-dir). Started with the `vpn.bat` snippet:
 ```
 cd sample
 start /pos=200,50,1000,800   ..\openvpn.exe --config sample-config-files/loopback-server
@@ -292,12 +293,12 @@ And the 64-bit equivalents:
   * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
   * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
   * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`.
-  * For OpenWatcom: not possible (no way AFAIK to create `x64` on OpenWatcom).
+  * For OpenWatcom: not possible (AFAIK there is no way to create `x64` programs on OpenWatcom).
 
 These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications
 using `wsock_trace.lib` needs not to be re-linked when I do change the inner
-workings of the `wsock_trace` source code (I've done that a lot lately).
+workings of the Wsock-trace source code.
 As long as the ABI is stable (e.g. not adding functions to the `wsock_trace.def`
 file), the application using `wsock_trace.dll` should work the same. Only the
 trace should change.
@@ -362,14 +363,14 @@ G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2018.
 ### Footnotes:
 
    * [1] Nmap; "*Network Mapper*" is a free and open source (license) utility for
-       network  discovery and security auditing.<br>
-       Ref. [**http://nmap.org/download.html**](http://nmap.org/download.html)
+         network  discovery and security auditing. <br>
+         Ref. [**http://nmap.org/download.html**](http://nmap.org/download.html)
 
-   * [2] A C library for asynchronous DNS requests (including name resolves)<br>
-       Ref. [**http://c-ares.haxx.se/**](http://c-ares.haxx.se/)
+   * [2] A C library for asynchronous DNS requests (including name resolves) <br>
+         Ref. [**http://c-ares.haxx.se/**](http://c-ares.haxx.se/)
 
-   * [3] This site or product includes IP2Location LITE data available from
-       [**http://lite.ip2location.com**](http://lite.ip2location.com).
+   * [3] This product includes IP2Location LITE data available from
+         [**http://lite.ip2location.com**](http://lite.ip2location.com).
 
 *PS*. This file is written with the aid of the **[Atom](https://atom.io/)**
       editor and it's **[Markdown-Preview](https://atom.io/packages/markdown-preview)**.
