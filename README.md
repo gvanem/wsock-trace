@@ -267,7 +267,8 @@ And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
 
 By default, the tracing of `htons()`,`htonl()`, `ntohs()` and `ntohl()` are
 excluded from the trace.<br>
-You can edit the `%HOME/wsock_trace` file and exclude whatever calls you like.
+You can edit the `%HOME/wsock_trace` config-file and exclude whatever calls you like.
+And the 2 traces above is showing the effect of the config-value `compact = 1`.
 
 A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** programs; a client and a
 server running a simple test (in OpenVPN's root-dir). Started with the `vpn.bat` snippet:
@@ -299,9 +300,9 @@ These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications
 using `wsock_trace.lib` needs not to be re-linked when I do change the inner
 workings of the Wsock-trace source code.
-As long as the ABI is stable (e.g. not adding functions to the `wsock_trace.def`
-file), the application using `wsock_trace.dll` should work the same. Only the
-trace should change.
+As long as the ABI is stable (e.g. not adding new functions to the
+[`wsock_trace.def`](https://github.com/gvanem/wsock-trace/blob/master/src/wsock_trace.def)
+file), the application using `wsock_trace.dll` should work the same.
 
 Note that some virus scanners may find the behaviour of programs linked to
 `wsock_trace.lib` suspicious.
