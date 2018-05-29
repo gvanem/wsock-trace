@@ -38,12 +38,6 @@ echo dump_data              = 1                             >> wsock_trace.appve
 echo max_data               = 5000                          >> wsock_trace.appveyor
 echo max_displacement       = 1000                          >> wsock_trace.appveyor
 echo exclude                = htons,htonl,inet_addr         >> wsock_trace.appveyor
-
-::
-:: Windows-Defender thinks generating a 'hosts' file is suspicious.
-:: Ref:
-::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
-::
 echo hosts_file             = %CD%\appveyor-hosts           >> wsock_trace.appveyor
 echo [geoip]                                                >> wsock_trace.appveyor
 echo enable                 = 1                             >> wsock_trace.appveyor
@@ -53,7 +47,7 @@ echo geoip4_file            = %CD%\geoip                    >> wsock_trace.appve
 echo geoip6_file            = %CD%\geoip6                   >> wsock_trace.appveyor
 echo ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN         >> wsock_trace.appveyor
 echo [idna]                                                 >> wsock_trace.appveyor
-echo enable                 = 1                             >> wsock_trace.appveyor
+echo enable      = 1                                        >> wsock_trace.appveyor
 echo [lua]                                                  >> wsock_trace.appveyor
 echo enable      = %%WSOCK_LUA_ENABLE%%                     >> wsock_trace.appveyor
 echo trace_level = 1                                        >> wsock_trace.appveyor
@@ -70,6 +64,14 @@ echo drop_url    = http://www.spamhaus.org/drop/drop.txt    >> wsock_trace.appve
 echo edrop_url   = http://www.spamhaus.org/drop/edrop.txt   >> wsock_trace.appveyor
 echo dropv6_url  = https://www.spamhaus.org/drop/dropv6.txt >> wsock_trace.appveyor
 
+::
+:: Windows-Defender thinks generating a 'hosts' file is suspicious.
+:: Even generating 'appveyor-hosts' triggers Windows-Defender.
+:: Therefore generate it by the 'type' command below.
+::
+:: Ref:
+::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
+::
 echo Generating appveyor-hosts file...
 type appveyor_host_content.txt > appveyor-hosts
 
