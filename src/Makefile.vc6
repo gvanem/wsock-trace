@@ -5,9 +5,9 @@
 # Usage:
 #   Open a "MSVC Developer Command Prompt" and set the compiler environment:
 #
-#     "%VSINSTALLDIR%VC\vcvarsall.bat" x86
+#     "%VSINSTALLDIR%VC\Auxiliary\Build\vcvarsall.bat" x86
 #   or:
-#     "%VSINSTALLDIR%VC\vcvarsall.bat" x64
+#     "%VSINSTALLDIR%VC\Auxiliary\Build\vcvarsall.bat" x64
 #
 # Then cd to this directory and run this makefile with:
 #   nmake -f Makefile.vc6 clean all
