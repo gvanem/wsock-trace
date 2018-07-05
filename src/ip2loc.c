@@ -244,6 +244,15 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
   return ip2loc_get_common (out, r);
 }
 
+DWORD ip2loc_index_errors (void)
+{
+#if 0 /* todo */
+  return (DWORD)IP2Location_DB_index_errors();
+#else
+  return (0);
+#endif
+}
+
 #else /* USE_IP2LOCATION */
 
 BOOL ip2loc_init (void)
@@ -284,5 +293,10 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *en
   ARGSUSED (addr);
   ARGSUSED (ent);
   return (FALSE);
+}
+
+DWORD ip2loc_index_errors (void)
+{
+  return (0);
 }
 #endif  /* USE_IP2LOCATION */

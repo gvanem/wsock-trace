@@ -61,6 +61,7 @@ extern BOOL  ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_en
 extern BOOL  ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out);
 extern DWORD ip2loc_num_ipv4_entries (void);
 extern DWORD ip2loc_num_ipv6_entries (void);
+extern DWORD ip2loc_index_errors (void);
 
 #endif
 

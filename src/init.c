@@ -941,6 +941,9 @@ static void trace_report (void)
 
     trace_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n",
                   DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
+
+    trace_printf ("  # of IP2Location shared-mem index errors: %lu\n",
+                  DWORD_CAST(ip2loc_index_errors()));
   }
 }
 #endif /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
