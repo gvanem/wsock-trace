@@ -213,11 +213,10 @@ vclean realclean: clean
 
 help:
 	@type <<
-Run one of the following commands:
-  nmake -f Makefile.vc6 VAR=VAL
-  nmake -f Makefile.vc6 install VAR=VAL
+Run one of the following targets:
+  nmake -f Makefile.vc6 <VAR=x> [all | clean | vclean | install | uninstall]
 
-where VAR can be of the following:
+where VAR can have of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
   USE_IP2LOCATION  (default: $(USE_IP2LOCATION))
