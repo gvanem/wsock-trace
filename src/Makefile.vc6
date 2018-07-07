@@ -165,6 +165,7 @@ install: all
 uninstall:
 	-del "$(LIB_TARGET)\$(WSOCK_LIB)"
 	-del "$(BIN_TARGET)\$(WSOCK_DLL)"
+	-del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
 
 geoip-gen4.c geoip-gen6.c: geoip.exe
 
