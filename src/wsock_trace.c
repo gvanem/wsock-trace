@@ -1380,13 +1380,17 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   char    ts_buf [40] = "";  /* timestamp at start of select() */
   int     rc;
   size_t  sz;
+  BOOL    _exclude_this;
 
   INIT_PTR (p_select);
   ENTER_CRIT();
 
+  /* Set the global and local 'exclude_this' values
+   */
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("select"));
+  _exclude_this = exclude_this;
 
-  if (!exclude_this)
+  if (!_exclude_this)
   {
     strcpy (ts_buf, get_timestamp());
 
@@ -1427,7 +1431,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   last_wr_fd = wr_fd;
   last_ex_fd = ex_fd;
 
-  if (!exclude_this)
+  if (!_exclude_this)
   {
     /* We want the timestamp for when select() was called.
      * Not the timestamp for when select() returned. Hence do not
