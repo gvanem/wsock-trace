@@ -602,6 +602,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"max_data"))
      g_cfg.max_data = atoi (val);
 
+  else if (!stricmp(key,"max_fd_set") || !stricmp(key,"max_fd_sets"))
+     g_cfg.max_fd_sets = atoi (val);
+
   else if (!stricmp(key,"max_displacement"))
      g_cfg.max_displacement = atoi (val);
 

@@ -77,6 +77,7 @@ struct config_table {
        int     callee_level;
        int     cpp_demangle;
        int     max_data;
+       UINT    max_fd_sets;
        int     max_displacement;
        BOOL    use_sema;
        BOOL    test_trace;

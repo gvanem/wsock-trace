@@ -94,6 +94,7 @@ dump_wsanetwork_events = 1         # Dump the WSAEVENT array from WSAEnumNetwork
 dump_data   = 1                    # Dump data in recv(), recvfrom(), send() and sendto().
 max_data    = 5000                 # but not more than 'max_data'.
 max_displacement = 100             # maximum distance for a public symbol to accept in SymGetLineFromAddr64()
+max_fd_sets      = 500             # Max number of 'fd_set' (i.e. sockets) to print in and out of 'select()'
 
 msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
 mingw_only  = 0                    # Trace only MinGW programs using the wsock_trace_mw.dll

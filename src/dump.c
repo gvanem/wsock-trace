@@ -1521,7 +1521,7 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
 }
 
 /*
- * Return the number of bytes needed to hold a 'fd_set'
+ * Return the number of bytes needed to hold a 'fd_set'.
  */
 size_t size_fd_set (const fd_set *fd)
 {
@@ -1541,6 +1541,10 @@ size_t size_fd_set (const fd_set *fd)
    * 'FD_SETSIZE' is defined to 64 in <winsock.h> by default.
    * But we cannot assume a certain 'FD_SETSIZE'.
    * Just allocate according to the maximum of 64 and 'fd_count'.
+   *
+   * But bounded by 'g_cfg.max_fd_sets' when printed in
+   * 'dump_one_fd_set()'.
+   *
    */
   count = max (64, fd->fd_count);
   size = count * sizeof(SOCKET) + sizeof(u_int);
@@ -1571,9 +1575,15 @@ fd_set *copy_fd_set_to (const fd_set *fd, fd_set *dst)
 static void dump_one_fd_set (const fd_set *fd, int indent)
 {
   u_int i, max_len, len = indent;
+  u_int s_limit = UINT_MAX;
+  u_int s_max = fd->fd_count;
   int   j;
 
-  for (i = 0; i < fd->fd_count; i++)
+  if (g_cfg.max_fd_sets > 0)
+       s_limit = min (g_cfg.max_fd_sets, s_max);
+  else s_limit = s_max;
+
+  for (i = 0; i < s_limit; i++)
   {
     char buf[10];
 
@@ -1581,10 +1591,15 @@ static void dump_one_fd_set (const fd_set *fd, int indent)
     max_len = (u_int) (g_cfg.screen_width - strlen(buf) - 1);
     trace_puts (buf);
 
-    if (i < fd->fd_count-1)
+    if (i < s_limit-1)
     {
       trace_putc (',');
       len += (u_int) strlen(buf) + 1;
+    }
+    else if (i == s_limit-1 && i < s_max-1)
+    {
+      trace_puts ("...\n");
+      break;
     }
     else
     {
