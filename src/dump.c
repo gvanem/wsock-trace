@@ -1541,10 +1541,6 @@ size_t size_fd_set (const fd_set *fd)
    * 'FD_SETSIZE' is defined to 64 in <winsock.h> by default.
    * But we cannot assume a certain 'FD_SETSIZE'.
    * Just allocate according to the maximum of 64 and 'fd_count'.
-   *
-   * But bounded by 'g_cfg.max_fd_sets' when printed in
-   * 'dump_one_fd_set()'.
-   *
    */
   count = max (64, fd->fd_count);
   size = count * sizeof(SOCKET) + sizeof(u_int);
@@ -1572,6 +1568,16 @@ fd_set *copy_fd_set_to (const fd_set *fd, fd_set *dst)
   return (dst);
 }
 
+/*
+ * Called from 'dump_select()' to print a single 'fd_set'.
+ * When e.g. 'g_cfg.max_fd_sets is 5, print it like this:
+ *
+ *  fd_input  -> rd: 600,724,760,752,756...
+ *
+ * Otherwise when 'fd->fd_count' is unbounded, print it like this:
+ *  fd_input  -> rd: 600,724,760,752,756,764,1692
+ *
+ */
 static void dump_one_fd_set (const fd_set *fd, int indent)
 {
   u_int i, max_len, len = indent;
@@ -1621,8 +1627,6 @@ static void dump_one_fd_set (const fd_set *fd, int indent)
 
 void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent)
 {
-  int i;
-
   struct sel_info {
          const char   *which;
          const fd_set *fd;
@@ -1631,6 +1635,7 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
          { " wr: ", NULL },
          { " ex: ", NULL }
        };
+  int i;
 
   info[0].fd = rd;
   info[1].fd = wr;
@@ -1639,7 +1644,6 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
   for (i = 0; i < DIM(info); i++)
   {
     trace_puts (info[i].which);
-
     if (info[i].fd)
          dump_one_fd_set (info[i].fd, indent+5);
     else trace_puts ( "<not set>\n");
