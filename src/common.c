@@ -1567,6 +1567,11 @@ const char *get_dll_short_name (void)
   return (RC_BASENAME RC_SUFFIX ".dll");
 }
 
+const char *get_dll_build_date (void)
+{
+  return (__DATE__);
+}
+
 /*
  * Returns e.g. "Visual-C, 32-bit"
  */
