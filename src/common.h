@@ -272,6 +272,7 @@ extern int    file_exists (const char *fname);
 extern const char *get_dll_full_name (void);
 extern void        set_dll_full_name (HINSTANCE inst_dll);
 extern const char *get_dll_short_name (void);
+extern const char *get_dll_build_date (void);
 extern const char *get_builder (void);
 
 #if defined(__CYGWIN__)

@@ -1163,7 +1163,7 @@ void wsock_trace_init (void)
   if (g_cfg.trace_level > 0 &&
       (g_cfg.trace_use_ods || (!g_cfg.trace_file_device && g_cfg.trace_file_okay)))
     trace_printf ("\n------- Trace started at %s --------"
-                  "---------------------- %s, %s\n", now, get_builder(), get_dll_short_name());
+                  "------ %s, %s. Build-date: %s.\n", now, get_builder(), get_dll_short_name(), get_dll_build_date());
 
   memset (&console_info, 0, sizeof(console_info));
 
@@ -1257,8 +1257,9 @@ void wsock_trace_init (void)
             "                curr_dir:            '%s'\n"
             "                prog_dir:            '%s'\n"
             "                get_builder():        %s\n"
-            "                get_dll_short_name(): %s\n",
-         curr_prog, curr_dir, prog_dir, get_builder(), get_dll_short_name());
+            "                get_dll_short_name(): %s\n"
+            "                get_dll_build_date(): %s\n",
+         curr_prog, curr_dir, prog_dir, get_builder(), get_dll_short_name(), get_dll_build_date());
 
   geoip_init (NULL, NULL);
   DNSBL_init();
