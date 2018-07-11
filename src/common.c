@@ -33,6 +33,7 @@
 
 #define IS_SLASH(c)  ((c) == '\\' || (c) == '/')
 #define TOUPPER(c)   toupper ((int)(c))
+#define TOLOWER(c)   tolower ((int)(c))
 
 int              fatal_error;
 CRITICAL_SECTION crit_sect;
@@ -840,6 +841,18 @@ const char *path_ltrim (const char *p1, const char *p2)
   return (p1);
 }
 
+/**
+ * For consistency, report drive-letter in lower case.
+ */
+char *_fix_drive (char *path)
+{
+  size_t len = strlen (path);
+
+  if (len >= 3 && path[1] == ':' && IS_SLASH(path[2]))
+     path[0] = (char) TOLOWER (path[0]);
+  return (path);
+}
+
 /*
  * This function is called from StackWalkShow() to return a
  * short version of 'Line.FileName'. I.e. a file-name relative to
@@ -861,10 +874,6 @@ const char *shorten_path (const char *path)
   }
   if (!g_cfg.use_full_path && len >= 3 && !strnicmp(prog_dir,path,len))
      return (real_name + len);
-
-#if 0
-  _fix_drive (real_name);
-#endif
 
   return (real_name);
 }
@@ -907,13 +916,13 @@ static const char *fname_cache_add (const char *fname)
   fn->crc32     = crc_bytes (fname, fn_len);
   fn->orig_name = str_replace ('\\', '/', strcpy((char*)(fn+1), fname));
 
-#if 0
-  _fix_drive (fn->orig_name);
-#endif
-
   if (GetLongPathName(fname, buf, sizeof(buf)))
-       fn->real_name = str_replace ('\\', '/', strdup(buf));
-  else fn->real_name = NULL;
+  {
+    fn->real_name = str_replace ('\\', '/', strdup(buf));
+    _fix_drive (fn->real_name);
+  }
+  else
+    fn->real_name = NULL;
 
   smartlist_add (fname_list, fn);
   return (fn->real_name ? fn->real_name : fn->orig_name);
@@ -1061,7 +1070,7 @@ int trace_vprintf (const char *fmt, va_list args)
 
 int trace_putc (int ch)
 {
-  static BOOL get_color = FALSE;
+  static BOOL get_color = FALSE;  /* \todo: this must be a "Thread Local" value */
   int    rc = 0;
 
   if (!trace_ptr || !trace_end)
