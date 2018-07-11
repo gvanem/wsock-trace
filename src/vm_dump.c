@@ -144,8 +144,8 @@ static void print_one_address (thread_args *args, DWORD64 addr)
 #if !defined(_MSC_VER) && !defined(__clang__)
   if (path[0] && !stricmp(our_module,path))
      have_PDB_info = FALSE;
-  /*
-   * otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
+
+  /* Otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
    */
 #endif
 
@@ -273,9 +273,20 @@ static DWORD WINAPI dump_thread (void *arg)
     if (vm_bug_debug >= 3)
     {
       const NT_TIB *tib = (const NT_TIB*) NtCurrentTeb();
+      DWORD stk_len;
 
+      /* 'length' = 'base - limit' since the stack grows towards a lower address.
+       */
+      stk_len = (DWORD) ((DWORD_PTR)tib->StackBase - (DWORD_PTR)tib->StackLimit);
+
+      /* The base and limit (2MByte) of the thread-stack should be constant
+       * throughout it's life-time. But print it anyway on each iteration.
+       * How do we check if the base/limit was changed?
+       * And what bad could happen then?
+       */
       TRACE (3, "stack-base:  0x%p\n"
-                "                stack-limit: 0x%p\n", tib->StackBase, tib->StackLimit);
+                "                stack-limit: 0x%p (%s bytes)\n",
+            tib->StackBase, tib->StackLimit, dword_str(stk_len));
     }
 
     if (recursion || addr == 0 || frame.AddrReturn.Offset == 0)
@@ -353,17 +364,30 @@ void vm_bug_list (int skip_frames, void *list)
 {
   thread_args arg;
   HANDLE      th;
-  DWORD       tid;
+  DWORD       tid, flags;
 
   init();
 
-  arg.list          = list;    /* \todo: A user defined 'smartlist_t' array to fill */
+  /**\todo: 'list' is a user defined 'smartlist_t' array to fill.
+   */
+  arg.list          = list;
   arg.tid           = GetCurrentThreadId();
   arg.skip_frames   = skip_frames;
   arg.max_recursion = INT_MAX;
   arg.max_frames    = INT_MAX;
 
-  th = CreateThread (NULL, 0, dump_thread, &arg, 0, &tid);
+  /* 16kByte seems to be the minimum stack-size on Windows-10.
+   * Whatever the crappy pages at 'https://docs.microsoft.com' says.
+   *
+   * And  without the 'STACK_SIZE_PARAM_IS_A_RESERVATION' flag, the
+   * given stack-size is the *commit* size of the stack. Not the reserve
+   * size.
+   *
+   * Ref:
+   *   https://bugzilla.mozilla.org/show_bug.cgi?id=958796
+   */
+  flags = STACK_SIZE_PARAM_IS_A_RESERVATION;
+  th = CreateThread (NULL, 4*1024, dump_thread, &arg, flags, &tid);
   if (th != INVALID_HANDLE_VALUE)
   {
     WaitForSingleObject (th, INFINITE);
