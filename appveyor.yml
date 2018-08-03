@@ -47,7 +47,7 @@ matrix:
 cache:
   - wsock-trace-%APPVEYOR_BUILD_NUMBER%
 
-install:
+before_build:
   #
   # clone the submodules.
   #
@@ -58,6 +58,18 @@ install:
   #
   - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
   - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
+
+install:
+  #
+  # clone the submodules.
+  #
+  # - cmd: git submodule update --init --recursive
+  #
+  #
+  # Download IP2Location Database (with IPv4+IP6 addresses) and decompress using '7z'.
+  #
+  #- cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  #- cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
 
   #
   # Add a few locations to our PATH.
