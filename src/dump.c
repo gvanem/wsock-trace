@@ -1205,6 +1205,15 @@ const char *event_bits_decode (__LONG32 flag)
   return flags_decode (flag, wsa_events_flgs, DIM(wsa_events_flgs));
 }
 
+/**
+ * Return the name for a 'SIO_x' code.
+ *
+ * \todo
+ *  Should also get more info on the value this 'SIO_x' reads or writes.
+ *  E.g for 'SIO_IDEAL_SEND_BACKLOG_QUERY' -> _IOR ('t', 123, ULONG),
+ *  we should get the 'ULONG' value read by it. '_IOR()' means it's
+ *  a 'read' value.
+ */
 const char *get_sio_name (DWORD code)
 {
   static char buf[20];
@@ -2337,14 +2346,16 @@ static const struct search_list test_list_1[] = {
                               { 3, "bar3"   },
                               { 0, "foobar" }
                             };
+
 static const struct search_list test_list_2[] = {
-                              { 0,          "foo" },
-                              { 1,          "bar" },
-                              { UINT_MAX,   "00"  },
-                              { UINT_MAX,   "01"  }
+                              { 0,        "foo" },
+                              { 1,        "bar" },
+                              { UINT_MAX, "00"  },
+                              { UINT_MAX, "01"  }
                             };
 
-static void report_check_err (const struct search_list *tab, const char *name, int rc, int idx1, int idx2)
+static void
+report_check_err (const struct search_list *tab, const char *name, int rc, int idx1, int idx2)
 {
   switch (rc)
   {
@@ -2357,10 +2368,10 @@ static void report_check_err (const struct search_list *tab, const char *name, i
     case -3:
          trace_printf ("%s[%d]: value == UINT_MAX.\n", name, idx1);
          break;
-     case -4:
+    case -4:
          trace_printf ("%s[%d+%d]: Duplicated values: '%s'=%u and '%s'=%u.\n",
-                         name, idx1, idx2, tab[idx1].name, tab[idx1].value,
-                         tab[idx2].name, tab[idx2].value);
+                       name, idx1, idx2, tab[idx1].name, tab[idx1].value,
+                       tab[idx2].name, tab[idx2].value);
          break;
   }
 }
