@@ -1894,6 +1894,7 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
 
 /*
  * This accepts only one address per line.
+ * Trailing '# comments' with or without a starting <TAB> are stripped off.
  */
 static smartlist_t *read_file (FILE *f, smartlist_t *list)
 {
@@ -1911,6 +1912,9 @@ static smartlist_t *read_file (FILE *f, smartlist_t *list)
     if (p)
        *p = '\0';
     p = strchr (buf, ' ');
+    if (p)
+       *p = '\0';
+    p = strchr (buf, '\t');
     if (p)
        *p = '\0';
     smartlist_add (list, strdup(buf));
