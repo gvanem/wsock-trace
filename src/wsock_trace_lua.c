@@ -41,12 +41,18 @@ const char *wslua_func_sig = NULL;
 static BOOL init_script_ok = FALSE;
 static BOOL open_ok        = TRUE;
 
+static void wslua_init (const char *script);
+static void wslua_exit (const char *script);
+
 BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 {
   const char *dll  = get_dll_full_name();
   const char *base = basename (dll);
   char        cpath [_MAX_PATH] = { "?" };
   BOOL        rc = TRUE;
+
+  if (!g_cfg.lua.enable)
+     return (TRUE);
 
   if (reason == DLL_PROCESS_ATTACH)
   {
@@ -62,8 +68,22 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     {
       snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", (int)(base-dll-1), dll);
       _setenv ("LUA_CPATH", cpath, 1);
+      wslua_init (g_cfg.lua.init_script);
     }
   }
+  else if (reason == DLL_PROCESS_DETACH)
+  {
+    wslua_exit (g_cfg.lua.exit_script);
+  }
+  else if (reason == DLL_THREAD_ATTACH)
+  {
+    /** \todo */
+  }
+  else if (reason == DLL_THREAD_DETACH)
+  {
+    /** \todo */
+  }
+
   LUA_TRACE (1, "rc: %d, dll: %s\n"
                  "                       %s.\n", rc, dll, cpath);
   return (rc);
@@ -299,7 +319,7 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
          break;
   }
 
-#if 0   /* to-do */
+#if 0   /** \todo */
   if (_ld->event == LUA_HOOKCALL)
   {
     lua_Debug ld;
@@ -339,7 +359,7 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
  *    E.g. do a:
  *      set LUA_PATH=c:\net\wsock_trace\LuaJIT\src\?.lua;?.lua
  */
-void wslua_init (const char *script)
+static void wslua_init (const char *script)
 {
   if (L)
      return;
@@ -365,12 +385,12 @@ void wslua_init (const char *script)
   init_script_ok = wslua_run_script (L, script);
 }
 
-/*
- * Called from 'DllMain()' / 'DLL_PROCESS_DETACH' to tear down
+/**
+ * Called on 'wslua_DllMain (...DLL_PROCESS_DETACH)' to tear down
  * Lua and optionally run the 'script'.
  * Provided the 'script' in 'wslua_init()' ran okay.
  */
-void wslua_exit (const char *script)
+static void wslua_exit (const char *script)
 {
   if (!L)
      return;
