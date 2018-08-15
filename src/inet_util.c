@@ -68,6 +68,19 @@
   }
 #endif
 
+/*
+ * Modified from <mstcpip.h> since not all targets or SDKs contain these
+ */
+int IN6_IS_ADDR_6TO4 (const struct in6_addr *a)
+{
+  return (a->s6_words[0] == 0x0220); /* == IN6ADDR_6TO4PREFIX_INIT swapped */
+}
+
+int IN6_IS_ADDR_ISATAP (const struct in6_addr *a)
+{
+  return ((a->s6_words[4] & 0xFFFD) == 0) && (a->s6_words[5] == 0xFE5E);
+}
+
 /* Handy macro to both define and declare the function-pointer.
  */
 #define INET_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
@@ -347,6 +360,16 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
     if (IN6_IS_ADDR_V4MAPPED(ip6))
     {
       *remark = "IPv4 mapped";
+      return (1);
+    }
+    if (IN6_IS_ADDR_6TO4(ip6))
+    {
+      *remark = "6to4";
+      return (1);
+    }
+    if (IN6_IS_ADDR_ISATAP(ip6))
+    {
+      *remark = "ISATAP";
       return (1);
     }
 
