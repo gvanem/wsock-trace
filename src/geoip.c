@@ -869,7 +869,7 @@ static const struct country_list c_list[] = {
        { 642, "ro", "Romania"                              },
        { 643, "ru", "Russia"                               },
        { 646, "rw", "Rwanda"                               },
-       { 0,   "bl", "Saint Barthélemy"                     }, /* https://en.wikipedia.org/wiki/ISO_3166-2:BL */
+       {   0, "bl", "Saint Barthélemy"                     }, /* https://en.wikipedia.org/wiki/ISO_3166-2:BL */
        { 659, "kn", "Saint Kitts & Nevis"                  },
        { 662, "lc", "Saint Lucia"                          },
        { 663, "mf", "Saint Martin"                         },
@@ -960,7 +960,7 @@ const char *geoip_get_long_name_by_A2 (const char *short_name)
    */
   for (i = 0; i < num; i++, list++)
   {
-    if (!strnicmp(list->short_name,short_name, sizeof(list->short_name)))
+    if (!strnicmp(list->short_name, short_name, sizeof(list->short_name)))
        return (list->long_name);
   }
   return (NULL);
@@ -971,8 +971,8 @@ const char *geoip_get_long_name_by_id (int number)
   const struct country_list *list = c_list + 0;
   size_t i, num = DIM(c_list);
 
-  /* Since several countries above have no assigned number, we cannot return a
-   * sensible name.
+  /* Since some countries above ("Kosovo" and "Saint Barthélemy") have no
+   * assigned number, we cannot return a sensible name.
    */
   if (number == 0)
      return ("?");
