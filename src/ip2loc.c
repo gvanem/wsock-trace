@@ -39,7 +39,8 @@ static IP2Location *open_file (const char *file)
   struct stat  st;
   IP2Location *loc;
   FILE        *f;
-  int          IPvX;
+  UINT         IPvX;
+  BOOL         is_IPv4_only, is_IPv6_only;
 
   f = fopen (file, "rb");
   if (!f)
@@ -62,6 +63,7 @@ static IP2Location *open_file (const char *file)
   file_size = st.st_size;
 
   /* The IP2Loc database scheme is really strange.
+   * This used to be true previously.
    */
   IPvX = loc->ipversion;
   if (IPvX == IPV4)
@@ -69,13 +71,23 @@ static IP2Location *open_file (const char *file)
   else if (IPvX == IPV6)
      IPvX = 6;
 
+  /* The IPvX count could now mean the count of IPv6 addresses
+   * in a database with both IPv4 and IPv6 addresses.
+   */
+  is_IPv4_only = is_IPv6_only = FALSE;
+  if ((IPvX == loc->ipv6databasecount) && (loc->ipv4databasecount == 0))
+     is_IPv6_only = TRUE;
+
+  else if ((IPvX == loc->ipv4databasecount) && (loc->ipv6databasecount == 0))
+     is_IPv4_only = TRUE;
+
   TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s\n"
             "                Date: %02d-%02d-%04d, IPvX: %d, "
-            "IP4count: %u, IP6count: %u.\n",
+            "IPv4-count: %u, IPv6-count: %u (is_IPv4_only: %d, is_IPv6_only: %d).\n",
          dword_str(loc->ipv4databasecount), IP2Location_api_version_string(),
          loc->databaseday, loc->databasemonth, 2000+loc->databaseyear,
          IPvX,
-         loc->ipv4databasecount, loc->ipv6databasecount);
+         loc->ipv4databasecount, loc->ipv6databasecount, is_IPv4_only, is_IPv6_only);
   return (loc);
 }
 
@@ -193,7 +205,7 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
 
 /*
  * This avoids the call to 'inet_pton()' and 'inet_addr()' since the passed
- * '*addr' should be valid IPv4-address.
+ * '*addr' should be a valid IPv4-address.
  */
 BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
 {
@@ -215,7 +227,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
 
 /*
  * This avoids the call to 'inet_pton()' since the passed
- * '*addr' should be valid IPv6-address.
+ * '*addr' should be a valid IPv6-address.
  */
 BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
 {
