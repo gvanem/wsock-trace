@@ -5,8 +5,8 @@
  *   A simple DNSBL (Domain Name System Blacklists) implementation.
  *   Parses and uses the the Spamhaus DROP / EDROP / DROPv6 files to
  *   check an IPv4/IPv6-address for membership of a "spam network".
- *   Used in dump.c to print the SBL (Spam Block Reference) reference
- *   if found in the 'DNSBL_list' smartlist.
+ *   Used in dump.c to print the SBL (Spamhaus Block Reference)
+ *   if found in the `DNSBL_list` smartlist.
  *
  * Ref:
  *   http://www.spamhaus.org/drop/
@@ -188,9 +188,19 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
   return (rc);
 }
 
-/*
+/**
  * Do a binary search in the 'DNSBL_list' to figure out if
  * 'ip4' or 'ip6' address is a member of a "spam group".
+ *
+ * \note An IPv4/IPv6 address can have more than 1 SBL reference.
+ *       This is currently unsupported.
+ *       \eg{.}:
+ *       Currently (as of August 2018), the IPv4 block `24.233.0.0/19`
+ *       is listed in both `drop.txt` and `edrop.txt` as:
+ *       ```
+ *         24.233.0.0/19 ; SBL210084
+ *         24.233.0.0/21 ; SBL356227
+ *       ```
  */
 static BOOL DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr *ip6, const char **sbl_ref)
 {
@@ -224,9 +234,9 @@ BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
   return DNSBL_check_common (NULL, ip6, sbl_ref);
 }
 
-/*
- * Called from 'DNSBL_test()'.
- * Simply prints the 'DNSBL_list' smartlist.
+/**
+ * Called from DNSBL_test().
+ * Simply prints the `DNSBL_list` smartlist.
  */
 static void DNSBL_dump (void)
 {
@@ -292,7 +302,7 @@ int DNSBL_test (void)
   BOOL   rc;
   static const struct test_list tests[] = {
                     { AF_INET,  "108.166.224.2", "235333" },  /* in drop.txt */
-                    { AF_INET,  "24.51.0.2",     "293696" },
+                    { AF_INET,  "24.233.0.21",   "210084" },
                     { AF_INET,  "8.8.8.8",       "<none>" },  /* Google's NS */
                     { AF_INET,  "193.25.48.3",   "211796" },
                     { AF_INET,  "120.46.4.1",    "262362" },  /* in edrop.txt */
@@ -303,13 +313,13 @@ int DNSBL_test (void)
                   };
   const struct test_list *test = tests + 0;
 
-  DNSBL_dump();
-
   if (!g_cfg.DNSBL.enable)
   {
     TRACE (2, "g_cfg.DNSBL.enable = 0\n");
     return (0);
   }
+
+  DNSBL_dump();
 
   if (g_cfg.DNSBL.drop_file && file_exists(g_cfg.DNSBL.drop_file))
      INET_util_test_mask4();
