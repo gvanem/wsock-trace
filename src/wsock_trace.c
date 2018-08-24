@@ -3012,15 +3012,14 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 #if 0
          smartlist_add (thread_list, GetCurrentThreadId());
 #endif
-#ifdef USE_LUA
+#if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);
 #endif
          break;
 
     case DLL_PROCESS_DETACH:
 #if defined(USE_LUA)
-         if (g_cfg.lua.enable)
-            wslua_DllMain (instDLL, reason);
+         wslua_DllMain (instDLL, reason);
 #endif
          tid = GetCurrentThreadId();
          wsock_trace_exit();
@@ -3036,7 +3035,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
           *   Add this 'tid' as a new thread to a 'smartlist_t' and call 'print_thread_times()'
           *   for it when 'DLL_PROCESS_DETACH' is received.
           */
-#ifdef USE_LUA
+#if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);
 #endif
          break;
@@ -3056,7 +3055,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
           *   dying thread and call 'print_thread_times()' for all threads (alive or dead) when
           *   'DLL_PROCESS_DETACH' is received.
           */
-#ifdef USE_LUA
+#if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);
 #endif
          break;
