@@ -313,9 +313,9 @@ int DNSBL_test (void)
                   };
   const struct test_list *test = tests + 0;
 
-  if (!g_cfg.DNSBL.enable)
+  if (!(g_cfg.DNSBL.enable && g_cfg.DNSBL.test))
   {
-    TRACE (2, "g_cfg.DNSBL.enable = 0\n");
+    TRACE (2, "g_cfg.DNSBL.enable = 0 or g_cfg.DNSBL.test = 0\n");
     return (0);
   }
 
@@ -451,24 +451,29 @@ static int update_file (const char *fname, const char *url, time_t now, time_t e
            fname, url);
   }
 
-  /* Currently for an AppVeyor build, 'g_cfg.DNSBL.max_days' is '0'.
-   * (max_days = 0 in the "[dnsbl]" section in the "wsock_trace.appveyor" file).
-   * This means these "*drop*.txt" files would be downloaded from SpamHaus's
-   * server immediately after being checked out from GitHub!
-   * Therefore, give a 10 sec time slack.
-   */
-  expiry -= 10;
-
-  if (st.st_mtime > expiry)
+  if (st.st_size == 0)
+     TRACE (2, "Updating truncated \"%s\" from \"%s\"\n", fname, url);
+  else
   {
-    when = now + g_cfg.DNSBL.max_days * 24 * 3600;
-    TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n",
-           fname, ctime(&when));
-    return (0);
-  }
+    /* Currently for an AppVeyor build, 'g_cfg.DNSBL.max_days' is '0'.
+     * (max_days = 0 in the "[dnsbl]" section in the "wsock_trace.appveyor" file).
+     * This means these "*drop*.txt" files would be downloaded from SpamHaus's
+     * server immediately after being checked out from GitHub!
+     * Therefore, give a 10 sec time slack.
+     */
+    expiry -= 10;
 
-  if (st.st_mtime > 0)
-     TRACE (2, "Updating \"%s\" from \"%s\"\n", fname, url);
+    if (st.st_mtime > expiry)
+    {
+      when = now + g_cfg.DNSBL.max_days * 24 * 3600;
+      TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n",
+             fname, ctime(&when));
+      return (0);
+    }
+
+    if (st.st_mtime > 0)
+       TRACE (2, "Updating \"%s\" from \"%s\"\n", fname, url);
+  }
 
   if (INET_util_download_file(fname, url) > 0)
   {
