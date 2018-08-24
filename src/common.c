@@ -295,9 +295,9 @@ char *win_strerror (DWORD err)
  */
 int load_dynamic_table (struct LoadTable *tab, int tab_size)
 {
-  int i;
+  int i, j;
 
-  for (i = 0; i < tab_size; tab++, i++)
+  for (i = j = 0; i < tab_size; tab++, i++)
   {
     const char             *is_opt;
     const struct LoadTable *prev = i > 0 ? (tab - 1) : NULL;
@@ -315,7 +315,10 @@ int load_dynamic_table (struct LoadTable *tab, int tab_size)
       if (!tab->optional)
       {
         if (!func_addr)
-           TRACE (2, "Function \"%s\" not found in %s.\n", tab->func_name, tab->mod_name);
+        {
+          TRACE (2, "Function \"%s\" not found in %s.\n", tab->func_name, tab->mod_name);
+          j++;
+        }
       }
       *tab->func_addr = func_addr;
     }
@@ -326,7 +329,7 @@ int load_dynamic_table (struct LoadTable *tab, int tab_size)
               ADDR_CAST(tab->mod_handle), tab->mod_name, tab->func_name,
               ADDR_CAST(*tab->func_addr), is_opt);
   }
-  return (i);
+  return (i - j);
 }
 
 int unload_dynamic_table (struct LoadTable *tab, int tab_size)
