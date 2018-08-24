@@ -1021,8 +1021,15 @@ void wsock_trace_exit (void)
   DeleteCriticalSection (&crit_sect);
 }
 
-/*
- * Called from DllMain(): dwReason == DLL_PROCESS_ATTACH
+/**
+ * Called from DllMain(): dwReason == DLL_PROCESS_ATTACH.
+ *
+ * \note There are significant limits on what you can safely do in a
+ *       DLL entry point. More at: \n
+ *       https://docs.microsoft.com/en-gb/windows/desktop/Dlls/dllmain
+ *
+ *       But the below code (except calling any "WinInet.dll" functions from
+ *       inet_util.c) seems safe to call.
  */
 void wsock_trace_init (void)
 {
