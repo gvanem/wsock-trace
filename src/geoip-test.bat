@@ -4,6 +4,7 @@
 :: Rewrite this into a Python script some day.
 ::
 setlocal
+set WSOCK_TRACE_LEVEL=0
 
 if %1. == -h. (
   echo Usage: %0 [-h ^| -d ^| --ip2loc_4 ^| --ip2loc_6]
