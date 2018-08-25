@@ -787,11 +787,12 @@ static enum cfg_sections lookup_section (const char *section)
 /*
  * Parse the config-file given in 'file'.
  */
-static void parse_config_file (FILE *file)
+static int parse_config_file (FILE *file)
 {
   const char *key, *val, *section;
   char        last_section[40];
-  unsigned    line = 0;
+  unsigned    line  = 0;
+  unsigned    lines = 0;
 
   str_replace ('\\', '/', fname);
   TRACE (4, "file: %s.\n", fname);
@@ -805,6 +806,7 @@ static void parse_config_file (FILE *file)
   while (config_get_line(file,&line,&key,&val,&section))
   {
     TRACE (4, "line %u: '%s' = '%s' (section: '%s')\n", line, key, val, section);
+    lines++;
 
     if (!*val)      /* foo = <empty value> */
        continue;
@@ -844,6 +846,7 @@ static void parse_config_file (FILE *file)
            break;
     }
   }
+  return (lines);
 }
 
 #if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
