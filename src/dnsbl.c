@@ -213,7 +213,8 @@ static BOOL DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr
   if (!DNSBL_list)
      return (FALSE);
 
-  dnsbl = smartlist_bsearch (DNSBL_list, ip4 ? (const void*)ip4 : (const void*)ip6,
+  dnsbl = smartlist_bsearch (DNSBL_list,
+                             ip4 ? (const void*)ip4         : (const void*)ip6,
                              ip4 ? DNSBL_compare_is_on_net4 : DNSBL_compare_is_on_net6);
   if (sbl_ref && dnsbl)
      *sbl_ref = dnsbl->SBL_ref;
