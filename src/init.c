@@ -1106,7 +1106,6 @@ void wsock_trace_init (void)
     else ws_sema_inherited = FALSE;
   }
 
-
   if ((g_cfg.msvc_only   && !is_msvc)  ||
       (g_cfg.mingw_only  && !is_mingw) ||
       (g_cfg.cygwin_only && !is_cygwin) )
@@ -1272,9 +1271,13 @@ void wsock_trace_init (void)
          curr_prog, curr_dir, prog_dir, get_builder(), get_dll_short_name(), get_dll_build_date());
 
   geoip_init (NULL, NULL);
-  DNSBL_init();
 
-#if !defined(TEST_GEOIP) && !defined(TEST_NLM)
+#if defined(TEST_GEOIP) || defined(TEST_NLM)
+  DNSBL_init (TRUE);
+
+#else
+  DNSBL_init (FALSE);
+
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
@@ -1294,7 +1297,7 @@ void wsock_trace_init (void)
 
   if (g_cfg.DNSBL.test)
      DNSBL_test();
-#endif  /* !TEST_GEOIP && !TEST_NLM */
+#endif  /* TEST_GEOIP || TEST_NLM */
 }
 
 #if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)

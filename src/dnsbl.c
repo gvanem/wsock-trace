@@ -11,7 +11,7 @@
  * Ref:
  *   http://www.spamhaus.org/drop/
  *
- * By Gisle Vanem <gvanem@yahoo.no> August 2018.
+ * By Gisle Vanem <gvanem@yahoo.no> August 2017.
  */
 
 #include "common.h"
@@ -49,6 +49,7 @@ struct DNSBL_info {
 static smartlist_t *DNSBL_list = NULL;
 static const char  *current_file;   /* The DROP-file we're currently parsing */
 
+static int           DNSBL_update_files (void);
 static void MS_CDECL DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
 static void MS_CDECL DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
@@ -386,19 +387,19 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
   }
 }
 
-/*
- * Called from init.c /  wsock_trace_init().
+/**
+ * Called from init.c / `wsock_trace_init()`.
  *
- * This function is called before 'load_ws2_funcs()' that dynamically loads
+ * This function is called before `load_ws2_funcs()` that dynamically loads
  * all Winsock functions. That means we must NOT call any true Winsock functions.
- * But instead use private functions like '_wsock_trace_inet_pton()' that sets
- * 'call_WSASetLastError == FALSE'.
+ * But instead use private functions like `_wsock_trace_inet_pton()` that sets
+ * `call_WSASetLastError == FALSE`.
  *
- * Since the 'DNSBL_test()' test function will call 'inet_addr()' (at trace_level >= 3)
- * via 'IP2Location_get_record()', the 'DNSBL_test()' must be postponed to a later
- * stage in 'wsock_trace_init()'.
+ * Since the `DNSBL_test()` test function will call `inet_addr()` (at `trace_level >= 3`)
+ * via `IP2Location_get_record()`, the `DNSBL_test()` must be postponed to a later
+ * stage in `wsock_trace_init()`.
  */
-void DNSBL_init (void)
+void DNSBL_init (BOOL update)
 {
   if (!g_cfg.DNSBL.enable)
   {
@@ -406,12 +407,14 @@ void DNSBL_init (void)
     return;
   }
 
-  DNSBL_update_files();
+  if (update)
+     DNSBL_update_files();
+
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.drop_file, DNSBL_parse_DROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.edrop_file, DNSBL_parse_EDROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.dropv6_file, DNSBL_parse_DROPv6);
 
-  /* Each of the 'drop.txt', 'edrop.txt' and 'dropv6.txt' should be sorted.
+  /* Each of the 'drop.txt', 'edrop.txt' and 'dropv6.txt' are already sorted.
    * But after merging them into one list, we must sort them ourself.
    */
   if (DNSBL_list)
@@ -433,26 +436,27 @@ void DNSBL_exit (void)
 }
 
 /**
- * Check if 'fname' needs an update.
- * If it does (or does not exist), download it using WinInet.dll and 'touch' it.
+ * Check if `fname` needs an update.
+ * If it does (or if it is truncated or does not exist), download it using
+ * WinInet.dll and `touch` it.
  */
-static int update_file (const char *fname, const char *url, time_t now, time_t expiry)
+static int update_file (const char *fname, const char *tmp_file, const char *url, time_t now, time_t expiry)
 {
   struct stat st;
-  time_t when;
+  time_t      when;
 
-  if (!fname || !url)
+  if (!fname || !tmp_file || !url)
      return (0);
 
-  if (stat(fname, &st) != 0)
+  if (stat(tmp_file, &st) != 0)
   {
     st.st_mtime = 0;
     TRACE (2, "File \"%s\" doesn't exist. Forcing a download from \"%s\".\n",
-           fname, url);
+           tmp_file, url);
   }
-
+  else
   if (st.st_size == 0)
-     TRACE (2, "Updating truncated \"%s\" from \"%s\"\n", fname, url);
+     TRACE (2, "Updating truncated \"%s\" from \"%s\"\n", tmp_file, url);
   else
   {
     /* Currently for an AppVeyor build, 'g_cfg.DNSBL.max_days' is '0'.
@@ -467,16 +471,18 @@ static int update_file (const char *fname, const char *url, time_t now, time_t e
     {
       when = now + g_cfg.DNSBL.max_days * 24 * 3600;
       TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n",
-             fname, ctime(&when));
+             tmp_file, ctime(&when));
       return (0);
     }
 
     if (st.st_mtime > 0)
-       TRACE (2, "Updating \"%s\" from \"%s\"\n", fname, url);
+       TRACE (2, "Updating \"%s\" from \"%s\"\n", tmp_file, url);
   }
 
-  if (INET_util_download_file(fname, url) > 0)
+  if (INET_util_download_file(tmp_file, url) > 0)
   {
+    TRACE (1, "%s -> %s\n", tmp_file, fname);
+    CopyFile (tmp_file, fname, FALSE);
     INET_util_touch_file (fname);
     return (1);
   }
@@ -484,14 +490,16 @@ static int update_file (const char *fname, const char *url, time_t now, time_t e
 }
 
 /**
- * Check all '*drop*.txt' files based on file's timestamp. The expiriry in the
- * file header is a bit too hard to parse. Simply use 'g_cfg.DNSBL.max_days'
+ * Check all `*drop*.txt` files based on file's timestamp. The expiriry in the
+ * file header is a bit too hard to parse. Simply use `g_cfg.DNSBL.max_days`
  * and download it if it's too old.
  */
-int DNSBL_update_files (void)
+static int DNSBL_update_files (void)
 {
-  time_t now, expiry;
-  int    num = 0;
+  char        tmp_file [MAX_PATH];
+  const char *env = getenv ("TEMP");
+  time_t      now, expiry;
+  int         num = 0;
 
   if (!g_cfg.DNSBL.enable)
   {
@@ -503,9 +511,15 @@ int DNSBL_update_files (void)
   now = time (NULL);
   expiry = now - g_cfg.DNSBL.max_days * 24 * 3600;
 
-  num += update_file (g_cfg.DNSBL.drop_file, g_cfg.DNSBL.drop_url, now, expiry);
-  num += update_file (g_cfg.DNSBL.edrop_file, g_cfg.DNSBL.edrop_url, now, expiry);
-  num += update_file (g_cfg.DNSBL.dropv6_file, g_cfg.DNSBL.dropv6_url, now, expiry);
+  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.drop_file));
+  num += update_file (g_cfg.DNSBL.drop_file, tmp_file, g_cfg.DNSBL.drop_url, now, expiry);
+
+  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.edrop_file));
+  num += update_file (g_cfg.DNSBL.edrop_file, tmp_file, g_cfg.DNSBL.edrop_url, now, expiry);
+
+  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.dropv6_file));
+  num += update_file (g_cfg.DNSBL.dropv6_file, tmp_file, g_cfg.DNSBL.dropv6_url, now, expiry);
+
   return (num);
 }
 
