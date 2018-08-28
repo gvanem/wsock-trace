@@ -1063,8 +1063,6 @@ static BOOL set_symbol_search_path (void)
   if (end[-1] == ';')
       end[-1] = '\0';   /* if we added anything, we have a trailing semicolon */
 
-  str_replace ('/', '\\', path);
-
   TRACE (2, "symbolSearchPath = \"%s\".\n", path);
 
   /* init symbol handler stuff
