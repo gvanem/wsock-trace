@@ -629,6 +629,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key,"hosts_file"))
      g_cfg.hosts_file = strdup (val);
 
+  else if (!stricmp(key,"use_winhttp"))
+     g_cfg.use_winhttp = atoi (val);
+
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }

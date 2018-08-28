@@ -129,6 +129,12 @@ exclude = FD_ISSET
 # exclude = nmap!getaddrinfo
 
 #
+# Use WinHTTP.dll to download the below files.
+# If 0, use WinInet.dll instead.
+#
+use_winhttp = 0
+
+#
 # Experimental:
 #   Lua-scripts for init and exit.
 #
