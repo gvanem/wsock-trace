@@ -69,11 +69,13 @@ install:
   - cmd: set PATH=%APPVEYOR_BUILD_FOLDER%\src;%WATCOM%\binnt;%PATH%
   - cmd: set NT_INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
   - cmd: set DISABLEDELAYEDEXPANSION=0
+  - cmd: set CYGWIN_PACKAGES=-P gcc-core,libgcc1,w32api-headers,w32api-runtime
+  - cmd: set CYGWIN_OPT=%CYGWIN_PACKAGE% -qgnNdO -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com
 
   - cmd: if "%BUILDER%"=="mingw32"  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if "%BUILDER%"=="mingw64"  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if "%BUILDER%"=="cygwin64" set PATH=c:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe -qgnNdO -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
 
   #
   # Set compiler environment for MSVC.
