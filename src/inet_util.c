@@ -255,6 +255,25 @@ static const char *wininet_strerror (DWORD err)
   return win_strerror (err);
 }
 
+/*
+ * Missing in AppVeyor's SDK and possibly others.
+ */
+#ifndef ERROR_WINHTTP_UNHANDLED_SCRIPT_TYPE
+#define ERROR_WINHTTP_UNHANDLED_SCRIPT_TYPE          (12000 + 176)
+#endif
+
+#ifndef ERROR_WINHTTP_SCRIPT_EXECUTION_ERROR
+#define ERROR_WINHTTP_SCRIPT_EXECUTION_ERROR         (12000 + 177)
+#endif
+
+#ifndef ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED_PROXY
+#define ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED_PROXY  (12000 + 187)
+#endif
+
+#ifndef ERROR_WINHTTP_SECURE_FAILURE_PROXY
+#define ERROR_WINHTTP_SECURE_FAILURE_PROXY           (12000 + 188)
+#endif
+
 #undef  ADD_VALUE
 #define ADD_VALUE(x)   { x, #x }
 
