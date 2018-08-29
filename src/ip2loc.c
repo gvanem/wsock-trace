@@ -24,10 +24,14 @@
 #include "geoip.h"
 
 #if defined(USE_IP2LOCATION)
+#if defined(__clang__)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-prototypes")
+#endif
+
 #include <IP2Location.h>
 
-static IP2Location *handle;
-static DWORD        file_size;
+static IP2Location *ip2loc_handle;
+static DWORD        ip2loc_file_size;
 
 /** A static function inside IP2Location.c which gets included below.
  */
@@ -63,7 +67,7 @@ static IP2Location *open_file (const char *file)
   }
 
   stat (file, &st);
-  file_size = st.st_size;
+  ip2loc_file_size = st.st_size;
 
   /* The IP2Loc database scheme is really strange.
    * This used to be true previously.
@@ -99,32 +103,32 @@ BOOL ip2loc_init (void)
   if (!g_cfg.geoip_enable || !g_cfg.ip2location_bin_file)
      return (FALSE);
 
-  if (!handle)
-     handle = open_file (g_cfg.ip2location_bin_file);
+  if (!ip2loc_handle)
+     ip2loc_handle = open_file (g_cfg.ip2location_bin_file);
 
-  return (handle != NULL);
+  return (ip2loc_handle != NULL);
 }
 
 void ip2loc_exit (void)
 {
-  if (handle)
-     IP2Location_close (handle);
+  if (ip2loc_handle)
+     IP2Location_close (ip2loc_handle);
 
   IP2Location_delete_shm(); /* Currently does nothing for '_WIN32' */
-  handle = NULL;
+  ip2loc_handle = NULL;
 }
 
 DWORD ip2loc_num_ipv4_entries (void)
 {
-  if (handle)
-     return (handle->ipv4databasecount);
+  if (ip2loc_handle)
+     return (ip2loc_handle->ipv4databasecount);
   return (0);
 }
 
 DWORD ip2loc_num_ipv6_entries (void)
 {
-  if (handle)
-     return (handle->ipv6databasecount);
+  if (ip2loc_handle)
+     return (ip2loc_handle->ipv6databasecount);
   return (0);
 }
 
@@ -135,10 +139,14 @@ DWORD ip2loc_num_ipv6_entries (void)
  * And turn off some warnings:
  */
 #if defined(__GNUC__) || defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function");
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-variable");
-  #if !defined(__clang__)
-    GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable");
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-variable")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-parameter")
+  #if defined(__clang__)
+    GCC_PRAGMA (GCC diagnostic ignored "-Wcast-qual")
+    GCC_PRAGMA (GCC diagnostic ignored "-Wconditional-uninitialized")
+  #else
+    GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
   #endif
 
 #elif defined(_MSC_VER)
@@ -196,7 +204,7 @@ static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
  */
 BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
 {
-  IP2LocationRecord *r = IP2Location_get_record (handle, (char*)addr, IP2LOC_FLAGS);
+  IP2LocationRecord *r = IP2Location_get_record (ip2loc_handle, (char*)addr, IP2LOC_FLAGS);
 
   memset (out, '\0', sizeof(*out));
   if (!r)
@@ -217,7 +225,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
 
   parsed_ipv.ipversion = 4;
   parsed_ipv.ipv4 = swap32 (addr->s_addr);
-  r = IP2Location_get_ipv4_record (handle, NULL, IP2LOC_FLAGS, parsed_ipv);
+  r = IP2Location_get_ipv4_record (ip2loc_handle, NULL, IP2LOC_FLAGS, parsed_ipv);
 
   memset (out, '\0', sizeof(*out));
   if (!r)
@@ -247,7 +255,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
     parsed_ipv.ipversion = 6;
     memcpy (&parsed_ipv.ipv6, addr, sizeof(*addr));
   }
-  r = IP2Location_get_ipv6_record (handle, NULL, IP2LOC_FLAGS, parsed_ipv);
+  r = IP2Location_get_ipv6_record (ip2loc_handle, NULL, IP2LOC_FLAGS, parsed_ipv);
 
   memset (out, '\0', sizeof(*out));
   if (!r)
