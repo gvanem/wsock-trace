@@ -695,7 +695,7 @@ static void download_winhttp (struct download_context *context)
   path [url_comp->dwUrlPathLength] = L'\0';
 
   TRACE (2, "host: '%" WCHAR_FMT "'.\n"
-            "                    path: '% " WCHAR_FMT "'.\n", host, path);
+            "                    path: '%" WCHAR_FMT "'.\n", host, path);
 
   /* Obtain a session handle.
    */
