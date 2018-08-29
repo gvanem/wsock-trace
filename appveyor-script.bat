@@ -63,7 +63,7 @@ echo edrop_file  = %CD%\edrop.txt                           >> wsock_trace.appve
 echo dropv6_file = %CD%\dropv6.txt                          >> wsock_trace.appveyor
 echo drop_url    = http://www.spamhaus.org/drop/drop.txt    >> wsock_trace.appveyor
 echo edrop_url   = http://www.spamhaus.org/drop/edrop.txt   >> wsock_trace.appveyor
-echo dropv6_url  = https://www.spamhaus.org/drop/dropv6.txt >> wsock_trace.appveyor
+echo dropv6_url  = http://www.spamhaus.org/drop/dropv6.txt  >> wsock_trace.appveyor
 
 ::
 :: Windows-Defender thinks generating a 'hosts' file is suspicious.
