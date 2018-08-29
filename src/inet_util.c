@@ -786,7 +786,7 @@ static void download_winhttp (struct download_context *context)
 
   ctx->h1 = ctx->h2 = ctx->h3 = NULL;
 
-  TRACE (2, "%s(): %s -> bytes_written: %lu\n",
+  TRACE (1, "%s(): %s -> bytes_written: %lu\n",
          __FUNCTION__, context->file_name, DWORD_CAST(context->bytes_written));
 
   if (context->fil)
