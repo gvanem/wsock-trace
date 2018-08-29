@@ -680,7 +680,7 @@ static void download_winhttp (struct download_context *context)
     return;
   }
 
-  TRACE (2, "url_wide '%S'.\n", url_wide);
+  TRACE (3, "url_wide '%S'.\n", url_wide);
 
   if (!(*p_WinHttpCrackUrl)(url_wide, 0, 0, url_comp))
   {
