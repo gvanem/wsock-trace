@@ -13,6 +13,12 @@
    */
   #undef  NTDDI_VERSION
   #define NTDDI_VERSION 0x05010000
+
+  /* No <winhttp.h> in OpenWatcom.
+   */
+  #undef HAVE_WINHTTP_H
+#else
+  #define HAVE_WINHTTP_H
 #endif
 
 #include <windows.h>
@@ -20,25 +26,30 @@
 #include <errno.h>
 #include <wininet.h>
 
-/* Hacks to be able to include <winhttp.h> below.
- */
-#define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
-#define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
+#if defined(HAVE_WINHTTP_H)
+  /*
+   * Hacks to be able to include <winhttp.h> below.
+   */
+  #define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
+  #define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
 
-#define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
-#define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
+  #define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
+  #define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
 
-#define URL_COMPONENTS       winhttp_URL_COMPONENTS
-#define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
+  #define URL_COMPONENTS       winhttp_URL_COMPONENTS
+  #define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
 
-#define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
-#define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
+  #define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
+  #define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
 
-#undef BOOLAPI
-#undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
-#undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
+  #undef BOOLAPI
+  #undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
+  #undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
 
-#include <winhttp.h>
+  #include <winhttp.h>
+#else
+  #define winhttp_URL_COMPONENTSW URL_COMPONENTSW
+#endif  /* HAVE_WINHTTP_H */
 
 #include "common.h"
 #include "init.h"
@@ -64,9 +75,6 @@
  * `WinInet.dll` and `WinHttp.dll` functions.
  */
 #define WININET_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
-                                    static func_##f p_##f = NULL
-
-#define WINHTTP_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
                                     static func_##f p_##f = NULL
 
 /**
@@ -126,10 +134,13 @@ static struct LoadTable wininet_funcs[] = {
                         ADD_VALUE (InternetCloseHandle)
                       };
 
+#if defined(HAVE_WINHTTP_H)
 /**
  * A similar interface to WinHTTP. A comparision table: \n
  *   https://docs.microsoft.com/en-us/windows/desktop/winhttp/porting-wininet-applications-to-winhttp
  */
+#define WINHTTP_FUNC(ret, f, args)  WININET_FUNC(ret, f, args)
+
 WINHTTP_FUNC (HINTERNET, WinHttpOpen, (const wchar_t *agent,
                                        DWORD          access_type,
                                        const wchar_t *proxy,
@@ -213,49 +224,6 @@ static struct LoadTable winhttp_funcs[] = {
                         ADD_VALUE (WinHttpCloseHandle)
                       };
 
-/**
- * Return error-string for `err` from `WinInet.dll`.
- *
- * Try to get a more detailed error-code and text from
- * the server response using `InternetGetLastResponseInfoA()`.
- */
-static const char *wininet_strerror (DWORD err)
-{
-  HMODULE mod = GetModuleHandle ("wininet.dll");
-  char    buf[512];
-
-  if (mod && mod != INVALID_HANDLE_VALUE &&
-      FormatMessageA (FORMAT_MESSAGE_FROM_HMODULE,
-                      mod, err, MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
-                      buf, sizeof(buf), NULL))
-  {
-    static char err_buf[512];
-    char   wininet_err_buf[200];
-    char  *p;
-    DWORD  wininet_err = 0;
-    DWORD  wininet_err_len = sizeof(wininet_err_buf)-1;
-
-    str_rip (buf);
-    p = strrchr (buf, '.');
-    if (p && p[1] == '\0')
-       *p = '\0';
-
-    p = err_buf;
-    p += snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
-
-    if ((*p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
-        wininet_err > INTERNET_ERROR_BASE && wininet_err <= INTERNET_ERROR_LAST)
-    {
-      snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", (u_long)wininet_err, wininet_err_buf);
-      p = strrchr (p, '.');
-      if (p && p[1] == '\0')
-         *p = '\0';
-    }
-    return (err_buf);
-  }
-  return win_strerror (err);
-}
-
 /*
  * Missing in AppVeyor's SDK and possibly others.
  */
@@ -338,6 +306,50 @@ static const char *winhttp_strerror (DWORD err)
 {
   if (err > WINHTTP_ERROR_BASE && err <= WINHTTP_ERROR_LAST)
      return list_lookup_name (err, winhttp_errors, DIM(winhttp_errors));
+  return win_strerror (err);
+}
+#endif /* HAVE_WINHTTP_H */
+
+/**
+ * Return error-string for `err` from `WinInet.dll`.
+ *
+ * Try to get a more detailed error-code and text from
+ * the server response using `InternetGetLastResponseInfoA()`.
+ */
+static const char *wininet_strerror (DWORD err)
+{
+  HMODULE mod = GetModuleHandle ("wininet.dll");
+  char    buf[512];
+
+  if (mod && mod != INVALID_HANDLE_VALUE &&
+      FormatMessageA (FORMAT_MESSAGE_FROM_HMODULE,
+                      mod, err, MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
+                      buf, sizeof(buf), NULL))
+  {
+    static char err_buf[512];
+    char   wininet_err_buf[200];
+    char  *p;
+    DWORD  wininet_err = 0;
+    DWORD  wininet_err_len = sizeof(wininet_err_buf)-1;
+
+    str_rip (buf);
+    p = strrchr (buf, '.');
+    if (p && p[1] == '\0')
+       *p = '\0';
+
+    p = err_buf;
+    p += snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
+
+    if ((*p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
+        wininet_err > INTERNET_ERROR_BASE && wininet_err <= INTERNET_ERROR_LAST)
+    {
+      snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", (u_long)wininet_err, wininet_err_buf);
+      p = strrchr (p, '.');
+      if (p && p[1] == '\0')
+         *p = '\0';
+    }
+    return (err_buf);
+  }
   return win_strerror (err);
 }
 
@@ -660,6 +672,7 @@ static void download_threaded (struct download_context *context)
          __FUNCTION__, t_hnd, t_id, t_timedout);
 }
 
+#if defined(HAVE_WINHTTP_H)
 /**
  * Download a file using `WinHttp.dll`.
  */
@@ -792,6 +805,7 @@ static void download_winhttp (struct download_context *context)
   if (context->fil)
      fclose (context->fil);
 }
+#endif  /* HAVE_WINHTTP_H */
 
 /**
  * Download a file from url using dynamcally loaded functions
@@ -815,9 +829,14 @@ DWORD INET_util_download_file (const char *file, const char *url)
 
   if (g_cfg.use_winhttp)
   {
+#if defined(HAVE_WINHTTP_H)
     funcs    = winhttp_funcs;
     tab_size = DIM(winhttp_funcs);
     tab_dll  = "WinHttp.dll";
+#else
+    TRACE (1, "WinHttp.dll cannot be used with this compiler.\n");
+    return (0);
+#endif
   }
   else
   {
@@ -861,9 +880,12 @@ DWORD INET_util_download_file (const char *file, const char *url)
 
   if (context.fil)
   {
+#if defined(HAVE_WINHTTP_H)
     if (g_cfg.use_winhttp)
-         download_winhttp (&context);
-    else if (use_threaded)
+       download_winhttp (&context);
+    else
+#endif
+    if (use_threaded)
          download_threaded (&context);
     else if (use_async)
          download_async_loop (&context);
