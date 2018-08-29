@@ -17,6 +17,7 @@
 
 #include <windows.h>
 #include <limits.h>
+#include <errno.h>
 #include <wininet.h>
 
 /* Hacks to be able to include <winhttp.h> below.
@@ -693,8 +694,8 @@ static void download_winhttp (struct download_context *context)
   wcsncpy (path, url_comp->lpszUrlPath, DIM(path)-1);
   path [url_comp->dwUrlPathLength] = L'\0';
 
-  TRACE (2, "host: '%ws'.\n"
-            "                    path: '%ws'.\n", host, path);
+  TRACE (2, "host: '%" WCHAR_FMT "'.\n"
+            "                    path: '% " WCHAR_FMT "'.\n", host, path);
 
   /* Obtain a session handle.
    */
