@@ -110,7 +110,7 @@ WININET_FUNC (BOOL, InternetCloseHandle, (HINTERNET handle));
  *                                                       DWORD     status_info_len);
  */
 WININET_FUNC (INTERNET_STATUS_CALLBACK, InternetSetStatusCallback,
-                                         (HINTERNET hnd,
+                                         (HINTERNET                hnd,
                                           INTERNET_STATUS_CALLBACK callback));
 
 #define ADD_VALUE(func)  { 0, NULL, "wininet.dll", #func, (void**) &p_##func }
@@ -820,7 +820,14 @@ DWORD INET_util_download_file (const char *file, const char *url)
   if (!context.fil)
      context.error = errno;
 
-  else if (!g_cfg.use_winhttp)
+  else if (g_cfg.use_winhttp)
+  {
+    context.u.winhttp.url_comp.dwStructSize     = sizeof(context.u.winhttp.url_comp);
+    context.u.winhttp.url_comp.dwSchemeLength   = (DWORD)-1;
+    context.u.winhttp.url_comp.dwHostNameLength = (DWORD)-1;
+    context.u.winhttp.url_comp.dwUrlPathLength  = (DWORD)-1;
+  }
+  else
   {
     context.u.wininet.inet_buf.dwStructSize   = sizeof(context.u.wininet.inet_buf);
     context.u.wininet.inet_buf.dwBufferLength = sizeof(context.file_buf);
@@ -830,13 +837,6 @@ DWORD INET_util_download_file (const char *file, const char *url)
     context.u.wininet.async_mode    = use_async;
     context.u.wininet.async_flag    = use_async ? INTERNET_FLAG_ASYNC : 0;
     context.u.wininet.async_flag   |= INTERNET_FLAG_NO_COOKIES;         /* no automatic cookie handling */
-  }
-  else
-  {
-    context.u.winhttp.url_comp.dwStructSize     = sizeof(context.u.winhttp.url_comp);
-    context.u.winhttp.url_comp.dwSchemeLength   = (DWORD)-1;
-    context.u.winhttp.url_comp.dwHostNameLength = (DWORD)-1;
-    context.u.winhttp.url_comp.dwUrlPathLength  = (DWORD)-1;
   }
 
   if (context.fil)
