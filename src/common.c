@@ -742,6 +742,7 @@ static const char *get_guid_internal_str (const GUID *guid, char *result, size_t
   }
   *out++ = '}';
   *out++ = '\0';
+  ARGSUSED (result_size);
   return (result);
 }
 
