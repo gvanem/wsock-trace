@@ -474,7 +474,7 @@ static void CALLBACK download_callback (HINTERNET hnd,
       {
         rc = (*p_InternetReadFileExA) (ctx->h2, &ctx->inet_buf, WININET_API_FLAG_ASYNC, _ctx);
         context->bytes_read     = ctx->inet_buf.dwBufferLength;
-        context->bytes_written += fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
+        context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
         ctx->inet_buf.dwBufferLength = sizeof(context->file_buf);
         TRACE (1, "  InternetReadFileExA(): rc: %d, %lu bytes\n", rc, context->bytes_read);
       }
@@ -600,7 +600,7 @@ static DWORD WINAPI download_sync_loop (struct download_context *context)
     TRACE (1, "InternetReadFile() read %lu bytes.\n", context->bytes_read);
     if (context->bytes_read == 0)
        break;
-    context->bytes_written += fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
+    context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
   }
   return download_exit (context);
 }
@@ -763,7 +763,7 @@ static void download_winhttp (struct download_context *context)
          TRACE (1, "WinHttpReadData(): %s.\n", win_strerror(GetLastError()));
       else
       {
-        context->bytes_written += fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
+        context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
         TRACE (2, "WinHttpReadData(), got chunk %d size %lu.\n", chunk++, context->bytes_read);
       }
     }
