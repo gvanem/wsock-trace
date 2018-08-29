@@ -1593,6 +1593,7 @@ const void *make_udp_hdr (size_t data_len)
   static struct udp_header uh;
 
   memset (&uh, 0xff, sizeof(uh));  /* \todo */
+  ARGSUSED (data_len);
   return (&uh);
 }
 
@@ -1603,6 +1604,7 @@ const void *make_tcp_hdr (size_t data_len)
   memset (&th, 0xff, sizeof(th));  /* \todo */
   th.th_flags = 0;
   th.th_offx2 = 16 * (sizeof(th)/4);
+  ARGSUSED (data_len);
   return (&th);
 }
 
@@ -1707,6 +1709,9 @@ size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
 #else
   fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
   fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.pcap.dump_stream);
+
+  ARGSUSED (s);
+  ARGSUSED (out);
 #endif
 
   rc = fwrite (pkt, 1, len, g_cfg.pcap.dump_stream);
@@ -1719,6 +1724,10 @@ size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
  */
 size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, BOOL out)
 {
+  ARGSUSED (s);
+  ARGSUSED (bufs);
+  ARGSUSED (num_bufs);
+  ARGSUSED (out);
   return (0);
 }
 
