@@ -1,11 +1,14 @@
-/*
- * ip2loc.c - Part of Wsock-Trace.
+/**\file ip2loc.c
  *
- * This file is an interface for the IP2Location library.
+ * \brief
+ * This file is an interface for the IP2Location library. \n
  *   Ref: https://github.com/chrislim2888/IP2Location-C-Library
  *        http://lite.ip2location.com
  *
- * For 'inet_addr' warning.
+ * ip2loc.c - Part of Wsock-Trace.
+ */
+
+/** To supress the warning on `inet_addr()`.
  */
 #ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -26,13 +29,13 @@
 static IP2Location *handle;
 static DWORD        file_size;
 
-/* A static function inside IP2Location.c which gets included below.
+/** A static function inside IP2Location.c which gets included below.
  */
 static int IP2Location_initialize (IP2Location *loc);
 
-/*
- * Do not call 'IP2Location_open()' because of it's use of 'printf()'.
- * Hence just do what 'IP2Location_open()' does here.
+/**
+ * Do not call `IP2Location_open()` because of it's use of `printf()`.
+ * Hence just do what `IP2Location_open()` does here.
  */
 static IP2Location *open_file (const char *file)
 {
@@ -125,9 +128,9 @@ DWORD ip2loc_num_ipv6_entries (void)
   return (0);
 }
 
-/*
+/**
  * Include the IP2Location sources here to avoid the need to build the library.
- * The Makefile.win on Github is broken anyway.
+ * The `Makefile.win` on Github is broken anyway.
  *
  * And turn off some warnings:
  */
@@ -142,26 +145,26 @@ DWORD ip2loc_num_ipv6_entries (void)
   #pragma warning (disable: 4101 4244)
 #endif
 
-/*
- * Since 'IP2Location_parse_addr()' does a lot of calls to
- * 'IP2Location_ip_is_ipv4()' and 'IP2Location_ip_is_ipv6()', keep
- * the noise-level down by not calling 'WSASetLastError()' in in_addr.c.
+/**
+ * Since `IP2Location_parse_addr()` does a lot of calls to
+ * `IP2Location_ip_is_ipv4()` and `IP2Location_ip_is_ipv6()`, keep
+ * the noise-level down by not calling `WSASetLastError()` in in_addr.c.
  */
 #undef  inet_pton
 #define inet_pton(family, addr, result)  _wsock_trace_inet_pton (family, addr, result)
 
 /* \todo */
 #if 0
-  #define inet_addr(str)                   _wsock_trace_inet_addr (str)
+  #define inet_addr(str)                 _wsock_trace_inet_addr (str)
 #endif
 
 #if defined(__CYGWIN__) && !defined(_WIN32)
-#define _WIN32   /* Checks on '_WIN32' in "IP2Location.c" */
+#define _WIN32    /**< Tests on `_WIN32` in `IP2Location.c` */
 #endif
 
-/*
- * This assumes the IP2Location .c/.h files are in the %INCLUDE% or
- * %C_INCLUDE_PATH% path. Or the '$(IP2LOCATION_ROOT)' is set in
+/**
+ * This assumes the IP2Location `.c/.h` files are in the `%INCLUDE%` or
+ * `%C_INCLUDE_PATH%` path. Or the `$(IP2LOCATION_ROOT)` is set in
  * respective makefile.
  */
 #include "IP2Location.c"
@@ -187,7 +190,7 @@ static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
   return (TRUE);
 }
 
-/*
+/**
  * This can be passed both IPv4 and IPv6 addresses.
  * But slower than the below.
  */
@@ -203,9 +206,9 @@ BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
   return ip2loc_get_common (out, r);
 }
 
-/*
- * This avoids the call to 'inet_pton()' and 'inet_addr()' since the passed
- * '*addr' should be a valid IPv4-address.
+/**
+ * This avoids the call to `inet_pton()` and `inet_addr()` since the passed
+ * `*addr` should be a valid IPv4-address.
  */
 BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
 {
@@ -225,9 +228,9 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
   return ip2loc_get_common (out, r);
 }
 
-/*
- * This avoids the call to 'inet_pton()' since the passed
- * '*addr' should be a valid IPv6-address.
+/**
+ * This avoids the call to `inet_pton()` since the passed
+ * `*addr` should be a valid IPv6-address.
  */
 BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
 {
