@@ -839,6 +839,7 @@ static int parse_config_file (FILE *file)
 
       /* \todo: handle more 'key' / 'val' here by extending lookup_section().
        */
+      case CFG_NONE:
       default:
            if (section[0] && stricmp(section,last_section))
            {
