@@ -1385,9 +1385,10 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
        break;
   }
 
-  if (ofs + i < data_len - 1)
+  if ((data_len > 0) && (ofs + i < data_len - 1))
   {
     trace_indent (g_cfg.trace_indent+2);
+
     trace_printf ("<%d more bytes...>\n", data_len-1-ofs-i);
   }
   trace_puts ("~0");
@@ -2108,6 +2109,7 @@ void dump_nameinfo (const char *host, const char *serv, DWORD flags)
   trace_printf ("~4name: %s, serv: %s~0\n",
                 host ? host : "NULL", serv ? serv : "NULL");
   check_and_dump_idna (host);
+  ARGSUSED (flags);
 }
 
 void dump_hostent (const char *name, const struct hostent *host)
