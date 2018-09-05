@@ -1340,6 +1340,9 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
   const BYTE *data = (const BYTE*) data_p;
   UINT  i = 0, j, ofs;
 
+  if (data_len == 0)
+     return;
+
   trace_puts ("~4");
 
   for (ofs = 0; ofs < data_len; ofs += 16)
@@ -1385,7 +1388,7 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
        break;
   }
 
-  if ((data_len > 0) && (ofs + i < data_len - 1))
+  if (ofs + i < data_len - 1)
   {
     trace_indent (g_cfg.trace_indent+2);
 
