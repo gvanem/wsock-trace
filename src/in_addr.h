@@ -1,3 +1,6 @@
+/**\file    in_addr.h
+ * \ingroup inet_util
+ */
 #ifndef _IN_ADDR_H
 #define _IN_ADDR_H
 

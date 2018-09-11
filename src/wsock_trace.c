@@ -1,9 +1,14 @@
-/*
+/**\file    wsock_trace.c
+ * \ingroup Main
+ *
+ * \brief
  * A small and simple drop-in tracer for most normal Winsock calls.
  * Works best for MSVC since the stack-walking code requires the program's
  * PDB symbol-file to be present. And unfortunately MinGW/CygWin doesn't
  * produce PDB-symbols.
- *
+ */
+
+/*
  * Usage (MSVC):
  *   link with wsock_trace.lib instead of the system's ws32_2.lib. Thus
  *   most normal Winsock calls are traced on entry and exit.

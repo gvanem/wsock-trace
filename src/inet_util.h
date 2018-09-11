@@ -1,3 +1,6 @@
+/**\file    inet_util.h
+ * \ingroup inet_util
+ */
 #ifndef _INET_UTIL_H
 #define _INET_UTIL_H
 

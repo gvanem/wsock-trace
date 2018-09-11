@@ -1,7 +1,10 @@
-/*
- * This is just a dummy stub file to enable linking geoip.exe
- * for the first time.
- * I.e. before 'geoip-gen4.c' and 'geoip-gen6.c' gets generated.
+/* \file    geoip-null.c
+ * \ingroup Geoip
+ *
+ * \brief
+ *   This is just a dummy stub file to enable linking geoip.exe
+ *   for the first time.
+ *   I.e. before `geoip-gen4.c` and `geoip-gen6.c` gets generated.
  */
 #include "geoip.h"
 

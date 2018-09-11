@@ -1,3 +1,6 @@
+/**\file    bfd_gcc.c
+ * \ingroup BFD
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>

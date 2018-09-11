@@ -1,7 +1,8 @@
 /**\file    hosts.c
- * \ingroup NET_UTIL
+ * \ingroup inet_util
  *
- * \brief '/etc/hosts' parsing for wsock_trace.
+ * \brief
+ *   `/etc/hosts` parsing for wsock_trace.
  *
  * By Gisle Vanem <gvanem@yahoo.no> August 2017.
  */
@@ -11,17 +12,20 @@
 #include "in_addr.h"
 #include "hosts.h"
 
+/**\struct host_entry
+ * The structure for host-entries we read from a file.
+ */
 struct host_entry {
-       char   host_name [MAX_HOST_LEN];  /* name of 'etc/hosts' entry */
-       size_t addr_size;                 /* size of this adresses (4 or 16) */
-       int    addr_type;                 /* type AF_INET or AF_INET6 */
-       char   addr [IN6ADDRSZ];          /* the actual address */
+       char   host_name [MAX_HOST_LEN];  /**< name of `etc/hosts` entry */
+       size_t addr_size;                 /**< size of this adresses (4 or 16) */
+       int    addr_type;                 /**< type AF_INET or AF_INET6 */
+       char   addr [IN6ADDRSZ];          /**< the actual address */
      };
 
 static smartlist_t *hosts_list;
 
 /**
- * Add an entry to the given 'smartlist_t' that becomes 'hosts_list'.
+ * Add an entry to the given `smartlist_t` that becomes `hosts_list`.
  */
 static void add_entry (smartlist_t *sl, const char *name, const char *ip, const void *addr, size_t size, int af_type)
 {
@@ -71,12 +75,12 @@ static int hosts_bsearch_name (const void *key, const void **member)
 }
 
 /**
- * Parse the file for lines matching "ip host".
+ * Parse the file for lines matching `"ip host"`. <br>
  * Do not care about aliases.
  *
- * \note the Windows 'hosts' file support both AF_INET and AF_INET6 addresses.
- *       That's the reason we call '_wsock_trace_pton(). Since passing
- *       an IPv6-addresses to 'wsock_trace_inet_pton4()' will call 'WSASetLastError()'.
+ * \note the Windows `hosts` file support both `AF_INET` and `AF_INET6` addresses. <br>
+ *       That's the reason we call `_wsock_trace_pton()`. Since passing
+ *       an IPv6-addresses to `wsock_trace_inet_pton4()` will call `WSASetLastError()`. <br>
  *       And vice-versa.
  */
 static void parse_hosts (smartlist_t *sl, const char *line)
@@ -101,7 +105,7 @@ static void parse_hosts (smartlist_t *sl, const char *line)
 }
 
 /**
- * Print the 'hosts_list' if 'g_cfg.trace_level >= 3'.
+ * Print the `hosts_list` if `g_cfg.trace_level >= 3`.
  */
 static void hosts_file_dump (void)
 {
@@ -122,7 +126,7 @@ static void hosts_file_dump (void)
 }
 
 /**
- * Free the memory in 'hosts_list' and free the list itself.
+ * Free the memory in `hosts_list` and free the list itself.
  */
 void hosts_file_exit (void)
 {
@@ -140,9 +144,9 @@ void hosts_file_exit (void)
 }
 
 /**
- * Build the 'hosts_file' smartlist.
+ * Build the `hosts_file` smartlist.
  *
- * \todo: support loading multiple '/etc/hosts' files.
+ * \todo: support loading multiple `/etc/hosts` files.
  */
 void hosts_file_init (void)
 {
@@ -158,7 +162,7 @@ void hosts_file_init (void)
 }
 
 /*
- * Check if one of the addresses for 'name' is from the hosts-file.
+ * Check if one of the addresses for `name` is from the hosts-file.
  */
 int hosts_file_check_hostent (const char *name, const struct hostent *host)
 {
@@ -171,7 +175,7 @@ int hosts_file_check_hostent (const char *name, const struct hostent *host)
   if (!name || !hosts_list || !addresses)
      return (0);
 
-  /* Do a binary search in the 'hosts_list'.
+  /** Do a binary search in the `hosts_list`.
    */
   he = smartlist_bsearch (hosts_list, name, hosts_bsearch_name);
 
@@ -184,8 +188,8 @@ int hosts_file_check_hostent (const char *name, const struct hostent *host)
   return (num);
 }
 
-/*
- * As above, but for an 'struct addrinfo *'.
+/**
+ * As above, but for an `struct addrinfo *`.
  */
 int hosts_file_check_addrinfo (const char *name, const struct addrinfo *ai)
 {

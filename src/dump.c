@@ -1,5 +1,8 @@
-/*
- * Dump and trace-functions for wsock_trace.
+/**\file    dump.c
+ * \ingroup Main
+ *
+ * \brief
+ *   Dump and trace-functions for wsock_trace.
  */
 #include <stdio.h>
 #include <stdlib.h>

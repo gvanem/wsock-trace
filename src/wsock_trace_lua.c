@@ -1,5 +1,8 @@
-/*
- * A Lua interface for WSock-Trace.
+/**\file    wsock_trace_lua.c
+ * \ingroup Lua
+ *
+ * \brief
+ *  A Lua interface for Wsock-Trace.
  */
 #include "common.h"
 

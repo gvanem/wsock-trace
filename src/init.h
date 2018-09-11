@@ -1,3 +1,6 @@
+/**\file    init.h
+ * \ingroup Main
+ */
 #ifndef _INIT_H
 #define _INIT_H
 

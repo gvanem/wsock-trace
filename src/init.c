@@ -1,11 +1,12 @@
-/*
- * init.c - Part of Wsock-Trace.
+/**\file    init.c
+ * \ingroup Main
  *
- * Most things here are called from 'wsock_trace_init()'
- * which is called from 'DllMain()'.
+ * \brief
+ *  Most things here are called from `wsock_trace_init()`
+ *  which is called from `DllMain()`:
  *
- * 1) Parsing of the 'wsock_trace' config-file.
- * 2) exclude-list handling.
+ * \li  Parsing of the `wsock_trace` config-file.
+ * \li  exclude-list handling.
  */
 
 #include <stdint.h>

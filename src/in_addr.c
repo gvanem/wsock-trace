@@ -1,5 +1,8 @@
-/*!\file in_addr.c
- * Convert network addresses to printable format.
+/**\file    in_addr.c
+ * \ingroup inet_util
+ *
+ * \brief
+ *  Convert network addresses to printable format.
  */
 
 /* Copyright (c) 1996 by Internet Software Consortium.
@@ -32,7 +35,7 @@ BOOL leading_zeroes       = FALSE;
 static const char hex_chars[] = "0123456789abcdef";
 
 /**
- * Check if 'str' is simply an IPv4 address.
+ * Check if `str` is simply an IPv4 address.
  */
 BOOL is_ip4_addr (const char *str)
 {
@@ -51,7 +54,8 @@ BOOL is_ip4_addr (const char *str)
  * Convert a network format address to presentation format.
  *
  * \retval pointer to presentation format address (`dst'),
- * \retval NULL on error (see errno).
+ * \retval NULL on error (see `WSAGetLastError()`).
+ *
  * \author Paul Vixie, 1996.
  */
 /* EXPORT */ PCSTR WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, size_t size)
@@ -76,6 +80,7 @@ BOOL is_ip4_addr (const char *str)
  * \retval 1  the address was valid for the specified address family.
  * \retval 0  the address wasn't valid (`dst' is untouched in this case).
  * \retval -1 some other error occurred (`dst' is untouched in this case, too).
+ *
  * \author Paul Vixie, 1996.
  */
 EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
@@ -93,7 +98,7 @@ EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
   }
 }
 
-/*
+/**
  * inet_ntop() + inet_pton() for internal use.
  */
 char *wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
@@ -129,12 +134,13 @@ int _wsock_trace_inet_pton (int family, const char *addr, void *result)
 }
 
 /**
- * Format an IPv4 address, more or less like inet_ntoa().
+ * Format an IPv4 address, more or less like `inet_ntoa()`.
  *
  * \retval `dst' (as a const)
  * \note
  *  - uses no statics
- *  - takes a u_char* not an in_addr as input
+ *  - takes an `u_char*` and not an `in_addr` as input.
+ *
  * \author Paul Vixie, 1996.
  */
 const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size)
@@ -151,7 +157,8 @@ const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size)
 }
 
 /**
- * Convert IPv6 binary address into presentation (printable) format
+ * Convert IPv6 binary address into presentation (printable) format.
+ *
  * \author
  *  Paul Vixie, 1996.
  */
@@ -259,11 +266,14 @@ inval:
 }
 
 /**
- * Like inet_aton() but without all the hexadecimal and shorthand.
+ * Like `inet_aton()` but without all the hexadecimal and shorthand.
+ *
  * \retval 1 if `src' is a valid dotted quad
  * \retval 0 if `src' is not a valid dotted quad.
+ *
  * \note
  *   does not touch `dst' unless it's returning 1.
+ *
  * \author
  *   Paul Vixie, 1996.
  */

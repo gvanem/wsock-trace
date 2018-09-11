@@ -1,3 +1,6 @@
+/**\file    dump.h
+ * \ingroup Main
+ */
 #ifndef _DUMP_H
 #define _DUMP_H
 

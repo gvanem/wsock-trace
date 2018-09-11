@@ -1,4 +1,5 @@
-/**\file inet_util.c
+/**\file    inet_util.c
+ * \ingroup inet_util
  *
  * \brief
  *  Functions for downloading files via `WinInet.dll` or `WinHttp.dll`

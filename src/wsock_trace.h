@@ -1,3 +1,6 @@
+/**\file    wsock_trace.h
+ * \ingroup Main
+ */
 #ifndef _WSOCK_TRACE_H
 #define _WSOCK_TRACE_H
 

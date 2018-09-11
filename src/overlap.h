@@ -1,3 +1,6 @@
+/**\file    overlap.h
+ * \ingroup Main
+ */
 #ifndef _OVERLAP_H
 #define _OVERLAP_H
 

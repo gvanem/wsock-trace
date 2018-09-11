@@ -1,4 +1,5 @@
-/**\file geoip.c
+/**\file    geoip.c
+ * \ingroup Geoip
  *
  * \brief Implements parsing of CSV value files of MaxMind's IPv4 + IPv6
  *        geoip-data files.
@@ -1789,7 +1790,10 @@ static int geoip_generate_array (int family, const char *out_file)
   }
 
   fprintf (out,
-           "/*\n"
+           "/**\n"
+           " * \\file    %s\n"
+           " * \\ingroup Geoip\n"
+           " *\n"
            " * This file was generated at %.24s.\n"
            " * by the Makefile command: \"geoip.exe -%cg %s\"\n"
            " * Built by %s. DO NOT EDIT!\n"
@@ -1797,7 +1801,7 @@ static int geoip_generate_array (int family, const char *out_file)
            "#include \"geoip.h\"\n"
            "\n"
            "GCC_PRAGMA (GCC diagnostic ignored \"-Wmissing-braces\")\n"
-           "\n", ctime(&now), fam, out_file, get_builder());
+           "\n", out_file, ctime(&now), fam, out_file, get_builder());
 
   fprintf (out, "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
 

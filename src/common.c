@@ -1,5 +1,8 @@
-/*
- * common.c - Part of Wsock-Trace.
+/**\file    common.c
+ * \ingroup Main
+ *
+ * \brief
+ *   Common support functions for Wsock-Trace and Geoip.exe etc.
  *
  * basename() and dirname():
  *   Copyright (C) 1998 DJ Delorie, see COPYING.DJ for details

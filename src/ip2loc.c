@@ -1,9 +1,10 @@
-/**\file ip2loc.c
+/**\file    ip2loc.c
+ * \ingroup Geoip
  *
  * \brief
- * This file is an interface for the IP2Location library. \n
- *   Ref: https://github.com/chrislim2888/IP2Location-C-Library
- *        http://lite.ip2location.com
+ *   This file is an interface for the IP2Location library. \n
+ *     Ref: https://github.com/chrislim2888/IP2Location-C-Library
+ *          http://lite.ip2location.com
  *
  * ip2loc.c - Part of Wsock-Trace.
  */

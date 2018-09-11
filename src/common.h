@@ -1,3 +1,6 @@
+/**\file    common.h
+ * \ingroup Main
+ */
 #ifndef _COMMON_H
 #define _COMMON_H
 

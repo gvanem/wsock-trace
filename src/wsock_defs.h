@@ -1,3 +1,6 @@
+/**\file    wsock_defs.h
+ * \ingroup Main
+ */
 #ifndef _WSOCK_DEFS_H
 #define _WSOCK_DEFS_H
 

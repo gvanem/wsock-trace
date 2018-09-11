@@ -1,3 +1,6 @@
+/**\file    bfd_gcc.h
+ * \ingroup BFD
+ */
 #ifndef _BFD_GCC_H
 #define _BFD_GCC_H
 

@@ -1,11 +1,12 @@
-/*
- * overlap.c - Part of Wsock-Trace
+/**\file    overlap.c
+ * \ingroup Main
  *
- * Functions for dealing with overlapped operations in WSA functions.
- * All winsock function that this can apply to is:
- *   AcceptEx(), ConnectEx(), DisconnectEx(), TransmitFile(),
- *   TransmitPackets(), WSARecv(), WSARecvFrom(), WSARecvMsg(),
- *   WSASend(), WSASendMsg(), WSASendTo(), and WSAIoctl().
+ * \brief
+ *   Functions for dealing with overlapped operations in `WSA` functions.
+ *   All Winsock function that this can apply to is:
+ *     `AcceptEx()`, `ConnectEx()`, `DisconnectEx()`, `TransmitFile()`,
+ *     `TransmitPackets()`, `WSARecv()`, `WSARecvFrom()`, `WSARecvMsg()`,
+ *     `WSASend()`, `WSASendMsg()`, `WSASendTo()`, and `WSAIoctl()`.
  *
  * Allthough Wsock-Trace does support only a few of these.
  */

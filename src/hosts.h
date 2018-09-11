@@ -1,3 +1,6 @@
+/**\file    hosts.h
+ * \ingroup inet_util
+ */
 #ifndef _HOSTS_H
 #define _HOSTS_H
 
