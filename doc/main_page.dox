@@ -1,0 +1,28 @@
+/* Define all the groups here: */
+
+/**
+ *\addtogroup DNSBL     Domain Name System Black Lists
+ *\addtogroup Geoip     IP-address to location support
+ *\addtogroup inet_util IP-address utilities
+ *\addtogroup Lua       Lua script support
+ *\addtogroup Main      Wsock-trace core functions
+ */
+
+/**
+
+\mainpage Wsock-trace
+\ingroup  Main
+
+<h2>Introduction</h2>
+
+A drop-in tracing library / DLL for most normal Winsock calls.
+It sits between your program and the Winsock library (`ws2_32.dll`).
+It works best for MSVC since the stack-walking code requires the program's
+<b>PDB</b> symbol-file to be present. And unfortunately MinGW/CygWin doesn't produce
+PDB-symbols (GNU-debugger instead relies on the archaic <b>BFD</b> library). So currently,
+the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
+functions.
+
+<h2>Options & Features</h2>
+
+*/
