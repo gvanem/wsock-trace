@@ -657,6 +657,7 @@ const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
     _itoa (swap16(sa6->sin6_port), end, 10);
     return (buf);
   }
+  ARGSUSED (sa_len);
   return (NULL);
 }
 
@@ -2773,6 +2774,7 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
 
 EXPORT void WINAPI FreeAddrInfoW (PADDRINFOW addr_info)
 {
+  ARGSUSED (addr_info);
   UNIMPLEMENTED();
 }
 
@@ -2782,6 +2784,10 @@ EXPORT INT WINAPI GetAddrInfoW (PCWSTR           node_name,
                                 PADDRINFOW      *result)
 {
   UNIMPLEMENTED();
+  ARGSUSED (node_name);
+  ARGSUSED (service_name);
+  ARGSUSED (hints);
+  ARGSUSED (result);
   return (-1);
 }
 
@@ -2795,6 +2801,13 @@ EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
                                 INT             flags)
 {
   UNIMPLEMENTED();
+  ARGSUSED (sockaddr);
+  ARGSUSED (sockaddr_len);
+  ARGSUSED (node_buf);
+  ARGSUSED (node_buf_size);
+  ARGSUSED (service_buf);
+  ARGSUSED (service_buf_size);
+  ARGSUSED (flags);
   return (-1);
 }
 
@@ -3000,6 +3013,9 @@ static void test_get_caller (const void *from)
 }
 #endif  /* USE_BFD */
 
+/**
+ * The `wsock_trace*.dll` main entry point.
+ */
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
   const char *reason_str = NULL;
