@@ -116,7 +116,7 @@ static void overlap_trace (int i, const struct overlapped *ov)
 
 void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
 {
-  struct overlapped *ov;
+  struct overlapped *ov = NULL;
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
