@@ -3,13 +3,23 @@
  *
  * \brief
  *   This file is an interface for the IP2Location library. \n
- *     Ref: https://github.com/chrislim2888/IP2Location-C-Library
+ *     Ref: https://github.com/chrislim2888/IP2Location-C-Library <br>
  *          http://lite.ip2location.com
  *
  * ip2loc.c - Part of Wsock-Trace.
+ *
+ * Together with the `geoip*.c` files, this module will return location
+ * information (country, city and region) for an IPv4/IPv6-address.
+ *
+ * Unlike `geoip.c`, this module uses an external binary file specified
+ * in the `[geoip]` section and keyword ` ip2location_bin_file` of `wsock_trace`.
+ *
+ * Compiling this file is optional; only done if the respective Makefile
+ * has a `-DUSE_IP2LOCATION` in it.
  */
 
-/** To supress the warning on `inet_addr()`.
+/**\def _WINSOCK_DEPRECATED_NO_WARNINGS
+ * To supress the warning on `inet_addr()`.
  */
 #ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -26,21 +36,36 @@
 
 #if defined(USE_IP2LOCATION)
 #if defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-prototypes")
+  #pragma clang diagnostic ignored "-Wstrict-prototypes"
 #endif
 
 #include <IP2Location.h>
 
+/**
+ * The handle for all IP2Location access.
+ * Returned from open_file().
+ */
 static IP2Location *ip2loc_handle;
-static DWORD        ip2loc_file_size;
 
-/** A static function inside IP2Location.c which gets included below.
+/**
+ * The size of the `file` opened by open_file().
+ * Currently not used for anything sensible.
+ */
+static DWORD ip2loc_file_size;
+
+/**
+ * Prototype to a static function inside IP2Location.c.
+ * This gets included below.
  */
 static int IP2Location_initialize (IP2Location *loc);
 
 /**
+ * Open and initialise access to the IP2Location library and binary data-file.
+ *
  * Do not call `IP2Location_open()` because of it's use of `printf()`.
  * Hence just do what `IP2Location_open()` does here.
+ *
+ * \param[in] file  the IP2Location binary file.
  */
 static IP2Location *open_file (const char *file)
 {
@@ -99,6 +124,10 @@ static IP2Location *open_file (const char *file)
   return (loc);
 }
 
+/**
+ * Our initialiser for IP2Location library and binary data-file. <br>
+ * Called from geoip_init().
+ */
 BOOL ip2loc_init (void)
 {
   if (!g_cfg.geoip_enable || !g_cfg.ip2location_bin_file)
@@ -110,6 +139,10 @@ BOOL ip2loc_init (void)
   return (ip2loc_handle != NULL);
 }
 
+/**
+ * Close the IP2Location library. <br>
+ * Called from geoip_exit().
+ */
 void ip2loc_exit (void)
 {
   if (ip2loc_handle)
@@ -119,6 +152,9 @@ void ip2loc_exit (void)
   ip2loc_handle = NULL;
 }
 
+/**
+ * Return the number of IPv4-addresses in the data-file.
+ */
 DWORD ip2loc_num_ipv4_entries (void)
 {
   if (ip2loc_handle)
@@ -126,6 +162,9 @@ DWORD ip2loc_num_ipv4_entries (void)
   return (0);
 }
 
+/**
+ * Return the number of IPv6-addresses in the data-file.
+ */
 DWORD ip2loc_num_ipv6_entries (void)
 {
   if (ip2loc_handle)
@@ -133,28 +172,31 @@ DWORD ip2loc_num_ipv6_entries (void)
   return (0);
 }
 
-/**
+/*
  * Include the IP2Location sources here to avoid the need to build the library.
  * The `Makefile.win` on Github is broken anyway.
  *
  * And turn off some warnings:
  */
 #if defined(__GNUC__) || defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-variable")
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-parameter")
+  #pragma GCC diagnostic ignored     "-Wunused-function"
+  #pragma GCC diagnostic ignored     "-Wunused-variable"
+  #pragma GCC diagnostic ignored     "-Wunused-parameter"
   #if defined(__clang__)
-    GCC_PRAGMA (GCC diagnostic ignored "-Wcast-qual")
-    GCC_PRAGMA (GCC diagnostic ignored "-Wconditional-uninitialized")
+    #pragma clang diagnostic ignored "-Wcast-qual"
+    #pragma clang diagnostic ignored "-Wconditional-uninitialized"
   #else
-    GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
+    #pragma GCC diagnostic ignored   "-Wunused-but-set-variable"
   #endif
 
 #elif defined(_MSC_VER)
   #pragma warning (disable: 4101 4244)
 #endif
 
-/**
+/**\def inet_pton
+ *
+ * Redefine `inet_pton()`.
+ *
  * Since `IP2Location_parse_addr()` does a lot of calls to
  * `IP2Location_ip_is_ipv4()` and `IP2Location_ip_is_ipv6()`, keep
  * the noise-level down by not calling `WSASetLastError()` in in_addr.c.
@@ -167,11 +209,14 @@ DWORD ip2loc_num_ipv6_entries (void)
   #define inet_addr(str)                 _wsock_trace_inet_addr (str)
 #endif
 
-#if defined(__CYGWIN__) && !defined(_WIN32)
-#define _WIN32    /**< Tests on `_WIN32` in `IP2Location.c` */
+/**\def _WIN32
+ * Since the code in `IP2Location.c` tests on `_WIN32`.
+ */
+#if defined(__DOXYGEN__) || (defined(__CYGWIN__) && !defined(_WIN32))
+#define _WIN32
 #endif
 
-/**
+/*
  * This assumes the IP2Location `.c/.h` files are in the `%INCLUDE%` or
  * `%C_INCLUDE_PATH%` path. Or the `$(IP2LOCATION_ROOT)` is set in
  * respective makefile.
@@ -179,8 +224,17 @@ DWORD ip2loc_num_ipv6_entries (void)
 #include "IP2Location.c"
 #include "IP2Loc_DBInterface.c"
 
+/**\def IP2LOC_FLAGS
+ * The flags used to look up a location record with a <i>short country</i>,
+ * <i>long country</i> name, <i>region</i> and <i>city</i>.
+ */
 #define IP2LOC_FLAGS  (COUNTRYSHORT | COUNTRYLONG | REGION | CITY)
 
+/**
+ * \param[out]    out The `ip2loc_entry` to fill.
+ * \param[in,out] r   The `IP2LocationRecord` record to get the result from.
+ *                    This will be freed when no longer needed.
+ */
 static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
 {
   if (r->country_short[0] == '-' ||                   /* is "-" for unallocated addr */
@@ -200,7 +254,7 @@ static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
 }
 
 /**
- * This can be passed both IPv4 and IPv6 addresses.
+ * This can be passed both IPv4 and IPv6 addresses. <br>
  * But slower than the below.
  */
 BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
@@ -268,6 +322,11 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
   return ip2loc_get_common (out, r);
 }
 
+/**
+ * \todo
+ *  Return number of index-errors to the shared memory area.<br>
+ *  Currently not an issue.
+ */
 DWORD ip2loc_index_errors (void)
 {
 #if 0 /* todo */
@@ -298,24 +357,24 @@ DWORD ip2loc_num_ipv6_entries (void)
   return (0);
 }
 
-BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *ent)
+BOOL ip2loc_get_entry (const char *addr, struct ip2loc_entry *out)
 {
   ARGSUSED (addr);
-  ARGSUSED (ent);
+  ARGSUSED (out);
   return (FALSE);
 }
 
-BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *ent)
+BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
 {
   ARGSUSED (addr);
-  ARGSUSED (ent);
+  ARGSUSED (out);
   return (FALSE);
 }
 
-BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ent)
+BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
 {
   ARGSUSED (addr);
-  ARGSUSED (ent);
+  ARGSUSED (out);
   return (FALSE);
 }
 

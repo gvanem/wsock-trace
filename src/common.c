@@ -264,7 +264,7 @@ char *str_ltrim (char *s)
 
 /**
  * Return err-number and string for 'err'. Only use this with
- * GetLastError(). Remove trailing [\r\n.]
+ * GetLastError(). Remove trailing `[\r\n]`.
  */
 char *win_strerror (DWORD err)
 {

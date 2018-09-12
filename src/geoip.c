@@ -3,10 +3,44 @@
  *
  * \brief Implements parsing of CSV value files of MaxMind's IPv4 + IPv6
  *        geoip-data files.
- *        It is inspired by Tor's `geoip.c`: \n
+ *        It is inspired by Tor's `geoip.c`: <br>
  *          https://gitweb.torproject.org/tor.git/tree/src/feature/stats/geoip.c
  *
  * geoip.c - Part of Wsock-Trace.
+ *
+ * \todo
+ *   Optionally use MaxMind's `GeoLite2-City.mmdb` file and print the location (city) too.
+ *   This will have to be coded in `geoip_get_location_by_ipv4()` and `geoip_get_location_by_ipv6()`.
+ *   Emulate what this command does:
+ *     \code
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions 0 names en
+ *     \endcode
+ *   giving:
+ *     \code
+ *     "New York" <utf8_string>
+ *     \endcode
+ *   Or this command:
+ *     \code
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions location
+ *     \endcode
+ *   giving:
+ *     \code
+ *     {
+ *       "accuracy_radius":
+ *         1000 <uint16>
+ *       "latitude":
+ *         43.048100 <double>
+ *       "longitude":
+ *         -76.147400 <double>
+ *       "metro_code":
+ *         555 <uint16>
+ *       "time_zone":
+ *         "America/New_York" <utf8_string>
+ *     }
+ *     \endcode
+ * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
+ *
+ * \todo Put this inside a \code{#ifdef USE_MAXMINDDB} section later.
  */
 
 #include <assert.h>
@@ -22,10 +56,15 @@
 #include "inet_util.h"
 #include "geoip.h"
 
-/** Number of calls for `smartlist_bsearch()` to find an IPv4 or IPv6 entry.
+/** Number of calls for `smartlist_bsearch()` to find an IPv4 entry. <br>
+ *  Used in `test_addr4()` only.
  */
-static DWORD num_4_compare;  /**< Number of compares for an IPv4 entry */
-static DWORD num_6_compare;  /**< Number of compares for an IPv6 entry */
+static DWORD num_4_compare;
+
+/** Number of calls for `smartlist_bsearch()` to find an IPv6 entry.
+ *  Used in `test_addr6()` only.
+ */
+static DWORD num_6_compare;
 
 static int  geoip4_parse_entry (char *buf, unsigned *line, DWORD *num);
 static int  geoip6_parse_entry (char *buf, unsigned *line, DWORD *num);
@@ -38,6 +77,8 @@ static int  geoip_get_num_addr (DWORD *num4, DWORD *num6);
 
 /**
  * Deallocate a smartlist and associated storage in the list's elements.
+ *
+ * \param[in] sl the smartlist to free.
  */
 static void smartlist_free_all (smartlist_t *sl)
 {
@@ -53,8 +94,12 @@ static void smartlist_free_all (smartlist_t *sl)
 
 /**
  * Used to make the smartlists for the fixed arrays `ipv4_gen_array` and `ipv6_gen_array`.
- * Since we know their sizes, just allocate the smartlist size once.
- * Called from `gen-geoip4.c` and `geoip-gen6.c`.
+ * Since we know their sizes, just allocate the smartlist size once. <br>
+ * Called from `geoip-gen4.c` and `geoip-gen6.c`.
+ *
+ * \param[in] start    the start address of the generated array.
+ * \param[in] el_size  the size of an array element.
+ * \param[in] num      the number of array elements.
  */
 smartlist_t *geoip_smartlist_fixed (void *start, size_t el_size, unsigned num)
 {
@@ -69,10 +114,14 @@ smartlist_t *geoip_smartlist_fixed (void *start, size_t el_size, unsigned num)
 }
 
 /**
- * Geoip specific smartlists:
+ * Geoip specific smartlist; list of IPv4 blocks.
  */
-static smartlist_t *geoip_ipv4_entries = NULL;  /**< list of IPv4 blocks */
-static smartlist_t *geoip_ipv6_entries = NULL;  /**< list of IPv6 blocks */
+static smartlist_t *geoip_ipv4_entries = NULL;
+
+/**
+ * Geoip specific smartlist; list of IPv6 blocks.
+ */
+static smartlist_t *geoip_ipv6_entries = NULL;
 
 /**\struct geoip_stats
  *
@@ -82,7 +131,7 @@ struct geoip_stats {
        uint64  num4;        /**< Total # of times seen in an IPv4-address */
        uint64  num6;        /**< Total # of times seen in an IPv6-address */
        char    country[2];  /**< 2 letter ISO-3166 2 letter Country-code */
-       char    flag;        /**< The country was seen in IPv4 or IPv6 address(es). \n
+       char    flag;        /**< The country was seen in IPv4 or IPv6 address(es). <br>
                              *   If the address was found by `ip2loc_get_ipv4_entry()` or `ip2loc_get_ipv6_entry()`
                              *   the flag `GEOIP_VIA_IP2LOC` is also set.
                              */
@@ -110,9 +159,12 @@ struct geoip_stats {
 static struct geoip_stats *geoip_stats_buf = NULL;
 
 /**
- * `smartlist_sort()` helper:
+ * `smartlist_sort()` helper.
  *
- *  returns -1, 1, or 0 based on comparison of two `ipv4_node`s
+ *  Returns -1, 1, or 0 based on comparison of two `ipv4_node`s.
+ *
+ * \param[in] _a  the address to the first node for comparision.
+ * \param[in] _b  the address to the second node for comparision.
  */
 static int geoip_ipv4_compare_entries (const void **_a, const void **_b)
 {
@@ -127,10 +179,13 @@ static int geoip_ipv4_compare_entries (const void **_a, const void **_b)
 }
 
 /**
- * `smartlist_bsearch()` helper:
+ * `smartlist_bsearch()` helper.
  *
- * returns -1, 1, or 0 based on comparison of an IP (a pointer
+ * Returns -1, 1, or 0 based on comparison of an IP (a pointer
  * to a `DWORD` on host order) to a `struct ipv4_node` element.
+ *
+ * \param[in] key    the IPv4 address to search for.
+ * \param[in] member a pointer to the entry in `geoip_ipv4_entries` to test for range membership.
  */
 static int geoip_ipv4_compare_key_to_entry (const void *key, const void **member)
 {
@@ -147,9 +202,12 @@ static int geoip_ipv4_compare_key_to_entry (const void *key, const void **member
 }
 
 /**
- * `smartlist_sort()` helper:
+ * `smartlist_sort()` helper.
  *
- * returns -1, 1, or 0 based on comparison of two `struct ipv6_node` elements.
+ * Returns -1, 1, or 0 based on comparison of two `struct ipv6_node` elements.
+ *
+ * \param[in] _a  the address to the first node for comparision.
+ * \param[in] _b  the address to the second node for comparision.
  */
 static int geoip_ipv6_compare_entries (const void **_a, const void **_b)
 {
@@ -160,10 +218,13 @@ static int geoip_ipv6_compare_entries (const void **_a, const void **_b)
 }
 
 /**
- * `smartlist_bsearch()` helper:
+ * `smartlist_bsearch()` helper.
  *
- * returns -1, 1, or 0 based on comparison of an IPv6
+ * Returns -1, 1, or 0 based on comparison of an IPv6
  * (a pointer to an `struct in6_addr`) to a `struct ipv6_node`.
+ *
+ * \param[in] key    the IPv6 address to search for.
+ * \param[in] member a pointer to the entry in `geoip_ipv6_entries` to test for range membership.
  */
 static int geoip_ipv6_compare_key_to_entry (const void *key, const void **member)
 {
@@ -181,6 +242,8 @@ static int geoip_ipv6_compare_key_to_entry (const void *key, const void **member
 
 /**
  * Add these special addresses to the `geoip_ipv4_entries` smartlist.
+ * Ref:
+ *  https://en.wikipedia.org/wiki/Private_network
  */
 void geoip_ipv4_add_specials (void)
 {
@@ -189,12 +252,12 @@ void geoip_ipv4_add_specials (void)
          const char *high;
          const char *remark;
        } priv[] = {
-         { "0.0.0.0",     "0.255.255.255",   "-L" },
-         { "10.0.0.0",    "10.255.255.255",  "-P" }, /* https://en.wikipedia.org/wiki/Private_network */
-         { "127.0.0.0",   "127.255.255.255", "-L" },
-         { "172.16.0.0",  "172.31.255.255",  "-P" },
-         { "192.168.0.0", "192.168.255.255", "-P" },
-         { "224.0.0.0",   "239.255.255.253", "-M" }  /* https://en.wikipedia.org/wiki/Multicast_address */
+         { "0.0.0.0",     "0.255.255.255",   "-L" }, /**< Local addresses */
+         { "10.0.0.0",    "10.255.255.255",  "-P" }, /**< The 10.0.0/8 Private block */
+         { "127.0.0.0",   "127.255.255.255", "-L" }, /**< Loopback addresses */
+         { "172.16.0.0",  "172.31.255.255",  "-P" }, /**< The 172.16/12 Private block */
+         { "192.168.0.0", "192.168.255.255", "-P" }, /**< The 192.168/16 Private block */
+         { "224.0.0.0",   "239.255.255.253", "-M" }  /**< https://en.wikipedia.org/wiki/Multicast_address */
        };
   int i;
 
@@ -220,14 +283,14 @@ void geoip_ipv6_add_specials (void)
          const char *high;
          const char *remark;
        } priv[] = {
-         { "::",      "::",  "-Z" },                                         /* IN6_IS_ADDR_UNSPECIFIED() */
-         { "::1",     "::1", "-L" },                                         /* IN6_IS_ADDR_LOOPBACK() */
+         { "::",      "::",  "-Z" },                                         /**< IN6_IS_ADDR_UNSPECIFIED() */
+         { "::1",     "::1", "-L" },                                         /**< IN6_IS_ADDR_LOOPBACK() */
       #if 1
-         { "2001:0::",    "2001:0000:ffff:ffff:ffff:ffff:ffff:ffff", "-T" }, /* RFC 4380 Teredo, 2001:0::/32 */
-         { "3ffe:831f::", "3ffe:831f:ffff:ffff:ffff:ffff:ffff:ffff", "-t" }, /* WinXP Teroedo,   3FFE:831F::/32 */
+         { "2001:0::",    "2001:0000:ffff:ffff:ffff:ffff:ffff:ffff", "-T" }, /**< RFC 4380 Teredo, 2001:0::/32 */
+         { "3ffe:831f::", "3ffe:831f:ffff:ffff:ffff:ffff:ffff:ffff", "-t" }, /**< WinXP Teroedo,   3FFE:831F::/32 */
       #endif
-         { "f0::",    "f0::ffff", "-G" },                                    /* !IN6_IS_ADDR_GLOBAL() */
-         { "fe80::",  "fe80:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "-l" }      /* IN6_IS_ADDR_LINKLOCAL() */
+         { "f0::",    "f0::ffff", "-G" },                                    /**< !IN6_IS_ADDR_GLOBAL() */
+         { "fe80::",  "fe80:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "-l" }      /**< IN6_IS_ADDR_LINKLOCAL() */
        };
   int i;
 
@@ -242,8 +305,8 @@ void geoip_ipv6_add_specials (void)
 }
 
 /**
- * Load pre-generated data from GeoIP files.
- *   IPv4-address (`AF_INET`) only or \n
+ * Load pre-generated data from GeoIP files. <br>
+ *   IPv4-address (`AF_INET`) only or <br>
  *   IPv6-address (`AF_INET6`) only.
  *
  * Watcom-C is not able to compile the huge generated `geoip-gen6.c`.
@@ -276,11 +339,10 @@ static DWORD geoip_load_data (int family)
 }
 
 /**
- * Open and parse a GeoIP file with either: \n
- *   IPv4-address (`AF_INET`) only or \n
- *   IPv6-address (`AF_INET6`) only.
+ * Open and parse a GeoIP file.
  *
- * Both files are on CVS format.
+ * \param[in] file   the file on CVS format to read and parse.
+ * \param[in] family the address family of the file; `AF_INET` or `AF_INET6`.
  */
 static DWORD geoip_parse_file (const char *file, int family)
 {
@@ -355,11 +417,19 @@ static DWORD geoip_parse_file (const char *file, int family)
 /**
  * The main init function for this module.
  * Normally called from `wsock_trace_init()`.
+ *
+ * \param[in,out]  _num4  Number of IPv4-addresses returned from
+ *                        `geoip_smartlist_fixed_ipv4()` or from the
+ *                        `g_cfg.geoip4_file` file.
+ *
+ * \param[in,out]  _num6  Number of IPv6-addresses returned from
+ *                        `geoip_smartlist_fixed_ipv6()` or from the
+ *                        `g_cfg.geoip6_file` file.
  */
 int geoip_init (DWORD *_num4, DWORD *_num6)
 {
   DWORD num4 = 0, num6 = 0;
-  BOOL open_geoip = FALSE;
+  BOOL  open_geoip = FALSE;
 
 #if defined(TEST_GEOIP)
   open_geoip = TRUE;
@@ -387,6 +457,10 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
   return geoip_get_num_addr (_num4, _num6);
 }
 
+/**
+ * Free memory allocated here. <br>
+ * Normally called from `wsock_trace_exit()`.
+ */
 void geoip_exit (void)
 {
   smartlist_free_all (geoip_ipv4_entries);
@@ -397,18 +471,18 @@ void geoip_exit (void)
 }
 
 /**
- * Parse and add a IPv4 entry to the `geoip_ipv4_entries` smart-list.
+ * Parse and add an IPv4 entry to the `geoip_ipv4_entries` smart-list.
+ *
+ * \param[in]     buf  the buffer from `fgets()` to parse.
+ * \param[in,out] line the line-counter for the parsed line. Used in the below `TRACE()` only.
+ * \param[in,out] num  the counter that gets incremented if `buf` matches an IPv4 address.
  */
 static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num)
 {
-  char *p = buf;
-  char  country[3];
-  int   rc = 0;
-#ifdef __CYGWIN__
-  unsigned long low, high;
-#else
-  DWORD low, high;
-#endif
+  char       *p = buf;
+  char        country[3];
+  __ms_u_long low, high;
+  int         rc = 0;
 
   for ( ; *p && isspace((int)*p); )
       p++;
@@ -433,7 +507,11 @@ static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num)
 }
 
 /**
- * Parse and add a IPv6 entry to the `geoip_ipv6_entries` smart-list.
+ * Parse and add an IPv6 entry to the `geoip_ipv6_entries` smart-list.
+ *
+ * \param[in]     buf   the buffer from `fgets()` to parse.
+ * \param[in,out] line  the line-counter for the parsed line. Used in the below `TRACE()` only.
+ * \param[in,out] num   the counter that gets incremented if `buf` matches an IPv6 address.
  */
 static int geoip6_parse_entry (char *buf, unsigned *line, DWORD *num)
 {
@@ -479,7 +557,14 @@ fail:
   return (rc);
 }
 
-
+/**
+ * Add an IPv4 entry to the `geoip_ipv4_entries` smart-list.
+ *
+ * \param[in] low      The lowest address in the IPv4-block.
+ * \param[in] high     The highest address in the IPv4-block.
+ * \param[in] country  The short country associated with this IPv4-block. <br>
+ *                     Or the `-X` remark if this IPv4-block is a special address.
+ */
 static int geoip4_add_entry (DWORD low, DWORD high, const char *country)
 {
   struct ipv4_node *entry = malloc (sizeof(*entry));
@@ -496,6 +581,14 @@ static int geoip4_add_entry (DWORD low, DWORD high, const char *country)
   return (1);
 }
 
+/**
+ * Add an IPv6 entry to the `geoip_ipv6_entries` smart-list.
+ *
+ * \param[in] low      The lowest address in the IPv6-block.
+ * \param[in] high     The highest address in the IPv6-block.
+ * \param[in] country  The short country associated with this IPv6-block. <br>
+ *                     Or the `-X` remark if this IPv6-block is a special address.
+ */
 static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *high, const char *country)
 {
   struct ipv6_node *entry = malloc (sizeof(*entry));
@@ -503,7 +596,7 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
   if (!entry)
      return (-1);
 
-  memcpy (&entry->low,  low,  sizeof(entry->low));
+  memcpy (&entry->low, low, sizeof(entry->low));
   memcpy (&entry->high, high, sizeof(entry->high));
   if (country)
        memcpy (&entry->country, country, sizeof(entry->country));
@@ -523,10 +616,12 @@ static struct ip2loc_entry g_ip2loc_entry;
 
 /**
  * Given an IPv4 address on network order, return an ISO-3166 2 letter
- * Country-code representing the country to which that address
+ * country-code representing the country to which that address
  * belongs, or NULL for `No geoip information available`.
  *
  * To decode it, call `geoip_get_long_name_by_A2()`.
+ *
+ * \param[in] addr  The IPv4 address to get the country for.
  */
 const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 {
@@ -571,11 +666,13 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 }
 
 /**
- * Given an IPv6 address,  return an ISO-3166 2 letter Country-code
+ * Given an IPv6 address,  return an ISO-3166 2 letter country-code
  * representing the country to which that address belongs, or NULL for
  * `No geoip information available`.
  *
  * To decode it, call `geoip_get_long_name_by_A2()`.
+ *
+ * \param[in] addr  The IPv6 address to get the country for.
  */
 const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
 {
@@ -619,6 +716,8 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
  *
  * Assumes `geoip_get_country_by_ipv4()` was just called for this address.
  * Currently only works when `ip2location_bin_file` is present.
+ *
+ * \param[in] ip4  The IPv4 address to get the location for.
  */
 const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
 {
@@ -638,6 +737,8 @@ const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
  *
  * Assumes `geoip_get_country_by_ipv6()` was just called for this address.
  * Currently only works when `ip2location_bin_file` is present.
+ *
+ * \param[in] ip6 The IPv6 address to get the location for.
  */
 const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
 {
@@ -653,41 +754,11 @@ const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
 }
 
 /**
- * \todo
- *   Optionally use MaxMind's `GeoLite2-City.mmdb` file and print the location (city) too.
- *   This will have to be coded in `geoip_get_location_by_ipv4()` and `geoip_get_location_by_ipv6()`.
- *   Emulate what this command does:
- *     \code
- *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions 0 names en
- *     \endcode
- *   giving:
- *     \code
- *     "New York" <utf8_string>
- *     \endcode
- *   Or this command:
- *     \code
- *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions location
- *     \endcode
- *   giving:
- *     \code
- *     {
- *       "accuracy_radius":
- *         1000 <uint16>
- *       "latitude":
- *         43.048100 <double>
- *       "longitude":
- *         -76.147400 <double>
- *       "metro_code":
- *         555 <uint16>
- *       "time_zone":
- *         "America/New_York" <utf8_string>
- *     }
- *     \endcode
- * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
+ * Return the number of records of `AF_INET` and/or `AF_INET6` addresses.
  *
- * \todo Put this inside a `#ifdef USE_MAXMINDDB` section later.
+ * \param[in,out] num4  Number of IPv4-addresses in the `geoip_ipv4_entries` list.
+ * \param[in,out] num6  Number of IPv6-addresses in the `geoip_ipv6_entries` list.
  */
-
 static int geoip_get_num_addr (DWORD *num4, DWORD *num6)
 {
   if (num4 && geoip_ipv4_entries)
@@ -709,14 +780,14 @@ static int geoip_get_num_addr (DWORD *num4, DWORD *num6)
 struct country_list {
        int         country_number; /**< ISO-3166-2 country number */
        char        short_name[3];  /**< A2 short country code */
-       const char *long_name;      /**< normal country name */
+       const char *long_name;      /**< normal (long) country name */
      };
 
 /**
  * The ISO-3166-2 list of countries.
  *
- * Refs: \n
- *  ftp://ftp.ripe.net/iso3166-countrycodes.txt \n
+ * Refs: <br>
+ *  ftp://ftp.ripe.net/iso3166-countrycodes.txt <br>
  *  https://en.wikipedia.org/wiki/ISO_3166-2
  */
 static const struct country_list c_list[] = {
@@ -975,11 +1046,19 @@ static const struct country_list c_list[] = {
        { 716, "zw", "Zimbabwe"                             }
      };
 
+/**
+ * Return number of countries in the `c_list[]' array.
+ */
 size_t geoip_num_countries (void)
 {
   return DIM(c_list);
 }
 
+/**
+ * Return the short-country name for a index in range `[0... DIM(c_list)]`.
+ *
+ * \param[in] idx  the index to get the short-country name for.
+ */
 const char *geoip_get_short_name_by_idx (int idx)
 {
   if (idx < 0 || idx > DIM(c_list))
@@ -987,6 +1066,11 @@ const char *geoip_get_short_name_by_idx (int idx)
   return (c_list[idx].short_name);
 }
 
+/**
+ * Given an ISO-3166-2 short-country, return the long-country name for it.
+ *
+ * \param[in] short_name  the ISO-3166-2 short-country name.
+ */
 const char *geoip_get_long_name_by_A2 (const char *short_name)
 {
   const struct country_list *list = c_list + 0;
@@ -1005,6 +1089,11 @@ const char *geoip_get_long_name_by_A2 (const char *short_name)
   return (NULL);
 }
 
+/**
+ * Given an ISO-3166-2 country-number, return the long-country name for it.
+ *
+ * \param[in] number  the ISO-3166-2 country-number.
+ */
 const char *geoip_get_long_name_by_id (int number)
 {
   const struct country_list *list = c_list + 0;
@@ -1054,6 +1143,9 @@ static void geoip_stats_init (void)
          (unsigned)size, (unsigned)num);
 }
 
+/**
+ * Free the memory for the geoip statistics array.
+ */
 static void geoip_stats_exit (void)
 {
   if (geoip_stats_buf)
@@ -1064,6 +1156,9 @@ static void geoip_stats_exit (void)
 /**
  * Update the country statistics for an IPv4 or IPv6-address.
  * `country_A2` should already be in upper case.
+ *
+ * \param[in] country_A2  The 2-letter country to update the statistics for.
+ * \param[in] flag        A flag describing what counter should be incremented.
  */
 static void geoip_stats_update (const char *country_A2, int flag)
 {
@@ -1095,6 +1190,9 @@ static void geoip_stats_update (const char *country_A2, int flag)
  * This function assumes the above `geoip_stats_update()` was called to update
  * `stats->num[46]`. Hence if `country_A2` is found and `stats->num[46] > 1`, the country
  * is no longer considered unique when `flag == stats->flag`.
+ *
+ * \param[in] country_A2  The 2-letter country to check uniqueness for.
+ * \param[in] flag        A flag describing which address type to check for.
  */
 int geoip_stats_is_unique (const char *country_A2, int flag)
 {
@@ -1120,6 +1218,15 @@ int geoip_stats_is_unique (const char *country_A2, int flag)
   return (0);
 }
 
+/**
+ * Using `geoip_stats_buf`, count the number of unique countries found in addresses at run-time.
+ * Normally called from `trace_report()` to print final accumulated statistics.
+ *
+ * \param[in] num_ip4      The total count of IPv4-addresses found for countries.
+ * \param[in] num_ip6      The total count of IPv6-addresses found for countries.
+ * \param[in] num_ip2loc4  The count of IPv4-addresses found for countries by functions in ip2loc.c.
+ * \param[in] num_ip2loc6  The count of IPv6-addresses found for countries by functions in ip2loc.c.
+ */
 void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2loc4, DWORD *num_ip2loc6)
 {
   const struct geoip_stats *stats;
@@ -1160,6 +1267,11 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2l
          DWORD_CAST(ip2loc_n4), DWORD_CAST(ip2loc_n6));
 }
 
+/**
+ * Using `geoip_stats_buf`, count the number of IPv4 and IPv6 addresses found at run-time.
+ *
+ * \param[in] idx  the index into `c_list[]`.
+ */
 uint64 geoip_get_stats_by_idx (int idx)
 {
   if (!geoip_stats_buf || idx < 0 || idx > (int)geoip_num_countries())
@@ -1168,7 +1280,31 @@ uint64 geoip_get_stats_by_idx (int idx)
 }
 
 /**
+ * Using `geoip_stats_buf`, count the number of IPv4 and IPv6 addresses found at run-time.
+ *
+ * \param[in] number  the ISO-3166-2 country-number.
+ */
+uint64 geoip_get_stats_by_number (int number)
+{
+  const struct country_list *list = c_list + 0;
+  size_t i, num = DIM(c_list);
+
+  for (i = 0; number > 0 && i < num; i++, list++)
+  {
+    if (list->country_number == number)
+       return geoip_get_stats_by_idx (i);
+  }
+  return (0U);
+}
+
+/**
  * Figure out if a download is needed for a `loc_file`.
+ * If it is, copy `tmp_file` over to `loc_file`.
+ *
+ * \param[in] loc_file      The local file to check for an update.
+ * \param[in] tmp_file      The temporary file to compare against the `loc_file`.
+ * \param[in] url           The URL to download from. Can be `http` or `https`.
+ * \param[in] force_update  If TRUE, download the `tmp_file` regardless.
  */
 static DWORD update_file (const char *loc_file, const char *tmp_file, const char *url, BOOL force_update)
 {
@@ -1215,11 +1351,15 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
 }
 
 /**
- * Check and download files from: \n
+ * Check and download files from: <br>
  * ```
  *   g_cfg.geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip   (if family == AF_INET)
  *   g_cfg.geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6  (if family == AF_INET6)
  * ```
+ *
+ * \param[in] family        If `AF_INET`, check if `g_cfg.geoip4_file` needs to be updated.<br>
+ *                          If `AF_INET6`, check if `g_cfg.geoip6_file` needs to be updated.
+ * \param[in] force_update  If TRUE, download the `%TEMP%/geoip.tmp` / `%TEMP%/geoip6.tmp` regardless.
  */
 void geoip_update_file (int family, BOOL force_update)
 {
