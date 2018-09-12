@@ -481,8 +481,12 @@ static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num)
 {
   char       *p = buf;
   char        country[3];
-  __ms_u_long low, high;
   int         rc = 0;
+#ifdef __CYGWIN__
+  unsigned long low, high;
+#else
+  DWORD         low, high;
+#endif
 
   for ( ; *p && isspace((int)*p); )
       p++;
