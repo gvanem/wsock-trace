@@ -453,7 +453,7 @@ static void CALLBACK download_callback (HINTERNET hnd,
 
   TRACE (1, "%sstatus: %s (%lu).\n"
             "                               hnd: 0x%p, ctx->h1: 0x%p, ctx->h2: 0x%p.\n",
-         get_timestamp(), status_name, status, hnd, ctx->h1, ctx->h2);
+         get_timestamp(), status_name, (unsigned long)status, hnd, ctx->h1, ctx->h2);
 
   if (ctx->h2 && hnd != ctx->h2)
      TRACE (1, "Wrong handle\n");
@@ -468,12 +468,12 @@ static void CALLBACK download_callback (HINTERNET hnd,
   else if (status == INTERNET_STATUS_CONNECTED_TO_SERVER)
   {
     TRACE (1, "INTERNET_STATUS_CONNECTED_TO_SERVER: dwConnectedState: 0x%08lX, dwFlags: 0x%08lX\n",
-           ci->dwConnectedState, ci->dwFlags);
+           (unsigned long)ci->dwConnectedState, (unsigned long)ci->dwFlags);
   }
   else if (status == INTERNET_STATUS_STATE_CHANGE)
   {
     TRACE (1, "INTERNET_STATUS_STATE_CHANGE: dwConnectedState: %lu, dwFlags: %lu\n",
-           ci->dwConnectedState, ci->dwFlags);
+           (unsigned long)ci->dwConnectedState, (unsigned long)ci->dwFlags);
   }
   else if (status == INTERNET_STATUS_REQUEST_COMPLETE)
   {
@@ -610,7 +610,7 @@ static DWORD WINAPI download_sync_loop (struct download_context *context)
     if (!(*p_InternetReadFile)(ctx->h2, context->file_buf, sizeof(context->file_buf), &context->bytes_read))
        break;
 
-    TRACE (1, "InternetReadFile() read %lu bytes.\n", context->bytes_read);
+    TRACE (1, "InternetReadFile() read %lu bytes.\n", (unsigned long)context->bytes_read);
     if (context->bytes_read == 0)
        break;
     context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
@@ -670,7 +670,7 @@ static void download_threaded (struct download_context *context)
     CloseHandle (t_hnd);
   }
   TRACE (1, "%s() finished, t_hnd: %p, t_tid: %lu, t_timedout: %d.\n",
-         __FUNCTION__, t_hnd, t_id, t_timedout);
+         __FUNCTION__, t_hnd, (unsigned long)t_id, t_timedout);
 }
 
 #if defined(HAVE_WINHTTP_H)
@@ -778,7 +778,7 @@ static void download_winhttp (struct download_context *context)
       else
       {
         context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
-        TRACE (2, "WinHttpReadData(), got chunk %d size %lu.\n", chunk++, context->bytes_read);
+        TRACE (2, "WinHttpReadData(), got chunk %d size %lu.\n", chunk++, (unsigned long)context->bytes_read);
       }
     }
     while (chunk_size > 0);
