@@ -868,7 +868,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   DWORD        total_cpp  = 0;
   DWORD        total_junk = 0;
   smartlist_t *orig_modules = NULL;
-  smartlist_t *modules_copy;
+  smartlist_t *modules_copy = NULL;
   const char  *pdb_hdr  = "  PDB: text  data   C++  junk";
   size_t       dash_len = 72 + 8*IS_WIN64;
   int          i, max = smartlist_len (g_modules_list);
