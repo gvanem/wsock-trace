@@ -162,7 +162,8 @@ FULL_PATH_NAMES        = NO
 # will be relative from the directory where doxygen is started.
 # This tag requires that the tag FULL_PATH_NAMES is set to YES.
 
-STRIP_FROM_PATH        = ../src
+STRIP_FROM_PATH        = ../src \
+                         ../IP2Location-C-Library/libIP2Location
 
 # The STRIP_FROM_INC_PATH tag can be used to strip a user-defined part of the
 # path mentioned in the documentation of a class, which tells the reader which
@@ -766,6 +767,9 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT = main_page.dox            \
+       ../src/bfd.h              \
+       ../src/bfd_gcc.h          \
+       ../src/bfd_gcc.c          \
        ../src/common.c           \
        ../src/cpu.c              \
        ../src/dnsbl.c            \
@@ -936,7 +940,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = README.md # main_page.dox
+USE_MDFILE_AS_MAINPAGE = main_page.dox # README.md
 
 #---------------------------------------------------------------------------
 # Configuration options related to source browsing
@@ -1351,7 +1355,7 @@ EXPAND_ONLY_PREDEF     = NO
 # The default value is: YES.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-SEARCH_INCLUDES        = NO
+SEARCH_INCLUDES        = YES
 
 # The INCLUDE_PATH tag can be used to specify one or more directories that
 # contain include files that are not input files but should be processed by the
@@ -1378,7 +1382,7 @@ INCLUDE_FILE_PATTERNS  = *.h
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = __DOXYGEN__:=1 NOT_USED:=1 _Printf_format_string_=1 _MSC_VER:=1900 _DEBUG:=1 \
-                         USE_IP2LOCATION=1 TEST_GEOIP=1
+                         WIN32:=1 _WIN32:=1 USE_IP2LOCATION=1 TEST_GEOIP=1
 
 SKIP_FUNCTION_MACROS   = NO
 
