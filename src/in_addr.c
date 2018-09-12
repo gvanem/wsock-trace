@@ -198,8 +198,12 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
     if (words[i] == 0)
     {
       if (cur.base == -1)
-           cur.base = i, cur.len = 1;
-      else cur.len++;
+      {
+        cur.base = i;
+        cur.len = 1;
+      }
+      else
+        cur.len++;
     }
     else if (cur.base != -1)
     {
