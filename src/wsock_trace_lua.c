@@ -89,6 +89,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
   LUA_TRACE (1, "rc: %d, dll: %s\n"
                  "                       %s.\n", rc, dll, cpath);
+  ARGSUSED (instDLL);
   return (rc);
 }
 
@@ -115,6 +116,8 @@ int wslua_WSAStartup (WORD ver, WSADATA *data)
 {
   if (g_cfg.lua.enable)
      LUA_TRACE (1, "wslua_func_sig: ~9'%s'\n", get_func_sig());
+  ARGSUSED (ver);
+  ARGSUSED (data);
   return (0);
 }
 
@@ -203,6 +206,7 @@ static int wslua_set_trace_level (lua_State *l)
   }
   else
     g_cfg.lua.trace_level = (int) lua_tonumber (L, 1);
+  ARGSUSED (l);
   return (1);
 }
 
@@ -212,6 +216,7 @@ static int wslua_register_hook (lua_State *l)
   const lua_CFunction func2 = lua_tocfunction (L, 2);
 
   LUA_TRACE (1, "func1=%p, func2=%p\n", func1, func2);
+  ARGSUSED (l);
   return (1);
 }
 
@@ -307,7 +312,7 @@ static int wstrace_lua_panic (lua_State *l)
 /*
  * The 'lua_sethook()' callback.
  */
-static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
+static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
 {
   switch (_ld->event)
   {
@@ -328,10 +333,12 @@ static void wstrace_lua_hook (lua_State *L, lua_Debug *_ld)
     lua_Debug ld;
 
     memset (&ld, '\0', sizeof(ld));
-    lua_getinfo (L, ">nl", &ld);
+    lua_getinfo (l, ">nl", &ld);
     trace_printf ("ld.name:        %s\n", ld.name);
     trace_printf ("ld.short_src:   %s\n", ld.short_src);
   }
+#else
+  ARGSUSED (l);
 #endif
   trace_puts ("~0\n");
 }
@@ -482,10 +489,10 @@ static int common_open (lua_State *l, const char *func, BOOL is_ours)
  * we will get re-entered here.
  */
 #define OPEN_EXPORT(func, ours)                                  \
-        __declspec(dllexport) int luaopen_##func (lua_State *L); \
-        int luaopen_##func (lua_State *L)                        \
+        __declspec(dllexport) int luaopen_##func (lua_State *l); \
+        int luaopen_##func (lua_State *l)                        \
         {                                                        \
-          return common_open (L, __FUNCTION__, ours);            \
+          return common_open (l, __FUNCTION__, ours);            \
         }
 
 OPEN_EXPORT (wsock_trace,         IS_WIN64 == 0 && IS_MSVC)
