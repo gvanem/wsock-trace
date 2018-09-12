@@ -1,7 +1,7 @@
 #
 # This is a GNU-make Makefile for Wsock-Trace's './doc'
 #
-THIS_DIR = $(dir $(realpath Makefile))
+LOG_FILE = doxygen.log
 
 DOC_GENERATED    = Wsock-Trace.chm Wsock-Trace.chw doxygen.log
 OUTPUT_GENERATED = $(addprefix ./output/, \
@@ -11,11 +11,11 @@ all: Wsock-Trace.chm
 
 Wsock-Trace.chm: Makefile Wsock-Trace.Doxyfile main_page.dox Wsock-Trace.css ../src/*.[ch]
 	rm -f output/msc*.png                      ; \
-	doxygen Wsock-Trace.Doxyfile > doxygen.log ; \
+	doxygen Wsock-Trace.Doxyfile > $(LOG_FILE) ; \
 	cd output                                  ; \
 	hhc index.hhp                              ; \
 	mv -f Wsock-Trace.chm ..
-	@echo 'Doxygen done. Look in "$(realpath doxygen.log)" for messages.'
+	@echo 'Doxygen done. Look in "$(LOG_FILE)" for messages.'
 
 clean:
 	rm -f $(OUTPUT_GENERATED)
