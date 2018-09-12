@@ -27,7 +27,7 @@ static smartlist_t *hosts_list;
 /**
  * Add an entry to the given `smartlist_t` that becomes `hosts_list`.
  */
-static void add_entry (smartlist_t *sl, const char *name, const char *ip, const void *addr, size_t size, int af_type)
+static void add_entry (smartlist_t *sl, const char *name, const void *addr, size_t size, int af_type)
 {
   struct host_entry *he;
 
@@ -99,9 +99,9 @@ static void parse_hosts (smartlist_t *sl, const char *line)
      return;
 
   if (_wsock_trace_inet_pton(AF_INET, ip, (u_char*)&in4) == 1)
-       add_entry (sl, name, ip, &in4, sizeof(in4), AF_INET);
+       add_entry (sl, name, &in4, sizeof(in4), AF_INET);
   else if (_wsock_trace_inet_pton(AF_INET6, ip, (u_char*)&in6) == 1)
-       add_entry (sl, name, ip, &in6, sizeof(in6), AF_INET6);
+       add_entry (sl, name, &in6, sizeof(in6), AF_INET6);
 }
 
 /**
