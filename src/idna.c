@@ -1122,7 +1122,7 @@ int main (int argc, char **argv)
      {
        case 'c':
             cp = atoi (optarg);
-            if (cp < 0)
+            if ((int)cp < 0)
             {
               printf ("Illegal codepage '%s'\n", optarg);
               return (-1);
