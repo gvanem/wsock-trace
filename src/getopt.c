@@ -93,11 +93,10 @@ int optopt = '?';
 
 static struct _getopt_data getopt_data;
 
-
 #if defined HAVE_DECL_GETENV && !HAVE_DECL_GETENV
 extern char *getenv ();
 #endif
-
+
 #ifdef _LIBC
 /* Stored original parameters.
    XXX This is no good solution.  We should rather copy the args so
@@ -114,19 +113,19 @@ extern char *__getopt_nonoption_flags;
 # endif
 
 # ifdef USE_NONOPTION_FLAGS
-#  define SWAP_FLAGS(ch1, ch2) \
-  if (d->__nonoption_flags_len > 0)					      \
-    {									      \
-      char __tmp = __getopt_nonoption_flags[ch1];			      \
-      __getopt_nonoption_flags[ch1] = __getopt_nonoption_flags[ch2];	      \
-      __getopt_nonoption_flags[ch2] = __tmp;				      \
+#  define SWAP_FLAGS(ch1, ch2)                                       \
+  if (d->__nonoption_flags_len > 0)                                  \
+    {                                                                \
+      char __tmp = __getopt_nonoption_flags[ch1];                    \
+      __getopt_nonoption_flags[ch1] = __getopt_nonoption_flags[ch2]; \
+      __getopt_nonoption_flags[ch2] = __tmp;                         \
     }
 # else
 #  define SWAP_FLAGS(ch1, ch2)
 # endif
-#else	/* !_LIBC */
+#else /* !_LIBC */
 # define SWAP_FLAGS(ch1, ch2)
-#endif	/* _LIBC */
+#endif /* _LIBC */
 
 /* Exchange two adjacent subsequences of ARGV.
    One subsequence is elements [first_nonopt,last_nonopt)
@@ -157,57 +156,57 @@ exchange (char **argv, struct _getopt_data *d)
   if (d->__nonoption_flags_len > 0 && top >= d->__nonoption_flags_max_len)
     {
       /* We must extend the array.  The user plays games with us and
-	 presents new arguments.  */
+         presents new arguments.  */
       char *new_str = malloc (top + 1);
       if (new_str == NULL)
-	d->__nonoption_flags_len = d->__nonoption_flags_max_len = 0;
+         d->__nonoption_flags_len = d->__nonoption_flags_max_len = 0;
       else
-	{
-	  memset (__mempcpy (new_str, __getopt_nonoption_flags,
-			     d->__nonoption_flags_max_len),
-		  '\0', top + 1 - d->__nonoption_flags_max_len);
-	  d->__nonoption_flags_max_len = top + 1;
-	  __getopt_nonoption_flags = new_str;
-	}
+        {
+          memset (__mempcpy (new_str, __getopt_nonoption_flags,
+                  d->__nonoption_flags_max_len),
+                  '\0', top + 1 - d->__nonoption_flags_max_len);
+          d->__nonoption_flags_max_len = top + 1;
+          __getopt_nonoption_flags = new_str;
+        }
     }
 #endif
 
   while (top > middle && middle > bottom)
     {
       if (top - middle > middle - bottom)
-	{
-	  /* Bottom segment is the short one.  */
-	  int len = middle - bottom;
-	  register int i;
+        {
+          /* Bottom segment is the short one.  */
+          int len = middle - bottom;
+          register int i;
 
-	  /* Swap it with the top part of the top segment.  */
-	  for (i = 0; i < len; i++)
-	    {
-	      tem = argv[bottom + i];
-	      argv[bottom + i] = argv[top - (middle - bottom) + i];
-	      argv[top - (middle - bottom) + i] = tem;
-	      SWAP_FLAGS (bottom + i, top - (middle - bottom) + i);
-	    }
-	  /* Exclude the moved bottom segment from further swapping.  */
-	  top -= len;
-	}
+          /* Swap it with the top part of the top segment.  */
+          for (i = 0; i < len; i++)
+            {
+              tem = argv[bottom + i];
+              argv[bottom + i] = argv[top - (middle - bottom) + i];
+              argv[top - (middle - bottom) + i] = tem;
+              SWAP_FLAGS (bottom + i, top - (middle - bottom) + i);
+            }
+          /* Exclude the moved bottom segment from further swapping.  */
+          top -= len;
+        }
       else
-	{
-	  /* Top segment is the short one.  */
-	  int len = top - middle;
-	  register int i;
+        {
+          /* Top segment is the short one.  */
+          int len = top - middle;
+          register int i;
 
-	  /* Swap it with the bottom part of the bottom segment.  */
-	  for (i = 0; i < len; i++)
-	    {
-	      tem = argv[bottom + i];
-	      argv[bottom + i] = argv[middle + i];
-	      argv[middle + i] = tem;
-	      SWAP_FLAGS (bottom + i, middle + i);
-	    }
-	  /* Exclude the moved top segment from further swapping.  */
-	  bottom += len;
-	}
+          /* Swap it with the bottom part of the bottom segment.  */
+          for (i = 0; i < len; i++)
+            {
+              tem = argv[bottom + i];
+              argv[bottom + i] = argv[middle + i];
+              argv[middle + i] = tem;
+              SWAP_FLAGS (bottom + i, middle + i);
+            }
+          /* Exclude the moved top segment from further swapping.  */
+          bottom += len;
+        }
     }
 
   /* Update records for the slots the non-options now occupy.  */
@@ -220,7 +219,7 @@ exchange (char **argv, struct _getopt_data *d)
 
 static const char *
 _getopt_initialize (int argc, char **argv, const char *optstring,
-		    int posixly_correct, struct _getopt_data *d)
+                    int posixly_correct, struct _getopt_data *d)
 {
   /* Start processing options with ARGV-element 1 (since ARGV-element 0
      is the program name); the sequence of previously skipped
@@ -254,25 +253,25 @@ _getopt_initialize (int argc, char **argv, const char *optstring,
       && argc == __libc_argc && argv == __libc_argv)
     {
       if (d->__nonoption_flags_max_len == 0)
-	{
-	  if (__getopt_nonoption_flags == NULL
-	      || __getopt_nonoption_flags[0] == '\0')
-	    d->__nonoption_flags_max_len = -1;
-	  else
-	    {
-	      const char *orig_str = __getopt_nonoption_flags;
-	      int len = d->__nonoption_flags_max_len = strlen (orig_str);
-	      if (d->__nonoption_flags_max_len < argc)
-		d->__nonoption_flags_max_len = argc;
-	      __getopt_nonoption_flags =
-		(char *) malloc (d->__nonoption_flags_max_len);
-	      if (__getopt_nonoption_flags == NULL)
-		d->__nonoption_flags_max_len = -1;
-	      else
-		memset (__mempcpy (__getopt_nonoption_flags, orig_str, len),
-			'\0', d->__nonoption_flags_max_len - len);
-	    }
-	}
+        {
+          if (__getopt_nonoption_flags == NULL
+              || __getopt_nonoption_flags[0] == '\0')
+            d->__nonoption_flags_max_len = -1;
+          else
+            {
+              const char *orig_str = __getopt_nonoption_flags;
+              int len = d->__nonoption_flags_max_len = strlen (orig_str);
+              if (d->__nonoption_flags_max_len < argc)
+                 d->__nonoption_flags_max_len = argc;
+              __getopt_nonoption_flags =
+                 (char *) malloc (d->__nonoption_flags_max_len);
+              if (__getopt_nonoption_flags == NULL)
+                 d->__nonoption_flags_max_len = -1;
+              else
+                 memset (__mempcpy (__getopt_nonoption_flags, orig_str, len),
+                         '\0', d->__nonoption_flags_max_len - len);
+            }
+        }
       d->__nonoption_flags_len = d->__nonoption_flags_max_len;
     }
   else
@@ -281,7 +280,7 @@ _getopt_initialize (int argc, char **argv, const char *optstring,
 
   return optstring;
 }
-
+
 /* Scan elements of ARGV (whose length is ARGC) for option characters
    given in OPTSTRING.
 
@@ -339,8 +338,8 @@ _getopt_initialize (int argc, char **argv, const char *optstring,
 
 int
 _getopt_internal_r (int argc, char **argv, const char *optstring,
-		    const struct option *longopts, int *longind,
-		    int long_only, int posixly_correct, struct _getopt_data *d)
+                    const struct option *longopts, int *longind,
+                    int long_only, int posixly_correct, struct _getopt_data *d)
 {
   int print_errors = d->opterr;
   if (optstring[0] == ':')
@@ -354,9 +353,8 @@ _getopt_internal_r (int argc, char **argv, const char *optstring,
   if (d->optind == 0 || !d->__initialized)
     {
       if (d->optind == 0)
-	d->optind = 1;	/* Don't scan ARGV[0], the program name.  */
-      optstring = _getopt_initialize (argc, argv, optstring,
-				      posixly_correct, d);
+         d->optind = 1;	/* Don't scan ARGV[0], the program name.  */
+      optstring = _getopt_initialize (argc, argv, optstring, posixly_correct, d);
       d->__initialized = 1;
     }
 
@@ -365,9 +363,9 @@ _getopt_internal_r (int argc, char **argv, const char *optstring,
      from the shell indicating it is not an option.  The later information
      is only used when the used in the GNU libc.  */
 #if defined _LIBC && defined USE_NONOPTION_FLAGS
-# define NONOPTION_P (argv[d->optind][0] != '-' || argv[d->optind][1] == '\0' \
-		      || (d->optind < d->__nonoption_flags_len		      \
-			  && __getopt_nonoption_flags[d->optind] == '1'))
+# define NONOPTION_P (argv[d->optind][0] != '-' || argv[d->optind][1] == '\0' || \
+                      (d->optind < d->__nonoption_flags_len &&                   \
+                      __getopt_nonoption_flags[d->optind] == '1'))
 #else
 # define NONOPTION_P (argv[d->optind][0] != '-' || argv[d->optind][1] == '\0')
 #endif
@@ -377,78 +375,78 @@ _getopt_internal_r (int argc, char **argv, const char *optstring,
       /* Advance to the next ARGV-element.  */
 
       /* Give FIRST_NONOPT & LAST_NONOPT rational values if OPTIND has been
-	 moved back by the user (who may also have changed the arguments).  */
+         moved back by the user (who may also have changed the arguments).  */
       if (d->__last_nonopt > d->optind)
-	d->__last_nonopt = d->optind;
+         d->__last_nonopt = d->optind;
       if (d->__first_nonopt > d->optind)
-	d->__first_nonopt = d->optind;
+         d->__first_nonopt = d->optind;
 
       if (d->__ordering == PERMUTE)
-	{
-	  /* If we have just processed some options following some non-options,
-	     exchange them so that the options come first.  */
+        {
+          /* If we have just processed some options following some non-options,
+             exchange them so that the options come first.  */
 
-	  if (d->__first_nonopt != d->__last_nonopt
-	      && d->__last_nonopt != d->optind)
-	    exchange ((char **) argv, d);
-	  else if (d->__last_nonopt != d->optind)
-	    d->__first_nonopt = d->optind;
+          if (d->__first_nonopt != d->__last_nonopt
+              && d->__last_nonopt != d->optind)
+            exchange ((char **) argv, d);
+          else if (d->__last_nonopt != d->optind)
+            d->__first_nonopt = d->optind;
 
-	  /* Skip any additional non-options
-	     and extend the range of non-options previously skipped.  */
+          /* Skip any additional non-options
+             and extend the range of non-options previously skipped.  */
 
-	  while (d->optind < argc && NONOPTION_P)
-	    d->optind++;
-	  d->__last_nonopt = d->optind;
-	}
+          while (d->optind < argc && NONOPTION_P)
+            d->optind++;
+          d->__last_nonopt = d->optind;
+        }
 
       /* The special ARGV-element `--' means premature end of options.
-	 Skip it like a null option,
-	 then exchange with previous non-options as if it were an option,
-	 then skip everything else like a non-option.  */
+         Skip it like a null option,
+         then exchange with previous non-options as if it were an option,
+         then skip everything else like a non-option.  */
 
       if (d->optind != argc && !strcmp (argv[d->optind], "--"))
-	{
-	  d->optind++;
+        {
+          d->optind++;
 
-	  if (d->__first_nonopt != d->__last_nonopt
-	      && d->__last_nonopt != d->optind)
-	    exchange ((char **) argv, d);
-	  else if (d->__first_nonopt == d->__last_nonopt)
-	    d->__first_nonopt = d->optind;
-	  d->__last_nonopt = argc;
+          if (d->__first_nonopt != d->__last_nonopt
+              && d->__last_nonopt != d->optind)
+            exchange ((char **) argv, d);
+          else if (d->__first_nonopt == d->__last_nonopt)
+            d->__first_nonopt = d->optind;
+          d->__last_nonopt = argc;
 
-	  d->optind = argc;
-	}
+          d->optind = argc;
+        }
 
       /* If we have done all the ARGV-elements, stop the scan
-	 and back over any non-options that we skipped and permuted.  */
+         and back over any non-options that we skipped and permuted.  */
 
       if (d->optind == argc)
-	{
-	  /* Set the next-arg-index to point at the non-options
-	     that we previously skipped, so the caller will digest them.  */
-	  if (d->__first_nonopt != d->__last_nonopt)
-	    d->optind = d->__first_nonopt;
-	  return -1;
-	}
+        {
+          /* Set the next-arg-index to point at the non-options
+             that we previously skipped, so the caller will digest them.  */
+          if (d->__first_nonopt != d->__last_nonopt)
+            d->optind = d->__first_nonopt;
+          return -1;
+        }
 
       /* If we have come to a non-option and did not permute it,
-	 either stop the scan or describe it to the caller and pass it by.  */
+         either stop the scan or describe it to the caller and pass it by.  */
 
       if (NONOPTION_P)
-	{
-	  if (d->__ordering == REQUIRE_ORDER)
-	    return -1;
-	  d->optarg = argv[d->optind++];
-	  return 1;
-	}
+        {
+          if (d->__ordering == REQUIRE_ORDER)
+            return -1;
+          d->optarg = argv[d->optind++];
+          return 1;
+        }
 
       /* We have found another option-ARGV-element.
-	 Skip the initial punctuation.  */
+         Skip the initial punctuation.  */
 
       d->__nextchar = (argv[d->optind] + 1
-		  + (longopts != NULL && argv[d->optind][1] == '-'));
+         + (longopts != NULL && argv[d->optind][1] == '-'));
     }
 
   /* Decode the current option-ARGV-element.  */
@@ -468,8 +466,8 @@ _getopt_internal_r (int argc, char **argv, const char *optstring,
 
   if (longopts != NULL
       && (argv[d->optind][1] == '-'
-	  || (long_only && (argv[d->optind][2]
-			    || !strchr (optstring, argv[d->optind][1])))))
+      || (long_only && (argv[d->optind][2]
+          || !strchr (optstring, argv[d->optind][1])))))
     {
       char *nameend;
       const struct option *p;
@@ -480,35 +478,35 @@ _getopt_internal_r (int argc, char **argv, const char *optstring,
       int option_index;
 
       for (nameend = d->__nextchar; *nameend && *nameend != '='; nameend++)
-	/* Do nothing.  */ ;
+       /* Do nothing.  */ ;
 
       /* Test all long options for either exact match
-	 or abbreviated matches.  */
+         or abbreviated matches.  */
       for (p = longopts, option_index = 0; p->name; p++, option_index++)
-	if (!strncmp (p->name, d->__nextchar, nameend - d->__nextchar))
-	  {
-	    if ((unsigned int) (nameend - d->__nextchar)
-		== (unsigned int) strlen (p->name))
-	      {
-		/* Exact match found.  */
-		pfound = p;
-		indfound = option_index;
-		exact = 1;
-		break;
-	      }
-	    else if (pfound == NULL)
-	      {
-		/* First nonexact match found.  */
-		pfound = p;
-		indfound = option_index;
-	      }
-	    else if (long_only
-		     || pfound->has_arg != p->has_arg
-		     || pfound->flag != p->flag
-		     || pfound->val != p->val)
-	      /* Second or later nonexact match found.  */
-	      ambig = 1;
-	  }
+        if (!strncmp (p->name, d->__nextchar, nameend - d->__nextchar))
+          {
+            if ((unsigned int) (nameend - d->__nextchar)
+               == (unsigned int) strlen (p->name))
+            {
+               /* Exact match found.  */
+               pfound = p;
+               indfound = option_index;
+               exact = 1;
+               break;
+            }
+            else if (pfound == NULL)
+            {
+              /* First nonexact match found.  */
+              pfound = p;
+              indfound = option_index;
+             }
+             else if (long_only
+                    || pfound->has_arg != p->has_arg
+                    || pfound->flag != p->flag
+                    || pfound->val != p->val)
+              /* Second or later nonexact match found.  */
+              ambig = 1;
+          }
 
       if (ambig && !exact)
 	{
@@ -1108,7 +1106,6 @@ getopt (int argc, char *const *argv, const char *optstring)
 			   POSIXLY_CORRECT);
 }
 
-
 #ifdef TEST
 
 /* Compile with -DTEST to make an executable for use in testing
