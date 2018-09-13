@@ -49,9 +49,9 @@ trace_overlap = 2
 #
 # Hook and trace Winsock extensions functions.
 # The call 'WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER, ...)' is the interface
-# to these extension functions. If 'hook_extensions = 1', hook-functions foe each
+# to these extension functions. If 'hook_extensions = 1', a hook-function for each
 # Winsock extension is set. Thus allowing a trace of these.
-# Ref: ws_hooks.c for details.
+# Ref: wsock_hooks.c for details.
 #
 hook_extensions = 0
 

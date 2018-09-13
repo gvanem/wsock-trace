@@ -142,7 +142,7 @@ static void wstrace_printf (BOOL first_line,
  * Hooking and tracing of Winsock extension functions returned in
  * 'WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER,...)'.
  */
-#include "ws_hooks.c"
+#include "wsock_hooks.c"
 
 /*
  * Handy macro to both define and declare the function-pointer.
@@ -999,7 +999,7 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, void *vals, DWORD size_in,
 
    /* hook the extension function only when someone wants to
     * use it. Thus allowing a trace of it.
-    * Ref. ws_hooks.c for details.
+    * Ref. wsock_hooks.c for details.
     */
     if (g_cfg.hook_extensions)
     {

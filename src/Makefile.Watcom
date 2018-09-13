@@ -175,7 +175,7 @@ $(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h &
                             init.h cpu.h stkwalk.h smartlist.h &
                             overlap.h dump.h wsock_trace_lua.h &
-                            wsock_trace.h ws_hooks.c
+                            wsock_trace.h wsock_hooks.c
 
 !if "$(USE_IP2LOCATION)" == "1"
 $(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h &
