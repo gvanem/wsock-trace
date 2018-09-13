@@ -7,6 +7,7 @@
  *\addtogroup inet_util IP-address utilities
  *\addtogroup Lua       Lua script support
  *\addtogroup Main      Wsock-trace core functions
+ *\addtogroup Misc      Various support functions
  */
 
 /**
