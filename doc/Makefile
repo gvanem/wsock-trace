@@ -3,22 +3,22 @@
 #
 LOG_FILE = doxygen.log
 
-DOC_GENERATED    = Wsock-Trace.chm Wsock-Trace.chw doxygen.log
+DOC_GENERATED    = wsock_trace.chm wsock_trace.chw doxygen.log
 OUTPUT_GENERATED = $(addprefix ./output/, \
                      *.css *.html *.js *.png *.map *.md5 index.{hhc,hhk,hhp} )
 
-all: Wsock-Trace.chm
+all: wsock_trace.chm
 
-Wsock-Trace.chm: Makefile Wsock-Trace.Doxyfile main_page.dox Wsock-Trace.css ../src/*.[ch]
+wsock_trace.chm: Makefile wsock_trace.Doxyfile main_page.dox wsock_trace.css ../src/*.[ch]
 	rm -f output/msc*.png                      ; \
-	doxygen Wsock-Trace.Doxyfile > $(LOG_FILE) ; \
+	doxygen wsock_trace.Doxyfile > $(LOG_FILE) ; \
 	cd output                                  ; \
 	hhc index.hhp                              ; \
-	mv -f Wsock-Trace.chm ..
+	mv -f wsock_trace.chm ..
 	@echo 'Doxygen done. Look in "$(LOG_FILE)" for messages.'
 
 clean:
 	rm -f $(OUTPUT_GENERATED)
 	rm -f $(DOC_GENERATED)
-	-rmdir output
+	- rmdir output
 	@echo '"clean" done.'
