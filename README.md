@@ -55,6 +55,11 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   it can detect IPv4 / IPv6-addresses uses by spammers and cyber-criminals.
   The more potent Spamhaus **[BGPCC](https://www.spamhaus.org/bgpf/)** is on the *to-do* list.
 
+* *Slowdown*; For testing *too fast programs*, all receive, transmit, `select()` and `WSAPoll()`
+  calls can be delayed a number of milli-seconds. E.g. slowing down a `recv()` call is
+  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L67)
+  config-file.
+
 * **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
   behaviour of Wsock-trace at runtime without rebuilding it.
