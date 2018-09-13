@@ -83,6 +83,10 @@ struct test_struct {
 static int chatty = 0;
 static int last_result = 0;
 
+/* For getopt.c.
+ */
+const char *program_name = "test.exe";
+
 #define TEST_STRING(expect, func)                  test_string (expect, func, #func)
 #define TEST_WSTRING(expect, func_res, func_name)  test_wstring (expect, func_res, func_name)
 #define TEST_CONDITION(cond, func)                 do {                                        \

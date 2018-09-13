@@ -992,6 +992,10 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
 #include "getopt.h"
 
+/* For getopt.c.
+ */
+const char *program_name = "idna.exe";
+
 struct config_table g_cfg;
 
 #if (USE_WINIDN)

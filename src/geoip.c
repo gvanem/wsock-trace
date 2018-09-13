@@ -1397,6 +1397,10 @@ void geoip_update_file (int family, BOOL force_update)
   int _dowildcard = -1;
 #endif
 
+/* For getopt.c.
+ */
+const char *program_name = "geoip.exe";
+
 /**
  * Simplified version of the `get_error()` function in `wsock_trace.c`.
  */
