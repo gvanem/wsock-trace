@@ -1764,6 +1764,7 @@ static void test_addr_common (const struct in_addr  *a4,
   const char *comment  = NULL;
   const char *remark   = NULL;
   const char *cc;
+  const BYTE *nibble;
   int   save, flag, width = 0;
   char  buf1 [100];
   char  buf2 [100];
@@ -1817,8 +1818,18 @@ static void test_addr_common (const struct in_addr  *a4,
        comment = "Unallocated?";
 
     if (remark)
-         snprintf (buf1, sizeof(buf1), "%s (%s)", comment, remark);
-    else snprintf (buf1, sizeof(buf1), "%s", comment);
+    {
+      if (!strcmp(remark,"6to4"))
+      {
+        nibble = (const BYTE*) &a6->s6_words[1]; /* = IN6_EXTRACT_V4ADDR_FROM_6TO4 (a6); */
+        snprintf (buf1, sizeof(buf1), "%s (6to4: %u.%u.%u.%u)",
+                  comment, nibble[0], nibble[1], nibble[2], nibble[3]);
+      }
+      else
+        snprintf (buf1, sizeof(buf1), "%s (%s)", comment, remark);
+    }
+    else
+      snprintf (buf1, sizeof(buf1), "%s", comment);
 
     if (a4 && geoip_ipv4_entries)
          snprintf (buf2, sizeof(buf2), "%lu compares", DWORD_CAST(num_4_compare));
