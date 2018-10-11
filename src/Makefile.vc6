@@ -230,13 +230,6 @@ where VAR can have of the following 'x' values:
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	rc -nologo -DDEBUG=$(USE_CRT_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
 
-
-#
-# Test that 'fastcall' functions (-Gr) can be mixed in and decoded by stkwalk.c.
-#
-$(OBJ_DIR)\test.obj: test.c
-	$(CC) $(CFLAGS) -Gr -Fo$*.obj -c test.c
-
 $(OBJ_DIR)\idna2.obj: idna.c
 	$(CC) $(CFLAGS) -DTEST_IDNA -Fo$*.obj -c idna.c
 
