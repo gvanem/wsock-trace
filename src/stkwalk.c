@@ -1,5 +1,7 @@
-/*!\file stkwalk.c
- * StackWalker (backtrace) for Win32 / MSVC+clang-cl+MinGW
+/** \file   stkwalk.c
+ *  \ingroup Misc
+ *  \brief
+ *    StackWalker (simple backtrace) for Win32 (MSVC, clang-cl and MinGW)
  */
 
 /*
