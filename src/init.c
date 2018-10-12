@@ -169,7 +169,7 @@ const char *get_timestamp (void)
 
     case TS_ABSOLUTE:
          GetLocalTime (&now);
-         sprintf (buf, "%02u:%02u:%02u: ", now.wHour, now.wMinute, now.wSecond);
+         sprintf (buf, "%02u:%02u:%02u.%03u: ", now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
          return (buf);
 
     case TS_NONE:
