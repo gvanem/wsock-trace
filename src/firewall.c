@@ -57,6 +57,7 @@ typedef LONG NTSTATUS;
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
+GCC_PRAGMA (GCC diagnostic ignored "-Wenum-compare")
 
 #define FW_API_LOW     0
 #define FW_API_HIGH    4
@@ -1961,7 +1962,7 @@ static void CALLBACK
     print_layer_item (drop_event, NULL);
     print_filter_rule (drop_event, NULL);
   }
-  else if (event_type == FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW)
+  else if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW)
   {
     if (allow_event->msFwpDirection == FWP_DIRECTION_IN ||
         allow_event->msFwpDirection == FWP_DIRECTION_INBOUND)
@@ -2009,10 +2010,10 @@ static void CALLBACK
   if (!printed && g_cfg.trace_level >= 1 && header->flags)
      trace_printf (", header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
-  if (event_type == FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW   ||
-      event_type == FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ||
-      event_type == FWPM_NET_EVENT_TYPE_CLASSIFY_DROP    ||
-      event_type == FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
+  if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW   ||
+      event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ||
+      event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP    ||
+      event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
     if ((header->flags & FWPM_NET_EVENT_FLAG_APP_ID_SET) &&
         header->appId.data && header->appId.size > 0)
