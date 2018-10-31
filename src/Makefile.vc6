@@ -1,6 +1,6 @@
 #
 # Wsock-trace makefile for MSVC6+
-# G. Vanem <gvanem@yahoo.no> 2017.
+# G. Vanem <gvanem@yahoo.no> 2018.
 #
 # Usage:
 #   Open a "MSVC Developer Command Prompt" and set the compiler environment:
@@ -113,63 +113,91 @@ EX_LIBS = $(EX_LIBS) ole32.lib
 # declaration ('in6addr_any' etc.), the non-export.obj is simply added to this
 # imp-lib.
 #
-WSOCK_LIB = wsock_trace$(X_SUFFIX).lib
-WSOCK_DLL = wsock_trace$(X_SUFFIX).dll
-WSOCK_MAP = wsock_trace$(X_SUFFIX).map
+WSOCK_TRACE_LIB = wsock_trace$(X_SUFFIX).lib
+WSOCK_TRACE_DLL = wsock_trace$(X_SUFFIX).dll
 
 CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
 
-OBJECTS = $(OBJ_DIR)\common.obj          \
-          $(OBJ_DIR)\cpu.obj             \
-          $(OBJ_DIR)\dnsbl.obj           \
-          $(OBJ_DIR)\dump.obj            \
-          $(OBJ_DIR)\hosts.obj           \
-          $(OBJ_DIR)\geoip.obj           \
-          $(OBJ_DIR)\geoip-gen4.obj      \
-          $(OBJ_DIR)\geoip-gen6.obj      \
-          $(OBJ_DIR)\idna.obj            \
-          $(OBJ_DIR)\ip2loc.obj          \
-          $(OBJ_DIR)\inet_util.obj       \
-          $(OBJ_DIR)\init.obj            \
-          $(OBJ_DIR)\in_addr.obj         \
-          $(OBJ_DIR)\overlap.obj         \
-          $(OBJ_DIR)\smartlist.obj       \
-          $(OBJ_DIR)\stkwalk.obj         \
-          $(OBJ_DIR)\vm_dump.obj         \
-          $(OBJ_DIR)\wsock_trace_lua.obj \
-          $(OBJ_DIR)\wsock_trace.obj     \
-          $(OBJ_DIR)\wsock_trace.res
+WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
+                  $(OBJ_DIR)\cpu.obj             \
+                  $(OBJ_DIR)\dnsbl.obj           \
+                  $(OBJ_DIR)\dump.obj            \
+                  $(OBJ_DIR)\hosts.obj           \
+                  $(OBJ_DIR)\geoip.obj           \
+                  $(OBJ_DIR)\geoip-gen4.obj      \
+                  $(OBJ_DIR)\geoip-gen6.obj      \
+                  $(OBJ_DIR)\idna.obj            \
+                  $(OBJ_DIR)\ip2loc.obj          \
+                  $(OBJ_DIR)\inet_util.obj       \
+                  $(OBJ_DIR)\init.obj            \
+                  $(OBJ_DIR)\in_addr.obj         \
+                  $(OBJ_DIR)\overlap.obj         \
+                  $(OBJ_DIR)\smartlist.obj       \
+                  $(OBJ_DIR)\stkwalk.obj         \
+                  $(OBJ_DIR)\vm_dump.obj         \
+                  $(OBJ_DIR)\wsock_trace_lua.obj \
+                  $(OBJ_DIR)\wsock_trace.obj     \
+                  $(OBJ_DIR)\wsock_trace.res
 
+#
+# This .obj-file does not export any functions or data.
+# It's simply added to '$(WSOCK_TRACE_LIB)'; the import-library for '$(WSOCK_TRACE_DLL)'.
+#
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
+#
+# These .obj-files are for 'firewall_test.exe', 'idna.exe'.
+#
+FIREWALL_TEST_OBJ = $(OBJ_DIR)\common.obj     \
+                    $(OBJ_DIR)\dnsbl.obj      \
+                    $(OBJ_DIR)\firewall_1.obj \
+                    $(OBJ_DIR)\geoip.obj      \
+                    $(OBJ_DIR)\geoip-gen4.obj \
+                    $(OBJ_DIR)\geoip-gen6.obj \
+                    $(OBJ_DIR)\getopt.obj     \
+                    $(OBJ_DIR)\idna.obj       \
+                    $(OBJ_DIR)\in_addr.obj    \
+                    $(OBJ_DIR)\inet_util.obj  \
+                    $(OBJ_DIR)\init_1.obj     \
+                    $(OBJ_DIR)\ip2loc.obj     \
+                    $(OBJ_DIR)\smartlist.obj
+
+IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
+           $(OBJ_DIR)\getopt.obj \
+           $(OBJ_DIR)\common.obj \
+           $(OBJ_DIR)\smartlist.obj
+
+#
+# Source and .obj-files for 'geoip.exe'.
+#
 GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_DLL) $(WSOCK_LIB) test.exe idna.exe
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) test.exe idna.exe firewall_test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_DEF) $(OBJECTS) $(NON_EXPORT_OBJ) $(WSOCK_DEP)
-	link -dll $(LDFLAGS) -implib:$(WSOCK_LIB) -out:$(WSOCK_DLL) $(LDFLAGS_DEF) $(OBJECTS) $(EX_LIBS)
-	lib -nologo $(WSOCK_LIB) $(NON_EXPORT_OBJ)
-	@del $(WSOCK_LIB:.lib=.exp)
+$(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP)
+	link -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(EX_LIBS)
+	lib -nologo $(WSOCK_TRACE_LIB) $(NON_EXPORT_OBJ)
+	@del $(WSOCK_TRACE_LIB:.lib=.exp)
 
 install: all
-	copy $(WSOCK_LIB)               "$(LIB_TARGET)"
-	copy $(WSOCK_DLL)               "$(BIN_TARGET)"
+	copy $(WSOCK_TRACE_LIB)               "$(LIB_TARGET)"
+	copy $(WSOCK_TRACE_DLL)               "$(BIN_TARGET)"
 	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
 
 uninstall:
-	-del "$(LIB_TARGET)\$(WSOCK_LIB)"
-	-del "$(BIN_TARGET)\$(WSOCK_DLL)"
+	-del "$(LIB_TARGET)\$(WSOCK_TRACE_LIB)"
+	-del "$(BIN_TARGET)\$(WSOCK_TRACE_DLL)"
 	-del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
 
 geoip-gen4.c geoip-gen6.c: geoip.exe
 
-test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_LIB)
-	link $(LDFLAGS) -verbose -out:$@ -pdb:$*.pdb $** > link.tmp
+test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
+	link $(LDFLAGS) -verbose -out:$@ $** > link.tmp
 	type link.tmp >> test.map
 
 geoip.exe: $(GEOIP_SRC) geoip-null.c
@@ -180,9 +208,16 @@ geoip.exe: $(GEOIP_SRC) geoip-null.c
 	link $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib
 	del $(GEOIP_OBJ)
 
-idna.exe: $(OBJ_DIR)\idna2.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
-	link $(LDFLAGS) -verbose -out:$@ -pdb:$*.pdb $** ole32.lib > link.tmp
+idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
+	link $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
 	type link.tmp >> idna.map
+
+#
+# This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
+#
+firewall_test.exe: $(FIREWALL_TEST_OBJ)
+	link $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib > link.tmp
+	type link.tmp >> firewall_test.map
 
 run_test: test.exe
 	test.exe -dd
@@ -201,10 +236,11 @@ clean:
 	     $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
 
 vclean realclean: clean
-	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.pdb
-	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.pdb
-	-del geoip.exe geoip.map geoip.pdb geoip-gen4.c geoip-gen6.c
-	-del idna.exe  idna.map  idna.pdb  test.exe     test.pdb
+	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map        wsock_trace.pdb
+	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map    wsock_trace_x64.pdb
+	-del geoip.exe           geoip.map           geoip.pdb geoip-gen4.c geoip-gen6.c
+	-del idna.exe            idna.map            idna.pdb  test.exe     test.pdb
+	-del firewall_test.exe   firewall_test.map   firewall_test.pdb
 	-rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
 	-del $(LUAJIT_ROOT)\src\lua51_static.lib
@@ -230,9 +266,18 @@ where VAR can have of the following 'x' values:
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	rc -nologo -DDEBUG=$(USE_CRT_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
 
-$(OBJ_DIR)\idna2.obj: idna.c
+$(OBJ_DIR)\firewall_1.obj: firewall.c
+	$(CC) $(CFLAGS) -DTEST_FIREWALL -Fo$*.obj -c firewall.c
+
+$(OBJ_DIR)\idna_1.obj: idna.c
 	$(CC) $(CFLAGS) -DTEST_IDNA -Fo$*.obj -c idna.c
 
+$(OBJ_DIR)\init_1.obj: init.c
+	$(CC) $(CFLAGS) -DTEST_GEOIP -Fo$*.obj -c init.c
+
+#
+# The default fall-back rule for other .obj-files.
+#
 .c{$(OBJ_DIR)}.obj:
 	$(CC) $(CFLAGS) -Fo$*.obj -c $<
 
