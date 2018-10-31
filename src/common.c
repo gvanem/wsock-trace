@@ -1227,6 +1227,42 @@ FILE *fopen_excl (const char *file, const char *mode)
  *
  * Use 4 buffers in round-robin.
  */
+#if 1 /* Use this instead since there is   problems below */
+const char *qword_str (unsigned __int64 val)
+{
+  static char buf[4][30];
+  static int  idx = 0;
+  char   tmp[30];
+  char  *rc = buf [idx++];
+
+  if (val < 1000UL)
+  {
+    sprintf (rc, "%lu", (u_long)val);
+  }
+  else if (val < 1000000UL)         /* 1E6 */
+  {
+    sprintf (rc, "%lu,%03lu", (u_long)(val/1000UL), (u_long)(val % 1000UL));
+  }
+  else if (val < 1000000000UL)      /* 1E9 */
+  {
+    sprintf (tmp, "%9lu", (u_long)val);
+    sprintf (rc, "%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6);
+  }
+  else if (val < 1000000000000UL)   /* 1E12 */
+  {
+    sprintf (tmp, "%12lu", (u_long)val);
+    sprintf (rc, "%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9);
+  }
+  else                              /* >= 1E12 */
+  {
+    sprintf (tmp, "%15lu", (u_long)val);
+    sprintf (rc, "%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9);
+  }
+  idx &= 3;
+  return str_ltrim (rc);
+}
+
+#else
 const char *qword_str (unsigned __int64 val)
 {
   static char buf [4][30];
@@ -1246,6 +1282,7 @@ const char *qword_str (unsigned __int64 val)
   idx &= 3;
   return (p+1);
 }
+#endif
 
 const char *dword_str (DWORD val)
 {
