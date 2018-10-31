@@ -4,6 +4,10 @@
  * \brief
  *  Function for listening for Windows "Internet Connection Firewall" (ICF) events.
  *
+ *  The `fw_init()` and `fw_monotor_start()` needs Administrator privileges.
+ *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
+ *  "Access Denied".
+ *
  * Thanks to dmex for his implementation of similar stuff in his ProcessHacker:
  * \see
  *   + https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/fw.c
