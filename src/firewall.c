@@ -369,6 +369,21 @@ typedef enum FW_ENFORCEMENT_STATE {
              FW_ENFORCEMENT_STATE_MAX
            } FW_ENFORCEMENT_STATE;
 
+typedef enum _FWPM_NET_EVENT_TYPE {
+             _FWPM_NET_EVENT_TYPE_IKEEXT_MM_FAILURE  = 0,
+             _FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE  = 1,
+             _FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE  = 2,
+             _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP      = 3,
+             _FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP  = 4,
+             _FWPM_NET_EVENT_TYPE_IPSEC_DOSP_DROP    = 5,
+             _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW     = 6,
+             _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP    = 7,
+             _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW   = 8,
+             _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP_MAC  = 9,
+             _FWPM_NET_EVENT_TYPE_LPM_PACKET_ARRIVAL = 10,
+             _FWPM_NET_EVENT_TYPE_MAX                = 11
+           } _FWPM_NET_EVENT_TYPE;
+
 typedef struct FW_PORT_RANGE {
          USHORT  wBegin;
          USHORT  wEnd;
@@ -811,12 +826,6 @@ typedef struct _FWPM_NET_EVENT_HEADER3 {
   #define FWPM_NET_EVENT_KEYWORD_CAPABILITY_ALLOW  0x00000008
   #define FWPM_NET_EVENT_KEYWORD_CLASSIFY_ALLOW    0x00000010
 
-  #define FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW        6
-  #define FWPM_NET_EVENT_TYPE_CAPABILITY_DROP       7
-  #define FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW      8
-  #define FWPM_NET_EVENT_TYPE_CLASSIFY_DROP_MAC     9
-  #define FWPM_NET_EVENT_TYPE_LPM_PACKET_ARRIVAL   10
-
   #define FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET      0x00000001
   #define FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET       0x00000002
   #define FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET      0x00000004
@@ -1148,9 +1157,9 @@ static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription);
           else {                                                                         \
             fw_event_callback (event->type,                                              \
                                (const _FWPM_NET_EVENT_HEADER3*)&event->header,           \
-                               event->type == FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?        \
+                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?        \
                                 (const _FWPM_NET_EVENT_CLASSIFY_DROP2*)drop : NULL,      \
-                               event->type == FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?       \
+                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?       \
                                  (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0*) allow : NULL); \
           }                                                                              \
           ARGSUSED (context);                                                            \
@@ -1867,22 +1876,26 @@ static void CALLBACK
                      const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
   #undef  ADD_VALUE
-  #define ADD_VALUE(v)  { v, #v }
+  #define ADD_VALUE(v)  { _FWPM_NET_EVENT_TYPE_##v, "FWPM_NET_EVENT_TYPE" #v }
 
   static const struct search_list events[] = {
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_IKEEXT_MM_FAILURE),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_CLASSIFY_DROP),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_IPSEC_DOSP_DROP),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_CAPABILITY_DROP),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_CLASSIFY_DROP_MAC),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_LPM_PACKET_ARRIVAL),
-                      ADD_VALUE (FWPM_NET_EVENT_TYPE_MAX)
+                      ADD_VALUE (IKEEXT_MM_FAILURE),
+                      ADD_VALUE (IKEEXT_QM_FAILURE),
+                      ADD_VALUE (IKEEXT_EM_FAILURE),
+                      ADD_VALUE (CLASSIFY_DROP),
+                      ADD_VALUE (IPSEC_KERNEL_DROP),
+                      ADD_VALUE (IPSEC_DOSP_DROP),
+                      ADD_VALUE (CLASSIFY_ALLOW),
+                      ADD_VALUE (CAPABILITY_DROP),
+                      ADD_VALUE (CAPABILITY_ALLOW),
+                      ADD_VALUE (CLASSIFY_DROP_MAC),
+                      ADD_VALUE (LPM_PACKET_ARRIVAL),
+                      ADD_VALUE (MAX)
                     };
+
+  #undef  ADD_VALUE
+  #define ADD_VALUE(v)  { v, #v }
+
   static const struct search_list ev_flags[] = {
                       ADD_VALUE (FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET),
                       ADD_VALUE (FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET),
