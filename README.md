@@ -69,8 +69,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 This project uses [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git) and
 [**LuaJIT**](https://github.com/LuaJIT/LuaJIT.git) as external projects.
 On GitHub, these are refered to as submodules (refered to in `.gitmodules`).
-To clone this repository along with it's submodules, do a:<br>
-  * `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git`
+To clone this repository along with it's submodules, do this in an **empty** directory:<br>
+  * `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git .`
 
 If you have already cloned this repository earlier, you can initialize and update
 the submodules like so:<br>
