@@ -56,6 +56,7 @@ typedef LONG NTSTATUS;
  * a gcc warning. Ignore it.
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
+GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
 
 #define FW_API_LOW     0
 #define FW_API_HIGH    4
