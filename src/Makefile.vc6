@@ -173,7 +173,7 @@ IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
 GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) test.exe idna.exe # firewall_test.exe
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) test.exe idna.exe firewall_test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
