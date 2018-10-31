@@ -1468,16 +1468,18 @@ static BOOL fw_check_sizes (void)
           do {                                                            \
             if (! (sizeof(a) cond sizeof(b)) ) {                          \
               printf ("Mismatch of '%s' and '%s'. %d versus %d bytes.\n", \
-                      #a, #b, sizeof(a), sizeof(b));                      \
+                      #a, #b, (int)sizeof(a), (int)sizeof(b));            \
               return (FALSE);                                             \
             }                                                             \
           } while (0)
+
+  #define OffsetOf(x, item) (unsigned) offsetof (x, item)
 
   #define CHK_OFS(a, b, item)                                                 \
           do {                                                                \
             if (offsetof(a, item) != offsetof(b, item)) {                     \
               printf ("Mismatch of '%s' and '%s'. ofs %d versus %d bytes.\n", \
-                      #a, #b, offsetof(a,item), offsetof(b,item));            \
+                      #a, #b, OffsetOf(a,item), OffsetOf(b,item));            \
               return (FALSE);                                                 \
             }                                                                 \
           } while (0)
