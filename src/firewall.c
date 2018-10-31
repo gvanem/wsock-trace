@@ -1286,9 +1286,9 @@ static void print_long_wline (const wchar_t *start, size_t indent)
 
       if (!next)
          next = wcschr (c+1, L'\0');
-      if (left <= 2 || (left <= (next - c)/sizeof(wchar_t)))
+      if (left <= 2 || (left < (next - c)/sizeof(wchar_t)))
       {
-        trace_printf ("\n!%*c", (int)indent, ' ');
+        trace_printf ("\n%*c", (int)indent, ' ');
         left = width - indent;
         do {
           c++;
@@ -2039,9 +2039,7 @@ const char *fw_strerror (DWORD err)
 /* For getopt.c.
  */
 const char *program_name = "firewall_test.exe";
-static int quit;
-
-extern DWORD geoip_load_data (int family);
+static int  quit;
 
 static char *set_net_program (int argc, char **argv)
 {
