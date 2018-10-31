@@ -46,6 +46,9 @@ extern const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4);
 extern const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6);
 extern uint64      geoip_get_stats_by_idx    (int idx);
 extern uint64      geoip_get_stats_by_number (int number);
+extern void        geoip_ipv4_add_specials (void);
+extern void        geoip_ipv6_add_specials (void);
+extern DWORD       geoip_load_data (int family);
 
 extern void geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
                                         DWORD *num_ip2loc4, DWORD *num_ip2loc6);

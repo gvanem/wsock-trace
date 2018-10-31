@@ -312,7 +312,7 @@ void geoip_ipv6_add_specials (void)
  * Watcom-C is not able to compile the huge generated `geoip-gen6.c`.
  * Thus no `geoip_smartlist_fixed_ipv4/6()` for Watcom :-(
  */
-static DWORD geoip_load_data (int family)
+DWORD geoip_load_data (int family)
 {
   DWORD num = 0;
 
