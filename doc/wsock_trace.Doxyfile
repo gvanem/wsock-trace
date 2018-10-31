@@ -774,6 +774,7 @@ INPUT = main_page.dox            \
        ../src/cpu.c              \
        ../src/dnsbl.c            \
        ../src/dump.c             \
+       ../src/firewall.c         \
        ../src/geoip.c            \
        ../src/geoip-gen4.c       \
        ../src/geoip-gen6.c       \
@@ -798,6 +799,7 @@ INPUT = main_page.dox            \
        ../src/cpu.h              \
        ../src/dnsbl.h            \
        ../src/dump.h             \
+       ../src/firewall.h         \
        ../src/geoip.h            \
        ../src/hosts.h            \
        ../src/idna.h             \
