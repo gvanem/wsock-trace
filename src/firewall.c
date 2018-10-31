@@ -2206,7 +2206,7 @@ int main (int argc, char **argv)
     goto quit;
   }
 
-  !fw_monitor_start())
+  if (!fw_monitor_start())
   {
     TRACE (0, "fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
     goto quit;
