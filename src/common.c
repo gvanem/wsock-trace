@@ -1224,14 +1224,17 @@ FILE *fopen_excl (const char *file, const char *mode)
 /**
  * Return nicely formatted string "xx,xxx,xxx"
  * with thousand separators (left adjusted).
+ *
+ * Use 4 buffers in round-robin.
  */
 const char *qword_str (unsigned __int64 val)
 {
-  static char buf [30];
+  static char buf [4][30];
+  static int  idx = 0;
   char   tmp [30], *p;
   int    i, j, len = snprintf (tmp, sizeof(tmp), "%" U64_FMT, val);
 
-  p = buf + len;
+  p = buf[idx++] + len;
   *p-- = '\0';
 
   for (i = len, j = -1; i >= 0; i--, j++)
@@ -1240,6 +1243,7 @@ const char *qword_str (unsigned __int64 val)
       *p-- = ',';
     *p-- = tmp[i];
   }
+  idx &= 3;
   return (p+1);
 }
 
