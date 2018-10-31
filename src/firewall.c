@@ -2059,17 +2059,17 @@ static char *set_net_program (int argc, char **argv)
   char   *prog = NULL;
   size_t len, i;
 
-  for (i = len = 0; i < argc; i++)
+  for (i = len = 0; i < (size_t)argc; i++)
       len += strlen (argv[i]) + 2;
 
   if (len > 0)
   {
     prog = malloc (len+1);
     *prog = '\0';
-    for (i = 0; i < argc; i++)
+    for (i = 0; i < (size_t)argc; i++)
     {
       strcat (prog, argv[i]);
-      if (i < argc-1)
+      if (i < (size_t)(argc-1))
          strcat (prog, " ");
     }
   }
