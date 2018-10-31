@@ -280,55 +280,55 @@ typedef enum FW_RULE_ORIGIN_TYPE {
  * \see http://msdn.microsoft.com/en-us/library/cc231521.aspx
  */
 typedef enum FW_ENUM_RULES_FLAGS {
-    /**
-     * This value signifies that no specific flag is used.
-     * It is defined for IDL definitions and code to add readability, instead of using the number 0.
-     */
-    FW_ENUM_RULES_FLAG_NONE = 0x0000,
+             /**
+              * This value signifies that no specific flag is used.
+              * It is defined for IDL definitions and code to add readability, instead of using the number 0.
+              */
+             FW_ENUM_RULES_FLAG_NONE = 0x0000,
 
-    /** Resolves rule description strings to user-friendly, localizable strings if they are in the following
-     *  format: @file.dll,-<resID>. resID refers to the resource ID in the indirect string.
-     *  Please see [MSDN-SHLoadIndirectString] for further documentation on the string format.
-     */
-    FW_ENUM_RULES_FLAG_RESOLVE_NAME = 0x0001,
+             /** Resolves rule description strings to user-friendly, localizable strings if they are in the following
+              *  format: @file.dll,-<resID>. resID refers to the resource ID in the indirect string.
+              *  Please see [MSDN-SHLoadIndirectString] for further documentation on the string format.
+              */
+             FW_ENUM_RULES_FLAG_RESOLVE_NAME = 0x0001,
 
-    /** Resolves rule description strings to user-friendly, localizable strings if they are in the following
-     *  format: @file.dll,-<resID>. resID refers to the resource ID in the indirect string.
-     * Please see [MSDN-SHLoadIndirectString] for further documentation on the string format.
-     */
-    FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION = 0x0002,
+             /** Resolves rule description strings to user-friendly, localizable strings if they are in the following
+              *  format: @file.dll,-<resID>. resID refers to the resource ID in the indirect string.
+              * Please see [MSDN-SHLoadIndirectString] for further documentation on the string format.
+              */
+             FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION = 0x0002,
 
-    /** If this flag is set, the server MUST inspect the wszLocalApplication field of each FW_RULE structure
-     *  and replace all environment variables in the string with their corresponding values.
-     *  See [MSDN-ExpandEnvironmentStrings] for more details about environment-variable strings.
-     */
-    FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION = 0x0004,
+             /** If this flag is set, the server MUST inspect the wszLocalApplication field of each FW_RULE structure
+              *  and replace all environment variables in the string with their corresponding values.
+              *  See [MSDN-ExpandEnvironmentStrings] for more details about environment-variable strings.
+              */
+             FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION = 0x0004,
 
-    /** Resolves keywords in addresses and ports to the actual addresses and
-     *  ports (dynamic store only).
-     */
-    FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD = 0x0008,
+             /** Resolves keywords in addresses and ports to the actual addresses and
+              *  ports (dynamic store only).
+              */
+             FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD = 0x0008,
 
-    /** Resolves the GPO name for the GP_RSOP rules.
-     */
-    FW_ENUM_RULES_FLAG_RESOLVE_GPO_NAME = 0x0010,
+             /** Resolves the GPO name for the GP_RSOP rules.
+              */
+             FW_ENUM_RULES_FLAG_RESOLVE_GPO_NAME = 0x0010,
 
-    /** If this flag is set, the server MUST only return objects where at least one
-     *  FW_ENFORCEMENT_STATE entry in the object's metadata is equal to FW_ENFORCEMENT_STATE_FULL.
-     *  This flag is available for the dynamic store only.
-     */
-    FW_ENUM_RULES_FLAG_EFFECTIVE = 0x0020,
+             /** If this flag is set, the server MUST only return objects where at least one
+              *  FW_ENFORCEMENT_STATE entry in the object's metadata is equal to FW_ENFORCEMENT_STATE_FULL.
+              *  This flag is available for the dynamic store only.
+              */
+             FW_ENUM_RULES_FLAG_EFFECTIVE = 0x0020,
 
-    /** Includes the metadata object information, represented by the FW_OBJECT_METADATA structure,
-     *  in the enumerated objects.
-     */
-    FW_ENUM_RULES_FLAG_INCLUDE_METADATA = 0x0040,
+             /** Includes the metadata object information, represented by the FW_OBJECT_METADATA structure,
+              *  in the enumerated objects.
+              */
+             FW_ENUM_RULES_FLAG_INCLUDE_METADATA = 0x0040,
 
-    /** This value and greater values are invalid and MUST NOT be used. It is defined for
-     *  simplicity in writing IDL definitions and code.
-     */
-    FW_ENUM_RULES_FLAG_MAX = 0x0080
-  } FW_ENUM_RULES_FLAGS;
+             /** This value and greater values are invalid and MUST NOT be used. It is defined for
+              *  simplicity in writing IDL definitions and code.
+              */
+             FW_ENUM_RULES_FLAG_MAX = 0x0080
+           } FW_ENUM_RULES_FLAGS;
 
 typedef enum FW_RULE_ACTION {
              FW_RULE_ACTION_INVALID = 0,
