@@ -18,16 +18,19 @@
  *   + https://social.msdn.microsoft.com/Forums/sqlserver/en-US/74e3bf1d-3a0b-43ce-a528-2a88bc1fb882/log-packets?forum=wfp
  */
 
-#if !defined(_MSC_VER) && 0
-#error "This module if for MSVC only."
-#else  /* Rest of file */
-
 /*
- * We need at least a Win-8 SDK here.
+ * For MSVC/clang We need at least a Win-Vista SDK here.
+ * But for tdm-gcc (MingW) we need 0x601; Win-7.
  */
-#if (!defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0602)) && 0
+#if defined(__MINGW32__)
+  #define MIN_WINNT 0x601
+#else
+  #define MIN_WINNT 0x600
+#endif
+
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT)
   #undef  _WIN32_WINNT
-  #define _WIN32_WINNT 0x0602
+  #define _WIN32_WINNT MIN_WINNT
 #endif
 
 // #define USE_FWUCLNT_STATIC_LIB
@@ -48,6 +51,11 @@ typedef LONG NTSTATUS;
 #endif
 
 #include "firewall.h"
+
+/* The code 'ip = _byteswap_ulong (*(DWORD*)&header->localAddrV4);' causes
+ * a gcc warning. Ignore it.
+ */
+GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
 
 #define FW_API_LOW     0
 #define FW_API_HIGH    4
@@ -1139,8 +1147,7 @@ static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription);
             fw_num_ignored++;                                                            \
           }                                                                              \
           else {                                                                         \
-            fw_event_callback (event_ver,                                                \
-                               event->type,                                              \
+            fw_event_callback (event->type,                                              \
                                (const _FWPM_NET_EVENT_HEADER3*)&event->header,           \
                                event->type == FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?        \
                                 (const _FWPM_NET_EVENT_CLASSIFY_DROP2*)drop : NULL,      \
@@ -1150,8 +1157,7 @@ static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription);
           ARGSUSED (context);                                                            \
         }
 
-static void CALLBACK fw_event_callback (int                                    callback_ver,
-                                        const UINT                             event_type,
+static void CALLBACK fw_event_callback (const UINT                             event_type,
                                         const _FWPM_NET_EVENT_HEADER3         *header,
                                         const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                                         const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event);
@@ -1736,7 +1742,6 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   const char *remote_port;
   char        local_addr [INET6_ADDRSTRLEN];
   char        remote_addr [INET6_ADDRSTRLEN];
-  BOOL        rc = FALSE;
 
   if (header->ipVersion != FWP_IP_VERSION_V6)
      return (FALSE);
@@ -1858,8 +1863,7 @@ static const char *get_protocol (UINT8 proto)
 }
 
 static void CALLBACK
-  fw_event_callback (int                                    callback_ver,
-                     const UINT                             event_type,
+  fw_event_callback (const UINT                             event_type,
                      const _FWPM_NET_EVENT_HEADER3         *header,
                      const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                      const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
@@ -2001,7 +2005,10 @@ static void CALLBACK
   {
     if ((header->flags & FWPM_NET_EVENT_FLAG_APP_ID_SET) &&
         header->appId.data && header->appId.size > 0)
-      trace_printf ("\n  app:  %.*S", header->appId.size, header->appId.data);
+      trace_printf ("\n  app:  %.*S",
+                    header->appId.size,
+                    /* cast from 'UINT8' to 'wchar_t*' to shut up gcc */
+                    (const wchar_t*)header->appId.data);
   }
 
   trace_putc ('\n');
@@ -2239,4 +2246,3 @@ quit:
   return (rc);
 }
 #endif  /* TEST_FIREWALL */
-#endif  /* _MSC_VER */
