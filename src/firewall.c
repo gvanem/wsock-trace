@@ -1224,9 +1224,6 @@ BOOL fw_init (void)
 
   fw_errno = (*p_FWOpenPolicyStore) (api_version, NULL, FW_STORE_TYPE_DEFAULTS, FW_POLICY_ACCESS_RIGHT_READ,
                                      FW_POLICY_STORE_FLAGS_NONE, &fw_policy_handle);
-  if (fw_errno != ERROR_SUCCESS)
-     TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
-
   return (fw_errno == ERROR_SUCCESS);
 }
 
