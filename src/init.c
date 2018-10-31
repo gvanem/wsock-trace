@@ -26,6 +26,7 @@
 #include "stkwalk.h"
 #include "overlap.h"
 #include "hosts.h"
+#include "firewall.h"
 #include "cpu.h"
 #include "dnsbl.h"
 #include "init.h"
@@ -983,6 +984,7 @@ void wsock_trace_exit (void)
   StackWalkExit();
   overlap_exit();
   hosts_file_exit();
+//fw_exit();
 
 #if 0
   if (g_cfg.trace_level >= 3)
@@ -1284,8 +1286,11 @@ void wsock_trace_init (void)
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
+#if !defined(TEST_BACKTRACE)
   load_ws2_funcs();
   hosts_file_init();
+//fw_init();
+#endif
 
 #if defined(USE_BFD)
   BFD_init();
