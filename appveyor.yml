@@ -115,6 +115,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
   - cmd: if "%BUILDER%"=="mingw32" echo Dumping Firewall Rules.               & firewall_test.exe -r
   - cmd: if "%BUILDER%"=="mingw32" echo Capturing Firewall events for 20 sec. & firewall_test.exe -d -4 sleep 20
+  - cmd: if "%BUILDER%"=="mingw64" echo Dumping Firewall Rules.               & firewall_test.exe -r
+  - cmd: if "%BUILDER%"=="mingw64" echo Capturing Firewall events for 20 sec. & firewall_test.exe -d -4 sleep 20
 
 #
 # Prevent the 'watcom' directory to end up in 'artifacts'.
