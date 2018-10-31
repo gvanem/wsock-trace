@@ -79,8 +79,9 @@ install:
   #
   # Set compiler environment for MSVC.
   #
+  - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
+
   # - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /%CPU%
-    - cmd: if "%BUILDER%"=="msvc" call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
 
 build_script:
   - cmd: appveyor-script.bat init
