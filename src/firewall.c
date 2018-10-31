@@ -1124,8 +1124,6 @@ static DWORD  fw_num_ignored   = 0;
 static BOOL   fw_show_ipv4     = TRUE;
 static BOOL   fw_show_ipv6     = TRUE;
 
-static void fw_dump_rules (const FW_RULE *rule);
-
 static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription);
 
 #define FW_ASSERT(x)                                                \
@@ -2072,15 +2070,15 @@ static int show_help (const char *my_name)
   printf ("Simple Windows ICF Firewall monitor test program.\n"
           "  Usage: %s [options] [program]\n"
           "  options:\n"
-          "    -a:  the maximal API \"<level>\" to try (N=%d-%d, default: %d).\n"
+          "    -a:  the minimum API \"level\" to try (=%d-%d, default: %d).\n"
+          "    -c:  only dump the callout rules                            (not yet).\n"
           "    -d:  debug level.\n"
-          "    -c:  only dump the callout rules.\n"
-          "    -e:  only dump recent event.\n"
+          "    -e:  only dump recent event                                 (not yet).\n"
+          "    -l:  also write the filter activity to \"log-file\"           (not yet).\n"
+          "    -p:  show only activity for programs matching \"app1,app2..\" (not yet).\n"
           "    -r:  only dump the firewall rules.\n"
           "    -4:  show IPv4 filter activity.\n"
-          "    -6:  show IPv6 filter activity (use `-46` to show both).\n"
-          "    -l:  also write the filter activity to \"<log-file>\"      (not yet).\n"
-          "    -p:  show only activity for programs matching \"<app-id>\" (not yet).\n"
+          "    -6:  show IPv6 filter activity (use \"-46\" to show both).\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
           "    Examples:\n"
@@ -2164,7 +2162,7 @@ int main (int argc, char **argv)
      geoip_load_data (AF_INET);
 
   if (fw_show_ipv6)
-    geoip_load_data (AF_INET6);
+     geoip_load_data (AF_INET6);
 
   ip2loc_init();
 
