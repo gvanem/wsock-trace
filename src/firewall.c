@@ -1158,9 +1158,9 @@ static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription);
           else {                                                                         \
             fw_event_callback (event->type,                                              \
                                (const _FWPM_NET_EVENT_HEADER3*)&event->header,           \
-                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?        \
-                                (const _FWPM_NET_EVENT_CLASSIFY_DROP2*)drop : NULL,      \
-                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?       \
+                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?       \
+                                (const _FWPM_NET_EVENT_CLASSIFY_DROP2*) drop : NULL,     \
+                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?      \
                                  (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0*) allow : NULL); \
           }                                                                              \
           ARGSUSED (context);                                                            \
@@ -1942,7 +1942,7 @@ static void CALLBACK
                 get_time_string(&header->timeStamp),
                 list_lookup_name(event_type, events, DIM(events)));
 
-  if (event_type == FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
+  if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
   {
     if (drop_event->msFwpDirection == FWP_DIRECTION_IN ||
         drop_event->msFwpDirection == FWP_DIRECTION_INBOUND)
@@ -1982,7 +1982,7 @@ static void CALLBACK
     print_layer_item (NULL, allow_event);
     print_filter_rule (NULL, allow_event);
   }
-  else if (event_type == FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
+  else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
   {
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        trace_printf (", %s\n", get_protocol(header->ipProtocol));
@@ -1990,7 +1990,7 @@ static void CALLBACK
     print_layer_item (NULL, allow_event);
     print_filter_rule (NULL, allow_event);
   }
-  else if (event_type == FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
+  else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        trace_printf (", %s\n", get_protocol(header->ipProtocol));
