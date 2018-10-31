@@ -1,3 +1,9 @@
+::
+:: This .bat is currently called from 'appveyor.yml' at the
+:: 'build_script:' stage and then with the 'init' argument.
+:: The 'clean' argument is anly meant to be used when running
+:: this .bat file locally.
+
 @echo off
 
 if %1. == init.  goto init
