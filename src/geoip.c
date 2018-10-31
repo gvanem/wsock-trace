@@ -1384,7 +1384,7 @@ void geoip_update_file (int family, BOOL force_update)
     TRACE (0, "Unknown address-family %d\n", family);
 }
 
-#if defined(TEST_GEOIP)
+#if defined(TEST_GEOIP) && !defined(TEST_FIREWALL) /* If not used with firewall_test.exe */
 
 #include "getopt.h"
 #include "dnsbl.h"
