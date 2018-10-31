@@ -271,20 +271,50 @@
 #define IP_WFP_REDIRECT_RECORDS 49 // ??
 #endif
 
-#ifndef IPPROTO_IPV6
-#define IPPROTO_IPV6            41
-#endif
-
-#ifndef IPPROTO_ICMPV6
-#define IPPROTO_ICMPV6          58
-#endif
+/*
+ * These are a rewrite of the enums in <ws2def.h> and <wsrm.h>.
+ * Since many of these are missing in e.g. MinGW, using `#ifndef IPPROTO_x` around them are not safe.
+ */
+#define _IPPROTO_HOPOPTS               0
+#define _IPPROTO_ICMP                  1
+#define _IPPROTO_IGMP                  2
+#define _IPPROTO_GGP                   3
+#define _BTHPROTO_RFCOMM               3
+#define _IPPROTO_IPV4                  4
+#define _IPPROTO_ST                    5
+#define _IPPROTO_TCP                   6
+#define _IPPROTO_CBT                   7
+#define _IPPROTO_EGP                   8
+#define _IPPROTO_IGP                   9
+#define _IPPROTO_PUP                   12
+#define _IPPROTO_UDP                   17
+#define _IPPROTO_IDP                   22
+#define _IPPROTO_RDP                   27
+#define _IPPROTO_IPV6                  41
+#define _IPPROTO_ROUTING               43
+#define _IPPROTO_FRAGMENT              44
+#define _IPPROTO_ESP                   50
+#define _IPPROTO_AH                    51
+#define _IPPROTO_ICMPV6                58
+#define _IPPROTO_NONE                  59
+#define _IPPROTO_DSTOPTS               60
+#define _IPPROTO_ND                    77
+#define _IPPROTO_ICLFXBM               78
+#define _IPPROTO_PIM                   103
+#define _IPPROTO_PGM                   113
+#define _IPPROTO_RM                    113
+#define _IPPROTO_L2TP                  115
+#define _IPPROTO_SCTP                  132
+#define _IPPROTO_RAW                   255
+#define _IPPROTO_MAX                   256
+#define _IPPROTO_RESERVED_RAW          257
+#define _IPPROTO_RESERVED_IPSEC        258
+#define _IPPROTO_RESERVED_IPSECOFFLOAD 259
+#define _IPPROTO_RESERVED_WNV          260
+#define _IPPROTO_RESERVED_MAX          261
 
 #ifndef IPPROTO_RM
-#define IPPROTO_RM              113
-#endif
-
-#ifndef BTHPROTO_RFCOMM
-#define BTHPROTO_RFCOMM  3
+#define IPPROTO_RM       113
 #endif
 
 #ifndef AF_CLUSTER
@@ -746,7 +776,6 @@
 #define SIO_GET_ATM_CONNECTION_ID                    0x50160004
 #endif
 
-
 static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_DEBUG),
                     ADD_VALUE (SO_ACCEPTCONN),
@@ -968,15 +997,49 @@ static const struct search_list getnameinfo_flgs[] = {
                     ADD_VALUE (NI_DGRAM)
                  };
 
+#define ADD_PROTO(p)   { _##p, #p }
+
 static const struct search_list protocols[] = {
-                    ADD_VALUE (IPPROTO_ICMP),
-                    ADD_VALUE (IPPROTO_IGMP),
-                    ADD_VALUE (BTHPROTO_RFCOMM),
-                    ADD_VALUE (IPPROTO_TCP),
-                    ADD_VALUE (IPPROTO_UDP),
-                    ADD_VALUE (IPPROTO_ICMPV6),
-                    ADD_VALUE (IPPROTO_RM),
-                    ADD_VALUE (IPPROTO_RAW)
+                    ADD_PROTO (IPPROTO_ICMP),
+                    ADD_PROTO (IPPROTO_IGMP),
+                    ADD_PROTO (BTHPROTO_RFCOMM),
+                    ADD_PROTO (IPPROTO_TCP),
+                    ADD_PROTO (IPPROTO_UDP),
+                    ADD_PROTO (IPPROTO_ICMPV6),
+                    ADD_PROTO (IPPROTO_RM),
+                    ADD_PROTO (IPPROTO_RAW),
+                    ADD_PROTO (IPPROTO_HOPOPTS),
+                    ADD_PROTO (IPPROTO_GGP),
+                    ADD_PROTO (IPPROTO_IPV4),
+                    ADD_PROTO (IPPROTO_IPV6),
+                    ADD_PROTO (IPPROTO_ST),
+                    ADD_PROTO (IPPROTO_CBT),
+                    ADD_PROTO (IPPROTO_EGP),
+                    ADD_PROTO (IPPROTO_IGP),
+                    ADD_PROTO (IPPROTO_PUP),
+                    ADD_PROTO (IPPROTO_IDP),
+                    ADD_PROTO (IPPROTO_RDP),
+                    ADD_PROTO (IPPROTO_ROUTING),
+                    ADD_PROTO (IPPROTO_FRAGMENT),
+                    ADD_PROTO (IPPROTO_ESP),
+                    ADD_PROTO (IPPROTO_AH),
+                    ADD_PROTO (IPPROTO_DSTOPTS),
+                    ADD_PROTO (IPPROTO_ND),
+                    ADD_PROTO (IPPROTO_ICLFXBM),
+                    ADD_PROTO (IPPROTO_PIM),
+                    ADD_PROTO (IPPROTO_PGM),
+                    ADD_PROTO (IPPROTO_L2TP),
+                    ADD_PROTO (IPPROTO_SCTP),
+                    ADD_PROTO (IPPROTO_RESERVED_IPSEC),
+                    ADD_PROTO (IPPROTO_RESERVED_IPSECOFFLOAD),
+                    ADD_PROTO (IPPROTO_RESERVED_WNV),
+                    ADD_PROTO (IPPROTO_RAW),
+                    ADD_PROTO (IPPROTO_RESERVED_RAW),
+                    ADD_PROTO (IPPROTO_NONE),
+                    ADD_PROTO (IPPROTO_RESERVED_IPSEC),
+                    ADD_PROTO (IPPROTO_RESERVED_IPSECOFFLOAD),
+                    ADD_PROTO (IPPROTO_RESERVED_WNV),
+                    ADD_PROTO (IPPROTO_RESERVED_MAX)
                   };
 
 #if !defined(__WATCOMC__)
@@ -1454,7 +1517,7 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
  *   "XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|XP1_IFS_HANDLES" (80 bytes)
  *
  * and 'indent == 1' and 'g_cfg.screen_width == 80', that would without any wrap-checking
- * caused thus "ugly" output:
+ * cause this "ugly" output:
  *   " XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|XP1_IFS_HANDLE"\n
  *   "S"
  *
@@ -2406,4 +2469,3 @@ void check_all_search_lists (void)
   CHECK (test_list_1);
   CHECK (test_list_2);
 }
-
