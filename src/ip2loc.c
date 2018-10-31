@@ -114,11 +114,11 @@ static IP2Location *open_file (const char *file)
   else if ((IPvX == loc->ipv4databasecount) && (loc->ipv6databasecount == 0))
      is_IPv4_only = TRUE;
 
-  TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s\n"
-            "                Date: %02d-%02d-%04d, IPvX: %d, "
+  TRACE (2, "ip2loc: Success. Database has %s entries. API-version: %s, size: %s bytes\n"
+            "                 Date: %02d-%02d-%04d, IPvX: %d, "
             "IPv4-count: %u, IPv6-count: %u (is_IPv4_only: %d, is_IPv6_only: %d).\n",
          dword_str(loc->ipv4databasecount), IP2Location_api_version_string(),
-         loc->databaseday, loc->databasemonth, 2000+loc->databaseyear,
+         dword_str(ip2loc_file_size), loc->databaseday, loc->databasemonth, 2000+loc->databaseyear,
          IPvX,
          loc->ipv4databasecount, loc->ipv6databasecount, is_IPv4_only, is_IPv6_only);
   return (loc);
