@@ -2187,33 +2187,27 @@ int main (int argc, char **argv)
     goto quit;
   }
 
-  if (!fw_init())
+  if (dump_rules || dump_callouts || dump_events)
   {
-    TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
+    if (!fw_init())
+    {
+      TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
+      goto quit;
+    }
+    if (dump_rules)
+       fw_enumerate_rules (FW_PROFILE_TYPE_CURRENT, FW_DIR_BOTH, fw_dump_rules);
+
+    if (dump_events)
+       fw_dump_events();
+
+    if (dump_callouts)
+       fw_enumerate_callouts();
     goto quit;
   }
 
-  if (!fw_monitor_start())
+  !fw_monitor_start())
   {
     TRACE (0, "fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
-    goto quit;
-  }
-
-  if (dump_rules)
-  {
-    fw_enumerate_rules (FW_PROFILE_TYPE_CURRENT, FW_DIR_BOTH, fw_dump_rules);
-    goto quit;
-  }
-
-  if (dump_callouts)
-  {
-    fw_enumerate_callouts();
-    goto quit;
-  }
-
-  if (dump_events)
-  {
-    fw_dump_events();
     goto quit;
   }
 
