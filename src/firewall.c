@@ -2135,7 +2135,7 @@ static int show_help (const char *my_name)
           "    -c:  only dump the callout rules                            (not yet).\n"
           "    -d:  debug level.\n"
           "    -e:  only dump recent event                                 (not yet).\n"
-          "    -l:  also write the filter activity to \"log-file\"           (not yet).\n"
+          "    -l:  write the filter activity to \"log-file\" only.\n"
           "    -p:  show only activity for programs matching \"app1,app2..\" (not yet).\n"
           "    -r:  only dump the firewall rules.\n"
           "    -4:  show IPv4 filter activity.\n"
@@ -2167,6 +2167,8 @@ int main (int argc, char **argv)
   char   *program;
   char   *only_appid = NULL;   /* \todo Capture 'appId' matching program(s) only. Support a list of 'appId's */
   char   *ignore_appid = NULL; /* \todo Ignore 'appId' matching program(s). Support a list of 'appId's */
+  char   *log_file = NULL;
+  FILE   *log_f = NULL;
   WSADATA wsa;
   WORD    ver = MAKEWORD(1,1);
 
@@ -2192,7 +2194,7 @@ int main (int argc, char **argv)
   setlocale (LC_CTYPE, "");
   tzset();
 
-  while ((ch = getopt(argc, argv, "a:h?cdep:r46")) != EOF)
+  while ((ch = getopt(argc, argv, "a:h?cdei:l:p:r46")) != EOF)
     switch (ch)
     {
       case 'a':
@@ -2209,6 +2211,9 @@ int main (int argc, char **argv)
            break;
       case 'i':
            ignore_appid = strdup (optarg);
+           break;
+      case 'l':
+           log_file = strdup (optarg);
            break;
       case 'p':
            only_appid = strdup (optarg);
@@ -2272,6 +2277,12 @@ int main (int argc, char **argv)
     goto quit;
   }
 
+  if (log_file)
+  {
+    log_f = fopen (log_file, "wb+");
+    g_cfg.trace_stream = log_f;
+  }
+
   signal (SIGINT, sig_handler);
 
   trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
@@ -2303,8 +2314,14 @@ quit:
   free (program);
   free (only_appid);
   free (ignore_appid);
+  free (log_file);
   fw_monitor_stop();
   fw_exit();
+
+  trace_printf ("  # of IP2Location shared-mem index errors: %lu\n",
+                DWORD_CAST(ip2loc_index_errors()));
+  if (log_f)
+    fclose (log_f);
 
   wsock_trace_exit();
   return (rc);
