@@ -25,7 +25,7 @@ BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS -fmax-errors=5 -DWIN32 -D_WIN32
 LDFLAGS = -Wl,--print-map,--sort-common -t
 RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
 OBJ_DIR = Cygwin_obj
@@ -64,7 +64,7 @@ GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.
             getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe
+all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe firewall_test.exe
 	@echo 'Welcome to Wsock_trace library and example.'
 
 message:
@@ -84,6 +84,7 @@ endif
 wsock_trace_cyg.dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
 	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(EX_LIBS) > wsock_trace_cyg.map
 	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
+	@echo
 
 install: libwsock_trace.a wsock_trace_cyg.dll
 	cp --update libwsock_trace.a    $(LIB_TARGET)
@@ -91,9 +92,15 @@ install: libwsock_trace.a wsock_trace_cyg.dll
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
+	@echo
 
 idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
+	@echo
+
+firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c getopt.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 > firewall_test.map
+	@echo
 
 geoip.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip.map
@@ -102,6 +109,7 @@ geoip.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^ geoip-gen4.c geoip-gen6.c
 	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
 	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
+	@echo
 
 geoip-gen4.c geoip-gen6.c: geoip.exe
 
@@ -129,7 +137,7 @@ endif
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_cyg.dll wsock_trace_cyg.map \
 	      geoip-gen4.c geoip-gen6.c idna.exe idna.map geoip.exe geoip.map \
-	      test.exe test.map .depend.CygWin
+	      test.exe test.map firewall_test.exe firewall_test.map .depend.CygWin
 	- rmdir $(OBJ_DIR)
 ifeq ($(USE_LUA),1)
 	- rm -f $(LUAJIT_ROOT)/src/libluajit.a
