@@ -1458,7 +1458,7 @@ void set_color (const WORD *col)
   }
 
   if (!g_cfg.trace_use_ods && g_cfg.trace_file_device)
-     TRACE (6, "fg: %d, bg: %d, attr: 0x%04X\n", (int)fg, (int)bg, attr);
+     TRACE (6, "fg: %d, bg: %d, attr: 0x%04X, last_attr: 0x%04X\n", (int)fg, (int)bg, attr, last_attr);
 
   if (attr != last_attr)
      SetConsoleTextAttribute (console_hnd, attr);
