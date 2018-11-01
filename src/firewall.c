@@ -6,7 +6,7 @@
  *
  *  The `fw_init()` and `fw_monotor_start()` needs Administrator privileges.
  *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
- *  "Access Denied".
+ *  "Access Denied" (error 5).
  *
  * Thanks to dmex for his implementation of similar stuff in his ProcessHacker:
  * \see
@@ -22,9 +22,9 @@
  *   + https://social.msdn.microsoft.com/Forums/sqlserver/en-US/74e3bf1d-3a0b-43ce-a528-2a88bc1fb882/log-packets?forum=wfp
  */
 
-/*
+/**
  * For MSVC/clang We need at least a Win-Vista SDK here.
- * But for tdm-gcc (MingW) we need 0x601; Win-7.
+ * But for MinGW (tdm-gcc) we need a Win-7 SDK (0x601).
  */
 #if defined(__MINGW32__)
   #define MIN_WINNT 0x601
@@ -37,8 +37,6 @@
   #define _WIN32_WINNT MIN_WINNT
 #endif
 
-// #define USE_FWUCLNT_STATIC_LIB
-
 #include "common.h"
 #include "init.h"
 #include "in_addr.h"
@@ -50,19 +48,71 @@ typedef LONG NTSTATUS;
 
 #include <fwpmu.h>
 
-#if !defined(__MINGW32__)
+#if defined(__MINGW32__) || defined(__CYGWIN__)
+  #include <fwpmu.h>
+#else
   #include <fwpsu.h>
 #endif
 
 #include "firewall.h"
 
-/* The code 'ip = _byteswap_ulong (*(DWORD*)&header->localAddrV4);' causes
+/**\def USE_FW_STATIC_LIB
+ *
+ * This should be set by invoking Makefile:
+ * `CFLAGS = -DUSE_FW_STATIC_LIB`
+ */
+
+/*
+ * The code 'ip = _byteswap_ulong (*(DWORD*)&header->localAddrV4);' causes
  * a gcc warning. Ignore it.
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
 GCC_PRAGMA (GCC diagnostic ignored "-Wenum-compare")
+GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
+#if defined(__CYGWIN__)
+  #include <errno.h>
+  #include <wctype.h>
+
+  #define _popen(cmd, mode)  popen (cmd, mode)
+  #define _pclose(fil)       pclose (fil)
+
+ /*
+  * These are prototyped in '<w32api/intrin.h>',
+  * but is nowhere to be found.
+  * Besides including <asm/byteorder.h> fails since <winsock2.h>
+  * was already included. Sigh!
+  */
+  static __inline DWORD _byteswap_ulong (DWORD x)
+  {
+    __asm__ __volatile (
+             "xchgb %b0, %h0\n\t"   /* swap lower bytes  */
+             "rorl  $16, %0\n\t"    /* swap words        */
+             "xchgb %b0, %h0"       /* swap higher bytes */
+            : "=q" (x) : "0" (x));
+    return (x);
+  }
+
+  static __inline WORD _byteswap_ushort (WORD x)
+  {
+    __asm__ __volatile__ (
+              "xchgb %b0, %h0"       /* swap bytes */
+            : "=q" (x) : "0" (x));
+    return (x);
+  }
+#endif
+
+/**\def FW_API_LOW
+ * The lowest API level supported here.
+ *
+ *\def FW_API_HIGH
+ * The highest API level supported here.
+ *
+ *\def FW_API_DEFAULS
+ * The default API level used here if not specified using the `fw_lowest_api` variable
+ * prior to calling `fw_monitor_start()`.
+ */
 #define FW_API_LOW     0
 #define FW_API_HIGH    4
 #define FW_API_DEFAULT 3
@@ -745,7 +795,26 @@ typedef struct _FWPM_NET_EVENT_HEADER3 {
         FWP_BYTE_BLOB       effectiveName;
       } _FWPM_NET_EVENT_HEADER3;
 
-#if defined(__MINGW32__)
+typedef struct _FWPM_FILTER_CONDITION0 {
+        GUID                  fieldKey;
+        FWP_MATCH_TYPE        matchType;
+        FWP_CONDITION_VALUE0  conditionValue;
+      } _FWPM_FILTER_CONDITION0;
+
+typedef struct _FWPM_NET_EVENT_ENUM_TEMPLATE0 {
+        FILETIME                  startTime;
+        FILETIME                  endTime;
+        UINT32                    numFilterConditions;
+        _FWPM_FILTER_CONDITION0  *filterCondition;
+      } _FWPM_NET_EVENT_ENUM_TEMPLATE0;
+
+typedef struct _FWPM_NET_EVENT_SUBSCRIPTION0 {
+        _FWPM_NET_EVENT_ENUM_TEMPLATE0 *enumTemplate;
+        UINT32                          flags;
+        GUID                            sessionKey;
+      } _FWPM_NET_EVENT_SUBSCRIPTION0;
+
+#if defined(__MINGW32__) || defined(__CYGWIN__)
   typedef struct FWPM_LAYER_STATISTICS0 {
           GUID    layerId;
           UINT32  classifyPermitCount;
@@ -797,31 +866,6 @@ typedef struct _FWPM_NET_EVENT_HEADER3 {
           UINT64                  reauthReasonProxyHandleChanged;
         } FWPM_STATISTICS0;
 
-  #if 0
-    typedef struct FWPM_FILTER_CONDITION0 {
-            GUID                  fieldKey;
-            FWP_MATCH_TYPE        matchType;
-            FWP_CONDITION_VALUE0  conditionValue;
-          } FWPM_FILTER_CONDITION0;
-
-    typedef struct FWPM_NET_EVENT_ENUM_TEMPLATE0 {
-            FILETIME                 startTime;
-            FILETIME                 endTime;
-            UINT32                   numFilterConditions;
-            FWPM_FILTER_CONDITION0  *filterCondition;
-          } FWPM_NET_EVENT_ENUM_TEMPLATE0;
-
-    typedef struct FWPM_NET_EVENT_SUBSCRIPTION0 {
-            FWPM_NET_EVENT_ENUM_TEMPLATE0 *enumTemplate;
-            UINT32                         flags;
-            GUID                           sessionKey;
-          } FWPM_NET_EVENT_SUBSCRIPTION0;
-  #endif
-
-//#define FWPM_NET_EVENT_CLASSIFY_DROP             FWPM_NET_EVENT_CLASSIFY_DROP2
-//#define FWPM_NET_EVENT_CLASSIFY_ALLOW            FWPM_NET_EVENT_CLASSIFY_ALLOW0
-  #define FWPM_NET_EVENT_SUBSCRIPTION              FWPM_NET_EVENT_SUBSCRIPTION0
-  #define FWPM_NET_EVENT_ENUM_TEMPLATE             FWPM_NET_EVENT_ENUM_TEMPLATE0
   #define FWPM_NET_EVENT                           FWPM_NET_EVENT2
   #define FWPM_SESSION                             FWPM_SESSION0
   #define FWP_VALUE                                FWP_VALUE0
@@ -847,7 +891,7 @@ typedef struct _FWPM_NET_EVENT_HEADER3 {
   #define FWPM_NET_EVENT_FLAG_EFFECTIVE_NAME_SET   0x00002000
 
   #define FWPM_ENGINE_MONITOR_IPSEC_CONNECTIONS    3
-#endif
+#endif  /* __MINGW32__ || __CYGWIN__ */
 
 /*
  * These are not in any MinGW SDK. So just define them here.
@@ -962,7 +1006,7 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK3) (void                   *cont
 typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *context,
                                                     const _FWPM_NET_EVENT5 *event);
 
-#if defined(USE_FWUCLNT_STATIC_LIB)
+#if defined(USE_FW_STATIC_LIB)
   DEF_FUNC2 (DWORD, FwpmEngineOpen0, (const wchar_t             *server_name,
                                       UINT32                     authn_service,
                                       SEC_WINNT_AUTH_IDENTITY_W *auth_identity,
@@ -975,25 +1019,25 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *cont
                                           const FWP_VALUE0  *new_value),
                     FwpmEngineSetOption0);
 
-  DEF_FUNC2 (DWORD, FwpmNetEventSubscribe2, (HANDLE                              engine_handle,
-                                             const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                             _FWPM_NET_EVENT_CALLBACK2           callback,
-                                             void                               *context,
-                                             HANDLE                             *events_handle),
+  DEF_FUNC2 (DWORD, FwpmNetEventSubscribe2, (HANDLE                               engine_handle,
+                                             const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                             _FWPM_NET_EVENT_CALLBACK2            callback,
+                                             void                                *context,
+                                             HANDLE                              *events_handle),
                     FwpmNetEventSubscribe2);
 
-  DEF_FUNC2 (DWORD, FwpmNetEventSubscribe3, (HANDLE                              engine_handle,
-                                             const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                             _FWPM_NET_EVENT_CALLBACK3           callback,
-                                             void                               *context,
-                                             HANDLE                             *events_handle),
+  DEF_FUNC2 (DWORD, FwpmNetEventSubscribe3, (HANDLE                               engine_handle,
+                                             const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                             _FWPM_NET_EVENT_CALLBACK3            callback,
+                                             void                                *context,
+                                             HANDLE                              *events_handle),
                     FwpmNetEventSubscribe3);
 
-  DEF_FUNC2 (DWORD, FwpmNetEventSubscribe4, (HANDLE                              engine_handle,
-                                             const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                             _FWPM_NET_EVENT_CALLBACK4           callback,
-                                             void                               *context,
-                                             HANDLE                             *events_handle),
+  DEF_FUNC2 (DWORD, FwpmNetEventSubscribe4, (HANDLE                               engine_handle,
+                                             const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                             _FWPM_NET_EVENT_CALLBACK4            callback,
+                                             void                                *context,
+                                             HANDLE                              *events_handle),
                     FwpmNetEventSubscribe4);
 
 #else
@@ -1001,35 +1045,35 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *cont
   /*
    * "FwpUclnt.dll" typedefs and functions pointers:
    */
-  DEF_FUNC (DWORD, FwpmNetEventSubscribe0, (HANDLE                              engine_handle,
-                                            const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                            _FWPM_NET_EVENT_CALLBACK0           callback,
-                                            void                               *context,
-                                            HANDLE                             *events_handle));
+  DEF_FUNC (DWORD, FwpmNetEventSubscribe0, (HANDLE                               engine_handle,
+                                            const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                            _FWPM_NET_EVENT_CALLBACK0            callback,
+                                            void                                *context,
+                                            HANDLE                              *events_handle));
 
-  DEF_FUNC (DWORD, FwpmNetEventSubscribe1, (HANDLE                              engine_handle,
-                                            const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+  DEF_FUNC (DWORD, FwpmNetEventSubscribe1, (HANDLE                               engine_handle,
+                                            const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
                                             _FWPM_NET_EVENT_CALLBACK1            callback,
-                                            void                               *context,
-                                            HANDLE                             *events_handle));
+                                            void                                *context,
+                                            HANDLE                              *events_handle));
 
-  DEF_FUNC (DWORD, FwpmNetEventSubscribe2, (HANDLE                              engine_handle,
-                                            const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                            _FWPM_NET_EVENT_CALLBACK2           callback,
-                                            void                               *context,
-                                            HANDLE                             *events_handle));
+  DEF_FUNC (DWORD, FwpmNetEventSubscribe2, (HANDLE                               engine_handle,
+                                            const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                            _FWPM_NET_EVENT_CALLBACK2            callback,
+                                            void                                *context,
+                                            HANDLE                              *events_handle));
 
-  DEF_FUNC (DWORD, FwpmNetEventSubscribe3, (HANDLE                              engine_handle,
-                                            const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                            _FWPM_NET_EVENT_CALLBACK3           callback,
-                                            void                               *context,
-                                            HANDLE                             *events_handle));
+  DEF_FUNC (DWORD, FwpmNetEventSubscribe3, (HANDLE                               engine_handle,
+                                            const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                            _FWPM_NET_EVENT_CALLBACK3            callback,
+                                            void                                *context,
+                                            HANDLE                              *events_handle));
 
-  DEF_FUNC (DWORD, FwpmNetEventSubscribe4, (HANDLE                              engine_handle,
-                                            const FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
-                                            _FWPM_NET_EVENT_CALLBACK4           callback,
-                                            void                               *context,
-                                            HANDLE                             *events_handle));
+  DEF_FUNC (DWORD, FwpmNetEventSubscribe4, (HANDLE                               engine_handle,
+                                            const _FWPM_NET_EVENT_SUBSCRIPTION0 *subscription,
+                                            _FWPM_NET_EVENT_CALLBACK4            callback,
+                                            void                                *context,
+                                            HANDLE                              *events_handle));
 
   DEF_FUNC (DWORD, FwpmNetEventUnsubscribe0, (HANDLE engine_handle,
                                               HANDLE events_handle));
@@ -1069,7 +1113,7 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *cont
   DEF_FUNC (DWORD, FwpmCalloutDestroyEnumHandle0, (HANDLE engine_handle,
                                                    HANDLE enum_handle));
 
-#endif /* USE_FWUCLNT_STATIC_LIB */
+#endif /* USE_FW_STATIC_LIB */
 
 /*
  * "FirewallAPI.dll" typedefs and functions pointers:
@@ -1108,7 +1152,7 @@ static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("FirewallAPI.dll", FWEnumFirewallRules),
               ADD_VALUE ("FirewallAPI.dll", FWFreeFirewallRules),
               ADD_VALUE ("FirewallAPI.dll", FWStatusMessageFromStatusCode),
-#if !defined(USE_FWUCLNT_STATIC_LIB)
+#if !defined(USE_FW_STATIC_LIB)
               ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventSubscribe0),
               ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventSubscribe1),
               ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventSubscribe2),
@@ -1139,7 +1183,7 @@ static DWORD  fw_num_ignored   = 0;
 static BOOL   fw_show_ipv4     = TRUE;
 static BOOL   fw_show_ipv6     = TRUE;
 
-static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription);
+static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription);
 
 #define FW_ASSERT(x)                                                \
         do {                                                        \
@@ -1193,7 +1237,7 @@ static BOOL fw_load_funcs (void)
   const struct LoadTable *tab = fw_funcs + 0;
   int   i, num, functions_needed = DIM(fw_funcs);
 
-#if !defined(USE_FWUCLNT_STATIC_LIB)
+#if !defined(USE_FW_STATIC_LIB)
   functions_needed -= 4;
 #endif
 
@@ -1336,7 +1380,7 @@ static void fw_dump_rules (const FW_RULE *rule)
   trace_putc ('\n');
 }
 
-static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription)
+static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
   FWPM_SESSION session;
   FWP_VALUE    value;
@@ -1414,12 +1458,11 @@ static BOOL fw_monitor_init (FWPM_NET_EVENT_SUBSCRIPTION *subscription)
   return (TRUE);
 }
 
-
-/*
+/**
  * Try all available `FwpmNetEventSubscribeX()` functions and return TRUE if one succeedes.
  * Start with the one above or equal the given API-level.
  */
-static BOOL fw_monitor_subscribe (FWPM_NET_EVENT_SUBSCRIPTION *subscription)
+static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
   #define SET_API_CALLBACK(N)                                                      \
           do {                                                                     \
@@ -1513,9 +1556,11 @@ static BOOL fw_check_sizes (void)
   CHK_SIZE (FWPM_NET_EVENT5, ==, _FWPM_NET_EVENT5);
 #endif
 
+#if !defined(__CYGWIN__)
   CHK_OFS (FWPM_NET_EVENT_HEADER0,        _FWPM_NET_EVENT_HEADER0, appId);
   CHK_OFS (FWPM_NET_EVENT_HEADER1,        _FWPM_NET_EVENT_HEADER1, appId);
   CHK_OFS (FWPM_NET_EVENT_CLASSIFY_DROP1, _FWPM_NET_EVENT_CLASSIFY_DROP1, msFwpDirection);
+#endif
 
 #if (_WIN32_WINNT >= 0x0602)
   CHK_OFS (FWPM_NET_EVENT_HEADER2,        _FWPM_NET_EVENT_HEADER2, appId);
@@ -1532,8 +1577,8 @@ static BOOL fw_check_sizes (void)
 
 BOOL fw_monitor_start (void)
 {
-  /* static */ FWPM_NET_EVENT_SUBSCRIPTION  subscription   = { 0 };
-  /* static */ FWPM_NET_EVENT_ENUM_TEMPLATE event_template = { 0 };
+  /* static */ _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
+  /* static */ _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
 
   if (!fw_check_sizes())
      return (FALSE);
@@ -2131,6 +2176,17 @@ int main (int argc, char **argv)
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_level   = 0;
   g_cfg.trace_indent  = 0;
+
+  /* There is some issues with colours in Cygwin.
+   * Just hardcode them here.
+   */
+#if defined(__CYGWIN__)
+  g_cfg.color_file  = 0xFF00 + 8 + 7;   /* bright white */
+  g_cfg.color_time  = 0xFF00 + 8 + 5;   /* bright magenta */
+  g_cfg.color_func  = 0xFF00 + 8 + 3;   /* bright cyan */
+  g_cfg.color_trace = 0xFF00 + 8 + 6;   /* bright yellow */
+  g_cfg.color_data  = 0xFF00 + 8 + 2;   /* bright green */
+#endif
 
   fw_show_ipv4 = fw_show_ipv6 = FALSE;
   setlocale (LC_CTYPE, "");
