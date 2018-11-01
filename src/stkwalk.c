@@ -1027,12 +1027,6 @@ static BOOL set_symbol_search_path (void)
   char  *dir  = NULL;
   size_t left = end - path;
 
-  if (curr_dir[0])  /* set in wsock_trace_init() */
-  {
-    p += snprintf (p, left, "%s;", curr_dir);
-    left = end - p;
-  }
-
   if (GetModuleFileName(NULL, tmp, sizeof(tmp)) && (dir = dirname(tmp)) != NULL)
   {
     if (strcmp(dir,curr_dir))
@@ -1041,6 +1035,12 @@ static BOOL set_symbol_search_path (void)
       left = end - p;
     }
     free (dir);
+  }
+
+  if (curr_dir[0])  /* set in wsock_trace_init() */
+  {
+    p += snprintf (p, left, "%s;", curr_dir);
+    left = end - p;
   }
 
   if (GetEnvironmentVariable("_NT_SYMBOL_PATH", tmp, sizeof(tmp)))
