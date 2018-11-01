@@ -1296,7 +1296,7 @@ uint64 geoip_get_stats_by_number (int number)
   for (i = 0; number > 0 && i < num; i++, list++)
   {
     if (list->country_number == number)
-       return geoip_get_stats_by_idx (i);
+       return geoip_get_stats_by_idx ((int)i);
   }
   return (0U);
 }
