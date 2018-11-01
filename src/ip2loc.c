@@ -42,7 +42,7 @@
   GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
 #endif
 
-#include <IP2Location.h>
+#include "IP2Location.h"
 
 /**
  * The handle for all IP2Location access.
@@ -152,8 +152,6 @@ void ip2loc_exit (void)
 {
   if (ip2loc_handle)
      IP2Location_close (ip2loc_handle);
-
-  IP2Location_delete_shm(); /* Currently does nothing for '_WIN32' */
   ip2loc_handle = NULL;
 }
 
@@ -214,20 +212,7 @@ DWORD ip2loc_num_ipv6_entries (void)
   #define inet_addr(str)                 _wsock_trace_inet_addr (str)
 #endif
 
-/**\def _WIN32
- * Since the code in `IP2Location.c` tests on `_WIN32`.
- */
-#if defined(__DOXYGEN__) || (defined(__CYGWIN__) && !defined(_WIN32))
-#define _WIN32
-#endif
-
-/*
- * This assumes the IP2Location `.c/.h` files are in the `%INCLUDE%` or
- * `%C_INCLUDE_PATH%` path. Or the `$(IP2LOCATION_ROOT)` is set in
- * respective makefile.
- */
 #include "IP2Location.c"
-#include "IP2Loc_DBInterface.c"
 
 /**\def IP2LOC_FLAGS
  * The flags used to look up a location record with a <i>short country</i>,
