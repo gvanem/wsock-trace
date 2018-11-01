@@ -1183,17 +1183,6 @@ static DWORD  fw_num_ignored   = 0;
 static BOOL   fw_show_ipv4     = TRUE;
 static BOOL   fw_show_ipv6     = TRUE;
 
-static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription);
-
-#define FW_ASSERT(x)                                                \
-        do {                                                        \
-          if (!(x)) {                                               \
-             fprintf (stderr, "\n%s(%u): Assertion failed: '%s'\n", \
-                     __FILE__, __LINE__, #x);                       \
-             _exit (-1);                                            \
-          }                                                         \
-        } while (0)
-
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, drop, allow)                          \
         static void CALLBACK                                                             \
         fw_event_callback##event_ver (void *context,                                     \
@@ -1512,7 +1501,7 @@ static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   SET_API_CALLBACK (0);
 
 quit:
-  TRACE (0, "FwpmNetEventSubscribe%d() failed.\n", lowest_api);
+  printf ("FwpmNetEventSubscribe%d() failed.\n", lowest_api);
   return (FALSE);
 }
 
@@ -1627,12 +1616,12 @@ void fw_monitor_stop (void)
 
 static void fw_enumerate_callouts (void)
 {
-  TRACE (1, "%s()\n", __FUNCTION__);
+  printf ("%s() not yet implemented.\n", __FUNCTION__);
 }
 
 static void fw_dump_events (void)
 {
-  TRACE (1, "%s()\n", __FUNCTION__);
+  printf ("%s() not yet implemented.\n", __FUNCTION__);
 }
 
 static void print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
@@ -2168,7 +2157,7 @@ int main (int argc, char **argv)
   char   *only_appid = NULL;   /* \todo Capture 'appId' matching program(s) only. Support a list of 'appId's */
   char   *ignore_appid = NULL; /* \todo Ignore 'appId' matching program(s). Support a list of 'appId's */
   char   *log_file = NULL;
-  FILE   *log_f = NULL;
+  FILE   *log_f    = NULL;
   WSADATA wsa;
   WORD    ver = MAKEWORD(1,1);
 
@@ -2257,7 +2246,7 @@ int main (int argc, char **argv)
   {
     if (!fw_init())
     {
-      TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
+      printf ("fw_init() failed: %s\n", win_strerror(fw_errno));
       goto quit;
     }
     if (dump_rules)
@@ -2273,7 +2262,7 @@ int main (int argc, char **argv)
 
   if (!fw_monitor_start())
   {
-    TRACE (0, "fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
+    printf ("fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
     goto quit;
   }
 
@@ -2281,6 +2270,11 @@ int main (int argc, char **argv)
   {
     log_f = fopen (log_file, "wb+");
     g_cfg.trace_stream = log_f;
+    if (!g_cfg.trace_stream)
+    {
+      printf ("Failed to create log-file %s: %s.\n", log_file, strerror(errno));
+      goto quit;
+    }
   }
 
   signal (SIGINT, sig_handler);
@@ -2307,7 +2301,7 @@ int main (int argc, char **argv)
       fw_print_statistics (NULL);
     }
     else
-      TRACE (0, "_popen() failed, errno %d\n", errno);
+      printf ("_popen() failed, errno %d\n", errno);
   }
 
 quit:
@@ -2318,8 +2312,6 @@ quit:
   fw_monitor_stop();
   fw_exit();
 
-  trace_printf ("  # of IP2Location shared-mem index errors: %lu\n",
-                DWORD_CAST(ip2loc_index_errors()));
   if (log_f)
     fclose (log_f);
 
