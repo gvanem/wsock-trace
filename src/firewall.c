@@ -1356,7 +1356,7 @@ static void fw_dump_rules (const FW_RULE *rule)
                     (rule->Direction == FW_DIR_OUT)     ? "OUT" :
                     (rule->Direction == FW_DIR_BOTH)    ? "BOTH": "?";
 
-  int indent = trace_printf ("%3lu: %s: ", ++fw_num_rules, dir);
+  int indent = trace_printf ("%3lu: %s: ", DWORD_CAST(++fw_num_rules), dir);
 
   print_long_wline (rule->wszDescription, indent);
 
@@ -2067,7 +2067,8 @@ static void CALLBACK
 void fw_print_statistics (FWPM_STATISTICS *stats)
 {
   if (fw_num_events > 0UL || fw_num_ignored > 0UL)
-     trace_printf ("Got %lu events, %lu ignored.\n", fw_num_events, fw_num_ignored);
+     trace_printf ("Got %lu events, %lu ignored.\n",
+                   DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
   ARGSUSED (stats);
 }
 
