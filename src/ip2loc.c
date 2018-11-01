@@ -326,17 +326,16 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
 }
 
 /**
- * \todo
- *  Return number of index-errors to the shared memory area.<br>
- *  Currently not an issue.
+ * Return number of index-errors to the shared memory area.
+ *
+ * This seems to be an issue when >= 2 processes are accessing the
+ * `g_cfg.ip2location_bin_file` at the same time. The latter process
+ * (using wsock_trace.dll) will get junk returned for locations.
+ * This is just an attempt to detect it.
  */
 DWORD ip2loc_index_errors (void)
 {
-#if 0 /* todo */
   return (DWORD)IP2Location_DB_index_errors();
-#else
-  return (0);
-#endif
 }
 
 #else /* USE_IP2LOCATION */
