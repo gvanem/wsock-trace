@@ -76,10 +76,10 @@ To clone this repository along with it's **LuaJIT** submodule, do this in an **e
 *Note*: [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git)
   is no longer used as a submodule (since I've made several local changes to it). But it is
   still placed in `c:\prog\wsock_trace\IP2Location-C-Library`. And with the same directory-
-  layout as before.
+  layout as before. But most files not related to Windows are removed (like *autotools* files).
 
 If you have already cloned this repository earlier, you can initialize and update
-the **LuaJit** submodule like so:<br>
+the **LuaJIT** submodule like so:<br>
   * `git submodule update --init --recursive`
 
 *Optional*: To be able to get more precise Geo-IP information for addresses (city and
