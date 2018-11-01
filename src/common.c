@@ -1235,28 +1235,28 @@ const char *qword_str (unsigned __int64 val)
   char   tmp[30];
   char  *rc = buf [idx++];
 
-  if (val < 1000UL)
+  if (val < U64_SUFFIX(1000))
   {
     sprintf (rc, "%lu", (u_long)val);
   }
-  else if (val < 1000000UL)         /* 1E6 */
+  else if (val < U64_SUFFIX(1000000))         /* 1E6 */
   {
     sprintf (rc, "%lu,%03lu", (u_long)(val/1000UL), (u_long)(val % 1000UL));
   }
-  else if (val < 1000000000UL)      /* 1E9 */
+  else if (val < U64_SUFFIX(1000000000))      /* 1E9 */
   {
-    sprintf (tmp, "%9lu", (u_long)val);
+    sprintf (tmp, "%9" U64_FMT, val);
     sprintf (rc, "%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6);
   }
-  else if (val < 1000000000000UL)   /* 1E12 */
+  else if (val < U64_SUFFIX(1000000000000))   /* 1E12 */
   {
-    sprintf (tmp, "%12lu", (u_long)val);
+    sprintf (tmp, "%12" U64_FMT, val);
     sprintf (rc, "%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9);
   }
-  else                              /* >= 1E12 */
+  else                                        /* >= 1E12 */
   {
-    sprintf (tmp, "%15lu", (u_long)val);
-    sprintf (rc, "%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9);
+    sprintf (tmp, "%15" U64_FMT, val);
+    sprintf (rc, "%.3s,%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9, tmp+12);
   }
   idx &= 3;
   return str_ltrim (rc);
