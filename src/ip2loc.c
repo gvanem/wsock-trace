@@ -37,6 +37,9 @@
 #if defined(USE_IP2LOCATION)
 #if defined(__clang__)
   #pragma clang diagnostic ignored "-Wstrict-prototypes"
+
+#elif defined(__CYGWIN__)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
 #endif
 
 #include <IP2Location.h>
