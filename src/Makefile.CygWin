@@ -1,8 +1,8 @@
 #
-# Wsock-trace makefile for Cygwin32 / CygWin64.
+# Wsock-trace makefile for CygWin32 / CygWin64.
 # This requires GNU make v4 or later.
 #
-# G. Vanem <gvanem@yahoo.no> 2011 - 2017.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2018.
 #
 
 USE_CRT_DEBUG ?= 0

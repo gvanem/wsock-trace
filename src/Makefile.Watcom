@@ -1,6 +1,6 @@
 #
 # Wsock-trace makefile for Open Watcom.
-# G. Vanem <gvanem@yahoo.no> 2011.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2018.
 #
 LIB_TARGET = $(%WATCOM)\lib386\nt
 BIN_TARGET = $(%WATCOM)\binnt

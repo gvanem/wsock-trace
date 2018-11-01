@@ -2,7 +2,7 @@
 # Wsock-trace makefile for MinGW, MinGW64-w64 or TDM-gcc.
 # This requires GNU make v4 or later.
 #
-# G. Vanem <gvanem@yahoo.no> 2011 - 2017.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2018.
 #
 
 USE_CRT_DEBUG ?= 0
