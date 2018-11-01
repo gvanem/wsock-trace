@@ -12,7 +12,6 @@ USE_BFD       ?= 0
 # Use the IP2Location library?
 #
 USE_IP2LOCATION  ?= 1
-IP2LOCATION_ROOT = ../IP2Location-C-Library
 
 #
 # If you want Lua-script support, change these:
@@ -43,7 +42,7 @@ ifeq ($(USE_BFD),1)
 endif
 
 ifeq ($(USE_IP2LOCATION),1)
-  CFLAGS += -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
+  CFLAGS += -DUSE_IP2LOCATION
 endif
 
 ifeq ($(USE_LUA),1)

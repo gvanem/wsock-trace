@@ -18,8 +18,6 @@ LDFLAGS = option quiet, map, eliminate, caseexact &
 
 OBJ_DIR = Watcom_obj
 
-IP2LOCATION_ROOT = ..\IP2Location-C-Library
-
 #
 # The IP2Location library from:
 #   https://github.com/chrislim2888/IP2Location-C-Library
@@ -30,7 +28,7 @@ IP2LOCATION_ROOT = ..\IP2Location-C-Library
 # Default value is 1.
 #
 !if "$(USE_IP2LOCATION)" == "1"
-CFLAGS = $(CFLAGS) -I$(IP2LOCATION_ROOT)\libIP2Location -DUSE_IP2LOCATION
+CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
 !endif
 
 LINK_ARG = $(OBJ_DIR)\wlink.arg
@@ -174,14 +172,5 @@ $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h &
                             init.h cpu.h stkwalk.h smartlist.h &
                             overlap.h dump.h wsock_trace_lua.h &
                             wsock_trace.h wsock_hooks.c
+$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h in_addr.h
 
-!if "$(USE_IP2LOCATION)" == "1"
-$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h &
-                            $(IP2LOCATION_ROOT)\libIP2Location/IP2Location.h &
-                            $(IP2LOCATION_ROOT)\libIP2Location/IP2Loc_DBInterface.h in_addr.h &
-                            $(IP2LOCATION_ROOT)\libIP2Location/IP2Location.c &
-                            $(IP2LOCATION_ROOT)\libIP2Location/IP2Location.h &
-                            $(IP2LOCATION_ROOT)\libIP2Location/IP2Loc_DBInterface.c
-!else
-$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h
-!endif

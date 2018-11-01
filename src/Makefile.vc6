@@ -33,8 +33,6 @@ USE_DEF_FILE = 1
 USE_IP2LOCATION = 1
 !endif
 
-IP2LOCATION_ROOT = ..\IP2Location-C-Library
-
 #
 # If you want Lua-script support, change these:
 #
@@ -100,7 +98,7 @@ WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 !if "$(USE_IP2LOCATION)" == "1"
-CFLAGS = $(CFLAGS) -I$(IP2LOCATION_ROOT)/libIP2Location -DUSE_IP2LOCATION
+CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib
@@ -253,7 +251,6 @@ where VAR can have of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
   USE_IP2LOCATION  (default: $(USE_IP2LOCATION))
-  IP2LOCATION_ROOT (default: $(IP2LOCATION_ROOT))
   USE_LUA          (default: $(USE_LUA))
   LUAJIT_ROOT      (default: $(LUAJIT_ROOT))
   CPU              (default: $(CPU))
@@ -314,17 +311,7 @@ $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h \
                             init.h cpu.h stkwalk.h smartlist.h \
                             overlap.h dump.h wsock_trace_lua.h \
                             wsock_trace.h wsock_hooks.c
-
-!if "$(USE_IP2LOCATION)" == "1"
-$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h \
-                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.h \
-                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Loc_DBInterface.h in_addr.h \
-                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.c \
-                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Location.h \
-                            $(IP2LOCATION_ROOT)/libIP2Location/IP2Loc_DBInterface.c
-!else
-$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h
-!endif
+$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h in_addr.h
 
 !if "$(USE_LUA)" == "1"
 wsock_trace_lua.h: $(LUAJIT_ROOT)/src/lua.h     \
