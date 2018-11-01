@@ -66,14 +66,20 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 ### Installation
 
-This project uses [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git) and
-[**LuaJIT**](https://github.com/LuaJIT/LuaJIT.git) as external projects.
-On GitHub, these are refered to as submodules (refered to in `.gitmodules`).
-To clone this repository along with it's submodules, do this in an **empty** directory:<br>
-  * `git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git .`
+This project uses [**LuaJIT**](https://github.com/LuaJIT/LuaJIT.git) as an external project.
+On GitHub, this is refered to as a submodule (refered to in `.gitmodules`).<br>
+The following assumes you will install this package in `c:\prog\wsock_trace`.
+To clone this repository along with it's **LuaJIT** submodule, do this in an **empty**
+`c:\prog\wsock_trace` directory:<br>
+* `c:\prog\wsock_trace> git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git .`
+
+*Note*: [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git)
+  is no longer used as a submodule (since I've made several local changes to it). But it is
+  still placed in `c:\prog\wsock_trace\IP2Location-C-Library`. And with the same directory-
+  layout as before.
 
 If you have already cloned this repository earlier, you can initialize and update
-the submodules like so:<br>
+the **LuaJit** submodule like so:<br>
   * `git submodule update --init --recursive`
 
 *Optional*: To be able to get more precise Geo-IP information for addresses (city and
