@@ -600,54 +600,51 @@ char *dirname (const char *fname)
 {
   const char *p  = fname;
   const char *slash = NULL;
+  char       *dirpart;
+  size_t      dirlen;
 
-  if (fname)
+  if (!fname)
+     return (NULL);
+
+  if (*fname && fname[1] == ':')
   {
-    size_t dirlen;
-    char  *dirpart;
-
-    if (*fname && fname[1] == ':')
-    {
-      slash = fname + 1;
-      p += 2;
-    }
-
-    /* Find the rightmost slash.  */
-    while (*p)
-    {
-      if (IS_SLASH(*p))
-         slash = p;
-      p++;
-    }
-
-    if (slash == NULL)
-    {
-      fname = ".";
-      dirlen = 1;
-    }
-    else
-    {
-      /* Remove any trailing slashes.  */
-      while (slash > fname && IS_SLASH(slash[-1]))
-          slash--;
-
-      /* How long is the directory we will return?  */
-      dirlen = slash - fname + (slash == fname || slash[-1] == ':');
-      if (*slash == ':' && dirlen == 1)
-         dirlen += 2;
-    }
-
-    dirpart = malloc (dirlen + 1);
-    if (dirpart)
-    {
-      strncpy (dirpart, fname, dirlen);
-      if (slash && *slash == ':' && dirlen == 3)
-         dirpart[2] = '.';      /* for "x:foo" return "x:." */
-      dirpart[dirlen] = '\0';
-    }
-    return (dirpart);
+    slash = fname + 1;
+    p += 2;
   }
-  return (NULL);
+
+  /* Find the rightmost slash.  */
+  while (*p)
+  {
+    if (IS_SLASH(*p))
+       slash = p;
+    p++;
+  }
+
+  if (slash == NULL)
+  {
+    fname = ".";
+    dirlen = 1;
+  }
+  else
+  {
+    /* Remove any trailing slashes.  */
+    while (slash > fname && IS_SLASH(slash[-1]))
+        slash--;
+
+    /* How long is the directory we will return?  */
+    dirlen = slash - fname + (slash == fname || slash[-1] == ':');
+    if (*slash == ':' && dirlen == 1)
+       dirlen += 2;
+  }
+
+  dirpart = malloc (dirlen + 1);
+  if (dirpart)
+  {
+    _strlcpy (dirpart, fname, dirlen+1);
+    if (slash && *slash == ':' && dirlen == 3)
+       dirpart[2] = '.';      /* for "x:foo" return "x:." */
+  }
+  return (dirpart);
 }
 
 /*
