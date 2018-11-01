@@ -98,8 +98,8 @@ build_script:
   - cmd: set CYGWIN=nodosfilewarning
 
   - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
-  - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW USE_CRT_DEBUG=0
+  - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW  USE_CRT_DEBUG=0
+  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW  USE_CRT_DEBUG=0
   - cmd: if "%BUILDER%"=="cygwin32" make          -f Makefile.CygWin USE_CRT_DEBUG=0
   - cmd: if "%BUILDER%"=="cygwin64" make          -f Makefile.CygWin USE_CRT_DEBUG=0
   - cmd: if "%BUILDER%"=="watcom"   wmake -h      -f Makefile.Watcom
