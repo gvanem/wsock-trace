@@ -12,8 +12,8 @@ USE_DEF_FILE   = 0
 #
 # Use the IP2Location library?
 #
-USE_IP2LOCATION  ?= 1
-IP2LOCATION_ROOT ?= ../IP2Location-C-Library
+USE_IP2LOCATION ?= 1
+IP2LOCATION_ROOT = ../IP2Location-C-Library
 
 #
 # If you want Lua-script support, change these:

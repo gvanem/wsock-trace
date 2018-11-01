@@ -21,11 +21,11 @@ USE_DEF_FILE = 1
 !endif
 
 #
-# The IP2Location library:
+# The IP2Location library from:
 #   https://github.com/chrislim2888/IP2Location-C-Library
 #
-# You can also add '$(IP2LOCATION_ROOT)/libIP2Location' to your
-# '%INCLUDE%' variable instead of setting it here.
+# The '../libIP2Location' direction contains a patched mini-version
+# if the official version.
 #
 # Default value is 1.
 #
@@ -33,9 +33,7 @@ USE_DEF_FILE = 1
 USE_IP2LOCATION = 1
 !endif
 
-!if "$(IP2LOCATION_ROOT)" == ""
 IP2LOCATION_ROOT = ..\IP2Location-C-Library
-!endif
 
 #
 # If you want Lua-script support, change these:

@@ -18,19 +18,17 @@ LDFLAGS = option quiet, map, eliminate, caseexact &
 
 OBJ_DIR = Watcom_obj
 
+IP2LOCATION_ROOT = ..\IP2Location-C-Library
+
 #
-# The IP2Location library:
+# The IP2Location library from:
 #   https://github.com/chrislim2888/IP2Location-C-Library
 #
-# You can also add '$(IP2LOCATION_ROOT)\libIP2Location' to your
-# '%NT_INCLUDE%' variable instead of setting it here.
+# The '../libIP2Location' direction contains a patched mini-version
+# if the official version.
 #
 # Default value is 1.
 #
-!if "$(IP2LOCATION_ROOT)" == ""
-IP2LOCATION_ROOT = ..\IP2Location-C-Library
-!endif
-
 !if "$(USE_IP2LOCATION)" == "1"
 CFLAGS = $(CFLAGS) -I$(IP2LOCATION_ROOT)\libIP2Location -DUSE_IP2LOCATION
 !endif
