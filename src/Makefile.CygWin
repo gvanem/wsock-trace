@@ -25,7 +25,7 @@ BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS -fmax-errors=5 -DWIN32 -D_WIN32
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS -fmax-errors=5
 LDFLAGS = -Wl,--print-map,--sort-common -t
 RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
 OBJ_DIR = Cygwin_obj
