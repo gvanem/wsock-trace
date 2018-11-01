@@ -2159,6 +2159,8 @@ int main (int argc, char **argv)
   char   *ignore_appid = NULL; /* \todo Ignore 'appId' matching program(s). Support a list of 'appId's */
   char   *log_file = NULL;
   FILE   *log_f    = NULL;
+  FILE   *p;
+  char    p_buf [1000];
   WSADATA wsa;
   WORD    ver = MAKEWORD(1,1);
 
@@ -2168,17 +2170,6 @@ int main (int argc, char **argv)
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_level   = 0;
   g_cfg.trace_indent  = 0;
-
-  /* There is some issues with colours in Cygwin.
-   * Just hardcode them here.
-   */
-#if defined(__CYGWIN__)
-  g_cfg.color_file  = 0xFF00 + 8 + 7;   /* bright white */
-  g_cfg.color_time  = 0xFF00 + 8 + 5;   /* bright magenta */
-  g_cfg.color_func  = 0xFF00 + 8 + 3;   /* bright cyan */
-  g_cfg.color_trace = 0xFF00 + 8 + 6;   /* bright yellow */
-  g_cfg.color_data  = 0xFF00 + 8 + 2;   /* bright green */
-#endif
 
   fw_show_ipv4 = fw_show_ipv6 = FALSE;
   setlocale (LC_CTYPE, "");
@@ -2286,24 +2277,22 @@ int main (int argc, char **argv)
                 fw_show_ipv4 && !fw_show_ipv6 ? "IPv4 "  :
                !fw_show_ipv4 &&  fw_show_ipv6 ? "IPv6 "  : "non-IPv4/IPv6 ");
 
-  if (program)
-  {
-    char  p_buf [1000];
-    FILE *p = _popen (program, "rb");
+  if (!program)
+     goto quit;
 
-    if (p)
+  p = _popen (program, "rb");
+  if (p)
+  {
+    while (fgets(p_buf,sizeof(p_buf)-1,p) && !quit)
     {
-      while (fgets(p_buf,sizeof(p_buf)-1,p) && !quit)
-      {
-        trace_printf ("~1program: %s~0", p_buf);
-        trace_flush();
-      }
-      _pclose (p);
-      fw_print_statistics (NULL);
+      trace_printf ("~1program: %s~0", p_buf);
+      trace_flush();
     }
-    else
-      printf ("_popen() failed, errno %d\n", errno);
+    _pclose (p);
+    fw_print_statistics (NULL);
   }
+  else
+    printf ("_popen() failed, errno %d\n", errno);
 
 quit:
   free (program);
@@ -2313,10 +2302,11 @@ quit:
   fw_monitor_stop();
   fw_exit();
 
-  if (log_f)
-    fclose (log_f);
-
   wsock_trace_exit();
+
+  if (log_f)
+     fclose (log_f);
+
   return (rc);
 }
 #endif  /* TEST_FIREWALL */
