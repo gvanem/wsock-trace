@@ -45,7 +45,6 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   are always enabled).
 
 * *IP-Location* information from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
-  (this is contolled by `USE_IP2LOCATION = 1` in the makefiles).<br>
   The above `Mountain View/California` is Google's well-known location.<br>
   Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
 
@@ -73,25 +72,25 @@ To clone this repository along with it's **LuaJIT** submodule, do this in an **e
 `c:\prog\wsock_trace` directory:<br>
 * `c:\prog\wsock_trace> git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git .`
 
-*Note*: [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git)
-  is no longer used as a submodule (since I've made several local changes to it). But it is
-  still placed in `c:\prog\wsock_trace\IP2Location-C-Library`. And with the same directory-
-  layout as before. But most files not related to Windows are removed (like *autotools* files).
-
 If you have already cloned this repository earlier, you can initialize and update
 the **LuaJIT** submodule like so:<br>
-  * `git submodule update --init --recursive`
+  * `c:\prog\wsock_trace> git submodule update --init --recursive`
 
-*Optional*: To be able to get more precise Geo-IP information for addresses (city and
-region), Wsock-trace can use the **[IP2Location-C-Library](https://github.com/chrislim2888/IP2Location-C-Library)**
-library. To make best use of it, do this:
-  * Sign-up for an account and download the free IP2Location LITE [**databases**](http://lite.ip2location.com).
-  * Put the `IP2LOCATION-LITE-DBx.BIN` file (or similar, see last bullet below)
-    into your `%HOME%` or `%APPDATA%` directory.
-  * Edit the respective makefile to say `USE_IP2LOCATION = 1`.
-  * Then do the specific installation for your compiler (see below).
-  * To enable locations for both IPv4 and IPv6 addresses, download and use a file named like <br>
-    `IP2LOCATION-LITE-DBx.IPV6.BIN`. These files contains both IPv4 and IPv6 records.
+To be able to get more precise Geo-IP information for addresses (city and region), Wsock-trace
+will use a IP2Location LITE [**database**](http://lite.ip2location.com). <br>
+To make best use of it, do this:
+  * Sign-up for an [**account**](https://lite.ip2location.com/sign-up) and download a free
+    IP2Location LITE [**database**](https://lite.ip2location.com/database/ip-country-region-city).
+    Or in case you have an account, go [**here**](https://lite.ip2location.com/file-download).
+  * Download and use a file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`. <br>
+    Such a file contains both IPv4 and IPv6 records.
+  * Copy `IP2LOCATION-LITE-DBx.IPV6.BIN` into your `%APPDATA%` directory and edit the keyword in
+    the `[geoip]` section to read: <br>
+    `ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DBx.IPV6.BIN`
+
+*Note*: [**IP2Location-C-Library**](https://github.com/chrislim2888/IP2Location-C-Library.git)
+  is no longer used as a submodule (since I've made several local changes to it). It has been
+  merged into `src/ip2loc.c` and simplified.
 
 ### Building
 

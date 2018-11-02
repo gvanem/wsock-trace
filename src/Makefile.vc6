@@ -21,19 +21,6 @@ USE_DEF_FILE = 1
 !endif
 
 #
-# The IP2Location library from:
-#   https://github.com/chrislim2888/IP2Location-C-Library
-#
-# The '../libIP2Location' direction contains a patched mini-version
-# if the official version.
-#
-# Default value is 1.
-#
-!if "$(USE_IP2LOCATION)" == ""
-USE_IP2LOCATION = 1
-!endif
-
-#
 # If you want Lua-script support, change these:
 #
 # Default value is 0.
@@ -95,10 +82,6 @@ LDFLAGS_DEF = -def:$(WSOCK_DEF)
 CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
 EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
-!endif
-
-!if "$(USE_IP2LOCATION)" == "1"
-CFLAGS = $(CFLAGS) -DUSE_IP2LOCATION
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib
@@ -250,7 +233,6 @@ Run one of the following targets:
 where VAR can have of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
-  USE_IP2LOCATION  (default: $(USE_IP2LOCATION))
   USE_LUA          (default: $(USE_LUA))
   LUAJIT_ROOT      (default: $(LUAJIT_ROOT))
   CPU              (default: $(CPU))

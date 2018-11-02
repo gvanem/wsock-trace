@@ -638,9 +638,8 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 
   wsock_trace_inet_ntop4 ((const u_char*)addr, buf, sizeof(buf));
 
-#ifdef USE_IP2LOCATION
   num = ip2loc_num_ipv4_entries();
-  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
+  TRACE (4, "Looking for %s in %u elements.\n", buf, num);
 
   if (num > 0 && INET_util_addr_is_global(addr,NULL) && ip2loc_get_ipv4_entry(addr, &g_ip2loc_entry))
   {
@@ -651,11 +650,6 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
 
   /* IP2LOCATION lookup failed. Fallback to a geoip lookup below.
    */
-#else
-  num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
-  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
-#endif
-
   if (geoip_ipv4_entries)
   {
     DWORD ip_num = swap32 (addr->s_addr);
@@ -689,9 +683,8 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
 
   wsock_trace_inet_ntop6 ((const u_char*)addr, buf, sizeof(buf));
 
-#ifdef USE_IP2LOCATION
   num = ip2loc_num_ipv6_entries();
-  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 1).\n", buf, num);
+  TRACE (4, "Looking for %s in %u elements.\n", buf, num);
 
   if (num > 0 && INET_util_addr_is_global(NULL,addr) && ip2loc_get_ipv6_entry(addr, &g_ip2loc_entry))
   {
@@ -699,10 +692,6 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
        geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_VIA_IP2LOC);
     return (g_ip2loc_entry.country_short);
   }
-#else
-  num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
-  TRACE (4, "Looking for %s in %u elements (USE_IP2LOCATION: 0).\n", buf, num);
-#endif
 
   if (geoip_ipv6_entries)
   {
@@ -1733,7 +1722,6 @@ static void dump_num_ip_blocks_by_country (void)
   puts ("");
 }
 
-#ifdef USE_IP2LOCATION
 /**
  * Get the region/city from the last successful call to either
  * `geoip_get_country_by_ipv4()` or `geoip_get_country_by_ipv6()`.
@@ -1751,7 +1739,6 @@ static const char *get_location (void)
   else strcpy (buf, "loc: <unknown>");
   return (buf);
 }
-#endif
 
 /**
  * Common code for testing an IPv4 or IPv6 address.
@@ -1785,15 +1772,13 @@ static void test_addr_common (const struct in_addr  *a4,
 
   g_cfg.trace_report = save;
 
+  width = use_ip2loc ? 40 : 29;
+  location = "";
+
   if (cc && *cc != '-')
   {
-#ifdef USE_IP2LOCATION
     if (use_ip2loc)
-    {
-      width = 40;
-      location = get_location();
-    }
-#endif
+       location = get_location();
 
     /** Longest name from `geoip_get_long_name_by_A2()` is
      *  `United States Minor Outlying Islands`. 36 characters.
@@ -1838,14 +1823,7 @@ static void test_addr_common (const struct in_addr  *a4,
     else strcpy (buf2, "??");
   }
 
-#ifdef USE_IP2LOCATION
   width = 60;
-#else
-  width = 29;
-#endif
-
-  if (!use_ip2loc)
-     width = 29;
 
   printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
 
@@ -1879,10 +1857,6 @@ static void test_addr_common (const struct in_addr  *a4,
       printf ("    %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
-
-#ifndef USE_IP2LOCATION
-  ARGSUSED (use_ip2loc);
-#endif
 }
 
 static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
@@ -2017,28 +1991,20 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 
 static int show_help (const char *my_name)
 {
-#ifdef USE_IP2LOCATION
-  #define I_OPT   "i"
-  #define I_HELP  "       -i:      do no use the IP2Location database.\n"
-#else
-  #define I_OPT   ""
-  #define I_HELP  ""
-#endif
-
-  printf ("Usage: %s [-cdfG%snruh] [-g file] <-4|-6> address(es)\n"
+  printf ("Usage: %s [-cdfGinruh] [-g file] <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
           "       -d:      dump address entries for countries and count of blocks.\n"
           "       -f:      force an update with the '-u' option.\n"
           "       -G:      use generated built-in IPv4/IPv6 arrays.\n"
           "       -g file: generate IPv4/IPv6 tables to <file> (or '-' for stdout).\n"
-          "%s"
+          "       -i:      do no use the IP2Location database.\n"
           "       -n #:    number of loops for random test.\n"
           "       -r:      random test for '-n' rounds (default 10).\n"
           "       -u:      test updating of geoip files.\n"
           "       -4:      test IPv4 address(es).\n"
           "       -6:      test IPv6 address(es).\n"
           "       -h:      this help.\n",
-          my_name, I_OPT, I_HELP);
+          my_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\".\n"
           "   Built by %s\n", get_builder());
@@ -2196,7 +2162,7 @@ int main (int argc, char **argv)
 {
   int c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
   int do_update = 0, do_dump = 0, do_rand = 0, do_generate = 0;
-  int use_ip2loc = 1;
+  int  use_ip2loc = 1;
   int loops = 10;
   int rc = 0;
   const char *my_name = argv[0];
@@ -2205,7 +2171,7 @@ int main (int argc, char **argv)
   wsock_trace_init();
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
 
-  while ((c = getopt (argc, argv, "h?cdfGg:" I_OPT "n:ru46")) != EOF)
+  while ((c = getopt (argc, argv, "h?cdfGg:in:ru46")) != EOF)
     switch (c)
     {
       case '?':

@@ -10,11 +10,6 @@ USE_BFD        = 0
 USE_DEF_FILE   = 0
 
 #
-# Use the IP2Location library?
-#
-USE_IP2LOCATION ?= 1
-
-#
 # If you want Lua-script support, change these:
 #
 USE_LUA     ?= 0
@@ -72,10 +67,6 @@ ifeq ($(USE_CRT_DEBUG),1)
 else
   CFLAGS  += -O3 -fomit-frame-pointer
   LDFLAGS += # -s
-endif
-
-ifeq ($(USE_IP2LOCATION),1)
-  CFLAGS += -DUSE_IP2LOCATION
 endif
 
 ifeq ($(USE_BFD),1)

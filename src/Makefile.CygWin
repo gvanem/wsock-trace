@@ -9,11 +9,6 @@ USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
 
 #
-# Use the IP2Location library?
-#
-USE_IP2LOCATION  ?= 1
-
-#
 # If you want Lua-script support, change these:
 #
 USE_LUA     ?= 0
@@ -39,10 +34,6 @@ endif
 ifeq ($(USE_BFD),1)
   CFLAGS  += -DUSE_BFD
   EX_LIBS += -lbfd -liberty -lintl -lz
-endif
-
-ifeq ($(USE_IP2LOCATION),1)
-  CFLAGS += -DUSE_IP2LOCATION
 endif
 
 ifeq ($(USE_LUA),1)
