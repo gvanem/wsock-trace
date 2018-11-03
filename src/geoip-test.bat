@@ -3,7 +3,7 @@
 :: Simple test for geoip/IP2Loc.
 :: Rewrite this into a Python script some day.
 ::
-setlocal
+:: setlocal
 set WSOCK_TRACE_LEVEL=0
 set TEST_INPUT_4=%TEMP%\geoip-addr_4.test
 set TEST_INPUT_6=%TEMP%\geoip-addr_6.test
@@ -70,36 +70,40 @@ echo 84.238.160.4  # part of 84.238.160.0/22 ; SBL339089 >> %TEST_INPUT_4%
 ::
 echo Generating %TEST_INPUT_6%...
 
-echo 2001:0200:0102::      JP  > %TEST_INPUT_6%
-echo 2a01:04f8:0d16:25c2:: DE >> %TEST_INPUT_6%
-echo 2a01:04f8:0d16:26c2:: DE >> %TEST_INPUT_6%
-echo 2a01:ad20::           ES >> %TEST_INPUT_6%
-echo 2a01:af60::           PL >> %TEST_INPUT_6%
-echo 2a01:b200::           SK >> %TEST_INPUT_6%
-echo 2a01:b340::           IE >> %TEST_INPUT_6%
-echo 2a01:b4c0::           CZ >> %TEST_INPUT_6%
-echo 2a01:b600:8001::      IT >> %TEST_INPUT_6%
-echo 2a01:b6c0::           SE >> %TEST_INPUT_6%
+echo 2001:0200:0102::      # JP  > %TEST_INPUT_6%
+echo 2a01:04f8:0d16:25c2:: # DE >> %TEST_INPUT_6%
+echo 2a01:04f8:0d16:26c2:: # DE >> %TEST_INPUT_6%
+echo 2a01:ad20::           # ES >> %TEST_INPUT_6%
+echo 2a01:af60::           # PL >> %TEST_INPUT_6%
+echo 2a01:b200::           # SK >> %TEST_INPUT_6%
+echo 2a01:b340::           # IE >> %TEST_INPUT_6%
+echo 2a01:b4c0::           # CZ >> %TEST_INPUT_6%
+echo 2a01:b600:8001::      # IT >> %TEST_INPUT_6%
+echo 2a01:b6c0::           # SE >> %TEST_INPUT_6%
+
+::
+:: Add some special IPv6 addresses too:
+::
+echo fd00:a41::50          # non-global   >> %TEST_INPUT_6%
+echo 2002::1               # 6to4 prefix  >> %TEST_INPUT_6%
+echo 2001:0::50            # Teredo       >> %TEST_INPUT_6%
+echo 3FFE:831F::50         # Teredo old   >> %TEST_INPUT_6%
+
 ::
 :: Add some IPv6 addresses from SpamHaus' DROPv6.txt too:
 ::
 echo 2a06:f680::3   # part of 2a06:f680::/29 ; SBL303641 >> %TEST_INPUT_6%
 echo 2a07:9b80::33  # part of 2a07:9b80::/29 ; SBL342980 >> %TEST_INPUT_6%
 
+@echo on
+
 if %1. == --ip2loc_4. (
-  rem
-  rem Add some IPv4 addresses from SpamHaus' DROP.txt too:
-  rem
-  echo 36.37.48.34     # part of 36.37.48.0/20   ; SBL258006 >> %TEST_INPUT_4%
-  echo 121.46.124.33   # part of 121.46.124.0/22 ; SBL287428 >> %TEST_INPUT_4%
+  shift
   %~dp0geoip.exe -4 %2 %3 %4 @%TEST_INPUT_4%
-  exit /b 0
-)
-
-if %1. == --ip2loc_6. (
+) else if %1. == --ip2loc_6. (
+  shift
   %~dp0geoip.exe -6 %2 %3 %4 @%TEST_INPUT_6%
-  exit /b 0
+) else (
+  %~dp0geoip.exe -4 %1 %2 %3 @%TEST_INPUT_4%
 )
-
-type %TEST_INPUT_4% | %~dp0geoip.exe -4 %1 %2 %3
 
