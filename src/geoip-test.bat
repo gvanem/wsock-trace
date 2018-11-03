@@ -3,7 +3,7 @@
 :: Simple test for geoip/IP2Loc.
 :: Rewrite this into a Python script some day.
 ::
-:: setlocal
+setlocal
 set WSOCK_TRACE_LEVEL=0
 set TEST_INPUT_4=%TEMP%\geoip-addr_4.test
 set TEST_INPUT_6=%TEMP%\geoip-addr_6.test
