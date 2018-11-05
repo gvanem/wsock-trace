@@ -93,7 +93,7 @@ static void parse_hosts (smartlist_t *sl, const char *line)
   char           *ip   = _strtok_r (p, " \t", &tok_buf);
   char           *name = _strtok_r (NULL, " \t", &tok_buf);
 
-  TRACE (2, "ip: '%s', name: '%s'\n", ip, name);
+  TRACE (3, "ip: '%s', name: '%s'\n", ip, name);
 
   if (!name || !ip)
      return;
