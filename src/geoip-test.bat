@@ -95,8 +95,6 @@ echo 3FFE:831F::50         # Teredo old   >> %TEST_INPUT_6%
 echo 2a06:f680::3   # part of 2a06:f680::/29 ; SBL303641 >> %TEST_INPUT_6%
 echo 2a07:9b80::33  # part of 2a07:9b80::/29 ; SBL342980 >> %TEST_INPUT_6%
 
-@echo on
-
 if %1. == --ip2loc_4. (
   shift
   %~dp0geoip.exe -4 %2 %3 %4 @%TEST_INPUT_4%
