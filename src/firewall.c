@@ -1689,7 +1689,7 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
   {
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
     country  = geoip_get_long_name_by_A2 (country);
-    trace_printf ("\n  loc:  %s, %s", country, location ? location : "");
+    trace_printf ("\n  loc:  %s, %s", country, location ? location : "?");
   }
 }
 
@@ -2055,10 +2055,20 @@ static void CALLBACK
   {
     if ((header->flags & FWPM_NET_EVENT_FLAG_APP_ID_SET) &&
         header->appId.data && header->appId.size > 0)
+    {
+      /** \todo
+       *  Convert to multi-byte,
+       *  get rid of the `\device\harddiskvolumeX` prefix and use
+       * `get_actual_filename()` to display it properly.
+       */
+#if 0
+      get_actual_filename (&header->appId.size, FALSE);
+#endif
       trace_printf ("\n  app:  %.*S",
                     header->appId.size,
                     /* cast from 'UINT8' to 'wchar_t*' to shut up gcc */
                     (const wchar_t*)header->appId.data);
+    }
   }
 
   trace_putc ('\n');
