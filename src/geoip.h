@@ -78,7 +78,6 @@ extern smartlist_t *geoip_smartlist_fixed_ipv6 (void);
  */
 extern BOOL  ip2loc_init (void);
 extern void  ip2loc_exit (void);
-extern BOOL  ip2loc_get_entry (const char *ip, struct ip2loc_entry *out);
 extern BOOL  ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out);
 extern BOOL  ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out);
 extern DWORD ip2loc_num_ipv4_entries (void);
