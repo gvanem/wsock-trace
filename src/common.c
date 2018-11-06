@@ -1189,32 +1189,50 @@ int trace_puts (const char *str)
 
 /**
  * Open an existing file (or create) in share-mode but deny other
- * processes to write to the file. On Watcom, fopen() already seems to
- * open with SH_DENYWR internally.
+ * processes to write to the file.
+ *
+ * On Watcom, fopen() already seems to open with `SH_DENYWR` internally.
+ * CygWin does not have `_sopen()`. Simply call `fopen()` for CygWin and Watcom.
  */
 FILE *fopen_excl (const char *file, const char *mode)
 {
-#if !defined(__WATCOMC__) && !defined(__CYGWIN__)
-  int fd, flags = _O_CREAT | _O_WRONLY;
+#if defined(__WATCOMC__) || defined(__CYGWIN__)
+  return fopen (file, mode);
+#else
+  int fd, open_flags, share_flags;
 
-#ifdef _O_SEQUENTIAL
-  flags |= _O_SEQUENTIAL;
-#endif
+  switch (*mode)
+  {
+    case 'r':
+          open_flags  = _O_RDONLY;
+          share_flags = S_IREAD;
+          break;
+    case 'w':
+          open_flags  = _O_WRONLY;
+          share_flags = S_IWRITE;
+          break;
+    case 'a':
+          open_flags  = _O_CREAT | _O_WRONLY | _O_APPEND;
+          share_flags = S_IWRITE;
+          break;
+    default:
+          return (NULL);
+  }
 
-  if (*mode == 'a')
-       flags |= _O_APPEND;
-  else flags |= _O_TRUNC;
+  if (mode[1] == '+')
+     open_flags |= _O_TRUNC;
 
   if (mode[strlen(mode)-1] == 'b')
-     flags |= O_BINARY;
+     open_flags |= O_BINARY;
 
-  fd = _sopen (file, flags, SH_DENYWR, S_IREAD | S_IWRITE);
+#ifdef _O_SEQUENTIAL
+  open_flags |= _O_SEQUENTIAL;
+#endif
+
+  fd = _sopen (file, open_flags, SH_DENYWR, share_flags);
   if (fd <= -1)
      return (NULL);
   return fdopen (fd, mode);
-
-#else
-  return fopen (file, mode);
 #endif
 }
 
