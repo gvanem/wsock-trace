@@ -1395,7 +1395,7 @@ const char *ioctlsocket_cmd_name (long cmd)
 
 /*
  * One dump-line is like:
- * "<prefix> 0000: 47 45 54 20 2F 20 48 54 54 50 2F 31 2E 31 0D 0A GET / HTTP/1.1..\n"
+ * "<prefix> 0000: 47 45 54 20 2F 20 48 54 54 50 2F 31 2E 31 0D 0A  GET / HTTP/1.1..\n"
  *
  */
 #define CHECK_MAX_DATA(ofs) \
@@ -1436,6 +1436,7 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
 
     for ( ; j < 15; j++)     /* pad line to 16 positions */
        trace_puts ("   ");
+    trace_putc (' ');
 
     for (i = 0; i < 16 && i+ofs < data_len; i++)
     {
