@@ -45,8 +45,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   are always enabled).
 
 * *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
-  The above `Mountain View/California` is Google's well-known location.<br>
-  Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
+  The above `Mountain View/California` is Google's well-known location. Many thanks to IP2Location
+  [**[3]**](#footnotes) for their data-bases.
 
 * *Domain Name System-based Blackhole List*
   (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of
@@ -58,6 +58,9 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   calls can be delayed a number of milli-seconds. E.g. slowing down a `recv()` call is
   controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L67)
   config-file.
+
+* *Firewall* activity (work in progress); report activity causing events from the *Window Filtering Platform* <br>
+  (the *Internet Connection Firewall*; ICF).
 
 * **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
