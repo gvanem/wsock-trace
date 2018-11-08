@@ -16,6 +16,7 @@
  */
 
 #include <stdint.h>
+#include <errno.h>
 
 #include "common.h"
 #include "init.h"
