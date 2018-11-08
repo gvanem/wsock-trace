@@ -10,7 +10,7 @@ PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library). So cur
 the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
 functions.
 
-A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com`
+A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com` <br>
 (`ahost` is part of the DNS library **[C-ares](http://c-ares.haxx.se/)**):
 
 [![screenshot](screenshot_ahost-msdn-com-win10.png?raw=true)]
@@ -44,7 +44,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L158)
   are always enabled).
 
-* *IP-Location* information from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
+* *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
   The above `Mountain View/California` is Google's well-known location.<br>
   Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
 
