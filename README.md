@@ -75,13 +75,12 @@ To clone this repository along with it's **LuaJIT** submodule, do this in an **e
 `c:\prog\wsock_trace` directory:<br>
 * `c:\prog\wsock_trace> git clone --recursive -j8 https://github.com/gvanem/wsock-trace.git .`
 
-If you have already cloned this repository earlier, you can initialize and update
-the **LuaJIT** submodule like so:<br>
+If you have already cloned this repository earlier, you can update the **LuaJIT** submodule like so:<br>
   * `c:\prog\wsock_trace> git submodule update --init --recursive`
 
 To be able to get more precise Geo-IP information for addresses (city and region), Wsock-trace
-will use a IP2Location LITE [**database**](http://lite.ip2location.com). <br>
-To make best use of it, do this:
+will use a IP2Location LITE [**database**](http://lite.ip2location.com). To make best use of it,
+do this:
   * Sign-up for an [**account**](https://lite.ip2location.com/sign-up) and download a free
     IP2Location LITE [**database**](https://lite.ip2location.com/database/ip-country-region-city).
     Or in case you have an account, go [**here**](https://lite.ip2location.com/file-download).
