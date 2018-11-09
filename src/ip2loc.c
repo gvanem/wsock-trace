@@ -29,6 +29,12 @@
 
 #elif defined(__CYGWIN__)
   GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
+
+#elif defined(__WATCOMC__) && !defined(IN6_IS_ADDR_V4MAPPED)
+  #define IN6_IS_ADDR_V4MAPPED(a) \
+          (BOOLEAN) ( ((a)->s6_words[0] == 0) && ((a)->s6_words[1] == 0) && \
+                      ((a)->s6_words[2] == 0) && ((a)->s6_words[3] == 0) && \
+                      ((a)->s6_words[4] == 0) && ((a)->s6_words[5] == 0xFFFF) )
 #endif
 
 /*
@@ -54,7 +60,7 @@
  * Use only shared-memory access without calling `calloc()` and `strdup()`
  * to return any results. Just copy to a `ip2loc_entry` entry as needed.
  */
-#define IP2LOC_NO_ALLOC  0
+#define IP2LOC_NO_ALLOC  1
 
 /**
  * \def IP2LOC_COMPLETE
@@ -62,7 +68,7 @@
  * Compile in all original IP2Location functions?
  * Not needed in Wsock-Trace due to below `IP2LOC_FLAGS`.
  */
-#define IP2LOC_COMPLETE  1
+#define IP2LOC_COMPLETE  0
 
 #if (IP2LOC_COMPLETE && IP2LOC_NO_ALLOC)
 #error "'IP2LOC_NO_ALLOC=1' and 'IP2LOC_NO_ALLOC=1' is not supported."
