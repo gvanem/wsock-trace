@@ -118,6 +118,7 @@ static void test_ioctlsocket (void);
 static void test_connect (void);
 static void test_select (void);
 static void test_select2 (void);
+static int  test_select3 (void);
 static void test_send (void);
 static void test_WSAPoll (void);
 static void test_WSAFDIsSet (void);
@@ -465,6 +466,27 @@ static void test_select2 (void)
   TEST_CONDITION (== -1, select (0, (fd_set*)&fd, NULL, NULL, NULL));
 }
 
+/*
+ * Since 'test_select3()' takes a long time, it is NOT in the 'tests[]' table.
+ * Poll keyboard too just for show.
+ */
+static int test_select3 (void)
+{
+  struct timeval tv = { 100, 1 };
+  fd_set fd;
+  SOCKET s;
+
+  test_WSAStartup();
+
+  FD_ZERO (&fd);
+  s = socket (AF_INET, SOCK_STREAM, 0);
+  FD_SET (s, &fd);
+
+  TEST_CONDITION (== -1, select (0, &fd, NULL, NULL, &tv));
+  TEST_CONDITION (== 0, WSACleanup());
+  return (0);
+}
+
 static void test_send (void)
 {
   char data[256];
@@ -694,9 +716,11 @@ static int thread_test (int num_threads)
 
 static int show_help (void)
 {
-  puts ("Usage: test [-h] [-d] [-l] [-t] [test-wildcard]  (default = '*')");
+  puts ("Usage: test [-h] [-d] [-f] [-l] [-t] [test-wildcard]  (default = '*')");
   puts ("       -h:     this help.");
   puts ("       -d:     increase verbosity.");
+  puts ("       -f:     Firewall event monitoring calling 'test_select3()'.\n"
+        "               Similar to 'firewall_test.exe' but monitors events together with 'wsock_trace.dll'.");
   puts ("       -l:     list tests and exit.");
   puts ("       -t [N]: only do a thread test with <N> running threads.");
   return (0);
@@ -721,6 +745,7 @@ static void MS_CDECL quit (int sig)
 {
   fputs ("Got ^C.\n", stderr);
   fflush (stderr);
+  (void) sig;
   exit (1);
 }
 
@@ -730,7 +755,7 @@ int MS_CDECL main (int argc, char **argv)
 
   signal (SIGINT, quit);
 
-  while ((c = getopt (argc, argv, "h?dlt::")) != EOF)
+  while ((c = getopt (argc, argv, "h?fdlt::")) != EOF)
     switch (c)
     {
       case '?':
@@ -740,6 +765,8 @@ int MS_CDECL main (int argc, char **argv)
       case 'l':
            exit (list_tests());
            break;
+      case 'f':
+           return test_select3();
 
       /* The above "t::" means 'optarg' is optional.
        * A limitation in getopt.c shows that if 4 threads is wanted, start this
