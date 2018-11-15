@@ -1142,7 +1142,8 @@ static const char *get_time_string (const FILETIME *ts);
             fw_num_ignored++;                                                            \
           }                                                                              \
           else {                                                                         \
-            TRACE (2, "  %s(): thr-id: %lu.\n", __FUNCTION__, GetCurrentThreadId());     \
+            TRACE (2, "  %s(): thr-id: %lu.\n",                                          \
+                   __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));                      \
             fw_event_callback (event->type,                                              \
                                (const _FWPM_NET_EVENT_HEADER3*)&event->header,           \
                                event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?       \
@@ -1299,26 +1300,6 @@ static void print_long_wline (const wchar_t *start, size_t indent)
   trace_putc ('\n');
 }
 
-static void fw_dump_rules (const FW_RULE *rule)
-{
-  const char *dir = (rule->Direction == FW_DIR_INVALID) ? "INV" :
-                    (rule->Direction == FW_DIR_IN)      ? "IN"  :
-                    (rule->Direction == FW_DIR_OUT)     ? "OUT" :
-                    (rule->Direction == FW_DIR_BOTH)    ? "BOTH": "?";
-
-  int indent = trace_printf ("%3lu: %s: ", DWORD_CAST(++fw_num_rules), dir);
-
-  print_long_wline (rule->wszDescription, indent);
-
-  if (rule->wszLocalApplication)
-     trace_printf ("     wszName:            %S\n", rule->wszName);
-
-  if (rule->wszEmbeddedContext)
-     trace_printf ("     wszEmbeddedContext: %S\n", rule->wszEmbeddedContext);
-
-  trace_putc ('\n');
-}
-
 static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
   FWPM_SESSION session;
@@ -1451,7 +1432,8 @@ static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   SET_API_CALLBACK (0);
 
 quit:
-  printf ("FwpmNetEventSubscribe%d() failed.\n", lowest_api);
+  TRACE (1, "FwpmNetEventSubscribe%d() failed: %s\n",
+         lowest_api, win_strerror(fw_errno));
   return (FALSE);
 }
 
@@ -1572,6 +1554,27 @@ void fw_monitor_stop (void)
 #endif
 }
 
+#if defined(TEST_FIREWALL)
+static void fw_dump_rules (const FW_RULE *rule)
+{
+  const char *dir = (rule->Direction == FW_DIR_INVALID) ? "INV" :
+                    (rule->Direction == FW_DIR_IN)      ? "IN"  :
+                    (rule->Direction == FW_DIR_OUT)     ? "OUT" :
+                    (rule->Direction == FW_DIR_BOTH)    ? "BOTH": "?";
+
+  int indent = trace_printf ("%3lu: %s: ", DWORD_CAST(++fw_num_rules), dir);
+
+  print_long_wline (rule->wszDescription, indent);
+
+  if (rule->wszLocalApplication)
+     trace_printf ("     wszName:            %S\n", rule->wszName);
+
+  if (rule->wszEmbeddedContext)
+     trace_printf ("     wszEmbeddedContext: %S\n", rule->wszEmbeddedContext);
+
+  trace_putc ('\n');
+}
+
 static void fw_enumerate_callouts (void)
 {
   printf ("%s() not yet implemented.\n", __FUNCTION__);
@@ -1581,6 +1584,7 @@ static void fw_dump_events (void)
 {
   printf ("%s() not yet implemented.\n", __FUNCTION__);
 }
+#endif
 
 static void print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                               const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
@@ -1675,7 +1679,7 @@ static const char *get_time_string (const FILETIME *ts)
     else diff = _ts - last_ts;
     sec  = (long) (diff / S64_SUFFIX(1000000));
     msec = (long) ((diff - (sec*1000000)) % 1000);
-    snprintf (time_str, sizeof(time_str), "%ld.%03ld sec", sec, abs(msec));
+    snprintf (time_str, sizeof(time_str), "%ld.%03d sec", sec, abs(msec));
     last_ts = _ts;
   }
   else
