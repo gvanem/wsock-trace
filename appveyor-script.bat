@@ -70,6 +70,13 @@ echo dropv6_file = %CD%\dropv6.txt                          >> wsock_trace.appve
 echo drop_url    = http://www.spamhaus.org/drop/drop.txt    >> wsock_trace.appveyor
 echo edrop_url   = http://www.spamhaus.org/drop/edrop.txt   >> wsock_trace.appveyor
 echo dropv6_url  = http://www.spamhaus.org/drop/dropv6.txt  >> wsock_trace.appveyor
+echo [firewall]                                             >> wsock_trace.appveyor
+echo enable    = 0                                          >> wsock_trace.appveyor
+echo show_ipv4 = 1                                          >> wsock_trace.appveyor
+echo show_ipv6 = 0                                          >> wsock_trace.appveyor
+echo show_all  = 0                                          >> wsock_trace.appveyor
+echo api_level = 3                                          >> wsock_trace.appveyor
+
 
 ::
 :: Windows-Defender thinks generating a 'hosts' file is suspicious.
