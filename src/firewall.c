@@ -84,23 +84,8 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   * Besides including <asm/byteorder.h> fails since <winsock2.h>
   * was already included. Sigh!
   */
-  static __inline DWORD _byteswap_ulong (DWORD x)
-  {
-    __asm__ __volatile (
-             "xchgb %b0, %h0\n\t"   /* swap lower bytes  */
-             "rorl  $16, %0\n\t"    /* swap words        */
-             "xchgb %b0, %h0"       /* swap higher bytes */
-            : "=q" (x) : "0" (x));
-    return (x);
-  }
-
-  static __inline WORD _byteswap_ushort (WORD x)
-  {
-    __asm__ __volatile__ (
-              "xchgb %b0, %h0"       /* swap bytes */
-            : "=q" (x) : "0" (x));
-    return (x);
-  }
+  #define _byteswap_ulong(x)  swap32(x)
+  #define _byteswap_ushort(x) swap16(x)
 #endif
 
 /**\def FW_API_LOW
@@ -1677,13 +1662,33 @@ static void print_user_id (const xx *header)
 #endif
 
 /**
- * \todo
- *  This should return a time-string matching the format of
- *  'g_cfg.trace_time_format'.
+ * Return a time-string for an event.
+ *
+ * Unless we're in the 'firewall_test.exe' program, this should return a
+ * time-string matching the format of 'g_cfg.trace_time_format'.
  */
+#if defined(TEST_FIREWALL)
+  #define TIME_STRING_FMT "\n~1%s: "
+#else
+
+  /* Similar as to wsock_trace.c shows a time-stamp.
+   */
+  #define TIME_STRING_FMT "\n  ~1* ~3%s: "
+
+  static int64 FILETIME_to_usec (const FILETIME *ft)
+  {
+    int64 res = (int64) ft->dwHighDateTime << 32;
+
+    res |= ft->dwLowDateTime;
+    return (res / 10);   /* from 100 nano-sec periods to usec */
+  }
+#endif
+
 static const char *get_time_string (const FILETIME *ts)
 {
-  static char  time_str [30];
+  static char time_str [30];
+
+#if defined(TEST_FIREWALL)
   time_t       ct = FILETIME_to_time_t (ts);
   const struct tm *tm = localtime (&ct);
 
@@ -1691,6 +1696,52 @@ static const char *get_time_string (const FILETIME *ts)
        strftime (time_str, sizeof(time_str), "%H:%M:%S", tm);
   else strcpy (time_str, "??");
   return (time_str);
+
+#else
+  static int64 ref_ts  = S64_SUFFIX(0);
+  static int64 last_ts = S64_SUFFIX(0);
+  int64  diff;
+  long   sec, msec;
+
+  /* Init 'ref_ts' for a TS_RELATIVE or TS_DELTA time-format.
+   */
+  if (ref_ts == S64_SUFFIX(0))
+  {
+    FILETIME _ts;
+
+    GetSystemTimeAsFileTime (&_ts);
+    last_ts = ref_ts = FILETIME_to_usec (&_ts);
+  }
+
+  if (g_cfg.trace_time_format == TS_RELATIVE)
+  {
+    diff = FILETIME_to_usec (ts) - ref_ts;
+    sec  = (long) (diff / S64_SUFFIX(1000000));
+    msec = (long) ((diff - (sec*1000000)) % 1000);
+
+    snprintf (time_str, sizeof(time_str), "%ld.%03ld sec", sec, abs(msec));
+  }
+  else if (g_cfg.trace_time_format == TS_DELTA)
+  {
+    int64 _ts = FILETIME_to_usec (ts);
+
+    diff    = _ts - last_ts;
+    last_ts = _ts;
+    sec  = (long) (diff / S64_SUFFIX(1000000));
+    msec = (long) ((diff - (sec*1000000)) % 1000);
+    snprintf (time_str, sizeof(time_str), "%ld.%03ld sec", sec, abs(msec));
+  }
+  else
+  {
+    SYSTEMTIME sys_time;
+
+    memset (&sys_time, '\0', sizeof(sys_time));
+    FileTimeToSystemTime (ts, &sys_time);
+    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u",
+              sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
+  }
+  return (time_str);
+#endif
 }
 
 static void print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
@@ -2004,7 +2055,7 @@ static void CALLBACK
     }
   }
 
-  trace_printf ("\n~1%s: ~4%s~0",
+  trace_printf (TIME_STRING_FMT "~4%s~0",
                 get_time_string(&header->timeStamp),
                 list_lookup_name(event_type, events, DIM(events)));
 
