@@ -1602,6 +1602,13 @@ BOOL fw_monitor_start (void)
 
 void fw_monitor_stop (void)
 {
+#if 0
+  CloseHandle (fw_event_handle);
+  CloseHandle (fw_engine_handle);
+
+  fw_event_handle = NULL;
+  fw_engine_handle = NULL;
+#else
   if (fw_engine_handle && fw_event_handle && p_FwpmNetEventUnsubscribe0)
   {
     (*p_FwpmNetEventUnsubscribe0) (fw_engine_handle, fw_event_handle);
@@ -1612,6 +1619,7 @@ void fw_monitor_stop (void)
     (*p_FwpmEngineClose0) (fw_engine_handle);
     fw_engine_handle = NULL;
   }
+#endif
 }
 
 static void fw_enumerate_callouts (void)
@@ -1668,6 +1676,11 @@ static void print_user_id (const xx *header)
 }
 #endif
 
+/**
+ * \todo
+ *  This should return a time-string matching the format of
+ *  'g_cfg.trace_time_format'.
+ */
 static const char *get_time_string (const FILETIME *ts)
 {
   static char  time_str [30];
@@ -1699,6 +1712,19 @@ static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, u_short port, char
 {
   struct servent *se = NULL;
 
+  /* If called when wsock_trace.dll is active, we might get "late events".
+   * Hence we cannot call 'getservbyport()' after a 'WSACleanup()'.
+   * Just return the port-number as a string.
+   */
+#if !defined(TEST_FIREWALL)
+  if (cleaned_up)
+     return _itoa (port, port_str, 10);
+#endif
+
+  /* Do not use 'WSTRACE()' on 'getservbyport()' here.
+   */
+  trace_level_save_restore (0);
+
   if (header->ipProtocol == IPPROTO_TCP)
      se = getservbyport (_byteswap_ushort(port), "tcp");
   else if (header->ipProtocol == IPPROTO_UDP)
@@ -1707,6 +1733,8 @@ static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, u_short port, char
   if (se && se->s_name)
        snprintf (port_str, PORT_STR_SIZE, "%d (%s)", port, se->s_name);
   else _itoa (port, port_str, 10);
+
+  trace_level_save_restore (1);
   return (port_str);
 }
 
