@@ -17,13 +17,13 @@ environment:
       CPU:     x86
     - BUILDER: msvc
       CPU:     x64
-    - BUILDER: mingw32
+    - BUILDER: mingw
       CPU:     x86
-    - BUILDER: mingw64
+    - BUILDER: mingw
       CPU:     x64
-    - BUILDER: cygwin32
+    - BUILDER: cygwin
       CPU:     x86
-    - BUILDER: cygwin64
+    - BUILDER: cygwin
       CPU:     x64
     - BUILDER: watcom
       CPU:     x86
@@ -71,15 +71,18 @@ install:
   - cmd: set DISABLEDELAYEDEXPANSION=0
   - cmd: set CYGWIN_OPT=-qgnNdOA -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com
 
-  - cmd: if "%BUILDER%"=="mingw32"  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="mingw64"  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="cygwin64" set PATH=c:\msys64\usr\bin;%PATH%
-  - cmd: if "%BUILDER%"=="cygwin32" c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
-
   #
   # Set compiler environment for MSVC.
   #
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
+
+  - cmd: if %CPU. == x86. (
+           if "%BUILDER%"=="mingw"  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
+           if "%BUILDER%"=="cygwin" c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
+         ) else (
+           if "%BUILDER%"=="mingw"  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
+           if "%BUILDER%"=="cygwin" set PATH=c:\msys64\usr\bin;%PATH%
+         )
 
 build_script:
   - cmd: appveyor-script.bat init
@@ -97,12 +100,10 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
 
-  - cmd: if "%BUILDER%"=="msvc"     nmake -nologo -f Makefile.vc6
-  - cmd: if "%BUILDER%"=="mingw32"  make          -f Makefile.MinGW  USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="mingw64"  make          -f Makefile.MinGW  USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="cygwin32" make          -f Makefile.CygWin USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="cygwin64" make          -f Makefile.CygWin USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="watcom"   wmake -h      -f Makefile.Watcom
+  - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
+  - cmd: if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW  CPU=%CPU% USE_CRT_DEBUG=0
+  - cmd: if "%BUILDER%"=="cygwin" make          -f Makefile.CygWin CPU=%CPU% USE_CRT_DEBUG=0
+  - cmd: if "%BUILDER%"=="watcom" wmake -h      -f Makefile.Watcom CPU=%CPU%
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe
@@ -113,8 +114,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
   - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=1 &                          test.exe WSAStartup WSACleanup
   - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
-# - cmd: if "%BUILDER%"=="msvc" echo Dumping Firewall Rules.               & firewall_test.exe -dr
-# - cmd: if "%BUILDER%"=="msvc" echo Capturing Firewall events for 20 sec. & firewall_test.exe -dddd -a1 -4 sleep 20
+# - cmd: if "%BUILDER%"=="msvc" echo Dumping Firewall Rules.               & firewall_test.exe -r
+# - cmd: if "%BUILDER%"=="msvc" echo Capturing Firewall events for 20 sec. & firewall_test.exe -a1 sleep 20
 
 #
 # Prevent the 'watcom' directory to end up in 'artifacts'.

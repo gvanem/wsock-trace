@@ -90,8 +90,7 @@ echo Generating appveyor-hosts file...
 type appveyor_host_content.txt > appveyor-hosts
 
 ::
-:: These should survive until 'build_script' for 'msvc', 'mingw32', 'mingw64,
-:: 'cygwin32', 'cygwin64' or 'watcom' get to run.
+:: These should survive until 'build_script' for 'msvc', 'mingw', 'cygwin', or 'watcom' get to run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
