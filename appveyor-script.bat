@@ -77,7 +77,6 @@ echo show_ipv6 = 0                                          >> wsock_trace.appve
 echo show_all  = 0                                          >> wsock_trace.appveyor
 echo api_level = 3                                          >> wsock_trace.appveyor
 
-
 ::
 :: Windows-Defender thinks generating a 'hosts' file is suspicious.
 :: Even generating 'appveyor-hosts' triggers Windows-Defender.
@@ -98,7 +97,7 @@ set COLUMNS=120
 
 ::
 :: Some issue with the Cygwin builds forces me to put the generated
-:: 'wsock_trace.appveyor' in AppVeyor's %APPDATA directory.
+:: 'wsock_trace.appveyor' in AppVeyor's %APPDATA% directory.
 ::
 copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace > NUL
 exit /b 0
