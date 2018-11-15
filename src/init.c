@@ -424,8 +424,7 @@ static BOOL _exclude_list_add (const char *name, BOOL is_func)
   ex->name         = _strlcpy ((char*)(ex+1), p, len+1);
   smartlist_add (exclude_list, ex);
 
-  if (!is_func)
-    TRACE (1, "_exclude_list_add() of '%s'.\n", ex->name);
+  TRACE (4, "_exclude_list_add() of '%s', is_func: %d.\n", ex->name, is_func);
   return (TRUE);
 }
 
