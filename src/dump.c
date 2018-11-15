@@ -1008,7 +1008,7 @@ static const struct search_list protocols[] = {
                     ADD_PROTO (IPPROTO_ICMPV6),
                     ADD_PROTO (IPPROTO_RM),
                     ADD_PROTO (IPPROTO_RAW),
-                    ADD_PROTO (IPPROTO_HOPOPTS),
+                 /* ADD_PROTO (IPPROTO_HOPOPTS), */
                     ADD_PROTO (IPPROTO_GGP),
                     ADD_PROTO (IPPROTO_IPV4),
                     ADD_PROTO (IPPROTO_IPV6),
