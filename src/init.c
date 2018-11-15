@@ -1015,7 +1015,6 @@ void wsock_trace_exit (void)
   StackWalkExit();
   overlap_exit();
   hosts_file_exit();
-  fw_exit();
 
 #if 0
   if (g_cfg.trace_level >= 3)
