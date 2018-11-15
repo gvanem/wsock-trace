@@ -1624,14 +1624,6 @@ static void print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
   }
 }
 
-#if 0
-static void print_user_id (const xx *header)
-{
-  if (header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET)
-     trace_printf ("%S, " header->userId);
-}
-#endif
-
 /**
  *
  * Return number of micro-sec from a `FILETIME`.
@@ -1897,11 +1889,6 @@ static void print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   w_name = (const wchar_t*) header->appId.data;
   w_len  = header->appId.size;
-
-  /** \todo
-   *  Map the `\device\harddiskvolumeX` prefix to a proper disk letter.
-   */
-
   w_len = WideCharToMultiByte (fw_acp, 0, w_name, w_len, 0, 0, NULL, NULL);
   if (w_len == 0)
        strcpy (a_name, "?");
@@ -1909,13 +1896,32 @@ static void print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   a_base = basename (a_name);
   if (exclude_list_get(a_base,FALSE) || exclude_list_get(a_name,FALSE))
-     TRACE (2, "Ignoring event for %s.\n", a_name);
+     TRACE (2, "\nIgnoring event for %s.\n", a_name);
   else
   {
     trace_putc ('\n');
     trace_indent (INDENT_SZ);
     trace_printf ("app:  %s", volume_to_letter(a_name));
   }
+}
+
+/**
+ * Process the `header->userId` field.
+ */
+static void print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
+{
+  const SID  *sid;
+  const BYTE *val;
+
+  if (!(header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET) || !header->userId)
+     return;
+
+  sid = header->userId;
+  val = &sid->IdentifierAuthority.Value[0];
+
+  trace_putc ('\n');
+  trace_indent (INDENT_SZ);
+  trace_printf ("User: %d.%d.%d.%d.%d.%d", val[0], val[1], val[2], val[3], val[4], val[5]);
 }
 
 /*
@@ -1958,48 +1964,48 @@ static void print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 #define _IPPROTO_RESERVED_WNV          260
 #define _IPPROTO_RESERVED_MAX          261
 
-#define ADD_PROTO(p)   { _##p, #p }
+#define ADD_PROTO(p)   { _IPPROTO_##p, "IPPROTO_" #p }
 
 static const struct search_list protocols[] = {
-                    ADD_PROTO (IPPROTO_ICMP),
-                    ADD_PROTO (IPPROTO_IGMP),
-                    ADD_PROTO (IPPROTO_TCP),
-                    ADD_PROTO (IPPROTO_UDP),
-                    ADD_PROTO (IPPROTO_ICMPV6),
-                    ADD_PROTO (IPPROTO_RM),
-                    ADD_PROTO (IPPROTO_RAW),
-                    ADD_PROTO (IPPROTO_HOPOPTS),
-                    ADD_PROTO (IPPROTO_GGP),
-                    ADD_PROTO (IPPROTO_IPV4),
-                    ADD_PROTO (IPPROTO_IPV6),
-                    ADD_PROTO (IPPROTO_ST),
-                    ADD_PROTO (IPPROTO_CBT),
-                    ADD_PROTO (IPPROTO_EGP),
-                    ADD_PROTO (IPPROTO_IGP),
-                    ADD_PROTO (IPPROTO_PUP),
-                    ADD_PROTO (IPPROTO_IDP),
-                    ADD_PROTO (IPPROTO_RDP),
-                    ADD_PROTO (IPPROTO_ROUTING),
-                    ADD_PROTO (IPPROTO_FRAGMENT),
-                    ADD_PROTO (IPPROTO_ESP),
-                    ADD_PROTO (IPPROTO_AH),
-                    ADD_PROTO (IPPROTO_DSTOPTS),
-                    ADD_PROTO (IPPROTO_ND),
-                    ADD_PROTO (IPPROTO_ICLFXBM),
-                    ADD_PROTO (IPPROTO_PIM),
-                    ADD_PROTO (IPPROTO_PGM),
-                    ADD_PROTO (IPPROTO_L2TP),
-                    ADD_PROTO (IPPROTO_SCTP),
-                    ADD_PROTO (IPPROTO_RESERVED_IPSEC),
-                    ADD_PROTO (IPPROTO_RESERVED_IPSECOFFLOAD),
-                    ADD_PROTO (IPPROTO_RESERVED_WNV),
-                    ADD_PROTO (IPPROTO_RAW),
-                    ADD_PROTO (IPPROTO_RESERVED_RAW),
-                    ADD_PROTO (IPPROTO_NONE),
-                    ADD_PROTO (IPPROTO_RESERVED_IPSEC),
-                    ADD_PROTO (IPPROTO_RESERVED_IPSECOFFLOAD),
-                    ADD_PROTO (IPPROTO_RESERVED_WNV),
-                    ADD_PROTO (IPPROTO_RESERVED_MAX)
+                    ADD_PROTO (ICMP),
+                    ADD_PROTO (IGMP),
+                    ADD_PROTO (TCP),
+                    ADD_PROTO (UDP),
+                    ADD_PROTO (ICMPV6),
+                    ADD_PROTO (RM),
+                    ADD_PROTO (RAW),
+                    ADD_PROTO (HOPOPTS),
+                    ADD_PROTO (GGP),
+                    ADD_PROTO (IPV4),
+                    ADD_PROTO (IPV6),
+                    ADD_PROTO (ST),
+                    ADD_PROTO (CBT),
+                    ADD_PROTO (EGP),
+                    ADD_PROTO (IGP),
+                    ADD_PROTO (PUP),
+                    ADD_PROTO (IDP),
+                    ADD_PROTO (RDP),
+                    ADD_PROTO (ROUTING),
+                    ADD_PROTO (FRAGMENT),
+                    ADD_PROTO (ESP),
+                    ADD_PROTO (AH),
+                    ADD_PROTO (DSTOPTS),
+                    ADD_PROTO (ND),
+                    ADD_PROTO (ICLFXBM),
+                    ADD_PROTO (PIM),
+                    ADD_PROTO (PGM),
+                    ADD_PROTO (L2TP),
+                    ADD_PROTO (SCTP),
+                    ADD_PROTO (RESERVED_IPSEC),
+                    ADD_PROTO (RESERVED_IPSECOFFLOAD),
+                    ADD_PROTO (RESERVED_WNV),
+                    ADD_PROTO (RAW),
+                    ADD_PROTO (RESERVED_RAW),
+                    ADD_PROTO (NONE),
+                    ADD_PROTO (RESERVED_IPSEC),
+                    ADD_PROTO (RESERVED_IPSECOFFLOAD),
+                    ADD_PROTO (RESERVED_WNV),
+                    ADD_PROTO (RESERVED_MAX)
                   };
 
 static const char *get_protocol (UINT8 proto)
@@ -2074,6 +2080,12 @@ static void CALLBACK
       return;
     }
   }
+
+  /**
+   * The callback needs to examine all the pieces of an event and
+   * the `exclude_list_get (appId)` or `exclude_list_get (address_str)`
+   * before deciding to print anything.
+   */
 
   trace_printf (TIME_STRING_FMT "~4%s~0",
                 get_time_string(&header->timeStamp),
@@ -2152,7 +2164,10 @@ static void CALLBACK
       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ||
       event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP    ||
       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
-     print_app_id (header);
+  {
+    print_app_id (header);
+ // print_user_id (header);
+  }
 
   trace_putc ('\n');
 }
