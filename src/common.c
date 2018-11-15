@@ -1089,6 +1089,9 @@ int trace_putc (int ch)
     int         col_idx;
 
     get_color = FALSE;
+
+    /* If we got "~~", print a single "~"
+    */
     if (ch == '~')
        goto put_it;
 
