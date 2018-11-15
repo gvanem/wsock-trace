@@ -1128,6 +1128,8 @@ static DWORD  fw_num_events    = 0;
 static DWORD  fw_num_ignored   = 0;
 static UINT   fw_acp;
 
+static const char *get_time_string (const FILETIME *ts);
+
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, drop, allow)                          \
         static void CALLBACK                                                             \
         fw_event_callback##event_ver (void *context,                                     \
@@ -1188,6 +1190,7 @@ static BOOL fw_load_funcs (void)
      return (TRUE);
 
   fw_acp = GetConsoleCP();
+  get_time_string (NULL);
 
   /* Functions never loaded.
    */
@@ -1652,32 +1655,28 @@ static const char *get_time_string (const FILETIME *ts)
   long   sec, msec;
 
   /* Init 'ref_ts' for a TS_RELATIVE or TS_DELTA time-format.
+   * Called from 'fw_load_funcs()'.
    */
-  if (ref_ts == S64_SUFFIX(0))
+  if (!ts)
   {
     FILETIME _ts;
 
     GetSystemTimeAsFileTime (&_ts);
     last_ts = ref_ts = FILETIME_to_usec (&_ts);
+    return (NULL);
   }
 
-  if (g_cfg.trace_time_format == TS_RELATIVE)
-  {
-    diff = FILETIME_to_usec (ts) - ref_ts;
-    sec  = (long) (diff / S64_SUFFIX(1000000));
-    msec = (long) ((diff - (sec*1000000)) % 1000);
-
-    snprintf (time_str, sizeof(time_str), "%ld.%03ld sec", sec, abs(msec));
-  }
-  else if (g_cfg.trace_time_format == TS_DELTA)
+  if (g_cfg.trace_time_format == TS_RELATIVE || g_cfg.trace_time_format == TS_DELTA)
   {
     int64 _ts = FILETIME_to_usec (ts);
 
-    diff    = _ts - last_ts;
-    last_ts = _ts;
+    if (g_cfg.trace_time_format == TS_RELATIVE)
+         diff = FILETIME_to_usec (ts) - ref_ts;
+    else diff = _ts - last_ts;
     sec  = (long) (diff / S64_SUFFIX(1000000));
     msec = (long) ((diff - (sec*1000000)) % 1000);
     snprintf (time_str, sizeof(time_str), "%ld.%03ld sec", sec, abs(msec));
+    last_ts = _ts;
   }
   else
   {
@@ -2075,6 +2074,7 @@ static void CALLBACK
   trace_printf (TIME_STRING_FMT "~4%s~0",
                 get_time_string(&header->timeStamp),
                 list_lookup_name(event_type, events, DIM(events)));
+  trace_flush();
 
   if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
   {
