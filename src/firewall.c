@@ -1136,13 +1136,14 @@ static DWORD  fw_num_events    = 0;
 static DWORD  fw_num_ignored   = 0;
 static BOOL   fw_show_ipv4     = TRUE;
 static BOOL   fw_show_ipv6     = TRUE;
+static UINT   fw_acp;
 
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, drop, allow)                          \
         static void CALLBACK                                                             \
         fw_event_callback##event_ver (void *context,                                     \
                  const _FWPM_NET_EVENT##callback_ver *event)                             \
         {                                                                                \
-          /* ENTER_CRIT(); */                                                            \
+       /* ENTER_CRIT(); */                                                               \
           if (!event) {                                                                  \
             trace_printf ("~4event == NULL!\n~0");                                       \
             fw_num_ignored++;                                                            \
@@ -1157,7 +1158,7 @@ static BOOL   fw_show_ipv6     = TRUE;
                                  (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0*) allow : NULL); \
           }                                                                              \
           ARGSUSED (context);                                                            \
-          /* LEAVE_CRIT(); */                                                            \
+       /* LEAVE_CRIT(); */                                                               \
         }
 
 static void CALLBACK fw_event_callback (const UINT                             event_type,
@@ -1181,21 +1182,21 @@ FW_EVENT_CALLBACK (4, 5, event->classifyDrop, event->classifyAllow)
 static BOOL fw_load_funcs (void)
 {
   const struct LoadTable *tab = fw_funcs + 0;
-  int   i, num, functions_needed = DIM(fw_funcs);
+  int   functions_needed = DIM(fw_funcs) - 4;
+  int   i, num;
 
-  functions_needed -= 4;
-
-  for (i = num = 0; i < DIM(fw_funcs); i++)
+  for (i = num = 0; i < DIM(fw_funcs); i++, tab++)
   {
     if (*tab->func_addr)
        num++;
-    tab++;
   }
 
   /* Already loaded functions okay; get out.
    */
   if (num >= functions_needed)
      return (TRUE);
+
+  fw_acp = GetConsoleCP();
 
   /* Functions never loaded.
    */
@@ -1862,6 +1863,67 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   return (TRUE);
 }
 
+/**
+ * Map a "\\device\\harddiskvolume[0-9]\\" string to a drive letter the easy way.
+ * Somewhat related:
+ *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
+ */
+static const char *volume_to_letter (const char *volume)
+{
+  #define VOLUME "\\Device\\HarddiskVolume"
+  const  char *p;
+  static char  ret [_MAX_PATH];
+
+  if (!strnicmp(volume, VOLUME, sizeof(VOLUME)-1))
+  {
+    p = volume + sizeof(VOLUME) - 1;
+    if (isdigit(*p) && p[1] == '\\')
+    {
+      ret[0] = 'a' - '0' + *p;
+      ret[1] = ':';
+      _strlcpy (ret+2, p+1, sizeof(ret));
+      return (ret);
+    }
+  }
+  return (volume);
+}
+
+/**
+ * Process the `header->addId` field.
+ */
+static void print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
+{
+  char          *a_base, a_name [_MAX_PATH];
+  const wchar_t *w_name;
+  int            w_len;
+
+  if ((header->flags & FWPM_NET_EVENT_FLAG_APP_ID_SET) == 0 ||
+      (header->appId.data && header->appId.size == 0))
+     return;
+
+  w_name = (const wchar_t*) header->appId.data;
+  w_len  = header->appId.size;
+
+  /** \todo
+   *  Map the `\device\harddiskvolumeX` prefix to a proper disk letter.
+   */
+
+  w_len = WideCharToMultiByte (fw_acp, 0, w_name, w_len, 0, 0, NULL, NULL);
+  if (w_len == 0)
+       strcpy (a_name, "?");
+  else WideCharToMultiByte (fw_acp, 0, w_name, header->appId.size, a_name, w_len, 0, 0);
+
+  a_base = basename (a_name);
+  if (exclude_list_get(a_base,FALSE) || exclude_list_get(a_name,FALSE))
+     TRACE (2, "Ignoring event for %s.\n", a_name);
+  else
+  {
+    trace_putc ('\n');
+    trace_indent (INDENT_SZ);
+    trace_printf ("app:  %s", volume_to_letter(a_name));
+  }
+}
+
 /*
  * Copied from dump.c:
  */
@@ -2095,26 +2157,7 @@ static void CALLBACK
       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ||
       event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP    ||
       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
-  {
-    if ((header->flags & FWPM_NET_EVENT_FLAG_APP_ID_SET) &&
-        header->appId.data && header->appId.size > 0)
-    {
-      /** \todo
-       *  Convert to multi-byte,
-       *  get rid of the `\device\harddiskvolumeX` prefix and use
-       * `get_actual_filename()` to display it properly.
-       */
-#if 0
-      get_actual_filename (&header->appId.size, FALSE);
-#endif
-      trace_putc ('\n');
-      trace_indent (INDENT_SZ);
-      trace_printf ("app:  %.*S",
-                    header->appId.size,
-                    /* cast from 'UINT8' to 'wchar_t*' to shut up gcc */
-                    (const wchar_t*)header->appId.data);
-    }
-  }
+     print_app_id (header);
 
   trace_putc ('\n');
 }
