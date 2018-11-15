@@ -62,6 +62,14 @@ struct DNSBL_cfg {
        int     max_days;
      };
 
+struct firewall_cfg {
+       BOOL    monitor_enable;
+       BOOL    show_ipv4;
+       BOOL    show_ipv6;
+       BOOL    show_all;
+       int     api_level;
+     };
+
 struct config_table {
        char   *trace_file;
        FILE   *trace_stream;
@@ -136,10 +144,11 @@ struct config_table {
        WORD    screen_width;
        WORD    screen_heigth;
 
-       struct lua_cfg     lua;
-       struct pcap_cfg    pcap;
-       struct DNSBL_cfg   DNSBL;
-       struct statistics  counts;
+       struct lua_cfg      lua;
+       struct pcap_cfg     pcap;
+       struct DNSBL_cfg    DNSBL;
+       struct firewall_cfg firewall;
+       struct statistics   counts;
        DWORD  reentries;
 
        TS_TYPE    trace_time_format;

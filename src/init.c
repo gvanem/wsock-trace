@@ -762,13 +762,38 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
               fname, line, key, val);
 }
 
+/*
+ * Handler for '[firewall]' section.
+ */
+static void parse_firewall_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key,"enable"))
+       g_cfg.firewall.monitor_enable = atoi (val);
+
+  else if (!stricmp(key,"show_ipv4"))
+       g_cfg.firewall.show_ipv4 = atoi (val);
+
+  else if (!stricmp(key,"show_ipv6"))
+       g_cfg.firewall.show_ipv6 = atoi (val);
+
+  else if (!stricmp(key,"show_all"))
+       g_cfg.firewall.show_all = atoi (val);
+
+  else if (!stricmp(key,"api_level"))
+       g_cfg.firewall.api_level = atoi (val);
+
+  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
 enum cfg_sections {
      CFG_NONE = 0,
      CFG_CORE,
      CFG_LUA,
      CFG_GEOIP,
      CFG_IDNA,
-     CFG_DNSBL
+     CFG_DNSBL,
+     CFG_FIREWALL
    };
 
 /*
@@ -786,6 +811,8 @@ static enum cfg_sections lookup_section (const char *section)
      return (CFG_IDNA);
   if (section && !stricmp(section,"dnsbl"))
      return (CFG_DNSBL);
+  if (section && !stricmp(section,"firewall"))
+     return (CFG_FIREWALL);
   return (CFG_NONE);
 }
 
@@ -837,6 +864,10 @@ static int parse_config_file (FILE *file)
       case CFG_DNSBL:
            parse_DNSBL_settings (key, val, line);
            strcpy (last_section, "dnsbl");
+           break;
+      case CFG_FIREWALL:
+           parse_firewall_settings (key, val, line);
+           strcpy (last_section, "firewall");
            break;
 
       /* \todo: handle more 'key' / 'val' here by extending lookup_section().
@@ -984,7 +1015,7 @@ void wsock_trace_exit (void)
   StackWalkExit();
   overlap_exit();
   hosts_file_exit();
-//fw_exit();
+  fw_exit();
 
 #if 0
   if (g_cfg.trace_level >= 3)
@@ -1289,7 +1320,6 @@ void wsock_trace_init (void)
 #if !defined(TEST_BACKTRACE)
   load_ws2_funcs();
   hosts_file_init();
-//fw_init();
 #endif
 
 #if defined(USE_BFD)
