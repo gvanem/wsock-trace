@@ -1184,7 +1184,8 @@ static int32_t IP2Location_DB_Load_to_mem (IP2Location *loc, HANDLE os_hnd)
   read = fread (loc->sh_mem_ptr, 1, loc->statbuf.st_size, loc->file);
   if (read != loc->statbuf.st_size)
   {
-    TRACE (2, "fread() failed, read=%u, loc->statbuf.st_size=%z, errno=%d\n", read, loc->statbuf.st_size, errno);
+    TRACE (2, "fread() failed, read=%d, loc->statbuf.st_size=%u, errno=%d\n",
+           (int)read, (unsigned)loc->statbuf.st_size, errno);
     return (-1);
   }
   return (0);
@@ -1386,7 +1387,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
      return (FALSE);
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
-         INET_util_get_ip_num(addr, NULL), r->country_short, num_4_loops);
+         INET_util_get_ip_num(addr, NULL), r->country_short, DWORD_CAST(num_4_loops));
   return ip2loc_get_common (out, r);
 }
 
@@ -1417,7 +1418,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
 
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",
          INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),
-         r->country_short, num_6_loops);
+         r->country_short, DWORD_CAST(num_6_loops));
   return ip2loc_get_common (out, r);
 }
 
