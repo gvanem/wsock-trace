@@ -118,7 +118,7 @@ static void test_ioctlsocket (void);
 static void test_connect (void);
 static void test_select (void);
 static void test_select2 (void);
-static int  test_select3 (void);
+       int  test_select3 (void);
 static void test_send (void);
 static void test_WSAPoll (void);
 static void test_WSAFDIsSet (void);
@@ -470,7 +470,7 @@ static void test_select2 (void)
  * Since 'test_select3()' takes a long time, it is NOT in the 'tests[]' table.
  * Poll keyboard too just for show.
  */
-static int test_select3 (void)
+int test_select3 (void)
 {
   struct timeval tv = { 100, 1 };
   fd_set fd;
@@ -482,7 +482,7 @@ static int test_select3 (void)
   s = socket (AF_INET, SOCK_STREAM, 0);
   FD_SET (s, &fd);
 
-  TEST_CONDITION (== -1, select (0, &fd, NULL, NULL, &tv));
+  TEST_CONDITION (== -1, select (0, &fd, &fd, NULL, &tv));
   TEST_CONDITION (== 0, WSACleanup());
   return (0);
 }
