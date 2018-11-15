@@ -14,198 +14,206 @@
 #   E.g. 'trace_level = %WSOCK_TRACE_LEVEL%'.
 #
 [core]
+  trace_level   = 1                  # The level of trace to give; higher value gives more details
+  trace_indent  = 2                  # The number of spaces to indent e.g. '  * test.c(45)'.
+  trace_caller  = 1                  ; ditto comment
+  trace_report  = 1                  # print a final trace report at program exit.
+  # trace_max_len = 100              # wrap lines at column 100 when printing to file or when stdout is redirected.
+  #                                  # When printing to the console, we wrap and indent text according to screen width.
 
-trace_level   = 1                  # The level of trace to give; higher value gives more details
-trace_indent  = 2                  # The number of spaces to indent e.g. '  * test.c(45)'.
-trace_caller  = 1                  ; ditto comment
-trace_report  = 1                  # print a final trace report at program exit.
-# trace_max_len = 100              # wrap lines at column 100 when printing to file or when stdout is redirected.
-#                                  # When printing to the console, we wrap and indent text according to screen width.
+  trace_binmode = 1                  # Write output-file in binary mode.
 
-trace_binmode = 1                  # Write output-file in binary mode.
+  # trace_file = %TEMP%\wstrace.txt  # file to trace to. If left unused, print to 'stdout'.
+                                     # Use "stderr" for stderr.
+                                     # Use "$ODS" to print using 'OutputDebugString()' and
+                                     # use dbgview to see the traces (no colours).
 
-# trace_file = %TEMP%\wstrace.txt  # file to trace to. If left unused, print to 'stdout'.
-                                   # Use "stderr" for stderr.
-                                   # Use "$ODS" to print using 'OutputDebugString()' and
-                                   # use dbgview to see the traces (no colours).
+  trace_time = relative              # Print timestamps at each trace-line. One of these:
+                                     #   "absolute" for current-time.
+                                     #   "relative" for msec since program started.
+                                     #   "delta"    for msec since previous trace-line.
+                                     #   "none"     for no timestamps
 
-trace_time = relative              # Print timestamps at each trace-line. One of these:
-                                   #   "absolute" for current-time.
-                                   #   "relative" for msec since program started.
-                                   #   "delta"    for msec since previous trace-line.
-                                   #   "none"     for no timestamps
+  dump_modules = 0                   # Dump information on all process modules.
+  pdb_report  = 1                    # Report PDB-symbols information found in all modules.
+  use_sema = 0
 
-dump_modules = 0                   # Dump information on all process modules.
-pdb_report  = 1                    # Report PDB-symbols information found in all modules.
-use_sema = 0
+  #
+  # For tracing of overlapped transfers in some WSA* functions:
+  #   If 'trace_overlap >= 1' and 'trace_level >= trace_overlap'
+  #   the overlapped operation will be traced.
+  #
+  trace_overlap = 2
 
-#
-# For tracing of overlapped transfers in some WSA* functions:
-#   If 'trace_overlap >= 1' and 'trace_level >= trace_overlap'
-#   the overlapped operation will be traced.
-#
-trace_overlap = 2
+  #
+  # Hook and trace Winsock extensions functions.
+  # The call 'WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER, ...)' is the interface
+  # to these extension functions. If 'hook_extensions = 1', a hook-function for each
+  # Winsock extension is set. Thus allowing a trace of these.
+  # Ref: wsock_hooks.c for details.
+  #
+  hook_extensions = 0
 
-#
-# Hook and trace Winsock extensions functions.
-# The call 'WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER, ...)' is the interface
-# to these extension functions. If 'hook_extensions = 1', a hook-function for each
-# Winsock extension is set. Thus allowing a trace of these.
-# Ref: wsock_hooks.c for details.
-#
-hook_extensions = 0
+  hosts_file = %WINDIR%\system32\drivers\etc\hosts  # The standard location of the 'hosts' file.
+                                                    # Change to suite.
+  #
+  # For testing too fast programs:
+  #   delay all receive, transmit, select() and WSAPoll() calls the
+  #   specified number of milli-seconds.
+  #
+  #  Note: The delay happens even if 'trace_level = 0'.
+  #
+  recv_delay   = 0                   # For recv(), recvfrom(), WSARecv(), WSARecvEx(), WSARecvFrom() and WSARecvDisconnect()
+  send_delay   = 0                   # For send(), sendto(), WSASend() and WSASendTo()
+  select_delay = 0                   # For select()
+  poll_delay   = 0                   # For WSAPoll()
 
-hosts_file = %WINDIR%\system32\drivers\etc\hosts  # The standard location of the 'hosts' file.
-                                                  # Change to suite.
-#
-# For testing too fast programs:
-#   delay all receive, transmit, select() and WSAPoll() calls the
-#   specified number of milli-seconds.
-#
-#  Note: The delay happens even if 'trace_level = 0'.
-#
-recv_delay   = 0                   # For recv(), recvfrom(), WSARecv(), WSARecvEx(), WSARecvFrom() and WSARecvDisconnect()
-send_delay   = 0                   # For send(), sendto(), WSASend() and WSASendTo()
-select_delay = 0                   # For select()
-poll_delay   = 0                   # For WSAPoll()
+  pcap_enable = 0
+  pcap_dump   = %TEMP%\wstrace.pcap
 
-pcap_enable = 0
-pcap_dump   = %TEMP%\wstrace.pcap
+  callee_level   = 1                 # How many stack-frames to unwind and show callers
+  cpp_demangle   = 1
+  short_errors   = 1
+  use_full_path  = 1                 # Report with full file-names in traces.
+  use_toolhlp32  = 1
+  use_ole32      = 0                 # Decode and print GUIDs using internal functions
+  start_new_line = 0                 # Always start tracing on column 1.
+  show_caller    = 0                 # Internal: show file/line where TRACE() was called.
 
-callee_level   = 1                 # How many stack-frames to unwind and show callers
-cpp_demangle   = 1
-short_errors   = 1
-use_full_path  = 1                 # Report with full file-names in traces.
-use_toolhlp32  = 1
-use_ole32      = 0                 # Decode and print GUIDs using internal functions
-start_new_line = 0                 # Always start tracing on column 1.
-show_caller    = 0                 # Internal: show file/line where TRACE() was called.
+  compact        = 0                 # Compact or detailed dump (not yet).
+  dump_select    = 1                 # Dump the 'fd_set's in select(). Do it before and after select() modifies them.
+  dump_hostent   = 1                 # Dump the 'hostent' structure returned in gethostbyname() and gethostbyaddr().
+  dump_protoent  = 1                 # Dump the 'protoent' structure returned in getprotobynumber() and getprotobyname().
+  dump_servent   = 1                 # Dump the 'servent' structure returned in getservbyport() and getservbyname().
+  dump_nameinfo  = 1                 # Dump the data returned from getnameinfo().
 
-compact        = 0                 # Compact or detailed dump (not yet).
-dump_select    = 1                 # Dump the 'fd_set's in select(). Do it before and after select() modifies them.
-dump_hostent   = 1                 # Dump the 'hostent' structure returned in gethostbyname() and gethostbyaddr().
-dump_protoent  = 1                 # Dump the 'protoent' structure returned in getprotobynumber() and getprotobyname().
-dump_servent   = 1                 # Dump the 'servent' structure returned in getservbyport() and getservbyname().
-dump_nameinfo  = 1                 # Dump the data returned from getnameinfo().
+  dump_wsaprotocol_info  = 1         # Dump the WSAPROTOCOL_INFO[A|W] structure in e.g. WSASocketA() and WSADuplicateSocketA().
+  dump_wsanetwork_events = 1         # Dump the WSAEVENT array from WSAEnumNetworkEvents().
 
-dump_wsaprotocol_info  = 1         # Dump the WSAPROTOCOL_INFO[A|W] structure in e.g. WSASocketA() and WSADuplicateSocketA().
-dump_wsanetwork_events = 1         # Dump the WSAEVENT array from WSAEnumNetworkEvents().
+  dump_data   = 1                    # Dump data in recv(), recvfrom(), send() and sendto().
+  max_data    = 5000                 # but not more than 'max_data'.
+  max_displacement = 100             # maximum distance for a public symbol to accept in SymGetLineFromAddr64()
+  max_fd_sets      = 500             # Max number of 'fd_set' (i.e. sockets) to print in and out of 'select()'
 
-dump_data   = 1                    # Dump data in recv(), recvfrom(), send() and sendto().
-max_data    = 5000                 # but not more than 'max_data'.
-max_displacement = 100             # maximum distance for a public symbol to accept in SymGetLineFromAddr64()
-max_fd_sets      = 500             # Max number of 'fd_set' (i.e. sockets) to print in and out of 'select()'
+  msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
+  mingw_only  = 0                    # Trace only MinGW programs using the wsock_trace_mw.dll
+  cygwin_only = 0                    # Trace only Cygwin programs using the wsock_trace_cyg.dll
 
-msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
-mingw_only  = 0                    # Trace only MinGW programs using the wsock_trace_mw.dll
-cygwin_only = 0                    # Trace only Cygwin programs using the wsock_trace_cyg.dll
+  color_time  = bright red           # Color of time-stamp. E.g. '* 125.654 msec:'
+  color_file  = bright white         # Color of first trace line. E.g.: ' sendf.c(319) (Curl_recv_plain+37):'
+  color_func  = bright red           # Not effective yet
+  color_trace = bright yellow        # Color of traced function. E.g.: 'recv (1492, 0x00B74604, 16384, 0) --> 11533 bytes.'
+  color_data  = bright green         # Color of extra traced stuff.
 
-color_time  = bright red           # Color of time-stamp. E.g. '* 125.654 msec:'
-color_file  = bright white         # Color of first trace line. E.g.: ' sendf.c(319) (Curl_recv_plain+37):'
-color_func  = bright red           # Not effective yet
-color_trace = bright yellow        # Color of traced function. E.g.: 'recv (1492, 0x00B74604, 16384, 0) --> 11533 bytes.'
-color_data  = bright green         # Color of extra traced stuff.
+  #
+  # Don't trace these functions:
+  #
+  exclude = htons
+  exclude = htonl
+  exclude = ntohs
+  exclude = ntohl
+  # exclude = WSASetLastError
+  # exclude = WSAGetLastError
 
-#
-# Don't trace these functions:
-#
-exclude = htons
-exclude = htonl
-exclude = ntohs
-exclude = ntohl
-# exclude = WSASetLastError
-# exclude = WSAGetLastError
+  exclude = inet_addr
+  exclude = FD_ISSET
+  # exclude = __WSAFDIsSet
 
-exclude = inet_addr
-exclude = FD_ISSET
-# exclude = __WSAFDIsSet
+  #
+  # Or don't trace these functions in these programs (not effective yet):
+  #
+  # exclude = libcurl*.dll!select
+  # exclude = curl.exe!inet_addr
+  # exclude = wget!WSAStartup
+  # exclude = nmap!getaddrinfo
 
-#
-# Or don't trace these functions in these programs (not effective yet):
-#
-# exclude = libcurl*.dll!select
-# exclude = curl.exe!inet_addr
-# exclude = wget!WSAStartup
-# exclude = nmap!getaddrinfo
-
-#
-# Use WinHTTP.dll to download the below files.
-# If 0, use WinInet.dll instead.
-#
-use_winhttp = 0
+  #
+  # Use WinHTTP.dll to download the below files.
+  # If 0, use WinInet.dll instead.
+  #
+  use_winhttp = 0
 
 #
 # Experimental:
 #   Lua-scripts for init and exit.
 #
 [lua]
+  enable      = 1
+  trace_level = 1              # The level for LUA_TRACE().
 
-enable      = 1
-trace_level = 1              # The level for LUA_TRACE().
+  #
+  # The colors used in LUA_TRACE() and LUA_WARNING():
+  #
+  color_head = bright magenta  # color of the start. E.g. "wsock_trace_lua.c(238):"
+  color_body = bright white    # color of the body. E.g. "func_sig: 'WSACleanup()'"
 
-#
-# The colors used in LUA_TRACE() and LUA_WARNING():
-#
-color_head = bright magenta  # color of the start. E.g. "wsock_trace_lua.c(238):"
-color_body = bright white    # color of the body. E.g. "func_sig: 'WSACleanup()'"
-
-lua_init = %APPDATA%\wsock_trace_init.lua
-lua_exit = %APPDATA%\wsock_trace_exit.lua
+  lua_init = %APPDATA%\wsock_trace_init.lua
+  lua_exit = %APPDATA%\wsock_trace_exit.lua
 
 #
 # GeoIP settings.
 #
 [geoip]
+  enable        = 1
+  use_generated = 0    # use IPV4/IP6 records from pre-generated records only
+  max_days      = 10   # max allowed days old before forcing an update
 
-enable        = 1
-use_generated = 0    # use IPV4/IP6 records from pre-generated records only
-max_days      = 10   # max allowed days old before forcing an update
+  geoip4_file = %APPDATA%\geoip
+  geoip6_file = %APPDATA%\geoip6
 
-geoip4_file = %APPDATA%\geoip
-geoip6_file = %APPDATA%\geoip6
+  geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
+  geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
 
-geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
-geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
+  #
+  # The address of (a local) proxy-host to fetch the above URLs from.
+  # If not set, retrieve directly.
+  #
+  proxy =
 
-#
-# The address of (a local) proxy-host to fetch the above URLs from.
-# If not set, retrieve directly.
-#
-proxy =
-
-#
-# IP2Location settings.
-#
-# To enable retrieving locations for both IPv4 and IPv6 addresses, download
-# and use a file named like IP2LOCATION-LITE-DBx.IPV6.BIN.
-# This files contains both IPv4 and IPv6 records.
-#
-# Ref. https://github.com/chrislim2888/IP2Location-C-Library
-#      http://lite.ip2location.com
-#
-ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DB11.IPV6.BIN
+  #
+  # IP2Location settings.
+  #
+  # To enable retrieving locations for both IPv4 and IPv6 addresses, download
+  # and use a file named like IP2LOCATION-LITE-DBx.IPV6.BIN.
+  # This files contains both IPv4 and IPv6 records.
+  #
+  # Ref. https://github.com/chrislim2888/IP2Location-C-Library
+  #      http://lite.ip2location.com
+  #
+  ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DB11.IPV6.BIN
 
 #
 # IDNA settings. Internationalizing Domain Names in Applications.
 #
 [idna]
-
-enable = 1
-winidn = 0
-codepage = 0
+  enable = 1
+  winidn = 0
+  codepage = 0
 
 #
 # DNSBL (Domain Name System Blacklists) settings
 #
 [DNSBL]
-enable      = 0
-test        = 0
-max_days    = 10                # max allowed age before forcing an update
-drop_file   = %APPDATA%\drop.txt
-edrop_file  = %APPDATA%\edrop.txt
-dropv6_file = %APPDATA%\dropv6.txt
+  enable      = 0
+  test        = 0
+  max_days    = 10                # max allowed age before forcing an update
+  drop_file   = %APPDATA%\drop.txt
+  edrop_file  = %APPDATA%\edrop.txt
+  dropv6_file = %APPDATA%\dropv6.txt
 
-drop_url   = http://www.spamhaus.org/drop/drop.txt
-edrop_url  = http://www.spamhaus.org/drop/edrop.txt
-dropv6_url = http://www.spamhaus.org/drop/dropv6.txt
+  drop_url   = http://www.spamhaus.org/drop/drop.txt
+  edrop_url  = http://www.spamhaus.org/drop/edrop.txt
+  dropv6_url = http://www.spamhaus.org/drop/dropv6.txt
+
+#
+# Settings for Windows' "Internet Connection Firewall" (ICF)
+# event handling.
+#
+[firewall]
+  enable    = 0       # Enable tracing of firewall events
+  show_ipv4 = 1       # Show IPv4 events?
+  show_ipv6 = 0       # Show IPv6 events?
+  show_all  = 0       # Show events for other programs besides "our" program?
+  api_level = 3       # Which API level to use in 'fw_monitor_subscribe()'.
+
 
