@@ -40,6 +40,7 @@
 #include "stkwalk.h"
 #include "overlap.h"
 #include "dump.h"
+#include "firewall.h"
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
@@ -738,9 +739,13 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   INIT_PTR (p_WSAStartup);
   rc = (*p_WSAStartup) (ver, data);
 
+  cleaned_up = 0;
+
   if (startup_count < INT_MAX)
      startup_count++;
-  cleaned_up = 0;
+
+  if (startup_count == 1 && g_cfg.firewall.monitor_enable)
+     fw_monitor_start();
 
   ENTER_CRIT();
   WSTRACE ("WSAStartup (%u.%u) --> %s",
@@ -766,8 +771,17 @@ EXPORT int WINAPI WSACleanup (void)
     startup_count--;
     cleaned_up = (startup_count == 0);
   }
+
   WSLUA_HOOK (rc, wslua_WSACleanup());
   LEAVE_CRIT();
+
+  if (g_cfg.firewall.monitor_enable)
+     TRACE (1, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
+            startup_count, cleaned_up);
+
+  /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
+   */
+  fw_monitor_stop();
   return (rc);
 }
 
