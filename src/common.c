@@ -1187,6 +1187,28 @@ int trace_puts (const char *str)
   return (rc);
 }
 
+/*
+ * Save and restore the 'g_cfg.trace_level' value:
+ *   pop = 0: set it to 0.
+ *   pop = 1: restore the global value.
+
+ * Used e.g. when firewall.c calls 'getservbyport()' in
+ * order NOT to 'WSTRACE()' for it.
+ */
+int trace_level_save_restore (int pop)
+{
+  static int val = 0;
+
+  if (pop == 0)
+  {
+    val = g_cfg.trace_level;
+    g_cfg.trace_level = 0;
+  }
+  else
+    g_cfg.trace_level = val;
+  return (val);
+}
+
 /**
  * Open an existing file (or create) in share-mode but deny other
  * processes to write to the file.

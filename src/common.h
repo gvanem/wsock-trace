@@ -185,6 +185,7 @@ extern int    trace_putc     (int ch);
 extern int    trace_putc_raw (int ch);
 extern int    trace_indent   (size_t indent);
 extern size_t trace_flush    (void);
+extern int    trace_level_save_restore (int pop);
 
 /* Init/exit functions for stuff in common.c.
  */
