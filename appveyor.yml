@@ -36,10 +36,7 @@ matrix:
   allow_failures:
      - BUILDER: watcom
        CPU:     x86
-     - BUILDER: cygwin32
-       CPU:     x86
-     - BUILDER: cygwin64
-       CPU:     x64
+     - BUILDER: cygwin
 
 #
 # todo: Get better version string.
