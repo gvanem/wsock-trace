@@ -102,6 +102,25 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 #define FW_API_HIGH    4
 #define FW_API_DEFAULT 3
 
+#if defined(TEST_FIREWALL)
+  #define TIME_STRING_FMT  "\n~1%s: "
+  #define INDENT_SZ        2
+#else
+
+  /* Similar as to wsock_trace.c shows a time-stamp.
+   */
+  #define TIME_STRING_FMT "\n  ~1* %s: "
+  #define INDENT_SZ        (2 + g_cfg.trace_indent)
+
+  static int64 FILETIME_to_usec (const FILETIME *ft)
+  {
+    int64 res = (int64) ft->dwHighDateTime << 32;
+
+    res |= ft->dwLowDateTime;
+    return (res / 10);   /* from 100 nano-sec periods to usec */
+  }
+#endif
+
 typedef enum FW_STORE_TYPE {
              FW_STORE_TYPE_INVALID,
              FW_STORE_TYPE_GP_RSOP,
@@ -1173,11 +1192,13 @@ static BOOL   fw_show_ipv6     = TRUE;
         fw_event_callback##event_ver (void *context,                                     \
                  const _FWPM_NET_EVENT##callback_ver *event)                             \
         {                                                                                \
+          /* ENTER_CRIT(); */                                                            \
           if (!event) {                                                                  \
             trace_printf ("~4event == NULL!\n~0");                                       \
             fw_num_ignored++;                                                            \
           }                                                                              \
           else {                                                                         \
+            TRACE (2, "  %s(): thr-id: %lu.\n", __FUNCTION__, GetCurrentThreadId());     \
             fw_event_callback (event->type,                                              \
                                (const _FWPM_NET_EVENT_HEADER3*)&event->header,           \
                                event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?       \
@@ -1186,6 +1207,7 @@ static BOOL   fw_show_ipv6     = TRUE;
                                  (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0*) allow : NULL); \
           }                                                                              \
           ARGSUSED (context);                                                            \
+          /* LEAVE_CRIT(); */                                                            \
         }
 
 static void CALLBACK fw_event_callback (const UINT                             event_type,
@@ -1630,7 +1652,8 @@ static void print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
 
   if (id && (*p_FwpmLayerGetById0)(fw_engine_handle, id, &layer_item) == ERROR_SUCCESS)
   {
-    trace_printf ("  layer-item:  %S\n", layer_item->displayData.name);
+    trace_indent (INDENT_SZ);
+    trace_printf ("layer-item:  %S\n", layer_item->displayData.name);
     (*p_FwpmFreeMemory0) ((void**)&layer_item);
   }
 }
@@ -1648,7 +1671,8 @@ static void print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
 
   if (id && (*p_FwpmFilterGetById0)(fw_engine_handle, id, &filter_item) == ERROR_SUCCESS)
   {
-    trace_printf ("  filter-item: %S\n", filter_item->displayData.name);
+    trace_indent (INDENT_SZ);
+    trace_printf ("filter-item: %S\n", filter_item->displayData.name);
     (*p_FwpmFreeMemory0) ((void**)&filter_item);
   }
 }
@@ -1667,23 +1691,6 @@ static void print_user_id (const xx *header)
  * Unless we're in the 'firewall_test.exe' program, this should return a
  * time-string matching the format of 'g_cfg.trace_time_format'.
  */
-#if defined(TEST_FIREWALL)
-  #define TIME_STRING_FMT "\n~1%s: "
-#else
-
-  /* Similar as to wsock_trace.c shows a time-stamp.
-   */
-  #define TIME_STRING_FMT "\n  ~1* ~3%s: "
-
-  static int64 FILETIME_to_usec (const FILETIME *ft)
-  {
-    int64 res = (int64) ft->dwHighDateTime << 32;
-
-    res |= ft->dwLowDateTime;
-    return (res / 10);   /* from 100 nano-sec periods to usec */
-  }
-#endif
-
 static const char *get_time_string (const FILETIME *ts)
 {
   static char time_str [30];
@@ -1753,7 +1760,9 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
   {
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
     country  = geoip_get_long_name_by_A2 (country);
-    trace_printf ("\n  loc:  %s, %s", country, location ? location : "?");
+    trace_putc ('\n');
+    trace_indent (INDENT_SZ);
+    trace_printf ("loc:  %s, %s", country, location ? location : "?");
   }
 }
 
@@ -1762,6 +1771,9 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
 static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, u_short port, char *port_str)
 {
   struct servent *se = NULL;
+
+  if (header->ipProtocol != IPPROTO_UDP && header->ipProtocol != IPPROTO_TCP)
+     return ("-");
 
   /* If called when wsock_trace.dll is active, we might get "late events".
    * Hence we cannot call 'getservbyport()' after a 'WSACleanup()'.
@@ -1842,11 +1854,13 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 
   get_ports (header, &local_port, &remote_port);
 
+  trace_indent (INDENT_SZ);
+
   if (direction_in)
-       trace_printf ("  addr: %s -> %s, ports: %s / %s",
+       trace_printf ("addr: %s -> %s, ports: %s / %s",
                      remote_addr, local_addr, remote_port, local_port);
 
-  else trace_printf ("  addr: %s -> %s, ports: %s / %s",
+  else trace_printf ("addr: %s -> %s, ports: %s / %s",
                      local_addr, remote_addr, local_port, remote_port);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
@@ -1885,11 +1899,13 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 
   get_ports (header, &local_port, &remote_port);
 
+  trace_indent (INDENT_SZ);
+
   if (direction_in)
-       trace_printf ("  addr: %s -> %s, ports: %s / %s",
+       trace_printf ("addr: %s -> %s, ports: %s / %s",
                      remote_addr, local_addr, remote_port, local_port);
 
-  else trace_printf ("  addr: %s -> %s, ports: %s / %s",
+  else trace_printf ("addr: %s -> %s, ports: %s / %s",
                      local_addr, remote_addr, local_port, remote_port);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
@@ -2143,7 +2159,9 @@ static void CALLBACK
 #if 0
       get_actual_filename (&header->appId.size, FALSE);
 #endif
-      trace_printf ("\n  app:  %.*S",
+      trace_putc ('\n');
+      trace_indent (INDENT_SZ);
+      trace_printf ("app:  %.*S",
                     header->appId.size,
                     /* cast from 'UINT8' to 'wchar_t*' to shut up gcc */
                     (const wchar_t*)header->appId.data);
