@@ -178,8 +178,8 @@ extern int  get_column (void);
 
 extern void init_ptr (const void **ptr, const char *ptr_name);
 
-extern BOOL exclude_list_add (const char *name);
-extern BOOL exclude_list_get (const char *fmt);
+extern BOOL exclude_list_add (const char *name, BOOL is_func);
+extern BOOL exclude_list_get (const char *fmt, BOOL is_func);
 extern BOOL exclude_list_free (void);
 
 extern const char *config_file_name (void);

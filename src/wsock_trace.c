@@ -75,20 +75,20 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
  *   Do NOT add a trailing ".~0\n"; it's done in this macro.
  *
  * If "g_cfg.trace_caller == 0" or "WSAStartup" is in the
- * "g_cfg.exclude_list[]", the '!exclude_list_get("WSAStartup...")'
+ * 'exclude_list' smartlist, the '!exclude_list_get("WSAStartup...",TRUE)'
  * returns FALSE.
  */
-#define WSTRACE(fmt, ...)                                   \
-  do {                                                      \
-    exclude_this = TRUE;                                    \
-    if (g_cfg.trace_level > 0 && !exclude_list_get(fmt)) {  \
-       exclude_this = FALSE;                                \
-       wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",            \
-                       get_timestamp(),                     \
-                       get_caller (GET_RET_ADDR(),          \
-                                   get_EBP()) );            \
-       wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
-    }                                                       \
+#define WSTRACE(fmt, ...)                                        \
+  do {                                                           \
+    exclude_this = TRUE;                                         \
+    if (g_cfg.trace_level > 0 && !exclude_list_get(fmt, TRUE)) { \
+       exclude_this = FALSE;                                     \
+       wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",                 \
+                       get_timestamp(),                          \
+                       get_caller (GET_RET_ADDR(),               \
+                                   get_EBP()) );                 \
+       wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__);      \
+    }                                                            \
   } while (0)
 
 
@@ -1074,7 +1074,7 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByNameA"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByNameA", TRUE));
   if (!exclude_this)
   {
     if (!tv)
@@ -1108,7 +1108,7 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByNameW"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByNameW", TRUE));
   if (!exclude_this)
   {
     if (!tv)
@@ -1141,7 +1141,7 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByList"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAConnectByList", TRUE));
   if (!exclude_this)
   {
     if (!tv)
@@ -1407,7 +1407,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
   /* Set the global and local 'exclude_this' values
    */
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("select"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("select", TRUE));
   _exclude_this = exclude_this;
 
   if (!_exclude_this)
@@ -1527,7 +1527,7 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("recv"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("recv", TRUE));
 
   if (rc >= 0)
   {
@@ -1573,7 +1573,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("recvfrom"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("recvfrom", TRUE));
 
   if (rc >= 0)
   {
@@ -1630,7 +1630,7 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("send"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("send", TRUE));
 
   if (rc >= 0)
        g_cfg.counts.send_bytes += rc;
@@ -1671,7 +1671,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("sendto"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("sendto", TRUE));
 
   if (rc >= 0)
        g_cfg.counts.send_bytes += rc;
@@ -1736,7 +1736,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecv"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecv", TRUE));
   size = bufs->len * num_bufs;
 
   if (rc == NO_ERROR)
@@ -1788,7 +1788,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvFrom"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvFrom", TRUE));
   size = bufs->len * num_bufs;
 
   if (rc == NO_ERROR)
@@ -1848,7 +1848,7 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvEx"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvEx", TRUE));
 
   if (rc >= 0)
        g_cfg.counts.recv_bytes += rc;
@@ -1922,7 +1922,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
   }
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASend"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASend", TRUE));
 
   if (!exclude_this)
   {
@@ -1976,7 +1976,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
     g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
   }
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendTo"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendTo", TRUE));
 
   if (!exclude_this)
   {
@@ -2027,7 +2027,7 @@ EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_byt
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendMsg"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendMsg", TRUE));
 
   if (!exclude_this)
   {
@@ -2204,7 +2204,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAPoll"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAPoll", TRUE));
 
   if (!exclude_this && fd_array)
   {
@@ -2285,7 +2285,7 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAWaitForMultipleEvents"));
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAWaitForMultipleEvents", TRUE));
 
   if (!exclude_this)
   {

@@ -216,4 +216,9 @@
   show_all  = 0       # Show events for other programs besides "our" program?
   api_level = 3       # Which API level to use in 'fw_monitor_subscribe()'.
 
+  #
+  # Don't report event for these programs:
+  #
+  exclude = svchost.exe, System
+
 

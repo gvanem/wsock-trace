@@ -47,10 +47,13 @@ const char *ws_sema_name = "Global\\wsock_trace-semaphore";
 
 /*
  * Structure for 'exclude_list*()' functions.
+ * This is used to exclude both tracing of functions and
+ * programs ("addId") in firewall.c.
  */
 struct exclude {
+       int     is_func;       /* below 'name' is for an excluded function (otherwise a program) */
        char   *name;          /* name of function to exclude from the trace */
-       uint64  num_excludes;  /* # of times this function was excluded */
+       uint64  num_excludes;  /* # of times this function / program was excluded */
      };
 
 /* Dynamic array of above exclude structure.
@@ -341,20 +344,22 @@ static int config_get_line (FILE        *fil,
   return (1);
 }
 
-/*
+/**
  * Given a C-format, extract the 1st word from it and check
- * if it should be excluded from tracing. We always assume
- * that 'fmt' starts with a function-name. Using 'strnicmp()'
- * avoids copying 'fmt' into a local buffer first.
+ * if the function / program should be excluded from tracing.
+ *
+ * We always assume that `fmt` starts with a valid name.
+ * Using `strnicmp()` avoids copying `fmt` into a local
+ * buffer first.
  */
-BOOL exclude_list_get (const char *fmt)
+BOOL exclude_list_get (const char *fmt, BOOL is_func)
 {
   size_t len;
   int    i, max;
 
   /* If no tracing of any callers, that should exclude everything.
    */
-  if (g_cfg.trace_caller <= 0)
+  if (is_func && g_cfg.trace_caller <= 0)
      return (TRUE);
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
@@ -364,7 +369,8 @@ BOOL exclude_list_get (const char *fmt)
     struct exclude *ex = smartlist_get (exclude_list, i);
 
     len = strlen (ex->name);
-    if (!strnicmp(fmt, ex->name, len))
+    if (ex->is_func == is_func &&
+        !strnicmp(fmt, ex->name, len))
     {
       ex->num_excludes++;
       return (TRUE);
@@ -392,32 +398,68 @@ BOOL exclude_list_free (void)
  * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
-static BOOL _exclude_list_add (const char *name)
+static BOOL _exclude_list_add (const char *name, BOOL is_func)
 {
   struct exclude *ex;
+  const char     *p = name;
+  size_t          len = strlen (p);
 
-  if (!isalpha((int)*name))
-     return (FALSE);
-
-  ex = malloc (sizeof(*ex)+strlen(name)+1);
+  if (!is_func)
+  {
+    if (strchr(p+1,'"') > strchr(p,'"'))
+    {
+      len = strlen (name) - 2;
+      p++;
+    }
+  }
+  else if (!isalpha((int)*p))
+          return (FALSE);
 
   if (!exclude_list)
      exclude_list = smartlist_new();
+
+  ex = malloc (sizeof(*ex)+len+1);
   ex->num_excludes = 0;
-  ex->name = strcpy ((char*)(ex+1), name);
+  ex->is_func      = is_func;
+  ex->name         = _strlcpy ((char*)(ex+1), p, len+1);
   smartlist_add (exclude_list, ex);
+
+  if (!is_func)
+    TRACE (1, "_exclude_list_add() of '%s'.\n", ex->name);
   return (TRUE);
 }
 
-/*
- * Handler for "exclude = func1, func2"
+/**
+ * Handler for `"exclude = func1, func2"` or <br>
+ *             `"exclude = prog1, prog2"`.
+ *
+ * If `is_func == FALSE` (a program), allow a `name` with quotes (`""`).
+ * But remove those before storing the `name`.
  */
-BOOL exclude_list_add (const char *name)
+BOOL exclude_list_add (const char *name, BOOL is_func)
 {
-  char *tok, *copy = strdup (name);
+  const char *tok_fmt = " ,";
+  char       *p, *tok, *copy = strdup (name);
 
-  for (tok = strtok(copy," ,"); tok; tok = strtok(NULL," ,"))
-      _exclude_list_add (tok);
+  p = copy;
+  if (!is_func)
+  {
+    char *end;
+    while (*p == '"')
+       p++;
+    end = strrchr (p, '"');
+    if (p > copy && end > p)
+       *end = '\0';
+    tok_fmt = ",";
+  }
+
+  for (tok = strtok(p,tok_fmt); tok; tok = strtok(NULL,tok_fmt))
+  {
+    while (!is_func && *tok == ' ')
+       tok++;
+    _exclude_list_add (tok, is_func);
+  }
+
   free (copy);
   return (TRUE);
 }
@@ -521,7 +563,7 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
      g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
 
   else if (!stricmp(key,"exclude"))
-     exclude_list_add (val);
+     exclude_list_add (val, TRUE);
 
   else if (!stricmp(key,"hook_extensions"))
      g_cfg.hook_extensions = atoi (val);
@@ -781,6 +823,9 @@ static void parse_firewall_settings (const char *key, const char *val, unsigned 
 
   else if (!stricmp(key,"api_level"))
        g_cfg.firewall.api_level = atoi (val);
+
+  else if (!stricmp(key,"exclude"))
+     exclude_list_add (val, FALSE);
 
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
