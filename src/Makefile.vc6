@@ -102,6 +102,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
                   $(OBJ_DIR)\dnsbl.obj           \
                   $(OBJ_DIR)\dump.obj            \
                   $(OBJ_DIR)\hosts.obj           \
+                  $(OBJ_DIR)\firewall.obj        \
                   $(OBJ_DIR)\geoip.obj           \
                   $(OBJ_DIR)\geoip-gen4.obj      \
                   $(OBJ_DIR)\geoip-gen6.obj      \

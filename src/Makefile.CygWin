@@ -44,7 +44,7 @@ endif
 EX_LIBS += -lole32
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
-          common.c cpu.c dnsbl.c dump.c geoip.c geoip-gen4.c geoip-gen6.c \
+          common.c cpu.c dnsbl.c dump.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c \
           in_addr.c ip2loc.c overlap.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
