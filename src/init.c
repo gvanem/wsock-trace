@@ -1664,7 +1664,7 @@ uint64 FILETIME_to_unix_epoch (const FILETIME *ft)
 
 time_t FILETIME_to_time_t (const FILETIME *ft)
 {
-   return (FILETIME_to_unix_epoch (ft) / U64_SUFFIX(1000000));
+  return (FILETIME_to_unix_epoch (ft) / U64_SUFFIX(1000000));
 }
 
 static void _gettimeofday (struct pcap_timeval *tv)
