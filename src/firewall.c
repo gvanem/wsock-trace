@@ -2250,7 +2250,6 @@ int main (int argc, char **argv)
   WORD    ver = MAKEWORD(1,1);
 
   wsock_trace_init();
-//geoip_exit();
 
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_indent  = 0;
@@ -2286,18 +2285,6 @@ int main (int argc, char **argv)
       case 'h':
            return show_help (argv[0]);
     }
-
-#if 0
-  g_cfg.geoip_use_generated = TRUE;
-
-  if (g_cfg.firewall.show_ipv4)
-     geoip_load_data (AF_INET);
-
-  if (g_cfg.firewall.show_ipv6)
-     geoip_load_data (AF_INET6);
-
-  ip2loc_init();
-#endif
 
   program = set_net_program (argc - optind, argv + optind);
 
@@ -2350,8 +2337,8 @@ int main (int argc, char **argv)
   trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
                 program ? program : "no program",
                 g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv4/6 " :
-                g_cfg.firewall.show_ipv4 && !g_cfg.firewall.show_ipv6 ? "IPv4 "  :
-               !g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv6 "  : "non-IPv4/IPv6 ");
+                g_cfg.firewall.show_ipv4 && !g_cfg.firewall.show_ipv6 ? "IPv4 "   :
+               !g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ");
 
   if (!program)
      goto quit;
