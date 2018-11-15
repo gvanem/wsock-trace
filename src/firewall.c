@@ -1126,8 +1126,6 @@ static HANDLE fw_event_handle  = NULL;
 static DWORD  fw_num_rules     = 0;
 static DWORD  fw_num_events    = 0;
 static DWORD  fw_num_ignored   = 0;
-static BOOL   fw_show_ipv4     = TRUE;
-static BOOL   fw_show_ipv6     = TRUE;
 static UINT   fw_acp;
 
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, drop, allow)                          \
@@ -1190,11 +1188,6 @@ static BOOL fw_load_funcs (void)
      return (TRUE);
 
   fw_acp = GetConsoleCP();
-
-#if !defined(TEST_FIREWALL)
-  fw_show_ipv4 = g_cfg.firewall.show_ipv4;
-  fw_show_ipv6 = g_cfg.firewall.show_ipv6;
-#endif
 
   /* Functions never loaded.
    */
@@ -2070,8 +2063,8 @@ static void CALLBACK
 
   if (header->flags & FWPM_NET_EVENT_FLAG_IP_VERSION_SET)
   {
-    if ( (header->ipVersion == FWP_IP_VERSION_V4 && !fw_show_ipv4) ||
-         (header->ipVersion == FWP_IP_VERSION_V6 && !fw_show_ipv6) )
+    if ( (header->ipVersion == FWP_IP_VERSION_V4 && !g_cfg.firewall.show_ipv4) ||
+         (header->ipVersion == FWP_IP_VERSION_V6 && !g_cfg.firewall.show_ipv6) )
     {
       fw_num_ignored++;
       TRACE (2, "Ignoring IPv%d event.\n", header->ipVersion == FWP_IP_VERSION_V4 ? 4 : 6);
@@ -2219,13 +2212,10 @@ static int show_help (const char *my_name)
           "  options:\n"
           "    -a:  the minimum API \"level\" to try (=%d-%d, default: %d).\n"
           "    -c:  only dump the callout rules                            (not yet).\n"
-          "    -d:  debug level.\n"
           "    -e:  only dump recent event                                 (not yet).\n"
           "    -l:  write the filter activity to \"log-file\" only.\n"
           "    -p:  show only activity for programs matching \"app1,app2..\" (not yet).\n"
           "    -r:  only dump the firewall rules.\n"
-          "    -4:  show IPv4 filter activity.\n"
-          "    -6:  show IPv6 filter activity (use \"-46\" to show both).\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
           "    Examples:\n"
@@ -2249,7 +2239,6 @@ int main (int argc, char **argv)
   int     dump_rules = 0;
   int     dump_callouts = 0;
   int     dump_events = 0;
-  int     debug_level = 0;
   char   *program;
   char   *only_appid = NULL;   /* \todo Capture 'appId' matching program(s) only. Support a list of 'appId's */
   char   *ignore_appid = NULL; /* \todo Ignore 'appId' matching program(s). Support a list of 'appId's */
@@ -2261,24 +2250,19 @@ int main (int argc, char **argv)
   WORD    ver = MAKEWORD(1,1);
 
   wsock_trace_init();
-  geoip_exit();
+//geoip_exit();
 
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
-  g_cfg.trace_level   = 0;
   g_cfg.trace_indent  = 0;
 
-  fw_show_ipv4 = fw_show_ipv6 = FALSE;
   setlocale (LC_CTYPE, "");
   tzset();
 
-  while ((ch = getopt(argc, argv, "a:h?cdei:l:p:r46")) != EOF)
+  while ((ch = getopt(argc, argv, "a:h?cei:l:p:r")) != EOF)
     switch (ch)
     {
       case 'a':
            fw_lowest_api = atoi (optarg);
-           break;
-      case 'd':
-           debug_level++;
            break;
       case 'c':
            dump_callouts = 1;
@@ -2298,27 +2282,22 @@ int main (int argc, char **argv)
       case 'r':
            dump_rules = 1;
            break;
-      case '4':
-           fw_show_ipv4 = TRUE;
-           break;
-      case '6':
-           fw_show_ipv6 = TRUE;
-           break;
       case '?':
       case 'h':
            return show_help (argv[0]);
     }
 
+#if 0
   g_cfg.geoip_use_generated = TRUE;
-  g_cfg.trace_level = debug_level;
 
-  if (fw_show_ipv4)
+  if (g_cfg.firewall.show_ipv4)
      geoip_load_data (AF_INET);
 
-  if (fw_show_ipv6)
+  if (g_cfg.firewall.show_ipv6)
      geoip_load_data (AF_INET6);
 
   ip2loc_init();
+#endif
 
   program = set_net_program (argc - optind, argv + optind);
 
@@ -2345,6 +2324,7 @@ int main (int argc, char **argv)
 
     if (dump_callouts)
        fw_enumerate_callouts();
+
     goto quit;
   }
 
@@ -2369,9 +2349,9 @@ int main (int argc, char **argv)
 
   trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
                 program ? program : "no program",
-                fw_show_ipv4 &&  fw_show_ipv6 ? "IPv4/6 " :
-                fw_show_ipv4 && !fw_show_ipv6 ? "IPv4 "  :
-               !fw_show_ipv4 &&  fw_show_ipv6 ? "IPv6 "  : "non-IPv4/IPv6 ");
+                g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv4/6 " :
+                g_cfg.firewall.show_ipv4 && !g_cfg.firewall.show_ipv6 ? "IPv4 "  :
+               !g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv6 "  : "non-IPv4/IPv6 ");
 
   if (!program)
      goto quit;
