@@ -76,7 +76,7 @@ install:
   #
   - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
 
-  - cmd: if %CPU. == x86. (
+  - cmd: if "%CPU%" == "x86" (
            if "%BUILDER%"=="mingw"  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
            if "%BUILDER%"=="cygwin" c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
          ) else (
