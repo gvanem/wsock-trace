@@ -104,14 +104,6 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
    */
   #define TIME_STRING_FMT "\n  ~1* %s: "
   #define INDENT_SZ        (2 + g_cfg.trace_indent)
-
-  static int64 FILETIME_to_usec (const FILETIME *ft)
-  {
-    int64 res = (int64) ft->dwHighDateTime << 32;
-
-    res |= ft->dwLowDateTime;
-    return (res / 10);   /* from 100 nano-sec periods to usec */
-  }
 #endif
 
 typedef enum FW_STORE_TYPE {
@@ -1144,6 +1136,7 @@ static UINT   fw_acp;
                  const _FWPM_NET_EVENT##callback_ver *event)                             \
         {                                                                                \
        /* ENTER_CRIT(); */                                                               \
+       /* ws_sema_wait(); */                                                             \
           if (!event) {                                                                  \
             trace_printf ("~4event == NULL!\n~0");                                       \
             fw_num_ignored++;                                                            \
@@ -1197,6 +1190,11 @@ static BOOL fw_load_funcs (void)
      return (TRUE);
 
   fw_acp = GetConsoleCP();
+
+#if !defined(TEST_FIREWALL)
+  fw_show_ipv4 = g_cfg.firewall.show_ipv4;
+  fw_show_ipv6 = g_cfg.firewall.show_ipv6;
+#endif
 
   /* Functions never loaded.
    */
@@ -1635,25 +1633,26 @@ static void print_user_id (const xx *header)
 #endif
 
 /**
+ *
+ * Return number of micro-sec from a `FILETIME`.
+ */
+static int64 FILETIME_to_usec (const FILETIME *ft)
+{
+  int64 res = (int64) ft->dwHighDateTime << 32;
+
+  res |= ft->dwLowDateTime;
+  return (res / 10);   /* from 100 nano-sec periods to usec */
+}
+
+/**
  * Return a time-string for an event.
  *
- * Unless we're in the 'firewall_test.exe' program, this should return a
- * time-string matching the format of 'g_cfg.trace_time_format'.
+ * This return a time-string matching `g_cfg.trace_time_format`.
+ * Ref. `get_timestamp()`.
  */
 static const char *get_time_string (const FILETIME *ts)
 {
-  static char time_str [30];
-
-#if defined(TEST_FIREWALL)
-  time_t       ct = FILETIME_to_time_t (ts);
-  const struct tm *tm = localtime (&ct);
-
-  if (tm)
-       strftime (time_str, sizeof(time_str), "%H:%M:%S", tm);
-  else strcpy (time_str, "??");
-  return (time_str);
-
-#else
+  static char  time_str [30];
   static int64 ref_ts  = S64_SUFFIX(0);
   static int64 last_ts = S64_SUFFIX(0);
   int64  diff;
@@ -1697,7 +1696,6 @@ static const char *get_time_string (const FILETIME *ts)
               sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
   }
   return (time_str);
-#endif
 }
 
 static void print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
