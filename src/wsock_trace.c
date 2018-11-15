@@ -3045,7 +3045,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          crtdbg_init();
          wsock_trace_init();
 #if 0
-         smartlist_add (thread_list, GetCurrentThreadId());
+         smartlist_add (thread_list, tid);
 #endif
 #if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);
@@ -3053,10 +3053,13 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          break;
 
     case DLL_PROCESS_DETACH:
+         tid = GetCurrentThreadId();
+#if 0
+         smartlist_remove (thread_list, tid);
+#endif
 #if defined(USE_LUA)
          wslua_DllMain (instDLL, reason);
 #endif
-         tid = GetCurrentThreadId();
          wsock_trace_exit();
          crtdbg_exit();
          break;
