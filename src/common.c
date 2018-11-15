@@ -1613,7 +1613,7 @@ int file_exists (const char *fname)
  * runtime.
  *
  * The .lua-scripts needs this information to know which .DLL to integrate with.
- * Some of these functions are also calle from geoip.c.
+ * Some of these functions are also called from geoip.c.
  */
 #include "wsock_trace.rc"
 
