@@ -221,4 +221,9 @@
   #
   exclude = svchost.exe, System
 
-
+  #
+  # TODO:
+  # Don't report event for these source / destination addresses:
+  #
+  exclude = 239.255.255.250            # SSDP protocol from svchost.exe
+  exclude = 224.0.0.251, 224.0.0.252   # IGMP protocol from System
