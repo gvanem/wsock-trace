@@ -30,10 +30,10 @@ struct ipv6_node {
  * A structure as returned from functions in ip2loc.c.
  */
 struct ip2loc_entry {
-       char country_short [3];  /**< The short country name of this entry */
-       char country_long [30];  /**< The full country name of this entry */
-       char city   [40];        /**< The city name of this entry (if any) */
-       char region [40];        /**< The region name of this entry (if any) */
+       char country_short [3];     /**< The short country name of this entry */
+       char country_long  [30];    /**< The full country name of this entry */
+       char city          [40];    /**< The city name of this entry (if any) */
+       char region        [40];    /**< The region name of this entry (if any) */
      };
 
 extern int         geoip_init (DWORD *_num4, DWORD *_num6);

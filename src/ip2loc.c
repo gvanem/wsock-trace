@@ -38,6 +38,10 @@
                       ((a)->s6_words[4] == 0) && ((a)->s6_words[5] == 0xFFFF) )
 #endif
 
+#if defined(__CYGWIN__)
+  #define _byteswap_ulong(x)   swap32(x)
+#endif
+
 /*
  * Previously ip2loc.c used the IP2Location-C-Library as a `git submodule`.
  * But now, I've simply pasted in the code from:
@@ -48,32 +52,16 @@
  *
  * below, patched heavily and removed stuff not needed.
  *
+ * Most importantly, it uses only shared-memory access without calling `calloc()`
+ * and `strdup()` to return any results. Just copy to a `ip2loc_entry` entry as
+ * needed.
+ *
  * IP2Location C library is distributed under MIT license
  * Copyright (c) 2013-2015 IP2Location.com. support at ip2location dot com
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the MIT license
  */
-
-/**
- * \def IP2LOC_NO_ALLOC
- *
- * Use only shared-memory access without calling `calloc()` and `strdup()`
- * to return any results. Just copy to a `ip2loc_entry` entry as needed.
- */
-#define IP2LOC_NO_ALLOC  1
-
-/**
- * \def IP2LOC_COMPLETE
- *
- * Compile in all original IP2Location functions?
- * Not needed in Wsock-Trace due to below `IP2LOC_FLAGS`.
- */
-#define IP2LOC_COMPLETE  0
-
-#if (IP2LOC_COMPLETE && IP2LOC_NO_ALLOC)
-#error "'IP2LOC_NO_ALLOC=1' and 'IP2LOC_NO_ALLOC=1' is not supported."
-#endif
 
 /**
  * \def API_VERSION_MAJOR
@@ -95,39 +83,6 @@
 #define REGION                0x00004
 #define CITY                  0x00008
 
-#if (IP2LOC_COMPLETE == 1)
-  #define ISP                 0x00010
-  #define LATITUDE            0x00020
-  #define LONGITUDE           0x00040
-  #define DOMAIN_             0x00080
-  #define ZIPCODE             0x00100
-  #define TIMEZONE            0x00200
-  #define NETSPEED            0x00400
-  #define IDDCODE             0x00800
-  #define AREACODE            0x01000
-  #define WEATHERSTATIONCODE  0x02000
-  #define WEATHERSTATIONNAME  0x04000
-  #define MCC                 0x08000
-  #define MNC                 0x10000
-  #define MOBILEBRAND         0x20000
-  #define ELEVATION           0x40000
-  #define USAGETYPE           0x80000
-
-  #define ALL                 (COUNTRYSHORT | COUNTRYLONG | REGION | CITY | ISP | LATITUDE | \
-                               LONGITUDE | DOMAIN_ | ZIPCODE | TIMEZONE | NETSPEED | IDDCODE | \
-                               AREACODE | WEATHERSTATIONCODE | WEATHERSTATIONNAME | MCC | MNC | \
-                               MOBILEBRAND | ELEVATION | USAGETYPE)
-
-  #define INVALID_IPV4_ADDR   "INVALID IPV4 ADDRESS"
-#endif
-
-#if (IP2LOC_NO_ALLOC)
-  #define STR_NOT_SUPPORTED()  NULL
-#else
-  #define STR_NOT_SUPPORTED()  strdup ("This parameter is unavailable for selected data file. " \
-                                       "Please upgrade the data file.")
-#endif
-
 /**\def IP2LOC_FLAGS
  * The flags used to look up a location record with a <i>short country</i>,
  * <i>long country</i> name, <i>region</i> and <i>city</i>.
@@ -144,66 +99,34 @@ typedef struct IP2Location {
         uint64      sh_mem_max;
         uint64      sh_mem_index_errors;
         HANDLE      sh_mem_fd;
-        struct stat statbuf;
-        uint8_t     databasetype;
-        uint8_t     databasecolumn;
-        uint8_t     databaseday;
-        uint8_t     databasemonth;
-        uint8_t     databaseyear;
-        uint32_t    databasecount;
-        uint32_t    databaseaddr;
-        uint32_t    ipversion;
-        uint32_t    ipv4databasecount;
-        uint32_t    ipv4databaseaddr;
-        uint32_t    ipv6databasecount;
-        uint32_t    ipv6databaseaddr;
-        uint32_t    ipv4indexbaseaddr;
-        uint32_t    ipv6indexbaseaddr;
+        struct stat stat_buf;
+        uint8_t     db_type;
+        uint8_t     db_column;
+        uint8_t     db_day;
+        uint8_t     db_month;
+        uint8_t     db_year;
+        uint32_t    db_count;
+        uint32_t    db_addr;
+        uint32_t    ip_version;
+        uint32_t    ipv4_db_count;
+        uint32_t    ipv4_db_addr;
+        uint32_t    ipv6_db_count;
+        uint32_t    ipv6_db_addr;
+        uint32_t    ipv4_index_db_addr;
+        uint32_t    ipv6_index_db_addr;
       } IP2Location;
 
-typedef struct IP2LocationRecord {
-        char  *country_short;
-        char  *country_long;
-        char  *region;
-        char  *city;
-#if (IP2LOC_COMPLETE == 1)
-        char  *isp;
-        float  latitude;
-        float  longitude;
-        char  *domain;
-        char  *zipcode;
-        char  *timezone;
-        char  *netspeed;
-        char  *iddcode;
-        char  *areacode;
-        char  *weatherstationcode;
-        char  *weatherstationname;
-        char  *mcc;
-        char  *mnc;
-        char  *mobilebrand;
-        float  elevation;
-        char  *usagetype;
-#endif
-      } IP2LocationRecord;
-
-typedef struct in6_addr_local {
-        union {
-          uint8_t addr8[16];
-          uint8_t addr16[8];
-        } u;
-      } in6_addr_local;
-
 typedef struct ipv_t {
-        uint32_t       ipversion;
-        uint32_t       ipv4;
-        in6_addr_local ipv6;
+        uint32_t        ipversion;
+        uint32_t        ipv4;
+        struct in6_addr ipv6;
       } ipv_t;
 
 /**
  * The global handle for all IP2Location access.
  * Returned from `open_file()`.
  */
-static IP2Location *ip2loc_handle;
+static struct IP2Location *ip2loc_handle;
 
 /** Number of loops in `IP2Location_get_ipv4_record()` to find an IPv4 entry.
  */
@@ -217,67 +140,14 @@ static uint8_t COUNTRY_POSITION[25] = { 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 static uint8_t REGION_POSITION[25]  = { 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
 static uint8_t CITY_POSITION[25]    = { 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
 
-#if (IP2LOC_COMPLETE == 1)
-  static uint8_t ISP_POSITION[25]                 = { 0, 0, 3, 0, 5, 0, 7, 5, 7, 0, 8, 0, 9, 0, 9, 0, 9, 0, 9, 7, 9, 0, 9, 7, 9 };
-  static uint8_t LATITUDE_POSITION[25]            = { 0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
-  static uint8_t LONGITUDE_POSITION[25]           = { 0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 };
-  static uint8_t DOMAIN_POSITION[25]              = { 0, 0, 0, 0, 0, 0, 0, 6, 8, 0, 9, 0, 10,0, 10, 0, 10, 0, 10, 8, 10, 0, 10, 8, 10 };
-  static uint8_t ZIPCODE_POSITION[25]             = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 0, 7, 7, 7, 0, 7, 0, 7, 7, 7, 0, 7 };
-  static uint8_t TIMEZONE_POSITION[25]            = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 7, 8, 8, 8, 7, 8, 0, 8, 8, 8, 0, 8 };
-  static uint8_t NETSPEED_POSITION[25]            = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11,0, 11,8, 11, 0, 11, 0, 11, 0, 11 };
-  static uint8_t IDDCODE_POSITION[25]             = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 12, 0, 12, 0, 12, 9, 12, 0, 12 };
-  static uint8_t AREACODE_POSITION[25]            = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 ,13 ,0, 13, 0, 13, 10, 13, 0, 13 };
-  static uint8_t WEATHERSTATIONCODE_POSITION[25]  = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 14, 0, 14, 0, 14, 0, 14 };
-  static uint8_t WEATHERSTATIONNAME_POSITION[25]  = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 15, 0, 15, 0, 15 };
-  static uint8_t MCC_POSITION[25]                 = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 16, 0, 16, 9, 16 };
-  static uint8_t MNC_POSITION[25]                 = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10,17, 0, 17, 10, 17 };
-  static uint8_t MOBILEBRAND_POSITION[25]         = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11,18, 0, 18, 11, 18 };
-  static uint8_t ELEVATION_POSITION[25]           = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19 };
-  static uint8_t USAGETYPE_POSITION[25]           = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20 };
-#endif
-
-static void               IP2Location_initialize (IP2Location *loc);
-static in6_addr_local     IP2Location_readIPv6Address (IP2Location *loc, uint32_t position);
-static uint32_t           IP2Location_read32 (IP2Location *loc, uint32_t position);
-static uint8_t            IP2Location_read8 (IP2Location *loc, uint32_t position);
-static char              *IP2Location_readStr (IP2Location *loc, uint32_t position);
-static float              IP2Location_readFloat (IP2Location *loc, uint32_t position);
-static int32_t            IP2Location_DB_set_shared_memory (IP2Location *loc);
-static void               IP2Location_close (IP2Location *loc);
-static unsigned           IP2Location_api_version_num (void);
-static const char        *IP2Location_api_version_string (void);
-static IP2LocationRecord *IP2Location_new_record (void);
-static void               IP2Location_free_record (IP2LocationRecord *record);
-static IP2LocationRecord *IP2Location_get_ipv4_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv);
-static IP2LocationRecord *IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv);
-
-#if (IP2LOC_COMPLETE == 1)
-  static IP2LocationRecord  *IP2Location_get_country_short (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_country_long (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_region (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_city (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_isp (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_latitude (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_longitude (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_domain (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_zipcode (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_timezone (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_netspeed (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_iddcode (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_areacode (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_weatherstationcode (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_weatherstationname (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_mcc (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_mnc (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_mobilebrand (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_elevation (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_usagetype (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_all (IP2Location *loc, const char *ip);
-  static IP2LocationRecord  *IP2Location_get_record (IP2Location *loc, const char *ip, uint32_t mode);
-  static uint32_t            IP2Location_ip2no (const char *ip);
-  static int                 IP2Location_ip_is_ipv4 (const char *ip);
-  static int                 IP2Location_ip_is_ipv6 (const char *ip);
-#endif
+static void        IP2Location_initialize (IP2Location *loc);
+static void        IP2Location_read_ipv6_addr (IP2Location *loc, uint32_t position, struct in6_addr *addr);
+static uint32_t    IP2Location_read32 (IP2Location *loc, uint32_t position);
+static uint8_t     IP2Location_read8 (IP2Location *loc, uint32_t position);
+static int32_t     IP2Location_DB_set_shared_memory (IP2Location *loc);
+static void        IP2Location_close (IP2Location *loc);
+static unsigned    IP2Location_api_version_num (void);
+static const char *IP2Location_api_version_string (void);
 
 /**
  * Open and initialise access to the IP2Location library and binary data-file.
@@ -286,9 +156,9 @@ static IP2LocationRecord *IP2Location_get_ipv6_record (IP2Location *loc, uint32_
  */
 static IP2Location *open_file (const char *fname)
 {
-  IP2Location *loc = calloc (1, sizeof(*loc));
-  UINT         IPvX;
-  BOOL         is_IPv4_only, is_IPv6_only;
+  struct IP2Location *loc = calloc (1, sizeof(*loc));
+  UINT   IPvX;
+  BOOL   is_IPv4_only, is_IPv6_only;
 
   loc->file = fopen_excl (fname, "rb");
   if (!loc->file)
@@ -314,7 +184,7 @@ static IP2Location *open_file (const char *fname)
   /* The IP2Loc database scheme is really strange.
    * This used to be true previously.
    */
-  IPvX = loc->ipversion;
+  IPvX = loc->ip_version;
   if (IPvX == IPV4)
      IPvX = 4;
   else if (IPvX == IPV6)
@@ -324,10 +194,10 @@ static IP2Location *open_file (const char *fname)
    * in a database with both IPv4 and IPv6 addresses.
    */
   is_IPv4_only = is_IPv6_only = FALSE;
-  if (IPvX == loc->ipv6databasecount && loc->ipv4databasecount == 0)
+  if (IPvX == loc->ipv6_db_count && loc->ipv4_db_count == 0)
      is_IPv6_only = TRUE;
 
-  else if (IPvX == loc->ipv4databasecount && loc->ipv6databasecount == 0)
+  else if (IPvX == loc->ipv4_db_count && loc->ipv6_db_count == 0)
      is_IPv4_only = TRUE;
 
   {
@@ -340,10 +210,10 @@ static IP2Location *open_file (const char *fname)
               "                 Date: %02d %.3s %04d, IPvX: %d, "
               "IPv4-count: %s, IPv6-count: %s (is_IPv4_only: %d, is_IPv6_only: %d).\n",
            fname,
-           dword_str(loc->ipv4databasecount), IP2Location_api_version_string(),
-           dword_str(loc->statbuf.st_size),
-           loc->databaseday, months[loc->databasemonth], 2000+loc->databaseyear, IPvX,
-           dword_str(loc->ipv4databasecount), dword_str(loc->ipv6databasecount),
+           dword_str(loc->ipv4_db_count), IP2Location_api_version_string(),
+           dword_str(loc->stat_buf.st_size),
+           loc->db_day, months[loc->db_month], 2000+loc->db_year, IPvX,
+           dword_str(loc->ipv4_db_count), dword_str(loc->ipv6_db_count),
            is_IPv4_only, is_IPv6_only);
   }
   return (loc);
@@ -380,7 +250,7 @@ void ip2loc_exit (void)
 DWORD ip2loc_num_ipv4_entries (void)
 {
   if (ip2loc_handle)
-     return (ip2loc_handle->ipv4databasecount);
+     return (ip2loc_handle->ipv4_db_count);
   return (0);
 }
 
@@ -390,7 +260,7 @@ DWORD ip2loc_num_ipv4_entries (void)
 DWORD ip2loc_num_ipv6_entries (void)
 {
   if (ip2loc_handle)
-     return (ip2loc_handle->ipv6databasecount);
+     return (ip2loc_handle->ipv6_db_count);
   return (0);
 }
 
@@ -480,40 +350,40 @@ static void IP2Location_close (IP2Location *loc)
  */
 static void IP2Location_initialize (IP2Location *loc)
 {
-  loc->databasetype   = IP2Location_read8 (loc, 1);
-  loc->databasecolumn = IP2Location_read8 (loc, 2);
-  loc->databaseyear   = IP2Location_read8 (loc, 3);
-  loc->databasemonth  = IP2Location_read8 (loc, 4);
-  loc->databaseday    = IP2Location_read8 (loc, 5);
+  loc->db_type       = IP2Location_read8 (loc, 1);
+  loc->db_column     = IP2Location_read8 (loc, 2);
+  loc->db_year       = IP2Location_read8 (loc, 3);
+  loc->db_month      = IP2Location_read8 (loc, 4);
+  loc->db_day        = IP2Location_read8 (loc, 5);
 
-  loc->databasecount  = IP2Location_read32 (loc, 6);
-  loc->databaseaddr   = IP2Location_read32 (loc, 10);
-  loc->ipversion      = IP2Location_read32 (loc, 14);
+  loc->db_count      = IP2Location_read32 (loc, 6);
+  loc->db_addr       = IP2Location_read32 (loc, 10);
+  loc->ip_version    = IP2Location_read32 (loc, 14);
 
-  loc->ipv4databasecount = IP2Location_read32 (loc, 6);
-  loc->ipv4databaseaddr  = IP2Location_read32 (loc, 10);
-  loc->ipv6databasecount = IP2Location_read32 (loc, 14);
-  loc->ipv6databaseaddr  = IP2Location_read32 (loc, 18);
+  loc->ipv4_db_count = IP2Location_read32 (loc, 6);
+  loc->ipv4_db_addr  = IP2Location_read32 (loc, 10);
+  loc->ipv6_db_count = IP2Location_read32 (loc, 14);
+  loc->ipv6_db_addr  = IP2Location_read32 (loc, 18);
 
-  loc->ipv4indexbaseaddr = IP2Location_read32 (loc, 22);
-  loc->ipv6indexbaseaddr = IP2Location_read32 (loc, 26);
+  loc->ipv4_index_db_addr = IP2Location_read32 (loc, 22);
+  loc->ipv6_index_db_addr = IP2Location_read32 (loc, 26);
 }
 
 /**
  * Compare to IPv6 addresses
  */
-static int ipv6_compare (const in6_addr_local *addr1, const in6_addr_local *addr2)
+static int ipv6_compare (const struct in6_addr *addr1, const struct in6_addr *addr2)
 {
   int i, ret = 0;
 
   for (i = 0 ; i < 16 ; i++)
   {
-    if (addr1->u.addr8[i] > addr2->u.addr8[i])
+    if (addr1->u.Byte[i] > addr2->u.Byte[i])
     {
       ret = 1;
       break;
     }
-    if (addr1->u.addr8[i] < addr2->u.addr8[i])
+    if (addr1->u.Byte[i] < addr2->u.Byte[i])
     {
       ret = -1;
       break;
@@ -522,441 +392,69 @@ static int ipv6_compare (const in6_addr_local *addr1, const in6_addr_local *addr
   return (ret);
 }
 
-#if (IP2LOC_COMPLETE == 1)
-/*
- * Parses IPv[46] addresses and returns both the version of address
- * and binary address used for searching
- * You can implement domain name lookup here as well
- * ipversion will be -1 on error (or something other than 4 or 6)
+/**
+ * Read a Pascal-type string; `size + byte-characters` at `position`.
  */
-static ipv_t IP2Location_parse_addr (const char *addr)
+static void IP2Location_readStr (IP2Location *loc, uint32_t position, char *ret, size_t max_sz)
 {
-  ipv_t parsed;
+  uint8_t size;
+  char   *str;
 
-  if (IP2Location_ip_is_ipv4(addr))
+  if ((uint64)loc->sh_mem_ptr + position >= loc->sh_mem_max)
   {
-    parsed.ipversion = 4;
-    parsed.ipv4 = IP2Location_ip2no (addr);
+    loc->sh_mem_index_errors++;
+    *ret = '\0';
+    return;
   }
-  else if (IP2Location_ip_is_ipv6(addr))
-  {
-    /* Parse the IPv6 address
-     */
-    inet_pton (AF_INET6, addr, &parsed.ipv6);
-    if (parsed.ipv6.u.addr8[0] == 0 && parsed.ipv6.u.addr8[1] == 0 && parsed.ipv6.u.addr8[2] == 0 &&
-        parsed.ipv6.u.addr8[3] == 0 && parsed.ipv6.u.addr8[4] == 0 && parsed.ipv6.u.addr8[5] == 0 &&
-        parsed.ipv6.u.addr8[6] == 0 && parsed.ipv6.u.addr8[7] == 0 && parsed.ipv6.u.addr8[8] == 0 &&
-        parsed.ipv6.u.addr8[9] == 0 && parsed.ipv6.u.addr8[10] == 255 && parsed.ipv6.u.addr8[11] == 255)
-    {
-      /* IPv4 address in IPv6 format (::ffff:0.0.0.0 or ::ffff:00:00)
-       */
-      parsed.ipversion = 4;
-      parsed.ipv4 = (parsed.ipv6.u.addr8[12] << 24) +
-                    (parsed.ipv6.u.addr8[13] << 16) +
-                    (parsed.ipv6.u.addr8[14] << 8)  +
-                    parsed.ipv6.u.addr8[15];
-    }
-    else
-    {
-      /* Pure IPv6 format
-       */
-      parsed.ipversion = 6;
-    }
-  }
-  else
-    parsed.ipversion = -1;
-
-  return (parsed);
+  size = loc->sh_mem_ptr [position];
+  size = min (size, max_sz);
+  memcpy (ret, &loc->sh_mem_ptr[position+1], size);
 }
 
 /**
- * Get country code
+ * Read the record data.
+ *
+ * \note The `*out` record is empty on entry of this function.
+ *
  */
-static IP2LocationRecord *IP2Location_get_country_short (IP2Location *loc, const char *ip)
+static void IP2Location_read_record (IP2Location *loc, uint32_t rowaddr, uint32_t mode, struct ip2loc_entry *out)
 {
-  return IP2Location_get_record (loc, ip, COUNTRYSHORT);
-}
-
-/**
- * Get country name
- */
-static IP2LocationRecord *IP2Location_get_country_long (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, COUNTRYLONG);
-}
-
-/**
- * Get the name of state/region
- */
-static IP2LocationRecord *IP2Location_get_region (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, REGION);
-}
-
-/**
- * Get city name
- */
-static IP2LocationRecord *IP2Location_get_city (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, CITY);
-}
-
-/**
- * Get ISP name
- */
-static IP2LocationRecord *IP2Location_get_isp(IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, ISP);
-}
-
-/**
- * Get latitude
- */
-static IP2LocationRecord *IP2Location_get_latitude (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, LATITUDE);
-}
-
-/**
- * Get longitude
- */
-static IP2LocationRecord *IP2Location_get_longitude (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, LONGITUDE);
-}
-
-/**
- * Get domain name
- */
-static IP2LocationRecord *IP2Location_get_domain (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, DOMAIN_);
-}
-
-/**
- * Get ZIP code
- */
-static IP2LocationRecord *IP2Location_get_zipcode (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, ZIPCODE);
-}
-
-/**
- * Get time zone
- */
-static IP2LocationRecord *IP2Location_get_timezone (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, TIMEZONE);
-}
-
-/**
- * Get net speed
- */
-static IP2LocationRecord *IP2Location_get_netspeed (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, NETSPEED);
-}
-
-/**
- * Get IDD code
- */
-static IP2LocationRecord *IP2Location_get_iddcode (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, IDDCODE);
-}
-
-/**
- * Get area code
- */
-static IP2LocationRecord *IP2Location_get_areacode (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, AREACODE);
-}
-
-/**
- * Get weather station code
- */
-static IP2LocationRecord *IP2Location_get_weatherstationcode (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, WEATHERSTATIONCODE);
-}
-
-/**
- * Get weather station name
- */
-static IP2LocationRecord *IP2Location_get_weatherstationname (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, WEATHERSTATIONNAME);
-}
-
-/**
- * Get mobile country code
- */
-static IP2LocationRecord *IP2Location_get_mcc (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, MCC);
-}
-
-/**
- * Get mobile national code
- */
-static IP2LocationRecord *IP2Location_get_mnc (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, MNC);
-}
-
-/**
- * Get mobile carrier brand
- */
-static IP2LocationRecord *IP2Location_get_mobilebrand (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, MOBILEBRAND);
-}
-
-/**
- * Get elevation
- */
-static IP2LocationRecord *IP2Location_get_elevation(IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, ELEVATION);
-}
-
-/**
- * Get usage type
- */
-static IP2LocationRecord *IP2Location_get_usagetype (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, USAGETYPE);
-}
-
-/**
- * Get all records of an IP address
- */
-static IP2LocationRecord *IP2Location_get_all (IP2Location *loc, const char *ip)
-{
-  return IP2Location_get_record (loc, ip, ALL);
-}
-
-/**
- * Fill the record fields with error message
- */
-static IP2LocationRecord *IP2Location_bad_record (const char *message)
-{
-  IP2LocationRecord *record = IP2Location_new_record();
-
-  record->country_short = strdup (message);
-  record->country_long = strdup (message);
-  record->region = strdup (message);
-  record->city = strdup (message);
-  record->isp = strdup (message);
-  record->latitude = 0;
-  record->longitude = 0;
-  record->domain = strdup (message);
-  record->zipcode = strdup (message);
-  record->timezone = strdup (message);
-  record->netspeed = strdup (message);
-  record->iddcode = strdup (message);
-  record->areacode = strdup (message);
-  record->weatherstationcode = strdup (message);
-  record->weatherstationname = strdup (message);
-  record->mcc = strdup (message);
-  record->mnc = strdup (message);
-  record->mobilebrand = strdup (message);
-  record->elevation = 0;
-  record->usagetype = strdup (message);
-  return (record);
-}
-#endif  /* IP2LOC_COMPLETE == 1 */
-
-/**
- * Read the record data
- */
-static IP2LocationRecord *IP2Location_read_record (IP2Location *loc, uint32_t rowaddr, uint32_t mode)
-{
-  uint32_t           val;
-  uint8_t            dbtype = loc->databasetype;
-  IP2LocationRecord *record = IP2Location_new_record();
+  uint32_t val;
+  uint8_t  dbtype = loc->db_type;
 
   if ((mode & COUNTRYSHORT) && COUNTRY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
-    record->country_short = IP2Location_readStr (loc, val);
+    IP2Location_readStr (loc, val, out->country_short, sizeof(out->country_short));
   }
-  else
-    record->country_short = STR_NOT_SUPPORTED();
-
   if ((mode & COUNTRYLONG) && COUNTRY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
-    record->country_long = IP2Location_readStr (loc, val+3);
+    IP2Location_readStr (loc, val+3, out->country_long, sizeof(out->country_long));
   }
-  else
-    record->country_long = STR_NOT_SUPPORTED();
-
   if ((mode & REGION) && REGION_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (REGION_POSITION[dbtype]-1));
-    record->region = IP2Location_readStr (loc, val);
+    IP2Location_readStr (loc, val, out->region, sizeof(out->region));
   }
-  else
-    record->region = STR_NOT_SUPPORTED();
-
   if ((mode & CITY) && CITY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (CITY_POSITION[dbtype]-1));
-    record->city = IP2Location_readStr (loc, val);
+    IP2Location_readStr (loc, val, out->city, sizeof(out->city));
   }
-  else
-    record->city = STR_NOT_SUPPORTED();
-
-#if (IP2LOC_COMPLETE == 1)
-  if ((mode & ISP) && ISP_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (ISP_POSITION[dbtype]-1));
-    record->isp = IP2Location_readStr (loc, val);
-  }
-  else
-    record->isp = STR_NOT_SUPPORTED();
-
-  if ((mode & LATITUDE) && LATITUDE_POSITION[dbtype])
-  {
-    val = rowaddr + 4 * (LATITUDE_POSITION[dbtype]-1);
-    record->latitude = IP2Location_readFloat (loc, val);
-  }
-  else
-    record->latitude = 0.0;
-
-  if ((mode & LONGITUDE) && LONGITUDE_POSITION[dbtype])
-  {
-    val = rowaddr + 4 * (LONGITUDE_POSITION[dbtype]-1);
-    record->longitude = IP2Location_readFloat (loc, val);
-  }
-  else
-    record->longitude = 0.0;
-
-  if ((mode & DOMAIN_) && DOMAIN_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (DOMAIN_POSITION[dbtype]-1));
-    record->domain = IP2Location_readStr (loc, val);
-  }
-  else
-    record->domain = STR_NOT_SUPPORTED();
-
-  if ((mode & ZIPCODE) && ZIPCODE_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (ZIPCODE_POSITION[dbtype]-1));
-    record->zipcode = IP2Location_readStr (loc, val);
-  }
-  else
-    record->zipcode = STR_NOT_SUPPORTED();
-
-  if ((mode & TIMEZONE) && TIMEZONE_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (TIMEZONE_POSITION[dbtype]-1));
-    record->timezone = IP2Location_readStr (loc, val);
-  }
-  else
-    record->timezone = STR_NOT_SUPPORTED();
-
-  if ((mode & NETSPEED) && NETSPEED_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (NETSPEED_POSITION[dbtype]-1));
-    record->netspeed = IP2Location_readStr (loc, val);
-  }
-  else
-    record->netspeed = STR_NOT_SUPPORTED();
-
-  if ((mode & IDDCODE) && IDDCODE_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (IDDCODE_POSITION[dbtype]-1));
-    record->iddcode = IP2Location_readStr (loc, val);
-  }
-  else
-    record->iddcode = STR_NOT_SUPPORTED();
-
-  if ((mode & AREACODE) && AREACODE_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (AREACODE_POSITION[dbtype]-1));
-    record->areacode = IP2Location_readStr (loc, val);
-  }
-  else
-    record->areacode = STR_NOT_SUPPORTED();
-
-  if ((mode & WEATHERSTATIONCODE) && WEATHERSTATIONCODE_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (WEATHERSTATIONCODE_POSITION[dbtype]-1));
-    record->weatherstationcode = IP2Location_readStr (loc, val);
-  }
-  else
-    record->weatherstationcode = STR_NOT_SUPPORTED();
-
-  if ((mode & WEATHERSTATIONNAME) && WEATHERSTATIONNAME_POSITION[dbtype])
-  {
-    val = IP2Location_read32(loc, rowaddr + 4 * (WEATHERSTATIONNAME_POSITION[dbtype]-1));
-    record->weatherstationname = IP2Location_readStr (loc, val);
-  }
-  else
-    record->weatherstationname = STR_NOT_SUPPORTED();
-
-  if ((mode & MCC) && MCC_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (MCC_POSITION[dbtype]-1));
-    record->mcc = IP2Location_readStr (loc, val);
-  }
-  else
-    record->mcc = STR_NOT_SUPPORTED();
-
-  if ((mode & MNC) && MNC_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (MNC_POSITION[dbtype]-1));
-    record->mnc = IP2Location_readStr (loc, val);
-  }
-  else
-    record->mnc = STR_NOT_SUPPORTED();
-
-  if ((mode & MOBILEBRAND) && MOBILEBRAND_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (MOBILEBRAND_POSITION[dbtype]-1));
-    record->mobilebrand = IP2Location_readStr (loc, val);
-  }
-  else
-    record->mobilebrand = STR_NOT_SUPPORTED();
-
-  if ((mode & ELEVATION) && ELEVATION_POSITION[dbtype])
-  {
-    char *mem;
-
-    val = IP2Location_read32 (loc, rowaddr + 4 * (ELEVATION_POSITION[dbtype]-1));
-    mem = IP2Location_readStr (loc, val);
-    record->elevation = atof (mem);
-    free (mem);
-  }
-  else
-    record->elevation = 0.0;
-
-  if ((mode & USAGETYPE) && USAGETYPE_POSITION[dbtype])
-  {
-    val = IP2Location_read32 (loc, rowaddr + 4 * (USAGETYPE_POSITION[dbtype]-1));
-    record->usagetype = IP2Location_readStr (loc, val);
-  }
-  else
-    record->usagetype = STR_NOT_SUPPORTED();
-#endif  /* IP2LOC_COMPLETE */
-
-  return (record);
 }
 
 /**
  * Get record for a IPv4 from database
  */
-static IP2LocationRecord *IP2Location_get_ipv4_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv)
+static BOOL IP2Location_get_ipv4_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv, struct ip2loc_entry *out)
 {
-  uint32_t baseaddr  = loc->ipv4databaseaddr;
-  uint32_t dbcolumn  = loc->databasecolumn;
-  uint32_t ipv4index = loc->ipv4indexbaseaddr;
+  uint32_t baseaddr  = loc->ipv4_db_addr;
+  uint32_t dbcolumn  = loc->db_column;
+  uint32_t ipv4index = loc->ipv4_index_db_addr;
   uint32_t low       = 0;
   uint32_t mid       = 0;
-  uint32_t high      = loc->ipv4databasecount;
+  uint32_t high      = loc->ipv4_db_count;
   uint32_t ipno, ipfrom, ipto;
 
   ipno = parsed_ipv.ipv4;
@@ -987,39 +485,42 @@ static IP2LocationRecord *IP2Location_get_ipv4_record (IP2Location *loc, uint32_
     num_4_loops++;
 
     if (ipno >= ipfrom && ipno < ipto)
-       return IP2Location_read_record (loc, baseaddr + (mid * column), mode);
+    {
+      IP2Location_read_record (loc, baseaddr + (mid * column), mode, out);
+      return (TRUE);
+    }
 
     if (ipno < ipfrom)
          high = mid - 1;
     else low  = mid + 1;
   }
-  return (NULL);
+  return (FALSE);
 }
 
 /**
  * Get record for a IPv6 from database
  */
-static IP2LocationRecord *IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv)
+static BOOL IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv, struct ip2loc_entry *out)
 {
-  uint32_t baseaddr  = loc->ipv6databaseaddr;
-  uint32_t dbcolumn  = loc->databasecolumn;
-  uint32_t ipv6index = loc->ipv6indexbaseaddr;
+  uint32_t baseaddr  = loc->ipv6_db_addr;
+  uint32_t dbcolumn  = loc->db_column;
+  uint32_t ipv6index = loc->ipv6_index_db_addr;
   uint32_t low       = 0;
   uint32_t mid       = 0;
-  uint32_t high      = loc->ipv6databasecount;
-  in6_addr_local ipfrom, ipto, ipno;
+  uint32_t high      = loc->ipv6_db_count;
+  struct in6_addr ipfrom, ipto, ipno;
 
   ipno = parsed_ipv.ipv6;
   num_6_loops = 0;
 
   if (!high)
-      return (NULL);
+      return (FALSE);
 
   if (ipv6index > 0)
   {
     /* use the index table
      */
-    uint32_t ipnum1   = (ipno.u.addr8[0] * 256) + ipno.u.addr8[1];
+    uint32_t ipnum1   = (ipno.u.Byte[0] * 256) + ipno.u.Byte[1];
     uint32_t indexpos = ipv6index + (ipnum1 << 3);
 
     low  = IP2Location_read32 (loc, indexpos);
@@ -1030,121 +531,23 @@ static IP2LocationRecord *IP2Location_get_ipv6_record (IP2Location *loc, uint32_
   {
     uint32_t column = dbcolumn * 4 + 12;
 
-    mid    = (uint32_t) ((low + high) >> 1);
-    ipfrom = IP2Location_readIPv6Address (loc, baseaddr + mid * column);
-    ipto   = IP2Location_readIPv6Address (loc, baseaddr + (mid + 1) * column);
+    mid = (uint32_t) ((low + high) >> 1);
+    IP2Location_read_ipv6_addr (loc, baseaddr + mid * column, &ipfrom);
+    IP2Location_read_ipv6_addr (loc, baseaddr + (mid + 1) * column, &ipto);
 
     num_6_loops++;
 
     if ((ipv6_compare(&ipno, &ipfrom) >= 0) && ipv6_compare(&ipno, &ipto) < 0)
-       return IP2Location_read_record (loc, baseaddr + mid * column + 12, mode);
+    {
+      IP2Location_read_record (loc, baseaddr + mid * column + 12, mode, out);
+      return (TRUE);
+    }
 
     if (ipv6_compare(&ipno, &ipfrom) < 0)
          high = mid - 1;
     else low = mid + 1;
   }
-  return (NULL);
-}
-
-#if (IP2LOC_COMPLETE == 1)
-/**
- * Get the location data.
- */
-static IP2LocationRecord *IP2Location_get_record (IP2Location *loc, const char *ip, uint32_t mode)
-{
-  ipv_t parsed_ipv = IP2Location_parse_addr (ip);
-
-  if (parsed_ipv.ipversion == 4)   /* process IPv4 */
-     return IP2Location_get_ipv4_record (loc, mode, parsed_ipv);
-
-  if (parsed_ipv.ipversion == 6)   /* process IPv6 */
-     return IP2Location_get_ipv6_record (loc, mode, parsed_ipv);
-
-  return IP2Location_bad_record (INVALID_IPV4_ADDR);
-}
-
-/**
- * Convert the IPv4 address into a number.
- */
-static uint32_t IP2Location_ip2no (const char *ip)
-{
-  uint32_t       a = 0;
-  uint32_t       IP = local_inet_addr (ip);
-  const uint8_t *ptr = (const uint8_t*) &IP;
-
-  a =  (uint8_t) (ptr[3]);
-  a += (uint8_t) (ptr[2]) * 256;
-  a += (uint8_t) (ptr[1]) * 256 * 256;
-  a += (uint8_t) (ptr[0]) * 256 * 256 * 256;
-  return a;
-}
-
-/**
- * Check if this was an IPv4 address.
- */
-static int IP2Location_ip_is_ipv4 (const char *ip)
-{
-  struct sockaddr_in sa;
-
-  return inet_pton (AF_INET, ip, &sa.sin_addr);
-}
-
-/**
- * Check if this was an IPv6 address.
- */
-static int IP2Location_ip_is_ipv6 (const char *ip)
-{
-  struct in6_addr_local ipv6;
-
-  return  inet_pton (AF_INET6, ip, &ipv6);
-}
-#endif  /* IP2LOC_COMPLETE == 1 */
-
-/**
- * Initialize the record object.
- */
-static IP2LocationRecord *IP2Location_new_record (void)
-{
-#if (IP2LOC_NO_ALLOC == 1)
-  static IP2LocationRecord r;
-
-  memset (&r, '\0', sizeof(r));
-  return (&r);
-#else
-  return calloc (1, sizeof(IP2LocationRecord));
-#endif
-}
-
-/**
- * Free the record object.
- */
-static void IP2Location_free_record (IP2LocationRecord *record)
-{
-#if (IP2LOC_NO_ALLOC == 0)
-  if (!record)
-     return;
-
-  free (record->country_long);
-  free (record->country_short);
-  free (record->region);
-  free (record->city);
-#if (IP2LOC_COMPLETE == 1)
-  free (record->domain);
-  free (record->isp);
-  free (record->zipcode);
-  free (record->timezone);
-  free (record->netspeed);
-  free (record->iddcode);
-  free (record->areacode);
-  free (record->weatherstationcode);
-  free (record->weatherstationname);
-  free (record->mcc);
-  free (record->mnc);
-  free (record->mobilebrand);
-  free (record->usagetype);
-#endif
-  free (record);
-#endif  /* IP2LOC_NO_ALLOC == 0 */
+  return (FALSE);
 }
 
 /**
@@ -1182,11 +585,11 @@ static int32_t IP2Location_DB_Load_to_mem (IP2Location *loc, HANDLE os_hnd)
     return (-1);
   }
 
-  read = fread (loc->sh_mem_ptr, 1, loc->statbuf.st_size, loc->file);
-  if (read != loc->statbuf.st_size)
+  read = fread (loc->sh_mem_ptr, 1, loc->stat_buf.st_size, loc->file);
+  if (read != loc->stat_buf.st_size)
   {
-    TRACE (2, "fread() failed, read=%d, loc->statbuf.st_size=%u, errno=%d\n",
-           (int)read, (unsigned)loc->statbuf.st_size, errno);
+    TRACE (2, "fread() failed, read=%d, loc->stat_buf.st_size=%u, errno=%d\n",
+           (int)read, (unsigned)loc->stat_buf.st_size, errno);
     return (-1);
   }
   return (0);
@@ -1210,20 +613,20 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
   HANDLE os_hnd  = (HANDLE) _get_osfhandle (fileno(file));
 #endif
 
-  if (fstat(fd, &loc->statbuf) == -1)
+  if (fstat(fd, &loc->stat_buf) == -1)
   {
     TRACE (2, "fstat() failed: errno=%d\n", errno);
     return (-1);
   }
 
-  if (loc->statbuf.st_size == 0)
+  if (loc->stat_buf.st_size == 0)
   {
     TRACE (1, "IP2Loc file is 0 bytes.\n");
     return (-1);
   }
 
   loc->sh_mem_fd = CreateFileMapping (os_hnd, NULL, os_prot, 0,
-                                      loc->statbuf.st_size+1, "IP2location_Shm");
+                                      loc->stat_buf.st_size+1, "IP2location_Shm");
   if (!loc->sh_mem_fd)
   {
     TRACE (2, "CreateFileMapping() failed: %s\n", win_strerror(GetLastError()));
@@ -1247,18 +650,16 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
   if (IP2Location_DB_Load_to_mem(loc, os_hnd) == -1)
      return (-1);
 
-  loc->sh_mem_max = (uint64)loc->sh_mem_ptr + loc->statbuf.st_size;
+  loc->sh_mem_max = (uint64)loc->sh_mem_ptr + loc->stat_buf.st_size;
   return (0);
 }
 
-static in6_addr_local IP2Location_readIPv6Address (IP2Location *loc, uint32_t position)
+static void IP2Location_read_ipv6_addr (IP2Location *loc, uint32_t position, struct in6_addr *addr)
 {
-  in6_addr_local addr6;
-  int  i, j;
+  int i, j;
 
   for (i = 0, j = 15; i < 16; i++, j--)
-      addr6.u.addr8[i] = IP2Location_read8 (loc, position + j);
-  return (addr6);
+      addr->u.Byte[i] = IP2Location_read8 (loc, position + j);
 }
 
 /**
@@ -1294,74 +695,16 @@ static uint8_t IP2Location_read8 (IP2Location *loc, uint32_t position)
 }
 
 /**
- * Read a Pascal-type string; `size + byte-characters` at `position`.
+ * Check the returned record for an unallocated address; `"-"`.
+ *
+ * \param[in] out  The record to check.
  */
-static char *IP2Location_readStr (IP2Location *loc, uint32_t position)
+static BOOL ip2loc_get_common (const struct ip2loc_entry *out)
 {
-  uint8_t size;
-  char   *str;
-
-  if ((uint64)loc->sh_mem_ptr + position >= loc->sh_mem_max)
-  {
-    loc->sh_mem_index_errors++;
-    return (NULL);
-  }
-
-  size = loc->sh_mem_ptr [position];
-  str  = calloc (1, size+1);
-  memcpy (str, &loc->sh_mem_ptr[position+1], size);
-  return (str);
-}
-
-/**
- * Read a 4-byte float value from shared-memory.
- */
-static float IP2Location_readFloat (IP2Location *loc, uint32_t position)
-{
-  float ret = 0.0;
-
-  if ((uint64)loc->sh_mem_ptr + position >= loc->sh_mem_max)
-       loc->sh_mem_index_errors++;
-  else memcpy ((void*)&ret, &loc->sh_mem_ptr[position-1], 4);
-  return (ret);
-}
-
-/* End of pasting in "IP2Location/libIP2Location" code */
-
-/**
- * \param[out]    out The `ip2loc_entry` to fill.
- * \param[in,out] r   The `IP2LocationRecord` record to get the result from.
- *                    This will be freed when no longer needed.
- */
-static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
-{
-#if (IP2LOC_NO_ALLOC == 1)
-  if (r->country_short == NULL ||
-      r->country_short[0] == '-')                  /* is "-" for unallocated addr */
+  if (out->country_short[0] == '\0' ||
+      out->country_short[0] == '-')    /* is "-" for unallocated addr */
      return (FALSE);
-
-  _strlcpy (out->country_short, r->country_short, sizeof(out->country_short));
-  _strlcpy (out->country_long, r->country_long, sizeof(out->country_long));
-  _strlcpy (out->city, r->city, sizeof(out->city));
-  _strlcpy (out->region, r->region, sizeof(out->region));
   return (TRUE);
-
-#else
-  if (r->country_short[0] == '-' ||                   /* is "-" for unallocated addr */
-      !strncmp(r->country_short,"INVALID",7) ||       /* INVALID_IPV4_ADDR */
-      !strncmp(r->country_short,"This parameter",14)) /* STR_NOT_SUPPORTED() */
-  {
-    IP2Location_free_record (r);
-    return (FALSE);
-  }
-
-  _strlcpy (out->country_short, r->country_short, sizeof(out->country_short));
-  _strlcpy (out->country_long, r->country_long, sizeof(out->country_long));
-  _strlcpy (out->city, r->city, sizeof(out->city));
-  _strlcpy (out->region, r->region, sizeof(out->region));
-  IP2Location_free_record (r);
-  return (TRUE);
-#endif
 }
 
 /**
@@ -1370,26 +713,18 @@ static BOOL ip2loc_get_common (struct ip2loc_entry *out, IP2LocationRecord *r)
  */
 BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
 {
-  IP2LocationRecord *r;
   ipv_t parsed_ipv;
 
   parsed_ipv.ipversion = 4;
-
-#if 0 /*  \todo */
-  parsed_ipv.ipv4 = _byteswap_ulong (addr->s_addr);
-#else
-  parsed_ipv.ipv4 = swap32 (addr->s_addr);
-#endif
-
-  r = IP2Location_get_ipv4_record (ip2loc_handle, IP2LOC_FLAGS, parsed_ipv);
+  parsed_ipv.ipv4      = _byteswap_ulong (addr->s_addr);
 
   memset (out, '\0', sizeof(*out));
-  if (!r)
+  if (!IP2Location_get_ipv4_record(ip2loc_handle, IP2LOC_FLAGS, parsed_ipv, out))
      return (FALSE);
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
-         INET_util_get_ip_num(addr, NULL), r->country_short, DWORD_CAST(num_4_loops));
-  return ip2loc_get_common (out, r);
+         INET_util_get_ip_num(addr, NULL), out->country_short, DWORD_CAST(num_4_loops));
+  return ip2loc_get_common (out);
 }
 
 /**
@@ -1398,7 +733,6 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
  */
 BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
 {
-  IP2LocationRecord *r;
   ipv_t parsed_ipv;
 
   if (IN6_IS_ADDR_V4MAPPED(addr))
@@ -1409,18 +743,17 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
   else
   {
     parsed_ipv.ipversion = 6;
-    memcpy (&parsed_ipv.ipv6, addr, sizeof(*addr));
+    memcpy (&parsed_ipv.ipv6, addr, sizeof(parsed_ipv.ipv6));
   }
 
-  r = IP2Location_get_ipv6_record (ip2loc_handle, IP2LOC_FLAGS, parsed_ipv);
   memset (out, '\0', sizeof(*out));
-  if (!r)
+  if (!IP2Location_get_ipv6_record(ip2loc_handle, IP2LOC_FLAGS, parsed_ipv, out))
      return (FALSE);
 
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",
          INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),
-         r->country_short, DWORD_CAST(num_6_loops));
-  return ip2loc_get_common (out, r);
+         out->country_short, DWORD_CAST(num_6_loops));
+  return ip2loc_get_common (out);
 }
 
 /**
