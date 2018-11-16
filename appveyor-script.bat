@@ -10,7 +10,7 @@ if %1. == init.  goto init
 if %1. == clean. goto clean
 
 echo Usage: %0 "init / clean"
-exit /b 0
+exit /b 1
 
 :init
 ::
