@@ -35,7 +35,6 @@ matrix:
   fast_finish: true
   allow_failures:
      - BUILDER: watcom
-       CPU:     x86
      - BUILDER: cygwin
 
 #
@@ -71,15 +70,12 @@ install:
   #
   # Set compiler environment for MSVC.
   #
-  - cmd: if "%BUILDER%"=="msvc" call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
+  - cmd: if %BUILDER%. == msvc. call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
 
-  - cmd: if "%CPU%" == "x86" (
-           if "%BUILDER%"=="mingw"  ( set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH% )
-           if "%BUILDER%"=="cygwin" ( c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH% )
-         ) else (
-           if "%BUILDER%"=="mingw"  ( set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH% )
-           if "%BUILDER%"=="cygwin" ( set PATH=c:\msys64\usr\bin;%PATH% )
-         )
+  - cmd: if %BUILDER%-%CPU%. == mingw-x86.  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
+         if %BUILDER%-%CPU%. == mingw-x64.  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
+         if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
+         if %BUILDER%-%CPU%. == cygwin-x64. set PATH=c:\msys64\usr\bin;%PATH%
 
 build_script:
   - cmd: appveyor-script.bat init
@@ -87,7 +83,7 @@ build_script:
   #
   # Download and extract OpenWatcom 2.0 using 'curl'
   #
-  - cmd: if "%BUILDER%"=="watcom" (
+  - cmd: if %BUILDER%. == watcom. (
             curl -O -# http://www.watt-32.net/CI/watcom20.zip &
             7z x -o%WATCOM% watcom20.zip > NUL)
 
@@ -97,10 +93,10 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
 
-  - cmd: if "%BUILDER%"=="msvc"   nmake -nologo -f Makefile.vc6
-  - cmd: if "%BUILDER%"=="mingw"  make          -f Makefile.MinGW  CPU=%CPU% USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="cygwin" make          -f Makefile.CygWin CPU=%CPU% USE_CRT_DEBUG=0
-  - cmd: if "%BUILDER%"=="watcom" wmake -h      -f Makefile.Watcom CPU=%CPU%
+  - cmd: if %BUILDER%. == msvc.   nmake -nologo -f Makefile.vc6
+  - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU% USE_CRT_DEBUG=0
+  - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU% USE_CRT_DEBUG=0
+  - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
 
 test_script:
   - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe
@@ -111,8 +107,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
   - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=1 &                          test.exe WSAStartup WSACleanup
   - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
-# - cmd: if "%BUILDER%"=="msvc" echo Dumping Firewall Rules.               & firewall_test.exe -r
-# - cmd: if "%BUILDER%"=="msvc" echo Capturing Firewall events for 20 sec. & firewall_test.exe -a1 sleep 20
+# - cmd: if %BUILDER%. == msvc. echo Dumping Firewall Rules.               & firewall_test.exe -r
+# - cmd: if %BUILDER%. == msvc. echo Capturing Firewall events for 20 sec. & firewall_test.exe -a1 sleep 20
 
 #
 # Prevent the 'watcom' directory to end up in 'artifacts'.
@@ -120,7 +116,7 @@ test_script:
 #
 after_test:
   - cmd: cd %APPVEYOR_BUILD_FOLDER%
-  - cmd: if "%BUILDER%"=="watcom" (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)                                     > NUL
+  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & del /S /Q watcom\* & rd watcom)                                   > NUL
   - cmd: 7z a wsock_trace-%BUILDER%-%APPVEYOR_BUILD_NUMBER%.zip .\README.md src\*.dll src\*.lib src\*.a src\*.exe src\*.lua        > NUL
   - cmd: 7z a wsock_trace-%BUILDER%-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt > NUL
 
