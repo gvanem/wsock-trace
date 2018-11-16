@@ -27,10 +27,11 @@
 #if defined(__clang__)
   #pragma clang diagnostic ignored "-Wstrict-prototypes"
 
-#elif defined(__CYGWIN__)
+#elif defined(__GNUC__)
   GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
+#endif
 
-#elif defined(__WATCOMC__) && !defined(IN6_IS_ADDR_V4MAPPED)
+#if !defined(IN6_IS_ADDR_V4MAPPED)
   #define IN6_IS_ADDR_V4MAPPED(a) \
           (BOOLEAN) ( ((a)->s6_words[0] == 0) && ((a)->s6_words[1] == 0) && \
                       ((a)->s6_words[2] == 0) && ((a)->s6_words[3] == 0) && \
