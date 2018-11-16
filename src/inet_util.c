@@ -72,44 +72,47 @@
 #define IN4_CLASSD(i)  (((LONG)(i) & 0x000000F0) == 0x000000E0)
 #endif
 
-/* Handy macros to both define and declare the function-pointer for
+/**
+ * \def DEF_FUNC
+ *
+ * Handy macro to both define and declare the function-pointer for
  * `WinInet.dll` and `WinHttp.dll` functions.
  */
-#define WININET_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
-                                    static func_##f p_##f = NULL
+#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                static func_##f p_##f = NULL
 
 /**
  * Download a single file using the WinInet API.
  * Load `WinInet.dll` dynamically.
  */
-WININET_FUNC (HINTERNET, InternetOpenA, (const char *user_agent,
-                                         DWORD       access_type,
-                                         const char *proxy_name,
-                                         const char *proxy_bypass,
-                                         DWORD       flags));
+DEF_FUNC (HINTERNET, InternetOpenA, (const char *user_agent,
+                                     DWORD       access_type,
+                                     const char *proxy_name,
+                                     const char *proxy_bypass,
+                                     DWORD       flags));
 
-WININET_FUNC (HINTERNET, InternetOpenUrlA, (HINTERNET   hnd,
-                                            const char *url,
-                                            const char *headers,
-                                            DWORD       headers_len,
-                                            DWORD       flags,
-                                            DWORD_PTR   context));
+DEF_FUNC (HINTERNET, InternetOpenUrlA, (HINTERNET   hnd,
+                                        const char *url,
+                                        const char *headers,
+                                        DWORD       headers_len,
+                                        DWORD       flags,
+                                        DWORD_PTR   context));
 
-WININET_FUNC (BOOL, InternetGetLastResponseInfoA, (DWORD *err_code,
-                                                   char  *err_buff,
-                                                   DWORD *err_buff_len));
+DEF_FUNC (BOOL, InternetGetLastResponseInfoA, (DWORD *err_code,
+                                               char  *err_buff,
+                                               DWORD *err_buff_len));
 
-WININET_FUNC (BOOL, InternetReadFile, (HINTERNET hnd,
-                                       void     *buffer,
-                                       DWORD     num_bytes_to_read,
-                                       DWORD    *num_bytes_read));
+DEF_FUNC (BOOL, InternetReadFile, (HINTERNET hnd,
+                                   void     *buffer,
+                                   DWORD     num_bytes_to_read,
+                                   DWORD    *num_bytes_read));
 
-WININET_FUNC (BOOL, InternetReadFileExA, (HINTERNET          hnd,
-                                          INTERNET_BUFFERSA *buf_out,
-                                          DWORD              flags,
-                                          DWORD_PTR          context));
+DEF_FUNC (BOOL, InternetReadFileExA, (HINTERNET          hnd,
+                                      INTERNET_BUFFERSA *buf_out,
+                                      DWORD              flags,
+                                      DWORD_PTR          context));
 
-WININET_FUNC (BOOL, InternetCloseHandle, (HINTERNET handle));
+DEF_FUNC (BOOL, InternetCloseHandle, (HINTERNET handle));
 
 /*
  * Just for reference:
@@ -119,9 +122,9 @@ WININET_FUNC (BOOL, InternetCloseHandle, (HINTERNET handle));
  *                                                       void     *status_info,
  *                                                       DWORD     status_info_len);
  */
-WININET_FUNC (INTERNET_STATUS_CALLBACK, InternetSetStatusCallback,
-                                         (HINTERNET                hnd,
-                                          INTERNET_STATUS_CALLBACK callback));
+DEF_FUNC (INTERNET_STATUS_CALLBACK, InternetSetStatusCallback,
+                                     (HINTERNET                hnd,
+                                      INTERNET_STATUS_CALLBACK callback));
 
 #define ADD_VALUE(func)  { 0, NULL, "wininet.dll", #func, (void**) &p_##func }
 
@@ -136,76 +139,74 @@ static struct LoadTable wininet_funcs[] = {
                       };
 
 #if defined(HAVE_WINHTTP_H)
-/**
+/***
  * A similar interface to WinHTTP. A comparision table: \n
  *   https://docs.microsoft.com/en-us/windows/desktop/winhttp/porting-wininet-applications-to-winhttp
  */
-#define WINHTTP_FUNC(ret, f, args)  WININET_FUNC(ret, f, args)
+DEF_FUNC (HINTERNET, WinHttpOpen, (const wchar_t *agent,
+                                   DWORD          access_type,
+                                   const wchar_t *proxy,
+                                   const wchar_t *proxy_bypass,
+                                   DWORD          flags));
 
-WINHTTP_FUNC (HINTERNET, WinHttpOpen, (const wchar_t *agent,
-                                       DWORD          access_type,
-                                       const wchar_t *proxy,
-                                       const wchar_t *proxy_bypass,
-                                       DWORD          flags));
+DEF_FUNC (HINTERNET, WinHttpConnect, (HINTERNET      hnd,
+                                      const wchar_t *server_name,
+                                      WORD           server_port,
+                                      DWORD          reserved));
 
-WINHTTP_FUNC (HINTERNET, WinHttpConnect, (HINTERNET      hnd,
-                                          const wchar_t *server_name,
-                                          WORD           server_port,
-                                          DWORD          reserved));
+DEF_FUNC (BOOL, WinHttpCrackUrl, (const wchar_t           *url,
+                                  DWORD                    url_len,
+                                  DWORD                    flags,
+                                  winhttp_URL_COMPONENTSW *url_comp));
 
-WINHTTP_FUNC (BOOL, WinHttpCrackUrl, (const wchar_t           *url,
-                                      DWORD                    url_len,
-                                      DWORD                    flags,
-                                      winhttp_URL_COMPONENTSW *url_comp));
+DEF_FUNC (HINTERNET, WinHttpOpenRequest, (HINTERNET      hnd,
+                                          const wchar_t  *verb,
+                                          const wchar_t  *object_name,
+                                          const wchar_t  *version,
+                                          const wchar_t  *referrer,
+                                          const wchar_t **ppwszAcceptTypes,
+                                          DWORD           flags));
 
-WINHTTP_FUNC (HINTERNET, WinHttpOpenRequest, (HINTERNET      hnd,
-                                              const wchar_t  *verb,
-                                              const wchar_t  *object_name,
-                                              const wchar_t  *version,
-                                              const wchar_t  *referrer,
-                                              const wchar_t **ppwszAcceptTypes,
-                                              DWORD           flags));
+DEF_FUNC (BOOL, WinHttpSendRequest, (HINTERNET      hnd,
+                                     const wchar_t *headers,
+                                     DWORD          headers_len,
+                                     void          *optional,
+                                     DWORD          optional_len,
+                                     DWORD          total_len,
+                                     DWORD_PTR      context));
 
-WINHTTP_FUNC (BOOL, WinHttpSendRequest, (HINTERNET      hnd,
-                                         const wchar_t *headers,
-                                         DWORD          headers_len,
-                                         void          *optional,
-                                         DWORD          optional_len,
-                                         DWORD          total_len,
-                                         DWORD_PTR      context));
+DEF_FUNC (BOOL, WinHttpQueryDataAvailable, (HINTERNET hnd,
+                                            DWORD    *bytes_available));
 
-WINHTTP_FUNC (BOOL, WinHttpQueryDataAvailable, (HINTERNET hnd,
-                                                DWORD    *bytes_available));
+DEF_FUNC (BOOL, WinHttpQueryHeaders, (HINTERNET hnd,
+                                      DWORD     Info_level,
+                                      wchar_t   *name,
+                                      void      *buffer,
+                                      DWORD     *buffer_len,
+                                      DWORD     *index));
 
-WINHTTP_FUNC (BOOL, WinHttpQueryHeaders, (HINTERNET hnd,
-                                          DWORD     Info_level,
-                                          wchar_t   *name,
-                                          void      *buffer,
-                                          DWORD     *buffer_len,
-                                          DWORD     *index));
+DEF_FUNC (BOOL, WinHttpReceiveResponse, (HINTERNET hnd,
+                                         void     *reserved));
 
-WINHTTP_FUNC (BOOL, WinHttpReceiveResponse, (HINTERNET hnd,
-                                             void     *reserved));
-
-WINHTTP_FUNC (BOOL, WinHttpReadData, (HINTERNET hnd,
-                                      void     *buf,
-                                      DWORD     bytes_to_read,
-                                      DWORD    *bytes_read));
+DEF_FUNC (BOOL, WinHttpReadData, (HINTERNET hnd,
+                                  void     *buf,
+                                  DWORD     bytes_to_read,
+                                  DWORD    *bytes_read));
 
 /** Luckily a `WINHTTP_STATUS_CALLBACK` is the same as a `INTERNET_STATUS_CALLBACK`.
  */
-WINHTTP_FUNC (INTERNET_STATUS_CALLBACK, WinHttpSetStatusCallback,
-                                         (HINTERNET                hnd,
-                                          INTERNET_STATUS_CALLBACK callback,
-                                          DWORD                    notification_flags,
-                                          DWORD_PTR                reserved));
+DEF_FUNC (INTERNET_STATUS_CALLBACK, WinHttpSetStatusCallback,
+                                     (HINTERNET                hnd,
+                                      INTERNET_STATUS_CALLBACK callback,
+                                      DWORD                    notification_flags,
+                                      DWORD_PTR                reserved));
 
-WINHTTP_FUNC (BOOL, WinHttpSetOption, (HINTERNET hnd,
-                                       DWORD     option,
-                                       void     *buf,
-                                       DWORD     buf_len));
+DEF_FUNC (BOOL, WinHttpSetOption, (HINTERNET hnd,
+                                   DWORD     option,
+                                   void     *buf,
+                                   DWORD     buf_len));
 
-WINHTTP_FUNC (BOOL, WinHttpCloseHandle, (HINTERNET hnd));
+DEF_FUNC (BOOL, WinHttpCloseHandle, (HINTERNET hnd));
 
 #undef  ADD_VALUE
 #define ADD_VALUE(func)  { 0, NULL, "winhttp.dll", #func, (void**) &p_##func }
@@ -429,7 +430,6 @@ struct download_context {
        DWORD             bytes_read;     /**< Last `(*p_WinHttpReadData)()` or `(*p_WinHttpReadData)()` read-count */
        DWORD             bytes_written;  /**< Accumulated bytes written to `fil` */
        int               error;
-
        union {
          struct wininet_context wininet;
          struct winhttp_context winhttp;
@@ -1264,9 +1264,9 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
 /**
  * Compare 2 IPv4-addresses; `addr1` and `addr2` considering `prefix_len`.
  *
- * \retval 0  if `addr1` is inside range of `addr2` block determined by `prefix_len`.
- *         1  if `addr1` is above the range of `addr2`.
- *        -1  if `addr1` is below the range of `addr2`.
+ * \retval  0  if `addr1` is inside range of `addr2` block determined by `prefix_len`.
+ * \retval  1  if `addr1` is above the range of `addr2`.
+ * \retval -1  if `addr1` is below the range of `addr2`.
  */
 int INET_util_range4cmp (const struct in_addr *addr1, const struct in_addr *addr2, int prefix_len)
 {
@@ -1294,9 +1294,9 @@ int INET_util_range4cmp (const struct in_addr *addr1, const struct in_addr *addr
 /**
  * Compare 2 IPv6-addresses; `addr1` and `addr2` considering `prefix_len`.
  *
- * \retval 0  if `addr1` is inside range of `addr2` block determined by `prefix_len`.
- *         1  if `addr1` is above the range of `addr2`.
- *        -1  if `addr1` is below the range of `addr2`.
+ * \retval  0  if `addr1` is inside range of `addr2` block determined by `prefix_len`.
+ * \retval  1  if `addr1` is above the range of `addr2`.
+ * \retval -1  if `addr1` is below the range of `addr2`.
  */
 int INET_util_range6cmp (const struct in6_addr *addr1, const struct in6_addr *addr2, int prefix_len)
 {
