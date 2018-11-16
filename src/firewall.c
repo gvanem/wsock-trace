@@ -1240,66 +1240,6 @@ void fw_exit (void)
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
 
-static void fw_enumerate_rules (FW_PROFILE_TYPE type,
-                                FW_DIRECTION    direction,
-                                FW_WALK_RULES   callback)
-{
-  FW_RULE *rule, *rules = NULL;
-  ULONG    rule_count = 0;
-  ULONG    result;
-  ULONG    flags  = FW_ENUM_RULES_FLAG_RESOLVE_NAME |
-                    FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION |
-                    FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION |
-                    FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD;
-
-  result = (*p_FWEnumFirewallRules) (fw_policy_handle, FW_RULE_STATUS_CLASS_ALL,
-                                     type, (FW_ENUM_RULES_FLAGS)flags,
-                                     &rule_count, &rules);
-  if (result == ERROR_SUCCESS && rules && rule_count)
-  {
-    for (rule = rules; rule; rule = rule->pNext)
-    {
-      if (direction == FW_DIR_BOTH || rule->Direction == direction)
-        (*callback) (rule);
-    }
-  }
-  if (p_FWFreeFirewallRules && rules)
-    (*p_FWFreeFirewallRules) (rules);
-}
-
-static void print_long_wline (const wchar_t *start, size_t indent)
-{
-  size_t         width = g_cfg.screen_width;
-  size_t         left = width - indent;
-  const wchar_t *c = start;
-
-  while (*c)
-  {
-    /* Break a long line only at space or TAB.
-     * Check if room for a word (L"foo ") before we must break the line.
-     */
-    if (iswspace(*c))
-    {
-      const wchar_t *next = wcschr (c+1, L' ');
-
-      if (!next)
-         next = wcschr (c+1, L'\0');
-      if (left <= 2 || (left < (next - c)/sizeof(wchar_t)))
-      {
-        trace_printf ("\n%*c", (int)indent, ' ');
-        left = width - indent;
-        do {
-          c++;
-        } while (c[1] && iswspace(*c));  /* If next 'wchar_t' is a space, drop it */
-        continue;
-      }
-    }
-    trace_putc (*c++);  /* truncates to 'char' */
-    left--;
-  }
-  trace_putc ('\n');
-}
-
 static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
   FWPM_SESSION session;
@@ -1555,6 +1495,39 @@ void fw_monitor_stop (void)
 }
 
 #if defined(TEST_FIREWALL)
+static void print_long_wline (const wchar_t *start, size_t indent)
+{
+  size_t         width = g_cfg.screen_width;
+  size_t         left = width - indent;
+  const wchar_t *c = start;
+
+  while (*c)
+  {
+    /* Break a long line only at space or TAB.
+     * Check if room for a word (L"foo ") before we must break the line.
+     */
+    if (iswspace(*c))
+    {
+      const wchar_t *next = wcschr (c+1, L' ');
+
+      if (!next)
+         next = wcschr (c+1, L'\0');
+      if (left <= 2 || (left < (next - c)/sizeof(wchar_t)))
+      {
+        trace_printf ("\n%*c", (int)indent, ' ');
+        left = width - indent;
+        do {
+          c++;
+        } while (c[1] && iswspace(*c));  /* If next 'wchar_t' is a space, drop it */
+        continue;
+      }
+    }
+    trace_putc (*c++);  /* truncates to 'char' */
+    left--;
+  }
+  trace_putc ('\n');
+}
+
 static void fw_dump_rules (const FW_RULE *rule)
 {
   const char *dir = (rule->Direction == FW_DIR_INVALID) ? "INV" :
@@ -1573,6 +1546,33 @@ static void fw_dump_rules (const FW_RULE *rule)
      trace_printf ("     wszEmbeddedContext: %S\n", rule->wszEmbeddedContext);
 
   trace_putc ('\n');
+}
+
+static void fw_enumerate_rules (FW_PROFILE_TYPE type,
+                                FW_DIRECTION    direction,
+                                FW_WALK_RULES   callback)
+{
+  FW_RULE *rule, *rules = NULL;
+  ULONG    rule_count = 0;
+  ULONG    result;
+  ULONG    flags  = FW_ENUM_RULES_FLAG_RESOLVE_NAME |
+                    FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION |
+                    FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION |
+                    FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD;
+
+  result = (*p_FWEnumFirewallRules) (fw_policy_handle, FW_RULE_STATUS_CLASS_ALL,
+                                     type, (FW_ENUM_RULES_FLAGS)flags,
+                                     &rule_count, &rules);
+  if (result == ERROR_SUCCESS && rules && rule_count)
+  {
+    for (rule = rules; rule; rule = rule->pNext)
+    {
+      if (direction == FW_DIR_BOTH || rule->Direction == direction)
+        (*callback) (rule);
+    }
+  }
+  if (p_FWFreeFirewallRules && rules)
+    (*p_FWFreeFirewallRules) (rules);
 }
 
 static void fw_enumerate_callouts (void)
