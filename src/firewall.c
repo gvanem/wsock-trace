@@ -32,6 +32,13 @@
   #define MIN_WINNT 0x600
 #endif
 
+#if defined(__WATCOMC__)
+  /*
+   * OpenWatcom 2.x is hardly able to compile and use anything here.
+   */
+  #error "This module if not for Watcom / OpenWatcom."
+#endif
+
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT)
   #undef  _WIN32_WINNT
   #define _WIN32_WINNT MIN_WINNT

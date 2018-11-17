@@ -744,8 +744,10 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   if (startup_count < INT_MAX)
      startup_count++;
 
+#if !defined(__WATCOMC__)
   if (startup_count == 1 && g_cfg.firewall.monitor_enable)
      fw_monitor_start();
+#endif
 
   ENTER_CRIT();
   WSTRACE ("WSAStartup (%u.%u) --> %s",
@@ -775,6 +777,7 @@ EXPORT int WINAPI WSACleanup (void)
   WSLUA_HOOK (rc, wslua_WSACleanup());
   LEAVE_CRIT();
 
+#if !defined(__WATCOMC__)
   if (g_cfg.firewall.monitor_enable)
      TRACE (1, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
             startup_count, cleaned_up);
@@ -782,6 +785,8 @@ EXPORT int WINAPI WSACleanup (void)
   /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
    */
   fw_monitor_stop();
+#endif
+
   return (rc);
 }
 
