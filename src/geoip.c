@@ -38,9 +38,10 @@
  *         "America/New_York" <utf8_string>
  *     }
  *     \endcode
+ *
  * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
  *
- * \todo Put this inside a \code{#ifdef USE_MAXMINDDB} section later.
+ * \todo Put this inside a `#ifdef USE_MAXMINDDB` section later.
  */
 
 #include <assert.h>
