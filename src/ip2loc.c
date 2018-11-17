@@ -38,7 +38,7 @@
                       ((a)->s6_words[4] == 0) && ((a)->s6_words[5] == 0xFFFF) )
 #endif
 
-#if defined(__CYGWIN__)
+#if defined(__CYGWIN__) || defined(__WATCOMC__)
   #define _byteswap_ulong(x)   swap32(x)
 #endif
 
@@ -117,7 +117,7 @@ typedef struct IP2Location {
       } IP2Location;
 
 typedef struct ipv_t {
-        uint32_t        ipversion;
+        uint32_t        ip_ver;
         uint32_t        ipv4;
         struct in6_addr ipv6;
       } ipv_t;
@@ -146,7 +146,6 @@ static uint32_t    IP2Location_read32 (IP2Location *loc, uint32_t position);
 static uint8_t     IP2Location_read8 (IP2Location *loc, uint32_t position);
 static int32_t     IP2Location_DB_set_shared_memory (IP2Location *loc);
 static void        IP2Location_close (IP2Location *loc);
-static unsigned    IP2Location_api_version_num (void);
 static const char *IP2Location_api_version_string (void);
 
 /**
@@ -285,43 +284,6 @@ DWORD ip2loc_num_ipv6_entries (void)
   #pragma warning (disable: 4101 4244)
 #endif
 
-/**\def inet_pton
- *
- * Redefine `inet_pton()`.
- *
- * Since `IP2Location_parse_addr()` does a lot of calls to
- * `IP2Location_ip_is_ipv4()` and `IP2Location_ip_is_ipv6()`, keep
- * the noise-level down by not calling `WSASetLastError()` in in_addr.c.
- */
-#undef  inet_pton
-#define inet_pton(family, addr, result)  _wsock_trace_inet_pton (family, addr, result)
-
-/**
- * Since we do not want a dependency on `wsock_trace.c` and it's `inet_addr()`,
- * just create a local version here.
- */
-static u_long local_inet_addr (const char *ip)
-{
-  const char *s = ip;
-  u_long      IP = 0;
-  int         i;
-
-  for (i = 24; i >= 0; i -= 8)
-  {
-    int cur = atoi (s);
-
-    IP |= (u_long)(cur & 0xFF) << i;
-    if (!i)
-       return (IP);
-
-    s = strchr (s, '.');
-    if (!s)
-       break;      /* return 0 on error */
-    s++;
-  }
-  return (0);
-}
-
 /**
  * Close the IP2Location database access to shared-memory.
  * Free the global `loc
@@ -395,10 +357,9 @@ static int ipv6_compare (const struct in6_addr *addr1, const struct in6_addr *ad
 /**
  * Read a Pascal-type string; `size + byte-characters` at `position`.
  */
-static void IP2Location_readStr (IP2Location *loc, uint32_t position, char *ret, size_t max_sz)
+static void IP2Location_read_str (IP2Location *loc, uint32_t position, char *ret, size_t max_sz)
 {
   uint8_t size;
-  char   *str;
 
   if ((uint64)loc->sh_mem_ptr + position >= loc->sh_mem_max)
   {
@@ -425,22 +386,22 @@ static void IP2Location_read_record (IP2Location *loc, uint32_t rowaddr, uint32_
   if ((mode & COUNTRYSHORT) && COUNTRY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
-    IP2Location_readStr (loc, val, out->country_short, sizeof(out->country_short));
+    IP2Location_read_str (loc, val, out->country_short, sizeof(out->country_short));
   }
   if ((mode & COUNTRYLONG) && COUNTRY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
-    IP2Location_readStr (loc, val+3, out->country_long, sizeof(out->country_long));
+    IP2Location_read_str (loc, val+3, out->country_long, sizeof(out->country_long));
   }
   if ((mode & REGION) && REGION_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (REGION_POSITION[dbtype]-1));
-    IP2Location_readStr (loc, val, out->region, sizeof(out->region));
+    IP2Location_read_str (loc, val, out->region, sizeof(out->region));
   }
   if ((mode & CITY) && CITY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (CITY_POSITION[dbtype]-1));
-    IP2Location_readStr (loc, val, out->city, sizeof(out->city));
+    IP2Location_read_str (loc, val, out->city, sizeof(out->city));
   }
 }
 
@@ -548,14 +509,6 @@ static BOOL IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t 
     else low = mid + 1;
   }
   return (FALSE);
-}
-
-/**
- * Return API version numeric.
- */
-static unsigned IP2Location_api_version_num (void)
-{
-  return (((API_VERSION_MAJOR * 100) + API_VERSION_MINOR) * 100 + API_VERSION_RELEASE);
 }
 
 /**
@@ -678,7 +631,7 @@ static uint32_t IP2Location_read32 (IP2Location *loc, uint32_t position)
   byte2 = loc->sh_mem_ptr [position];
   byte3 = loc->sh_mem_ptr [position+1];
   byte4 = loc->sh_mem_ptr [position+2];
-  return ((byte4 << 24) | (byte3 << 16) | (byte2 << 8) | (byte1));
+  return ((byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1);
 }
 
 /**
@@ -715,8 +668,8 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
 {
   ipv_t parsed_ipv;
 
-  parsed_ipv.ipversion = 4;
-  parsed_ipv.ipv4      = _byteswap_ulong (addr->s_addr);
+  parsed_ipv.ip_ver = 4;
+  parsed_ipv.ipv4   = _byteswap_ulong (addr->s_addr);
 
   memset (out, '\0', sizeof(*out));
   if (!IP2Location_get_ipv4_record(ip2loc_handle, IP2LOC_FLAGS, parsed_ipv, out))
@@ -737,12 +690,12 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
 
   if (IN6_IS_ADDR_V4MAPPED(addr))
   {
-    parsed_ipv.ipversion = 4;
-    parsed_ipv.ipv4 = *(const uint32_t*) addr;
+    parsed_ipv.ip_ver = 4;
+    parsed_ipv.ipv4   = *(const uint32_t*) addr;
   }
   else
   {
-    parsed_ipv.ipversion = 6;
+    parsed_ipv.ip_ver = 6;
     memcpy (&parsed_ipv.ipv6, addr, sizeof(parsed_ipv.ipv6));
   }
 
