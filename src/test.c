@@ -139,39 +139,39 @@ static int name_match (const char *wildcard, const char *string);
 #define NAME_MATCH   1
 #define NAME_NOMATCH 0
 
-#define ADD_TEST(func)  { #func, func }
+#define ADD_TEST(func)  { "test_" #func, test_ ##func }
 
 static const struct test_struct tests[] = {
-                    ADD_TEST (test_ptr_or_error32),
-                    ADD_TEST (test_ptr_or_error32b),
-                    ADD_TEST (test_ptr_or_error64),
-                    ADD_TEST (test_WSAStartup),
-                    ADD_TEST (test_gethostbyaddr),
-                    ADD_TEST (test_gethostbyname),
-                    ADD_TEST (test_IDNA_functions),
-                    ADD_TEST (test_getprotobyname),
-                    ADD_TEST (test_getprotobynumber),
-                    ADD_TEST (test_getservbyname),
-                    ADD_TEST (test_getservbyport),
-                    ADD_TEST (test_getnameinfo),
-                    ADD_TEST (test_getaddrinfo),
-                    ADD_TEST (test_gai_strerror),
-                    ADD_TEST (test_socket),
-                    ADD_TEST (test_socket_unix),
-                    ADD_TEST (test_ioctlsocket),
-                    ADD_TEST (test_connect),
-                    ADD_TEST (test_select),
-                    ADD_TEST (test_select2),
-                    ADD_TEST (test_send),
-                    ADD_TEST (test_WSAPoll),
-                    ADD_TEST (test_WSAFDIsSet),
-                    ADD_TEST (test_WSAAddressToStringA),
-                    ADD_TEST (test_WSAAddressToStringW),
-                    ADD_TEST (test_WSAAddressToStringWP),
-                    ADD_TEST (test_WSAStringToAddressA),
-                    ADD_TEST (test_WSAStringToAddressW),
-                    ADD_TEST (test_WSAEnumProtocols),
-                    ADD_TEST (test_WSACleanup)
+                    ADD_TEST (ptr_or_error32),
+                    ADD_TEST (ptr_or_error32b),
+                    ADD_TEST (ptr_or_error64),
+                    ADD_TEST (WSAStartup),
+                    ADD_TEST (gethostbyaddr),
+                    ADD_TEST (gethostbyname),
+                    ADD_TEST (IDNA_functions),
+                    ADD_TEST (getprotobyname),
+                    ADD_TEST (getprotobynumber),
+                    ADD_TEST (getservbyname),
+                    ADD_TEST (getservbyport),
+                    ADD_TEST (getnameinfo),
+                    ADD_TEST (getaddrinfo),
+                    ADD_TEST (gai_strerror),
+                    ADD_TEST (socket),
+                    ADD_TEST (socket_unix),
+                    ADD_TEST (ioctlsocket),
+                    ADD_TEST (connect),
+                    ADD_TEST (select),
+                    ADD_TEST (select2),
+                    ADD_TEST (send),
+                    ADD_TEST (WSAPoll),
+                    ADD_TEST (WSAFDIsSet),
+                    ADD_TEST (WSAAddressToStringA),
+                    ADD_TEST (WSAAddressToStringW),
+                    ADD_TEST (WSAAddressToStringWP),
+                    ADD_TEST (WSAStringToAddressA),
+                    ADD_TEST (WSAStringToAddressW),
+                    ADD_TEST (WSAEnumProtocols),
+                    ADD_TEST (WSACleanup)
                   };
 
 static int run_test (const char *wildcard)
@@ -466,9 +466,12 @@ static void test_select2 (void)
   TEST_CONDITION (== -1, select (0, (fd_set*)&fd, NULL, NULL, NULL));
 }
 
-/*
+/**
  * Since 'test_select3()' takes a long time, it is NOT in the 'tests[]' table.
- * Poll keyboard too just for show.
+ *
+ * \todo Poll keyboard too just for show.
+ *
+ * \note This function is not `static` since that caused it to be inlined in below `main()`.
  */
 int test_select3 (void)
 {
@@ -719,7 +722,7 @@ static int show_help (void)
   puts ("Usage: test [-h] [-d] [-f] [-l] [-t] [test-wildcard]  (default = '*')");
   puts ("       -h:     this help.");
   puts ("       -d:     increase verbosity.");
-  puts ("       -f:     Firewall event monitoring calling 'test_select3()'.\n"
+  puts ("       -f:     Firewall event monitoring calling 'test_select3()' for 100 sec.\n"
         "               Similar to 'firewall_test.exe' but monitors events together with 'wsock_trace.dll'.");
   puts ("       -l:     list tests and exit.");
   puts ("       -t [N]: only do a thread test with <N> running threads.");
@@ -768,10 +771,10 @@ int MS_CDECL main (int argc, char **argv)
       case 'f':
            return test_select3();
 
-      /* The above "t::" means 'optarg' is optional.
-       * A limitation in getopt.c shows that if 4 threads is wanted, start this
-       * programs as 'test.exe -t4' and not 'test.exe -t 4'.
-       */
+          /* The above "t::" means 'optarg' is optional.
+           * A limitation in getopt.c shows that if 4 threads is wanted, start this
+           * programs as 'test.exe -t4' and not 'test.exe -t 4'.
+           */
       case 't':
            if (optarg)
                 num = atoi (optarg);
