@@ -1797,7 +1797,7 @@ void dump_one_proto_infof (const char *fmt, ...)
 #if defined(__WATCOMC__)
 void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)
 {
-  trace_puts ("~0");
+  trace_puts ("Unavailable~0");
 }
 #else
 static void dump_provider_path (const GUID *guid, const void *provider_path_func)
