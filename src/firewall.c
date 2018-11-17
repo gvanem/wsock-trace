@@ -62,6 +62,7 @@ typedef LONG NTSTATUS;
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
+GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
 GCC_PRAGMA (GCC diagnostic ignored "-Wenum-compare")
 GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
