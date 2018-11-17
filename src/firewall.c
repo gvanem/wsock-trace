@@ -2039,23 +2039,23 @@ static void CALLBACK
                     };
 
   #undef  ADD_VALUE
-  #define ADD_VALUE(v)  { v, #v }
+  #define ADD_VALUE(v)  { FWPM_NET_EVENT_FLAG_##v, "FWPM_NET_EVENT_FLAG_" #v }
 
   static const struct search_list ev_flags[] = {
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_LOCAL_PORT_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_REMOTE_PORT_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_APP_ID_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_USER_ID_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_SCOPE_ID_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_IP_VERSION_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_REAUTH_REASON_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_PACKAGE_ID_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_ENTERPRISE_ID_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_POLICY_FLAGS_SET),
-                      ADD_VALUE (FWPM_NET_EVENT_FLAG_EFFECTIVE_NAME_SET)
+                      ADD_VALUE (IP_PROTOCOL_SET),
+                      ADD_VALUE (LOCAL_ADDR_SET),
+                      ADD_VALUE (REMOTE_ADDR_SET),
+                      ADD_VALUE (LOCAL_PORT_SET),
+                      ADD_VALUE (REMOTE_PORT_SET),
+                      ADD_VALUE (APP_ID_SET),
+                      ADD_VALUE (USER_ID_SET),
+                      ADD_VALUE (SCOPE_ID_SET),
+                      ADD_VALUE (IP_VERSION_SET),
+                      ADD_VALUE (REAUTH_REASON_SET),
+                      ADD_VALUE (PACKAGE_ID_SET),
+                      ADD_VALUE (ENTERPRISE_ID_SET),
+                      ADD_VALUE (POLICY_FLAGS_SET),
+                      ADD_VALUE (EFFECTIVE_NAME_SET)
        };
 
   static const struct search_list directions[] = {
