@@ -353,17 +353,17 @@ DEF_FUNC (INT, WSAAddressToStringW, (SOCKADDR          *address,
                                      wchar_t           *result_string,
                                      DWORD             *result_string_len));
 
-DEF_FUNC (INT, WSAStringToAddressA, (char              *addressStr,
-                                     INT                addressFamily,
-                                     WSAPROTOCOL_INFOA *protocolInfo,
+DEF_FUNC (INT, WSAStringToAddressA, (char              *address_str,
+                                     INT                address_fam,
+                                     WSAPROTOCOL_INFOA *protocol_info,
                                      SOCKADDR          *address,
-                                     INT               *addressLength));
+                                     INT               *address_len));
 
-DEF_FUNC (INT, WSAStringToAddressW, (wchar_t           *addressStr,
-                                     INT                addressFamily,
-                                     WSAPROTOCOL_INFOW *protocolInfo,
+DEF_FUNC (INT, WSAStringToAddressW, (wchar_t           *address_str,
+                                     INT                address_fam,
+                                     WSAPROTOCOL_INFOW *protocol_info,
                                      SOCKADDR          *address,
-                                     INT               *addressLength));
+                                     INT               *address_len));
 
 DEF_FUNC (int, WSAEnumNetworkEvents, (SOCKET            s,
                                       WSAEVENT          ev,
@@ -944,42 +944,36 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
   return (rc);
 }
 
-EXPORT INT WINAPI WSAStringToAddressA (char              *addressStr,
-                                       INT                addressFamily,
-                                       WSAPROTOCOL_INFOA *protocolInfo,
+EXPORT INT WINAPI WSAStringToAddressA (char              *address_str,
+                                       INT                address_fam,
+                                       WSAPROTOCOL_INFOA *protocol_info,
                                        SOCKADDR          *address,
-                                       INT               *addressLength)
+                                       INT               *address_len)
 {
   INT rc;
 
   INIT_PTR (p_WSAStringToAddressA);
-  rc = (*p_WSAStringToAddressA) (addressStr, addressFamily, protocolInfo, address, addressLength);
+  rc = (*p_WSAStringToAddressA) (address_str, address_fam, protocol_info, address, address_len);
+
   ENTER_CRIT();
-
-  if (rc == 0)
-       WSTRACE ("WSAStringToAddressA(). --> ok");
-  else WSTRACE ("WSAStringToAddressA(). --> %s", get_error(rc));
-
+  WSTRACE ("WSAStringToAddressA (\"%s\"). --> %s", address_str, get_error(rc));
   LEAVE_CRIT();
   return (rc);
 }
 
-EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *addressStr,
-                                       INT                addressFamily,
-                                       WSAPROTOCOL_INFOW *protocolInfo,
+EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *address_str,
+                                       INT                address_fam,
+                                       WSAPROTOCOL_INFOW *protocol_info,
                                        SOCKADDR          *address,
-                                       INT               *addressLength)
+                                       INT               *address_len)
 {
   INT rc;
 
   INIT_PTR (p_WSAStringToAddressW);
-  rc = (*p_WSAStringToAddressW) (addressStr, addressFamily, protocolInfo, address, addressLength);
+  rc = (*p_WSAStringToAddressW) (address_str, address_fam, protocol_info, address, address_len);
+
   ENTER_CRIT();
-
-  if (rc == 0)
-       WSTRACE ("WSAStringToAddressW(). --> ok");
-  else WSTRACE ("WSAStringToAddressW(). --> %s", get_error(rc));
-
+  WSTRACE ("WSAStringToAddressW (L\"%S\"). --> %s", address_str, get_error(rc));
   LEAVE_CRIT();
   return (rc);
 }
