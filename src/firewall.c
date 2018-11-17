@@ -82,15 +82,16 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define _byteswap_ushort(x)  swap16(x)
 #endif
 
-/**\def FW_API_LOW
- * The lowest API level supported here.
+/**
+ * \def FW_API_LOW
+ *  The lowest API level supported here.
  *
- *\def FW_API_HIGH
- * The highest API level supported here.
+ * \def FW_API_HIGH
+ *  The highest API level supported here.
  *
- *\def FW_API_DEFAULS
- * The default API level used here if not specified using the `fw_lowest_api` variable
- * prior to calling `fw_monitor_start()`.
+ * \def FW_API_DEFAULT
+ *  The default API level used here if not specified using the `fw_lowest_api` variable
+ *  prior to calling `fw_monitor_start()`.
  */
 #define FW_API_LOW     0
 #define FW_API_HIGH    4
@@ -332,13 +333,13 @@ typedef enum FW_ENUM_RULES_FLAGS {
              FW_ENUM_RULES_FLAG_NONE = 0x0000,
 
              /** Resolves rule description strings to user-friendly, localizable strings if they are in the following
-              *  format: @file.dll,-<resID>. resID refers to the resource ID in the indirect string.
+              *  format: `@file.dll,-<resID>`. resID refers to the resource ID in the indirect string.
               *  Please see [MSDN-SHLoadIndirectString] for further documentation on the string format.
               */
              FW_ENUM_RULES_FLAG_RESOLVE_NAME = 0x0001,
 
              /** Resolves rule description strings to user-friendly, localizable strings if they are in the following
-              *  format: @file.dll,-<resID>. resID refers to the resource ID in the indirect string.
+              *  format: `@file.dll,-<resID>`. resID refers to the resource ID in the indirect string.
               * Please see [MSDN-SHLoadIndirectString] for further documentation on the string format.
               */
              FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION = 0x0002,
