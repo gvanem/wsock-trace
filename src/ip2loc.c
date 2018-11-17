@@ -65,29 +65,65 @@
 
 /**
  * \def API_VERSION_MAJOR
- * \def API_VERSION_MINOR
- * \def API_VERSION_RELEASE
+ *  The major version of this API.
  *
- * API version changes only if functions are added (release) or changed (minor/major)
+ * \def API_VERSION_MINOR
+ *  The minor version of this API.
+ *
+ * \def API_VERSION_MICRO
+ *  The micro version of this API.
  */
-#define API_VERSION_MAJOR     8
-#define API_VERSION_MINOR     0
-#define API_VERSION_RELEASE   7
+#define API_VERSION_MAJOR   8
+#define API_VERSION_MINOR   0
+#define API_VERSION_MICRO   7
 
-#define MAX_IPV4_RANGE        4294967295U
-#define IPV4                  0
-#define IPV6                  1
-
-#define COUNTRYSHORT          0x00001
-#define COUNTRYLONG           0x00002
-#define REGION                0x00004
-#define CITY                  0x00008
-
-/**\def IP2LOC_FLAGS
- * The flags used to look up a location record with a <i>short country</i>,
- * <i>long country</i> name, <i>region</i> and <i>city</i>.
+/**
+ * Flags used to determine what to look for in `IP2Location_read_record()`.
+ *
+ * \def FLG_COUNTRY_SHORT
+ *  Look up the 2 letter ISO-3166 country code.
+ * \ref `geoip_get_long_name_by_A2()` and `c_list[]`.
+ *
+ * \def FLG_COUNTRY_LONG
+ *  Look up the complete country name.
+ *
+ * \def FLG_REGION
+ *  Look up the region in the country.
+ *
+ * \def FLG_CITY
+ *  Look up the city in the country.
  */
-#define IP2LOC_FLAGS  (COUNTRYSHORT | COUNTRYLONG | REGION | CITY)
+#define FLG_COUNTRY_SHORT   0x00001
+#define FLG_COUNTRY_LONG    0x00002
+#define FLG_REGION          0x00004
+#define FLG_CITY            0x00008
+
+/**
+ * \def IP2LOC_FLAGS
+ *
+ * The flags used to look up an database-entry for an IPv4/IPv6-address
+ * with these members:
+ *
+ *  \li `struct ip2loc_entry::country_short`,
+ *  \li `struct ip2loc_entry::country_long`,
+ *  \li `struct ip2loc_entry::city`,
+ *  \li `struct ip2loc_entry::region`.
+ */
+
+#if 0
+  #define IP2LOC_FLAGS  (FLG_COUNTRY_SHORT | FLG_COUNTRY_LONG | FLG_REGION | FLG_CITY)
+#else
+  /**
+   * A bit faster to skip looking for the full country-name.
+   * The returned `struct ip2loc_entry::country_short` is instead passed to
+   * `geoip_get_long_name_by_A2()` to get the full country-name.
+   */
+  #define IP2LOC_FLAGS  (FLG_COUNTRY_SHORT | FLG_REGION | FLG_CITY)
+#endif
+
+#define MAX_IPV4_RANGE      4294967295U /* ULONG_MAX */
+#define IPV4                0
+#define IPV6                1
 
 /**\typedef IP2Location
  *
@@ -146,7 +182,7 @@ static uint32_t    IP2Location_read32 (IP2Location *loc, uint32_t position);
 static uint8_t     IP2Location_read8 (IP2Location *loc, uint32_t position);
 static int32_t     IP2Location_DB_set_shared_memory (IP2Location *loc);
 static void        IP2Location_close (IP2Location *loc);
-static const char *IP2Location_api_version_string (void);
+static const char *IP2Location_api_version_str (void);
 
 /**
  * Open and initialise access to the IP2Location library and binary data-file.
@@ -209,7 +245,7 @@ static IP2Location *open_file (const char *fname)
               "                 Date: %02d %.3s %04d, IPvX: %d, "
               "IPv4-count: %s, IPv6-count: %s (is_IPv4_only: %d, is_IPv6_only: %d).\n",
            fname,
-           dword_str(loc->ipv4_db_count), IP2Location_api_version_string(),
+           dword_str(loc->ipv4_db_count), IP2Location_api_version_str(),
            dword_str(loc->stat_buf.st_size),
            loc->db_day, months[loc->db_month], 2000+loc->db_year, IPvX,
            dword_str(loc->ipv4_db_count), dword_str(loc->ipv6_db_count),
@@ -373,32 +409,37 @@ static void IP2Location_read_str (IP2Location *loc, uint32_t position, char *ret
 }
 
 /**
- * Read the record data.
+ * Read the record data into `*out`.
  *
- * \note The `*out` record is empty on entry of this function.
+ * \param[in] loc      the current database structure; equals `ip2loc_handle`.
+ * \param[in] rowaddr  the database row.
+ * \param[in] mode     the flags used for lookup; equals `IP2LOC_FLAGS`.
+ * \param[out] out     the entry to return.
  *
+ * \note
+ *  The `*out` record is empty on entry of this function.
  */
 static void IP2Location_read_record (IP2Location *loc, uint32_t rowaddr, uint32_t mode, struct ip2loc_entry *out)
 {
   uint32_t val;
   uint8_t  dbtype = loc->db_type;
 
-  if ((mode & COUNTRYSHORT) && COUNTRY_POSITION[dbtype])
+  if ((mode & FLG_COUNTRY_SHORT) && COUNTRY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val, out->country_short, sizeof(out->country_short));
   }
-  if ((mode & COUNTRYLONG) && COUNTRY_POSITION[dbtype])
+  if ((mode & FLG_COUNTRY_LONG) && COUNTRY_POSITION[dbtype])  /* No need to call this. Remove? */
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val+3, out->country_long, sizeof(out->country_long));
   }
-  if ((mode & REGION) && REGION_POSITION[dbtype])
+  if ((mode & FLG_REGION) && REGION_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (REGION_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val, out->region, sizeof(out->region));
   }
-  if ((mode & CITY) && CITY_POSITION[dbtype])
+  if ((mode & FLG_CITY) && CITY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (CITY_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val, out->city, sizeof(out->city));
@@ -514,12 +555,12 @@ static BOOL IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t 
 /**
  * Return API version as string.
  */
-static const char *IP2Location_api_version_string (void)
+static const char *IP2Location_api_version_str (void)
 {
   #define _STR2(x) #x
   #define _STR(x)  _STR2(x)
 
-  return (_STR(API_VERSION_MAJOR) "." _STR(API_VERSION_MINOR) "." _STR(API_VERSION_RELEASE));
+  return (_STR(API_VERSION_MAJOR) "." _STR(API_VERSION_MINOR) "." _STR(API_VERSION_MICRO));
 }
 
 /**
@@ -648,19 +689,6 @@ static uint8_t IP2Location_read8 (IP2Location *loc, uint32_t position)
 }
 
 /**
- * Check the returned record for an unallocated address; `"-"`.
- *
- * \param[in] out  The record to check.
- */
-static BOOL ip2loc_get_common (const struct ip2loc_entry *out)
-{
-  if (out->country_short[0] == '\0' ||
-      out->country_short[0] == '-')    /* is "-" for unallocated addr */
-     return (FALSE);
-  return (TRUE);
-}
-
-/**
  * This avoids the call to `inet_pton()` since the passed `addr`
  * should be a valid IPv4-address.
  */
@@ -677,7 +705,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
          INET_util_get_ip_num(addr, NULL), out->country_short, DWORD_CAST(num_4_loops));
-  return ip2loc_get_common (out);
+  return (out->country_short[0] != '\0');
 }
 
 /**
@@ -706,7 +734,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",
          INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),
          out->country_short, DWORD_CAST(num_6_loops));
-  return ip2loc_get_common (out);
+  return (out->country_short[0] != '\0');
 }
 
 /**
