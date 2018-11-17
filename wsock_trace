@@ -100,8 +100,8 @@
   cygwin_only = 0                    # Trace only Cygwin programs using the wsock_trace_cyg.dll
 
   color_time  = bright red           # Color of time-stamp. E.g. '* 125.654 msec:'
-  color_file  = bright white         # Color of first trace line. E.g.: ' sendf.c(319) (Curl_recv_plain+37):'
-  color_func  = bright red           # Not effective yet
+  color_file  = bright white         # Color of file/line. E.g.: ' sendf.c(319)'
+  color_func  = bright cyan          # Color of 1st traced line. E.g.: '(Curl_recv_plain+37):'
   color_trace = bright yellow        # Color of traced function. E.g.: 'recv (1492, 0x00B74604, 16384, 0) --> 11533 bytes.'
   color_data  = bright green         # Color of extra traced stuff.
 
