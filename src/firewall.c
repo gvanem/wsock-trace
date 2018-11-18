@@ -2,7 +2,7 @@
  * \ingroup inet_util
  *
  * \brief
- *  Function for listening for Windows "Internet Connection Firewall" (ICF) events.
+ *  Function for listening for "Windows Filtering Platform (WFP)" events
  *
  *  The `fw_init()` and `fw_monotor_start()` needs Administrator privileges.
  *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
@@ -1634,7 +1634,6 @@ static void print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
 }
 
 /**
- *
  * Return number of micro-sec from a `FILETIME`.
  */
 static int64 FILETIME_to_usec (const FILETIME *ft)
@@ -1650,46 +1649,67 @@ static int64 FILETIME_to_usec (const FILETIME *ft)
  *
  * This return a time-string matching `g_cfg.trace_time_format`.
  * Ref. `get_timestamp()`.
+ *
+ * \note A `diff` can be negative since different layers in the WFP, seems to create
+ *       these timestamp them-self. And each event is not sent to this callback in
+ *       an ordered fashion.
  */
 static const char *get_time_string (const FILETIME *ts)
 {
   static char  time_str [30];
-  static int64 ref_ts  = S64_SUFFIX(0);
-  static int64 last_ts = S64_SUFFIX(0);
+  static int64 ref_ts = S64_SUFFIX(0);
   int64  diff;
-  long   sec, msec;
 
-  /* Init 'ref_ts' for a TS_RELATIVE or TS_DELTA time-format.
-   * Called from 'fw_load_funcs()'.
+  /* Init `ref_ts` for a `TS_RELATIVE` or `TS_DELTA` time-format.
+   * Called from `fw_load_funcs()`.
    */
   if (!ts)
   {
     FILETIME _ts;
 
     GetSystemTimeAsFileTime (&_ts);
-    last_ts = ref_ts = FILETIME_to_usec (&_ts);
+    ref_ts = FILETIME_to_usec (&_ts);
     return (NULL);
   }
 
+  if (g_cfg.trace_time_format == TS_NONE)
+     return ("");
+
   if (g_cfg.trace_time_format == TS_RELATIVE || g_cfg.trace_time_format == TS_DELTA)
   {
-    int64 _ts = FILETIME_to_usec (ts);
+    static int64 last_ts = S64_SUFFIX(0);
+    const char *sign = "";
+    int64       _ts = FILETIME_to_usec (ts);
+    long        sec, msec;
 
     if (g_cfg.trace_time_format == TS_RELATIVE)
-         diff = FILETIME_to_usec (ts) - ref_ts;
+         diff = _ts - ref_ts;
+    else if (last_ts == S64_SUFFIX(0))  /* First event when `g_cfg.trace_time_format == TS_DELTA` */
+         diff = S64_SUFFIX(0);
     else diff = _ts - last_ts;
-    sec  = (long) (diff / S64_SUFFIX(1000000));
-    msec = (long) ((diff - (sec*1000000)) % 1000);
-    snprintf (time_str, sizeof(time_str), "%ld.%03d sec", sec, abs(msec));
+
     last_ts = _ts;
+    sec  = (long) (diff / S64_SUFFIX(1000000));
+    msec = (long) ((diff - (1000000 * sec)) % 1000);
+    if (sec < 0)
+    {
+      sec  = -sec;
+      sign = "-";
+    }
+    if (msec < 0)
+    {
+      msec = -msec;
+      sign = "-";
+    }
+    snprintf (time_str, sizeof(time_str), "%s%ld.%03d sec", sign, sec, msec);
   }
-  else /* TS_ABSOLUTE */
+  else if (g_cfg.trace_time_format == TS_ABSOLUTE)
   {
     SYSTEMTIME sys_time;
     FILETIME   loc_time;
 
-    memset (&loc_time, '\0', sizeof(loc_time));
     memset (&sys_time, '\0', sizeof(sys_time));
+    memset (&loc_time, '\0', sizeof(loc_time));
     FileTimeToLocalFileTime (ts, &loc_time);
     FileTimeToSystemTime (&loc_time, &sys_time);
 
@@ -1704,7 +1724,10 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
   const char *country, *location;
 
   country = ia4 ? geoip_get_country_by_ipv4(ia4) : geoip_get_country_by_ipv6(ia6);
-  if (country && *country != '-')
+  if (!country)
+     return;
+
+  if (*country != '-')
   {
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
     country  = geoip_get_long_name_by_A2 (country);
@@ -1712,6 +1735,14 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
     trace_indent (INDENT_SZ);
     trace_printf ("loc:  %s, %s", country, location ? location : "?");
   }
+#if 0
+  else if (*country == '-')
+  {
+    trace_putc ('\n');
+    trace_indent (INDENT_SZ);
+    trace_printf ("loc:  %s", country);
+  }
+#endif
 }
 
 #define PORT_STR_SIZE 80
