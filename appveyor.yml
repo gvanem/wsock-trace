@@ -68,6 +68,11 @@ install:
   - cmd: set CYGWIN_OPT=-qgnNdOA -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com
 
   #
+  # The .zip-file used in 'after_test'.
+  #
+  - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+
+  #
   # Set compiler environment for MSVC first.
   #
   - cmd: if %BUILDER%-%CPU%. == msvc-x86.   call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
@@ -116,15 +121,15 @@ test_script:
 #
 after_test:
   - cmd: cd %APPVEYOR_BUILD_FOLDER%
-  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)                                               > NUL
-  - cmd: 7z a wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip .\README.md src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua  > NUL
-  - cmd: 7z a wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt     > NUL
+  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)  > NUL
+  - cmd: 7z a %ZIP_FILE% .\README.md src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua  > NUL
+  - cmd: 7z a %ZIP_FILE% .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt     > NUL
 
 artifacts:
   #
-  # Push  wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip as an artifact.
+  # Push %ZIP_FILE% as an artifact.
   #
-  - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+  - path: %ZIP_FILE%
     name: Wsock-Trace
 
 #
