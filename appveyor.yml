@@ -70,7 +70,7 @@ install:
   #
   # The .zip-file used in 'after_test'.
   #
-  - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+  # - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
 
   #
   # Set compiler environment for MSVC first.
@@ -121,15 +121,15 @@ test_script:
 #
 after_test:
   - cmd: cd %APPVEYOR_BUILD_FOLDER%
-  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)  > NUL
-  - cmd: 7z a %ZIP_FILE% .\README.md src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua  > NUL
-  - cmd: 7z a %ZIP_FILE% .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt     > NUL
+  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)
+  - cmd: 7z a %ZIP_FILE% .\README.md src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua
+  - cmd: 7z a %ZIP_FILE% .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt
 
 artifacts:
   #
   # Push %ZIP_FILE% as an artifact.
   #
-  - path: %ZIP_FILE%
+  - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
     name: Wsock-Trace
 
 #
