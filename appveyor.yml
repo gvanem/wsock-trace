@@ -116,13 +116,13 @@ test_script:
 #
 after_test:
   - cmd: cd %APPVEYOR_BUILD_FOLDER%
-  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)                                           > NUL
-  - cmd: 7z a wsock_trace-%BUILDER%-%APPVEYOR_BUILD_NUMBER%.zip .\README.md src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua    > NUL
-  - cmd: 7z a wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt > NUL
+  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)                                               > NUL
+  - cmd: 7z a wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip .\README.md src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua  > NUL
+  - cmd: 7z a wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt     > NUL
 
 artifacts:
   #
-  # Push  wsock_trace-%BUILDER%-%APPVEYOR_BUILD_NUMBER%.zip as an artifact.
+  # Push  wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip as an artifact.
   #
   - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
     name: Wsock-Trace
