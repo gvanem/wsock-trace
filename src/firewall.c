@@ -1683,12 +1683,16 @@ static const char *get_time_string (const FILETIME *ts)
     snprintf (time_str, sizeof(time_str), "%ld.%03d sec", sec, abs(msec));
     last_ts = _ts;
   }
-  else
+  else /* TS_ABSOLUTE */
   {
     SYSTEMTIME sys_time;
+    FILETIME   loc_time;
 
+    memset (&loc_time, '\0', sizeof(loc_time));
     memset (&sys_time, '\0', sizeof(sys_time));
-    FileTimeToSystemTime (ts, &sys_time);
+    FileTimeToLocalFileTime (ts, &loc_time);
+    FileTimeToSystemTime (&loc_time, &sys_time);
+
     snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u",
               sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
   }
