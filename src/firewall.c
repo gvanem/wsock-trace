@@ -1656,7 +1656,7 @@ int fw_enumerate_rules (void)
     (*p_FWFreeFirewallRules) (rules);
 
   if (num != (int)rule_count)
-     TRACE (1, "num: %d, rule_count: %lu.\n", num, rule_count);
+     TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
   return (num);
 }
 
@@ -2331,42 +2331,54 @@ static const char *get_callout_layer (const GUID *layer)
                       ADD_VALUE (INBOUND_IPPACKET_V4_DISCARD),
                       ADD_VALUE (INBOUND_IPPACKET_V6),
                       ADD_VALUE (INBOUND_IPPACKET_V6_DISCARD),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V4),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V4_DISCARD),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V6),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V6_DISCARD),
-                      ADD_VALUE (IPFORWARD_V4),
-                      ADD_VALUE (IPFORWARD_V4_DISCARD),
-                      ADD_VALUE (IPFORWARD_V6),
-                      ADD_VALUE (IPFORWARD_V6_DISCARD),
                       ADD_VALUE (INBOUND_TRANSPORT_V4),
                       ADD_VALUE (INBOUND_TRANSPORT_V4_DISCARD),
                       ADD_VALUE (INBOUND_TRANSPORT_V6),
                       ADD_VALUE (INBOUND_TRANSPORT_V6_DISCARD),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V4),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V4_DISCARD),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V6),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V6_DISCARD),
-                      ADD_VALUE (STREAM_V4),
-                      ADD_VALUE (STREAM_V4_DISCARD),
-                      ADD_VALUE (STREAM_V6),
-                      ADD_VALUE (STREAM_V6_DISCARD),
-                      ADD_VALUE (DATAGRAM_DATA_V4),
-                      ADD_VALUE (DATAGRAM_DATA_V4_DISCARD),
-                      ADD_VALUE (DATAGRAM_DATA_V6),
-                      ADD_VALUE (DATAGRAM_DATA_V6_DISCARD),
+                      ADD_VALUE (INBOUND_TRANSPORT_FAST),
                       ADD_VALUE (INBOUND_ICMP_ERROR_V4),
                       ADD_VALUE (INBOUND_ICMP_ERROR_V4_DISCARD),
                       ADD_VALUE (INBOUND_ICMP_ERROR_V6),
                       ADD_VALUE (INBOUND_ICMP_ERROR_V6_DISCARD),
+                      ADD_VALUE (INBOUND_MAC_FRAME_ETHERNET),
+                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE),
+                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE_FAST),
+                      ADD_VALUE (INBOUND_RESERVED2),
+
+                      ADD_VALUE (OUTBOUND_IPPACKET_V4),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V4_DISCARD),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V6),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V6_DISCARD),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V4),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V4_DISCARD),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V6),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V6_DISCARD),
                       ADD_VALUE (OUTBOUND_ICMP_ERROR_V4),
                       ADD_VALUE (OUTBOUND_ICMP_ERROR_V4_DISCARD),
                       ADD_VALUE (OUTBOUND_ICMP_ERROR_V6),
                       ADD_VALUE (OUTBOUND_ICMP_ERROR_V6_DISCARD),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4_DISCARD),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6_DISCARD),
+                      ADD_VALUE (OUTBOUND_MAC_FRAME_ETHERNET),
+                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_FAST),
+                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE_FAST),
+
+                      ADD_VALUE (IPFORWARD_V4),
+                      ADD_VALUE (IPFORWARD_V4_DISCARD),
+                      ADD_VALUE (IPFORWARD_V6),
+                      ADD_VALUE (IPFORWARD_V6_DISCARD),
+
+                      ADD_VALUE (STREAM_V4),
+                      ADD_VALUE (STREAM_V4_DISCARD),
+                      ADD_VALUE (STREAM_V6),
+                      ADD_VALUE (STREAM_V6_DISCARD),
+                      ADD_VALUE (STREAM_PACKET_V4),
+                      ADD_VALUE (STREAM_PACKET_V6)
+
+                      ADD_VALUE (DATAGRAM_DATA_V4),
+                      ADD_VALUE (DATAGRAM_DATA_V4_DISCARD),
+                      ADD_VALUE (DATAGRAM_DATA_V6),
+                      ADD_VALUE (DATAGRAM_DATA_V6_DISCARD),
+
                       ADD_VALUE (ALE_AUTH_LISTEN_V4),
                       ADD_VALUE (ALE_AUTH_LISTEN_V4_DISCARD),
                       ADD_VALUE (ALE_AUTH_LISTEN_V6),
@@ -2383,45 +2395,43 @@ static const char *get_callout_layer (const GUID *layer)
                       ADD_VALUE (ALE_FLOW_ESTABLISHED_V4_DISCARD),
                       ADD_VALUE (ALE_FLOW_ESTABLISHED_V6),
                       ADD_VALUE (ALE_FLOW_ESTABLISHED_V6_DISCARD),
-                      ADD_VALUE (INBOUND_MAC_FRAME_ETHERNET),
-                      ADD_VALUE (OUTBOUND_MAC_FRAME_ETHERNET),
-                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE),
-                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE),
-                      ADD_VALUE (INGRESS_VSWITCH_ETHERNET),
-                      ADD_VALUE (EGRESS_VSWITCH_ETHERNET),
-                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V4),
-                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V6),
-                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V4),
-                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V6),
-                      ADD_VALUE (INBOUND_TRANSPORT_FAST),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_FAST),
-                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE_FAST),
-                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE_FAST),
-                      ADD_VALUE (IPSEC_KM_DEMUX_V4),
-                      ADD_VALUE (IPSEC_KM_DEMUX_V6),
-                      ADD_VALUE (IPSEC_V4),
-                      ADD_VALUE (IPSEC_V6),
-                      ADD_VALUE (IKEEXT_V4),
-                      ADD_VALUE (IKEEXT_V6),
-                      ADD_VALUE (RPC_UM),
-                      ADD_VALUE (RPC_EPMAP),
-                      ADD_VALUE (RPC_EP_ADD),
-                      ADD_VALUE (RPC_PROXY_CONN),
-                      ADD_VALUE (RPC_PROXY_IF),
-                      ADD_VALUE (KM_AUTHORIZATION),
-                      ADD_VALUE (NAME_RESOLUTION_CACHE_V4),
-                      ADD_VALUE (NAME_RESOLUTION_CACHE_V6),
-                      ADD_VALUE (ALE_RESOURCE_RELEASE_V4),
-                      ADD_VALUE (ALE_RESOURCE_RELEASE_V6),
                       ADD_VALUE (ALE_ENDPOINT_CLOSURE_V4),
                       ADD_VALUE (ALE_ENDPOINT_CLOSURE_V6),
                       ADD_VALUE (ALE_CONNECT_REDIRECT_V4),
                       ADD_VALUE (ALE_CONNECT_REDIRECT_V6),
                       ADD_VALUE (ALE_BIND_REDIRECT_V4),
                       ADD_VALUE (ALE_BIND_REDIRECT_V6),
-                      ADD_VALUE (STREAM_PACKET_V4),
-                      ADD_VALUE (STREAM_PACKET_V6),
-                      ADD_VALUE (INBOUND_RESERVED2)
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4_DISCARD),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6_DISCARD),
+                      ADD_VALUE (ALE_RESOURCE_RELEASE_V4),
+                      ADD_VALUE (ALE_RESOURCE_RELEASE_V6),
+
+                      ADD_VALUE (INGRESS_VSWITCH_ETHERNET),
+                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V4),
+                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V6),
+
+                      ADD_VALUE (EGRESS_VSWITCH_ETHERNET),
+                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V4),
+                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V6),
+
+                      ADD_VALUE (IPSEC_KM_DEMUX_V4),
+                      ADD_VALUE (IPSEC_KM_DEMUX_V6),
+                      ADD_VALUE (IPSEC_V4),
+                      ADD_VALUE (IPSEC_V6),
+                      ADD_VALUE (IKEEXT_V4),
+                      ADD_VALUE (IKEEXT_V6),
+
+                      ADD_VALUE (RPC_UM),
+                      ADD_VALUE (RPC_EPMAP),
+                      ADD_VALUE (RPC_EP_ADD),
+                      ADD_VALUE (RPC_PROXY_CONN),
+                      ADD_VALUE (RPC_PROXY_IF),
+
+                      ADD_VALUE (KM_AUTHORIZATION),
+                      ADD_VALUE (NAME_RESOLUTION_CACHE_V4),
+                      ADD_VALUE (NAME_RESOLUTION_CACHE_V6)
                     };
   static char ret [sizeof("FWPM_LAYER_DATAGRAM_DATA_V4_DISCARD") + 40 + 2];
 
@@ -2522,7 +2532,7 @@ BOOL fw_enumerate_callouts (void)
   }
 
   if (fw_unknown_layers)
-     trace_printf ("Found %lu callout layer GUIDs.\n", fw_unknown_layers);
+     trace_printf ("Found %lu unknown callout layer GUIDs.\n", DWORD_CAST(fw_unknown_layers));
   fw_unknown_layers = 0;
 
   fw_errno = ERROR_SUCCESS;
@@ -2732,7 +2742,7 @@ static const char *get_time_string (const FILETIME *ts)
       msec = -msec;
       sign = "-";
     }
-    snprintf (time_str, sizeof(time_str), "%s%ld.%03d sec", sign, sec, msec);
+    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec", sign, sec, msec);
   }
   else if (g_cfg.trace_time_format == TS_ABSOLUTE)
   {
@@ -2970,7 +2980,7 @@ static void print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
   else WideCharToMultiByte (fw_acp, 0, w_name, header->appId.size, a_name, w_len, 0, 0);
 
   a_base = basename (a_name);
-  if (exclude_list_get(a_base,FALSE) || exclude_list_get(a_name,FALSE))
+  if (exclude_list_get(a_base,EXCL_PROGRAM) || exclude_list_get(a_name,EXCL_PROGRAM))
      TRACE (2, "\nIgnoring event for %s.\n", a_name);
   else
   {
@@ -3133,12 +3143,15 @@ static void CALLBACK
                       ADD_VALUE (EFFECTIVE_NAME_SET)
        };
 
+  #undef  ADD_VALUE
+  #define ADD_VALUE(v)  { FWP_DIRECTION_##v, #v }
+
   static const struct search_list directions[] = {
-                    { FWP_DIRECTION_IN,       "IN"  },
-                    { FWP_DIRECTION_INBOUND,  "IN"  },
-                    { FWP_DIRECTION_OUT,      "OUT" },
-                    { FWP_DIRECTION_OUTBOUND, "OUT" }
-                  };
+                      ADD_VALUE (IN),
+                      ADD_VALUE (INBOUND),
+                      ADD_VALUE (OUT),
+                      ADD_VALUE (OUTBOUND)
+                    };
 
   BOOL direction_in  = FALSE;
   BOOL direction_out = FALSE;
@@ -3158,8 +3171,10 @@ static void CALLBACK
   }
 
   /**
+   * \todo
+   *
    * The callback needs to examine all the pieces of an event and
-   * the `exclude_list_get (appId)` or `exclude_list_get (address_str)`
+   * the `exclude_list_get (appId, EXCL_PROGRAM)` or `exclude_list_get (address_str, EXCL_ADDRESS)`
    * before deciding to print anything.
    */
 
@@ -3226,7 +3241,7 @@ static void CALLBACK
   }
 
   /* Print the local / remote addresses and ports for IPv4 / IPv6.
-   * An event can only match IPv4 or IPv6 (or something else).
+   * A single event can only match IPv4 or IPv6 (or something else).
    */
   printed = print_addresses_ipv4 (header, direction_in);
 
