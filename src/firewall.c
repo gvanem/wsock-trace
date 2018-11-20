@@ -672,6 +672,10 @@ typedef struct FW_RULE {
 #define FWP_DIRECTION_OUT              0x00003901L
 #define FWP_DIRECTION_FORWARD          0x00003902L
 
+#ifndef FWPM_SESSION_FLAG_DYNAMIC
+#define FWPM_SESSION_FLAG_DYNAMIC      0x00000001
+#endif
+
 typedef struct _FWPM_NET_EVENT_CLASSIFY_DROP0 {
         UINT64  filterId;
         UINT16  layerId;
@@ -1329,9 +1333,11 @@ static BOOL fw_create_engine (void)
   fw_session.displayData.name        = L"FirewallMonitoringSession";
   fw_session.displayData.description = L"Non-Dynamic session for wsock_trace";
 
+#if 0
   /* Let the Base Firewall Engine cleanup after us.
    */
   fw_session.flags = FWPM_SESSION_FLAG_DYNAMIC;
+#endif
 
   rc = (*p_FwpmEngineOpen0) (NULL, RPC_C_AUTHN_WINNT, NULL, &fw_session, &fw_engine_handle);
   if (rc != ERROR_SUCCESS)
