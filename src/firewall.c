@@ -55,10 +55,8 @@ typedef LONG NTSTATUS;
 
 #include <fwpmu.h>
 
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  #include <fwpmu.h>
-#else
-  #include <fwpsu.h>
+#if !defined(__MINGW32__) && !defined(__CYGWIN__)
+#include <fwpsu.h>
 #endif
 
 #include "firewall.h"
@@ -98,12 +96,25 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
  *
  * \def FW_API_DEFAULT
  *  The default API level used here if not specified using the `fw_lowest_api` variable
- *  prior to calling `fw_monitor_start()`.
+ *  prior to calling `fw_monitor_start()` or `fw_dump_events()`.
  */
 #define FW_API_LOW     0
 #define FW_API_HIGH    4
 #define FW_API_DEFAULT 3
 
+/**
+ * \def FW_FUNC_ERROR
+ *  The error-code (1627) to use if a needed function is not found.
+ */
+#define FW_FUNC_ERROR  ERROR_FUNCTION_FAILED
+
+/**
+ * \def TIME_STRING_FMT
+ * The `trace_printf()` format for a `get_time_string()` result.
+ *
+ * \def INDENT_SZ
+ * The number of spaces to indent a printed line.
+ */
 #if defined(TEST_FIREWALL)
   #define TIME_STRING_FMT  "\n~1%s: "
   #define INDENT_SZ        2
@@ -114,6 +125,28 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define TIME_STRING_FMT "\n  ~1* %s: "
   #define INDENT_SZ        (2 + g_cfg.trace_indent)
 #endif
+
+/**
+ * \def DEF_FUNC(ret, f, args)
+ *
+ * Macro to both define and declare the function-pointer.
+ *
+ * \param[in] ret The return value of the typdef'ed function-pointer.
+ * \param[in] f   The function name.
+ * \param[in] f   The function arguments as a list of `(arg1, arg2, ...)`.
+ */
+#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                static func_##f  p_##f = NULL
+
+/**
+ * \def ADD_VALUE(dll, func)
+ *
+ * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
+ *
+ * \param[in] dll  The name of the .DLL to use for `LoadLibrary()`.
+ * \param[in  func The name of the function to  use for `GetProcAddress()`.
+ */
+#define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
 
 typedef enum FW_STORE_TYPE {
              FW_STORE_TYPE_INVALID,
@@ -620,8 +653,6 @@ typedef struct FW_RULE {
         ULONG               compartmentId;
       } FW_RULE;
 
-typedef void (*FW_WALK_RULES) (const FW_RULE *rule);
-
 /*
  * http://msdn.microsoft.com/en-us/library/cc231461.aspx
  */
@@ -637,15 +668,9 @@ typedef void (*FW_WALK_RULES) (const FW_RULE *rule);
 #define FW_REDSTONE1_BINARY_VERSION    0x021A
 #define FW_REDSTONE2_BINARY_VERSION    0x021B
 
-#define FWP_DIRECTION_IN      0x00003900L
-#define FWP_DIRECTION_OUT     0x00003901L
-#define FWP_DIRECTION_FORWARD 0x00003902L
-
-/*
- * Handy macro to both define and declare the function-pointer.
- */
-#define DEF_FUNC(ret, f, args)       typedef ret (WINAPI *func_##f) args; \
-                                     static func_##f  p_##f = NULL
+#define FWP_DIRECTION_IN               0x00003900L
+#define FWP_DIRECTION_OUT              0x00003901L
+#define FWP_DIRECTION_FORWARD          0x00003902L
 
 typedef struct _FWPM_NET_EVENT_CLASSIFY_DROP0 {
         UINT64  filterId;
@@ -1073,6 +1098,31 @@ DEF_FUNC (DWORD, FwpmCalloutDestroyEnumHandle0, (HANDLE engine_handle,
                                                  HANDLE enum_handle));
 
 /*
+ * For fw_dump_events():
+ */
+DEF_FUNC (DWORD, FwpmNetEventCreateEnumHandle0,
+                  (HANDLE                                engine_handle,
+                   const _FWPM_NET_EVENT_ENUM_TEMPLATE0 *enum_template,
+                   HANDLE                               *enum_handle));
+
+DEF_FUNC (DWORD, FwpmNetEventDestroyEnumHandle0, (HANDLE engine_handle,
+                                                  HANDLE enum_handle));
+
+#define DEF_NetEventEnum(N) \
+        DEF_FUNC (DWORD, FwpmNetEventEnum##N,                           \
+                          (HANDLE                engine_handle,         \
+                           HANDLE                enum_handle,           \
+                           UINT32                num_entries_requested, \
+                           _FWPM_NET_EVENT##N ***entries,               \
+                           UINT32               *num_entries_returned))
+DEF_NetEventEnum (0);
+DEF_NetEventEnum (1);
+DEF_NetEventEnum (2);
+DEF_NetEventEnum (3);
+DEF_NetEventEnum (4);
+DEF_NetEventEnum (5);
+
+/*
  * "FirewallAPI.dll" typedefs and functions pointers:
  */
 DEF_FUNC (ULONG, FWOpenPolicyStore, (USHORT                   binary_version,
@@ -1096,13 +1146,6 @@ DEF_FUNC (ULONG, FWStatusMessageFromStatusCode, (FW_RULE_STATUS status_code,
 DEF_FUNC (ULONG, FWFreeFirewallRules, (FW_RULE *pFwRules));
 DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
 
-/**
- * Use this error-code if a needed function is not found.
- */
-#define FUNC_ERROR ERROR_FUNCTION_FAILED
-
-#define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
-
 static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("FirewallAPI.dll", FWOpenPolicyStore),
               ADD_VALUE ("FirewallAPI.dll", FWClosePolicyStore),
@@ -1123,22 +1166,36 @@ static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("FwpUclnt.dll",    FwpmFilterGetById0),
               ADD_VALUE ("FwpUclnt.dll",    FwpmCalloutCreateEnumHandle0),
               ADD_VALUE ("FwpUclnt.dll",    FwpmCalloutEnum0),
-              ADD_VALUE ("FwpUclnt.dll",    FwpmCalloutDestroyEnumHandle0)
+              ADD_VALUE ("FwpUclnt.dll",    FwpmCalloutDestroyEnumHandle0),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventCreateEnumHandle0),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventDestroyEnumHandle0),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum0),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum1),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum2),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum3),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum4),
+              ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum5)
             };
 
 DWORD fw_errno;
 int   fw_lowest_api = -1;
 
-static HANDLE fw_policy_handle = NULL;
-static HANDLE fw_engine_handle = NULL;
-static HANDLE fw_event_handle  = NULL;
-static DWORD  fw_num_rules     = 0;
-static DWORD  fw_num_events    = 0;
-static DWORD  fw_num_ignored   = 0;
-static UINT   fw_acp;
+static FWPM_SESSION fw_session;
+static HANDLE       fw_policy_handle  = INVALID_HANDLE_VALUE;
+static HANDLE       fw_engine_handle  = INVALID_HANDLE_VALUE;
+static HANDLE       fw_event_handle   = INVALID_HANDLE_VALUE;
+static DWORD        fw_num_rules      = 0;
+static DWORD        fw_num_events     = 0;
+static DWORD        fw_num_ignored    = 0;
+static DWORD        fw_unknown_layers = 0;
+static UINT         fw_acp;
 
 static const char *get_time_string (const FILETIME *ts);
 
+/**
+ * \def FW_EVENT_CALLBACK
+ *
+ */
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, drop, allow)                          \
         static void CALLBACK                                                             \
         fw_event_callback##event_ver (void *context,                                     \
@@ -1175,17 +1232,17 @@ FW_EVENT_CALLBACK (2, 3, event->classifyDrop, event->classifyAllow)
 FW_EVENT_CALLBACK (3, 4, event->classifyDrop, event->classifyAllow)
 FW_EVENT_CALLBACK (4, 5, event->classifyDrop, event->classifyAllow)
 
-
 /**
  * Ensure the needed functions are loaded only once.
  *
- * We'll probably manage with only `FwpmNetEventSubscribe0()`.
- * Hence subtract 4 from the number of functions in `fw_funcs[]`.
+ * We'll probably manage with only `FwpmNetEventSubscribe0()` and
+ * `FwpmNetEventEnum0`. Hence subtract (4 + 5) from the number of
+ * functions in `fw_funcs[]`.
  */
 static BOOL fw_load_funcs (void)
 {
   const struct LoadTable *tab = fw_funcs + 0;
-  int   functions_needed = DIM(fw_funcs) - 4;
+  int   functions_needed = DIM(fw_funcs) - (4 + 5);
   int   i, num;
 
   for (i = num = 0; i < DIM(fw_funcs); i++, tab++)
@@ -1209,7 +1266,7 @@ static BOOL fw_load_funcs (void)
 
   if (num < functions_needed)
   {
-    fw_errno = FUNC_ERROR;
+    fw_errno = FW_FUNC_ERROR;
     return (FALSE);
   }
   return (TRUE);
@@ -1239,46 +1296,64 @@ BOOL fw_init (void)
  */
 void fw_exit (void)
 {
-  if (p_FWClosePolicyStore && fw_policy_handle)
+  if (p_FWClosePolicyStore && fw_policy_handle != INVALID_HANDLE_VALUE)
     (*p_FWClosePolicyStore) (fw_policy_handle);
 
-  fw_policy_handle = NULL;
+  fw_policy_handle = INVALID_HANDLE_VALUE;
 
   fw_monitor_stop();
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
 
-static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
+/**
+ * Create the `fw_engine_handle` if not already done.
+ * Initialise the global `fw_session`.
+ */
+static BOOL fw_create_engine (void)
 {
-  FWPM_SESSION session;
-  FWP_VALUE    value;
-  DWORD        rc;
+  DWORD rc;
 
-  memset (&session, '\0', sizeof(session));
-  session.flags                   = 0;  // FWPM_SESSION_FLAG_DYNAMIC;
-  session.displayData.name        = L"FirewallMonitoringSession";
-  session.displayData.description = L"Non-Dynamic session for wsock_trace";
+  if (fw_engine_handle != INVALID_HANDLE_VALUE)
+     return (TRUE);
 
-  /* Assume `p_FwpmEngineOpen0` is NULL
-   */
-  rc = FUNC_ERROR;
-
-  /* Create a non-dynamic BFE session.
-   * Adapted from:
-   *   https://docs.microsoft.com/en-us/windows/desktop/fwp/displaying-net-events
-   */
-  if (!p_FwpmEngineOpen0 ||
-      (rc = (*p_FwpmEngineOpen0)(NULL, RPC_C_AUTHN_WINNT, NULL, &session,
-                                 &fw_engine_handle)) != ERROR_SUCCESS)
+  if (!p_FwpmEngineOpen0)
   {
-    fw_errno = rc;
+    fw_errno = FW_FUNC_ERROR;
+    TRACE (1, "%s() failed: %s\n", __FUNCTION__, win_strerror(fw_errno));
     return (FALSE);
   }
 
+  memset (&fw_session, '\0', sizeof(fw_session));
+  fw_session.flags                   = 0;
+  fw_session.displayData.name        = L"FirewallMonitoringSession";
+  fw_session.displayData.description = L"Non-Dynamic session for wsock_trace";
+
+  /* Let the Base Firewall Engine cleanup after us.
+   */
+  fw_session.flags = FWPM_SESSION_FLAG_DYNAMIC;
+
+  rc = (*p_FwpmEngineOpen0) (NULL, RPC_C_AUTHN_WINNT, NULL, &fw_session, &fw_engine_handle);
+  if (rc != ERROR_SUCCESS)
+  {
+    fw_errno = rc;
+    TRACE (1, "FwpmEngineOpen0() failed: %s\n", win_strerror(fw_errno));
+    return (FALSE);
+  }
+  return (TRUE);
+}
+
+static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
+{
+  FWP_VALUE value;
+  DWORD     rc;
+
+  if (!fw_create_engine())
+     return (FALSE);
+
   /* Assume `p_FwpmEngineSetOption0` is NULL
    */
-  rc = FUNC_ERROR;
+  rc = FW_FUNC_ERROR;
 
   /* Enable collection of NetEvents
    */
@@ -1322,7 +1397,7 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   }
 #endif
 
-  subscription->sessionKey = session.sessionKey;
+  subscription->sessionKey = fw_session.sessionKey;
   fw_errno = ERROR_SUCCESS;
   return (TRUE);
 }
@@ -1333,16 +1408,16 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
  */
 static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
-  #define SET_API_CALLBACK(N)                                                      \
-          do {                                                                     \
-            if (lowest_api >= N && p_FwpmNetEventSubscribe##N &&                   \
-                (*p_FwpmNetEventSubscribe##N) (fw_engine_handle, subscription,     \
-                                               fw_event_callback##N, hnd,          \
-                                               &fw_event_handle) == ERROR_SUCCESS) \
-            {                                                                      \
-              TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);              \
-              return (TRUE);                                                       \
-            }                                                                      \
+  #define SET_API_CALLBACK(N)                                                          \
+          do {                                                                         \
+            if (lowest_api >= N && p_FwpmNetEventSubscribe##N &&                       \
+                (*p_FwpmNetEventSubscribe##N) (fw_engine_handle, subscription,         \
+                                               fw_event_callback##N, fw_engine_handle, \
+                                               &fw_event_handle) == ERROR_SUCCESS)     \
+            {                                                                          \
+              TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);                  \
+              return (TRUE);                                                           \
+            }                                                                          \
           } while (0)
 
   #define CHK_API_CALLBACK(N)               \
@@ -1352,12 +1427,6 @@ static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
               goto quit;                    \
             }                               \
           } while (0)
-
-#if 1
-  HANDLE hnd = fw_engine_handle;  /* pass engine_handle so we don't have to open another */
-#else
-  HANDLE hnd = NULL;
-#endif
 
   int lowest_api = fw_lowest_api;
 
@@ -1408,7 +1477,7 @@ static BOOL fw_check_sizes (void)
             }                                                                 \
           } while (0)
 
-  fw_errno = FUNC_ERROR;  /* Assume failure */
+  fw_errno = FW_FUNC_ERROR;  /* Assume failure */
 
 #if (_WIN32_WINNT >= 0x0A02)
   CHK_SIZE (FWPM_NET_EVENT_HEADER1, ==, _FWPM_NET_EVENT_HEADER1);
@@ -1447,8 +1516,8 @@ static BOOL fw_check_sizes (void)
 
 BOOL fw_monitor_start (void)
 {
-  /* static */ _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
-  /* static */ _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
+  _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
+  _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
 
   if (!fw_check_sizes())
      return (FALSE);
@@ -1474,7 +1543,7 @@ BOOL fw_monitor_start (void)
    */
   if (!fw_monitor_subscribe(&subscription))
   {
-    fw_errno = FUNC_ERROR;
+    fw_errno = FW_FUNC_ERROR;
     return (FALSE);
   }
   fw_num_events = fw_num_ignored = 0;
@@ -1486,24 +1555,16 @@ void fw_monitor_stop (void)
 #if 0
   CloseHandle (fw_event_handle);
   CloseHandle (fw_engine_handle);
-
-  fw_event_handle = NULL;
-  fw_engine_handle = NULL;
 #else
-  if (fw_engine_handle && fw_event_handle && p_FwpmNetEventUnsubscribe0)
-  {
+  if (fw_engine_handle != INVALID_HANDLE_VALUE && fw_event_handle != INVALID_HANDLE_VALUE && p_FwpmNetEventUnsubscribe0)
     (*p_FwpmNetEventUnsubscribe0) (fw_engine_handle, fw_event_handle);
-    fw_event_handle = NULL;
-  }
-  if (fw_engine_handle && p_FwpmEngineClose0)
-  {
+
+  if (fw_engine_handle != INVALID_HANDLE_VALUE && p_FwpmEngineClose0)
     (*p_FwpmEngineClose0) (fw_engine_handle);
-    fw_engine_handle = NULL;
-  }
 #endif
+  fw_event_handle = fw_engine_handle = INVALID_HANDLE_VALUE;
 }
 
-#if defined(TEST_FIREWALL)
 static void print_long_wline (const wchar_t *start, size_t indent)
 {
   size_t         width = g_cfg.screen_width;
@@ -1537,7 +1598,7 @@ static void print_long_wline (const wchar_t *start, size_t indent)
   trace_putc ('\n');
 }
 
-static void fw_dump_rules (const FW_RULE *rule)
+static void fw_dump_rule (const FW_RULE *rule)
 {
   const char *dir = (rule->Direction == FW_DIR_INVALID) ? "INV" :
                     (rule->Direction == FW_DIR_IN)      ? "IN"  :
@@ -1557,43 +1618,1007 @@ static void fw_dump_rules (const FW_RULE *rule)
   trace_putc ('\n');
 }
 
-static void fw_enumerate_rules (FW_PROFILE_TYPE type,
-                                FW_DIRECTION    direction,
-                                FW_WALK_RULES   callback)
+int fw_enumerate_rules (void)
 {
+  int      num = 0;
   FW_RULE *rule, *rules = NULL;
   ULONG    rule_count = 0;
-  ULONG    result;
-  ULONG    flags  = FW_ENUM_RULES_FLAG_RESOLVE_NAME |
-                    FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION |
-                    FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION |
-                    FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD;
+  ULONG    rc;
+  ULONG    flags = FW_ENUM_RULES_FLAG_RESOLVE_NAME |
+                   FW_ENUM_RULES_FLAG_RESOLVE_DESCRIPTION |
+                   FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION |
+                   FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD;
 
-  result = (*p_FWEnumFirewallRules) (fw_policy_handle, FW_RULE_STATUS_CLASS_ALL,
-                                     type, (FW_ENUM_RULES_FLAGS)flags,
-                                     &rule_count, &rules);
-  if (result == ERROR_SUCCESS && rules && rule_count)
+  rc = (*p_FWEnumFirewallRules) (fw_policy_handle, FW_RULE_STATUS_CLASS_ALL,
+                                 FW_PROFILE_TYPE_CURRENT, (FW_ENUM_RULES_FLAGS)flags,
+                                 &rule_count, &rules);
+  if (rc != ERROR_SUCCESS)
+  {
+    fw_errno = rc;
+    TRACE (1, "FWEnumFirewallRules() failed: %s.\n", win_strerror(fw_errno));
+    return (-1);
+  }
+  if (rules && rule_count)
   {
     for (rule = rules; rule; rule = rule->pNext)
     {
-      if (direction == FW_DIR_BOTH || rule->Direction == direction)
-        (*callback) (rule);
+      fw_dump_rule (rule);
+      num++;
     }
   }
   if (p_FWFreeFirewallRules && rules)
     (*p_FWFreeFirewallRules) (rules);
+
+  if (num != (int)rule_count)
+     TRACE (1, "num: %d, rule_count: %lu.\n", num, rule_count);
+  return (num);
 }
 
-static void fw_enumerate_callouts (void)
-{
-  printf ("%s() not yet implemented.\n", __FUNCTION__);
-}
-
-static void fw_dump_events (void)
-{
-  printf ("%s() not yet implemented.\n", __FUNCTION__);
-}
+#ifndef FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW
+#define FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW         0x00000001
 #endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_OFFLOAD
+#define FWP_CALLOUT_FLAG_ALLOW_OFFLOAD               0x00000002
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY
+#define FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY    0x00000004
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION
+#define FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION 0x00000008
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY
+#define FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY            0x00000010
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_RESERVED1
+#define FWP_CALLOUT_FLAG_RESERVED1                   0x00000020
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_RSC
+#define FWP_CALLOUT_FLAG_ALLOW_RSC                   0x00000040
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY
+#define FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY     0x00000080
+#endif
+
+#ifndef FWPM_CALLOUT_FLAG_PERSISTENT
+#define FWPM_CALLOUT_FLAG_PERSISTENT                 0x00010000
+#endif
+
+#ifndef FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT
+#define FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT      0x00020000
+#endif
+
+#ifndef FWPM_CALLOUT_FLAG_REGISTERED
+#define FWPM_CALLOUT_FLAG_REGISTERED                 0x00040000
+#endif
+
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { v, #v }
+
+static const char *get_callout_flag (UINT32 flags)
+{
+  /* Enter flags with highest bit first.
+   */
+  static const struct search_list callout_flags[] = {
+                                  ADD_VALUE (FWPM_CALLOUT_FLAG_REGISTERED),
+                                  ADD_VALUE (FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT),
+                                  ADD_VALUE (FWPM_CALLOUT_FLAG_PERSISTENT),
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY),
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_RSC),
+                               /* ADD_VALUE (FWP_CALLOUT_FLAG_RESERVED1), */
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY),
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION),
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY),
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_OFFLOAD),
+                                  ADD_VALUE (FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW)
+                                };
+  flags &= ~FWP_CALLOUT_FLAG_RESERVED1;
+  return flags_decode (flags, callout_flags, DIM(callout_flags));
+}
+
+/**
+ * Get the `FWPM_LAYER_xx` name from <fwpmu.h> for this layer.
+ *
+ * \eg{.}:
+ * ```
+ *  // c86fd1bf-21cd-497e-a0bb-17425c885c58
+ *  _DEFINE_GUID (FWPM_LAYER_INBOUND_IPPACKET_V4,
+ *                ...)
+ * ```
+ * In this case, return name of `layer` as `FWPM_LAYER_INBOUND_IPPACKET_V4 (C86FD1BF-21CD-497E-A0BB-17425C885C58)`
+ */
+struct GUID_search_list2 {
+       const GUID *guid;
+       const char *name;
+     };
+
+#define _DEFINE_GUID(name, dw, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+         static const GUID _##name = {                                 \
+                      dw, w1, w2, { b1, b2, b3, b4, b5, b6, b7, b8 }   \
+                    };
+/*
+ * Generated by `gen-fwpm-guid.bat` and hand-edited:
+ */
+_DEFINE_GUID (FWPM_LAYER_INBOUND_IPPACKET_V4,
+              0xC86FD1BF,
+              0x21CD,
+              0x497E,
+              0xA0, 0xBB, 0x17, 0x42, 0x5C, 0x88, 0x5C, 0x58);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_IPPACKET_V4_DISCARD,
+              0xB5A230D0,
+              0xA8C0,
+              0x44F2,
+              0x91, 0x6E, 0x99, 0x1B, 0x53, 0xDE, 0xD1, 0xF7);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_IPPACKET_V6,
+              0xF52032CB,
+              0x991C,
+              0x46E7,
+              0x97, 0x1D, 0x26, 0x01, 0x45, 0x9A, 0x91, 0xCA);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_IPPACKET_V6_DISCARD,
+              0xBB24C279,
+              0x93B4,
+              0x47A2,
+              0x83, 0xAD, 0xAE, 0x16, 0x98, 0xB5, 0x08, 0x85);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_IPPACKET_V4,
+              0x1E5C9FAE,
+              0x8A84,
+              0x4135,
+              0xA3, 0x31, 0x95, 0x0B, 0x54, 0x22, 0x9E, 0xCD);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_IPPACKET_V4_DISCARD,
+              0x08E4BCB5,
+              0xB647,
+              0x48F3,
+              0x95, 0x3C, 0xE5, 0xDD, 0xBD, 0x03, 0x93, 0x7E);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_IPPACKET_V6,
+              0xA3B3AB6B,
+              0x3564,
+              0x488C,
+              0x91, 0x17, 0xF3, 0x4E, 0x82, 0x14, 0x27, 0x63);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_IPPACKET_V6_DISCARD,
+              0x9513D7C4,
+              0xA934,
+              0x49DC,
+              0x91, 0xA7, 0x6C, 0xCB, 0x80, 0xCC, 0x02, 0xE3);
+
+_DEFINE_GUID (FWPM_LAYER_IPFORWARD_V4,
+              0xA82ACC24,
+              0x4EE1,
+              0x4EE1,
+              0xB4, 0x65, 0xFD, 0x1D, 0x25, 0xCB, 0x10, 0xA4);
+
+_DEFINE_GUID (FWPM_LAYER_IPFORWARD_V4_DISCARD,
+              0x9E9EA773,
+              0x2FAE,
+              0x4210,
+              0x8F, 0x17, 0x34, 0x12, 0x9E, 0xF3, 0x69, 0xEB);
+
+_DEFINE_GUID (FWPM_LAYER_IPFORWARD_V6,
+              0x7B964818,
+              0x19C7,
+              0x493A,
+              0xB7, 0x1F, 0x83, 0x2C, 0x36, 0x84, 0xD2, 0x8C);
+
+_DEFINE_GUID (FWPM_LAYER_IPFORWARD_V6_DISCARD,
+              0x31524A5D,
+              0x1DFE,
+              0x472F,
+              0xBB, 0x93, 0x51, 0x8E, 0xE9, 0x45, 0xD8, 0xA2);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_TRANSPORT_V4,
+              0x5926DFC8,
+              0xE3CF,
+              0x4426,
+              0xA2, 0x83, 0xDC, 0x39, 0x3F, 0x5D, 0x0F, 0x9D);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_TRANSPORT_V4_DISCARD,
+              0xAC4A9833,
+              0xF69D,
+              0x4648,
+              0xB2, 0x61, 0x6D, 0xC8, 0x48, 0x35, 0xEF, 0x39);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_TRANSPORT_V6,
+              0x634A869F,
+              0xFC23,
+              0x4B90,
+              0xB0, 0xC1, 0xBF, 0x62, 0x0A, 0x36, 0xAE, 0x6F);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_TRANSPORT_V6_DISCARD,
+              0x2A6FF955,
+              0x3B2B,
+              0x49D2,
+              0x98, 0x48, 0xAD, 0x9D, 0x72, 0xDC, 0xAA, 0xB7);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
+              0x09E61AEA,
+              0xD214,
+              0x46E2,
+              0x9B, 0x21, 0xB2, 0x6B, 0x0B, 0x2F, 0x28, 0xC8);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_TRANSPORT_V4_DISCARD,
+              0xC5F10551,
+              0xBDB0,
+              0x43D7,
+              0xA3, 0x13, 0x50, 0xE2, 0x11, 0xF4, 0xD6, 0x8A);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
+              0xE1735BDE,
+              0x013F,
+              0x4655,
+              0xB3, 0x51, 0xA4, 0x9E, 0x15, 0x76, 0x2D, 0xF0);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_TRANSPORT_V6_DISCARD,
+              0xF433DF69,
+              0xCCBD,
+              0x482E,
+              0xB9, 0xB2, 0x57, 0x16, 0x56, 0x58, 0xC3, 0xB3);
+
+_DEFINE_GUID (FWPM_LAYER_STREAM_V4,
+              0x3B89653C,
+              0xC170,
+              0x49E4,
+              0xB1, 0xCD, 0xE0, 0xEE, 0xEE, 0xE1, 0x9A, 0x3E);
+
+_DEFINE_GUID (FWPM_LAYER_STREAM_V4_DISCARD,
+              0x25C4C2C2,
+              0x25FF,
+              0x4352,
+              0x82, 0xF9, 0xC5, 0x4A, 0x4A, 0x47, 0x26, 0xDC);
+
+_DEFINE_GUID (FWPM_LAYER_STREAM_V6,
+              0x47C9137A,
+              0x7EC4,
+              0x46B3,
+              0xB6, 0xE4, 0x48, 0xE9, 0x26, 0xB1, 0xED, 0xA4);
+
+_DEFINE_GUID (FWPM_LAYER_STREAM_V6_DISCARD,
+              0x10A59FC7,
+              0xB628,
+              0x4C41,
+              0x9E, 0xB8, 0xCF, 0x37, 0xD5, 0x51, 0x03, 0xCF);
+
+_DEFINE_GUID (FWPM_LAYER_DATAGRAM_DATA_V4,
+              0x3D08BF4E,
+              0x45F6,
+              0x4930,
+              0xA9, 0x22, 0x41, 0x70, 0x98, 0xE2, 0x00, 0x27);
+
+_DEFINE_GUID (FWPM_LAYER_DATAGRAM_DATA_V4_DISCARD,
+              0x18E330C6,
+              0x7248,
+              0x4E52,
+              0xAA, 0xAB, 0x47, 0x2E, 0xD6, 0x77, 0x04, 0xFD);
+
+_DEFINE_GUID (FWPM_LAYER_DATAGRAM_DATA_V6,
+              0xFA45FE2F,
+              0x3CBA,
+              0x4427,
+              0x87, 0xFC, 0x57, 0xB9, 0xA4, 0xB1, 0x0D, 0x00);
+
+_DEFINE_GUID (FWPM_LAYER_DATAGRAM_DATA_V6_DISCARD,
+              0x09D1DFE1,
+              0x9B86,
+              0x4A42,
+              0xBE, 0x9D, 0x8C, 0x31, 0x5B, 0x92, 0xA5, 0xD0);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_ICMP_ERROR_V4,
+              0x61499990,
+              0x3CB6,
+              0x4E84,
+              0xB9, 0x50, 0x53, 0xB9, 0x4B, 0x69, 0x64, 0xF3);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_ICMP_ERROR_V4_DISCARD,
+              0xA6B17075,
+              0xEBAF,
+              0x4053,
+              0xA4, 0xE7, 0x21, 0x3C, 0x81, 0x21, 0xED, 0xE5);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_ICMP_ERROR_V6,
+              0x65F9BDFF,
+              0x3B2D,
+              0x4E5D,
+              0xB8, 0xC6, 0xC7, 0x20, 0x65, 0x1F, 0xE8, 0x98);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_ICMP_ERROR_V6_DISCARD,
+              0xA6E7CCC0,
+              0x08FB,
+              0x468D,
+              0xA4, 0x72, 0x97, 0x71, 0xD5, 0x59, 0x5E, 0x09);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_ICMP_ERROR_V4,
+              0x41390100,
+              0x564C,
+              0x4B32,
+              0xBC, 0x1D, 0x71, 0x80, 0x48, 0x35, 0x4D, 0x7C);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_ICMP_ERROR_V4_DISCARD,
+              0xB3598D36,
+              0x0561,
+              0x4588,
+              0xA6, 0xBF, 0xE9, 0x55, 0xE3, 0xF6, 0x26, 0x4B);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_ICMP_ERROR_V6,
+              0x7FB03B60,
+              0x7B8D,
+              0x4DFA,
+              0xBA, 0xDD, 0x98, 0x01, 0x76, 0xFC, 0x4E, 0x12);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_ICMP_ERROR_V6_DISCARD,
+              0x65F2E647,
+              0x8D0C,
+              0x4F47,
+              0xB1, 0x9B, 0x33, 0xA4, 0xD3, 0xF1, 0x35, 0x7C);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
+              0x1247D66D,
+              0x0B60,
+              0x4A15,
+              0x8D, 0x44, 0x71, 0x55, 0xD0, 0xF5, 0x3A, 0x0C);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4_DISCARD,
+              0x0B5812A2,
+              0xC3FF,
+              0x4ECA,
+              0xB8, 0x8D, 0xC7, 0x9E, 0x20, 0xAC, 0x63, 0x22);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V6,
+              0x55A650E1,
+              0x5F0A,
+              0x4ECA,
+              0xA6, 0x53, 0x88, 0xF5, 0x3B, 0x26, 0xAA, 0x8C);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V6_DISCARD,
+              0xCBC998BB,
+              0xC51F,
+              0x4C1A,
+              0xBB, 0x4F, 0x97, 0x75, 0xFC, 0xAC, 0xAB, 0x2F);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_LISTEN_V4,
+              0x88BB5DAD,
+              0x76D7,
+              0x4227,
+              0x9C, 0x71, 0xDF, 0x0A, 0x3E, 0xD7, 0xBE, 0x7E);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_LISTEN_V4_DISCARD,
+              0x371DFADA,
+              0x9F26,
+              0x45FD,
+              0xB4, 0xEB, 0xC2, 0x9E, 0xB2, 0x12, 0x89, 0x3F);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_LISTEN_V6,
+              0x7AC9DE24,
+              0x17DD,
+              0x4814,
+              0xB4, 0xBD, 0xA9, 0xFB, 0xC9, 0x5A, 0x32, 0x1B);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_LISTEN_V6_DISCARD,
+              0x60703B07,
+              0x63C8,
+              0x48E9,
+              0xAD, 0xA3, 0x12, 0xB1, 0xAF, 0x40, 0xA6, 0x17);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+              0xE1CD9FE7,
+              0xF4B5,
+              0x4273,
+              0x96, 0xC0, 0x59, 0x2E, 0x48, 0x7B, 0x86, 0x50);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4_DISCARD,
+              0x9EEAA99B,
+              0xBD22,
+              0x4227,
+              0x91, 0x9F, 0x00, 0x73, 0xC6, 0x33, 0x57, 0xB1);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+              0xA3B42C97,
+              0x9F04,
+              0x4672,
+              0xB8, 0x7E, 0xCE, 0xE9, 0xC4, 0x83, 0x25, 0x7F);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6_DISCARD,
+              0x89455B97,
+              0xDBE1,
+              0x453F,
+              0xA2, 0x24, 0x13, 0xDA, 0x89, 0x5A, 0xF3, 0x96);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_CONNECT_V4,
+              0xC38D57D1,
+              0x05A7,
+              0x4C33,
+              0x90, 0x4F, 0x7F, 0xBC, 0xEE, 0xE6, 0x0E, 0x82);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_CONNECT_V4_DISCARD,
+              0xD632A801,
+              0xF5BA,
+              0x4AD6,
+              0x96, 0xE3, 0x60, 0x70, 0x17, 0xD9, 0x83, 0x6A);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_CONNECT_V6,
+              0x4A72393B,
+              0x319F,
+              0x44BC,
+              0x84, 0xC3, 0xBA, 0x54, 0xDC, 0xB3, 0xB6, 0xB4);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_AUTH_CONNECT_V6_DISCARD,
+              0xC97BC3B8,
+              0xC9A3,
+              0x4E33,
+              0x86, 0x95, 0x8E, 0x17, 0xAA, 0xD4, 0xDE, 0x09);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4,
+              0xAF80470A,
+              0x5596,
+              0x4C13,
+              0x99, 0x92, 0x53, 0x9E, 0x6F, 0xE5, 0x79, 0x67);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4_DISCARD,
+              0x146AE4A9,
+              0xA1D2,
+              0x4D43,
+              0xA3, 0x1A, 0x4C, 0x42, 0x68, 0x2B, 0x8E, 0x4F);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6,
+              0x7021D2B3,
+              0xDFA4,
+              0x406E,
+              0xAF, 0xEB, 0x6A, 0xFA, 0xF7, 0xE7, 0x0E, 0xFD);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6_DISCARD,
+              0x46928636,
+              0xBBCA,
+              0x4B76,
+              0x94, 0x1D, 0x0F, 0xA7, 0xF5, 0xD7, 0xD3, 0x72);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_MAC_FRAME_ETHERNET,
+              0xEFFB7EDB,
+              0x0055,
+              0x4F9A,
+              0xA2, 0x31, 0x4F, 0xF8, 0x13, 0x1A, 0xD1, 0x91);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_MAC_FRAME_ETHERNET,
+              0x694673BC,
+              0xD6DB,
+              0x4870,
+              0xAD, 0xEE, 0x0A, 0xCD, 0xBD, 0xB7, 0xF4, 0xB2);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_MAC_FRAME_NATIVE,
+              0xD4220BD3,
+              0x62CE,
+              0x4F08,
+              0xAE, 0x88, 0xB5, 0x6E, 0x85, 0x26, 0xDF, 0x50);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_MAC_FRAME_NATIVE,
+              0x94C44912,
+              0x9D6F,
+              0x4EBF,
+              0xB9, 0x95, 0x05, 0xAB, 0x8A, 0x08, 0x8D, 0x1B);
+
+_DEFINE_GUID (FWPM_LAYER_INGRESS_VSWITCH_ETHERNET,
+              0x7D98577A,
+              0x9A87,
+              0x41EC,
+              0x97, 0x18, 0x7C, 0xF5, 0x89, 0xC9, 0xF3, 0x2D);
+
+_DEFINE_GUID (FWPM_LAYER_EGRESS_VSWITCH_ETHERNET,
+              0x86C872B0,
+              0x76FA,
+              0x4B79,
+              0x93, 0xA4, 0x07, 0x50, 0x53, 0x0A, 0xE2, 0x92);
+
+_DEFINE_GUID (FWPM_LAYER_INGRESS_VSWITCH_TRANSPORT_V4,
+              0xB2696FF6,
+              0x774F,
+              0x4554,
+              0x9F, 0x7D, 0x3D, 0xA3, 0x94, 0x5F, 0x8E, 0x85);
+
+_DEFINE_GUID (FWPM_LAYER_INGRESS_VSWITCH_TRANSPORT_V6,
+              0x5EE314FC,
+              0x7D8A,
+              0x47F4,
+              0xB7, 0xE3, 0x29, 0x1A, 0x36, 0xDA, 0x4E, 0x12);
+
+_DEFINE_GUID (FWPM_LAYER_EGRESS_VSWITCH_TRANSPORT_V4,
+              0xB92350B6,
+              0x91F0,
+              0x46B6,
+              0xBD, 0xC4, 0x87, 0x1D, 0xFD, 0x4A, 0x7C, 0x98);
+
+_DEFINE_GUID (FWPM_LAYER_EGRESS_VSWITCH_TRANSPORT_V6,
+              0x1B2DEF23,
+              0x1881,
+              0x40BD,
+              0x82, 0xF4, 0x42, 0x54, 0xE6, 0x31, 0x41, 0xCB);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_TRANSPORT_FAST,
+              0xE41D2719,
+              0x05C7,
+              0x40F0,
+              0x89, 0x83, 0xEA, 0x8D, 0x17, 0xBB, 0xC2, 0xF6);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_TRANSPORT_FAST,
+              0x13ED4388,
+              0xA070,
+              0x4815,
+              0x99,0x35,0x7A,0x9B,0xE6,0x40,0x8B,0x78);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_MAC_FRAME_NATIVE_FAST,
+              0x853AAA8E,
+              0x2B78,
+              0x4D24,
+              0xA8,0x04,0x36,0xDB,0x08,0xB2,0x97,0x11);
+
+_DEFINE_GUID (FWPM_LAYER_OUTBOUND_MAC_FRAME_NATIVE_FAST,
+              0x470DF946,
+              0xC962,
+              0x486F,
+              0x94,0x46,0x82,0x93,0xCB,0xC7,0x5E,0xB8);
+
+_DEFINE_GUID (FWPM_LAYER_IPSEC_KM_DEMUX_V4,
+              0xF02B1526,
+              0xA459,
+              0x4A51,
+              0xB9, 0xE3, 0x75, 0x9D, 0xE5, 0x2B, 0x9D, 0x2C);
+
+_DEFINE_GUID (FWPM_LAYER_IPSEC_KM_DEMUX_V6,
+              0x2F755CF6,
+              0x2FD4,
+              0x4E88,
+              0xB3, 0xE4, 0xA9, 0x1B, 0xCA, 0x49, 0x52, 0x35);
+
+_DEFINE_GUID (FWPM_LAYER_IPSEC_V4,
+              0xEDA65C74,
+              0x610D,
+              0x4BC5,
+              0x94, 0x8F, 0x3C, 0x4F, 0x89, 0x55, 0x68, 0x67);
+
+_DEFINE_GUID (FWPM_LAYER_IPSEC_V6,
+              0x13C48442,
+              0x8D87,
+              0x4261,
+              0x9A, 0x29, 0x59, 0xD2, 0xAB, 0xC3, 0x48, 0xB4);
+
+_DEFINE_GUID (FWPM_LAYER_IKEEXT_V4,
+              0xB14B7BDB,
+              0xDBBD,
+              0x473E,
+              0xBE, 0xD4, 0x8B, 0x47, 0x08, 0xD4, 0xF2, 0x70);
+
+_DEFINE_GUID (FWPM_LAYER_IKEEXT_V6,
+              0xB64786B3,
+              0xF687,
+              0x4EB9,
+              0x89, 0xD2, 0x8E, 0xF3, 0x2A, 0xCD, 0xAB, 0xE2);
+
+_DEFINE_GUID (FWPM_LAYER_RPC_UM,
+              0x75A89DDA,
+              0x95E4,
+              0x40F3,
+              0xAD, 0xC7, 0x76, 0x88, 0xA9, 0xC8, 0x47, 0xE1);
+
+_DEFINE_GUID (FWPM_LAYER_RPC_EPMAP,
+              0x9247BC61,
+              0xEB07,
+              0x47EE,
+              0x87, 0x2C, 0xBF, 0xD7, 0x8B, 0xFD, 0x16, 0x16);
+
+_DEFINE_GUID (FWPM_LAYER_RPC_EP_ADD,
+              0x618DFFC7,
+              0xC450,
+              0x4943,
+              0x95, 0xDB, 0x99, 0xB4, 0xC1, 0x6A, 0x55, 0xD4);
+
+_DEFINE_GUID (FWPM_LAYER_RPC_PROXY_CONN,
+              0x94A4B50B,
+              0xBA5C,
+              0x4F27,
+              0x90, 0x7A, 0x22, 0x9F, 0xAC, 0x0C, 0x2A, 0x7A);
+
+_DEFINE_GUID (FWPM_LAYER_RPC_PROXY_IF,
+              0xF8A38615,
+              0xE12C,
+              0x41AC,
+              0x98, 0xDF, 0x12, 0x1A, 0xD9, 0x81, 0xAA, 0xDE);
+
+_DEFINE_GUID (FWPM_LAYER_KM_AUTHORIZATION,
+              0x4AA226E9,
+              0x9020,
+              0x45FB,
+              0x95,0x6A, 0xC0, 0x24, 0x9D, 0x84, 0x11, 0x95);
+
+_DEFINE_GUID (FWPM_LAYER_NAME_RESOLUTION_CACHE_V4,
+              0x0C2AA681,
+              0x905B,
+              0x4CCD,
+              0xA4, 0x67, 0x4D, 0xD8, 0x11, 0xD0, 0x7B, 0x7B);
+
+_DEFINE_GUID (FWPM_LAYER_NAME_RESOLUTION_CACHE_V6,
+              0x92D592FA,
+              0x6B01,
+              0x434A,
+              0x9D, 0xEA, 0xD1, 0xE9, 0x6E, 0xA9, 0x7D, 0xA9);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_RESOURCE_RELEASE_V4,
+              0x74365CCE,
+              0xCCB0,
+              0x401A,
+              0xBF, 0xC1, 0xB8, 0x99, 0x34, 0xAD, 0x7E, 0x15);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_RESOURCE_RELEASE_V6,
+              0xF4E5CE80,
+              0xEDCC,
+              0x4E13,
+              0x8A, 0x2F, 0xB9, 0x14, 0x54, 0xBB, 0x05, 0x7B);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_ENDPOINT_CLOSURE_V4,
+              0xB4766427,
+              0xE2A2,
+              0x467A,
+              0xBD, 0x7E, 0xDB, 0xCD, 0x1B, 0xD8, 0x5A, 0x09);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_ENDPOINT_CLOSURE_V6,
+              0xBB536CCD,
+              0x4755,
+              0x4BA9,
+              0x9F, 0xF7, 0xF9, 0xED, 0xF8, 0x69, 0x9C, 0x7B);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_CONNECT_REDIRECT_V4,
+              0xC6E63C8C,
+              0xB784,
+              0x4562,
+              0xAA, 0x7D, 0x0A, 0x67, 0xCF, 0xCA, 0xF9, 0xA3);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_CONNECT_REDIRECT_V6,
+              0x587E54A7,
+              0x8046,
+              0x42BA,
+              0xA0, 0xAA, 0xB7, 0x16, 0x25, 0x0F, 0xC7, 0xFD);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_BIND_REDIRECT_V4,
+              0x66978CAD,
+              0xC704,
+              0x42AC,
+              0x86, 0xAC, 0x7C, 0x1A, 0x23, 0x1B, 0xD2, 0x53);
+
+_DEFINE_GUID (FWPM_LAYER_ALE_BIND_REDIRECT_V6,
+              0xBEF02C9C,
+              0x606B,
+              0x4536,
+              0x8C, 0x26, 0x1C, 0x2F, 0xC7, 0xB6, 0x31, 0xD4);
+
+_DEFINE_GUID (FWPM_LAYER_STREAM_PACKET_V4,
+              0xAF52D8EC,
+              0xCB2D,
+              0x44E5,
+              0xAD, 0x92, 0xF8, 0xDC, 0x38, 0xD2, 0xEB, 0x29);
+
+_DEFINE_GUID (FWPM_LAYER_STREAM_PACKET_V6,
+              0x779A8CA3,
+              0xF099,
+              0x468F,
+              0xB5, 0xD4, 0x83, 0x53, 0x5C, 0x46, 0x1C, 0x02);
+
+_DEFINE_GUID (FWPM_LAYER_INBOUND_RESERVED2,
+              0xF4FB8D55,
+              0xC076,
+              0x46D8,
+              0xA2, 0xC7, 0x6A, 0x4C, 0x72, 0x2C, 0xA4, 0xED);
+
+static const char *get_callout_layer (const GUID *layer)
+{
+  #undef  ADD_VALUE
+  #define ADD_VALUE(v)  { &_FWPM_LAYER_##v, "FWPM_LAYER_" #v }
+
+  static const struct GUID_search_list2 fwpm_guids[] = {
+                      ADD_VALUE (INBOUND_IPPACKET_V4),
+                      ADD_VALUE (INBOUND_IPPACKET_V4_DISCARD),
+                      ADD_VALUE (INBOUND_IPPACKET_V6),
+                      ADD_VALUE (INBOUND_IPPACKET_V6_DISCARD),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V4),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V4_DISCARD),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V6),
+                      ADD_VALUE (OUTBOUND_IPPACKET_V6_DISCARD),
+                      ADD_VALUE (IPFORWARD_V4),
+                      ADD_VALUE (IPFORWARD_V4_DISCARD),
+                      ADD_VALUE (IPFORWARD_V6),
+                      ADD_VALUE (IPFORWARD_V6_DISCARD),
+                      ADD_VALUE (INBOUND_TRANSPORT_V4),
+                      ADD_VALUE (INBOUND_TRANSPORT_V4_DISCARD),
+                      ADD_VALUE (INBOUND_TRANSPORT_V6),
+                      ADD_VALUE (INBOUND_TRANSPORT_V6_DISCARD),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V4),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V4_DISCARD),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V6),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_V6_DISCARD),
+                      ADD_VALUE (STREAM_V4),
+                      ADD_VALUE (STREAM_V4_DISCARD),
+                      ADD_VALUE (STREAM_V6),
+                      ADD_VALUE (STREAM_V6_DISCARD),
+                      ADD_VALUE (DATAGRAM_DATA_V4),
+                      ADD_VALUE (DATAGRAM_DATA_V4_DISCARD),
+                      ADD_VALUE (DATAGRAM_DATA_V6),
+                      ADD_VALUE (DATAGRAM_DATA_V6_DISCARD),
+                      ADD_VALUE (INBOUND_ICMP_ERROR_V4),
+                      ADD_VALUE (INBOUND_ICMP_ERROR_V4_DISCARD),
+                      ADD_VALUE (INBOUND_ICMP_ERROR_V6),
+                      ADD_VALUE (INBOUND_ICMP_ERROR_V6_DISCARD),
+                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V4),
+                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V4_DISCARD),
+                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V6),
+                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V6_DISCARD),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4_DISCARD),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6),
+                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6_DISCARD),
+                      ADD_VALUE (ALE_AUTH_LISTEN_V4),
+                      ADD_VALUE (ALE_AUTH_LISTEN_V4_DISCARD),
+                      ADD_VALUE (ALE_AUTH_LISTEN_V6),
+                      ADD_VALUE (ALE_AUTH_LISTEN_V6_DISCARD),
+                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V4),
+                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V4_DISCARD),
+                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V6),
+                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V6_DISCARD),
+                      ADD_VALUE (ALE_AUTH_CONNECT_V4),
+                      ADD_VALUE (ALE_AUTH_CONNECT_V4_DISCARD),
+                      ADD_VALUE (ALE_AUTH_CONNECT_V6),
+                      ADD_VALUE (ALE_AUTH_CONNECT_V6_DISCARD),
+                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V4),
+                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V4_DISCARD),
+                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V6),
+                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V6_DISCARD),
+                      ADD_VALUE (INBOUND_MAC_FRAME_ETHERNET),
+                      ADD_VALUE (OUTBOUND_MAC_FRAME_ETHERNET),
+                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE),
+                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE),
+                      ADD_VALUE (INGRESS_VSWITCH_ETHERNET),
+                      ADD_VALUE (EGRESS_VSWITCH_ETHERNET),
+                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V4),
+                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V6),
+                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V4),
+                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V6),
+                      ADD_VALUE (INBOUND_TRANSPORT_FAST),
+                      ADD_VALUE (OUTBOUND_TRANSPORT_FAST),
+                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE_FAST),
+                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE_FAST),
+                      ADD_VALUE (IPSEC_KM_DEMUX_V4),
+                      ADD_VALUE (IPSEC_KM_DEMUX_V6),
+                      ADD_VALUE (IPSEC_V4),
+                      ADD_VALUE (IPSEC_V6),
+                      ADD_VALUE (IKEEXT_V4),
+                      ADD_VALUE (IKEEXT_V6),
+                      ADD_VALUE (RPC_UM),
+                      ADD_VALUE (RPC_EPMAP),
+                      ADD_VALUE (RPC_EP_ADD),
+                      ADD_VALUE (RPC_PROXY_CONN),
+                      ADD_VALUE (RPC_PROXY_IF),
+                      ADD_VALUE (KM_AUTHORIZATION),
+                      ADD_VALUE (NAME_RESOLUTION_CACHE_V4),
+                      ADD_VALUE (NAME_RESOLUTION_CACHE_V6),
+                      ADD_VALUE (ALE_RESOURCE_RELEASE_V4),
+                      ADD_VALUE (ALE_RESOURCE_RELEASE_V6),
+                      ADD_VALUE (ALE_ENDPOINT_CLOSURE_V4),
+                      ADD_VALUE (ALE_ENDPOINT_CLOSURE_V6),
+                      ADD_VALUE (ALE_CONNECT_REDIRECT_V4),
+                      ADD_VALUE (ALE_CONNECT_REDIRECT_V6),
+                      ADD_VALUE (ALE_BIND_REDIRECT_V4),
+                      ADD_VALUE (ALE_BIND_REDIRECT_V6),
+                      ADD_VALUE (STREAM_PACKET_V4),
+                      ADD_VALUE (STREAM_PACKET_V6),
+                      ADD_VALUE (INBOUND_RESERVED2)
+                    };
+  static char ret [sizeof("FWPM_LAYER_DATAGRAM_DATA_V4_DISCARD") + 40 + 2];
+
+  const GUID *guid = fwpm_guids[0].guid;
+  const char *name = NULL;
+  int   i;
+
+  for (i = 0; i < DIM(fwpm_guids); guid = fwpm_guids[++i].guid)
+  {
+    if (!memcmp(layer,guid,sizeof(*guid)))
+    {
+      name = fwpm_guids[i].name;
+      break;
+    }
+  }
+  if (!name)
+  {
+    fw_unknown_layers++;
+    name = "?";
+  }
+  snprintf (ret, sizeof(ret), "%s %s", get_guid_string(layer), name);
+  return (ret);
+}
+
+/**
+ *
+ * \ref
+ *   https://github.com/Microsoft/Windows-driver-samples/blob/master/network/trans/WFPSampler/lib/HelperFunctions_FwpmCallout.cpp
+ */
+BOOL fw_enumerate_callouts (void)
+{
+  FWPM_CALLOUT0 **entries = NULL;
+  HANDLE          fw_callout_handle = INVALID_HANDLE_VALUE;
+  UINT32          i, num_in, num_out;
+  DWORD           rc;
+
+  if (!p_FwpmCalloutCreateEnumHandle0  ||
+      !p_FwpmCalloutDestroyEnumHandle0 ||
+      !p_FwpmCalloutEnum0              ||
+      !p_FwpmFreeMemory0)
+  {
+    rc = FW_FUNC_ERROR;
+    TRACE (1, "%s() failed: %s.\n", __FUNCTION__, win_strerror(fw_errno));
+    return (FALSE);
+  }
+
+  if (!fw_create_engine())
+     return (FALSE);
+
+  rc = (*p_FwpmCalloutCreateEnumHandle0) (fw_engine_handle, NULL, &fw_callout_handle);
+  if (rc != ERROR_SUCCESS)
+  {
+    fw_errno = rc;
+    TRACE (1, "FwpmCalloutCreateEnumHandle0() failed: %s.\n", win_strerror(fw_errno));
+    goto fail;
+  }
+
+  num_in  = 100;  /* should be plenty */
+  num_out = 0;
+
+  rc = (*p_FwpmCalloutEnum0) (fw_engine_handle, fw_callout_handle, num_in, &entries, &num_out);
+
+  if (rc == FWP_E_CALLOUT_NOT_FOUND || rc == FWP_E_NOT_FOUND)
+  {
+    fw_errno = rc;
+    TRACE (1, "FwpmCalloutEnum0() returned no callouts: %s.\n", win_strerror(fw_errno));
+    goto fail;
+  }
+  if (rc != ERROR_SUCCESS)
+  {
+    fw_errno = rc;
+    TRACE (1, "FwpmCalloutEnum0() failed: %s.\n", win_strerror(fw_errno));
+    goto fail;
+  }
+
+  TRACE (1, "FwpmCalloutEnum0() returned %u entries.\n", num_out);
+  for (i = 0; i < num_out; i++)
+  {
+    const FWPM_CALLOUT0  *entry = entries[i];
+
+    trace_printf ("%2u: calloutId: %u:\n", i, entry->calloutId);
+    trace_printf ("    name:            %S\n"
+                  "    descr:           %S\n",
+                  entry->displayData.name,
+                  entry->displayData.description ? entry->displayData.description : L"<None>");
+
+    trace_printf ("    flags:           %s\n", get_callout_flag(entry->flags));
+    trace_printf ("    calloutKey:      %s\n", get_guid_string(&entry->calloutKey));
+    trace_printf ("    providerKey:     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
+    trace_printf ("    applicableLayer: %s\n", get_callout_layer(&entry->applicableLayer));
+
+#if 0  /* Never anything here */
+    if (entry->providerData.data)
+         trace_printf ("    providerData:    %.*S\n", entry->providerData.size, (const wchar_t*)entry->providerData.data);
+    else trace_puts   ("    providerData:    <none>\n");
+#endif
+    trace_putc ('\n');
+  }
+
+  if (fw_unknown_layers)
+     trace_printf ("Found %lu callout layer GUIDs.\n", fw_unknown_layers);
+  fw_unknown_layers = 0;
+
+  fw_errno = ERROR_SUCCESS;
+
+fail:
+  if (entries)
+    (*p_FwpmFreeMemory0) ((void**)&entries);
+
+  if (fw_callout_handle != INVALID_HANDLE_VALUE)
+    (*p_FwpmCalloutDestroyEnumHandle0) (fw_engine_handle, fw_callout_handle);
+
+  return (fw_errno == ERROR_SUCCESS);
+}
+
+/**
+ *
+ */
+static BOOL fw_dump_events (void)
+{
+  HANDLE  fw_enum_handle = INVALID_HANDLE_VALUE;
+  UINT32  i, num_in, num_out;
+  DWORD   rc;
+  int     lowest_api = fw_lowest_api;
+
+  _FWPM_FILTER_CONDITION0        filter_conditions [5] = { 0 };
+  _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
+  _FWPM_NET_EVENT0             **entries = NULL;
+
+  if (lowest_api < FW_API_LOW)
+      lowest_api = FW_API_DEFAULT;
+
+  if (!p_FwpmNetEventCreateEnumHandle0  ||
+      !p_FwpmNetEventDestroyEnumHandle0 ||
+      !p_FwpmNetEventEnum0              ||
+      !p_FwpmFreeMemory0)
+  {
+    rc = FW_FUNC_ERROR;
+    TRACE (1, "%s() failed: %s.\n", __FUNCTION__, win_strerror(fw_errno));
+    return (FALSE);
+  }
+
+  if (!fw_create_engine())
+     return (FALSE);
+
+  event_template.startTime.dwLowDateTime = event_template.startTime.dwHighDateTime = 0UL;
+  GetSystemTimeAsFileTime (&event_template.endTime);
+  event_template.numFilterConditions = 0;
+  event_template.filterCondition = filter_conditions;
+
+  rc = (*p_FwpmNetEventCreateEnumHandle0) (fw_engine_handle, &event_template, &fw_enum_handle);
+  if (rc != ERROR_SUCCESS)
+  {
+    fw_errno = rc;
+    TRACE (1, "FwpmNetEventCreateEnumHandle0() failed: %s.\n", win_strerror(fw_errno));
+    goto fail;
+  }
+
+  num_in  = INFINITE; /* == 0xFFFFFFFF */
+  num_out = 0;
+
+ /*
+  * Ref:
+  *   https://github.com/Microsoft/Windows-classic-samples/blob/master/Samples/Win7Samples/netds/wfp/diagevents/diagevents.c#L188
+  * for example use.
+  */
+  rc = (*p_FwpmNetEventEnum0) (fw_engine_handle, fw_enum_handle, num_in, &entries, &num_out);
+  if (rc != ERROR_SUCCESS)
+  {
+    fw_errno = rc;
+    TRACE (1, "FwpmNetEventEnum0() failed: %s\n", win_strerror(fw_errno));
+    goto fail;
+  }
+
+  TRACE (1, "FwpmNetEventEnum0() returned %u entries.\n", num_out);
+  for (i = 0; i < num_out; i++)
+  {
+    const _FWPM_NET_EVENT0               *entry = entries[i];
+    const _FWPM_NET_EVENT_HEADER3        *header;
+    const _FWPM_NET_EVENT_CLASSIFY_DROP2 *drop_event;
+
+    if (entry->type == FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
+    {
+      header     = (const _FWPM_NET_EVENT_HEADER3*)        &entry->header;
+      drop_event = (const _FWPM_NET_EVENT_CLASSIFY_DROP2*) &entry->classifyDrop;
+      fw_event_callback (FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, header, drop_event, NULL);
+    }
+    else
+      trace_printf ("Ignoring entry->type: %d\n", entry->type);
+  }
+
+  fw_errno = ERROR_SUCCESS;
+
+fail:
+  if (entries)
+    (*p_FwpmFreeMemory0) ((void**)&entries);
+
+  if (fw_event_handle != INVALID_HANDLE_VALUE)
+    (*p_FwpmNetEventDestroyEnumHandle0) (fw_engine_handle, fw_enum_handle);
+
+  ARGSUSED (filter_conditions);
+  return (fw_errno == ERROR_SUCCESS);
+}
 
 static void print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                               const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
@@ -2275,7 +3300,7 @@ static int show_help (const char *my_name)
           "  Usage: %s [options] [program]\n"
           "  options:\n"
           "    -a:  the minimum API \"level\" to try (=%d-%d, default: %d).\n"
-          "    -c:  only dump the callout rules                            (not yet).\n"
+          "    -c:  only dump the callout rules.\n"
           "    -e:  only dump recent event                                 (not yet).\n"
           "    -l:  write the filter activity to \"log-file\" only.\n"
           "    -p:  show only activity for programs matching \"app1,app2..\" (not yet).\n"
@@ -2311,7 +3336,7 @@ int main (int argc, char **argv)
   FILE   *p;
   char    p_buf [1000];
   WSADATA wsa;
-  WORD    ver = MAKEWORD(1,1);
+  WORD    ver = MAKEWORD(2,2);
 
   wsock_trace_init();
 
@@ -2368,7 +3393,7 @@ int main (int argc, char **argv)
       goto quit;
     }
     if (dump_rules)
-       fw_enumerate_rules (FW_PROFILE_TYPE_CURRENT, FW_DIR_BOTH, fw_dump_rules);
+       fw_enumerate_rules();
 
     if (dump_events)
        fw_dump_events();
