@@ -2372,7 +2372,7 @@ static const char *get_callout_layer (const GUID *layer)
                       ADD_VALUE (STREAM_V6),
                       ADD_VALUE (STREAM_V6_DISCARD),
                       ADD_VALUE (STREAM_PACKET_V4),
-                      ADD_VALUE (STREAM_PACKET_V6)
+                      ADD_VALUE (STREAM_PACKET_V6),
 
                       ADD_VALUE (DATAGRAM_DATA_V4),
                       ADD_VALUE (DATAGRAM_DATA_V4_DISCARD),
