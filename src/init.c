@@ -29,6 +29,7 @@
 #include "firewall.h"
 #include "cpu.h"
 #include "dnsbl.h"
+#include "in_addr.h"
 #include "init.h"
 
 #define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
@@ -45,16 +46,18 @@ HANDLE      ws_sema;
 BOOL        ws_sema_inherited;
 const char *ws_sema_name = "Global\\wsock_trace-semaphore";
 
-/*
- * Structure for 'exclude_list*()' functions.
- * This is used to exclude both tracing of functions and
- * programs ("addId") in firewall.c.
+/**
+ * \typedef exclude
+ *
+ * Structure for `exclude_list*()` functions.
+ * This is used to exclude both tracing of functions,
+ * programs ("addId") and addresses in firewall.c.
  */
-struct exclude {
-       int     is_func;       /* below 'name' is for an excluded function (otherwise a program) */
-       char   *name;          /* name of function to exclude from the trace */
-       uint64  num_excludes;  /* # of times this function / program was excluded */
-     };
+typedef struct exclude {
+        char        *name;          /**< the `name` to exclude from trace */
+        uint64       num_excludes;  /**< # of times this `name` was excluded */
+        exclude_type which;         /**< which exclude type of the above `name` */
+      } exclude;
 
 /* Dynamic array of above exclude structure.
  */
@@ -352,14 +355,14 @@ static int config_get_line (FILE        *fil,
  * Using `strnicmp()` avoids copying `fmt` into a local
  * buffer first.
  */
-BOOL exclude_list_get (const char *fmt, BOOL is_func)
+BOOL exclude_list_get (const char *fmt,  exclude_type which)
 {
   size_t len;
   int    i, max;
 
   /* If no tracing of any callers, that should exclude everything.
    */
-  if (is_func && g_cfg.trace_caller <= 0)
+  if (which == EXCL_FUNCTION && g_cfg.trace_caller <= 0)
      return (TRUE);
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
@@ -369,8 +372,7 @@ BOOL exclude_list_get (const char *fmt, BOOL is_func)
     struct exclude *ex = smartlist_get (exclude_list, i);
 
     len = strlen (ex->name);
-    if (ex->is_func == is_func &&
-        !strnicmp(fmt, ex->name, len))
+    if (ex->which == which && !strnicmp(fmt, ex->name, len))
     {
       ex->num_excludes++;
       return (TRUE);
@@ -398,13 +400,13 @@ BOOL exclude_list_free (void)
  * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
-static BOOL _exclude_list_add (const char *name, BOOL is_func)
+static BOOL _exclude_list_add (const char *name, exclude_type which)
 {
   struct exclude *ex;
   const char     *p = name;
   size_t          len = strlen (p);
 
-  if (!is_func)
+  if (which == EXCL_PROGRAM)
   {
     if (strchr(p+1,'"') > strchr(p,'"'))
     {
@@ -412,36 +414,39 @@ static BOOL _exclude_list_add (const char *name, BOOL is_func)
       p++;
     }
   }
-  else if (!isalpha((int)*p))
-          return (FALSE);
+  else
+  if (which == EXCL_FUNCTION && !isalpha((int)*p))
+     return (FALSE);
 
   if (!exclude_list)
      exclude_list = smartlist_new();
 
   ex = malloc (sizeof(*ex)+len+1);
   ex->num_excludes = 0;
-  ex->is_func      = is_func;
+  ex->which        = which;
   ex->name         = _strlcpy ((char*)(ex+1), p, len+1);
   smartlist_add (exclude_list, ex);
 
-  TRACE (4, "_exclude_list_add() of '%s', is_func: %d.\n", ex->name, is_func);
+  if (which == EXCL_ADDRESS)
+     TRACE (2, "_exclude_list_add() of '%s', which: %d.\n", ex->name, which);
   return (TRUE);
 }
 
 /**
  * Handler for `"exclude = func1, func2"` or <br>
- *             `"exclude = prog1, prog2"`.
+ *             `"exclude = prog1, prog2"` or <br>
+ *             `"exclude = addr1, addr2"`.
  *
- * If `is_func == FALSE` (a program), allow a `name` with quotes (`""`).
+ * If `which == EXCL_PROGRAM`, allow a `name` with quotes (`""`).
  * But remove those before storing the `name`.
  */
-BOOL exclude_list_add (const char *name, BOOL is_func)
+BOOL exclude_list_add (const char *name, exclude_type which)
 {
   const char *tok_fmt = " ,";
   char       *p, *tok, *copy = strdup (name);
 
   p = copy;
-  if (!is_func)
+  if (which == EXCL_PROGRAM)
   {
     char *end;
     while (*p == '"')
@@ -454,9 +459,10 @@ BOOL exclude_list_add (const char *name, BOOL is_func)
 
   for (tok = strtok(p,tok_fmt); tok; tok = strtok(NULL,tok_fmt))
   {
-    while (!is_func && *tok == ' ')
-       tok++;
-    _exclude_list_add (tok, is_func);
+    if (which == EXCL_PROGRAM)
+       while (*tok == ' ')
+          tok++;
+    _exclude_list_add (tok, which);
   }
 
   free (copy);
@@ -562,7 +568,7 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
      g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
 
   else if (!stricmp(key,"exclude"))
-     exclude_list_add (val, TRUE);
+     exclude_list_add (val, EXCL_FUNCTION);
 
   else if (!stricmp(key,"hook_extensions"))
      g_cfg.hook_extensions = atoi (val);
@@ -824,7 +830,15 @@ static void parse_firewall_settings (const char *key, const char *val, unsigned 
        g_cfg.firewall.api_level = atoi (val);
 
   else if (!stricmp(key,"exclude"))
-     exclude_list_add (val, FALSE);
+  {
+    u_char a4[4], a6[16];
+
+    if (_wsock_trace_inet_pton(AF_INET, val, a4) == 1)
+         exclude_list_add (val, EXCL_ADDRESS);
+    else if (_wsock_trace_inet_pton(AF_INET6, val, a6) == 1)
+         exclude_list_add (val, EXCL_ADDRESS);
+    else exclude_list_add (val, EXCL_PROGRAM);
+  }
 
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
