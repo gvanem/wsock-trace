@@ -303,7 +303,7 @@ int wsock_trace_inet_pton4 (const char *src, u_char *dst)
       if (New > 255)
          goto inval;
       *tp = New;
-      if (! saw_digit)
+      if (!saw_digit)
       {
         if (++octets > 4)
            goto inval;
