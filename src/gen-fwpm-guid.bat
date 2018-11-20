@@ -18,4 +18,5 @@ set GREP_OPT=--before-context=1 --after-context=5
 echo `#include <fwpmu.h>`          > %TEMP%\gen-fwpm-guid.c
 cl %CFLAGS% %TEMP%\gen-fwpm-guid.c > %TEMP%\gen-fwpm-guid.tmp
 
-grep %GREP_OPT% '   FWPM_LAYER_.*,' %TEMP%\gen-fwpm-guid.tmp | sed -e 's/--//' -e 's/DEFINE_GUID/_DEFINE_GUID/'
+grep %GREP_OPT% '   FWPM_LAYER_.*,' %TEMP%\gen-fwpm-guid.tmp | ^
+     sed -e 's/--//' -e 's/DEFINE_GUID(/_DEFINE_GUID (/'
