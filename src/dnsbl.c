@@ -47,7 +47,6 @@ struct DNSBL_info {
      };
 
 static smartlist_t *DNSBL_list = NULL;
-static const char  *current_file;   /* The DROP-file we're currently parsing */
 
 static int           DNSBL_update_files (void);
 static void MS_CDECL DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
@@ -377,7 +376,6 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
   {
     smartlist_t *sl = smartlist_read_file (file, parser);
 
-    current_file = file;
     if (*prev)
     {
       smartlist_append (*prev, sl);
