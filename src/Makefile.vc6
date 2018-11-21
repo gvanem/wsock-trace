@@ -84,7 +84,7 @@ EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
-EX_LIBS = $(EX_LIBS) ole32.lib
+EX_LIBS = $(EX_LIBS) ole32.lib advapi32.lib
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.

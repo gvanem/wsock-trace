@@ -41,7 +41,7 @@ ifeq ($(USE_LUA),1)
   EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
 endif
 
-EX_LIBS += -lole32
+EX_LIBS += -lole32 -ladvapi32
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
           common.c cpu.c dnsbl.c dump.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c \
