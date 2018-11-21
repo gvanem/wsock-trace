@@ -130,7 +130,7 @@
  * The structure that holds all vital information in a IP2Location .bin data-file.
  */
 typedef struct IP2Location {
-        FILE       *file;         /**< The `fdopen()` */
+        FILE       *file;         /**< The `fopen_excl()` file structure */
         uint8_t    *sh_mem_ptr;
         uint64      sh_mem_max;
         uint64      sh_mem_index_errors;
