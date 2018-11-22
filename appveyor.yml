@@ -118,7 +118,7 @@ after_test:
   - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
   - cmd: cd %APPVEYOR_BUILD_FOLDER%
   - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)
-  - cmd: 7z a %ZIP_FILE% .\README.md  .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua
+  - cmd: 7z a %ZIP_FILE% .\README.md  .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua > NUL
 
 #
 # Push %ZIP_FILE% as an artifact.
