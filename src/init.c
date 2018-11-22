@@ -412,6 +412,7 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
   const char     *p = name;
   size_t          len = strlen (p);
   u_char          ia4[4], ia6[16];
+  char            prog [_MAX_PATH];
   exclude_type    which = EXCL_NONE;
 
   if (exclude_which & EXCL_ADDRESS)
@@ -425,10 +426,13 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
   {
     if (strchr(p+1,'"') > strchr(p,'"'))
     {
-      len = strlen (name) - 2;
+      len -= 2;
       p++;
     }
-    which = EXCL_PROGRAM;
+    p = _strlcpy (prog, p, min(len, sizeof(prog)));
+    if (basename(prog) > prog && !file_exists(prog))
+         TRACE (1, "EXCL_PROGRAM '%s' not not exist.\n", prog);
+    else which = EXCL_PROGRAM;
   }
 
   if (which == EXCL_NONE && (exclude_which & EXCL_FUNCTION))
