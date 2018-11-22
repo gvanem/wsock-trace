@@ -89,7 +89,7 @@ idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
 	@echo
 
 firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c getopt.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 > firewall_test.map
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 > firewall_test.map
 	@echo
 
 geoip.exe: $(GEOIP_SRC) geoip-null.c
