@@ -1368,11 +1368,6 @@ static BOOL fw_load_funcs (void)
   if (num >= functions_needed)
      return (TRUE);
 
-  fw_acp = GetConsoleCP();
-  get_time_string (NULL);
-  GetModuleFileName (NULL, fw_module, sizeof(fw_module));
-  TRACE (1, "fw_module: '%s'.\n", fw_module);
-
   /* Functions never loaded.
    */
   if (num == 0)
@@ -1388,14 +1383,16 @@ static BOOL fw_load_funcs (void)
 
 /**
  * This should be the first functions called in this module.
- * But `fw_monitor_start()` does not depend on this function having
- * been called first.
  */
 BOOL fw_init (void)
 {
   USHORT api_version = FW_REDSTONE2_BINARY_VERSION;
 
   fw_num_rules = 0;
+  fw_acp = GetConsoleCP();
+  get_time_string (NULL);
+  GetModuleFileName (NULL, fw_module, sizeof(fw_module));
+  TRACE (1, "fw_module: '%s'.\n", fw_module);
 
   if (!fw_load_funcs())
      return (FALSE);
@@ -2780,7 +2777,7 @@ static const char *get_time_string (const FILETIME *ts)
   int64  diff;
 
   /* Init `ref_ts` for a `TS_RELATIVE` or `TS_DELTA` time-format.
-   * Called from `fw_load_funcs()`.
+   * Called from `fw_init()`.
    */
   if (!ts)
   {
@@ -3334,7 +3331,8 @@ static void CALLBACK
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
   {
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-       fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+         fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+    else TRACE (2, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
     print_layer_item (NULL, allow_event);
     print_filter_rule (NULL, allow_event);
@@ -3342,7 +3340,8 @@ static void CALLBACK
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-       fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+         fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+    else TRACE (2, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
     print_layer_item (drop_event, NULL);
     print_filter_rule (drop_event, NULL);
@@ -3359,11 +3358,11 @@ static void CALLBACK
    if (!address_printed)
       TRACE (3, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
-  if (address_printed /* &&
+  if (/* address_printed && */
       (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW   ||
        event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ||
        event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP    ||
-       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP) */)
+       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP))
   {
     program_printed = print_app_id (header);
     print_user_id (header);
@@ -3371,7 +3370,7 @@ static void CALLBACK
 
   fw_buf_addc ('\n');
 
-  /* We filer only on addresses and programs.
+  /* We filter only on addresses and programs.
    */
   if (address_printed && program_printed)
      fw_buf_flush();
@@ -3446,6 +3445,7 @@ static int show_help (const char *my_name)
           "    -r:  only dump the firewall rules.\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
+          "    Does not work with GUI programs.\n"
           "    Examples:\n"
           "      pause\n"
           "      ping -n 10 www.google.com\n"
@@ -3521,13 +3521,14 @@ int main (int argc, char **argv)
     goto quit;
   }
 
+  if (!fw_init())
+  {
+    TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
+    goto quit;
+  }
+
   if (dump_rules || dump_callouts || dump_events)
   {
-    if (!fw_init())
-    {
-     TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
-      goto quit;
-    }
     if (dump_rules)
        fw_enumerate_rules();
 
@@ -3536,6 +3537,7 @@ int main (int argc, char **argv)
 
     if (dump_callouts)
        fw_enumerate_callouts();
+
     goto quit;
   }
 
@@ -3577,7 +3579,7 @@ int main (int argc, char **argv)
     if (space)
        *space = '\0';
     g_cfg.firewall.show_all = 0;
-    TRACE (1, "fw_module: '%s'.\n", fw_module);
+    TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
   }
 
   p = _popen (program, "rb");
