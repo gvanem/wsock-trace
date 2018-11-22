@@ -1171,12 +1171,22 @@ put_it:
 
 int trace_putc_raw (int ch)
 {
-  static BOOL save;
-  int    rc;
+  int  rc;
+  BOOL save = tilde_escape;
 
-  save = tilde_escape;
   tilde_escape = FALSE;
   rc = trace_putc (ch);
+  tilde_escape = save;
+  return (rc);
+}
+
+int trace_puts_raw (const char *str)
+{
+  int  rc;
+  BOOL save = tilde_escape;
+
+  tilde_escape = FALSE;
+  rc = trace_puts (str);
   tilde_escape = save;
   return (rc);
 }
