@@ -3549,7 +3549,7 @@ int main (int argc, char **argv)
 
   if (log_file)
   {
-    log_f = fopen (log_file, "w+");
+    log_f = fopen (log_file, "wb+");
     g_cfg.trace_stream = log_f;
     if (!g_cfg.trace_stream)
     {
