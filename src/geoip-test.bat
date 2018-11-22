@@ -97,11 +97,11 @@ echo 2a07:9b80::33  # part of 2a07:9b80::/29 ; SBL342980 >> %TEST_INPUT_6%
 
 if %1. == --ip2loc_4. (
   shift
-  %~dp0geoip.exe -4 %2 %3 %4 @%TEST_INPUT_4%
+  %~dp0geoip.exe -4 %2 %3 %4 < %TEST_INPUT_4%
 ) else if %1. == --ip2loc_6. (
   shift
-  %~dp0geoip.exe -6 %2 %3 %4 @%TEST_INPUT_6%
+  %~dp0geoip.exe -6 %2 %3 %4 < %TEST_INPUT_6%
 ) else (
-  %~dp0geoip.exe -4 %1 %2 %3 @%TEST_INPUT_4%
+  %~dp0geoip.exe -4 %1 %2 %3 < %TEST_INPUT_4%
 )
 
