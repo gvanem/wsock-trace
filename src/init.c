@@ -54,9 +54,9 @@ const char *ws_sema_name = "Global\\wsock_trace-semaphore";
  * programs ("addId") and addresses in firewall.c.
  */
 typedef struct exclude {
-        char        *name;          /**< the `name` to exclude from trace */
-        uint64       num_excludes;  /**< # of times this `name` was excluded */
-        exclude_type which;         /**< a bit-set of `exclude_type` of the above `name` */
+        char        *name;          /**< The `name` to exclude from trace */
+        uint64       num_excludes;  /**< Number of times this `name` was excluded */
+        exclude_type which;         /**< A single `exclude_type` of the above `name` */
       } exclude;
 
 /* Dynamic array of above exclude structure.
