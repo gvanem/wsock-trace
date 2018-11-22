@@ -2007,7 +2007,7 @@ static int show_help (const char *my_name)
           "       -h:      this help.\n",
           my_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
-          "   Or from 'stdin': \"cat file-with-addr | geoip.exe -4\".\n"
+          "   Or from 'stdin': \"geoip.exe -4 < file-with-addr\".\n"
           "   Built by %s\n", get_builder());
   wsock_trace_exit();
   return (0);
