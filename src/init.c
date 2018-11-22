@@ -56,7 +56,7 @@ const char *ws_sema_name = "Global\\wsock_trace-semaphore";
 typedef struct exclude {
         char        *name;          /**< the `name` to exclude from trace */
         uint64       num_excludes;  /**< # of times this `name` was excluded */
-        exclude_type which;         /**< which exclude type of the above `name` */
+        exclude_type which;         /**< a bit-set of `exclude_type` of the above `name` */
       } exclude;
 
 /* Dynamic array of above exclude structure.
@@ -355,14 +355,14 @@ static int config_get_line (FILE        *fil,
  * Using `strnicmp()` avoids copying `fmt` into a local
  * buffer first.
  */
-BOOL exclude_list_get (const char *fmt,  exclude_type which)
+BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
 {
   size_t len;
   int    i, max;
 
   /* If no tracing of any callers, that should exclude everything.
    */
-  if (which == EXCL_FUNCTION && g_cfg.trace_caller <= 0)
+  if (exclude_which == EXCL_FUNCTION && g_cfg.trace_caller <= 0)
      return (TRUE);
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
@@ -372,7 +372,7 @@ BOOL exclude_list_get (const char *fmt,  exclude_type which)
     struct exclude *ex = smartlist_get (exclude_list, i);
 
     len = strlen (ex->name);
-    if (ex->which == which && !strnicmp(fmt, ex->name, len))
+    if ((ex->which & exclude_which) && !strnicmp(fmt, ex->name, len))
     {
       ex->num_excludes++;
       return (TRUE);
@@ -400,36 +400,58 @@ BOOL exclude_list_free (void)
  * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
-static BOOL _exclude_list_add (const char *name, exclude_type which)
+static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
 {
-  struct exclude *ex;
+  static const struct search_list exclude_flags[] = {
+                    { EXCL_NONE,     "EXCL_NONE"     },
+                    { EXCL_FUNCTION, "EXCL_FUNCTION" },
+                    { EXCL_PROGRAM,  "EXCL_PROGRAM"  },
+                    { EXCL_ADDRESS,  "EXCL_ADDRESS"  },
+                  };
+  struct exclude *ex = NULL;
   const char     *p = name;
   size_t          len = strlen (p);
+  u_char          ia4[4], ia6[16];
+  exclude_type    which = EXCL_NONE;
 
-  if (which == EXCL_PROGRAM)
+  if (exclude_which & EXCL_ADDRESS)
+  {
+    if (_wsock_trace_inet_pton(AF_INET, name, ia4) == 1 ||
+        _wsock_trace_inet_pton(AF_INET6, name, ia6) == 1)
+       which = EXCL_ADDRESS;
+  }
+
+  if (which == EXCL_NONE && (exclude_which & EXCL_PROGRAM))
   {
     if (strchr(p+1,'"') > strchr(p,'"'))
     {
       len = strlen (name) - 2;
       p++;
     }
+    which = EXCL_PROGRAM;
   }
-  else
-  if (which == EXCL_FUNCTION && !isalpha((int)*p))
-     return (FALSE);
 
-  if (!exclude_list)
-     exclude_list = smartlist_new();
+  if (which == EXCL_NONE && (exclude_which & EXCL_FUNCTION))
+  {
+    if (isalpha((int)*p))
+       which = EXCL_FUNCTION;
+  }
 
-  ex = malloc (sizeof(*ex)+len+1);
-  ex->num_excludes = 0;
-  ex->which        = which;
-  ex->name         = _strlcpy ((char*)(ex+1), p, len+1);
-  smartlist_add (exclude_list, ex);
+  if (which != EXCL_NONE)
+  {
+    if (!exclude_list)
+       exclude_list = smartlist_new();
 
-  if (which == EXCL_ADDRESS)
-     TRACE (2, "_exclude_list_add() of '%s', which: %d.\n", ex->name, which);
-  return (TRUE);
+    ex = malloc (sizeof(*ex)+len+1);
+    ex->num_excludes = 0;
+    ex->which        = which;
+    ex->name         = _strlcpy ((char*)(ex+1), p, len+1);
+    smartlist_add (exclude_list, ex);
+  }
+
+  TRACE (3, "_exclude_list_add() of '%s', which: %s.\n",
+         ex ? ex->name : name, flags_decode(which, exclude_flags, DIM(exclude_flags)));
+  return (which != EXCL_NONE);
 }
 
 /**
@@ -437,16 +459,19 @@ static BOOL _exclude_list_add (const char *name, exclude_type which)
  *             `"exclude = prog1, prog2"` or <br>
  *             `"exclude = addr1, addr2"`.
  *
- * If `which == EXCL_PROGRAM`, allow a `name` with quotes (`""`).
+ * If `(which & EXCL_PROGRAM) == EXCL_PROGRAM`, allow a `name` with quotes (`""`).
  * But remove those before storing the `name`.
  */
-BOOL exclude_list_add (const char *name, exclude_type which)
+BOOL exclude_list_add (const char *name, unsigned exclude_which)
 {
   const char *tok_fmt = " ,";
   char       *p, *tok, *copy = strdup (name);
 
   p = copy;
-  if (which == EXCL_PROGRAM)
+
+  /* If adding a `"program with spaces.exe"`, we must use `strtok (p, ",")`.
+   */
+  if (exclude_which & EXCL_PROGRAM)
   {
     char *end;
     while (*p == '"')
@@ -459,12 +484,11 @@ BOOL exclude_list_add (const char *name, exclude_type which)
 
   for (tok = strtok(p,tok_fmt); tok; tok = strtok(NULL,tok_fmt))
   {
-    if (which == EXCL_PROGRAM)
+    if (exclude_which & EXCL_PROGRAM)
        while (*tok == ' ')
           tok++;
-    _exclude_list_add (tok, which);
+    _exclude_list_add (tok, exclude_which);
   }
-
   free (copy);
   return (TRUE);
 }
@@ -830,15 +854,7 @@ static void parse_firewall_settings (const char *key, const char *val, unsigned 
        g_cfg.firewall.api_level = atoi (val);
 
   else if (!stricmp(key,"exclude"))
-  {
-    u_char a4[4], a6[16];
-
-    if (_wsock_trace_inet_pton(AF_INET, val, a4) == 1)
-         exclude_list_add (val, EXCL_ADDRESS);
-    else if (_wsock_trace_inet_pton(AF_INET6, val, a6) == 1)
-         exclude_list_add (val, EXCL_ADDRESS);
-    else exclude_list_add (val, EXCL_PROGRAM);
-  }
+       exclude_list_add (val, EXCL_PROGRAM | EXCL_ADDRESS);
 
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -977,9 +993,11 @@ static void trace_report (void)
       indent = (i == 0) ? " " : "              ";
       ex = smartlist_get (exclude_list, i);
       len = strlen (ex->name);
-      trace_printf ("%s%s():%*s %*s times.\n",
-                    indent, ex->name, (int)(max_len-len), "",
-                    (int)max_digits, qword_str(ex->num_excludes));
+
+      if (ex->which == EXCL_FUNCTION)
+           trace_printf ("%s%s():%*s ", indent, ex->name, (int)(max_len-len), "");
+      else trace_printf ("%s%s:%*s   ", indent, ex->name, (int)(max_len-len), "");
+      trace_printf ("%*s times.\n", (int)max_digits, qword_str(ex->num_excludes));
     }
   }
 

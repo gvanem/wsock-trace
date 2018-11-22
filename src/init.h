@@ -179,14 +179,14 @@ extern int  get_column (void);
 extern void init_ptr (const void **ptr, const char *ptr_name);
 
 typedef enum exclude_type {
-        EXCL_NONE,
-        EXCL_FUNCTION,
-        EXCL_PROGRAM,
-        EXCL_ADDRESS,
+        EXCL_NONE     = 0x00,
+        EXCL_FUNCTION = 0x01,
+        EXCL_PROGRAM  = 0x02,
+        EXCL_ADDRESS  = 0x04,
       } exclude_type;
 
-extern BOOL exclude_list_add (const char *name, exclude_type which);
-extern BOOL exclude_list_get (const char *fmt, exclude_type which);
+extern BOOL exclude_list_add (const char *name, unsigned exclude_which);
+extern BOOL exclude_list_get (const char *fmt, unsigned exclude_which);
 extern BOOL exclude_list_free (void);
 
 extern const char *config_file_name (void);
