@@ -429,9 +429,9 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
       len -= 2;
       p++;
     }
-    p = _strlcpy (prog, p, min(len, sizeof(prog)));
+    p = _strlcpy (prog, p, min(len+1, sizeof(prog)));
     if (basename(prog) > prog && !file_exists(prog))
-         TRACE (1, "EXCL_PROGRAM '%s' not not exist.\n", prog);
+         TRACE (1, "EXCL_PROGRAM '%s' does not exist.\n", prog);
     else which = EXCL_PROGRAM;
   }
 
