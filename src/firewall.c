@@ -1744,7 +1744,7 @@ int fw_enumerate_rules (void)
     TRACE (1, "FWEnumFirewallRules() failed: %s.\n", win_strerror(fw_errno));
     return (-1);
   }
-  for (num = 0, rule = rules; rule && num < rule_count; rule = rule->pNext, num++)
+  for (num = 0, rule = rules; rule && num < (int)rule_count; rule = rule->pNext, num++)
   {
     fw_dump_rule (rule);
     fw_buf_flush();
@@ -3126,7 +3126,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
  * Lookup the account and domain for a `sid` to get
  * a more sensible account and domain-name.
  */
-static BOOL lookup_account_SID (const SID *sid, const char sid_str, char **account_p, char **domain_p)
+static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char **account_p, char **domain_p)
 {
   SID_NAME_USE sid_use = SidTypeUnknown;
   char        *account_name, *domain_name;

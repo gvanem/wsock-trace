@@ -404,7 +404,7 @@ static void IP2Location_read_str (IP2Location *loc, uint32_t position, char *ret
     return;
   }
   size = loc->sh_mem_ptr [position];
-  size = min (size, (int)max_sz);
+  size = min (size, (uint8_t)max_sz);
   memcpy (ret, &loc->sh_mem_ptr[position+1], size);
 }
 
