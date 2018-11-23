@@ -947,19 +947,18 @@ static void fname_cache_dump (void)
   }
 }
 
+static void fname_cache_free_one (void *e)
+{
+  struct file_name_entry *fn = (struct file_name_entry*) e;
+
+  free (fn->real_name);
+  free (fn);
+}
+
 static void fname_cache_free (void)
 {
-  struct file_name_entry *fn;
-  int    i, max = fname_list ? smartlist_len (fname_list) : 0;
-
-  for (i = 0; i < max; i++)
-  {
-    fn = smartlist_get (fname_list, i);
-    if (fn->real_name)
-       free (fn->real_name);
-    free (fn);
-  }
-  smartlist_free (fname_list);
+  if (fname_list)
+     smartlist_wipe (fname_list, fname_cache_free_one);
   fname_list = NULL;
 }
 
