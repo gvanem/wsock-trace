@@ -1915,6 +1915,7 @@ static void reset_invalid_handler (void)
     _CrtMemDumpStatistics (&last_state);
     _CrtCheckMemory();
     _CrtDumpMemoryLeaks();
+    smartlist_leak_check();
     reset_invalid_handler();
   }
 

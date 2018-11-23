@@ -27,7 +27,15 @@
 
 typedef void (MS_CDECL *smartlist_parse_func) (smartlist_t *sl, const char *line);
 
-extern smartlist_t *smartlist_new (void);
+#if defined(_CRTDBG_MAP_ALLOC)
+  extern smartlist_t *_smartlist_new (const char *file, unsigned line);
+  extern void          smartlist_leak_check (void);
+
+  #define smartlist_new() _smartlist_new (__FILE__, __LINE__)
+#else
+  extern smartlist_t *smartlist_new (void);
+#endif
+
 extern int          smartlist_len (const smartlist_t *sl);
 extern void        *smartlist_get (const smartlist_t *sl, int idx);
 extern void         smartlist_free (smartlist_t *sl);

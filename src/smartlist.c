@@ -69,26 +69,92 @@
   #define assert(x) VM_ASSERT(x)
 #endif
 
+#if defined(_CRTDBG_MAP_ALLOC)
+  /*
+   * Allocate and return an empty smartlist.
+   * The Debug version.
+   */
+  struct sm_list {
+         const void *sl;
+         const char *file;
+         unsigned    line;
+       };
+  static struct sm_list lists [20];
 
-/*
- * Allocate and return an empty smartlist.
- */
-smartlist_t *smartlist_new (void)
-{
-  smartlist_t *sl = malloc (sizeof(*sl));
-
-#ifdef USE_VM_ABORTER
-  init_aborter();
-#endif
-
-  if (sl)
+  void smartlist_leak_check (void)
   {
-    sl->num_used = 0;
-    sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
-    sl->list = calloc (sizeof(void*), sl->capacity);
+    unsigned i;
+
+    for (i = 0; i < DIM(lists); i++)
+    {
+      if (lists[i].sl)
+         fprintf (stderr, "Unfreed smartlist 0x%p allocated at %s(%u).\n",
+                  lists[i].sl, lists[i].file, lists[i].line);
+    }
   }
-  return (sl);
-}
+  static void smartlist_leak_delete (const void *sl)
+  {
+    unsigned i;
+
+    for (i = 0; i < DIM(lists); i++)
+    {
+      if (sl != lists[i].sl)
+         continue;
+      lists [i].sl = NULL;
+      break;
+    }
+  }
+
+  smartlist_t *_smartlist_new (const char *file, unsigned line)
+  {
+    smartlist_t *sl = malloc (sizeof(*sl));
+
+  #ifdef USE_VM_ABORTER
+    init_aborter();
+  #endif
+
+    if (sl)
+    {
+      unsigned i;
+
+      sl->num_used = 0;
+      sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
+      sl->list = calloc (sizeof(void*), sl->capacity);
+
+      for (i = 0; i < DIM(lists); i++)
+      {
+        if (lists[i].sl) /* Already occupied */
+           continue;
+        lists [i].sl   = sl;
+        lists [i].file = file;
+        lists [i].line = line;
+        break;
+      }
+    }
+    return (sl);
+  }
+#else
+  /*
+   * Allocate and return an empty smartlist.
+   * The Release version.
+   */
+  smartlist_t *smartlist_new (void)
+  {
+    smartlist_t *sl = malloc (sizeof(*sl));
+
+  #ifdef USE_VM_ABORTER
+    init_aborter();
+  #endif
+
+    if (sl)
+    {
+      sl->num_used = 0;
+      sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
+      sl->list = calloc (sizeof(void*), sl->capacity);
+    }
+    return (sl);
+  }
+#endif
 
 /*
  * Return the number of items in 'sl'.
@@ -125,6 +191,9 @@ void smartlist_free (smartlist_t *sl)
     sl->num_used = 0;
     free (sl->list);
     free (sl);
+#if defined(_CRTDBG_MAP_ALLOC)
+    smartlist_leak_delete (sl);
+#endif
   }
 }
 
