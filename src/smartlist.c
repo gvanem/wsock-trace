@@ -31,9 +31,9 @@
    * In MSVC '_DEBUG' mode (-MDd), if 'free()' was called on 'sl', the start-value
    * (or the whole block?) gets filled with '0xDDDDDDD'.
     */
-  #define ASSERT_VAL(x) do {                                     \
-                          const size_t *val = (const size_t*) x; \
-                          assert (*val != 0xDDDDDDDD);           \
+  #define ASSERT_VAL(x) do {                                      \
+                          const size_t *_val = (const size_t*) x; \
+                          assert (*_val != 0xDDDDDDDD);           \
                         } while (0)
 #else
   #define ASSERT_VAL(x) (void) 0
@@ -142,6 +142,7 @@ void smartlist_wipe (smartlist_t *sl, void (*free_fn)(void *a))
   for (i = 0; i < sl->num_used; i++)
   {
     val = sl->list[i];
+    assert (val);
     ASSERT_VAL (val);
     (*free_fn) (val);
   }
