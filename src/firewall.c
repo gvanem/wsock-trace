@@ -45,6 +45,7 @@
 #endif
 
 #include "common.h"
+#include "smartlist.h"
 #include "init.h"
 #include "in_addr.h"
 #include "dump.h"
@@ -1198,6 +1199,19 @@ static DWORD        fw_unknown_layers = 0;
 static UINT         fw_acp;
 static char         fw_module [_MAX_PATH];
 
+/**
+ * A cache of SIDs for `print_user_id()`.
+ */
+struct SID_entry {
+       SID  *sid_copy;
+       char *sid_str;
+       char *account_name;
+       char *domain_name;
+     };
+
+static smartlist_t *fw_SID_list;
+static DWORD        fw_SID_cache_hits, fw_SID_cache_misses;
+
 static char  fw_buf [2000];
 static char *fw_ptr  = fw_buf;
 static int   fw_left = (int)sizeof(fw_buf) - 1;
@@ -1388,9 +1402,11 @@ BOOL fw_init (void)
 {
   USHORT api_version = FW_REDSTONE2_BINARY_VERSION;
 
+  fw_SID_list = smartlist_new();
   fw_num_rules = 0;
   fw_acp = GetConsoleCP();
   get_time_string (NULL);
+
   GetModuleFileName (NULL, fw_module, sizeof(fw_module));
   TRACE (1, "fw_module: '%s'.\n", fw_module);
 
@@ -1400,6 +1416,21 @@ BOOL fw_init (void)
   fw_errno = (*p_FWOpenPolicyStore) (api_version, NULL, FW_STORE_TYPE_DEFAULTS, FW_POLICY_ACCESS_RIGHT_READ,
                                      FW_POLICY_STORE_FLAGS_NONE, &fw_policy_handle);
   return (fw_errno == ERROR_SUCCESS);
+}
+
+/**
+ * `smartlist_wipe()` helper.
+ * Free an item in the `fw_SID_list` smartlist.
+ */
+static void fw_SID_free (void *_e)
+{
+  struct SID_entry *e = (struct SID_entry*) _e;
+
+  LocalFree (e->sid_str);
+  free (e->sid_copy);
+  free (e->account_name);
+  free (e->domain_name);
+  free (e);
 }
 
 /**
@@ -1413,6 +1444,11 @@ void fw_exit (void)
   fw_policy_handle = INVALID_HANDLE_VALUE;
 
   fw_monitor_stop();
+
+  TRACE (1, "fw_SID_cache_hits: %lu, fw_SID_cache_misses: %lu.\n",
+         DWORD_CAST(fw_SID_cache_hits), DWORD_CAST(fw_SID_cache_misses));
+
+  smartlist_wipe (fw_SID_list, fw_SID_free);
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
@@ -3087,26 +3123,116 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 }
 
 /**
+ * Lookup the account and domain for a `sid` to get
+ * a more sensible account and domain-name.
+ */
+static BOOL lookup_account_SID (const SID *sid, const char sid_str, char **account_p, char **domain_p)
+{
+  SID_NAME_USE sid_use = SidTypeUnknown;
+  char        *account_name, *domain_name;
+  DWORD        account_name_sz = 0;
+  DWORD        domain_name_sz  = 0;
+  DWORD        err, rc;
+
+  *account_p = *domain_p = NULL;
+
+  /* First call to LookupAccountSid() to get the sizes of account/domain names.
+   */
+  rc = LookupAccountSid (NULL, (PSID)sid,
+                         NULL, (DWORD*)&account_name_sz,
+                         NULL, (DWORD*)&domain_name_sz,
+                         &sid_use);
+
+  /* If no mapping between SID and account-name, just return the
+   * account-name as a SID-string. And no domain-name.
+   */
+  if (!rc && GetLastError() == ERROR_NONE_MAPPED && sid_use == SidTypeUnknown)
+  {
+    *account_p = strdup (sid_str);
+    return (TRUE);
+  }
+
+  account_name = malloc (account_name_sz);
+  if (!account_name)
+     return (FALSE);
+
+  domain_name = malloc (domain_name_sz);
+  if (!domain_name)
+  {
+    free (account_name);
+    return (FALSE);
+  }
+
+  /* Second call to LookupAccountSid() to get the account/domain names.
+   */
+  rc = LookupAccountSid (NULL,                      /* NULL -> name of local computer */
+                         (PSID)sid,                 /* security identifier */
+                         account_name,              /* account name buffer */
+                         (DWORD*)&account_name_sz,  /* size of account name buffer */
+                         domain_name,               /* domain name */
+                         (DWORD*)&domain_name_sz,   /* size of domain name buffer */
+                         &sid_use);                 /* SID type */
+  if (!rc)
+  {
+    err = GetLastError();
+    if (err == ERROR_NONE_MAPPED)
+         TRACE (2, "Account owner not found for specified SID.\n");
+    else TRACE (2, "Error in LookupAccountSid(): %s.\n", win_strerror(err));
+    free (domain_name);
+    free (account_name);
+    return (FALSE);
+  }
+  *account_p = account_name;
+  *domain_p  = domain_name;
+  return (TRUE);
+}
+
+/**
+ * Lookup the entry for the `sid` in the `fw_SID_list` cache.
+ * If not found, add an entry for it.
+ */
+static struct SID_entry *lookup_or_add_SID (const SID *sid)
+{
+  struct SID_entry *se;
+  DWORD  len;
+  int    i, max = smartlist_len (fw_SID_list);
+
+  for (i = 0; i < max; i++)
+  {
+    se = smartlist_get (fw_SID_list, i);
+    if (EqualSid((PSID)sid, se->sid_copy))
+    {
+      fw_SID_cache_hits++;
+      return (se);
+    }
+  }
+  fw_SID_cache_misses++;
+
+  se  = calloc (sizeof(*se), 1);
+  len = GetLengthSid ((PSID)sid);
+  se->sid_copy = malloc (len);
+  CopySid (len, se->sid_copy, (PSID)sid);
+  ConvertSidToStringSid ((PSID)sid, &se->sid_str);
+  lookup_account_SID (sid, se->sid_str, &se->account_name, &se->domain_name);
+  smartlist_add (fw_SID_list, se);
+  return (se);
+}
+
+/**
  * Process the `header->userId` field.
- *
- * \todo Use `LookupAccountSid()` to get a more sensible acount-name.
  */
 static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
 {
-  char       *sid_str = NULL;
-  const SID  *sid;
-  const BYTE *val;
+  const struct SID_entry *se;
+  const char             *user, *domain;
 
   if (!(header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET) || !header->userId)
      return (FALSE);
 
-  sid = header->userId;
-  val = &sid->IdentifierAuthority.Value[0];
-
-  ConvertSidToStringSid ((PSID)sid, &sid_str);
-  fw_buf_add ("\n%-*suser:   %s", INDENT_SZ, "", sid_str ? sid_str : "?");
-  if (sid_str)
-     LocalFree (sid_str);
+  se     = lookup_or_add_SID (header->userId);
+  user   = se->account_name;
+  domain = se->domain_name;
+  fw_buf_add ("\n%-*suser:   %s\\%s", INDENT_SZ, "", user ? user : "?", domain ? domain : "?");
   return (TRUE);
 }
 
