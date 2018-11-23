@@ -383,16 +383,11 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
 
 BOOL exclude_list_free (void)
 {
-  struct exclude *ex;
-  int    i, max = exclude_list ? smartlist_len (exclude_list) : 0;
-
-  for (i = 0; i < max; i++)
+  if (exclude_list)
   {
-    ex = smartlist_get (exclude_list, i);
-    free (ex);
+    smartlist_wipe (exclude_list, free);
+    exclude_list = NULL;
   }
-  smartlist_free (exclude_list);
-  exclude_list = NULL;
   return (TRUE);
 }
 
