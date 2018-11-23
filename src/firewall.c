@@ -1200,16 +1200,23 @@ static UINT         fw_acp;
 static char         fw_module [_MAX_PATH];
 
 /**
- * A cache of SIDs for `print_user_id()`.
+ * \def MAX_DOMAIN_SZ
+ *  Maximum size of a domain name for a `struct SID_entry`.
+ *
+ * \def MAX_ACCOUNT_SZ
+ *  Maximum size of an account name for a `struct SID_entry`.
  */
-#define MAX_DOMAIN_SZ      20
-#define MAX_ACCOUNT_SZ     30
+#define MAX_DOMAIN_SZ    20
+#define MAX_ACCOUNT_SZ   30
 
+/**
+ * A cache of SIDs for `print_user_id()` and `print_package_id()`.
+ */
 struct SID_entry {
        SID  *sid_copy;
        char *sid_str;
-       char  domain  [MAX_DOMAIN_SZ];
-       char  account [MAX_ACCOUNT_SZ];
+       char  domain [MAX_DOMAIN_SZ];
+       char  account[MAX_ACCOUNT_SZ];
      };
 
 static smartlist_t *fw_SID_list;
@@ -1413,7 +1420,8 @@ static void fw_SID_free (void *_e)
 {
   struct SID_entry *e = (struct SID_entry*) _e;
 
-  LocalFree (e->sid_str);
+  if (e->sid_str)
+     LocalFree (e->sid_str);
   free (e);
 }
 
@@ -3158,7 +3166,7 @@ static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char *accou
  * Lookup the entry for the `sid` in the `fw_SID_list` cache.
  * If not found, add an entry for it.
  */
-static struct SID_entry *lookup_or_add_SID (const SID *sid)
+static struct SID_entry *lookup_or_add_SID (SID *sid)
 {
   struct SID_entry *se;
   DWORD  len;
@@ -3167,15 +3175,15 @@ static struct SID_entry *lookup_or_add_SID (const SID *sid)
   for (i = 0; i < max; i++)
   {
     se = smartlist_get (fw_SID_list, i);
-    if (EqualSid((PSID)sid, se->sid_copy))
+    if (EqualSid(sid, se->sid_copy))
        return (se);
   }
 
-  se  = calloc (sizeof(*se), 1);
-  len = GetLengthSid ((PSID)sid);
-  se->sid_copy = malloc (len);
-  CopySid (len, se->sid_copy, (PSID)sid);
-  ConvertSidToStringSid ((PSID)sid, &se->sid_str);
+  len = GetLengthSid (sid);
+  se  = calloc (sizeof(*se) + len, 1);
+  se->sid_copy = (SID*) (se + 1);
+  CopySid (len, se->sid_copy, sid);
+  ConvertSidToStringSid (sid, &se->sid_str);
 
   lookup_account_SID (sid, se->sid_str, se->account, se->domain);
   smartlist_add (fw_SID_list, se);
@@ -3192,9 +3200,29 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
   if (!(header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET) || !header->userId)
      return (FALSE);
 
-  se = lookup_or_add_SID (header->userId);
+  se = lookup_or_add_SID ((PSID)header->userId);
   fw_buf_add ("\n%-*suser:   %s\\%s", INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
+}
+
+/**
+ * Process the `header->packageSid` field.
+ */
+static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
+{
+  #define NULL_SID "S-1-0-0"
+  const struct SID_entry *se;
+
+  if (!(header->flags & FWPM_NET_EVENT_FLAG_PACKAGE_ID_SET) || !header->packageSid)
+     return (FALSE);
+
+  se = lookup_or_add_SID ((PSID)header->packageSid);
+  if (se->sid_str && strcmp(NULL_SID, se->sid_str))
+  {
+    fw_buf_add ("\n%-*spkg:   %s", INDENT_SZ, "", se->sid_str);
+    return (TRUE);
+  }
+  return (FALSE);
 }
 
 /*
@@ -3449,6 +3477,7 @@ static void CALLBACK
   {
     program_printed = print_app_id (header);
     print_user_id (header);
+    print_package_id (header);
   }
 
   fw_buf_addc ('\n');
