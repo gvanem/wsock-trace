@@ -74,7 +74,6 @@ void overlap_exit (void)
       TRACE ("  o: 0x%p, event: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
              ov->ov, ov->event, SOCKET_CAST(ov->sock), ov->is_recv, DWORD_CAST(ov->bytes));
     }
-    smartlist_wipe (ov_list, free);
   }
   else if (num_overlaps)
   {
@@ -83,6 +82,7 @@ void overlap_exit (void)
     TRACE ("All overlapped transfers completed.\n");
   }
   num_overlaps = 0;
+  smartlist_wipe (ov_list, free);
   ov_list = NULL;
 }
 
