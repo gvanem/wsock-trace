@@ -527,27 +527,40 @@ static void modules_list_add (const char *module, ULONG_PTR base_addr, DWORD siz
 }
 
 /*
+ * A `smartlist_wipe()` helper callback for `modules_list_free()`.
+ */
+static void module_free (void *m)
+{
+  struct ModuleEntry *me = (struct ModuleEntry*) m;
+
+#ifdef USE_BFD
+  BFD_unload_debug_symbols (me->module_mame);
+#endif
+  free (me);
+}
+
+/*
  * Free and delete the contents of 'g_modules_list'.
  */
 static void modules_list_free (void)
 {
-  struct ModuleEntry *me;
-  int    i, max;
-
-  if (!g_modules_list)
-     return;
-
-  max = smartlist_len (g_modules_list);
-  for (i = 0; i < max; i++)
-  {
-    me = smartlist_get (g_modules_list, i);
-#ifdef USE_BFD
-    BFD_unload_debug_symbols (me->module_mame);
-#endif
-    free (me);
-  }
-  smartlist_free (g_modules_list);
+  if (g_modules_list)
+     smartlist_wipe (g_modules_list, module_free);
   g_modules_list = NULL;
+}
+
+/*
+ * A `smartlist_wipe()` helper callback for `symbols_list_free()`.
+ */
+static void symbols_free (void *s)
+{
+  struct SymbolEntry *se = (struct SymbolEntry*) s;
+
+  if (se->func_name)
+     free (se->func_name);
+  if (se->file_name)
+     free (se->file_name);
+  free (se);
 }
 
 /*
@@ -555,25 +568,8 @@ static void modules_list_free (void)
  */
 static void symbols_list_free (void)
 {
-  struct SymbolEntry *se;
-  int    i, max;
-
-  if (!g_symbols_list)
-     return;
-
-  max = smartlist_len (g_symbols_list);
-  for (i = 0; i < max; i++)
-  {
-    se = smartlist_get (g_symbols_list, i);
-#if 1
-    if (se->func_name)
-       free (se->func_name);
-    if (se->file_name)
-       free (se->file_name);
-#endif
-    free (se);
-  }
-  smartlist_free (g_symbols_list);
+  if (g_symbols_list)
+     smartlist_wipe (g_symbols_list, symbols_free);
   g_symbols_list = NULL;
 }
 
