@@ -77,23 +77,6 @@ static void geoip_stats_update (const char *country_A2, int flag);
 static int  geoip_get_num_addr (DWORD *num4, DWORD *num6);
 
 /**
- * Deallocate a smartlist and associated storage in the list's elements.
- *
- * \param[in] sl the smartlist to free.
- */
-static void smartlist_free_all (smartlist_t *sl)
-{
-  if (sl && !g_cfg.geoip_use_generated)
-  {
-    int i, max = smartlist_len (sl);
-
-    for (i = 0; i < max; i++)
-        free (smartlist_get(sl, i));
-  }
-  smartlist_free (sl);
-}
-
-/**
  * Used to make the smartlists for the fixed arrays `ipv4_gen_array` and `ipv6_gen_array`.
  * Since we know their sizes, just allocate the smartlist size once. <br>
  * Called from `geoip-gen4.c` and `geoip-gen6.c`.
@@ -464,8 +447,13 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
  */
 void geoip_exit (void)
 {
-  smartlist_free_all (geoip_ipv4_entries);
-  smartlist_free_all (geoip_ipv6_entries);
+  if (!g_cfg.geoip_use_generated)
+  {
+    if (geoip_ipv4_entries)
+       smartlist_wipe (geoip_ipv4_entries, free);
+    if (geoip_ipv6_entries)
+       smartlist_wipe (geoip_ipv6_entries, free);
+  }
   geoip_ipv4_entries = geoip_ipv6_entries = NULL;
   geoip_stats_exit();
   ip2loc_exit();
@@ -2130,15 +2118,6 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
   return (list);
 }
 
-static void free_argv_list (smartlist_t *sl)
-{
-  int i, max = smartlist_len (sl);
-
-  for (i = 0; i < max; i++)
-      free (smartlist_get(sl, i));
-  smartlist_free (sl);
-}
-
 static int check_requirements (BOOL check_geoip4, BOOL check_geoip6)
 {
   if (check_geoip4 && (!g_cfg.geoip4_file || !file_exists(g_cfg.geoip4_file)))
@@ -2277,7 +2256,7 @@ int main (int argc, char **argv)
        test_addr_list (list, use_ip2loc, test_addr4);
     if (do_6)
        test_addr_list (list, use_ip2loc, test_addr6);
-    free_argv_list (list);
+     smartlist_wipe (list, free);
   }
 
   wsock_trace_exit();
