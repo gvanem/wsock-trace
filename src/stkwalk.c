@@ -556,10 +556,8 @@ static void symbols_free (void *s)
 {
   struct SymbolEntry *se = (struct SymbolEntry*) s;
 
-  if (se->func_name)
-     free (se->func_name);
-  if (se->file_name)
-     free (se->file_name);
+  free (se->func_name);
+  free (se->file_name);
   free (se);
 }
 
