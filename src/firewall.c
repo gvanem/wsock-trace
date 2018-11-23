@@ -1324,7 +1324,7 @@ static void fw_buf_flush (void)
                              "%s(): thr-id: %lu.\n",                                      \
                              __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));             \
             fw_event_callback (event->type,                                               \
-                               (const _FWPM_NET_EVENT_HEADER3 *)&event->header,           \
+                               (const _FWPM_NET_EVENT_HEADER3 *) &event->header,          \
                                event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?        \
                                  (const _FWPM_NET_EVENT_CLASSIFY_DROP2 *) drop : NULL,    \
                                event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?       \
@@ -3270,12 +3270,12 @@ static const struct search_list protocols[] = {
                     ADD_VALUE (PGM),
                     ADD_VALUE (L2TP),
                     ADD_VALUE (SCTP),
+                    ADD_VALUE (NONE),
+                    ADD_VALUE (RAW),
                     ADD_VALUE (RESERVED_IPSEC),
                     ADD_VALUE (RESERVED_IPSECOFFLOAD),
                     ADD_VALUE (RESERVED_WNV),
-                    ADD_VALUE (RAW),
                     ADD_VALUE (RESERVED_RAW),
-                    ADD_VALUE (NONE),
                     ADD_VALUE (RESERVED_IPSEC),
                     ADD_VALUE (RESERVED_IPSECOFFLOAD),
                     ADD_VALUE (RESERVED_WNV),
@@ -3297,16 +3297,16 @@ static void CALLBACK
   #define ADD_VALUE(v)  { _FWPM_NET_EVENT_TYPE_##v, "FWPM_NET_EVENT_TYPE_" #v }
 
   static const struct search_list events[] = {
-                      ADD_VALUE (IKEEXT_MM_FAILURE),
-                      ADD_VALUE (IKEEXT_QM_FAILURE),
-                      ADD_VALUE (IKEEXT_EM_FAILURE),
                       ADD_VALUE (CLASSIFY_DROP),
-                      ADD_VALUE (IPSEC_KERNEL_DROP),
-                      ADD_VALUE (IPSEC_DOSP_DROP),
                       ADD_VALUE (CLASSIFY_ALLOW),
                       ADD_VALUE (CAPABILITY_DROP),
                       ADD_VALUE (CAPABILITY_ALLOW),
                       ADD_VALUE (CLASSIFY_DROP_MAC),
+                      ADD_VALUE (IKEEXT_MM_FAILURE),
+                      ADD_VALUE (IKEEXT_QM_FAILURE),
+                      ADD_VALUE (IKEEXT_EM_FAILURE),
+                      ADD_VALUE (IPSEC_KERNEL_DROP),
+                      ADD_VALUE (IPSEC_DOSP_DROP),
                       ADD_VALUE (LPM_PACKET_ARRIVAL),
                       ADD_VALUE (MAX)
                     };
