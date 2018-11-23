@@ -4,9 +4,9 @@
  * \brief
  *  Function for listening for "Windows Filtering Platform (WFP)" events
  *
- *  The `fw_init()` and `fw_monotor_start()` needs Administrator privileges.
+ *  The `fw_init()` and `fw_monitor_start()` needs Administrator privileges.
  *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
- *  "Access Denied" (error 5).
+ *  "The device does not recognize the command" (`ERROR_BAD_COMMAND = 22`).
  *
  * Thanks to dmex for his implementation of similar stuff in his ProcessHacker:
  * \see
@@ -1202,20 +1202,21 @@ static char         fw_module [_MAX_PATH];
 /**
  * A cache of SIDs for `print_user_id()`.
  */
+#define MAX_DOMAIN_SZ      20
+#define MAX_ACCOUNT_SZ     30
+
 struct SID_entry {
        SID  *sid_copy;
        char *sid_str;
-       char *account_name;
-       char *domain_name;
+       char  domain  [MAX_DOMAIN_SZ];
+       char  account [MAX_ACCOUNT_SZ];
      };
 
 static smartlist_t *fw_SID_list;
-static DWORD        fw_SID_cache_hits, fw_SID_cache_misses;
 
 static char  fw_buf [2000];
 static char *fw_ptr  = fw_buf;
 static int   fw_left = (int)sizeof(fw_buf) - 1;
-static DWORD fw_overruns = 0;
 
 static int fw_buf_add (const char *fmt, ...)
 {
@@ -1223,10 +1224,8 @@ static int fw_buf_add (const char *fmt, ...)
   int     len;
 
   if (fw_left < (int)strlen(fmt))
-  {
-    fw_overruns++;
-    return (0);
-  }
+     return (0);
+
   va_start (args, fmt);
   len = vsnprintf (fw_ptr, fw_left, fmt, args);
   fw_ptr  += len;
@@ -1238,16 +1237,14 @@ static int fw_buf_add (const char *fmt, ...)
 static int fw_buf_addc (int ch)
 {
   if (fw_left <= 1)
-  {
-    fw_overruns++;
-    return (0);
-  }
+     return (0);
+
   *fw_ptr++ = ch;
   fw_left--;
   return (1);
 }
 
-static void _fw_add_long_line (const char *start, size_t indent, int brk_ch)
+static void fw_add_long_line (const char *start, size_t indent, int brk_ch)
 {
   size_t      left = g_cfg.screen_width - indent;
   const char *c    = start;
@@ -1286,16 +1283,6 @@ static void _fw_add_long_line (const char *start, size_t indent, int brk_ch)
     left--;
   }
   fw_buf_addc ('\n');
-}
-
-static void fw_add_long_line (const char *start, size_t indent)
-{
-  _fw_add_long_line (start, indent, ' ');
-}
-
-static void fw_add_long_flags (const char *start, size_t indent)
-{
-  _fw_add_long_line (start, indent, '|');
 }
 
 static void fw_buf_reset (void)
@@ -1427,9 +1414,6 @@ static void fw_SID_free (void *_e)
   struct SID_entry *e = (struct SID_entry*) _e;
 
   LocalFree (e->sid_str);
-  free (e->sid_copy);
-  free (e->account_name);
-  free (e->domain_name);
   free (e);
 }
 
@@ -1444,9 +1428,6 @@ void fw_exit (void)
   fw_policy_handle = INVALID_HANDLE_VALUE;
 
   fw_monitor_stop();
-
-  TRACE (1, "fw_SID_cache_hits: %lu, fw_SID_cache_misses: %lu.\n",
-         DWORD_CAST(fw_SID_cache_hits), DWORD_CAST(fw_SID_cache_misses));
 
   smartlist_wipe (fw_SID_list, fw_SID_free);
 
@@ -2555,9 +2536,10 @@ static const char *get_callout_layer (const GUID *layer)
 }
 
 /**
- *
- * \ref
- *   https://github.com/Microsoft/Windows-driver-samples/blob/master/network/trans/WFPSampler/lib/HelperFunctions_FwpmCallout.cpp
+ * "Callouts": a set of functions exposed by a driver and used for specialized filtering.
+ * \see
+ *  + https://docs.microsoft.com/en-gb/windows/desktop/FWP/about-windows-filtering-platform
+ *  + https://github.com/Microsoft/Windows-driver-samples/blob/master/network/trans/WFPSampler/lib/HelperFunctions_FwpmCallout.cpp
  */
 BOOL fw_enumerate_callouts (void)
 {
@@ -2616,7 +2598,7 @@ BOOL fw_enumerate_callouts (void)
     fw_buf_add ("    descr:           %S\n", entry->displayData.description ? entry->displayData.description : L"<None>");
 
     indent = fw_buf_add ("    flags:           ");
-    fw_add_long_flags (get_callout_flag(entry->flags), indent);
+    fw_add_long_line (get_callout_flag(entry->flags), indent, '|');
 
     fw_buf_add ("    calloutKey:      %s\n", get_guid_string(&entry->calloutKey));
     fw_buf_add ("    providerKey:     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
@@ -3126,64 +3108,49 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
  * Lookup the account and domain for a `sid` to get
  * a more sensible account and domain-name.
  */
-static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char **account_p, char **domain_p)
+static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char *account, char *domain)
 {
   SID_NAME_USE sid_use = SidTypeUnknown;
-  char        *account_name, *domain_name;
-  DWORD        account_name_sz = 0;
-  DWORD        domain_name_sz  = 0;
+  DWORD        account_sz = 0;
+  DWORD        domain_sz  = 0;
   DWORD        err, rc;
-
-  *account_p = *domain_p = NULL;
 
   /* First call to LookupAccountSid() to get the sizes of account/domain names.
    */
   rc = LookupAccountSid (NULL, (PSID)sid,
-                         NULL, (DWORD*)&account_name_sz,
-                         NULL, (DWORD*)&domain_name_sz,
+                         NULL, (DWORD*)&account_sz,
+                         NULL, (DWORD*)&domain_sz,
                          &sid_use);
+
+  if (domain_sz > MAX_ACCOUNT_SZ)
+      domain_sz = MAX_DOMAIN_SZ;
+  if (account_sz > MAX_ACCOUNT_SZ)
+      account_sz = MAX_ACCOUNT_SZ;
 
   /* If no mapping between SID and account-name, just return the
    * account-name as a SID-string. And no domain-name.
    */
   if (!rc && GetLastError() == ERROR_NONE_MAPPED && sid_use == SidTypeUnknown)
   {
-    *account_p = strdup (sid_str);
+    _strlcpy (account, sid_str, MAX_ACCOUNT_SZ);
     return (TRUE);
   }
 
-  account_name = malloc (account_name_sz);
-  if (!account_name)
-     return (FALSE);
-
-  domain_name = malloc (domain_name_sz);
-  if (!domain_name)
-  {
-    free (account_name);
-    return (FALSE);
-  }
-
-  /* Second call to LookupAccountSid() to get the account/domain names.
-   */
-  rc = LookupAccountSid (NULL,                      /* NULL -> name of local computer */
-                         (PSID)sid,                 /* security identifier */
-                         account_name,              /* account name buffer */
-                         (DWORD*)&account_name_sz,  /* size of account name buffer */
-                         domain_name,               /* domain name */
-                         (DWORD*)&domain_name_sz,   /* size of domain name buffer */
-                         &sid_use);                 /* SID type */
+  rc = LookupAccountSid (NULL,                  /* NULL -> name of local computer */
+                         (PSID)sid,             /* security identifier */
+                         account,               /* account name buffer */
+                         (DWORD*)&account_sz,   /* size of account name buffer */
+                         domain,                /* domain name */
+                         (DWORD*)&domain_sz,    /* size of domain name buffer */
+                         &sid_use);             /* SID type */
   if (!rc)
   {
     err = GetLastError();
     if (err == ERROR_NONE_MAPPED)
-         TRACE (2, "Account owner not found for specified SID.\n");
-    else TRACE (2, "Error in LookupAccountSid(): %s.\n", win_strerror(err));
-    free (domain_name);
-    free (account_name);
+         TRACE (1, "Account owner not found for specified SID.\n");
+    else TRACE (1, "Error in LookupAccountSid(): %s.\n", win_strerror(err));
     return (FALSE);
   }
-  *account_p = account_name;
-  *domain_p  = domain_name;
   return (TRUE);
 }
 
@@ -3201,19 +3168,16 @@ static struct SID_entry *lookup_or_add_SID (const SID *sid)
   {
     se = smartlist_get (fw_SID_list, i);
     if (EqualSid((PSID)sid, se->sid_copy))
-    {
-      fw_SID_cache_hits++;
-      return (se);
-    }
+       return (se);
   }
-  fw_SID_cache_misses++;
 
   se  = calloc (sizeof(*se), 1);
   len = GetLengthSid ((PSID)sid);
   se->sid_copy = malloc (len);
   CopySid (len, se->sid_copy, (PSID)sid);
   ConvertSidToStringSid ((PSID)sid, &se->sid_str);
-  lookup_account_SID (sid, se->sid_str, &se->account_name, &se->domain_name);
+
+  lookup_account_SID (sid, se->sid_str, se->account, se->domain);
   smartlist_add (fw_SID_list, se);
   return (se);
 }
@@ -3224,15 +3188,12 @@ static struct SID_entry *lookup_or_add_SID (const SID *sid)
 static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
 {
   const struct SID_entry *se;
-  const char             *user, *domain;
 
   if (!(header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET) || !header->userId)
      return (FALSE);
 
-  se     = lookup_or_add_SID (header->userId);
-  user   = se->account_name;
-  domain = se->domain_name;
-  fw_buf_add ("\n%-*suser:   %s\\%s", INDENT_SZ, "", user ? user : "?", domain ? domain : "?");
+  se = lookup_or_add_SID (header->userId);
+  fw_buf_add ("\n%-*suser:   %s\\%s", INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
 }
 
@@ -3505,9 +3466,9 @@ static void CALLBACK
 
 void fw_print_statistics (FWPM_STATISTICS *stats)
 {
-  if (fw_num_events > 0UL || fw_num_ignored > 0UL || fw_overruns > 0UL)
-     trace_printf ("Got %lu events, %lu ignored. fw_overruns: %lu\n",
-                   DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored), DWORD_CAST(fw_overruns));
+  if (fw_num_events > 0UL || fw_num_ignored > 0UL)
+     trace_printf ("Got %lu events, %lu ignored.\n",
+                   DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
   ARGSUSED (stats);
 }
 
