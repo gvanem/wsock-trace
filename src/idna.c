@@ -237,14 +237,9 @@ BOOL IDNA_CheckCodePage (UINT cp)
     else TRACE (3, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
   }
 
-  /* And now free the 'cp_list'
+  /* And now free the content and the 'cp_list' itself.
    */
-  for (i = 0; i < max; i++)
-  {
-    cp_info = smartlist_get (cp_list, i);
-    free (cp_info);
-  }
-  smartlist_free (cp_list);
+  smartlist_wipe (cp_list, free);
   cp_list = NULL;
   return (cp_found);
 }
@@ -1015,6 +1010,7 @@ void usage (const char *argv0)
           "%s"
           "   -c select codepage (active is CP%d)\n",
           argv0, W_OPT, W_HELP, IDNA_GetCodePage());
+  common_exit();
   exit (0);
 }
 
@@ -1118,8 +1114,16 @@ static int do_test (WORD cp, const char *host)
 
 int main (int argc, char **argv)
 {
-  WORD cp = 0;
-  int  ch, rc;
+  const char *my_name = argv[0];
+  WORD  cp = 0;
+  int   ch, rc;
+
+  sock_init();
+  common_init();
+  InitializeCriticalSection (&crit_sect);
+
+  g_cfg.trace_stream = stdout;
+  g_cfg.show_caller = TRUE;
 
   while ((ch = getopt(argc, argv, "c:d" W_GETOPT "h?")) != EOF)
      switch (ch)
@@ -1146,20 +1150,14 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            usage (argv[0]);
+            usage (my_name);
             break;
   }
 
   argc -= optind;
   argv += optind;
   if (!*argv)
-     usage (argv[0]);
-
-  sock_init();
-  common_init();
-  g_cfg.trace_stream = stdout;
-  g_cfg.show_caller = TRUE;
-  InitializeCriticalSection (&crit_sect);
+     usage (my_name);
 
   rc = do_test (cp, argv[0]);
 
