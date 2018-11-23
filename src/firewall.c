@@ -3061,21 +3061,21 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
  * Somewhat related:
  *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
  */
-static const char *volume_to_letter (const char *volume)
+static const char *volume_to_path (const char *volume)
 {
   #define VOLUME "\\Device\\HarddiskVolume"
   const  char *p;
-  static char  ret [_MAX_PATH];
+  static char  path [_MAX_PATH];
 
   if (!strnicmp(volume, VOLUME, sizeof(VOLUME)-1))
   {
     p = volume + sizeof(VOLUME) - 1;
     if (isdigit(*p) && p[1] == '\\')
     {
-      ret[0] = 'a' - '0' + *p;
-      ret[1] = ':';
-      _strlcpy (ret+2, p+1, sizeof(ret));
-      return (ret);
+      path[0] = 'a' - '0' + *p;
+      path[1] = ':';
+      _strlcpy (path+2, p+1, sizeof(path));
+      return (path);
     }
   }
   return (volume);
@@ -3100,7 +3100,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   if (WideCharToMultiByte(fw_acp, 0, w_name, w_len, a_name, (int)sizeof(a_name), NULL, NULL) == 0)
        _strlcpy (a_name, "?", sizeof(a_name));
-  else _strlcpy (a_name, volume_to_letter(a_name), sizeof(a_name));
+  else _strlcpy (a_name, volume_to_path(a_name), sizeof(a_name));
 
   a_base = basename (a_name);
 
@@ -3383,8 +3383,6 @@ static void CALLBACK
   BOOL address_printed = FALSE;
   BOOL program_printed = FALSE;
 
-  fw_num_events++;
-
   if (header->flags & FWPM_NET_EVENT_FLAG_IP_VERSION_SET)
   {
     if ( (header->ipVersion == FWP_IP_VERSION_V4 && !g_cfg.firewall.show_ipv4) ||
@@ -3494,7 +3492,10 @@ static void CALLBACK
   /* We filter only on addresses and programs.
    */
   if (address_printed && program_printed)
-     fw_buf_flush();
+  {
+    fw_buf_flush();
+    fw_num_events++;
+  }
   else
   {
     fw_buf_reset();
