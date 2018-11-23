@@ -3003,6 +3003,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   const char *remote_port;
   char        local_addr [INET6_ADDRSTRLEN];
   char        remote_addr [INET6_ADDRSTRLEN];
+  char        scope [20];
 
   if (header->ipVersion != FWP_IP_VERSION_V6)
      return (FALSE);
@@ -3034,12 +3035,20 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 
   fw_buf_add ("%-*s", INDENT_SZ, "");
 
-  if (direction_in)
-       fw_buf_add ("addr:   %s -> %s, ports: %s / %s",
-                   remote_addr, local_addr, remote_port, local_port);
+  if (header->flags & FWPM_NET_EVENT_FLAG_SCOPE_ID_SET)
+  {
+    scope[0] = '%';
+    _itoa (header->scopeId, scope+1, 10);
+  }
+  else
+    scope[0] = '\0';
 
-  else fw_buf_add ("addr:   %s -> %s, ports: %s / %s",
-                   local_addr, remote_addr, local_port, remote_port);
+  if (direction_in)
+       fw_buf_add ("addr:   %s -> %s%s, ports: %s / %s",
+                   remote_addr, local_addr, scope, remote_port, local_port);
+
+  else fw_buf_add ("addr:   %s%s -> %s, ports: %s / %s",
+                   local_addr, scope, remote_addr, local_port, remote_port);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
      print_country_location (NULL, (const struct in6_addr*)&header->remoteAddrV6);
