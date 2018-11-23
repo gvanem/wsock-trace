@@ -31,6 +31,7 @@ extern smartlist_t *smartlist_new (void);
 extern int          smartlist_len (const smartlist_t *sl);
 extern void        *smartlist_get (const smartlist_t *sl, int idx);
 extern void         smartlist_free (smartlist_t *sl);
+extern void         smartlist_wipe (smartlist_t *sl, void (*free_fn)(void *a));
 extern void         smartlist_ensure_capacity (smartlist_t *sl, size_t num);
 extern void         smartlist_add (smartlist_t *sl, void *element);
 extern void         smartlist_del (smartlist_t *sl, int idx);

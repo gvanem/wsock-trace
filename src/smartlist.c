@@ -128,6 +128,26 @@ void smartlist_free (smartlist_t *sl)
   }
 }
 
+/**
+ * Deallocate all storage associated with the list's elements;
+ * calling a `free_fn` for all items first.
+ * Then calls `smartlist_free()` on the list itself.
+ */
+void smartlist_wipe (smartlist_t *sl, void (*free_fn)(void *a))
+{
+  void *val;
+  int   i;
+
+  assert (sl);
+  for (i = 0; i < sl->num_used; i++)
+  {
+    val = sl->list[i];
+    ASSERT_VAL (val);
+    (*free_fn) (val);
+  }
+  smartlist_free (sl);
+}
+
 /*
  * Make sure that 'sl' can hold at least 'num' entries.
  */
