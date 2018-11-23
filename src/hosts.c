@@ -130,16 +130,8 @@ static void hosts_file_dump (void)
  */
 void hosts_file_exit (void)
 {
-  int i, max;
-
-  if (!hosts_list)
-     return;
-
-  max = smartlist_len (hosts_list);
-  for (i = 0; i < max; i++)
-      free (smartlist_get(hosts_list, i));
-
-  smartlist_free (hosts_list);
+  if (hosts_list)
+     smartlist_wipe (hosts_list, free);
   hosts_list = NULL;
 }
 
