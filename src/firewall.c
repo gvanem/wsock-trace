@@ -96,7 +96,7 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
  *  The highest API level supported here.
  *
  * \def FW_API_DEFAULT
- *  The default API level used here if not specified using the `fw_lowest_api` variable
+ *  The default API level used here if not specified using the `fw_api` variable
  *  prior to calling `fw_monitor_start()` or `fw_dump_events()`.
  */
 #define FW_API_LOW     0
@@ -1185,7 +1185,7 @@ static struct LoadTable fw_funcs[] = {
 static const char *get_time_string (const FILETIME *ts);
 
 DWORD fw_errno;
-int   fw_lowest_api = -1;
+int   fw_api = FW_API_DEFAULT;
 
 static FWPM_SESSION fw_session;
 static HANDLE       fw_policy_handle  = INVALID_HANDLE_VALUE;
@@ -1517,54 +1517,50 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 
 /**
  * Try all available `FwpmNetEventSubscribeX()` functions and return TRUE if one succeedes.
- * Start with the one above or equal the given API-level.
+ * Start with the one above or equal the given API-level in `fw_api`.
  */
 static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
-  #define SET_API_CALLBACK(N)                                                          \
-          do {                                                                         \
-            if (lowest_api >= N && p_FwpmNetEventSubscribe##N &&                       \
-                (*p_FwpmNetEventSubscribe##N) (fw_engine_handle, subscription,         \
-                                               fw_event_callback##N, fw_engine_handle, \
-                                               &fw_event_handle) == ERROR_SUCCESS)     \
-            {                                                                          \
-              TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);                  \
-              return (TRUE);                                                           \
-            }                                                                          \
+  #define SET_API_CALLBACK(N)                                                                \
+          do {                                                                               \
+            if (api_level == N && p_FwpmNetEventSubscribe##N)                                \
+            {                                                                                \
+              TRACE (2, "Trying FwpmNetEventSubscribe%d().\n", N);                           \
+              fw_errno = (*p_FwpmNetEventSubscribe##N) (fw_engine_handle,                    \
+                                                        subscription,                        \
+                                                        fw_event_callback##N,                \
+                                                        fw_engine_handle,                    \
+                                                        &fw_event_handle);                   \
+              if (fw_errno == ERROR_SUCCESS)                                                 \
+              {                                                                              \
+                TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);                      \
+                return (TRUE);                                                               \
+              }                                                                              \
+            }                                                                                \
+            if (api_level >= N && !p_FwpmNetEventSubscribe##N)                               \
+            {                                                                                \
+              fw_errno = ERROR_BAD_COMMAND;                                                  \
+              TRACE (1, "FwpmNetEventSubscribe%d() not available on this OS.\n", api_level); \
+              return (FALSE);                                                                \
+            }                                                                                \
           } while (0)
 
-  #define CHK_API_CALLBACK(N)               \
-          do {                              \
-            if (lowest_api > N) {           \
-              fw_errno = ERROR_BAD_COMMAND; \
-              goto quit;                    \
-            }                               \
-          } while (0)
+  int api_level = fw_api;
 
-  int lowest_api = fw_lowest_api;
-
-  if (lowest_api < FW_API_LOW)
-      lowest_api = FW_API_DEFAULT;
-
-  CHK_API_CALLBACK (FW_API_HIGH);
+  if (api_level < FW_API_LOW || api_level > FW_API_HIGH)
+  {
+    fw_errno = ERROR_INVALID_DATA;
+    TRACE (1, "FwpmNetEventSubscribe%d() is not a legal API-level.\n", api_level);
+    return (FALSE);
+  }
 
   SET_API_CALLBACK (4);
-  CHK_API_CALLBACK (4);
-
   SET_API_CALLBACK (3);
-  CHK_API_CALLBACK (3);
-
   SET_API_CALLBACK (2);
-  CHK_API_CALLBACK (2);
-
   SET_API_CALLBACK (1);
-  CHK_API_CALLBACK (1);
-
   SET_API_CALLBACK (0);
 
-quit:
-  TRACE (1, "FwpmNetEventSubscribe%d() failed: %s\n",
-         lowest_api, win_strerror(fw_errno));
+  TRACE (1, "FwpmNetEventSubscribe%d() failed: %s\n", api_level, win_strerror(fw_errno));
   return (FALSE);
 }
 
@@ -1635,9 +1631,6 @@ BOOL fw_monitor_start (void)
   if (!fw_check_sizes())
      return (FALSE);
 
-  if (!fw_load_funcs())
-     return (FALSE);
-
   if (!fw_monitor_init(&subscription))
      return (FALSE);
 
@@ -1652,13 +1645,11 @@ BOOL fw_monitor_start (void)
 #endif
 
   /* Subscribe to the events.
-   * With API level = `fw_lowest_api` or `2` if not user-defined.
+   * With API level = `fw_api == FW_API_DEFAULT` if not user-defined.
    */
   if (!fw_monitor_subscribe(&subscription))
-  {
-    fw_errno = FW_FUNC_ERROR;
-    return (FALSE);
-  }
+     return (FALSE);
+
   fw_num_events = fw_num_ignored = 0;
   return (TRUE);
 }
@@ -2630,21 +2621,26 @@ static BOOL fw_dump_events (void)
   HANDLE  fw_enum_handle = INVALID_HANDLE_VALUE;
   UINT32  i, num_in, num_out;
   DWORD   rc;
-  int     lowest_api = fw_lowest_api;
+  int     api_level;
 
-  _FWPM_FILTER_CONDITION0        filter_conditions [5] = { 0 };
+  _FWPM_FILTER_CONDITION0        filter_conditions[5] = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
   _FWPM_NET_EVENT0             **entries = NULL;
 
-  if (lowest_api < FW_API_LOW)
-      lowest_api = FW_API_DEFAULT;
+  api_level = fw_api;
+  if (api_level < FW_API_LOW || api_level > FW_API_HIGH)
+  {
+    fw_errno = ERROR_INVALID_DATA;
+    TRACE (1, "%s() failed: %s.\n", __FUNCTION__, win_strerror(fw_errno));
+    return (FALSE);
+  }
 
   if (!p_FwpmNetEventCreateEnumHandle0  ||
       !p_FwpmNetEventDestroyEnumHandle0 ||
       !p_FwpmNetEventEnum0              ||
       !p_FwpmFreeMemory0)
   {
-    rc = FW_FUNC_ERROR;
+    fw_errno = FW_FUNC_ERROR;
     TRACE (1, "%s() failed: %s.\n", __FUNCTION__, win_strerror(fw_errno));
     return (FALSE);
   }
@@ -3489,7 +3485,7 @@ int main (int argc, char **argv)
     switch (ch)
     {
       case 'a':
-           fw_lowest_api = atoi (optarg);
+           fw_api = atoi (optarg);
            break;
       case 'c':
            dump_callouts = 1;
