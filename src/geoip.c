@@ -447,13 +447,21 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
  */
 void geoip_exit (void)
 {
-  if (!g_cfg.geoip_use_generated)
+  if (g_cfg.geoip_use_generated)
+  {
+    if (geoip_ipv4_entries)
+       smartlist_free (geoip_ipv4_entries);
+    if (geoip_ipv6_entries)
+       smartlist_free (geoip_ipv6_entries);
+  }
+  else
   {
     if (geoip_ipv4_entries)
        smartlist_wipe (geoip_ipv4_entries, free);
     if (geoip_ipv6_entries)
        smartlist_wipe (geoip_ipv6_entries, free);
   }
+
   geoip_ipv4_entries = geoip_ipv6_entries = NULL;
   geoip_stats_exit();
   ip2loc_exit();
