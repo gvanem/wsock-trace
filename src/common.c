@@ -488,7 +488,7 @@ unsigned list_lookup_value (const char *name, const struct search_list *list, in
 
 const char *flags_decode (DWORD flags, const struct search_list *list, int num)
 {
-  static char buf[300];
+  static char buf[400];
   char  *ret  = buf;
   char  *end  = buf + sizeof(buf) - 1;
   size_t left = end - ret;
