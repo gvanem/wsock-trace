@@ -1911,10 +1911,19 @@ static void reset_invalid_handler (void)
 
   void crtdbg_exit (void)
   {
-    _CrtMemDumpAllObjectsSince (&last_state);
-    _CrtMemDumpStatistics (&last_state);
-    _CrtCheckMemory();
-    _CrtDumpMemoryLeaks();
+    _CrtMemState new_state, diff_state;
+
+    _CrtMemCheckpoint (&new_state);
+
+    /* Do this only if there is a significant difference in the mem-state.
+     */
+    if (_CrtMemDifference(&diff_state, &last_state, &new_state))
+    {
+      _CrtMemDumpAllObjectsSince (&last_state);
+      _CrtMemDumpStatistics (&last_state);
+      _CrtCheckMemory();
+      _CrtDumpMemoryLeaks();
+    }
     smartlist_leak_check();
     reset_invalid_handler();
   }
