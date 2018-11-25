@@ -472,6 +472,12 @@ typedef enum _FWPM_NET_EVENT_TYPE {
              _FWPM_NET_EVENT_TYPE_MAX                = 11
            } _FWPM_NET_EVENT_TYPE;
 
+typedef enum FWPM_APPC_NETWORK_CAPABILITY_TYPE {
+             FWPM_APPC_NETWORK_CAPABILITY_INTERNET_CLIENT,
+             FWPM_APPC_NETWORK_CAPABILITY_INTERNET_CLIENT_SERVER,
+             FWPM_APPC_NETWORK_CAPABILITY_INTERNET_PRIVATE_NETWORK
+           } FWPM_APPC_NETWORK_CAPABILITY_TYPE;
+
 typedef struct FW_PORT_RANGE {
          USHORT  wBegin;
          USHORT  wEnd;
@@ -716,6 +722,18 @@ typedef struct _FWPM_NET_EVENT_CLASSIFY_ALLOW0 {
         BOOL          isLoopback;
       } _FWPM_NET_EVENT_CLASSIFY_ALLOW0;
 
+typedef struct _FWPM_NET_EVENT_CAPABILITY_DROP0 {
+        FWPM_APPC_NETWORK_CAPABILITY_TYPE networkCapabilityId;
+        UINT64                            filterId;
+        BOOL                              isLoopback;
+      } _FWPM_NET_EVENT_CAPABILITY_DROP0;
+
+typedef struct _FWPM_NET_EVENT_CAPABILITY_ALLOW0 {
+        FWPM_APPC_NETWORK_CAPABILITY_TYPE networkCapabilityId;
+        UINT64                            filterId;
+        BOOL                              isLoopback;
+      } _FWPM_NET_EVENT_CAPABILITY_ALLOW0;
+
 typedef struct _FWPM_NET_EVENT_HEADER0 {
         FILETIME           timeStamp;
         UINT32             flags;
@@ -926,12 +944,12 @@ typedef struct _FWPM_NET_EVENT0 {
         _FWPM_NET_EVENT_HEADER0 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-            _FWPM_NET_EVENT_CLASSIFY_DROP0     *classifyDrop;
-          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE0 *ikeMmFailure; Not needed */
-          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0 *ikeQmFailure; Not needed */
-          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE0 *ikeEmFailure; Not needed */
-          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0 *ipsecDrop;    Not needed */
-          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0   *idpDrop;      Not needed */
+            _FWPM_NET_EVENT_CLASSIFY_DROP0      *classifyDrop;
+          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE0  *ikeMmFailure; Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0  *ikeQmFailure; Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE0  *ikeEmFailure; Not needed */
+          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;    Not needed */
+          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;      Not needed */
         };
       }  _FWPM_NET_EVENT0;
 
@@ -939,12 +957,12 @@ typedef struct _FWPM_NET_EVENT1 {
         _FWPM_NET_EVENT_HEADER1 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-            _FWPM_NET_EVENT_CLASSIFY_DROP1     *classifyDrop;
-          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE1 *ikeMmFailure;  Not needed */
-          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0 *ikeQmFailure;  Not needed */
-          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1 *ikeEmFailure;  Not needed */
-          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0 *ipsecDrop;     Not needed */
-          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0   *idpDrop;       Not needed */
+            _FWPM_NET_EVENT_CLASSIFY_DROP1      *classifyDrop;
+          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE1  *ikeMmFailure;  Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0  *ikeQmFailure;  Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1  *ikeEmFailure;  Not needed */
+          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;     Not needed */
+          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;       Not needed */
         };
       } _FWPM_NET_EVENT1;
 
@@ -952,16 +970,16 @@ typedef struct _FWPM_NET_EVENT2 {
         _FWPM_NET_EVENT_HEADER2 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-             _FWPM_NET_EVENT_CLASSIFY_DROP2    *classifyDrop;
-             _FWPM_NET_EVENT_CLASSIFY_ALLOW0   *classifyAllow;
-          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE1 *ikeMmFailure;     Not needed */
-          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0 *ikeQmFailure;     Not needed */
-          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1 *ikeEmFailure;     Not needed */
-          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0 *ipsecDrop;        Not needed */
-          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0   *idpDrop;          Not needed */
-          /* FWPM_NET_EVENT_CAPABILITY_DROP0   *capabilityDrop;   Not needed */
-          /* FWPM_NET_EVENT_CAPABILITY_ALLOW0  *capabilityAllow;  Not needed */
-          /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0 *classifyDropMac;  Not needed */
+            _FWPM_NET_EVENT_CLASSIFY_DROP2      *classifyDrop;
+            _FWPM_NET_EVENT_CLASSIFY_ALLOW0     *classifyAllow;
+            _FWPM_NET_EVENT_CAPABILITY_DROP0    *capabilityDrop;
+            _FWPM_NET_EVENT_CAPABILITY_ALLOW0   *capabilityAllow;
+          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE1  *ikeMmFailure;     Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0  *ikeQmFailure;     Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1  *ikeEmFailure;     Not needed */
+          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;        Not needed */
+          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;          Not needed */
+          /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0  *classifyDropMac;  Not needed */
         };
       } _FWPM_NET_EVENT2;
 
@@ -969,16 +987,16 @@ typedef struct _FWPM_NET_EVENT3 {
         _FWPM_NET_EVENT_HEADER3 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-          _FWPM_NET_EVENT_CLASSIFY_DROP2     *classifyDrop;
-          _FWPM_NET_EVENT_CLASSIFY_ALLOW0    *classifyAllow;
-       /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE1  *ikeMmFailure;    Not needed */
-       /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0  *ikeQmFailure;    Not needed */
-       /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1  *ikeEmFailure;    Not needed */
-       /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;       Not needed */
-       /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;         Not needed */
-       /* FWPM_NET_EVENT_CAPABILITY_DROP0    *capabilityDrop;  Not needed */
-       /* FWPM_NET_EVENT_CAPABILITY_ALLOW0   *capabilityAllow; Not needed */
-       /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0  *classifyDropMac; Not needed */
+            _FWPM_NET_EVENT_CLASSIFY_DROP2      *classifyDrop;
+            _FWPM_NET_EVENT_CLASSIFY_ALLOW0     *classifyAllow;
+            _FWPM_NET_EVENT_CAPABILITY_DROP0    *capabilityDrop;
+            _FWPM_NET_EVENT_CAPABILITY_ALLOW0   *capabilityAllow;
+          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE1  *ikeMmFailure;    Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE0  *ikeQmFailure;    Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1  *ikeEmFailure;    Not needed */
+          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;       Not needed */
+          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;         Not needed */
+          /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0  *classifyDropMac; Not needed */
         };
       } _FWPM_NET_EVENT3;
 
@@ -986,16 +1004,16 @@ typedef struct _FWPM_NET_EVENT4 {
         _FWPM_NET_EVENT_HEADER3 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-          _FWPM_NET_EVENT_CLASSIFY_DROP2     *classifyDrop;
-          _FWPM_NET_EVENT_CLASSIFY_ALLOW0    *classifyAllow;
-       /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE2  *ikeMmFailure;    Not needed */
-       /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE1  *ikeQmFailure;    Not needed */
-       /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1  *ikeEmFailure;    Not needed */
-       /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;       Not needed */
-       /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;         Not needed */
-       /* FWPM_NET_EVENT_CAPABILITY_DROP0    *capabilityDrop;  Not needed */
-       /* FWPM_NET_EVENT_CAPABILITY_ALLOW0   *capabilityAllow; Not needed */
-       /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0  *classifyDropMac; Not needed */
+            _FWPM_NET_EVENT_CLASSIFY_DROP2     *classifyDrop;
+            _FWPM_NET_EVENT_CLASSIFY_ALLOW0    *classifyAllow;
+            _FWPM_NET_EVENT_CAPABILITY_DROP0    *capabilityDrop;
+            _FWPM_NET_EVENT_CAPABILITY_ALLOW0   *capabilityAllow;
+          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE2  *ikeMmFailure;    Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE1  *ikeQmFailure;    Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1  *ikeEmFailure;    Not needed */
+          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0  *ipsecDrop;       Not needed */
+          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0    *idpDrop;         Not needed */
+          /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0  *classifyDropMac; Not needed */
         };
       } _FWPM_NET_EVENT4;
 
@@ -1003,17 +1021,17 @@ typedef struct _FWPM_NET_EVENT5 {
         _FWPM_NET_EVENT_HEADER3 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-          _FWPM_NET_EVENT_CLASSIFY_DROP2      *classifyDrop;
-          _FWPM_NET_EVENT_CLASSIFY_ALLOW0     *classifyAllow;
-       /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE2   *ikeMmFailure;     Not needed */
-       /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE1   *ikeQmFailure;     Not needed */
-       /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1   *ikeEmFailure;     Not needed */
-       /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0   *ipsecDrop;        Not needed */
-       /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0     *idpDrop;          Not needed */
-       /* FWPM_NET_EVENT_CAPABILITY_DROP0     *capabilityDrop;   Not needed */
-       /* FWPM_NET_EVENT_CAPABILITY_ALLOW0    *capabilityAllow;  Not needed */
-       /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0   *classifyDropMac;  Not needed */
-       /* FWPM_NET_EVENT_LPM_PACKET_ARRIVAL0  *lpmPacketArrival; Not needed */
+            _FWPM_NET_EVENT_CLASSIFY_DROP2      *classifyDrop;
+            _FWPM_NET_EVENT_CLASSIFY_ALLOW0     *classifyAllow;
+            _FWPM_NET_EVENT_CAPABILITY_DROP0     *capabilityDrop;
+            _FWPM_NET_EVENT_CAPABILITY_ALLOW0    *capabilityAllow;
+          /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE2   *ikeMmFailure;     Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_QM_FAILURE1   *ikeQmFailure;     Not needed */
+          /* FWPM_NET_EVENT_IKEEXT_EM_FAILURE1   *ikeEmFailure;     Not needed */
+          /* FWPM_NET_EVENT_IPSEC_KERNEL_DROP0   *ipsecDrop;        Not needed */
+          /* FWPM_NET_EVENT_IPSEC_DOSP_DROP0     *idpDrop;          Not needed */
+          /* FWPM_NET_EVENT_CLASSIFY_DROP_MAC0   *classifyDropMac;  Not needed */
+          /* FWPM_NET_EVENT_LPM_PACKET_ARRIVAL0  *lpmPacketArrival; Not needed */
         };
       } _FWPM_NET_EVENT5;
 
@@ -1300,7 +1318,7 @@ static void fw_buf_reset (void)
 
 static void fw_buf_flush (void)
 {
-  size_t len = fw_ptr - fw_buf + 0;
+  size_t len = fw_ptr - fw_buf;
 
   if (len > 0)
   {
@@ -2736,7 +2754,7 @@ fail:
 static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                               const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
-  FWPM_LAYER0 *layer_item;
+  FWPM_LAYER0 *layer_item = NULL;
   UINT16       id = 0;
 
   if (drop_event)
@@ -2755,7 +2773,7 @@ static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
 static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                                const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
-  FWPM_FILTER0 *filter_item;
+  FWPM_FILTER0 *filter_item = NULL;
   UINT64        id = 0;
 
   if (drop_event)
@@ -3104,11 +3122,14 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   a_base = basename (a_name);
 
-  if (!g_cfg.firewall.show_all &&
-      (!stricmp(fw_module, a_name) || !stricmp(fw_module, a_base)))
+  if (g_cfg.firewall.show_all == 0)
   {
-    TRACE (1, "Got event for fw_module: '%s' matching '%s'.\n", fw_module, a_name);
-    return (TRUE);
+    if (!stricmp(fw_module, a_name) || !stricmp(fw_module, a_base)))
+    {
+      TRACE (1, "Got event for fw_module: '%s' matching '%s'.\n", fw_module, a_name);
+      return (TRUE);
+    }
+    return (FALSE);
   }
 
   if (exclude_list_get(a_base,EXCL_PROGRAM) ||  /* short file-name */
@@ -3395,11 +3416,11 @@ static void CALLBACK
   }
 
   /**
-   * The `printed` variable is used to examine all the pieces of an event and the return values
-   * of `exclude_list_get (appId, EXCL_PROGRAM)` or `exclude_list_get (address_str, EXCL_ADDRESS)`
-   * before deciding to print anything.
+   * The `address__printed` variable is used to examine all the pieces of an event and the return value
+   * of `exclude_list_get (address_str, EXCL_ADDRESS)` before desiding to print anything.
+   * The same goes for `exclude_list_get (appId, EXCL_PROGRAM)`.
    *
-   * If `printed == FALSE`, `fw_buf_reset()` is called. Hence nothing gets printed to `trace_puts()`.
+   * If both `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.
    */
 
   fw_buf_add (TIME_STRING_FMT "~4%s~0",
@@ -3450,20 +3471,26 @@ static void CALLBACK
   {
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
          fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
-    else TRACE (2, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+    else TRACE (1, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
     print_layer_item (NULL, allow_event);
     print_filter_rule (NULL, allow_event);
+
+    TRACE (2, "_FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW: header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
          fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
-    else TRACE (2, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+    else TRACE (1, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
     print_layer_item (drop_event, NULL);
     print_filter_rule (drop_event, NULL);
+
+    TRACE (1, "_FWPM_NET_EVENT_TYPE_CAPABILITY_DROP: header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
   }
+  else
+    TRACE (1, "Event: %d", event_type);
 
   /* Print the local / remote addresses and ports for IPv4 / IPv6.
    * A single event can only match IPv4 or IPv6 (or something else).
@@ -3474,7 +3501,7 @@ static void CALLBACK
       address_printed = print_addresses_ipv6 (header, direction_in);
 
    if (!address_printed)
-      TRACE (3, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+      TRACE (1, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
 
   if (/* address_printed && */
       (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW   ||
@@ -3491,7 +3518,7 @@ static void CALLBACK
 
   /* We filter only on addresses and programs.
    */
-  if (address_printed && program_printed)
+  if (address_printed || program_printed)
   {
     fw_buf_flush();
     fw_num_events++;
