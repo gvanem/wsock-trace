@@ -747,7 +747,10 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 
 #if !defined(__WATCOMC__)
   if (startup_count == 1 && g_cfg.firewall.monitor_enable)
-     fw_monitor_start();
+  {
+    fw_init();
+    fw_monitor_start();
+  }
 #endif
 
   ENTER_CRIT();
