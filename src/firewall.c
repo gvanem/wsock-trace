@@ -1004,8 +1004,8 @@ typedef struct _FWPM_NET_EVENT4 {
         _FWPM_NET_EVENT_HEADER3 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-            _FWPM_NET_EVENT_CLASSIFY_DROP2     *classifyDrop;
-            _FWPM_NET_EVENT_CLASSIFY_ALLOW0    *classifyAllow;
+            _FWPM_NET_EVENT_CLASSIFY_DROP2      *classifyDrop;
+            _FWPM_NET_EVENT_CLASSIFY_ALLOW0     *classifyAllow;
             _FWPM_NET_EVENT_CAPABILITY_DROP0    *capabilityDrop;
             _FWPM_NET_EVENT_CAPABILITY_ALLOW0   *capabilityAllow;
           /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE2  *ikeMmFailure;    Not needed */
@@ -1021,8 +1021,8 @@ typedef struct _FWPM_NET_EVENT5 {
         _FWPM_NET_EVENT_HEADER3 header;
         FWPM_NET_EVENT_TYPE     type;
         union {
-            _FWPM_NET_EVENT_CLASSIFY_DROP2      *classifyDrop;
-            _FWPM_NET_EVENT_CLASSIFY_ALLOW0     *classifyAllow;
+            _FWPM_NET_EVENT_CLASSIFY_DROP2       *classifyDrop;
+            _FWPM_NET_EVENT_CLASSIFY_ALLOW0      *classifyAllow;
             _FWPM_NET_EVENT_CAPABILITY_DROP0     *capabilityDrop;
             _FWPM_NET_EVENT_CAPABILITY_ALLOW0    *capabilityAllow;
           /* FWPM_NET_EVENT_IKEEXT_MM_FAILURE2   *ikeMmFailure;     Not needed */
@@ -1219,15 +1219,16 @@ static char         fw_module [_MAX_PATH];
 
 /**
  * \def MAX_DOMAIN_SZ
- *  Maximum size of a domain name for a `struct SID_entry`.
+ *  Maximum size of a `domain` name in a `struct SID_entry`.
  *
  * \def MAX_ACCOUNT_SZ
- *  Maximum size of an account name for a `struct SID_entry`.
+ *  Maximum size of an `account` name in a `struct SID_entry`.
  */
 #define MAX_DOMAIN_SZ    20
 #define MAX_ACCOUNT_SZ   30
 
 /**
+ * \struct SID_entry
  * A cache of SIDs for `print_user_id()` and `print_package_id()`.
  */
 struct SID_entry {
@@ -1504,6 +1505,11 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   FWP_VALUE value;
   DWORD     rc;
 
+  /* If 'fw_init()' wasn't called or succeeded, return FALSE.
+   */
+  if (fw_policy_handle == INVALID_HANDLE_VALUE)
+     return (FALSE);
+
   if (!fw_create_engine())
      return (FALSE);
 
@@ -1564,28 +1570,28 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
  */
 static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
-  #define SET_API_CALLBACK(N)                                                                \
-          do {                                                                               \
-            if (api_level == N && p_FwpmNetEventSubscribe##N)                                \
-            {                                                                                \
-              TRACE (2, "Trying FwpmNetEventSubscribe%d().\n", N);                           \
-              fw_errno = (*p_FwpmNetEventSubscribe##N) (fw_engine_handle,                    \
-                                                        subscription,                        \
-                                                        fw_event_callback##N,                \
-                                                        fw_engine_handle,                    \
-                                                        &fw_event_handle);                   \
-              if (fw_errno == ERROR_SUCCESS)                                                 \
-              {                                                                              \
-                TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);                      \
-                return (TRUE);                                                               \
-              }                                                                              \
-            }                                                                                \
-            if (api_level >= N && !p_FwpmNetEventSubscribe##N)                               \
-            {                                                                                \
-              fw_errno = ERROR_BAD_COMMAND;                                                  \
-              TRACE (1, "FwpmNetEventSubscribe%d() not available on this OS.\n", api_level); \
-              return (FALSE);                                                                \
-            }                                                                                \
+  #define SET_API_CALLBACK(N)                                                        \
+          do {                                                                       \
+            if (api_level == N && p_FwpmNetEventSubscribe##N)                        \
+            {                                                                        \
+              TRACE (2, "Trying FwpmNetEventSubscribe%d().\n", N);                   \
+              fw_errno = (*p_FwpmNetEventSubscribe##N) (fw_engine_handle,            \
+                                                        subscription,                \
+                                                        fw_event_callback##N,        \
+                                                        fw_engine_handle,            \
+                                                        &fw_event_handle);           \
+              if (fw_errno == ERROR_SUCCESS)                                         \
+              {                                                                      \
+                TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);              \
+                return (TRUE);                                                       \
+              }                                                                      \
+            }                                                                        \
+            if (api_level >= N && !p_FwpmNetEventSubscribe##N)                       \
+            {                                                                        \
+              fw_errno = ERROR_BAD_COMMAND;                                          \
+              TRACE (1, "FwpmNetEventSubscribe%d() not available on this OS.\n", N); \
+              return (FALSE);                                                        \
+            }                                                                        \
           } while (0)
 
   int api_level = fw_api;
@@ -1671,6 +1677,14 @@ BOOL fw_monitor_start (void)
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
 
+  fw_num_events = fw_num_ignored = 0;
+
+  if (ws_sema_inherited)
+  {
+    TRACE (1, "Not safe to use 'fw_monitor_start()' in a sub-process.\n");
+    return (FALSE);
+  }
+
   if (!fw_check_sizes())
      return (FALSE);
 
@@ -1690,11 +1704,7 @@ BOOL fw_monitor_start (void)
   /* Subscribe to the events.
    * With API level = `fw_api == FW_API_DEFAULT` if not user-defined.
    */
-  if (!fw_monitor_subscribe(&subscription))
-     return (FALSE);
-
-  fw_num_events = fw_num_ignored = 0;
-  return (TRUE);
+  return fw_monitor_subscribe (&subscription);
 }
 
 void fw_monitor_stop (void)
@@ -3124,7 +3134,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   if (g_cfg.firewall.show_all == 0)
   {
-    if (!stricmp(fw_module, a_name) || !stricmp(fw_module, a_base)))
+    if (!stricmp(fw_module, a_name) || !stricmp(fw_module, a_base))
     {
       TRACE (1, "Got event for fw_module: '%s' matching '%s'.\n", fw_module, a_name);
       return (TRUE);
@@ -3230,7 +3240,7 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
   if (!(header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET) || !header->userId)
      return (FALSE);
 
-  se = lookup_or_add_SID ((PSID)header->userId);
+  se = lookup_or_add_SID (header->userId);
   fw_buf_add ("\n%-*suser:   %s\\%s", INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
 }
@@ -3246,7 +3256,7 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
   if (!(header->flags & FWPM_NET_EVENT_FLAG_PACKAGE_ID_SET) || !header->packageSid)
      return (FALSE);
 
-  se = lookup_or_add_SID ((PSID)header->packageSid);
+  se = lookup_or_add_SID (header->packageSid);
   if (se->sid_str && strcmp(NULL_SID, se->sid_str))
   {
     fw_buf_add ("\n%-*spkg:   %s", INDENT_SZ, "", se->sid_str);
@@ -3476,7 +3486,8 @@ static void CALLBACK
     print_layer_item (NULL, allow_event);
     print_filter_rule (NULL, allow_event);
 
-    TRACE (2, "_FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW: header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+    TRACE (2, "_FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW: header->flags: %s",
+           flags_decode(header->flags, ev_flags, DIM(ev_flags)));
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
@@ -3487,7 +3498,8 @@ static void CALLBACK
     print_layer_item (drop_event, NULL);
     print_filter_rule (drop_event, NULL);
 
-    TRACE (1, "_FWPM_NET_EVENT_TYPE_CAPABILITY_DROP: header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+    TRACE (1, "_FWPM_NET_EVENT_TYPE_CAPABILITY_DROP: header->flags: %s",
+           flags_decode(header->flags, ev_flags, DIM(ev_flags)));
   }
   else
     TRACE (1, "Event: %d", event_type);
