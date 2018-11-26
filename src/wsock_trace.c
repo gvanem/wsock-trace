@@ -789,6 +789,7 @@ EXPORT int WINAPI WSACleanup (void)
   /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
    */
   fw_monitor_stop();
+  fw_exit();
 #endif
 
   return (rc);
