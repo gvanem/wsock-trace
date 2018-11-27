@@ -128,27 +128,19 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define INDENT_SZ        (2 + g_cfg.trace_indent)
 #endif
 
-/**
- * \def DEF_FUNC(ret, f, args)
- *
- * Macro to both define and declare the function-pointer.
- *
- * \param[in] ret The return value of the typdef'ed function-pointer.
- * \param[in] f   The function name.
- * \param[in] f   The function arguments as a list of `(arg1, arg2, ...)`.
- */
-#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
-                                static func_##f  p_##f = NULL
+DWORD fw_errno;
+int   fw_api = FW_API_DEFAULT;
 
-/**
- * \def ADD_VALUE(dll, func)
- *
- * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
- *
- * \param[in] dll  The name of the .DLL to use for `LoadLibrary()`.
- * \param[in  func The name of the function to  use for `GetProcAddress()`.
- */
-#define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
+static FWPM_SESSION fw_session;
+static HANDLE       fw_policy_handle  = INVALID_HANDLE_VALUE;
+static HANDLE       fw_engine_handle  = INVALID_HANDLE_VALUE;
+static HANDLE       fw_event_handle   = INVALID_HANDLE_VALUE;
+static DWORD        fw_num_rules      = 0;
+static DWORD        fw_num_events     = 0;
+static DWORD        fw_num_ignored    = 0;
+static DWORD        fw_unknown_layers = 0;
+static UINT         fw_acp;
+static char         fw_module [_MAX_PATH];
 
 typedef enum FW_STORE_TYPE {
              FW_STORE_TYPE_INVALID,
@@ -679,6 +671,7 @@ typedef struct FW_RULE {
 #define FWP_DIRECTION_IN               0x00003900L
 #define FWP_DIRECTION_OUT              0x00003901L
 #define FWP_DIRECTION_FORWARD          0x00003902L
+#define FWP_DIRECTION_FORWARD2         0x00003903L
 
 #ifndef FWPM_SESSION_FLAG_DYNAMIC
 #define FWPM_SESSION_FLAG_DYNAMIC      0x00000001
@@ -1050,6 +1043,18 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK3) (void                   *cont
 typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *context,
                                                     const _FWPM_NET_EVENT5 *event);
 
+/**
+ * \def DEF_FUNC(ret, f, args)
+ *
+ * Macro to both define and declare the function-pointer.
+ *
+ * \param[in] ret The return value of the typdef'ed function-pointer.
+ * \param[in] f   The function name.
+ * \param[in] f   The function arguments as a list of `(arg1, arg2, ...)`.
+ */
+#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                static func_##f  p_##f = NULL
+
 /*
  * "FwpUclnt.dll" typedefs and functions pointers:
  */
@@ -1170,6 +1175,16 @@ DEF_FUNC (ULONG, FWStatusMessageFromStatusCode, (FW_RULE_STATUS status_code,
 DEF_FUNC (ULONG, FWFreeFirewallRules, (FW_RULE *pFwRules));
 DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
 
+/**
+ * \def ADD_VALUE(dll, func)
+ *
+ * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
+ *
+ * \param[in] dll  The name of the .DLL to use for `LoadLibrary()`.
+ * \param[in  func The name of the function to  use for `GetProcAddress()`.
+ */
+#define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
+
 static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("FirewallAPI.dll", FWOpenPolicyStore),
               ADD_VALUE ("FirewallAPI.dll", FWClosePolicyStore),
@@ -1201,21 +1216,209 @@ static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("FwpUclnt.dll",    FwpmNetEventEnum5)
             };
 
-static const char *get_time_string (const FILETIME *ts);
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { _FWPM_NET_EVENT_TYPE_##v, "FWPM_NET_EVENT_TYPE_" #v }
 
-DWORD fw_errno;
-int   fw_api = FW_API_DEFAULT;
+static const struct search_list events[] = {
+                    ADD_VALUE (CLASSIFY_DROP),
+                    ADD_VALUE (CLASSIFY_ALLOW),
+                    ADD_VALUE (CAPABILITY_DROP),
+                    ADD_VALUE (CAPABILITY_ALLOW),
+                    ADD_VALUE (CLASSIFY_DROP_MAC),
+                    ADD_VALUE (IKEEXT_MM_FAILURE),
+                    ADD_VALUE (IKEEXT_QM_FAILURE),
+                    ADD_VALUE (IKEEXT_EM_FAILURE),
+                    ADD_VALUE (IPSEC_KERNEL_DROP),
+                    ADD_VALUE (IPSEC_DOSP_DROP),
+                    ADD_VALUE (LPM_PACKET_ARRIVAL),
+                    ADD_VALUE (MAX)
+                  };
 
-static FWPM_SESSION fw_session;
-static HANDLE       fw_policy_handle  = INVALID_HANDLE_VALUE;
-static HANDLE       fw_engine_handle  = INVALID_HANDLE_VALUE;
-static HANDLE       fw_event_handle   = INVALID_HANDLE_VALUE;
-static DWORD        fw_num_rules      = 0;
-static DWORD        fw_num_events     = 0;
-static DWORD        fw_num_ignored    = 0;
-static DWORD        fw_unknown_layers = 0;
-static UINT         fw_acp;
-static char         fw_module [_MAX_PATH];
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { FWPM_NET_EVENT_FLAG_##v, "FWPM_NET_EVENT_FLAG_" #v }
+
+static const struct search_list ev_flags[] = {
+                    ADD_VALUE (IP_PROTOCOL_SET),
+                    ADD_VALUE (LOCAL_ADDR_SET),
+                    ADD_VALUE (REMOTE_ADDR_SET),
+                    ADD_VALUE (LOCAL_PORT_SET),
+                    ADD_VALUE (REMOTE_PORT_SET),
+                    ADD_VALUE (APP_ID_SET),
+                    ADD_VALUE (USER_ID_SET),
+                    ADD_VALUE (SCOPE_ID_SET),
+                    ADD_VALUE (IP_VERSION_SET),
+                    ADD_VALUE (REAUTH_REASON_SET),
+                    ADD_VALUE (PACKAGE_ID_SET),
+                    ADD_VALUE (ENTERPRISE_ID_SET),
+                    ADD_VALUE (POLICY_FLAGS_SET),
+                    ADD_VALUE (EFFECTIVE_NAME_SET)
+     };
+
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { FWP_DIRECTION_##v, #v }
+
+static const struct search_list directions[] = {
+                    ADD_VALUE (IN),
+                    ADD_VALUE (INBOUND),
+                    ADD_VALUE (OUT),
+                    ADD_VALUE (OUTBOUND),
+                    ADD_VALUE (FORWARD),
+                    ADD_VALUE (FORWARD2)
+                  };
+
+/*
+ * Copied from dump.c:
+ */
+#define _IPPROTO_HOPOPTS               0
+#define _IPPROTO_ICMP                  1
+#define _IPPROTO_IGMP                  2
+#define _IPPROTO_GGP                   3
+#define _IPPROTO_IPV4                  4
+#define _IPPROTO_ST                    5
+#define _IPPROTO_TCP                   6
+#define _IPPROTO_CBT                   7
+#define _IPPROTO_EGP                   8
+#define _IPPROTO_IGP                   9
+#define _IPPROTO_PUP                   12
+#define _IPPROTO_UDP                   17
+#define _IPPROTO_IDP                   22
+#define _IPPROTO_RDP                   27
+#define _IPPROTO_IPV6                  41
+#define _IPPROTO_ROUTING               43
+#define _IPPROTO_FRAGMENT              44
+#define _IPPROTO_ESP                   50
+#define _IPPROTO_AH                    51
+#define _IPPROTO_ICMPV6                58
+#define _IPPROTO_NONE                  59
+#define _IPPROTO_DSTOPTS               60
+#define _IPPROTO_ND                    77
+#define _IPPROTO_ICLFXBM               78
+#define _IPPROTO_PIM                   103
+#define _IPPROTO_PGM                   113
+#define _IPPROTO_RM                    113
+#define _IPPROTO_L2TP                  115
+#define _IPPROTO_SCTP                  132
+#define _IPPROTO_RAW                   255
+#define _IPPROTO_MAX                   256
+#define _IPPROTO_RESERVED_RAW          257
+#define _IPPROTO_RESERVED_IPSEC        258
+#define _IPPROTO_RESERVED_IPSECOFFLOAD 259
+#define _IPPROTO_RESERVED_WNV          260
+#define _IPPROTO_RESERVED_MAX          261
+
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { _IPPROTO_##v, "IPPROTO_" #v }
+
+static const struct search_list protocols[] = {
+                    ADD_VALUE (ICMP),
+                    ADD_VALUE (IGMP),
+                    ADD_VALUE (TCP),
+                    ADD_VALUE (UDP),
+                    ADD_VALUE (ICMPV6),
+                    ADD_VALUE (RM),
+                    ADD_VALUE (RAW),
+                    ADD_VALUE (HOPOPTS),
+                    ADD_VALUE (GGP),
+                    ADD_VALUE (IPV4),
+                    ADD_VALUE (IPV6),
+                    ADD_VALUE (ST),
+                    ADD_VALUE (CBT),
+                    ADD_VALUE (EGP),
+                    ADD_VALUE (IGP),
+                    ADD_VALUE (PUP),
+                    ADD_VALUE (IDP),
+                    ADD_VALUE (RDP),
+                    ADD_VALUE (ROUTING),
+                    ADD_VALUE (FRAGMENT),
+                    ADD_VALUE (ESP),
+                    ADD_VALUE (AH),
+                    ADD_VALUE (DSTOPTS),
+                    ADD_VALUE (ND),
+                    ADD_VALUE (ICLFXBM),
+                    ADD_VALUE (PIM),
+                    ADD_VALUE (PGM),
+                    ADD_VALUE (L2TP),
+                    ADD_VALUE (SCTP),
+                    ADD_VALUE (NONE),
+                    ADD_VALUE (RAW),
+                    ADD_VALUE (RESERVED_IPSEC),
+                    ADD_VALUE (RESERVED_IPSECOFFLOAD),
+                    ADD_VALUE (RESERVED_WNV),
+                    ADD_VALUE (RESERVED_RAW),
+                    ADD_VALUE (RESERVED_IPSEC),
+                    ADD_VALUE (RESERVED_IPSECOFFLOAD),
+                    ADD_VALUE (RESERVED_WNV),
+                    ADD_VALUE (RESERVED_MAX)
+                  };
+
+#ifndef FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW
+#define FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW         0x00000001
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_OFFLOAD
+#define FWP_CALLOUT_FLAG_ALLOW_OFFLOAD               0x00000002
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY
+#define FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY    0x00000004
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION
+#define FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION 0x00000008
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY
+#define FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY            0x00000010
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_RESERVED1
+#define FWP_CALLOUT_FLAG_RESERVED1                   0x00000020
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_RSC
+#define FWP_CALLOUT_FLAG_ALLOW_RSC                   0x00000040
+#endif
+
+#ifndef FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY
+#define FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY     0x00000080
+#endif
+
+#ifndef FWPM_CALLOUT_FLAG_PERSISTENT
+#define FWPM_CALLOUT_FLAG_PERSISTENT                 0x00010000
+#endif
+
+#ifndef FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT
+#define FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT      0x00020000
+#endif
+
+#ifndef FWPM_CALLOUT_FLAG_REGISTERED
+#define FWPM_CALLOUT_FLAG_REGISTERED                 0x00040000
+#endif
+
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { v, #v }
+
+/* Enter flags with highest bit first.
+ */
+static const struct search_list callout_flags[] = {
+                    ADD_VALUE (FWPM_CALLOUT_FLAG_REGISTERED),
+                    ADD_VALUE (FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT),
+                    ADD_VALUE (FWPM_CALLOUT_FLAG_PERSISTENT),
+                    ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY),
+                    ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_RSC),
+                 /* ADD_VALUE (FWP_CALLOUT_FLAG_RESERVED1), */
+                    ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY),
+                    ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION),
+                    ADD_VALUE (FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY),
+                    ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_OFFLOAD),
+                    ADD_VALUE (FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW)
+                  };
+
+static const char *get_callout_flag (UINT32 flags)
+{
+  flags &= ~FWP_CALLOUT_FLAG_RESERVED1;
+  return flags_decode (flags, callout_flags, DIM(callout_flags));
+}
 
 /**
  * \def MAX_DOMAIN_SZ
@@ -1333,43 +1536,137 @@ static void fw_buf_flush (void)
  * \def FW_EVENT_CALLBACK
  *
  */
-#define FW_EVENT_CALLBACK(event_ver, callback_ver, drop, allow)                           \
-        static void CALLBACK                                                              \
-        fw_event_callback##event_ver (void *context,                                      \
-                 const _FWPM_NET_EVENT##callback_ver *event)                              \
-        {                                                                                 \
-       /* ENTER_CRIT(); */                                                                \
-       /* ws_sema_wait(); */                                                              \
-          if (!event)                                                                     \
-             fw_num_ignored++;                                                            \
-          else                                                                            \
-          {                                                                               \
-            if (g_cfg.trace_level >= 2)                                                   \
-               trace_printf ("\n------------------------------------------"               \
-                             "-----------------------------------------\n"                \
-                             "%s(): thr-id: %lu.\n",                                      \
-                             __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));             \
-            fw_event_callback (event->type,                                               \
-                               (const _FWPM_NET_EVENT_HEADER3 *) &event->header,          \
-                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?        \
-                                 (const _FWPM_NET_EVENT_CLASSIFY_DROP2 *) drop : NULL,    \
-                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?       \
-                                 (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *) allow : NULL); \
-          }                                                                               \
-          ARGSUSED (context);                                                             \
-       /* LEAVE_CRIT(); */                                                                \
+#define FW_EVENT_CALLBACK(event_ver, callback_ver, allow_member1, allow_member2, drop_member1, drop_member2) \
+        static void CALLBACK                                                                                 \
+        fw_event_callback##event_ver (void *context,                                                         \
+                                      const _FWPM_NET_EVENT##callback_ver *event)                            \
+        {                                                                                                    \
+       /* ENTER_CRIT(); */                                                                                   \
+       /* ws_sema_wait(); */                                                                                 \
+          if (event)                                                                                         \
+          {                                                                                                  \
+            if (g_cfg.trace_level >= 2)                                                                      \
+               trace_printf ("\n------------------------------------------"                                  \
+                             "-----------------------------------------\n"                                   \
+                             "%s(): thr-id: %lu.\n",                                                         \
+                             __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));                                \
+            fw_event_callback (event->type,                                                                  \
+                               (const _FWPM_NET_EVENT_HEADER3*) &event->header,                              \
+                                                                                                             \
+                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ?                           \
+                                 (const _FWPM_NET_EVENT_CLASSIFY_DROP2*) drop_member1 : NULL,                \
+                                                                                                             \
+                               event->type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP ?                         \
+                                 (const _FWPM_NET_EVENT_CAPABILITY_DROP0*) drop_member2 : NULL,              \
+                                                                                                             \
+                               event->type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ?                          \
+                                 (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0*) allow_member1: NULL,               \
+                                                                                                             \
+                                event->type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ?                       \
+                                 (const _FWPM_NET_EVENT_CAPABILITY_ALLOW0*) allow_member2 : NULL);           \
+          }                                                                                                  \
+          ARGSUSED (context);                                                                                \
+       /* LEAVE_CRIT(); */                                                                                   \
         }
 
-static void CALLBACK fw_event_callback (const UINT                             event_type,
-                                        const _FWPM_NET_EVENT_HEADER3         *header,
-                                        const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
-                                        const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event);
+static void CALLBACK fw_event_callback (const UINT                               event_type,
+                                        const _FWPM_NET_EVENT_HEADER3           *header,
+                                        const _FWPM_NET_EVENT_CLASSIFY_DROP2    *drop_event1,
+                                        const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event2,
+                                        const _FWPM_NET_EVENT_CLASSIFY_ALLOW0   *allow_event1,
+                                        const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event2);
 
-FW_EVENT_CALLBACK (0, 1, event->classifyDrop, NULL)  /* -> 'static void CALLBACK fw_event_callback0 (void *context, const _FWPM_NET_EVENT1 *event) ...' */
-FW_EVENT_CALLBACK (1, 2, event->classifyDrop, NULL)
-FW_EVENT_CALLBACK (2, 3, event->classifyDrop, event->classifyAllow)
-FW_EVENT_CALLBACK (3, 4, event->classifyDrop, event->classifyAllow)
-FW_EVENT_CALLBACK (4, 5, event->classifyDrop, event->classifyAllow)
+FW_EVENT_CALLBACK (0, 1, NULL,                 NULL,                   event->classifyDrop, NULL)
+FW_EVENT_CALLBACK (1, 2, NULL,                 NULL,                   event->classifyDrop, NULL)
+FW_EVENT_CALLBACK (2, 3, event->classifyAllow, event->capabilityAllow, event->classifyDrop, event->capabilityDrop)
+FW_EVENT_CALLBACK (3, 4, event->classifyAllow, event->capabilityAllow, event->classifyDrop, event->capabilityDrop)
+FW_EVENT_CALLBACK (4, 5, event->classifyAllow, event->capabilityAllow, event->classifyDrop, event->capabilityDrop)
+
+/**
+ * Return number of micro-sec from a `FILETIME`.
+ */
+static int64 FILETIME_to_usec (const FILETIME *ft)
+{
+  int64 res = (int64) ft->dwHighDateTime << 32;
+
+  res |= ft->dwLowDateTime;
+  return (res / 10);   /* from 100 nano-sec periods to usec */
+}
+
+/**
+ * Return a time-string for an event.
+ *
+ * This return a time-string matching `g_cfg.trace_time_format`.
+ * Ref. `get_timestamp()`.
+ *
+ * \note A `diff` can be negative since different layers in the WFP, seems to create
+ *       these timestamp them-self. And each event is not sent to this callback in
+ *       an ordered fashion.
+ */
+static const char *get_time_string (const FILETIME *ts)
+{
+  static char  time_str [30];
+  static int64 ref_ts = S64_SUFFIX(0);
+  int64  diff;
+
+  /* Init `ref_ts` for a `TS_RELATIVE` or `TS_DELTA` time-format.
+   * Called from `fw_init()`.
+   */
+  if (!ts)
+  {
+    FILETIME _ts;
+
+    GetSystemTimeAsFileTime (&_ts);
+    ref_ts = FILETIME_to_usec (&_ts);
+    return (NULL);
+  }
+
+  if (g_cfg.trace_time_format == TS_NONE)
+     return ("");
+
+  if (g_cfg.trace_time_format == TS_RELATIVE || g_cfg.trace_time_format == TS_DELTA)
+  {
+    static int64 last_ts = S64_SUFFIX(0);
+    const char *sign = "";
+    int64       _ts = FILETIME_to_usec (ts);
+    long        sec, msec;
+
+    if (g_cfg.trace_time_format == TS_RELATIVE)
+         diff = _ts - ref_ts;
+    else if (last_ts == S64_SUFFIX(0))  /* First event when `g_cfg.trace_time_format == TS_DELTA` */
+         diff = S64_SUFFIX(0);
+    else diff = _ts - last_ts;
+
+    last_ts = _ts;
+    sec  = (long) (diff / S64_SUFFIX(1000000));
+    msec = (long) ((diff - (1000000 * sec)) % 1000);
+    if (sec < 0)
+    {
+      sec  = -sec;
+      sign = "-";
+    }
+    if (msec < 0)
+    {
+      msec = -msec;
+      sign = "-";
+    }
+    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec", sign, sec, msec);
+  }
+  else if (g_cfg.trace_time_format == TS_ABSOLUTE)
+  {
+    SYSTEMTIME sys_time;
+    FILETIME   loc_time;
+
+    memset (&sys_time, '\0', sizeof(sys_time));
+    memset (&loc_time, '\0', sizeof(loc_time));
+    FileTimeToLocalFileTime (ts, &loc_time);
+    FileTimeToSystemTime (&loc_time, &sys_time);
+
+    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u",
+              sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
+  }
+  return (time_str);
+}
 
 /**
  * Ensure the needed functions are loaded only once.
@@ -1456,7 +1753,9 @@ void fw_exit (void)
 
   fw_monitor_stop();
 
-  smartlist_wipe (fw_SID_list, fw_SID_free);
+  if (fw_SID_list)
+     smartlist_wipe (fw_SID_list, fw_SID_free);
+  fw_SID_list = NULL;
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
@@ -1570,28 +1869,28 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
  */
 static BOOL fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 {
-  #define SET_API_CALLBACK(N)                                                        \
-          do {                                                                       \
-            if (api_level == N && p_FwpmNetEventSubscribe##N)                        \
-            {                                                                        \
-              TRACE (2, "Trying FwpmNetEventSubscribe%d().\n", N);                   \
-              fw_errno = (*p_FwpmNetEventSubscribe##N) (fw_engine_handle,            \
-                                                        subscription,                \
-                                                        fw_event_callback##N,        \
-                                                        fw_engine_handle,            \
-                                                        &fw_event_handle);           \
-              if (fw_errno == ERROR_SUCCESS)                                         \
-              {                                                                      \
-                TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);              \
-                return (TRUE);                                                       \
-              }                                                                      \
-            }                                                                        \
-            if (api_level >= N && !p_FwpmNetEventSubscribe##N)                       \
-            {                                                                        \
-              fw_errno = ERROR_BAD_COMMAND;                                          \
-              TRACE (1, "FwpmNetEventSubscribe%d() not available on this OS.\n", N); \
-              return (FALSE);                                                        \
-            }                                                                        \
+  #define SET_API_CALLBACK(N)                                                  \
+          do {                                                                 \
+            if (api_level == N && p_FwpmNetEventSubscribe##N)                  \
+            {                                                                  \
+              TRACE (2, "Trying FwpmNetEventSubscribe%d().\n", N);             \
+              fw_errno = (*p_FwpmNetEventSubscribe##N) (fw_engine_handle,      \
+                                                        subscription,          \
+                                                        fw_event_callback##N,  \
+                                                        fw_engine_handle,      \
+                                                        &fw_event_handle);     \
+              if (fw_errno == ERROR_SUCCESS)                                   \
+              {                                                                \
+                TRACE (1, "FwpmNetEventSubscribe%d() succeeded.\n", N);        \
+                return (TRUE);                                                 \
+              }                                                                \
+            }                                                                  \
+            if (api_level >= N && !p_FwpmNetEventSubscribe##N)                 \
+            {                                                                  \
+              fw_errno = ERROR_BAD_COMMAND;                                    \
+              TRACE (0, "p_FwpmNetEventSubscribe%d() is not available.\n", N); \
+              return (FALSE);                                                  \
+            }                                                                  \
           } while (0)
 
   int api_level = fw_api;
@@ -1713,12 +2012,16 @@ void fw_monitor_stop (void)
   CloseHandle (fw_event_handle);
   CloseHandle (fw_engine_handle);
 #else
-  if (fw_engine_handle != INVALID_HANDLE_VALUE && fw_event_handle != INVALID_HANDLE_VALUE && p_FwpmNetEventUnsubscribe0)
+  if (fw_engine_handle != INVALID_HANDLE_VALUE &&
+      fw_event_handle  != INVALID_HANDLE_VALUE &&
+      p_FwpmNetEventUnsubscribe0)
     (*p_FwpmNetEventUnsubscribe0) (fw_engine_handle, fw_event_handle);
 
-  if (fw_engine_handle != INVALID_HANDLE_VALUE && p_FwpmEngineClose0)
+  if (fw_engine_handle != INVALID_HANDLE_VALUE &&
+      p_FwpmEngineClose0)
     (*p_FwpmEngineClose0) (fw_engine_handle);
 #endif
+
   fw_event_handle = fw_engine_handle = INVALID_HANDLE_VALUE;
 }
 
@@ -1773,74 +2076,6 @@ int fw_enumerate_rules (void)
   if (num != (int)rule_count)
      TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
   return (num);
-}
-
-#ifndef FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW
-#define FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW         0x00000001
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_ALLOW_OFFLOAD
-#define FWP_CALLOUT_FLAG_ALLOW_OFFLOAD               0x00000002
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY
-#define FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY    0x00000004
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION
-#define FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION 0x00000008
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY
-#define FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY            0x00000010
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_RESERVED1
-#define FWP_CALLOUT_FLAG_RESERVED1                   0x00000020
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_ALLOW_RSC
-#define FWP_CALLOUT_FLAG_ALLOW_RSC                   0x00000040
-#endif
-
-#ifndef FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY
-#define FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY     0x00000080
-#endif
-
-#ifndef FWPM_CALLOUT_FLAG_PERSISTENT
-#define FWPM_CALLOUT_FLAG_PERSISTENT                 0x00010000
-#endif
-
-#ifndef FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT
-#define FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT      0x00020000
-#endif
-
-#ifndef FWPM_CALLOUT_FLAG_REGISTERED
-#define FWPM_CALLOUT_FLAG_REGISTERED                 0x00040000
-#endif
-
-#undef  ADD_VALUE
-#define ADD_VALUE(v)  { v, #v }
-
-static const char *get_callout_flag (UINT32 flags)
-{
-  /* Enter flags with highest bit first.
-   */
-  static const struct search_list callout_flags[] = {
-                                  ADD_VALUE (FWPM_CALLOUT_FLAG_REGISTERED),
-                                  ADD_VALUE (FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT),
-                                  ADD_VALUE (FWPM_CALLOUT_FLAG_PERSISTENT),
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_L2_BATCH_CLASSIFY),
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_RSC),
-                               /* ADD_VALUE (FWP_CALLOUT_FLAG_RESERVED1), */
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_RECLASSIFY),
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_MID_STREAM_INSPECTION),
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_ENABLE_COMMIT_ADD_NOTIFY),
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_ALLOW_OFFLOAD),
-                                  ADD_VALUE (FWP_CALLOUT_FLAG_CONDITIONAL_ON_FLOW)
-                                };
-  flags &= ~FWP_CALLOUT_FLAG_RESERVED1;
-  return flags_decode (flags, callout_flags, DIM(callout_flags));
 }
 
 /**
@@ -2436,139 +2671,129 @@ _DEFINE_GUID (FWPM_LAYER_INBOUND_RESERVED2,
               0x46D8,
               0xA2, 0xC7, 0x6A, 0x4C, 0x72, 0x2C, 0xA4, 0xED);
 
-static const char *get_callout_layer (const GUID *layer)
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { &_FWPM_LAYER_##v, "FWPM_LAYER_" #v }
+
+static const struct GUID_search_list2 fwpm_guids[] = {
+                    ADD_VALUE (INBOUND_IPPACKET_V4),
+                    ADD_VALUE (INBOUND_IPPACKET_V4_DISCARD),
+                    ADD_VALUE (INBOUND_IPPACKET_V6),
+                    ADD_VALUE (INBOUND_IPPACKET_V6_DISCARD),
+                    ADD_VALUE (INBOUND_TRANSPORT_V4),
+                    ADD_VALUE (INBOUND_TRANSPORT_V4_DISCARD),
+                    ADD_VALUE (INBOUND_TRANSPORT_V6),
+                    ADD_VALUE (INBOUND_TRANSPORT_V6_DISCARD),
+                    ADD_VALUE (INBOUND_TRANSPORT_FAST),
+                    ADD_VALUE (INBOUND_ICMP_ERROR_V4),
+                    ADD_VALUE (INBOUND_ICMP_ERROR_V4_DISCARD),
+                    ADD_VALUE (INBOUND_ICMP_ERROR_V6),
+                    ADD_VALUE (INBOUND_ICMP_ERROR_V6_DISCARD),
+                    ADD_VALUE (INBOUND_MAC_FRAME_ETHERNET),
+                    ADD_VALUE (INBOUND_MAC_FRAME_NATIVE),
+                    ADD_VALUE (INBOUND_MAC_FRAME_NATIVE_FAST),
+                    ADD_VALUE (INBOUND_RESERVED2),
+
+                    ADD_VALUE (OUTBOUND_IPPACKET_V4),
+                    ADD_VALUE (OUTBOUND_IPPACKET_V4_DISCARD),
+                    ADD_VALUE (OUTBOUND_IPPACKET_V6),
+                    ADD_VALUE (OUTBOUND_IPPACKET_V6_DISCARD),
+                    ADD_VALUE (OUTBOUND_TRANSPORT_V4),
+                    ADD_VALUE (OUTBOUND_TRANSPORT_V4_DISCARD),
+                    ADD_VALUE (OUTBOUND_TRANSPORT_V6),
+                    ADD_VALUE (OUTBOUND_TRANSPORT_V6_DISCARD),
+                    ADD_VALUE (OUTBOUND_ICMP_ERROR_V4),
+                    ADD_VALUE (OUTBOUND_ICMP_ERROR_V4_DISCARD),
+                    ADD_VALUE (OUTBOUND_ICMP_ERROR_V6),
+                    ADD_VALUE (OUTBOUND_ICMP_ERROR_V6_DISCARD),
+                    ADD_VALUE (OUTBOUND_MAC_FRAME_ETHERNET),
+                    ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE),
+                    ADD_VALUE (OUTBOUND_TRANSPORT_FAST),
+                    ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE_FAST),
+
+                    ADD_VALUE (IPFORWARD_V4),
+                    ADD_VALUE (IPFORWARD_V4_DISCARD),
+                    ADD_VALUE (IPFORWARD_V6),
+                    ADD_VALUE (IPFORWARD_V6_DISCARD),
+
+                    ADD_VALUE (STREAM_V4),
+                    ADD_VALUE (STREAM_V4_DISCARD),
+                    ADD_VALUE (STREAM_V6),
+                    ADD_VALUE (STREAM_V6_DISCARD),
+                    ADD_VALUE (STREAM_PACKET_V4),
+                    ADD_VALUE (STREAM_PACKET_V6),
+
+                    ADD_VALUE (DATAGRAM_DATA_V4),
+                    ADD_VALUE (DATAGRAM_DATA_V4_DISCARD),
+                    ADD_VALUE (DATAGRAM_DATA_V6),
+                    ADD_VALUE (DATAGRAM_DATA_V6_DISCARD),
+
+                    ADD_VALUE (ALE_AUTH_LISTEN_V4),
+                    ADD_VALUE (ALE_AUTH_LISTEN_V4_DISCARD),
+                    ADD_VALUE (ALE_AUTH_LISTEN_V6),
+                    ADD_VALUE (ALE_AUTH_LISTEN_V6_DISCARD),
+                    ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V4),
+                    ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V4_DISCARD),
+                    ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V6),
+                    ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V6_DISCARD),
+                    ADD_VALUE (ALE_AUTH_CONNECT_V4),
+                    ADD_VALUE (ALE_AUTH_CONNECT_V4_DISCARD),
+                    ADD_VALUE (ALE_AUTH_CONNECT_V6),
+                    ADD_VALUE (ALE_AUTH_CONNECT_V6_DISCARD),
+                    ADD_VALUE (ALE_FLOW_ESTABLISHED_V4),
+                    ADD_VALUE (ALE_FLOW_ESTABLISHED_V4_DISCARD),
+                    ADD_VALUE (ALE_FLOW_ESTABLISHED_V6),
+                    ADD_VALUE (ALE_FLOW_ESTABLISHED_V6_DISCARD),
+                    ADD_VALUE (ALE_ENDPOINT_CLOSURE_V4),
+                    ADD_VALUE (ALE_ENDPOINT_CLOSURE_V6),
+                    ADD_VALUE (ALE_CONNECT_REDIRECT_V4),
+                    ADD_VALUE (ALE_CONNECT_REDIRECT_V6),
+                    ADD_VALUE (ALE_BIND_REDIRECT_V4),
+                    ADD_VALUE (ALE_BIND_REDIRECT_V6),
+                    ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4),
+                    ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4_DISCARD),
+                    ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6),
+                    ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6_DISCARD),
+                    ADD_VALUE (ALE_RESOURCE_RELEASE_V4),
+                    ADD_VALUE (ALE_RESOURCE_RELEASE_V6),
+
+                    ADD_VALUE (INGRESS_VSWITCH_ETHERNET),
+                    ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V4),
+                    ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V6),
+
+                    ADD_VALUE (EGRESS_VSWITCH_ETHERNET),
+                    ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V4),
+                    ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V6),
+
+                    ADD_VALUE (IPSEC_KM_DEMUX_V4),
+                    ADD_VALUE (IPSEC_KM_DEMUX_V6),
+                    ADD_VALUE (IPSEC_V4),
+                    ADD_VALUE (IPSEC_V6),
+                    ADD_VALUE (IKEEXT_V4),
+                    ADD_VALUE (IKEEXT_V6),
+
+                    ADD_VALUE (RPC_UM),
+                    ADD_VALUE (RPC_EPMAP),
+                    ADD_VALUE (RPC_EP_ADD),
+                    ADD_VALUE (RPC_PROXY_CONN),
+                    ADD_VALUE (RPC_PROXY_IF),
+
+                    ADD_VALUE (KM_AUTHORIZATION),
+                    ADD_VALUE (NAME_RESOLUTION_CACHE_V4),
+                    ADD_VALUE (NAME_RESOLUTION_CACHE_V6)
+                  };
+
+static const char *get_callout_layer_name (const GUID *layer)
 {
-  #undef  ADD_VALUE
-  #define ADD_VALUE(v)  { &_FWPM_LAYER_##v, "FWPM_LAYER_" #v }
-
-  static const struct GUID_search_list2 fwpm_guids[] = {
-                      ADD_VALUE (INBOUND_IPPACKET_V4),
-                      ADD_VALUE (INBOUND_IPPACKET_V4_DISCARD),
-                      ADD_VALUE (INBOUND_IPPACKET_V6),
-                      ADD_VALUE (INBOUND_IPPACKET_V6_DISCARD),
-                      ADD_VALUE (INBOUND_TRANSPORT_V4),
-                      ADD_VALUE (INBOUND_TRANSPORT_V4_DISCARD),
-                      ADD_VALUE (INBOUND_TRANSPORT_V6),
-                      ADD_VALUE (INBOUND_TRANSPORT_V6_DISCARD),
-                      ADD_VALUE (INBOUND_TRANSPORT_FAST),
-                      ADD_VALUE (INBOUND_ICMP_ERROR_V4),
-                      ADD_VALUE (INBOUND_ICMP_ERROR_V4_DISCARD),
-                      ADD_VALUE (INBOUND_ICMP_ERROR_V6),
-                      ADD_VALUE (INBOUND_ICMP_ERROR_V6_DISCARD),
-                      ADD_VALUE (INBOUND_MAC_FRAME_ETHERNET),
-                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE),
-                      ADD_VALUE (INBOUND_MAC_FRAME_NATIVE_FAST),
-                      ADD_VALUE (INBOUND_RESERVED2),
-
-                      ADD_VALUE (OUTBOUND_IPPACKET_V4),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V4_DISCARD),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V6),
-                      ADD_VALUE (OUTBOUND_IPPACKET_V6_DISCARD),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V4),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V4_DISCARD),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V6),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_V6_DISCARD),
-                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V4),
-                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V4_DISCARD),
-                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V6),
-                      ADD_VALUE (OUTBOUND_ICMP_ERROR_V6_DISCARD),
-                      ADD_VALUE (OUTBOUND_MAC_FRAME_ETHERNET),
-                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE),
-                      ADD_VALUE (OUTBOUND_TRANSPORT_FAST),
-                      ADD_VALUE (OUTBOUND_MAC_FRAME_NATIVE_FAST),
-
-                      ADD_VALUE (IPFORWARD_V4),
-                      ADD_VALUE (IPFORWARD_V4_DISCARD),
-                      ADD_VALUE (IPFORWARD_V6),
-                      ADD_VALUE (IPFORWARD_V6_DISCARD),
-
-                      ADD_VALUE (STREAM_V4),
-                      ADD_VALUE (STREAM_V4_DISCARD),
-                      ADD_VALUE (STREAM_V6),
-                      ADD_VALUE (STREAM_V6_DISCARD),
-                      ADD_VALUE (STREAM_PACKET_V4),
-                      ADD_VALUE (STREAM_PACKET_V6),
-
-                      ADD_VALUE (DATAGRAM_DATA_V4),
-                      ADD_VALUE (DATAGRAM_DATA_V4_DISCARD),
-                      ADD_VALUE (DATAGRAM_DATA_V6),
-                      ADD_VALUE (DATAGRAM_DATA_V6_DISCARD),
-
-                      ADD_VALUE (ALE_AUTH_LISTEN_V4),
-                      ADD_VALUE (ALE_AUTH_LISTEN_V4_DISCARD),
-                      ADD_VALUE (ALE_AUTH_LISTEN_V6),
-                      ADD_VALUE (ALE_AUTH_LISTEN_V6_DISCARD),
-                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V4),
-                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V4_DISCARD),
-                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V6),
-                      ADD_VALUE (ALE_AUTH_RECV_ACCEPT_V6_DISCARD),
-                      ADD_VALUE (ALE_AUTH_CONNECT_V4),
-                      ADD_VALUE (ALE_AUTH_CONNECT_V4_DISCARD),
-                      ADD_VALUE (ALE_AUTH_CONNECT_V6),
-                      ADD_VALUE (ALE_AUTH_CONNECT_V6_DISCARD),
-                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V4),
-                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V4_DISCARD),
-                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V6),
-                      ADD_VALUE (ALE_FLOW_ESTABLISHED_V6_DISCARD),
-                      ADD_VALUE (ALE_ENDPOINT_CLOSURE_V4),
-                      ADD_VALUE (ALE_ENDPOINT_CLOSURE_V6),
-                      ADD_VALUE (ALE_CONNECT_REDIRECT_V4),
-                      ADD_VALUE (ALE_CONNECT_REDIRECT_V6),
-                      ADD_VALUE (ALE_BIND_REDIRECT_V4),
-                      ADD_VALUE (ALE_BIND_REDIRECT_V6),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V4_DISCARD),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6),
-                      ADD_VALUE (ALE_RESOURCE_ASSIGNMENT_V6_DISCARD),
-                      ADD_VALUE (ALE_RESOURCE_RELEASE_V4),
-                      ADD_VALUE (ALE_RESOURCE_RELEASE_V6),
-
-                      ADD_VALUE (INGRESS_VSWITCH_ETHERNET),
-                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V4),
-                      ADD_VALUE (INGRESS_VSWITCH_TRANSPORT_V6),
-
-                      ADD_VALUE (EGRESS_VSWITCH_ETHERNET),
-                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V4),
-                      ADD_VALUE (EGRESS_VSWITCH_TRANSPORT_V6),
-
-                      ADD_VALUE (IPSEC_KM_DEMUX_V4),
-                      ADD_VALUE (IPSEC_KM_DEMUX_V6),
-                      ADD_VALUE (IPSEC_V4),
-                      ADD_VALUE (IPSEC_V6),
-                      ADD_VALUE (IKEEXT_V4),
-                      ADD_VALUE (IKEEXT_V6),
-
-                      ADD_VALUE (RPC_UM),
-                      ADD_VALUE (RPC_EPMAP),
-                      ADD_VALUE (RPC_EP_ADD),
-                      ADD_VALUE (RPC_PROXY_CONN),
-                      ADD_VALUE (RPC_PROXY_IF),
-
-                      ADD_VALUE (KM_AUTHORIZATION),
-                      ADD_VALUE (NAME_RESOLUTION_CACHE_V4),
-                      ADD_VALUE (NAME_RESOLUTION_CACHE_V6)
-                    };
-  static char ret [sizeof("FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4_DISCARD") + 40 + 2];
-
   const GUID *guid = fwpm_guids[0].guid;
-  const char *name = NULL;
   int   i;
 
   for (i = 0; i < DIM(fwpm_guids); guid = fwpm_guids[++i].guid)
   {
     if (!memcmp(layer,guid,sizeof(*guid)))
-    {
-      name = fwpm_guids[i].name;
-      break;
-    }
+       return (fwpm_guids[i].name);
   }
-  if (!name)
-  {
-    fw_unknown_layers++;
-    name = "?";
-  }
-  snprintf (ret, sizeof(ret), "%s %s", get_guid_string(layer), name);
-  return (ret);
+  fw_unknown_layers++;
+  return ("?");
 }
 
 /**
@@ -2605,7 +2830,7 @@ BOOL fw_enumerate_callouts (void)
     goto fail;
   }
 
-  num_in  = 100;  /* should be plenty */
+  num_in  = 200;  /* should be plenty */
   num_out = 0;
 
   rc = (*p_FwpmCalloutEnum0) (fw_engine_handle, fw_callout_handle, num_in, &entries, &num_out);
@@ -2638,7 +2863,8 @@ BOOL fw_enumerate_callouts (void)
 
     fw_buf_add ("    calloutKey:      %s\n", get_guid_string(&entry->calloutKey));
     fw_buf_add ("    providerKey:     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
-    fw_buf_add ("    applicableLayer: %s\n", get_callout_layer(&entry->applicableLayer));
+    fw_buf_add ("    applicableLayer: %s\n%*s= %s\n", get_guid_string(&entry->applicableLayer), indent, "",
+                                                      get_callout_layer_name(&entry->applicableLayer));
 
 #if 0  /* Never anything here */
    fw_buf_add ("    providerData:    ");
@@ -2675,24 +2901,21 @@ static BOOL fw_dump_events (void)
   HANDLE  fw_enum_handle = INVALID_HANDLE_VALUE;
   UINT32  i, num_in, num_out;
   DWORD   rc;
-  int     api_level;
+  int     save_all, save_ipv4, save_ipv6;
+  int     api_level = fw_api;
+  void   *entries = NULL;
 
   _FWPM_FILTER_CONDITION0        filter_conditions[5] = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
-  _FWPM_NET_EVENT0             **entries = NULL;
 
-  api_level = fw_api;
   if (api_level < FW_API_LOW || api_level > FW_API_HIGH)
   {
     fw_errno = ERROR_INVALID_DATA;
-    TRACE (1, "%s() failed: %s.\n", __FUNCTION__, win_strerror(fw_errno));
+    TRACE (1, "FwpmNetEventEnum%d() is not a legal API-level.\n", api_level);
     return (FALSE);
   }
 
-  if (!p_FwpmNetEventCreateEnumHandle0  ||
-      !p_FwpmNetEventDestroyEnumHandle0 ||
-      !p_FwpmNetEventEnum0              ||
-      !p_FwpmFreeMemory0)
+  if (!p_FwpmNetEventCreateEnumHandle0 || !p_FwpmNetEventDestroyEnumHandle0 || !p_FwpmFreeMemory0)
   {
     fw_errno = FW_FUNC_ERROR;
     TRACE (1, "%s() failed: %s.\n", __FUNCTION__, win_strerror(fw_errno));
@@ -2702,7 +2925,14 @@ static BOOL fw_dump_events (void)
   if (!fw_create_engine())
      return (FALSE);
 
-  event_template.startTime.dwLowDateTime = event_template.startTime.dwHighDateTime = 0UL;
+  save_all  = g_cfg.firewall.show_all;
+  save_ipv4 = g_cfg.firewall.show_ipv4;
+  save_ipv6 = g_cfg.firewall.show_ipv6;
+
+  fw_num_events = fw_num_ignored = 0UL;
+
+  event_template.startTime.dwLowDateTime  = 0UL;
+  event_template.startTime.dwHighDateTime = 0UL;
   GetSystemTimeAsFileTime (&event_template.endTime);
   event_template.numFilterConditions = 0;
   event_template.filterCondition = filter_conditions;
@@ -2710,49 +2940,99 @@ static BOOL fw_dump_events (void)
   rc = (*p_FwpmNetEventCreateEnumHandle0) (fw_engine_handle, &event_template, &fw_enum_handle);
   if (rc != ERROR_SUCCESS)
   {
-    fw_errno = rc;
-    TRACE (1, "FwpmNetEventCreateEnumHandle0() failed: %s.\n", win_strerror(fw_errno));
-    goto fail;
+    TRACE (1, "FwpmNetEventCreateEnumHandle0() failed: %s.\n", win_strerror(rc));
+    goto quit;
   }
 
   num_in  = INFINITE; /* == 0xFFFFFFFF */
   num_out = 0;
 
+  #define DO_ENUM_LOOP(N, allow_member1, allow_member2, drop_member1, drop_member2)                    \
+          do {                                                                                         \
+            TRACE (1, "FwpmNetEventEnum%d() returned %u entries.\n", N, num_out);                      \
+            for (i = 0; i < num_out; i++)                                                              \
+            {                                                                                          \
+              const _FWPM_NET_EVENT##N      *entry = entries##N [i];                                   \
+              const _FWPM_NET_EVENT_HEADER3 *header = (const _FWPM_NET_EVENT_HEADER3*) &entry->header; \
+                                                                                                       \
+              switch (entry->type)                                                                     \
+              {                                                                                        \
+                case _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP:                                               \
+                     fw_event_callback (entry->type, header,                                           \
+                                        (const _FWPM_NET_EVENT_CLASSIFY_DROP2*) drop_member1,          \
+                                        NULL, NULL, NULL);                                             \
+                     break;                                                                            \
+                case _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP:                                             \
+                     fw_event_callback (entry->type, header,                                           \
+                                        NULL, drop_member2,                                            \
+                                        NULL, NULL);                                                   \
+                     break;                                                                            \
+                case _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW:                                              \
+                     fw_event_callback (entry->type, header,                                           \
+                                        NULL, NULL,                                                    \
+                                        (const _FWPM_NET_EVENT_CLASSIFY_ALLOW0*) allow_member1,        \
+                                        NULL);                                                         \
+                     break;                                                                            \
+                case _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW:                                            \
+                     fw_event_callback (entry->type, header,                                           \
+                                        NULL, NULL,                                                    \
+                                        NULL, allow_member2);                                          \
+                     break;                                                                            \
+                default:                                                                               \
+                     TRACE (1, "Ignoring entry->type: %s\n",                                           \
+                            list_lookup_name(entry->type, events, DIM(events)));                       \
+              }                                                                                        \
+            }                                                                                          \
+          } while (0)
+
  /*
   * Ref:
   *   https://github.com/Microsoft/Windows-classic-samples/blob/master/Samples/Win7Samples/netds/wfp/diagevents/diagevents.c#L188
-  * for example use.
+  * for an example use.
   */
-  rc = (*p_FwpmNetEventEnum0) (fw_engine_handle, fw_enum_handle, num_in, &entries, &num_out);
-  if (rc != ERROR_SUCCESS)
-  {
-    fw_errno = rc;
-    TRACE (1, "FwpmNetEventEnum0() failed: %s\n", win_strerror(fw_errno));
-    goto fail;
-  }
+  #define GET_ENUM_ENTRIES(N, allow_member1, allow_member2, drop_member1, drop_member2)     \
+          do {                                                                              \
+            if (api_level == N && p_FwpmNetEventEnum##N)                                    \
+            {                                                                               \
+              _FWPM_NET_EVENT##N **entries##N = NULL;                                       \
+                                                                                            \
+              TRACE (1, "Trying FwpmNetEventEnum%d().\n", N);                               \
+              rc = (*p_FwpmNetEventEnum##N) (fw_engine_handle, fw_enum_handle,              \
+                                             num_in, &entries##N, &num_out);                \
+              if (rc != ERROR_SUCCESS)                                                      \
+              {                                                                             \
+                fw_errno = rc;                                                              \
+                TRACE (1, "FwpmNetEventEnum%d() failed: %s\n", N, win_strerror(fw_errno));  \
+              }                                                                             \
+              else                                                                          \
+              {                                                                             \
+                entries = (void**) entries##N;                                              \
+                DO_ENUM_LOOP (N, allow_member1, allow_member2, drop_member1, drop_member2); \
+              }                                                                             \
+              goto quit;                                                                    \
+            }                                                                               \
+          } while (0)
 
-  TRACE (1, "FwpmNetEventEnum0() returned %u entries.\n", num_out);
-  for (i = 0; i < num_out; i++)
-  {
-    const _FWPM_NET_EVENT0               *entry = entries[i];
-    const _FWPM_NET_EVENT_HEADER3        *header;
-    const _FWPM_NET_EVENT_CLASSIFY_DROP2 *drop_event;
+#if 0
+  g_cfg.firewall.show_all  = 1;
+  g_cfg.firewall.show_ipv4 = 1;
+  g_cfg.firewall.show_ipv6 = 1;
+#endif
 
-    if (entry->type == FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
-    {
-      header     = (const _FWPM_NET_EVENT_HEADER3*)        &entry->header;
-      drop_event = (const _FWPM_NET_EVENT_CLASSIFY_DROP2*) &entry->classifyDrop;
-      fw_event_callback (FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, header, drop_event, NULL);
-    }
-    else
-      TRACE (1, "Ignoring entry->type: %d\n", entry->type);
-  }
+  GET_ENUM_ENTRIES (4, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
+  GET_ENUM_ENTRIES (3, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
+  GET_ENUM_ENTRIES (2, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
+  GET_ENUM_ENTRIES (1, NULL,                 NULL,                   entry->classifyDrop, NULL);
+  GET_ENUM_ENTRIES (0, NULL,                 NULL,                   entry->classifyDrop, NULL);
 
-  fw_errno = ERROR_SUCCESS;
+quit:
+  fw_errno = rc;
+  g_cfg.firewall.show_all  = save_all;
+  g_cfg.firewall.show_ipv4 = save_ipv4;
+  g_cfg.firewall.show_ipv6 = save_ipv6;
 
-fail:
   if (entries)
-    (*p_FwpmFreeMemory0) ((void**)&entries);
+    (*p_FwpmFreeMemory0) (&entries);
 
   if (fw_event_handle != INVALID_HANDLE_VALUE)
     (*p_FwpmNetEventDestroyEnumHandle0) (fw_engine_handle, fw_enum_handle);
@@ -2780,6 +3060,16 @@ static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
   return (id != 0);
 }
 
+static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+                               const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
+{
+  TRACE (2, "networkCapabilityId: %d, filterId: %" U64_FMT ", isLoopback: %d\n",
+         allow_event ? allow_event->networkCapabilityId : drop_event->networkCapabilityId,
+         allow_event ? allow_event->filterId            : drop_event->filterId,
+         allow_event ? allow_event->isLoopback          : drop_event->isLoopback);
+  return (TRUE);
+}
+
 static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                                const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
@@ -2799,91 +3089,25 @@ static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
   return (id != 0);
 }
 
-/**
- * Return number of micro-sec from a `FILETIME`.
- */
-static int64 FILETIME_to_usec (const FILETIME *ft)
+static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+                                const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
-  int64 res = (int64) ft->dwHighDateTime << 32;
+  FWPM_FILTER0 *filter_item = NULL;
+  UINT64        id = 0;
 
-  res |= ft->dwLowDateTime;
-  return (res / 10);   /* from 100 nano-sec periods to usec */
+  if (drop_event)
+     id = drop_event->filterId;
+  else if (allow_event)
+     id = allow_event->filterId;
+
+  if (id && (*p_FwpmFilterGetById0)(fw_engine_handle, id, &filter_item) == ERROR_SUCCESS)
+  {
+    fw_buf_add ("%-*sfilter: %S\n", INDENT_SZ, "", filter_item->displayData.name);
+    (*p_FwpmFreeMemory0) ((void**)&filter_item);
+  }
+  return (id != 0);
 }
 
-/**
- * Return a time-string for an event.
- *
- * This return a time-string matching `g_cfg.trace_time_format`.
- * Ref. `get_timestamp()`.
- *
- * \note A `diff` can be negative since different layers in the WFP, seems to create
- *       these timestamp them-self. And each event is not sent to this callback in
- *       an ordered fashion.
- */
-static const char *get_time_string (const FILETIME *ts)
-{
-  static char  time_str [30];
-  static int64 ref_ts = S64_SUFFIX(0);
-  int64  diff;
-
-  /* Init `ref_ts` for a `TS_RELATIVE` or `TS_DELTA` time-format.
-   * Called from `fw_init()`.
-   */
-  if (!ts)
-  {
-    FILETIME _ts;
-
-    GetSystemTimeAsFileTime (&_ts);
-    ref_ts = FILETIME_to_usec (&_ts);
-    return (NULL);
-  }
-
-  if (g_cfg.trace_time_format == TS_NONE)
-     return ("");
-
-  if (g_cfg.trace_time_format == TS_RELATIVE || g_cfg.trace_time_format == TS_DELTA)
-  {
-    static int64 last_ts = S64_SUFFIX(0);
-    const char *sign = "";
-    int64       _ts = FILETIME_to_usec (ts);
-    long        sec, msec;
-
-    if (g_cfg.trace_time_format == TS_RELATIVE)
-         diff = _ts - ref_ts;
-    else if (last_ts == S64_SUFFIX(0))  /* First event when `g_cfg.trace_time_format == TS_DELTA` */
-         diff = S64_SUFFIX(0);
-    else diff = _ts - last_ts;
-
-    last_ts = _ts;
-    sec  = (long) (diff / S64_SUFFIX(1000000));
-    msec = (long) ((diff - (1000000 * sec)) % 1000);
-    if (sec < 0)
-    {
-      sec  = -sec;
-      sign = "-";
-    }
-    if (msec < 0)
-    {
-      msec = -msec;
-      sign = "-";
-    }
-    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec", sign, sec, msec);
-  }
-  else if (g_cfg.trace_time_format == TS_ABSOLUTE)
-  {
-    SYSTEMTIME sys_time;
-    FILETIME   loc_time;
-
-    memset (&sys_time, '\0', sizeof(sys_time));
-    memset (&loc_time, '\0', sizeof(loc_time));
-    FileTimeToLocalFileTime (ts, &loc_time);
-    FileTimeToSystemTime (&loc_time, &sys_time);
-
-    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u",
-              sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
-  }
-  return (time_str);
-}
 
 static void print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
@@ -2897,17 +3121,17 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
   {
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
     country  = geoip_get_long_name_by_A2 (country);
-    fw_buf_add ("\n%-*sloc:    %s, %s", INDENT_SZ, "", country, location ? location : "?");
+    fw_buf_add ("%-*sloc:    %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
   }
 #if 0
   else if (*country == '-')
-    fw_buf_add ("\n%-*sloc:    %s", INDENT_SZ, "", country);
+    fw_buf_add ("%-*sloc:    %s\n", INDENT_SZ, "", country);
 #endif
 }
 
 #define PORT_STR_SIZE 80
 
-static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, u_short port, char *port_str)
+static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *port_str)
 {
   struct servent *se = NULL;
 
@@ -3007,10 +3231,10 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   fw_buf_add ("%-*s", INDENT_SZ, "");
 
   if (direction_in)
-       fw_buf_add ("addr:   %s -> %s, ports: %s / %s",
+       fw_buf_add ("addr:   %s -> %s, ports: %s / %s\n",
                    remote_addr, local_addr, remote_port, local_port);
 
-  else fw_buf_add ("addr:   %s -> %s, ports: %s / %s",
+  else fw_buf_add ("addr:   %s -> %s, ports: %s / %s\n",
                    local_addr, remote_addr, local_port, remote_port);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
@@ -3072,10 +3296,10 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     scope[0] = '\0';
 
   if (direction_in)
-       fw_buf_add ("addr:   %s -> %s%s, ports: %s / %s",
+       fw_buf_add ("addr:   %s -> %s%s, ports: %s / %s\n",
                    remote_addr, local_addr, scope, remote_port, local_port);
 
-  else fw_buf_add ("addr:   %s%s -> %s, ports: %s / %s",
+  else fw_buf_add ("addr:   %s%s -> %s, ports: %s / %s\n",
                    local_addr, scope, remote_addr, local_port, remote_port);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
@@ -3148,8 +3372,25 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
     TRACE (2, "Ignoring event for '%s'.\n", a_name);
     return (FALSE);
   }
-  fw_buf_add ("\n%-*sapp:    %s", INDENT_SZ, "", a_name);
+  fw_buf_add ("%-*sapp:    %s\n", INDENT_SZ, "", a_name);
   return (TRUE);
+}
+
+/**
+ * Process the `header->effectiveName` field.
+ */
+static void print_eff_name_id (const _FWPM_NET_EVENT_HEADER3 *header)
+{
+  LPCWSTR w_name;
+  int     w_len;
+
+  if ((header->flags & FWPM_NET_EVENT_FLAG_EFFECTIVE_NAME_SET) == 0 ||
+      !header->effectiveName.data || header->effectiveName.size == 0)
+     return;
+
+  w_name = (LPCWSTR) header->effectiveName.data;
+  w_len  = header->effectiveName.size;
+  fw_buf_add ("\n%-*seff:      %.*S\n", INDENT_SZ, "", w_len, w_name);
 }
 
 /**
@@ -3241,7 +3482,8 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
      return (FALSE);
 
   se = lookup_or_add_SID (header->userId);
-  fw_buf_add ("\n%-*suser:   %s\\%s", INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
+  fw_buf_add ("%-*suser:   %s\\%s\n",
+              INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
 }
 
@@ -3259,96 +3501,24 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
   se = lookup_or_add_SID (header->packageSid);
   if (se->sid_str && strcmp(NULL_SID, se->sid_str))
   {
-    fw_buf_add ("\n%-*spkg:   %s", INDENT_SZ, "", se->sid_str);
+    fw_buf_add ("%-*spkg:   %s\n", INDENT_SZ, "", se->sid_str);
     return (TRUE);
   }
   return (FALSE);
 }
 
-/*
- * Copied from dump.c:
- */
-#define _IPPROTO_HOPOPTS               0
-#define _IPPROTO_ICMP                  1
-#define _IPPROTO_IGMP                  2
-#define _IPPROTO_GGP                   3
-#define _IPPROTO_IPV4                  4
-#define _IPPROTO_ST                    5
-#define _IPPROTO_TCP                   6
-#define _IPPROTO_CBT                   7
-#define _IPPROTO_EGP                   8
-#define _IPPROTO_IGP                   9
-#define _IPPROTO_PUP                   12
-#define _IPPROTO_UDP                   17
-#define _IPPROTO_IDP                   22
-#define _IPPROTO_RDP                   27
-#define _IPPROTO_IPV6                  41
-#define _IPPROTO_ROUTING               43
-#define _IPPROTO_FRAGMENT              44
-#define _IPPROTO_ESP                   50
-#define _IPPROTO_AH                    51
-#define _IPPROTO_ICMPV6                58
-#define _IPPROTO_NONE                  59
-#define _IPPROTO_DSTOPTS               60
-#define _IPPROTO_ND                    77
-#define _IPPROTO_ICLFXBM               78
-#define _IPPROTO_PIM                   103
-#define _IPPROTO_PGM                   113
-#define _IPPROTO_RM                    113
-#define _IPPROTO_L2TP                  115
-#define _IPPROTO_SCTP                  132
-#define _IPPROTO_RAW                   255
-#define _IPPROTO_MAX                   256
-#define _IPPROTO_RESERVED_RAW          257
-#define _IPPROTO_RESERVED_IPSEC        258
-#define _IPPROTO_RESERVED_IPSECOFFLOAD 259
-#define _IPPROTO_RESERVED_WNV          260
-#define _IPPROTO_RESERVED_MAX          261
+static void print_reauth_reason (const _FWPM_NET_EVENT_HEADER3         *header,
+                                 const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
+                                 const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
+{
+  if (!(header->flags & FWPM_NET_EVENT_FLAG_REAUTH_REASON_SET))
+     return;
 
-#undef  ADD_VALUE
-#define ADD_VALUE(p)  { _IPPROTO_##p, "IPPROTO_" #p }
-
-static const struct search_list protocols[] = {
-                    ADD_VALUE (ICMP),
-                    ADD_VALUE (IGMP),
-                    ADD_VALUE (TCP),
-                    ADD_VALUE (UDP),
-                    ADD_VALUE (ICMPV6),
-                    ADD_VALUE (RM),
-                    ADD_VALUE (RAW),
-                    ADD_VALUE (HOPOPTS),
-                    ADD_VALUE (GGP),
-                    ADD_VALUE (IPV4),
-                    ADD_VALUE (IPV6),
-                    ADD_VALUE (ST),
-                    ADD_VALUE (CBT),
-                    ADD_VALUE (EGP),
-                    ADD_VALUE (IGP),
-                    ADD_VALUE (PUP),
-                    ADD_VALUE (IDP),
-                    ADD_VALUE (RDP),
-                    ADD_VALUE (ROUTING),
-                    ADD_VALUE (FRAGMENT),
-                    ADD_VALUE (ESP),
-                    ADD_VALUE (AH),
-                    ADD_VALUE (DSTOPTS),
-                    ADD_VALUE (ND),
-                    ADD_VALUE (ICLFXBM),
-                    ADD_VALUE (PIM),
-                    ADD_VALUE (PGM),
-                    ADD_VALUE (L2TP),
-                    ADD_VALUE (SCTP),
-                    ADD_VALUE (NONE),
-                    ADD_VALUE (RAW),
-                    ADD_VALUE (RESERVED_IPSEC),
-                    ADD_VALUE (RESERVED_IPSECOFFLOAD),
-                    ADD_VALUE (RESERVED_WNV),
-                    ADD_VALUE (RESERVED_RAW),
-                    ADD_VALUE (RESERVED_IPSEC),
-                    ADD_VALUE (RESERVED_IPSECOFFLOAD),
-                    ADD_VALUE (RESERVED_WNV),
-                    ADD_VALUE (RESERVED_MAX)
-                  };
+  fw_buf_add ("%-*sreauth: ", INDENT_SZ, "");
+  if (drop_event)
+       fw_buf_add ("%lu\n", DWORD_CAST(drop_event->reauthReason));
+  else fw_buf_add ("%lu\n", DWORD_CAST(allow_event->reauthReason));
+}
 
 static const char *get_protocol (UINT8 proto)
 {
@@ -3356,68 +3526,24 @@ static const char *get_protocol (UINT8 proto)
 }
 
 static void CALLBACK
-  fw_event_callback (const UINT                             event_type,
-                     const _FWPM_NET_EVENT_HEADER3         *header,
-                     const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
-                     const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
+  fw_event_callback (const UINT                               event_type,
+                     const _FWPM_NET_EVENT_HEADER3           *header,
+                     const _FWPM_NET_EVENT_CLASSIFY_DROP2    *drop_event1,
+                     const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event2,
+                     const _FWPM_NET_EVENT_CLASSIFY_ALLOW0   *allow_event1,
+                     const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event2)
 {
-  #undef  ADD_VALUE
-  #define ADD_VALUE(v)  { _FWPM_NET_EVENT_TYPE_##v, "FWPM_NET_EVENT_TYPE_" #v }
-
-  static const struct search_list events[] = {
-                      ADD_VALUE (CLASSIFY_DROP),
-                      ADD_VALUE (CLASSIFY_ALLOW),
-                      ADD_VALUE (CAPABILITY_DROP),
-                      ADD_VALUE (CAPABILITY_ALLOW),
-                      ADD_VALUE (CLASSIFY_DROP_MAC),
-                      ADD_VALUE (IKEEXT_MM_FAILURE),
-                      ADD_VALUE (IKEEXT_QM_FAILURE),
-                      ADD_VALUE (IKEEXT_EM_FAILURE),
-                      ADD_VALUE (IPSEC_KERNEL_DROP),
-                      ADD_VALUE (IPSEC_DOSP_DROP),
-                      ADD_VALUE (LPM_PACKET_ARRIVAL),
-                      ADD_VALUE (MAX)
-                    };
-
-  #undef  ADD_VALUE
-  #define ADD_VALUE(v)  { FWPM_NET_EVENT_FLAG_##v, "FWPM_NET_EVENT_FLAG_" #v }
-
-  static const struct search_list ev_flags[] = {
-                      ADD_VALUE (IP_PROTOCOL_SET),
-                      ADD_VALUE (LOCAL_ADDR_SET),
-                      ADD_VALUE (REMOTE_ADDR_SET),
-                      ADD_VALUE (LOCAL_PORT_SET),
-                      ADD_VALUE (REMOTE_PORT_SET),
-                      ADD_VALUE (APP_ID_SET),
-                      ADD_VALUE (USER_ID_SET),
-                      ADD_VALUE (SCOPE_ID_SET),
-                      ADD_VALUE (IP_VERSION_SET),
-                      ADD_VALUE (REAUTH_REASON_SET),
-                      ADD_VALUE (PACKAGE_ID_SET),
-                      ADD_VALUE (ENTERPRISE_ID_SET),
-                      ADD_VALUE (POLICY_FLAGS_SET),
-                      ADD_VALUE (EFFECTIVE_NAME_SET)
-       };
-
-  #undef  ADD_VALUE
-  #define ADD_VALUE(v)  { FWP_DIRECTION_##v, #v }
-
-  static const struct search_list directions[] = {
-                      ADD_VALUE (IN),
-                      ADD_VALUE (INBOUND),
-                      ADD_VALUE (OUT),
-                      ADD_VALUE (OUTBOUND)
-                    };
-
-  BOOL direction_in    = FALSE;
-  BOOL direction_out   = FALSE;
-  BOOL address_printed = FALSE;
-  BOOL program_printed = FALSE;
+  BOOL        direction_in    = FALSE;
+  BOOL        direction_out   = FALSE;
+  BOOL        address_printed = FALSE;
+  BOOL        program_printed = FALSE;
+  DWORD       unhandled_flags;
+  const char *event_name;
 
   if (header->flags & FWPM_NET_EVENT_FLAG_IP_VERSION_SET)
   {
-    if ( (header->ipVersion == FWP_IP_VERSION_V4 && !g_cfg.firewall.show_ipv4) ||
-         (header->ipVersion == FWP_IP_VERSION_V6 && !g_cfg.firewall.show_ipv6) )
+    if ((header->ipVersion == FWP_IP_VERSION_V4 && !g_cfg.firewall.show_ipv4) ||
+        (header->ipVersion == FWP_IP_VERSION_V6 && !g_cfg.firewall.show_ipv6))
     {
       fw_num_ignored++;
       TRACE (2, "Ignoring IPv%d event.\n", header->ipVersion == FWP_IP_VERSION_V4 ? 4 : 6);
@@ -3432,77 +3558,83 @@ static void CALLBACK
    *
    * If both `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.
    */
+  event_name = list_lookup_name(event_type, events, DIM(events));
 
   fw_buf_add (TIME_STRING_FMT "~4%s~0",
-              get_time_string(&header->timeStamp),
-              list_lookup_name(event_type, events, DIM(events)));
+              get_time_string(&header->timeStamp), event_name);
 
   if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
   {
-    if (drop_event->msFwpDirection == FWP_DIRECTION_IN ||
-        drop_event->msFwpDirection == FWP_DIRECTION_INBOUND)
+    if (drop_event1->msFwpDirection == FWP_DIRECTION_IN ||
+        drop_event1->msFwpDirection == FWP_DIRECTION_INBOUND)
        direction_in = TRUE;
     else
-    if (drop_event->msFwpDirection == FWP_DIRECTION_OUT ||
-        drop_event->msFwpDirection == FWP_DIRECTION_OUTBOUND)
+    if (drop_event1->msFwpDirection == FWP_DIRECTION_OUT ||
+        drop_event1->msFwpDirection == FWP_DIRECTION_OUTBOUND)
        direction_out = TRUE;
 
+    /* API 0-2 doesn't set the `header->msFwpDirection` correctly.
+     */
+    if (!direction_in && !direction_out)
+       direction_in = TRUE;
+
     if (direction_in || direction_out)
-       fw_buf_add (", %s", list_lookup_name(drop_event->msFwpDirection, directions, DIM(directions)));
+       fw_buf_add (", ~3%s~0", list_lookup_name(drop_event1->msFwpDirection, directions, DIM(directions)));
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
          fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
     else fw_buf_addc ('\n');
 
-    print_layer_item (drop_event, NULL);
-    print_filter_rule (drop_event, NULL);
+    print_layer_item (drop_event1, NULL);
+    print_filter_rule (drop_event1, NULL);
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW)
   {
-    if (allow_event->msFwpDirection == FWP_DIRECTION_IN ||
-        allow_event->msFwpDirection == FWP_DIRECTION_INBOUND)
+    if (allow_event1->msFwpDirection == FWP_DIRECTION_IN ||
+        allow_event1->msFwpDirection == FWP_DIRECTION_INBOUND)
        direction_in = TRUE;
     else
-    if (allow_event->msFwpDirection == FWP_DIRECTION_OUT ||
-        allow_event->msFwpDirection == FWP_DIRECTION_OUTBOUND)
+    if (allow_event1->msFwpDirection == FWP_DIRECTION_OUT ||
+        allow_event1->msFwpDirection == FWP_DIRECTION_OUTBOUND)
        direction_out = TRUE;
 
+    /* API 0-2 doesn't set the `header->msFwpDirection` correctly.
+     */
+    if (!direction_in && !direction_out)
+       direction_in = TRUE;
+
     if (direction_in || direction_out)
-       fw_buf_add (", %s", list_lookup_name(allow_event->msFwpDirection, directions, DIM(directions)));
+       fw_buf_add (", ~3%s~0", list_lookup_name(allow_event1->msFwpDirection, directions, DIM(directions)));
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
          fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
     else fw_buf_addc ('\n');
 
-    print_layer_item (NULL, allow_event);
-    print_filter_rule (NULL, allow_event);
+    print_layer_item (NULL, allow_event1);
+    print_filter_rule (NULL, allow_event1);
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
   {
+    direction_in = TRUE;
+
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-         fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
-    else TRACE (1, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+       fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
 
-    print_layer_item (NULL, allow_event);
-    print_filter_rule (NULL, allow_event);
-
-    TRACE (2, "_FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW: header->flags: %s",
-           flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+    print_layer_item2 (NULL, allow_event2);
+    print_filter_rule2 (NULL, allow_event2);
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
+    direction_in = TRUE;
+
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-         fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
-    else TRACE (1, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+       fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
 
-    print_layer_item (drop_event, NULL);
-    print_filter_rule (drop_event, NULL);
-
-    TRACE (1, "_FWPM_NET_EVENT_TYPE_CAPABILITY_DROP: header->flags: %s",
-           flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+    print_layer_item2 (drop_event2, NULL);
+    print_filter_rule2 (drop_event2, NULL);
   }
   else
-    TRACE (1, "Event: %d", event_type);
+    return;  /* Impossible */
 
   /* Print the local / remote addresses and ports for IPv4 / IPv6.
    * A single event can only match IPv4 or IPv6 (or something else).
@@ -3512,21 +3644,16 @@ static void CALLBACK
   if (!address_printed)
       address_printed = print_addresses_ipv6 (header, direction_in);
 
-   if (!address_printed)
-      TRACE (1, "header->flags: %s", flags_decode(header->flags, ev_flags, DIM(ev_flags)));
+  program_printed = print_app_id (header);
+  print_user_id (header);
+  print_package_id (header);
+  print_eff_name_id (header);
 
-  if (/* address_printed && */
-      (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW   ||
-       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW ||
-       event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP    ||
-       event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP))
-  {
-    program_printed = print_app_id (header);
-    print_user_id (header);
-    print_package_id (header);
-  }
+  if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ||
+      event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
+     print_reauth_reason (header, drop_event1, allow_event1);
 
-  fw_buf_addc ('\n');
+//fw_buf_addc ('\n');
 
   /* We filter only on addresses and programs.
    */
@@ -3540,6 +3667,13 @@ static void CALLBACK
     fw_buf_reset();
     fw_num_ignored++;
   }
+
+  unhandled_flags = header->flags & (FWPM_NET_EVENT_FLAG_ENTERPRISE_ID_SET |
+                                     FWPM_NET_EVENT_FLAG_POLICY_FLAGS_SET  |
+                                     FWPM_NET_EVENT_FLAG_EFFECTIVE_NAME_SET);
+  if (unhandled_flags)
+     TRACE (1, "Unhandled %s header->flags: %s\n",
+            event_name, flags_decode(unhandled_flags, ev_flags, DIM(ev_flags)));
 }
 
 void fw_print_statistics (FWPM_STATISTICS *stats)
@@ -3566,11 +3700,15 @@ const char *fw_strerror (DWORD err)
 #include <signal.h>
 #include "getopt.h"
 
-/* For getopt.c.
+/**
+ * For getopt.c.
  */
 const char *program_name = "firewall_test.exe";
 static int  quit;
 
+/**
+ * Return a `malloc()`ed string of the program (with arguments) to pass to `_popen()`.
+ */
 static char *set_net_program (int argc, char **argv)
 {
   char   *prog = NULL;
@@ -3587,7 +3725,7 @@ static char *set_net_program (int argc, char **argv)
     {
       strcat (prog, argv[i]);
       if (i < (size_t)(argc-1))
-         strcat (prog, " ");
+         strcat (prog, " ");  /* Add a space between arguments (but not after last) */
     }
   }
   return (prog);
@@ -3624,7 +3762,7 @@ static void sig_handler (int sig)
 
 int main (int argc, char **argv)
 {
-  int          ch, rc = 0;
+  int          ch, rc = 1;
   int          dump_rules = 0;
   int          dump_callouts = 0;
   int          dump_events = 0;
@@ -3642,9 +3780,7 @@ int main (int argc, char **argv)
 
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_indent  = 0;
-  g_cfg.trace_report = 1;
-
-  tzset();
+  g_cfg.trace_report  = 1;
 
   while ((ch = getopt(argc, argv, "a:h?cel:pr")) != EOF)
     switch (ch)
@@ -3672,13 +3808,13 @@ int main (int argc, char **argv)
            return show_help (argv[0]);
     }
 
-  program = set_net_program (argc - optind, argv + optind);
+  program = set_net_program (argc-optind, argv+optind);
 
-  /* Because we use `getservbyport()` above, we need to call `WSAStartup()` too.
+  /* Because we use `getservbyport()` above, we need to call `WSAStartup()` first.
    */
   if (WSAStartup(ver, &wsa) != 0 || wsa.wVersion < ver)
   {
-    TRACE (0, "Winsock init failed; code %s\n", win_strerror(GetLastError()));
+    TRACE (0, "Winsock init failed: %s\n", win_strerror(GetLastError()));
     goto quit;
   }
 
@@ -3754,6 +3890,7 @@ int main (int argc, char **argv)
       trace_flush();
     }
     _pclose (p);
+    rc = 0;
   }
   else
    TRACE (0, "_popen() failed, errno %d\n", errno);
