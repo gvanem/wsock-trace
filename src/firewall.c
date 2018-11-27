@@ -1443,6 +1443,7 @@ struct SID_entry {
      };
 
 static smartlist_t *fw_SID_list;
+static char         fw_logged_on_user [100];
 
 /**
  * \struct filter_entry
@@ -1546,7 +1547,9 @@ static void fw_buf_flush (void)
 
 /**
  * \def FW_EVENT_CALLBACK
+ * The macro for defining the event-callback functions for API-levels 0 - 4.
  *
+ * (since C does not support C++-like templates, do it with this hack).
  */
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, allow_member1, allow_member2, drop_member1, drop_member2) \
         static void CALLBACK                                                                                 \
@@ -1588,6 +1591,12 @@ static void CALLBACK fw_event_callback (const UINT                              
                                         const _FWPM_NET_EVENT_CLASSIFY_ALLOW0   *allow_event1,
                                         const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event2);
 
+/**
+ * This expands to:
+ * \li `static void CALLBACK fw_event_callback0 (...)`
+ * \li ...
+ * \li `static void CALLBACK fw_event_callback4 (...)`
+ */
 FW_EVENT_CALLBACK (0, 1, NULL,                 NULL,                   event->classifyDrop, NULL)
 FW_EVENT_CALLBACK (1, 2, NULL,                 NULL,                   event->classifyDrop, NULL)
 FW_EVENT_CALLBACK (2, 3, event->classifyAllow, event->capabilityAllow, event->classifyDrop, event->capabilityDrop)
@@ -1723,15 +1732,22 @@ static BOOL fw_load_funcs (void)
 BOOL fw_init (void)
 {
   USHORT api_version = FW_REDSTONE2_BINARY_VERSION;
+  ULONG  user_len    = sizeof(fw_logged_on_user);
 
   fw_SID_list    = smartlist_new();
   fw_filter_list = smartlist_new();
-  fw_num_rules = 0;
-  fw_acp = GetConsoleCP();
+  fw_num_rules   = 0;
+
+  if (g_cfg.trace_stream == stdout || g_cfg.trace_stream == stderr)
+       fw_acp = GetConsoleCP();
+  else fw_acp = CP_ACP;
+
+  GetUserName (fw_logged_on_user, &user_len);
+
   get_time_string (NULL);
 
   GetModuleFileName (NULL, fw_module, sizeof(fw_module));
-  TRACE (1, "fw_module: '%s'.\n", fw_module);
+  TRACE (2, "fw_module: '%s', fw_logged_on_user: '%s'.\n", fw_module, fw_logged_on_user);
 
   if (!fw_load_funcs())
      return (FALSE);
@@ -2052,15 +2068,20 @@ static void fw_dump_rule (const FW_RULE *rule)
                     (rule->Direction == FW_DIR_IN)      ? "IN"  :
                     (rule->Direction == FW_DIR_OUT)     ? "OUT" :
                     (rule->Direction == FW_DIR_BOTH)    ? "BOTH": "?";
+  char descr [300];
+  int  indent;
 
-  fw_buf_add ("%3lu: %s:%*s %S\n",
-              DWORD_CAST(++fw_num_rules), dir, 7-strlen(dir), "", rule->wszDescription);
+  if (WideCharToMultiByte (fw_acp, 0, rule->wszDescription, -1, descr, (int)sizeof(descr)-1, NULL, NULL) == 0)
+     strcpy (descr, "?");
+
+  indent = fw_buf_add ("~4%3lu: ~3%s:~0%*s", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "");
+  fw_add_long_line (descr, indent-6, ' ');
 
   if (rule->wszLocalApplication)
-     fw_buf_add ("     name:    %S\n", rule->wszName);
+     fw_buf_add ("     ~1name:~0    %S\n", rule->wszName);
 
   if (rule->wszEmbeddedContext)
-     fw_buf_add ("     context: %S\n", rule->wszEmbeddedContext);
+     fw_buf_add ("     ~1context:~0 %S\n", rule->wszEmbeddedContext);
 
   fw_buf_addc ('\n');
 }
@@ -2874,21 +2895,28 @@ BOOL fw_enumerate_callouts (void)
   {
     const FWPM_CALLOUT0  *entry = entries[i];
     int   indent;
+    char  descr [200];
 
-    fw_buf_add ("%2u: calloutId: %u:\n", i, entry->calloutId);
-    fw_buf_add ("    name:            %S\n", entry->displayData.name);
-    fw_buf_add ("    descr:           %S\n", entry->displayData.description ? entry->displayData.description : L"<None>");
+    if (entry->displayData.description)
+         WideCharToMultiByte (fw_acp, 0, entry->displayData.description, -1, descr, (int)sizeof(descr), NULL, NULL);
+    else strcpy (descr, "<None>");
 
-    indent = fw_buf_add ("    flags:           ");
+    fw_buf_add ("~4%2u~0: calloutId: ~3%u:~0\n", i, entry->calloutId);
+    fw_buf_add ("    ~1name~0:            %S\n", entry->displayData.name);
+
+    indent = fw_buf_add ("    ~1descr:~0           ") - 4;
+    fw_add_long_line (descr, indent, ' ');
+
+    fw_buf_add ("    ~1flags:~2           ");
     fw_add_long_line (get_callout_flag(entry->flags), indent, '|');
 
-    fw_buf_add ("    calloutKey:      %s\n", get_guid_string(&entry->calloutKey));
-    fw_buf_add ("    providerKey:     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
-    fw_buf_add ("    applicableLayer: %s\n%*s= %s\n", get_guid_string(&entry->applicableLayer), indent, "",
-                                                      get_callout_layer_name(&entry->applicableLayer));
+    fw_buf_add ("    ~1calloutKey:~0      %s\n", get_guid_string(&entry->calloutKey));
+    fw_buf_add ("    ~1providerKey:~0     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
+    fw_buf_add ("    ~1applicableLayer:~0 %s\n%*s= ~2%s~0\n", get_guid_string(&entry->applicableLayer), indent, "",
+                                                              get_callout_layer_name(&entry->applicableLayer));
 
 #if 0  /* Never anything here */
-   fw_buf_add ("    providerData:    ");
+   fw_buf_add ("    ~1providerData:~0    ");
    if (entry->providerData.data && entry->providerData.size > 0)
          fw_buf_add ("%.*S\n", entry->providerData.size, entry->providerData.data);
     else fw_buf_add ("<None>\n");
@@ -3203,22 +3231,23 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
 #endif
 }
 
-#define PORT_STR_SIZE 80
+#define PORT_STR_SIZE  80
+#define PORTS_FMT      ", ports: %s / %s"
 
-static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *port_str)
+static void get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *port_str)
 {
   struct servent *se = NULL;
 
-  if (header->ipProtocol != IPPROTO_UDP && header->ipProtocol != IPPROTO_TCP)
-     return ("-");
-
   /* If called when wsock_trace.dll is active, we might get "late events".
-   * Hence we cannot call 'getservbyport()' after a 'WSACleanup()'.
+   * Hence we cannot call `getservbyport()` after a `WSACleanup()`.
    * Just return the port-number as a string.
    */
 #if !defined(TEST_FIREWALL)
   if (cleaned_up)
-     return _itoa (port, port_str, 10);
+  {
+    _itoa (port, port_str, 10);
+    return;
+  }
 #endif
 
   /* Do not use 'WSTRACE()' on 'getservbyport()' here.
@@ -3235,23 +3264,27 @@ static char *get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *p
   else _itoa (port, port_str, 10);
 
   trace_level_save_restore (1);
-  return (port_str);
 }
 
-static void get_ports (const _FWPM_NET_EVENT_HEADER3 *header,
-                       const char                   **local_port_p,
-                       const char                   **remote_port_p)
+static const char *get_ports (const _FWPM_NET_EVENT_HEADER3 *header)
 {
-  static char local_port [PORT_STR_SIZE];
-  static char remote_port [PORT_STR_SIZE];
+  static char ret [sizeof(PORTS_FMT) + 2*PORT_STR_SIZE];
+  char local_port [PORT_STR_SIZE];
+  char remote_port[PORT_STR_SIZE];
+
+  if (header->ipProtocol != IPPROTO_UDP && header->ipProtocol != IPPROTO_TCP)
+     return ("");
 
   if (header->flags & FWPM_NET_EVENT_FLAG_LOCAL_PORT_SET)
-       *local_port_p = get_port (header, header->localPort, local_port);
-  else *local_port_p = "-";
+       get_port (header, header->localPort, local_port);
+  else strcpy (local_port, "-");
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_PORT_SET)
-       *remote_port_p = get_port (header, header->remotePort, remote_port);
-  else *remote_port_p = "-";
+       get_port (header, header->remotePort, remote_port);
+  else strcpy (remote_port, "-");
+
+  snprintf (ret, sizeof(ret), PORTS_FMT, local_port, remote_port);
+  return (ret);
 }
 
 /**
@@ -3260,8 +3293,7 @@ static void get_ports (const _FWPM_NET_EVENT_HEADER3 *header,
 static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL direction_in)
 {
   struct in_addr ia4;
-  const char    *local_port;
-  const char    *remote_port;
+  const char    *ports;
   char           local_addr [INET_ADDRSTRLEN];
   char           remote_addr [INET_ADDRSTRLEN];
   DWORD          ip;
@@ -3300,16 +3332,13 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     return (FALSE);
   }
 
-  get_ports (header, &local_port, &remote_port);
-
   fw_buf_add ("%-*s", INDENT_SZ, "");
 
-  if (direction_in)
-       fw_buf_add ("addr:   %s -> %s, ports: %s / %s\n",
-                   remote_addr, local_addr, remote_port, local_port);
+  ports = get_ports (header);
 
-  else fw_buf_add ("addr:   %s -> %s, ports: %s / %s\n",
-                   local_addr, remote_addr, local_port, remote_port);
+  if (direction_in)
+       fw_buf_add ("addr:   %s -> %s%s\n", remote_addr, local_addr, ports);
+  else fw_buf_add ("addr:   %s -> %s%s\n", local_addr, remote_addr, ports);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
@@ -3325,8 +3354,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
  */
 static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL direction_in)
 {
-  const char *local_port;
-  const char *remote_port;
+  const char *ports;
   char        local_addr [INET6_ADDRSTRLEN];
   char        remote_addr [INET6_ADDRSTRLEN];
   char        scope [20];
@@ -3357,9 +3385,9 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     return (FALSE);
   }
 
-  get_ports (header, &local_port, &remote_port);
-
   fw_buf_add ("%-*s", INDENT_SZ, "");
+
+  ports = get_ports (header);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_SCOPE_ID_SET)
   {
@@ -3370,11 +3398,8 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     scope[0] = '\0';
 
   if (direction_in)
-       fw_buf_add ("addr:   %s -> %s%s, ports: %s / %s\n",
-                   remote_addr, local_addr, scope, remote_port, local_port);
-
-  else fw_buf_add ("addr:   %s%s -> %s, ports: %s / %s\n",
-                   local_addr, scope, remote_addr, local_port, remote_port);
+       fw_buf_add ("addr:   %s -> %s%s%s\n", remote_addr, local_addr, scope, ports);
+  else fw_buf_add ("addr:   %s%s -> %s%s\n", local_addr, scope, remote_addr, ports);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
      print_country_location (NULL, (const struct in6_addr*)&header->remoteAddrV6);
@@ -3495,6 +3520,7 @@ static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char *accou
    */
   if (!rc && GetLastError() == ERROR_NONE_MAPPED && sid_use == SidTypeUnknown)
   {
+    TRACE (2, "No account mapping for SID: %s.\n", sid_str);
     _strlcpy (account, sid_str, MAX_ACCOUNT_SZ);
     return (TRUE);
   }
@@ -3553,9 +3579,15 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
   const struct SID_entry *se;
 
   if (!(header->flags & FWPM_NET_EVENT_FLAG_USER_ID_SET) || !header->userId)
-     return (FALSE);
+     return (TRUE);
 
   se = lookup_or_add_SID (header->userId);
+
+  /* Show activity for logged-on user only
+   */
+  if (g_cfg.firewall.show_user && !stricmp(se->account, fw_logged_on_user))
+     return (FALSE);
+
   fw_buf_add ("%-*suser:   %s\\%s\n",
               INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
@@ -3570,9 +3602,10 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
   const struct SID_entry *se;
 
   if (!(header->flags & FWPM_NET_EVENT_FLAG_PACKAGE_ID_SET) || !header->packageSid)
-     return (FALSE);
+     return (TRUE);
 
   se = lookup_or_add_SID (header->packageSid);
+
   if (se->sid_str && (g_cfg.firewall.show_all || strcmp(NULL_SID, se->sid_str)))
   {
     fw_buf_add ("%-*spkg:    %s\n", INDENT_SZ, "", se->sid_str);
@@ -3607,10 +3640,9 @@ static void CALLBACK
                      const _FWPM_NET_EVENT_CLASSIFY_ALLOW0   *allow_event1,
                      const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event2)
 {
-  BOOL        direction_in    = FALSE;
-  BOOL        direction_out   = FALSE;
-  BOOL        address_printed = FALSE;
-  BOOL        program_printed = FALSE;
+  BOOL        direction_in  = FALSE;
+  BOOL        direction_out = FALSE;
+  BOOL        address_printed, program_printed, user_printed, pkg_printed;
   DWORD       unhandled_flags;
   const char *event_name;
 
@@ -3716,20 +3748,27 @@ static void CALLBACK
   address_printed = print_addresses_ipv4 (header, direction_in);
 
   if (!address_printed)
-      address_printed = print_addresses_ipv6 (header, direction_in);
+     address_printed = print_addresses_ipv6 (header, direction_in);
 
   program_printed = print_app_id (header);
-  print_user_id (header);
-  print_package_id (header);
+  user_printed    = print_user_id (header);
+  pkg_printed     = print_package_id (header);
+
   print_eff_name_id (header);
 
   if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ||
       event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
      print_reauth_reason (header, drop_event1, allow_event1);
 
-  /* We filter only on addresses and programs.
+  /* We filter on addresses, programs, logged-on user and packages.
    */
-  if (address_printed || program_printed)
+  if (!user_printed)
+     address_printed = FALSE;
+
+  if (!program_printed)
+     address_printed = FALSE;
+
+  if (address_printed || program_printed || user_printed || pkg_printed)
   {
     fw_buf_flush();
     fw_num_events++;
@@ -3811,8 +3850,8 @@ static int show_help (const char *my_name)
           "    -a:  the minimum API \"level\" to try (=%d-%d, default: %d).\n"
           "    -c:  only dump the callout rules.\n"
           "    -e:  only dump recent event; works flaky.\n"
-          "    -l:  write the filter activity to \"log-file\" only.\n"
-          "    -p:  show only activity for the below program.\n"
+          "    -l:  print to \"log-file\" only.\n"
+          "    -p:  print events for the below program only (implies your \"user-activity\" only).\n"
           "    -r:  only dump the firewall rules.\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
@@ -3820,7 +3859,7 @@ static int show_help (const char *my_name)
           "    Examples:\n"
           "      pause\n"
           "      ping -n 10 www.google.com\n"
-          "      wget -d -o- -O NUL www.vg.no\n",
+          "      \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
           my_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT);
   return (0);
 }
@@ -3832,21 +3871,76 @@ static void sig_handler (int sig)
   (void) sig;
 }
 
+/*
+ * This mysterious SID was found in FirewallApi.DLL.
+ * Figure out what account it has.
+ */
+static int test_SID (void)
+{
+  const char *sid_str = "S-1-15-3-4214768333-1334025770-122408079-3919188833";
+  char        account[MAX_ACCOUNT_SZ];
+  char        domain [MAX_DOMAIN_SZ];
+  PSID        sid = NULL;
+
+  g_cfg.trace_level = 2;
+  if (!ConvertStringSidToSid(sid_str, &sid))
+  {
+    printf ("ConvertStringSidToSid() failed.\n");
+    return (1);
+  }
+  account[0] = domain[0] = '\0';
+  lookup_account_SID (sid, sid_str, account, domain);
+  printf ("SID: %s -> %s\\%s\n", sid_str, domain[0] ? domain : "?", account[0] ? account : "?");
+  LocalFree (sid);
+  return (0);
+}
+
+static int run_program (const char *program)
+{
+  FILE *p;
+  char  p_buf [1000];
+  const char *what;
+
+  what = g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv4/6 " :
+         g_cfg.firewall.show_ipv4 && !g_cfg.firewall.show_ipv6 ? "IPv4 "   :
+        !g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ";
+
+  trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
+                program ? program : "no program", what);
+
+  if (!program)
+     return (1);
+
+  p = _popen (program, "rb");
+  if (!p)
+  {
+    TRACE (0, "_popen() failed, errno %d\n", errno);
+    return (1);
+  }
+
+  while (fgets(p_buf,sizeof(p_buf)-1,p) && !quit)
+  {
+    trace_puts ("~1program: ");
+    trace_puts_raw (p_buf);
+    trace_puts ("~0");
+    trace_flush();
+  }
+  _pclose (p);
+  return (0);
+}
+
 int main (int argc, char **argv)
 {
-  int          ch, rc = 1;
-  int          dump_rules = 0;
-  int          dump_callouts = 0;
-  int          dump_events = 0;
-  int          program_only = 0;  /* Capture 'appId' matching program only. */
-  char        *program;
-  char        *log_file = NULL;
-  FILE        *log_f    = NULL;
-  FILE        *p;
-  char         p_buf [1000];
-  const char *what;
-  WSADATA     wsa;
-  WORD        ver = MAKEWORD(2,2);
+  int     ch, rc = 1;
+  int     dump_rules = 0;
+  int     dump_callouts = 0;
+  int     dump_events = 0;
+  int     program_only = 0;  /* Capture 'appId' matching program or 'userId' matching logged-on user only. */
+  char   *program;
+  char   *log_file = NULL;
+  FILE   *log_f    = NULL;
+  WSADATA wsa;
+  WORD    ver = MAKEWORD(2,2);
 
   wsock_trace_init();
 
@@ -3854,7 +3948,7 @@ int main (int argc, char **argv)
   g_cfg.trace_indent  = 0;
   g_cfg.trace_report  = 1;
 
-  while ((ch = getopt(argc, argv, "a:h?cel:pr")) != EOF)
+  while ((ch = getopt(argc, argv, "a:h?cel:prt")) != EOF)
     switch (ch)
     {
       case 'a':
@@ -3875,6 +3969,8 @@ int main (int argc, char **argv)
       case 'r':
            dump_rules = 1;
            break;
+      case 't':
+           return test_SID();
       case '?':
       case 'h':
            return show_help (argv[0]);
@@ -3896,6 +3992,34 @@ int main (int argc, char **argv)
     goto quit;
   }
 
+  if (log_file)
+  {
+    fw_acp = CP_ACP;
+    log_f = fopen (log_file, "wb+");
+    g_cfg.trace_stream = log_f;
+    if (!g_cfg.trace_stream)
+    {
+      TRACE (0, "Failed to create log-file %s: %s.\n", log_file, strerror(errno));
+      goto quit;
+    }
+  }
+
+  if (program_only)
+  {
+    if (program)
+    {
+      char *space;
+
+      _strlcpy (fw_module, program, sizeof(fw_module));
+      space = strchr (fw_module, ' ');
+      if (space)
+         *space = '\0';
+    }
+    g_cfg.firewall.show_all  = 0;
+    g_cfg.firewall.show_user = 1;
+    TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
+  }
+
   if (dump_rules || dump_callouts || dump_events)
   {
     if (dump_rules)
@@ -3906,74 +4030,19 @@ int main (int argc, char **argv)
 
     if (dump_callouts)
        fw_enumerate_callouts();
-
-    goto quit;
   }
-
-  if (!fw_monitor_start())
+  else if (fw_monitor_start())
   {
-    TRACE (0, "fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
-    goto quit;
-  }
-
-  if (log_file)
-  {
-    log_f = fopen (log_file, "wb+");
-    g_cfg.trace_stream = log_f;
-    if (!g_cfg.trace_stream)
-    {
-      TRACE (0, "Failed to create log-file %s: %s.\n", log_file, strerror(errno));
-      goto quit;
-    }
-  }
-
-  signal (SIGINT, sig_handler);
-
-  what = g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv4/6 " :
-         g_cfg.firewall.show_ipv4 && !g_cfg.firewall.show_ipv6 ? "IPv4 "   :
-        !g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ";
-
-  trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
-                program ? program : "no program", what);
-
-  if (!program)
-     goto quit;
-
-  if (program_only)
-  {
-    char *space;
-
-    _strlcpy (fw_module, program, sizeof(fw_module));
-    space = strchr (fw_module, ' ');
-    if (space)
-       *space = '\0';
-    g_cfg.firewall.show_all = 0;
-    TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
-  }
-
-  p = _popen (program, "rb");
-  if (p)
-  {
-    while (fgets(p_buf,sizeof(p_buf)-1,p) && !quit)
-    {
-      trace_puts ("~1program: ");
-      trace_puts_raw (p_buf);
-      trace_puts ("~0");
-      trace_flush();
-    }
-    _pclose (p);
-    rc = 0;
+    signal (SIGINT, sig_handler);
+    rc = run_program (program);
   }
   else
-   TRACE (0, "_popen() failed, errno %d\n", errno);
+    TRACE (0, "fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
 
 quit:
   fw_print_statistics (NULL);
   free (program);
   free (log_file);
-  fw_monitor_stop (FALSE);
-  fw_exit();
-
   wsock_trace_exit();
 
   if (log_f)
