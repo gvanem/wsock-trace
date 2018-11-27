@@ -1444,6 +1444,17 @@ struct SID_entry {
 
 static smartlist_t *fw_SID_list;
 
+/**
+ * \struct filter_entry
+ * A cache of filter-IDs and names for `print_filter_rule()`, `print_filter_rule2()` and `print_layer_item2()`.
+ */
+struct filter_entry {
+       UINT64 value;
+       char   name [50];
+     };
+
+static smartlist_t *fw_filter_list;
+
 static char  fw_buf [2000];
 static char *fw_ptr  = fw_buf;
 static int   fw_left = (int)sizeof(fw_buf) - 1;
@@ -1546,7 +1557,7 @@ static void fw_buf_flush (void)
        /* ws_sema_wait(); */                                                                                 \
           if (event)                                                                                         \
           {                                                                                                  \
-            if (g_cfg.trace_level >= 2)                                                                      \
+            if (g_cfg.trace_level >= 3)                                                                      \
                trace_printf ("\n------------------------------------------"                                  \
                              "-----------------------------------------\n"                                   \
                              "%s(): thr-id: %lu.\n",                                                         \
@@ -1713,7 +1724,8 @@ BOOL fw_init (void)
 {
   USHORT api_version = FW_REDSTONE2_BINARY_VERSION;
 
-  fw_SID_list = smartlist_new();
+  fw_SID_list    = smartlist_new();
+  fw_filter_list = smartlist_new();
   fw_num_rules = 0;
   fw_acp = GetConsoleCP();
   get_time_string (NULL);
@@ -1756,7 +1768,10 @@ void fw_exit (void)
 
   if (fw_SID_list)
      smartlist_wipe (fw_SID_list, fw_SID_free);
-  fw_SID_list = NULL;
+  if (fw_filter_list)
+     smartlist_wipe (fw_filter_list, free);
+
+  fw_SID_list = fw_filter_list = NULL;
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
@@ -2902,7 +2917,6 @@ static BOOL fw_dump_events (void)
   HANDLE  fw_enum_handle = INVALID_HANDLE_VALUE;
   UINT32  i, num_in, num_out;
   DWORD   rc;
-  int     save_all, save_ipv4, save_ipv6;
   int     api_level = fw_api;
   void   *entries = NULL;
 
@@ -2925,10 +2939,6 @@ static BOOL fw_dump_events (void)
 
   if (!fw_create_engine())
      return (FALSE);
-
-  save_all  = g_cfg.firewall.show_all;
-  save_ipv4 = g_cfg.firewall.show_ipv4;
-  save_ipv6 = g_cfg.firewall.show_ipv6;
 
   fw_num_events = fw_num_ignored = 0UL;
 
@@ -2979,12 +2989,21 @@ static BOOL fw_dump_events (void)
                                         NULL, NULL,                                                    \
                                         NULL, allow_member2);                                          \
                      break;                                                                            \
-                default:                                                                               \
+                                                                                                       \
+                case _FWPM_NET_EVENT_TYPE_IKEEXT_MM_FAILURE:                                           \
+                case _FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE:                                           \
+                case _FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE:                                           \
+                case _FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP:                                           \
+                case _FWPM_NET_EVENT_TYPE_IPSEC_DOSP_DROP:                                             \
+                case _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP_MAC:                                           \
+                case _FWPM_NET_EVENT_TYPE_LPM_PACKET_ARRIVAL:                                          \
+                case _FWPM_NET_EVENT_TYPE_MAX:                                                         \
                      TRACE (1, "Ignoring entry->type: %s\n",                                           \
                             list_lookup_name(entry->type, events, DIM(events)));                       \
               }                                                                                        \
             }                                                                                          \
           } while (0)
+
 
  /*
   * Ref:
@@ -3014,12 +3033,6 @@ static BOOL fw_dump_events (void)
             }                                                                               \
           } while (0)
 
-#if 0
-  g_cfg.firewall.show_all  = 1;
-  g_cfg.firewall.show_ipv4 = 1;
-  g_cfg.firewall.show_ipv6 = 1;
-#endif
-
   GET_ENUM_ENTRIES (4, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
   GET_ENUM_ENTRIES (3, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
   GET_ENUM_ENTRIES (2, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
@@ -3028,9 +3041,6 @@ static BOOL fw_dump_events (void)
 
 quit:
   fw_errno = rc;
-  g_cfg.firewall.show_all  = save_all;
-  g_cfg.firewall.show_ipv4 = save_ipv4;
-  g_cfg.firewall.show_ipv6 = save_ipv6;
 
   if (entries)
     (*p_FwpmFreeMemory0) (&entries);
@@ -3040,6 +3050,57 @@ quit:
 
   ARGSUSED (filter_conditions);
   return (fw_errno == ERROR_SUCCESS);
+}
+
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { FWPM_APPC_NETWORK_CAPABILITY_##v , "FWPM_APPC_NETWORK_CAPABILITY_" #v }
+
+static const struct search_list network_capabilities[] = {
+                    ADD_VALUE (INTERNET_CLIENT),
+                    ADD_VALUE (INTERNET_CLIENT_SERVER),
+                    ADD_VALUE (INTERNET_PRIVATE_NETWORK)
+                  };
+
+static const char *get_network_capability_id (int id)
+{
+  return list_lookup_name (id, network_capabilities, DIM(network_capabilities));
+}
+
+/**
+ * Lookup the entry for a `filter` value in the `fw_filter_list` cache.
+ * If not found, add an entry for it.
+ *
+ * \note a `filter == 0` is never valid.
+ */
+static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
+{
+  static struct filter_entry null_filter = { 0, "NULL" };
+  struct filter_entry *fe;
+  FWPM_FILTER0        *filter_item;
+  int                  i, max;
+
+  if (filter == 0UL)
+     return (&null_filter);
+
+  max = smartlist_len (fw_filter_list);
+  for (i = 0; i < max; i++)
+  {
+    fe = smartlist_get (fw_filter_list, i);
+    if (filter == fe->value)
+       return (fe);
+  }
+
+  fe = calloc (sizeof(*fe), 1);
+  fe->value = filter;
+  strcpy (fe->name, "?");
+
+  if ((*p_FwpmFilterGetById0)(fw_engine_handle, filter, &filter_item) == ERROR_SUCCESS)
+  {
+    WideCharToMultiByte (fw_acp, 0, filter_item->displayData.name, -1, fe->name, (int)sizeof(fe->name), NULL, NULL);
+    (*p_FwpmFreeMemory0) ((void**)&filter_item);
+  }
+  smartlist_add (fw_filter_list, fe);
+  return (fe);
 }
 
 static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
@@ -3064,51 +3125,58 @@ static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
 static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
                                const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
-  TRACE (2, "networkCapabilityId: %d, filterId: %" U64_FMT ", isLoopback: %d\n",
-         allow_event ? allow_event->networkCapabilityId : drop_event->networkCapabilityId,
-         allow_event ? allow_event->filterId            : drop_event->filterId,
-         allow_event ? allow_event->isLoopback          : drop_event->isLoopback);
-  return (TRUE);
+  int    capability_id = allow_event ? allow_event->networkCapabilityId : drop_event->networkCapabilityId;
+  int    is_loopback   = allow_event ? allow_event->isLoopback          : drop_event->isLoopback;
+  UINT64 filter_id     = allow_event ? allow_event->filterId            : drop_event->filterId;
+
+  fw_buf_add ("%-*slayer2: ", INDENT_SZ, "");
+  if (filter_id)
+  {
+    const struct filter_entry *fe = lookup_or_add_filter (filter_id);
+
+    fw_buf_add ("(%" U64_FMT ") %s, ", fe->value, fe->name);
+  }
+  fw_buf_add ("%s, isLoopback: %d\n", get_network_capability_id(capability_id), is_loopback);
+  return (filter_id != 0);
 }
 
 static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                                const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
-  FWPM_FILTER0 *filter_item = NULL;
-  UINT64        id = 0;
+  UINT64 filter_id = 0UL;
 
   if (drop_event)
-     id = drop_event->filterId;
+     filter_id = drop_event->filterId;
   else if (allow_event)
-     id = allow_event->filterId;
+     filter_id = allow_event->filterId;
 
-  if (id && (*p_FwpmFilterGetById0)(fw_engine_handle, id, &filter_item) == ERROR_SUCCESS)
+  if (filter_id)
   {
-    fw_buf_add ("%-*sfilter: %S\n", INDENT_SZ, "", filter_item->displayData.name);
-    (*p_FwpmFreeMemory0) ((void**)&filter_item);
+    const struct filter_entry *fe = lookup_or_add_filter (filter_id);
+
+    fw_buf_add ("%-*sfilter: (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
+    return (TRUE);
   }
-  return (id != 0);
+  return (FALSE);
 }
 
 static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
                                 const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
-  FWPM_FILTER0 *filter_item = NULL;
-  UINT64        id = 0;
+  const struct filter_entry *fe = NULL;
 
   if (drop_event)
-     id = drop_event->filterId;
+     fe = lookup_or_add_filter (drop_event->filterId);
   else if (allow_event)
-     id = allow_event->filterId;
+     fe = lookup_or_add_filter (allow_event->filterId);
 
-  if (id && (*p_FwpmFilterGetById0)(fw_engine_handle, id, &filter_item) == ERROR_SUCCESS)
+  if (fe)
   {
-    fw_buf_add ("%-*sfilter: %S\n", INDENT_SZ, "", filter_item->displayData.name);
-    (*p_FwpmFreeMemory0) ((void**)&filter_item);
+    fw_buf_add ("%-*sfilter: (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
+    return (TRUE);
   }
-  return (id != 0);
+  return (FALSE);
 }
-
 
 static void print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
@@ -3500,9 +3568,9 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
      return (FALSE);
 
   se = lookup_or_add_SID (header->packageSid);
-  if (se->sid_str && strcmp(NULL_SID, se->sid_str))
+  if (se->sid_str && (g_cfg.firewall.show_all || strcmp(NULL_SID, se->sid_str)))
   {
-    fw_buf_add ("%-*spkg:   %s\n", INDENT_SZ, "", se->sid_str);
+    fw_buf_add ("%-*spkg:    %s\n", INDENT_SZ, "", se->sid_str);
     return (TRUE);
   }
   return (FALSE);
@@ -3653,8 +3721,6 @@ static void CALLBACK
   if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ||
       event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
      print_reauth_reason (header, drop_event1, allow_event1);
-
-//fw_buf_addc ('\n');
 
   /* We filter only on addresses and programs.
    */
