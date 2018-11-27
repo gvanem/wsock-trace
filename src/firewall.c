@@ -1764,7 +1764,7 @@ void fw_exit (void)
 
   fw_policy_handle = INVALID_HANDLE_VALUE;
 
-  fw_monitor_stop();
+  fw_monitor_stop (FALSE);
 
   if (fw_SID_list)
      smartlist_wipe (fw_SID_list, fw_SID_free);
@@ -2022,21 +2022,26 @@ BOOL fw_monitor_start (void)
   return fw_monitor_subscribe (&subscription);
 }
 
-void fw_monitor_stop (void)
+void fw_monitor_stop (BOOL force)
 {
-#if 0
-  CloseHandle (fw_event_handle);
-  CloseHandle (fw_engine_handle);
-#else
-  if (fw_engine_handle != INVALID_HANDLE_VALUE &&
-      fw_event_handle  != INVALID_HANDLE_VALUE &&
-      p_FwpmNetEventUnsubscribe0)
-    (*p_FwpmNetEventUnsubscribe0) (fw_engine_handle, fw_event_handle);
+  if (force)
+  {
+    if (fw_event_handle != INVALID_HANDLE_VALUE)
+       CloseHandle (fw_event_handle);
+    if (fw_engine_handle != INVALID_HANDLE_VALUE)
+       CloseHandle (fw_engine_handle);
+  }
+  else
+  {
+    if (fw_engine_handle != INVALID_HANDLE_VALUE &&
+        fw_event_handle  != INVALID_HANDLE_VALUE &&
+        p_FwpmNetEventUnsubscribe0)
+      (*p_FwpmNetEventUnsubscribe0) (fw_engine_handle, fw_event_handle);
 
-  if (fw_engine_handle != INVALID_HANDLE_VALUE &&
-      p_FwpmEngineClose0)
-    (*p_FwpmEngineClose0) (fw_engine_handle);
-#endif
+    if (fw_engine_handle != INVALID_HANDLE_VALUE &&
+        p_FwpmEngineClose0)
+      (*p_FwpmEngineClose0) (fw_engine_handle);
+  }
 
   fw_event_handle = fw_engine_handle = INVALID_HANDLE_VALUE;
 }
@@ -3966,7 +3971,7 @@ quit:
   fw_print_statistics (NULL);
   free (program);
   free (log_file);
-  fw_monitor_stop();
+  fw_monitor_stop (FALSE);
   fw_exit();
 
   wsock_trace_exit();

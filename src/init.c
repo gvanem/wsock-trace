@@ -1106,7 +1106,7 @@ void wsock_trace_exit (void)
 
   /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
    */
-  fw_monitor_stop();
+  fw_monitor_stop (TRUE);
   fw_exit();
 #endif
 #endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
