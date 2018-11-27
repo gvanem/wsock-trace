@@ -131,17 +131,6 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 DWORD fw_errno;
 int   fw_api = FW_API_DEFAULT;
 
-static FWPM_SESSION fw_session;
-static HANDLE       fw_policy_handle  = INVALID_HANDLE_VALUE;
-static HANDLE       fw_engine_handle  = INVALID_HANDLE_VALUE;
-static HANDLE       fw_event_handle   = INVALID_HANDLE_VALUE;
-static DWORD        fw_num_rules      = 0;
-static DWORD        fw_num_events     = 0;
-static DWORD        fw_num_ignored    = 0;
-static DWORD        fw_unknown_layers = 0;
-static UINT         fw_acp;
-static char         fw_module [_MAX_PATH];
-
 typedef enum FW_STORE_TYPE {
              FW_STORE_TYPE_INVALID,
              FW_STORE_TYPE_GP_RSOP,
@@ -1419,6 +1408,18 @@ static const char *get_callout_flag (UINT32 flags)
   flags &= ~FWP_CALLOUT_FLAG_RESERVED1;
   return flags_decode (flags, callout_flags, DIM(callout_flags));
 }
+
+static FWPM_SESSION fw_session;
+static HANDLE       fw_policy_handle  = INVALID_HANDLE_VALUE;
+static HANDLE       fw_engine_handle  = INVALID_HANDLE_VALUE;
+static HANDLE       fw_event_handle   = INVALID_HANDLE_VALUE;
+static DWORD        fw_num_rules      = 0;
+static DWORD        fw_num_events     = 0;
+static DWORD        fw_num_ignored    = 0;
+static DWORD        fw_unknown_layers = 0;
+static UINT         fw_acp;
+static char         fw_module [_MAX_PATH];
+
 
 /**
  * \def MAX_DOMAIN_SZ
@@ -2955,7 +2956,7 @@ static BOOL fw_dump_events (void)
               const _FWPM_NET_EVENT##N      *entry = entries##N [i];                                   \
               const _FWPM_NET_EVENT_HEADER3 *header = (const _FWPM_NET_EVENT_HEADER3*) &entry->header; \
                                                                                                        \
-              switch (entry->type)                                                                     \
+              switch ((_FWPM_NET_EVENT_TYPE)entry->type)  /* Cast to shut-up MinGW/CygWin */           \
               {                                                                                        \
                 case _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP:                                               \
                      fw_event_callback (entry->type, header,                                           \
