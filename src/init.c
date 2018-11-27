@@ -1098,6 +1098,17 @@ void wsock_trace_exit (void)
     print_process_times();
   }
 #endif
+
+#if !defined(__WATCOMC__)
+  if (g_cfg.firewall.monitor_enable)
+     TRACE (1, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
+            startup_count, cleaned_up);
+
+  /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
+   */
+  fw_monitor_stop();
+  fw_exit();
+#endif
 #endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
   common_exit();

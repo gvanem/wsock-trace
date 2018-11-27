@@ -781,17 +781,6 @@ EXPORT int WINAPI WSACleanup (void)
   WSLUA_HOOK (rc, wslua_WSACleanup());
   LEAVE_CRIT();
 
-#if !defined(__WATCOMC__)
-  if (g_cfg.firewall.monitor_enable)
-     TRACE (1, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
-            startup_count, cleaned_up);
-
-  /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
-   */
-  fw_monitor_stop();
-  fw_exit();
-#endif
-
   return (rc);
 }
 
