@@ -67,6 +67,7 @@ struct firewall_cfg {
        BOOL    show_ipv4;
        BOOL    show_ipv6;
        BOOL    show_all;
+       BOOL    show_user;
        int     api_level;
      };
 
