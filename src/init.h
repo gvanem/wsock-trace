@@ -63,7 +63,7 @@ struct DNSBL_cfg {
      };
 
 struct firewall_cfg {
-       BOOL    monitor_enable;
+       BOOL    enable;
        BOOL    show_ipv4;
        BOOL    show_ipv6;
        BOOL    show_all;

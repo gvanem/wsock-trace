@@ -838,7 +838,7 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
 static void parse_firewall_settings (const char *key, const char *val, unsigned line)
 {
   if (!stricmp(key,"enable"))
-       g_cfg.firewall.monitor_enable = atoi (val);
+       g_cfg.firewall.enable = atoi (val);
 
   else if (!stricmp(key,"show_ipv4"))
        g_cfg.firewall.show_ipv4 = atoi (val);
@@ -1100,11 +1100,11 @@ void wsock_trace_exit (void)
 #endif
 
 #if !defined(__WATCOMC__)
-  if (g_cfg.firewall.monitor_enable)
+  if (g_cfg.firewall.enable)
      TRACE (1, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
             startup_count, cleaned_up);
 
-  /* This does nothing if 'g_cfg.firewall.monitor_enable = 0'.
+  /* This does nothing if 'g_cfg.firewall.enable = 0'.
    */
   fw_monitor_stop (TRUE);
   fw_exit();
