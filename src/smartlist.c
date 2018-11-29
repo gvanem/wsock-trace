@@ -346,11 +346,51 @@ void smartlist_append (smartlist_t *sl1, const smartlist_t *sl2)
  * the ordering function 'compare', which returns less then 0 if a
  * precedes b, greater than 0 if b precedes a, and 0 if a 'equals' b.
  */
-void smartlist_sort (smartlist_t *sl, int (*compare)(const void **a, const void **b))
+void smartlist_sort (smartlist_t *sl, smartlist_sort_func compare)
 {
   if (sl->num_used > 0)
      qsort (sl->list, sl->num_used, sizeof(void*),
             (int (*)(const void *,const void*))compare);
+}
+
+/**
+ * Given a sorted smartlist `sl` and the comparison function (`compare`)
+ * used to sort it, return number of duplicate members.
+ */
+int smartlist_duplicates (smartlist_t *sl, smartlist_sort_func compare)
+{
+  int i, dups = 0;
+
+  for (i = 1; i < sl->num_used; i++)
+  {
+    if ((*compare)((const void**)&sl->list[i-1],
+                   (const void**)&sl->list[i]) == 0)
+     dups++;
+  }
+  return (dups);
+}
+
+/**
+ * Given a sorted smartlist `sl` and the comparison function (`compare`)
+ * used to sort it, remove all duplicate members.<br>
+ * If `free_fn` is provided, calls `free_fn` on each duplicate. <br>
+ * Otherwise, just removes them. <br>
+ * Preserves the list order.
+ */
+void smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*free_fn)(void *a))
+{
+  int i;
+
+  for (i = 1; i < sl->num_used; i++)
+  {
+    if ((*compare)((const void**)&sl->list[i-1],
+                   (const void**)&sl->list[i]) == 0)
+    {
+      if (free_fn)
+        (*free_fn) (sl->list[i]);
+      smartlist_del_keeporder (sl, i--);
+    }
+  }
 }
 
 /*
