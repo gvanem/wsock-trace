@@ -1423,6 +1423,8 @@ static DWORD        fw_num_rules      = 0;
 static DWORD        fw_num_events     = 0;
 static DWORD        fw_num_ignored    = 0;
 static DWORD        fw_unknown_layers = 0;
+static BOOL         fw_have_ip2loc4   = FALSE;
+static BOOL         fw_have_ip2loc6   = FALSE;
 static UINT         fw_acp;
 static char         fw_module [_MAX_PATH] = { '\0' };
 
@@ -1456,7 +1458,7 @@ static char         fw_logged_on_user [100];
  *
  * Is the `_set_printf_count_output()` available?
  */
-#if defined(_MSC_VER) || (defined(__MINGW32__) && __USE_MINGW_ANSI_STDIO == 0)
+#if defined(_MSC_VER) || (defined(__MINGW_MAJOR_VERSION) && __USE_MINGW_ANSI_STDIO == 0)
   #define _SET_PRINTF_COUNT_OUTPUT(x)  _set_printf_count_output (x)
 #else
   #define _SET_PRINTF_COUNT_OUTPUT(x)  0
@@ -1774,6 +1776,8 @@ static BOOL fw_load_funcs (void)
 
 /**
  * This should be the first functions called in this module.
+ *
+ * It should be called after `geoip_init()`. I.e. after `wsock_trace_init()`.
  */
 BOOL fw_init (void)
 {
@@ -1783,6 +1787,9 @@ BOOL fw_init (void)
   fw_SID_list    = smartlist_new();
   fw_filter_list = smartlist_new();
   fw_num_rules   = 0;
+
+  fw_have_ip2loc4 = (ip2loc_num_ipv4_entries() > 0);
+  fw_have_ip2loc6 = (ip2loc_num_ipv6_entries() > 0);
 
   if ((g_cfg.trace_stream == stdout || g_cfg.trace_stream == stderr) && isatty(fileno(g_cfg.trace_stream)))
        fw_acp = GetConsoleCP();
@@ -3247,7 +3254,7 @@ static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
 
   if (id && (*p_FwpmLayerGetById0)(fw_engine_handle, id, &layer_item) == ERROR_SUCCESS)
   {
-    fw_buf_add ("%-*slayer:  (%u) %S\n", INDENT_SZ, "", id, layer_item->displayData.name);
+    fw_buf_add ("%-*slayer:   (%u) %S\n", INDENT_SZ, "", id, layer_item->displayData.name);
     (*p_FwpmFreeMemory0) ((void**)&layer_item);
   }
   return (id != 0);
@@ -3260,7 +3267,7 @@ static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_eve
   int    is_loopback   = allow_event ? allow_event->isLoopback          : drop_event->isLoopback;
   UINT64 filter_id     = allow_event ? allow_event->filterId            : drop_event->filterId;
 
-  fw_buf_add ("%-*slayer2: ", INDENT_SZ, "");
+  fw_buf_add ("%-*slayer2:  ", INDENT_SZ, "");
   if (filter_id)
   {
     const struct filter_entry *fe = lookup_or_add_filter (filter_id);
@@ -3285,7 +3292,7 @@ static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
   {
     const struct filter_entry *fe = lookup_or_add_filter (filter_id);
 
-    fw_buf_add ("%-*sfilter: (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
+    fw_buf_add ("%-*sfilter:  (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
     return (TRUE);
   }
   return (FALSE);
@@ -3303,7 +3310,7 @@ static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_ev
 
   if (fe)
   {
-    fw_buf_add ("%-*sfilter: (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
+    fw_buf_add ("%-*sfilter:  (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
     return (TRUE);
   }
   return (FALSE);
@@ -3312,21 +3319,30 @@ static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_ev
 static void print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
   const char *country, *location;
+  BOOL  have_location;
 
-  country = ia4 ? geoip_get_country_by_ipv4(ia4) : geoip_get_country_by_ipv6(ia6);
-  if (!country)
+  have_location = ia4 ? fw_have_ip2loc4                : fw_have_ip2loc6;
+  country       = ia4 ? geoip_get_country_by_ipv4(ia4) : geoip_get_country_by_ipv6(ia6);
+
+  if (!country || country[0] == '-')
      return;
 
-  if (*country != '-')
+  /* Get the long country name; "US" -> "United States"
+   */
+  country = geoip_get_long_name_by_A2 (country);
+  if (have_location)
   {
+    /* Location is known. Print as "country, city/region".
+     */
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
-    country  = geoip_get_long_name_by_A2 (country);
-    fw_buf_add ("%-*sloc:    %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
+    fw_buf_add ("%-*scountry: %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
   }
-#if 0
-  else if (*country == '-')
-    fw_buf_add ("%-*sloc:    %s\n", INDENT_SZ, "", country);
-#endif
+  else
+  {
+    /* Location is unknown. Just print the country.
+     */
+    fw_buf_add ("%-*scountry: %s\n", INDENT_SZ, "", country);
+  }
 }
 
 #define PORT_STR_SIZE  80
@@ -3435,8 +3451,8 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   ports = get_ports (header);
 
   if (direction_in)
-       fw_buf_add ("addr:   %s -> %s%s\n", remote_addr, local_addr, ports);
-  else fw_buf_add ("addr:   %s -> %s%s\n", local_addr, remote_addr, ports);
+       fw_buf_add ("addr:    %s -> %s%s\n", remote_addr, local_addr, ports);
+  else fw_buf_add ("addr:    %s -> %s%s\n", local_addr, remote_addr, ports);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
@@ -3569,7 +3585,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
     TRACE (2, "Ignoring event for '%s'.\n", a_name);
     return (FALSE);
   }
-  fw_buf_add ("%-*sapp:    %s\n", INDENT_SZ, "", a_name);
+  fw_buf_add ("%-*sapp:     %s\n", INDENT_SZ, "", a_name);
   return (TRUE);
 }
 
@@ -3686,7 +3702,7 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
   if (g_cfg.firewall.show_user && !stricmp(se->account, fw_logged_on_user))
      return (FALSE);
 
-  fw_buf_add ("%-*suser:   %s\\%s\n",
+  fw_buf_add ("%-*suser:    %s\\%s\n",
               INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
 }
@@ -3706,7 +3722,7 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   if (se->sid_str && (g_cfg.firewall.show_all || strcmp(NULL_SID, se->sid_str)))
   {
-    fw_buf_add ("%-*spkg:    %s\n", INDENT_SZ, "", se->sid_str);
+    fw_buf_add ("%-*spackage: %s\n", INDENT_SZ, "", se->sid_str);
     return (TRUE);
   }
   return (FALSE);
@@ -3719,7 +3735,7 @@ static void print_reauth_reason (const _FWPM_NET_EVENT_HEADER3         *header,
   if (!(header->flags & FWPM_NET_EVENT_FLAG_REAUTH_REASON_SET))
      return;
 
-  fw_buf_add ("%-*sreauth: ", INDENT_SZ, "");
+  fw_buf_add ("%-*sreauth:  ", INDENT_SZ, "");
   if (drop_event)
        fw_buf_add ("%lu\n", DWORD_CAST(drop_event->reauthReason));
   else fw_buf_add ("%lu\n", DWORD_CAST(allow_event->reauthReason));
@@ -3890,8 +3906,22 @@ static void CALLBACK
 void fw_print_statistics (FWPM_STATISTICS *stats)
 {
   if (fw_num_events > 0UL || fw_num_ignored > 0UL)
+  {
      trace_printf ("Got %lu events, %lu ignored.\n",
                    DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
+
+    if (g_cfg.geoip_enable)
+    {
+      DWORD num_ip4, num_ip6;
+
+      geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);
+
+      if (g_cfg.firewall.show_ipv4)
+         trace_printf ("Unique IPv4 countries: %3lu.\n", DWORD_CAST(num_ip4));
+      if (g_cfg.firewall.show_ipv6)
+         trace_printf ("Unique IPv6 countries: %3lu.\n", DWORD_CAST(num_ip6));
+    }
+  }
   ARGSUSED (stats);
 }
 
