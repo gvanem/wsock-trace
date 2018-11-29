@@ -303,14 +303,14 @@ in *Ukraine / Donetsk*"" is *very* active giving a Firewall event approx.
 every 5 minutes.
 
 A good test of the `firewall.c` features is to open your WiFi FireWall and start a remote
-**[port-scan](http://www.whatsmyip.org/port-scanner/games/)** while `firewall_test.exe`
+**[port-scan](http://www.whatsmyip.org/port-scanner/server/)** while `firewall_test.exe`
 is running.<br>
 You'll see a lot of **DROP**-events like:
 ```
-297.630 sec: FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP
-  layer:   (13) Inbound Transport v4 Discard-layer
-  filter:  (277599) Filter to prevent port-scanning
-  addr:    204.11.35.98 -> 10.0.0.10, ports: 666 (doom) / 51782
+6.700 sec: FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP
+  layer:   (13) Inbound Transport v4 Discard-lag
+  filter:  (277599) Filter for å hindre portskanning
+  addr:    204.11.35.98 -> 10.0.0.10, ports: 21 (ftp) / 52115
   country: United States, Troy/Michigan
 ```
 
