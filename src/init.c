@@ -852,6 +852,9 @@ static void parse_firewall_settings (const char *key, const char *val, unsigned 
   else if (!stricmp(key,"api_level"))
        g_cfg.firewall.api_level = atoi (val);
 
+  else if (!stricmp(key,"console_title"))
+       g_cfg.firewall.console_title = atoi (val);
+
   else if (!stricmp(key,"exclude"))
        exclude_list_add (val, EXCL_PROGRAM | EXCL_ADDRESS);
 

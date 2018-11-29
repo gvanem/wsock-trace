@@ -73,6 +73,7 @@ typedef LONG NTSTATUS;
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
+GCC_PRAGMA (GCC diagnostic ignored "-Wunused-value")
 GCC_PRAGMA (GCC diagnostic ignored "-Wenum-compare")
 GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
@@ -127,6 +128,10 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   /* Used for the reference-timestamp value in `get_time_string (NULL)`.
    */
   func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
+
+  /* Show statistics on the Console Title bar
+   */
+  static void fw_console_stats (void);
 
   /* Used in `print_DNSBL_info()`.
    */
@@ -1437,7 +1442,6 @@ static char         fw_module [_MAX_PATH] = { '\0' };
 /**
  * SpamHaus blocklist features.
  */
-static DWORD        fw_num_DNSBL_hits = 0;
 static smartlist_t *fw_SBL_ref_list = NULL;
 static char        *fw_SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
 
@@ -1473,7 +1477,7 @@ static char         fw_logged_on_user [100];
 #if defined(_MSC_VER) || (defined(__MINGW_MAJOR_VERSION) && __USE_MINGW_ANSI_STDIO == 0)
   #define _SET_PRINTF_COUNT_OUTPUT(x)   _set_printf_count_output (x)
 #else
-  #define _SET_PRINTF_COUNT_OUTPUT(x)   ((void)(x), 0)
+  #define _SET_PRINTF_COUNT_OUTPUT(x)   0
 #endif
 
 static BOOL fw_have_n_format = FALSE;
@@ -3386,7 +3390,6 @@ static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
   fw_warning_sound (TRUE);
 #endif
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
-  fw_num_DNSBL_hits++;
 }
 
 #define PORT_STR_SIZE  80
@@ -3948,6 +3951,10 @@ static void CALLBACK
   {
     fw_buf_flush();
     fw_num_events++;
+#ifdef TEST_FIREWALL
+    if (g_cfg.firewall.console_title)
+       fw_console_stats();
+#endif
   }
   else
   {
@@ -4002,7 +4009,7 @@ void fw_print_statistics (FWPM_STATISTICS *stats)
       trace_printf ("%d unique remote addresses found in DNSBL block lists. Goto:\n", max);
       for (i = 0; i < max; i++)
           trace_printf ("  ~2%s/SBL%s~0\n",
-                        fw_SpamHaus_URL, smartlist_get(fw_SBL_ref_list, i));
+                        fw_SpamHaus_URL, (const char*)smartlist_get(fw_SBL_ref_list, i));
       trace_puts ("  for more information.\n");
     }
     else
@@ -4088,6 +4095,19 @@ static void sig_handler (int sig)
   quit = 1;
   trace_puts ("~1Quitting.~0\n");
   (void) sig;
+}
+
+static void fw_console_stats (void)
+{
+  char buf [_MAX_PATH+100];
+  char num_DNSBL [20];
+
+  if (g_cfg.DNSBL.enable && fw_SBL_ref_list)
+       _itoa (smartlist_len(fw_SBL_ref_list), num_DNSBL, 10);
+  else strcpy (num_DNSBL, "-");
+
+  snprintf (buf, sizeof(buf), "%s, events: %lu, DNSBL: %s", fw_module, fw_num_events, num_DNSBL);
+  SetConsoleTitle (buf);
 }
 
 /*

@@ -217,6 +217,12 @@
   api_level = 3       # Which API level to use in 'fw_monitor_subscribe()'.
 
   #
+  # For firewall_test.exe only.
+  # Show statistics on the Console title bar.
+  #
+
+  console_title = 1
+  #
   # Don't report event for these programs:
   #
   exclude = svchost.exe, System
