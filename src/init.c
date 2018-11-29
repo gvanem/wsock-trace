@@ -1101,13 +1101,13 @@ void wsock_trace_exit (void)
 
 #if !defined(__WATCOMC__)
   if (g_cfg.firewall.enable)
-     TRACE (1, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
-            startup_count, cleaned_up);
+  {
+    TRACE (2, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
+           startup_count, cleaned_up);
 
-  /* This does nothing if 'g_cfg.firewall.enable = 0'.
-   */
-  fw_monitor_stop (TRUE);
-  fw_exit();
+    fw_monitor_stop (TRUE);
+    fw_exit();
+  }
 #endif
 #endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
@@ -1367,7 +1367,7 @@ void wsock_trace_init (void)
   }
 
   if (g_cfg.trace_level == 0)
-     g_cfg.dump_data = g_cfg.dump_select = 0;
+     g_cfg.dump_data = g_cfg.dump_select = g_cfg.firewall.enable = 0;
 
   if (g_cfg.trace_time_format != TS_NONE)
      init_timestamp();
@@ -1751,6 +1751,28 @@ uint64 FILETIME_to_unix_epoch (const FILETIME *ft)
 time_t FILETIME_to_time_t (const FILETIME *ft)
 {
   return (FILETIME_to_unix_epoch (ft) / U64_SUFFIX(1000000));
+}
+
+/**
+ * Return FILETIME in seconds as a double.
+ */
+double FILETIME_to_sec (const FILETIME *filetime)
+{
+  const LARGE_INTEGER *ft = (const LARGE_INTEGER*) filetime;
+  long double          rc = (long double) ft->QuadPart;
+
+  return (double) (rc/1E7);    /* from 100 nano-sec periods to sec */
+}
+
+/**
+ * Return number of micro-sec from a `FILETIME` as a 64-bit signed.
+ */
+int64 FILETIME_to_usec (const FILETIME *ft)
+{
+  int64 res = (int64) ft->dwHighDateTime << 32;
+
+  res |= ft->dwLowDateTime;
+  return (res / 10);   /* from 100 nano-sec periods to usec */
 }
 
 static void _gettimeofday (struct pcap_timeval *tv)

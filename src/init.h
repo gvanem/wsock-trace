@@ -194,6 +194,8 @@ extern const char *config_file_name (void);
 extern const char *get_timestamp (void);
 extern const char *get_timestamp2 (void);
 
+extern double FILETIME_to_sec        (const FILETIME *ft);
+extern int64  FILETIME_to_usec       (const FILETIME *ft);
 extern uint64 FILETIME_to_unix_epoch (const FILETIME *ft);
 extern time_t FILETIME_to_time_t     (const FILETIME *ft);
 

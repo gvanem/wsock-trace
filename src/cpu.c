@@ -39,17 +39,6 @@ static void init_cpu (void)
 }
 
 /**
- * Return FILETIME in seconds as a double.
- */
-static double filetime_sec (const FILETIME *filetime)
-{
-  const LARGE_INTEGER *ft = (const LARGE_INTEGER*) filetime;
-  long double          rc = (long double) ft->QuadPart;
-
-  return (double) (rc/1E7);    /* from 100 nano-sec periods to sec */
-}
-
-/**
  * Print some times (and CPU cycle counts) for a thread.
  * I.e. the WinPcap receiver thread.
  */
@@ -86,12 +75,12 @@ void print_thread_times (HANDLE thread)
 
   /* If this is negative, the thread lived in kernel all the time.
    */
-  life_span = filetime_sec (&etime) - filetime_sec (&ctime);
+  life_span = FILETIME_to_sec (&etime) - FILETIME_to_sec (&ctime);
   if (life_span < 0.0)
      life_span = -life_span;
 
   trace_printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
-                filetime_sec(&ktime), filetime_sec(&utime), life_span);
+                FILETIME_to_sec(&ktime), FILETIME_to_sec(&utime), life_span);
 
   if (p_QueryThreadCycleTime)
   {
@@ -145,7 +134,7 @@ void print_process_times (void)
      * Therefore it is zero.
      */
     trace_printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
-                  time_str, fract_t, filetime_sec(&krnl_time), filetime_sec(&usr_time));
+                  time_str, fract_t, FILETIME_to_sec(&krnl_time), FILETIME_to_sec(&usr_time));
   }
   CloseHandle (proc);
 }
