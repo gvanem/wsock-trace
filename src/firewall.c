@@ -1459,9 +1459,9 @@ static char         fw_logged_on_user [100];
  * Is the `_set_printf_count_output()` available?
  */
 #if defined(_MSC_VER) || (defined(__MINGW_MAJOR_VERSION) && __USE_MINGW_ANSI_STDIO == 0)
-  #define _SET_PRINTF_COUNT_OUTPUT(x)  _set_printf_count_output (x)
+  #define _SET_PRINTF_COUNT_OUTPUT(x)   _set_printf_count_output (x)
 #else
-  #define _SET_PRINTF_COUNT_OUTPUT(x)  0
+  #define _SET_PRINTF_COUNT_OUTPUT(x)   ((void)(x), 0)
 #endif
 
 static BOOL fw_have_n_format = FALSE;
