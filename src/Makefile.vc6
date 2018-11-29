@@ -196,7 +196,7 @@ idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
 # This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
 #
 firewall_test.exe: $(FIREWALL_TEST_OBJ)
-	link $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib advapi32.lib > link.tmp
+	link $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib advapi32.lib winmm.lib > link.tmp
 	type link.tmp >> firewall_test.map
 
 run_test: test.exe
