@@ -59,8 +59,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L67)
   config-file.
 
-* *Firewall* activity (work in progress); report activity causing events from the *Window Filtering Platform* <br>
-  (the *Internet Connection Firewall*; ICF).
+* *Firewall* activity; report activity causing events from the *Window Filtering Platform* (the *Internet Connection Firewall*; ICF). See below.
 
 * **[LuaJIT]( https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
@@ -293,6 +292,15 @@ start /pos=800,150,1000,1000 ..\openvpn.exe --config sample-config-files/loopbac
 
 A **[Larger](http://www.watt-32.net/misc/screenshot-openvpn.png)** version.
 
+### Firewall Monitor
+
+The `firewall_test.exe` program show a screen like:
+[![screenshot](screenshot_firewall_test_DNSBL.png?raw=true)](screenshot_firewall_test_DNSBL.png?raw=true)
+
+Together with `[DNSBL], enable = 1` it shows remote addresses in **[SpamHaus](https://www.spamhaus.org/sbl/)** DROP-lists. In this case
+the **[address](https://blackhat.directory/ip/176.119.4.53)** `176.119.4.56`
+in *Ukraine / Donetsk*"" is *very* active giving a Firewall event approx.
+every 5 minutes.
 
 ### Implementation notes
 
