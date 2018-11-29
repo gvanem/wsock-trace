@@ -6,6 +6,7 @@
  *
  *  The `fw_init()` and `fw_monitor_start()` needs Administrator privileges.
  *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
+ *  "Access denied"                             (`ERROR_ACCESS_DENIED = 5`) or
  *  "The device does not recognize the command" (`ERROR_BAD_COMMAND = 22`).
  *
  * Thanks to dmex for his implementation of similar stuff in his ProcessHacker:
@@ -4224,7 +4225,7 @@ int main (int argc, char **argv)
    */
   if (WSAStartup(ver, &wsa) != 0 || wsa.wVersion < ver)
   {
-    TRACE (0, "Winsock init failed: %s\n", win_strerror(GetLastError()));
+    fprintf (stderr, "Winsock init failed: %s.\n", win_strerror(GetLastError()));
     goto quit;
   }
 
@@ -4234,7 +4235,7 @@ int main (int argc, char **argv)
     g_cfg.trace_stream = log_f;
     if (!g_cfg.trace_stream)
     {
-      TRACE (0, "Failed to create log-file %s: %s.\n", log_file, strerror(errno));
+      fprintf (stderr, "Failed to create log-file %s: %s.\n", log_file, strerror(errno));
       goto quit;
     }
   }
@@ -4258,7 +4259,7 @@ int main (int argc, char **argv)
 
   if (!fw_init())
   {
-    TRACE (0, "fw_init() failed: %s\n", win_strerror(fw_errno));
+    fprintf (stderr, "fw_init() failed: %s.\n", win_strerror(fw_errno));
     goto quit;
   }
 
@@ -4279,7 +4280,11 @@ int main (int argc, char **argv)
     rc = run_program (program);
   }
   else
-    TRACE (0, "fw_monitor_start() failed: %s\n", win_strerror(fw_errno));
+  {
+    fprintf (stderr, "fw_monitor_start() failed: %s.\n", win_strerror(fw_errno));
+    if (fw_errno == ERROR_ACCESS_DENIED)
+       fprintf (stderr, "%s needs to be run as Adminstrator.\n", argv[0]);
+  }
 
 quit:
   fw_print_statistics (NULL);
