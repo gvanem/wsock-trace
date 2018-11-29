@@ -1807,6 +1807,12 @@ static void test_addr_common (const struct in_addr  *a4,
         snprintf (buf1, sizeof(buf1), "%s (6to4: %u.%u.%u.%u)",
                   comment, nibble[0], nibble[1], nibble[2], nibble[3]);
       }
+      else if (a6 && !stricmp(remark,"IPv4 compatible"))
+      {
+        printf ("Recursing for a %s address.\n", remark);
+        test_addr_common ((const struct in_addr*)&a6->s6_words[6], NULL, use_ip2loc);
+        return;
+      }
       else
         snprintf (buf1, sizeof(buf1), "%s (%s)", comment, remark);
     }
