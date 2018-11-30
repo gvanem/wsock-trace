@@ -78,19 +78,20 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
  * 'exclude_list' smartlist, the '!exclude_list_get("WSAStartup...", EXCL_FUNCTION)'
  * returns FALSE.
  */
-#define WSTRACE(fmt, ...)                                   \
-  do {                                                      \
-    exclude_this = TRUE;                                    \
-    if (g_cfg.trace_level > 0 &&                            \
-        !exclude_list_get(fmt, EXCL_FUNCTION)) {            \
-       exclude_this = FALSE;                                \
-       wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",            \
-                       get_timestamp(),                     \
-                       get_caller (GET_RET_ADDR(),          \
-                                   get_EBP()) );            \
-       wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
-    }                                                       \
-  } while (0)
+#define WSTRACE(fmt, ...)                                        \
+        do {                                                     \
+          exclude_this = TRUE;                                   \
+          if (g_cfg.trace_level > 0 &&                           \
+              !exclude_list_get(fmt, EXCL_FUNCTION))             \
+          {                                                      \
+            exclude_this = FALSE;                                \
+            wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",            \
+                            get_timestamp(),                     \
+                            get_caller (GET_RET_ADDR(),          \
+                                        get_EBP()) );            \
+            wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
+          }                                                      \
+        } while (0)
 
 
 #if defined(__GNUC__) || defined(__clang__)
