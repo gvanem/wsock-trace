@@ -136,7 +136,7 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
   /* Used in `print_DNSBL_info()`.
    */
-  static void fw_warning_sound (BOOL on_off);
+  static void fw_warning_sound (void);
 #else
 
   /* Similar as to wsock_trace.c shows a time-stamp.
@@ -1443,6 +1443,7 @@ static char         fw_module [_MAX_PATH] = { '\0' };
 /**
  * SpamHaus blocklist features.
  */
+static DWORD        fw_num_SBL_hits = 0;
 static smartlist_t *fw_SBL_ref_list = NULL;
 static char        *fw_SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
 
@@ -2090,7 +2091,7 @@ BOOL fw_monitor_start (void)
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
 
-  fw_num_events = fw_num_ignored = 0;
+  fw_num_events = fw_num_ignored = fw_num_SBL_hits = 0;
 
   if (ws_sema_inherited)
   {
@@ -3094,7 +3095,7 @@ static BOOL fw_dump_events (void)
   if (!fw_create_engine())
      return (FALSE);
 
-  fw_num_events = fw_num_ignored = 0UL;
+  fw_num_events = fw_num_ignored = fw_num_SBL_hits = 0UL;
 
   event_template.numFilterConditions      = 0;
   event_template.filterCondition          = filter_conditions;
@@ -3370,26 +3371,32 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
 static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
   const char *sbl_ref = NULL;
-  BOOL        rc;
+  int         i, max;
+  BOOL        rc, found = FALSE;
 
   if (!g_cfg.DNSBL.enable || !INET_util_addr_is_global(ia4, ia6))
      return;
 
   rc = ia4 ? DNSBL_check_ipv4 (ia4, &sbl_ref) : DNSBL_check_ipv6 (ia6, &sbl_ref);
-  if (!rc)
+  if (!rc || !sbl_ref)
      return;
-
-  if (!sbl_ref)
-     sbl_ref = " <none>";
 
   if (!fw_SBL_ref_list)
      fw_SBL_ref_list = smartlist_new();
 
-  smartlist_add (fw_SBL_ref_list, strdup(sbl_ref));
+  max = smartlist_len (fw_SBL_ref_list);
+  for (i = 0; i < max && !found; i++)
+      if (!strcmp(smartlist_get(fw_SBL_ref_list, i), sbl_ref))
+         found = TRUE;
+
+  if (!found)
+     smartlist_add (fw_SBL_ref_list, strdup(sbl_ref));
 
 #ifdef TEST_FIREWALL
-  fw_warning_sound (TRUE);
+  fw_warning_sound();
 #endif
+
+  fw_num_SBL_hits++; /* Increment total "SpamHaus Block List" hits */
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
 }
 
@@ -3971,17 +3978,6 @@ static void CALLBACK
             event_name, flags_decode(unhandled_flags, ev_flags, DIM(ev_flags)));
 }
 
-/**
- * Sort the `fw_SBL_ref_list`.
- */
-static int SBL_ref_compare (const void **_a, const void **_b)
-{
-  const char *a = *_a;
-  const char *b = *_b;
-
-  return stricmp (a, b);
-}
-
 void fw_print_statistics (FWPM_STATISTICS *stats)
 {
   if (fw_num_events > 0UL || fw_num_ignored > 0UL)
@@ -4001,11 +3997,7 @@ void fw_print_statistics (FWPM_STATISTICS *stats)
     }
     if (g_cfg.DNSBL.enable && fw_SBL_ref_list)
     {
-      int i, max;
-
-      smartlist_sort (fw_SBL_ref_list, SBL_ref_compare);
-      smartlist_make_uniq (fw_SBL_ref_list, SBL_ref_compare, free);
-      max = smartlist_len (fw_SBL_ref_list);
+      int i, max = smartlist_len (fw_SBL_ref_list);
 
       trace_printf ("%d unique remote addresses found in DNSBL block lists. Goto:\n", max);
       for (i = 0; i < max; i++)
@@ -4100,15 +4092,21 @@ static void sig_handler (int sig)
 
 static void fw_console_stats (void)
 {
-  char buf [_MAX_PATH+100];
-  char num_DNSBL [20];
+  static DWORD last_num_events = 0;
+  char         buf [_MAX_PATH+100];
+  char         num_DNSBL [20];
+
+  if (last_num_events == fw_num_events)
+     return;
 
   if (g_cfg.DNSBL.enable && fw_SBL_ref_list)
-       _itoa (smartlist_len(fw_SBL_ref_list), num_DNSBL, 10);
+       _itoa (fw_num_SBL_hits, num_DNSBL, 10);
   else strcpy (num_DNSBL, "-");
 
-  snprintf (buf, sizeof(buf), "%s, events: %lu, DNSBL: %s", fw_module, fw_num_events, num_DNSBL);
+  snprintf (buf, sizeof(buf), "%s, events: %lu, DNSBL: %s",
+            fw_module, DWORD_CAST(fw_num_events), num_DNSBL);
   SetConsoleTitle (buf);
+  last_num_events = fw_num_events;
 }
 
 /*
@@ -11432,10 +11430,13 @@ static const BYTE warning_sound[] = {
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
 
-static void fw_warning_sound (BOOL play)
+/**
+ * Play the `warning_sound[]` asynchronously.
+ *
+ * No need to stop it as it will fade away by itself.
+ */
+static void fw_warning_sound (void)
 {
-  if (play)
-       sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
-  else sndPlaySound (NULL, 0);
+  sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
 }
 #endif  /* TEST_FIREWALL */
