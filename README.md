@@ -308,8 +308,8 @@ is running.<br>
 You'll see a lot of **DROP**-events like:
 ```
 6.700 sec: FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP
-  layer:   (13) Inbound Transport v4 Discard-lag
-  filter:  (277599) Filter for å hindre portskanning
+  layer:   (13) Inbound Transport v4 Discard-layer
+  filter:  (277599) Filter to prevent port-scanning
   addr:    204.11.35.98 -> 10.0.0.10, ports: 21 (ftp) / 52115
   country: United States, Troy/Michigan
 ```
