@@ -1370,7 +1370,7 @@ void wsock_trace_init (void)
   }
 
   if (g_cfg.trace_level == 0)
-     g_cfg.dump_data = g_cfg.dump_select = g_cfg.firewall.enable = 0;
+     g_cfg.dump_data = g_cfg.dump_select = 0;
 
   if (g_cfg.trace_time_format != TS_NONE)
      init_timestamp();
