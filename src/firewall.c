@@ -3581,8 +3581,8 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     scope[0] = '\0';
 
   if (direction_in)
-       fw_buf_add ("addr:   %s -> %s%s%s\n", remote_addr, local_addr, scope, ports);
-  else fw_buf_add ("addr:   %s%s -> %s%s\n", local_addr, scope, remote_addr, ports);
+       fw_buf_add ("addr:    %s -> %s%s%s\n", remote_addr, local_addr, scope, ports);
+  else fw_buf_add ("addr:    %s%s -> %s%s\n", local_addr, scope, remote_addr, ports);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
