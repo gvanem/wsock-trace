@@ -61,7 +61,7 @@
 #include "bfd_gcc.h"
 #include "stkwalk.h"
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(__clang__)
  /*
   * With the Universal CRT in Windows/MSVC and with 'cl' CFLAGS:
   *  '-MD' or '-MDd' -> __scrt_is_ucrt_dll_in_use() = 1.
@@ -71,6 +71,7 @@
   * for 'g_module'. Ref. the use of 'g_long_CPP_syms'.
   */
   extern int __cdecl __scrt_is_ucrt_dll_in_use (void);
+  #define SCRT_IS_UCRT_DLL_IN_USE() __scrt_is_ucrt_dll_in_use()
 #endif
 
 /*
@@ -1571,8 +1572,8 @@ BOOL StackWalkInit (void)
   TRACE (2, "g_module: %s\n", g_module);
 
 #if defined(_MSC_VER)
-  #if (_MSC_VER >= 1900)
-    g_long_CPP_syms = (__scrt_is_ucrt_dll_in_use() == 0);
+  #ifdef SCRT_IS_UCRT_DLL_IN_USE
+    g_long_CPP_syms = (SCRT_IS_UCRT_DLL_IN_USE() == 0);
   #elif defined(_MT)
     g_long_CPP_syms = TRUE;
   #endif

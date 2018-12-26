@@ -2038,6 +2038,10 @@ static BOOL fw_check_sizes (void)
             }                                                                \
           } while (0)
 
+  #ifndef offsetof
+  #define offsetof(_struct, _member)  ((size_t)&(((_struct*)0)->_member))
+  #endif
+
   #define OffsetOf(x, item) (unsigned) offsetof (x, item)
 
   #define CHK_OFS(a, b, item)                                                    \
