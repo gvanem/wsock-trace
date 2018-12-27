@@ -833,6 +833,27 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
 }
 
 /*
+ * parse a "Hertz, mill-sec" value for the '[firewall]' section.
+ */
+static void get_freq_msec (const char *val, struct FREQ_MILLISEC *out)
+{
+  struct FREQ_MILLISEC fr = { 0, 0 };
+  int num = sscanf (val, "%u,%u", &fr.frequency, &fr.milli_sec);
+
+  if (num == 2)
+  {
+    out->frequency = fr.frequency;
+    out->milli_sec = fr.milli_sec;
+  }
+  else if (num == 1)
+    out->frequency = fr.frequency;
+
+  out->frequency = min (out->frequency, 10000);
+  out->milli_sec = min (out->milli_sec, 1000);
+  TRACE (4, "freq: %u Hz, %u msec.\n", out->frequency, out->milli_sec);
+}
+
+/*
  * Handler for '[firewall]' section.
  */
 static void parse_firewall_settings (const char *key, const char *val, unsigned line)
@@ -857,6 +878,18 @@ static void parse_firewall_settings (const char *key, const char *val, unsigned 
 
   else if (!stricmp(key,"exclude"))
        exclude_list_add (val, EXCL_PROGRAM | EXCL_ADDRESS);
+
+  else if (!stricmp(key,"sound.enable"))
+      g_cfg.firewall.sound.enable = atoi (val);
+
+  else if (!stricmp(key,"sound.beep.event_drop"))
+      get_freq_msec (val, &g_cfg.firewall.sound.beep.event_drop);
+
+  else if (!stricmp(key,"sound.beep.event_allow"))
+      get_freq_msec (val, &g_cfg.firewall.sound.beep.event_allow);
+
+  else if (!stricmp(key,"sound.beep.event_DNSBL"))
+      get_freq_msec (val, &g_cfg.firewall.sound.beep.event_DNSBL);
 
   else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);

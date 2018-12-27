@@ -21,6 +21,22 @@
  * A rather messy but rich example is at:
  *  \see
  *   + https://social.msdn.microsoft.com/Forums/sqlserver/en-US/74e3bf1d-3a0b-43ce-a528-2a88bc1fb882/log-packets?forum=wfp
+ *
+ * From the command-line, the `netsh` program can be used.
+   To show "Global Settings" and "Profile Settings" for WFP:
+ * ```
+ *   c:\> netsh advfirewall monitor show firewall
+ * ```
+ *
+ * Show the GUID and .DLLs involved in filtering:
+ * ```
+ *   c:\> netsh show helper | grep -i -e firewall -e wfp
+ *        {02BC1F81-D927-4EC5-8CBC-8DD65E3E38E8}  AUTHFWCFG.DLL  advfirewall
+ *        {35342B49-83B4-4FCC-A90D-278533D5BEA2}  AUTHFWCFG.DLL  firewall
+ *        {8B3A0D7F-1F30-4402-B753-C4B2C7607C97}  FWCFG.DLL      firewall
+ *        {3BB6DA1D-AC0C-4972-AC05-B22F49DEA9B6}  NSHWFP.DLL     wfp
+ * ```
+ *
  */
 
 /**
@@ -133,10 +149,6 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   /* Show statistics on the Console Title bar
    */
   static void fw_console_stats (void);
-
-  /* Used in `print_DNSBL_info()`.
-   */
-  static void fw_warning_sound (void);
 #else
 
   /* Similar as to wsock_trace.c shows a time-stamp.
@@ -1753,6 +1765,22 @@ static const char *get_time_string (const FILETIME *ts)
               sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
   }
   return (time_str);
+}
+
+/**
+ * Beep the speaker.
+ */
+static void fw_play_sound (const struct FREQ_MILLISEC *sound)
+{
+#if defined(TEST_FIREWALL) && 0
+  static void fw_warning_sound (void);
+
+  if (sound == &g_cfg.firewall.sound.beep.event_DNSBL)
+     fw_warning_sound();
+  else
+#endif
+  if (g_cfg.firewall.sound.enable && sound->frequency > 0 && sound->milli_sec > 0)
+     Beep (sound->frequency, sound->milli_sec);
 }
 
 /**
@@ -3396,9 +3424,7 @@ static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
   if (!found)
      smartlist_add (fw_SBL_ref_list, strdup(sbl_ref));
 
-#ifdef TEST_FIREWALL
-  fw_warning_sound();
-#endif
+  fw_play_sound (&g_cfg.firewall.sound.beep.event_DNSBL);
 
   fw_num_SBL_hits++; /* Increment total "SpamHaus Block List" hits */
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
@@ -3963,9 +3989,17 @@ static void CALLBACK
   {
     fw_buf_flush();
     fw_num_events++;
+
+    if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ||
+        event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
+       fw_play_sound (&g_cfg.firewall.sound.beep.event_allow);
+    else
+    if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ||
+        event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
+       fw_play_sound (&g_cfg.firewall.sound.beep.event_drop);
+
 #ifdef TEST_FIREWALL
-    if (g_cfg.firewall.console_title)
-       fw_console_stats();
+    fw_console_stats();
 #endif
   }
   else
@@ -4096,9 +4130,12 @@ static void sig_handler (int sig)
 
 static void fw_console_stats (void)
 {
-  static DWORD last_num_events = 0;
+  static DWORD last_num_events = 0xFFFFFFFF;
   char         buf [_MAX_PATH+100];
   char         num_DNSBL [20];
+
+  if (!g_cfg.firewall.console_title)
+     return;
 
   if (last_num_events == fw_num_events)
      return;
@@ -4278,6 +4315,9 @@ int main (int argc, char **argv)
   }
   else if (fw_monitor_start())
   {
+    g_cfg.firewall.sound.enable = (log_file ? FALSE : TRUE);
+
+    fw_console_stats();  /* Clear the console title bar */
     signal (SIGINT, sig_handler);
     rc = run_program (program);
   }
@@ -11441,6 +11481,7 @@ static const BYTE warning_sound[] = {
  */
 static void fw_warning_sound (void)
 {
-  sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
+  if (g_cfg.firewall.sound.enable)
+     sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
 }
 #endif  /* TEST_FIREWALL */

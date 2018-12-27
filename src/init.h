@@ -62,6 +62,11 @@ struct DNSBL_cfg {
        int     max_days;
      };
 
+typedef struct FREQ_MILLISEC {
+        unsigned  frequency;
+        unsigned  milli_sec;
+      } FREQ_MILLISEC;
+
 struct firewall_cfg {
        BOOL    enable;
        BOOL    show_ipv4;
@@ -70,6 +75,15 @@ struct firewall_cfg {
        BOOL    show_user;
        BOOL    console_title;
        int     api_level;
+
+       struct {
+         BOOL enable;
+         struct {
+           FREQ_MILLISEC  event_allow;
+           FREQ_MILLISEC  event_drop;
+           FREQ_MILLISEC  event_DNSBL;
+         } beep;
+       } sound;
      };
 
 struct config_table {
