@@ -3465,7 +3465,7 @@ static void get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *po
   trace_level_save_restore (1);
 }
 
-static const char *get_ports (const _FWPM_NET_EVENT_HEADER3 *header)
+static const char *get_ports (const _FWPM_NET_EVENT_HEADER3 *header, BOOL direction_in)
 {
   static char ret [sizeof(PORTS_FMT) + 2*PORT_STR_SIZE];
   char local_port [PORT_STR_SIZE];
@@ -3482,7 +3482,9 @@ static const char *get_ports (const _FWPM_NET_EVENT_HEADER3 *header)
        get_port (header, header->remotePort, remote_port);
   else strcpy (remote_port, "-");
 
-  snprintf (ret, sizeof(ret), PORTS_FMT, local_port, remote_port);
+  if (direction_in)
+       snprintf (ret, sizeof(ret), PORTS_FMT, remote_port, local_port);
+  else snprintf (ret, sizeof(ret), PORTS_FMT, local_port, remote_port);
   return (ret);
 }
 
@@ -3535,7 +3537,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 
   fw_buf_add ("%-*s", INDENT_SZ, "");
 
-  ports = get_ports (header);
+  ports = get_ports (header, direction_in);
 
   if (direction_in)
        fw_buf_add ("addr:    %s -> %s%s\n", remote_addr, local_addr, ports);
@@ -3600,7 +3602,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 
   fw_buf_add ("%-*s", INDENT_SZ, "");
 
-  ports = get_ports (header);
+  ports = get_ports (header, direction_in);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_SCOPE_ID_SET)
   {
@@ -4315,7 +4317,8 @@ int main (int argc, char **argv)
   }
   else if (fw_monitor_start())
   {
-    g_cfg.firewall.sound.enable = (log_file ? FALSE : TRUE);
+    if (log_file)
+       g_cfg.firewall.sound.enable = FALSE;
 
     fw_console_stats();  /* Clear the console title bar */
     signal (SIGINT, sig_handler);
