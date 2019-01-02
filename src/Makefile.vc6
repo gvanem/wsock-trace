@@ -43,6 +43,12 @@ MACHINE    = x64
 BITNESS    = 64
 LIB_TARGET = $(VCINSTALLDIR)lib\x64
 BIN_TARGET = $(VCINSTALLDIR)bin\x64
+
+!else if "$(PLATFORM)" == "x86_arm" || "$(CPU)" == "x86_arm"
+X_SUFFIX   =
+MACHINE    = x86_arm
+BITNESS    = 32
+CFLAGS     = -D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE=1
 !else
 MACHINE    = x86
 BITNESS    = 32
@@ -59,9 +65,9 @@ BIN_TARGET = $(VCINSTALLDIR)bin
 #  -MT   - libc, threads,     release
 #  -MTd  - libc, threads,     debug
 
-CC      = cl
-CFLAGS  = -nologo -I. -W3 -Zi -DWIN32 -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
-LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console                  # -debugtype:cv -fixed:no
+CC      = cl.exe
+CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32 -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
+LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console                            # -debugtype:cv -fixed:no
 LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
@@ -160,7 +166,7 @@ $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP)
-	link -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(EX_LIBS)
+	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(EX_LIBS)
 	lib -nologo $(WSOCK_TRACE_LIB) $(NON_EXPORT_OBJ)
 	@del $(WSOCK_TRACE_LIB:.lib=.exp)
 
@@ -177,7 +183,7 @@ uninstall:
 geoip-gen4.c geoip-gen6.c: geoip.exe
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
-	link $(LDFLAGS) -verbose -out:$@ $** > link.tmp
+	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
 	type link.tmp >> test.map
 
 geoip.exe: $(GEOIP_SRC) geoip-null.c
@@ -185,18 +191,18 @@ geoip.exe: $(GEOIP_SRC) geoip-null.c
 	geoip.exe -4g geoip-gen4.c
 	geoip.exe -6g geoip-gen6.c
 	$(CC) -c $(CFLAGS) geoip-gen4.c geoip-gen6.c
-	link $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib
+	link.exe $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib
 	del $(GEOIP_OBJ)
 
 idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
-	link $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
+	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
 	type link.tmp >> idna.map
 
 #
 # This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
 #
 firewall_test.exe: $(FIREWALL_TEST_OBJ)
-	link $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib advapi32.lib winmm.lib > link.tmp
+	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib advapi32.lib winmm.lib > link.tmp
 	type link.tmp >> firewall_test.map
 
 run_test: test.exe
