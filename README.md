@@ -29,7 +29,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
   from [`QueryPerformanceCounter()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms644904(v=vs.85).aspx).<br>
   The timestamp is controlled by `trace_time` in the
-  [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
+  [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L31)
   config-file.
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
@@ -40,8 +40,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
   Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
-  (using the CSV files [`geoip`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L157)
-  and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L158)
+  (using the CSV files [`geoip`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L161)
+  and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L162)
   are always enabled).
 
 * *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
@@ -52,11 +52,11 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of
   DROP-files from the **[Spamhaus](http://www.spamhaus.org/drop/)** project,
   it can detect IPv4 / IPv6-addresses uses by spammers and cyber-criminals.
-  The more potent Spamhaus **[BGPCC](https://www.spamhaus.org/bgpf/)** is on the *to-do* list.
+  The more potent Spamhaus **[BGPf / BCL](https://www.spamhaus.org/bgpf/)** is on the *to-do* list.
 
 * *Slowdown*; For testing *too fast programs*, all receive, transmit, `select()` and `WSAPoll()`
   calls can be delayed a number of milli-seconds. E.g. slowing down a `recv()` call is
-  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L67)
+  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L66)
   config-file.
 
 * *Firewall* activity; report activity causing events from the *Window Filtering Platform* (the *Internet Connection Firewall*; ICF). See below.
@@ -297,15 +297,13 @@ A **[Larger](http://www.watt-32.net/misc/screenshot-openvpn.png)** version.
 The `firewall_test.exe` program show a screen like:
 [![screenshot](screenshot_firewall_test_DNSBL.png?raw=true)](screenshot_firewall_test_DNSBL.png?raw=true)
 
-Together with `[DNSBL], enable = 1` it shows remote addresses in **[SpamHaus](https://www.spamhaus.org/sbl/)** DROP-lists. In this case
-the **[address](https://blackhat.directory/ip/176.119.4.53)** `176.119.4.56`
-in *Ukraine / Donetsk*"" is *very* active giving a Firewall event approx.
-every 5 minutes.
+Together with `[DNSBL], enable = 1` it shows remote addresses in **[SpamHaus](https://www.spamhaus.org/sbl/)** DROP-lists.
+In this case the **[address](https://blackhat.directory/ip/176.119.4.53)** `176.119.4.56`
+in *Ukraine / Donetsk* is *very* active giving a Firewall event approximately every 5 minutes.
 
 A good test of the `firewall.c` features is to open your WiFi FireWall and start a remote
 **[port-scan](http://www.whatsmyip.org/port-scanner/server/)** while `firewall_test.exe`
-is running.<br>
-You'll see a lot of **DROP**-events like:
+is running. You'll see a lot of **DROP**-events like:
 ```
 6.700 sec: FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP
   layer:   (13) Inbound Transport v4 Discard-layer
