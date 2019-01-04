@@ -88,8 +88,13 @@ void ws_sema_release (void)
      ReleaseSemaphore (ws_sema, 1, NULL);
 }
 
-/*
- * Get the CPU frequency needed for showing time-stamps.
+/**
+ * Get the `start-ticks` value for showing time-stamps.
+ *
+ * \note
+ *   The `g_cfg.clocks_per_usec` is not the true CPU-speed.
+ *   On a multicore CPU, this is normally higher than the real
+ *   CPU MHz frequeny.
  */
 static void init_timestamp (void)
 {
@@ -102,8 +107,8 @@ static void init_timestamp (void)
   g_cfg.clocks_per_usec = frequency / 1000000ULL;
   MHz = (double)frequency / 1E3;
   if (MHz > 1000.0)
-       TRACE (2, "CPU speed: %.3f GHz\n", MHz/1000.0);
-  else TRACE (2, "CPU speed: %.0f MHz\n", MHz);
+       TRACE (2, "QPC speed: %.3f GHz\n", MHz/1000.0);
+  else TRACE (2, "QPC speed: %.0f MHz\n", MHz);
 
   QueryPerformanceCounter (&rc);
   g_cfg.start_ticks = rc.QuadPart;
