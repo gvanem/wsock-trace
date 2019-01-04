@@ -78,7 +78,7 @@ vclean realclean: clean .SYMBOLIC
 .ERASE
 .c{$(OBJ_DIR)}.obj:
 	*$(CC) $(CFLAGS) -fo=$@ $[@
-	@echo
+	@echo.
 
 $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
 	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
@@ -86,7 +86,7 @@ $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@
-	@echo
+	@echo.
 
 install: $(WSOCK_LIB) $(WSOCK_DLL)
 	copy $(WSOCK_LIB) $(LIB_TARGET)
@@ -98,7 +98,7 @@ uninstall: .SYMBOLIC
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
-	@echo
+	@echo.
 
 #
 # Note:
@@ -112,14 +112,14 @@ geoip.exe: geoip.c init.c $(GEOIP_OBJ)
 	wlink $(LDFLAGS) name $@ file { $(GEOIP_OBJ) } &
 	                         library clib3$(STACK_OR_REG).lib, ws2_32.lib
 	rm -f $(OBJ_DIR)\init.obj $(OBJ_DIR)\geoip.obj
-	@echo
+	@echo.
 
 idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
 	*$(CC) $(CFLAGS) -DTEST_IDNA -fo=$(OBJ_DIR)\idna.obj idna.c
 	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\idna.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj } &
 	                         library clib3$(STACK_OR_REG).lib,$(WSOCK_LIB)
 	rm -f $(OBJ_DIR)\idna.obj
-	@echo
+	@echo.
 
 run_test: test.exe .SYMBOLIC
 	test.exe
