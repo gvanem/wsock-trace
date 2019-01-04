@@ -133,13 +133,13 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
 /**
  * \def TIME_STRING_FMT
- * The `fw_buf_add()` format for a `get_time_string()` result.
+ *  The `fw_buf_add()` format for a `get_time_string()` result.
  *
  * \def INDENT_SZ
- * The number of spaces to indent a printed line.
+ *  The number of spaces to indent a printed line.
  */
 #if defined(TEST_FIREWALL)
-  #define TIME_STRING_FMT  "\n~1%s: "
+  #define TIME_STRING_FMT  "\n~1%s"
   #define INDENT_SZ        2
 
   /* Used for the reference-timestamp value in `get_time_string (NULL)`.
@@ -151,14 +151,15 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   static void fw_console_stats (void);
 #else
 
-  /* Similar as to wsock_trace.c shows a time-stamp.
+  /* Similar as to how wsock_trace.c shows a time-stamp.
    */
-  #define TIME_STRING_FMT "\n  ~1* %s: "
+  #define TIME_STRING_FMT "\n  ~1* %s"
   #define INDENT_SZ        (2 + g_cfg.trace_indent)
 #endif
 
 DWORD fw_errno;
 int   fw_api = FW_API_DEFAULT;
+BOOL  fw_force_init = FALSE;
 
 typedef enum FW_STORE_TYPE {
              FW_STORE_TYPE_INVALID,
@@ -1063,8 +1064,7 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *cont
 
 /**
  * \def DEF_FUNC(ret, f, args)
- *
- * Macro to both define and declare the function-pointer.
+ *  Macro to both define and declare the function-pointer.
  *
  * \param[in] ret The return value of the typdef'ed function-pointer.
  * \param[in] f   The function name.
@@ -1195,8 +1195,7 @@ DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
 
 /**
  * \def ADD_VALUE(dll, func)
- *
- * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
+ *  Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
  *
  * \param[in] dll  The name of the .DLL to use for `LoadLibrary()`.
  * \param[in  func The name of the function to  use for `GetProcAddress()`.
@@ -1633,9 +1632,9 @@ static void fw_add_long_line (const char *start, size_t indent, int brk_ch)
 
 /**
  * \def FW_EVENT_CALLBACK
- * The macro for defining the event-callback functions for API-levels 0 - 4.
+ *  The macro for defining the event-callback functions for API-levels 0 - 4.
  *
- * (since C does not support C++-like templates, do it with this hack).
+ *  (since C does not support C++-like templates, do it with this hack).
  */
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, allow_member1, allow_member2, drop_member1, drop_member2) \
         static void CALLBACK                                                                                 \
@@ -1738,7 +1737,7 @@ static const char *get_time_string (const FILETIME *ts)
 
     last_ts = _ts;
     sec  = (long) (diff / S64_SUFFIX(1000000));
-    msec = (long) ((diff - (1000000 * sec)) % 1000);
+    msec = (long) ((diff / 1000) % 1000);
     if (sec < 0)
     {
       sec  = -sec;
@@ -1749,7 +1748,7 @@ static const char *get_time_string (const FILETIME *ts)
       msec = -msec;
       sign = "-";
     }
-    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec", sign, sec, msec);
+    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec: ", sign, sec, msec);
   }
   else if (g_cfg.trace_time_format == TS_ABSOLUTE)
   {
@@ -1761,7 +1760,7 @@ static const char *get_time_string (const FILETIME *ts)
     FileTimeToLocalFileTime (ts, &loc_time);
     FileTimeToSystemTime (&loc_time, &sys_time);
 
-    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u",
+    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u: ",
               sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
   }
   return (time_str);
@@ -1792,7 +1791,7 @@ static void fw_play_sound (const struct FREQ_MILLISEC *sound)
  */
 static BOOL fw_load_funcs (void)
 {
-  const struct LoadTable *tab = fw_funcs + 0;
+  const struct LoadTable *tab = fw_funcs;
   int   functions_needed = DIM(fw_funcs) - (4 + 5);
   int   i, num;
 
@@ -1814,6 +1813,8 @@ static BOOL fw_load_funcs (void)
 
   if (num < functions_needed)
   {
+    TRACE (1, "Found %d, but I need %d \"FirewallAPI.dll\" and \"FwpUclnt.dll\" functions.\n",
+           num, functions_needed);
     fw_errno = FW_FUNC_ERROR;
     return (FALSE);
   }
@@ -1827,8 +1828,14 @@ static BOOL fw_load_funcs (void)
  */
 BOOL fw_init (void)
 {
-  USHORT api_version = FW_REDSTONE2_BINARY_VERSION;
-  ULONG  user_len    = sizeof(fw_logged_on_user);
+  USHORT api_version;
+  ULONG  user_len;
+
+  /**
+   * \todo
+   *  This should be function of the Windows version.
+   */
+  api_version = FW_REDSTONE2_BINARY_VERSION;
 
   fw_SID_list    = smartlist_new();
   fw_filter_list = smartlist_new();
@@ -1841,6 +1848,7 @@ BOOL fw_init (void)
        fw_acp = GetConsoleCP();
   else fw_acp = CP_ACP;
 
+  user_len = sizeof(fw_logged_on_user);
   GetUserName (fw_logged_on_user, &user_len);
 
   get_time_string (NULL);
@@ -1860,6 +1868,7 @@ BOOL fw_init (void)
 
   fw_errno = (*p_FWOpenPolicyStore) (api_version, NULL, FW_STORE_TYPE_DEFAULTS, FW_POLICY_ACCESS_RIGHT_READ,
                                      FW_POLICY_STORE_FLAGS_NONE, &fw_policy_handle);
+  TRACE (2, "FWOpenPolicyStore(): fw_errno: %d.\n", fw_errno);
   return (fw_errno == ERROR_SUCCESS);
 }
 
@@ -2125,7 +2134,7 @@ BOOL fw_monitor_start (void)
 
   fw_num_events = fw_num_ignored = fw_num_SBL_hits = 0;
 
-  if (ws_sema_inherited)
+  if (ws_sema_inherited && !fw_force_init)
   {
     TRACE (1, "Not safe to use 'fw_monitor_start()' in a sub-process.\n");
     return (FALSE);
@@ -3883,7 +3892,7 @@ static void CALLBACK
    *
    * If both `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.
    */
-  event_name = list_lookup_name(event_type, events, DIM(events));
+  event_name = list_lookup_name (event_type, events, DIM(events));
 
   fw_buf_add (TIME_STRING_FMT "~4%s~0",
               get_time_string(&header->timeStamp), event_name);
@@ -4108,6 +4117,7 @@ static int show_help (const char *my_name)
           "    -a:  the API-level to use (%d-%d, default: %d).\n"
           "    -c:  only dump the callout rules.\n"
           "    -e:  only dump recent event; does not work with \"-a0\" or \"-a1\".\n"
+          "    -f:  force an init in 'fw_monitor_start()'.\n"
           "    -l:  print to \"log-file\" only.\n"
           "    -p:  print events for the below program only (implies your \"user-activity\" only).\n"
           "    -r:  only dump the firewall rules.\n"
@@ -4229,7 +4239,7 @@ int main (int argc, char **argv)
   g_cfg.trace_indent  = 0;
   g_cfg.trace_report  = 1;
 
-  while ((ch = getopt(argc, argv, "a:h?cel:prtv")) != EOF)
+  while ((ch = getopt(argc, argv, "a:fh?cel:prtv")) != EOF)
     switch (ch)
     {
       case 'a':
@@ -4240,6 +4250,9 @@ int main (int argc, char **argv)
            break;
       case 'e':
            dump_events = 1;
+           break;
+      case 'f':
+           fw_force_init = TRUE;
            break;
       case 'l':
            log_file = strdup (optarg);
