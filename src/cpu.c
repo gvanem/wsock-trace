@@ -1,4 +1,10 @@
-/*
+/**\file    cpu.c
+ * \ingroup Micc
+ *
+ * \brief
+ *  `cpu_init()` is for obtaining the number of CPU cores and the
+ *  average CPU frequency.
+ *
  * cpu.c - Part of Wsock-Trace.
  */
 
@@ -13,29 +19,79 @@
 #include "init.h"
 #include "cpu.h"
 
+#define MAX_CPUS 256
+
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
-static struct LoadTable dyn_funcs2 [] = {
+static struct LoadTable dyn_funcs [] = {
                         ADD_VALUE (1, "kernel32.dll", QueryThreadCycleTime),
                         ADD_VALUE (1, "kernel32.dll", GetSystemTimePreciseAsFileTime),
                         ADD_VALUE (1, "ntdll.dll",    NtQueryInformationThread),
-                        ADD_VALUE (1, "ntdll.dll",    NtQuerySystemInformation)
+                        ADD_VALUE (1, "ntdll.dll",    NtQuerySystemInformation),
+                        ADD_VALUE (1, "powrprof.dll", CallNtPowerInformation)
                       };
 
-static int num_cpus = -1;
+typedef struct _PROCESSOR_POWER_INFORMATION {
+        ULONG  Number;
+        ULONG  MaxMhz;
+        ULONG  CurrentMhz;
+        ULONG  MhzLimit;
+        ULONG  MaxIdleState;
+        ULONG  CurrentIdleState;
+      } PROCESSOR_POWER_INFORMATION;
 
-static void init_cpu (void)
+/* From 'enum POWER_INFORMATION_LEVEL'. We only need this value.
+ * Ref:
+ *   https://docs.microsoft.com/en-us/windows/desktop/api/Powerbase/nf-powerbase-callntpowerinformation
+ */
+#define _ProcessorInformation 11
+
+static unsigned num_cpus = 0;
+
+void cpu_init (void)
 {
   SYSTEM_INFO sys_info;
 
-  if (num_cpus >= 0)
+  if (num_cpus >= 1)
      return;
 
   memset (&sys_info, 0, sizeof(sys_info));
   GetSystemInfo (&sys_info);
-  num_cpus = sys_info.dwNumberOfProcessors;
 
-  load_dynamic_table (dyn_funcs2, DIM(dyn_funcs2));
+  if (sys_info.dwNumberOfProcessors == 0)
+       num_cpus = 1;
+  else num_cpus = sys_info.dwNumberOfProcessors;
+  num_cpus = min (num_cpus, MAX_CPUS);
+
+  load_dynamic_table (dyn_funcs, DIM(dyn_funcs));
+
+  if (p_CallNtPowerInformation)
+  {
+    /* Rewritten from:
+     *   https://github.com/giampaolo/psutil/blob/master/psutil/_psutil_windows.c
+     */
+    PROCESSOR_POWER_INFORMATION  ppi [MAX_CPUS];
+    DWORD     rc = (*p_CallNtPowerInformation) (_ProcessorInformation,
+                                                NULL, 0,   /* No input buffer */
+                                                &ppi, sizeof(ppi));
+    if (rc == STATUS_SUCCESS)
+    {
+      unsigned cpu;
+      double   MHz = 0.0;
+
+      for (cpu = 0; cpu < num_cpus; cpu++)
+          MHz += (double) ppi[cpu].CurrentMhz;
+
+      MHz /= num_cpus;
+      if (MHz > 1000.0)
+           TRACE (2, "CPU speed: %.3f GHz\n", MHz/1000.0);
+      else TRACE (2, "CPU speed: %.0f MHz\n", MHz);
+    }
+    else
+      TRACE (1, "CallNtPowerInformation() failed: %s.\n", win_strerror(rc));
+  }
+  else
+    TRACE (1, "CallNtPowerInformation() not present in \"powrprof.dll\".\n");
 }
 
 /**
@@ -47,7 +103,7 @@ void print_thread_times (HANDLE thread)
   FILETIME ctime, etime, ktime, utime;
   double   life_span;
 
-  init_cpu();
+  cpu_init();
 
   if (thread == NULL)
   {
@@ -110,10 +166,9 @@ void print_thread_times (HANDLE thread)
  */
 void print_process_times (void)
 {
-  HANDLE proc = OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-                             FALSE, GetCurrentProcessId());
   FILETIME cr_time, exit_time, krnl_time, usr_time;
-
+  HANDLE   proc = OpenProcess (PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                               FALSE, GetCurrentProcessId());
   if (!proc)
      return;
 
@@ -161,8 +216,6 @@ typedef struct {
         LONG           InterruptCount;
       } SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION;
 
-#define MAX_CPUS 256
-
 /**
  * Print some performance timers.
  *
@@ -175,7 +228,7 @@ void print_perf_times (void)
   DWORD     i, ret_len, ret_num_CPUs;
   NTSTATUS  rc;
 
-  init_cpu();
+  cpu_init();
 
   if (!p_NtQuerySystemInformation || num_cpus == 0)
   {

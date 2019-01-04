@@ -11,9 +11,10 @@
                                   extern func_##f p_##f
 #endif
 
-/*
- * Instead of including <NtDDK.h> here, we define undocumented stuff
- * needed for NtQueryInformationThread() here:
+/**
+ * Instead of including <NtDDK.h> and <Wdm.h> here, we define undocumented
+ * stuff needed for `NtQueryInformationThread()` and
+ * `CallNtPowerInformation()` here:
  */
 typedef LONG NTSTATUS;
 
@@ -48,11 +49,11 @@ CPU_FUNC (BOOL, QueryThreadCycleTime,
                  ULONG64 *cycle_time));
 
 CPU_FUNC (NTSTATUS, NtQueryInformationThread,
-                   (HANDLE           thread_handle,
-                    THREADINFOCLASS  thread_information_class,
-                    void            *thread_information,
-                    ULONG            thread_information_length,
-                    ULONG           *return_length));
+                    (HANDLE          thread_handle,
+                     THREADINFOCLASS thread_information_class,
+                     void           *thread_information,
+                     ULONG           thread_information_length,
+                     ULONG          *return_length));
 
 CPU_FUNC (NTSTATUS, NtQuerySystemInformation,
                     (ULONG  system_information_class,
@@ -63,6 +64,14 @@ CPU_FUNC (NTSTATUS, NtQuerySystemInformation,
 CPU_FUNC (void, GetSystemTimePreciseAsFileTime,  /* A Win 8+ function */
                 (FILETIME *sys_time));
 
+CPU_FUNC (NTSTATUS, CallNtPowerInformation,
+                    (unsigned info_level,    /* An 'enum POWER_INFORMATION_LEVEL' */
+                     void    *input_buf,
+                     ULONG    input_buf_len,
+                     void    *output_buf,
+                     ULONG    output_buf_len));
+
+extern void cpu_init (void);
 extern void print_thread_times (HANDLE thread);
 extern void print_process_times (void);
 extern void print_perf_times (void);
