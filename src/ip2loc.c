@@ -135,6 +135,7 @@ typedef struct IP2Location {
         uint64      sh_mem_max;
         uint64      sh_mem_index_errors;
         HANDLE      sh_mem_fd;
+        BOOL        sh_mem_already;
         struct stat stat_buf;
         uint8_t     db_type;
         uint8_t     db_column;
@@ -211,10 +212,13 @@ static IP2Location *open_file (const char *fname)
 
   IP2Location_initialize (loc);
 
-  /* No need to keep the file open
-   */
-  fclose (loc->file);
-  loc->file = NULL;
+  if (!loc->sh_mem_already)
+  {
+    /* No need to keep the file open
+     */
+    fclose (loc->file);
+    loc->file = NULL;
+  }
 
   /* The IP2Loc database scheme is really strange.
    * This used to be true previously.
@@ -596,7 +600,6 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
 {
   FILE  *file = loc->file;
   int    fd = fileno (file);
-  BOOL   DB_loaded;
 #if 1
   DWORD  os_prot = PAGE_READWRITE;
   DWORD  os_map  = FILE_MAP_WRITE;
@@ -619,6 +622,7 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
     return (-1);
   }
 
+  SetLastError (0);
   loc->sh_mem_fd = CreateFileMapping (os_hnd, NULL, os_prot, 0,
                                       loc->stat_buf.st_size+1, "IP2location_Shm");
   if (!loc->sh_mem_fd)
@@ -627,7 +631,7 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
     return (-1);
   }
 
-  DB_loaded = (GetLastError() == ERROR_ALREADY_EXISTS);
+  loc->sh_mem_already = (GetLastError() == ERROR_ALREADY_EXISTS);
 
   loc->sh_mem_ptr = MapViewOfFile (loc->sh_mem_fd, os_map, 0, 0, 0);
 
@@ -637,12 +641,14 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
     return (-1);
   }
 
-  if (DB_loaded)
+  if (loc->sh_mem_already)
      TRACE (2, "CreateFileMapping() already exist. Sharing 0x%p file-mapping with another process.\n",
             loc->sh_mem_ptr);
   else
-  if (IP2Location_DB_Load_to_mem(loc, os_hnd) == -1)
-     return (-1);
+  {
+    if (IP2Location_DB_Load_to_mem(loc, os_hnd) == -1)
+       return (-1);
+  }
 
   loc->sh_mem_max = (uint64)loc->sh_mem_ptr + loc->stat_buf.st_size;
   return (0);
