@@ -1382,7 +1382,7 @@ INCLUDE_FILE_PATTERNS  = *.h
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = __DOXYGEN__:=1 NOT_USED:=1 _Printf_format_string_=1 _MSC_VER:=1900 _DEBUG:=1 \
-                         WIN32:=1 _WIN32:=1 USE_IP2LOCATION=1 TEST_GEOIP=1
+                         WIN32:=1 _WIN32:=1 USE_IP2LOCATION=1 TEST_GEOIP=1 USE_DEF_FILE:=1
 
 SKIP_FUNCTION_MACROS   = NO
 
