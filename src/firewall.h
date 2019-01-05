@@ -1,5 +1,5 @@
 /**\file    firewall.h
- * \ingroup inet_util
+ * \ingroup Misc
  */
 #ifndef _FIREWALL_H
 #define _FIREWALL_H

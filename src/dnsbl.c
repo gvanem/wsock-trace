@@ -2,7 +2,7 @@
  * \ingroup DNSBL
  *
  * \brief
- *   A simple DNSBL (Domain Name System Blacklists) implementation.
+ *   A simple DNSBL (Domain Name System Blacklist) implementation.
  *   Parses and uses the the Spamhaus DROP / EDROP / DROPv6 files to
  *   check an IPv4/IPv6-address for membership of a "spam network".
  *   Used in dump.c to print the SBL (Spamhaus Block Reference)
@@ -60,10 +60,11 @@ static const char *DNSBL_type_name (DNSBL_type type)
           type == DNSBL_DROPv6 ? "DROPv6" : "?");
 }
 
-/*
- * smartlist_sort() helper; compare on network.
- * This compares both 'DNSBL_info*' nodes with 'family == AF_INET'
- * and 'family == AF_INET6'.
+/**
+ * `smartlist_sort()` helper; compare on network.
+ *
+ * This compares both `DNSBL_info*` nodes with `family == AF_INET`
+ * and `family == AF_INET6`.
  */
 static int DNSBL_compare_net (const void **_a, const void **_b)
 {
@@ -98,10 +99,10 @@ static int DNSBL_compare_net (const void **_a, const void **_b)
   return (0);
 }
 
-/*
- * smartlist_bsearch() helper; compare on IPv4 network range.
+/**
+ * `smartlist_bsearch()` helper; compare on IPv4 network range.
  *
- * \note: the 'mask, 'start_ip' and 'end_ip' are all on network order.
+ * \note the `mask`, `start_ip` and `end_ip` are all on network order.
  */
 static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
 {
@@ -112,7 +113,7 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
   if (dnsbl->family != AF_INET)
   {
     /* Since AF_INET6 networks are sorted last in 'DNSBL_list', force
-     * 'smartlist_bsearch_idx()' too look closer to index 0.
+     * 'smartlist_bsearch_idx()' to look closer to index 0.
      */
     TRACE (3, "Wrong family\n");
     return (-1);
@@ -144,10 +145,10 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
   return (rc);
 }
 
-/*
- * smartlist_bsearch() helper; compare on IPv6 network range.
+/**
+ * `smartlist_bsearch()` helper; compare on IPv6 network range.
  *
- * \note: the 'mask, 'start_ip' and 'end_ip' are all on network order.
+ * \note the `mask`, `start_ip` and `end_ip` are all on network order.
  */
 static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
 {
@@ -158,7 +159,7 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
   if (dnsbl->family != AF_INET6)
   {
     /* Since AF_INET6 networks are sorted last in 'DNSBL_list', force
-     * 'smartlist_bsearch_idx()' too look closer to the end-index.
+     * 'smartlist_bsearch_idx()' to look closer to the end-index.
      */
     TRACE (3, "Wrong family\n");
     return (1);
@@ -189,8 +190,8 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
 }
 
 /**
- * Do a binary search in the 'DNSBL_list' to figure out if
- * 'ip4' or 'ip6' address is a member of a "spam group".
+ * Do a binary search in the `DNSBL_list` to figure out if
+ * `ip4` or `ip6` address is a member of a **spam group**.
  *
  * \note An IPv4/IPv6 address can have more than 1 SBL reference.
  *       This is currently unsupported.
@@ -236,8 +237,8 @@ BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
 }
 
 /**
- * Called from DNSBL_test().
- * Simply prints the `DNSBL_list` smartlist.
+ * Called from `DNSBL_test()`.
+ * Simply prints all the members of the `DNSBL_list` smartlist.
  */
 static void DNSBL_dump (void)
 {
@@ -312,7 +313,7 @@ int DNSBL_test (void)
                     { AF_INET6, "2a06:e480::ff", "301771" },
                     { AF_INET6, "2607:d100::1",  "347495" }
                   };
-  const struct test_list *test = tests + 0;
+  const struct test_list *test = tests;
 
   if (!(g_cfg.DNSBL.enable && g_cfg.DNSBL.test))
   {

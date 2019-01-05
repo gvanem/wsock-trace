@@ -1,5 +1,5 @@
 /**\file    firewall.c
- * \ingroup inet_util
+ * \ingroup Misc
  *
  * \brief
  *  Function for listening for "Windows Filtering Platform (WFP)" events
@@ -10,17 +10,14 @@
  *  "The device does not recognize the command" (`ERROR_BAD_COMMAND = 22`).
  *
  * Thanks to dmex for his implementation of similar stuff in his ProcessHacker:
- * \see
- *   + https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/fw.c
- *   + https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/monitor.c
+ *   \li https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/fw.c
+ *   \li https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/monitor.c
  *
  * Also many thanks to Henry++ for his SimpleWall:
- *  \see
- *    + https://github.com/henrypp/simplewall/blob/master/src/main.cpp
+ *   \li https://github.com/henrypp/simplewall/blob/master/src/main.cpp
  *
  * A rather messy but rich example is at:
- *  \see
- *   + https://social.msdn.microsoft.com/Forums/sqlserver/en-US/74e3bf1d-3a0b-43ce-a528-2a88bc1fb882/log-packets?forum=wfp
+ *   \li https://social.msdn.microsoft.com/Forums/sqlserver/en-US/74e3bf1d-3a0b-43ce-a528-2a88bc1fb882/log-packets?forum=wfp
  *
  * From the command-line, the `netsh` program can be used.
    To show "Global Settings" and "Profile Settings" for WFP:
@@ -1066,9 +1063,9 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *cont
  * \def DEF_FUNC(ret, f, args)
  *  Macro to both define and declare the function-pointer.
  *
- * \param[in] ret The return value of the typdef'ed function-pointer.
- * \param[in] f   The function name.
- * \param[in] f   The function arguments as a list of `(arg1, arg2, ...)`.
+ * \param[in] ret  The return value of the typdef'ed function-pointer.
+ * \param[in] f    The function name.
+ * \param[in] args The function arguments as a list of `(arg1, arg2, ...)`.
  */
 #define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
                                 static func_##f  p_##f = NULL
@@ -1198,7 +1195,7 @@ DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
  *  Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
  *
  * \param[in] dll  The name of the .DLL to use for `LoadLibrary()`.
- * \param[in  func The name of the function to  use for `GetProcAddress()`.
+ * \param[in] func The name of the function to  use for `GetProcAddress()`.
  */
 #define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
 
@@ -1234,6 +1231,10 @@ static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("kernel32.dll",    GetSystemTimePreciseAsFileTime),
             };
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `_FWPM_NET_EVENT_TYPE_X` value and it's name to the `events[]` array.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { _FWPM_NET_EVENT_TYPE_##v, "FWPM_NET_EVENT_TYPE_" #v }
 
@@ -1252,6 +1253,10 @@ static const struct search_list events[] = {
                     ADD_VALUE (MAX)
                   };
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `FWPM_NET_EVENT_FLAG_X` value and it's name to the `ev_flags[]` array.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { FWPM_NET_EVENT_FLAG_##v, "FWPM_NET_EVENT_FLAG_" #v }
 
@@ -1272,6 +1277,10 @@ static const struct search_list ev_flags[] = {
                     ADD_VALUE (EFFECTIVE_NAME_SET)
      };
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `FWP_DIRECTIONS_X` value and it's name to the `directions[]` array.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { FWP_DIRECTION_##v, #v }
 
@@ -1324,6 +1333,11 @@ static const struct search_list directions[] = {
 #define _IPPROTO_RESERVED_WNV          260
 #define _IPPROTO_RESERVED_MAX          261
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `_IPPROTO_X` value and it's name to the `protocols[]` array.
+ * These values are copied from dump.c.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { _IPPROTO_##v, "IPPROTO_" #v }
 
@@ -1413,6 +1427,10 @@ static const struct search_list protocols[] = {
 #define FWPM_CALLOUT_FLAG_REGISTERED                 0x00040000
 #endif
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `FWPM_CALLOUT_X` value and it's name to the `callout_flags[]` array.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { v, #v }
 
@@ -1454,8 +1472,8 @@ static char         fw_module [_MAX_PATH] = { '\0' };
 /**
  * SpamHaus blocklist features.
  */
-static DWORD        fw_num_SBL_hits = 0;
-static smartlist_t *fw_SBL_ref_list = NULL;
+static DWORD        fw_num_SBL_hits = 0;     /**< Number of remote addresses found in DNSBL records. */
+static smartlist_t *fw_SBL_ref_list = NULL;  /**< List of unique DNSBL records found in firewall events. */
 static char        *fw_SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
 
 /**
@@ -1479,8 +1497,8 @@ struct SID_entry {
        char  account[MAX_ACCOUNT_SZ];
      };
 
-static smartlist_t *fw_SID_list;
-static char         fw_logged_on_user [100];
+static smartlist_t *fw_SID_list;             /**< A cache of SIDs (Security Identifier) */
+static char         fw_logged_on_user [100]; /**< The name of the logged on user */
 
 /**
  * Stuff for checking if `%n` can be used in `*printf()` functions.
@@ -1677,10 +1695,10 @@ static void CALLBACK fw_event_callback (const UINT                              
                                         const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event2);
 
 /**
- * This expands to:
- * \li `static void CALLBACK fw_event_callback0 (...)`
+ * These expands to:
+ * \li `static void CALLBACK fw_event_callback0 (void *context, const _FWPM_NET_EVENT1 *event)`
  * \li ...
- * \li `static void CALLBACK fw_event_callback4 (...)`
+ * \li `static void CALLBACK fw_event_callback4 (void *context, const _FWPM_NET_EVENT5 *event)`
  */
 FW_EVENT_CALLBACK (0, 1, NULL,                 NULL,                   event->classifyDrop, NULL)
 FW_EVENT_CALLBACK (1, 2, NULL,                 NULL,                   event->classifyDrop, NULL)
@@ -1833,7 +1851,7 @@ BOOL fw_init (void)
 
   /**
    * \todo
-   *  This should be function of the Windows version.
+   *  The `api_version` should be a function of the Windows version.
    */
   api_version = FW_REDSTONE2_BINARY_VERSION;
 
@@ -1874,7 +1892,7 @@ BOOL fw_init (void)
 
 /**
  * `smartlist_wipe()` helper.
- * Free an item in the `fw_SID_list` smartlist.
+ * Free an item `_e` in the `fw_SID_list` smartlist.
  */
 static void fw_SID_free (void *_e)
 {
@@ -1897,12 +1915,9 @@ void fw_exit (void)
 
   fw_monitor_stop (FALSE);
 
-  if (fw_SID_list)
-     smartlist_wipe (fw_SID_list, fw_SID_free);
-  if (fw_filter_list)
-     smartlist_wipe (fw_filter_list, free);
-  if (fw_SBL_ref_list)
-     smartlist_wipe (fw_SBL_ref_list, free);
+  smartlist_wipe (fw_SID_list, fw_SID_free);
+  smartlist_wipe (fw_filter_list, free);
+  smartlist_wipe (fw_SBL_ref_list, free);
 
   fw_SID_list = fw_filter_list = fw_SBL_ref_list = NULL;
 
@@ -2267,9 +2282,9 @@ int fw_enumerate_rules (void)
 }
 
 /**
- * Get the `FWPM_LAYER_xx` name from <fwpmu.h> for this layer.
+ * Get the `FWPM_LAYER_xx` name from `<fwpmu.h>` for this layer.
  *
- * \eg{.}:
+ * \eg{.}
  * ```
  *  // c86fd1bf-21cd-497e-a0bb-17425c885c58
  *  _DEFINE_GUID (FWPM_LAYER_INBOUND_IPPACKET_V4,
@@ -2861,6 +2876,10 @@ _DEFINE_GUID (FWPM_LAYER_INBOUND_RESERVED2,
               0x46D8,
               0xA2, 0xC7, 0x6A, 0x4C, 0x72, 0x2C, 0xA4, 0xED);
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `_FWPM_LAYER_X` value and it's name to the `fwpm_GUID[]` array.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { &_FWPM_LAYER_##v, "FWPM_LAYER_" #v }
 
@@ -2972,9 +2991,13 @@ static const struct GUID_search_list2 fwpm_GUIDs[] = {
                     ADD_VALUE (NAME_RESOLUTION_CACHE_V6)
                   };
 
+/**
+ * Traverse the list of GUIDs in `fwpm_GUID` to find the name for the layer
+ * represented by that GUID.
+ */
 static const char *get_callout_layer_name (const GUID *layer)
 {
-  const struct GUID_search_list2 *list = fwpm_GUIDs + 0;
+  const struct GUID_search_list2 *list = fwpm_GUIDs;
   const GUID *guid = list->guid;
   int   i;
 
@@ -3251,6 +3274,10 @@ quit:
   return (fw_errno == ERROR_SUCCESS);
 }
 
+/**
+ * \def ADD_VALUE(v)
+ *  Add a `FWPM_APPC_NETWORK_CAPABILITY_X` value and it's name to the `network_capabilities[]` array.
+ */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { FWPM_APPC_NETWORK_CAPABILITY_##v , "FWPM_APPC_NETWORK_CAPABILITY_" #v }
 
@@ -3435,7 +3462,7 @@ static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
 
   fw_play_sound (&g_cfg.firewall.sound.beep.event_DNSBL);
 
-  fw_num_SBL_hits++; /* Increment total "SpamHaus Block List" hits */
+  fw_num_SBL_hits++;   /* Increment total "SpamHaus Block List" hits */
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
 }
 
@@ -3635,6 +3662,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 
 /**
  * Map a "\\device\\harddiskvolume[0-9]\\" string to a drive letter the easy way.
+ *
  * Somewhat related:
  *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
  */
@@ -3719,8 +3747,12 @@ static void print_eff_name_id (const _FWPM_NET_EVENT_HEADER3 *header)
 }
 
 /**
- * Lookup the account and domain for a `sid` to get
+ * Lookup the account and domain for a SID to get
  * a more sensible account and domain-name.
+ *
+ * \retval TRUE  The account and domain for the SID was found.
+ *               Also returns TRUE if there is no mapping of the SID.
+ * \retval FALSE The account and domain for the SID was not found.
  */
 static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char *account, char *domain)
 {
@@ -3772,6 +3804,8 @@ static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char *accou
 /**
  * Lookup the entry for the `sid` in the `fw_SID_list` cache.
  * If not found, add an entry for it.
+ *
+ * \retval The found or newly allocated `SID_entry`.
  */
 static struct SID_entry *lookup_or_add_SID (SID *sid)
 {
@@ -3886,8 +3920,8 @@ static void CALLBACK
   }
 
   /**
-   * The `address__printed` variable is used to examine all the pieces of an event and the return value
-   * of `exclude_list_get (address_str, EXCL_ADDRESS)` before desiding to print anything.
+   * The `address_printed` variable is used to examine all the pieces of an event and the return value
+   * of `exclude_list_get (address_str, EXCL_ADDRESS)` before deciding to print anything.
    * The same goes for `exclude_list_get (appId, EXCL_PROGRAM)`.
    *
    * If both `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.

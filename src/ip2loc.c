@@ -604,7 +604,7 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
   DWORD  os_prot = PAGE_READWRITE;
   DWORD  os_map  = FILE_MAP_WRITE;
   HANDLE os_hnd  = INVALID_HANDLE_VALUE;
-#else  /* \todo */
+#else  /* \todo xxx */
   DWORD  os_prot = PAGE_READONLY | SEC_LARGE_PAGES;
   DWORD  os_map  = FILE_MAP_READ;
   HANDLE os_hnd  = (HANDLE) _get_osfhandle (fileno(file));

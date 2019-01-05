@@ -1,21 +1,25 @@
 #ifndef _SMARTLIST_H
 #define _SMARTLIST_H
 
-/*
- * From Tor's src/common/container.h:
+/**\file    smartlist.h
+ * \ingroup Misc
  *
+ * \brief
  * A resizeable list of pointers, with associated helpful functionality.
- *
- * The members of this struct are exposed only when 'EXPOSE_SMARTLIST_DETAILS'
- * is defined (like inside common.c). Otherwise all access to smartlist
- * internals should go through the functions defined below.
+ * Taken from Tor's src/common/container.h and modified.
  */
-#if defined(EXPOSE_SMARTLIST_DETAILS)
+#if defined(EXPOSE_SMARTLIST_DETAILS) || defined(__DOXYGEN__)
+  /**
+   * \typedef smartlist_t
+   * The members of this struct are exposed only when `EXPOSE_SMARTLIST_DETAILS`
+   * is set inside smartlist.c. Otherwise all access to smartlist internals
+   * should go through the functions defined below.
+   */
   typedef struct smartlist_t {
-          /*
-           * 'list' (of anything) has enough capacity to store exactly 'capacity'
-           * elements before it needs to be resized. Only the first 'num_used'
-           * (<= capacity) elements point to valid data.
+          /**
+           * `list` (of anything) has enough capacity to store exactly `capacity`
+           * elements before it needs to be resized. Only the first `num_used`
+           * (<= `capacity`) elements point to valid data.
            */
           void **list;
           int    num_used;
@@ -25,7 +29,14 @@
   typedef struct smartlist_internal smartlist_t; /* Opaque struct */
 #endif
 
-typedef int  (MS_CDECL *smartlist_sort_func) (const void **a, const void **b);
+/**\typedef smartlist_sort_func
+ * A function used to compare smartlist elements must match this type.
+ */
+typedef int (MS_CDECL *smartlist_sort_func) (const void **a, const void **b);
+
+/**\typedef smartlist_parse_func
+ * A function used to parse lines from a text-file must match this type.
+ */
 typedef void (MS_CDECL *smartlist_parse_func) (smartlist_t *sl, const char *line);
 
 #if defined(_CRTDBG_MAP_ALLOC)

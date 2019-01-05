@@ -53,7 +53,7 @@ BOOL is_ip4_addr (const char *str)
 /**
  * Convert a network format address to presentation format.
  *
- * \retval pointer to presentation format address (`dst'),
+ * \retval pointer to presentation format address (`dst`),
  * \retval NULL on error (see `WSAGetLastError()`).
  *
  * \author Paul Vixie, 1996.
@@ -78,8 +78,8 @@ BOOL is_ip4_addr (const char *str)
  * to network format (which is usually some kind of binary format).
  *
  * \retval 1  the address was valid for the specified address family.
- * \retval 0  the address wasn't valid (`dst' is untouched in this case).
- * \retval -1 some other error occurred (`dst' is untouched in this case, too).
+ * \retval 0  the address wasn't valid (`dst` is untouched in this case).
+ * \retval -1 some other error occurred (`dst` is untouched in this case, too).
  *
  * \author Paul Vixie, 1996.
  */
@@ -136,7 +136,7 @@ int _wsock_trace_inet_pton (int family, const char *addr, void *result)
 /**
  * Format an IPv4 address, more or less like `inet_ntoa()`.
  *
- * \retval `dst' (as a const)
+ * \retval `dst` (as a const)
  * \note
  *  - uses no statics
  *  - takes an `u_char*` and not an `in_addr` as input.
@@ -272,11 +272,11 @@ inval:
 /**
  * Like `inet_aton()` but without all the hexadecimal and shorthand.
  *
- * \retval 1 if `src' is a valid dotted quad
- * \retval 0 if `src' is not a valid dotted quad.
+ * \retval 1 if `src` is a valid dotted quad
+ * \retval 0 if `src` is not a valid dotted quad.
  *
  * \note
- *   does not touch `dst' unless it's returning 1.
+ *   does not touch `dst` unless it's returning 1.
  *
  * \author
  *   Paul Vixie, 1996.
@@ -336,11 +336,11 @@ inval:
 /**
  * Convert presentation level address to network order binary form.
  *
- * \retval 1 if `src' is a valid [RFC1884 2.2] address.
+ * \retval 1 if `src` is a valid [RFC1884 2.2] address.
  * \retval 0 otherwise.
  * \note
- *   - does not touch `dst' unless it's returning 1.
- *   - `::' in a full address is silently ignored.
+ *   - does not touch `dst` unless it's returning 1.
+ *   - `::` in a full address is silently ignored.
  *
  * \author Paul Vixie, 1996.
  * \n\b credit: inspired by Mark Andrews.
