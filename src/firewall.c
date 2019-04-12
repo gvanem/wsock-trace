@@ -4,12 +4,12 @@
  * \brief
  *  Function for listening for "Windows Filtering Platform (WFP)" events
  *
- *  The `fw_init()` and `fw_monitor_start()` needs Administrator privileges.
+ *  The `fw_init()` and `fw_monitor_start()` needs Administrator privileges. <br>
  *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
- *  "Access denied"                             (`ERROR_ACCESS_DENIED = 5`) or
+ *  "Access denied"                             (`ERROR_ACCESS_DENIED = 5`) or <br>
  *  "The device does not recognize the command" (`ERROR_BAD_COMMAND = 22`).
  *
- * Thanks to dmex for his implementation of similar stuff in his ProcessHacker:
+ * Thanks to Steven G (a.k.a. dmex) for his implementation of similar stuff in his ProcessHacker:
  *   \li https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/fw.c
  *   \li https://github.com/processhacker/plugins-extra/blob/master/FirewallMonitorPlugin/monitor.c
  *
@@ -1190,12 +1190,8 @@ DEF_FUNC (ULONG, FWStatusMessageFromStatusCode, (FW_RULE_STATUS status_code,
 DEF_FUNC (ULONG, FWFreeFirewallRules, (FW_RULE *pFwRules));
 DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
 
-/**
- * \def ADD_VALUE(dll, func)
- *  Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
- *
- * \param[in] dll  The name of the .DLL to use for `LoadLibrary()`.
- * \param[in] func The name of the function to  use for `GetProcAddress()`.
+/*
+ * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
  */
 #define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
 
@@ -1231,9 +1227,8 @@ static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("kernel32.dll",    GetSystemTimePreciseAsFileTime),
             };
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `_FWPM_NET_EVENT_TYPE_X` value and it's name to the `events[]` array.
+/*
+ * Add a `_FWPM_NET_EVENT_TYPE_X` value and it's name to the `events[]` array.
  */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { _FWPM_NET_EVENT_TYPE_##v, "FWPM_NET_EVENT_TYPE_" #v }
@@ -1253,9 +1248,8 @@ static const struct search_list events[] = {
                     ADD_VALUE (MAX)
                   };
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `FWPM_NET_EVENT_FLAG_X` value and it's name to the `ev_flags[]` array.
+/*
+ * Add a `FWPM_NET_EVENT_FLAG_X` value and it's name to the `ev_flags[]` array.
  */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { FWPM_NET_EVENT_FLAG_##v, "FWPM_NET_EVENT_FLAG_" #v }
@@ -1277,9 +1271,8 @@ static const struct search_list ev_flags[] = {
                     ADD_VALUE (EFFECTIVE_NAME_SET)
      };
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `FWP_DIRECTIONS_X` value and it's name to the `directions[]` array.
+/*
+ * Add a `FWP_DIRECTIONS_X` value and it's name to the `directions[]` array.
  */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { FWP_DIRECTION_##v, #v }
@@ -1333,9 +1326,8 @@ static const struct search_list directions[] = {
 #define _IPPROTO_RESERVED_WNV          260
 #define _IPPROTO_RESERVED_MAX          261
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `_IPPROTO_X` value and it's name to the `protocols[]` array.
+/*
+ * Add a `_IPPROTO_X` value and it's name to the `protocols[]` array.
  * These values are copied from dump.c.
  */
 #undef  ADD_VALUE
@@ -1427,11 +1419,11 @@ static const struct search_list protocols[] = {
 #define FWPM_CALLOUT_FLAG_REGISTERED                 0x00040000
 #endif
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `FWPM_CALLOUT_X` value and it's name to the `callout_flags[]` array.
+#undef ADD_VALUE
+
+/*
+ * Add a `FWPM_CALLOUT_X` value and it's name to the `callout_flags[]` array.
  */
-#undef  ADD_VALUE
 #define ADD_VALUE(v)  { v, #v }
 
 /* Enter flags with highest bit first.
@@ -1472,9 +1464,9 @@ static char         fw_module [_MAX_PATH] = { '\0' };
 /**
  * SpamHaus blocklist features.
  */
-static DWORD        fw_num_SBL_hits = 0;     /**< Number of remote addresses found in DNSBL records. */
-static smartlist_t *fw_SBL_ref_list = NULL;  /**< List of unique DNSBL records found in firewall events. */
-static char        *fw_SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
+static DWORD        num_SBL_hits = 0;      /**< Number of remote addresses found in DNSBL records. */
+static smartlist_t *SBL_entries  = NULL;   /**< List of unique DNSBL records for remote addresses found. */
+static char        *SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
 
 /**
  * \def MAX_DOMAIN_SZ
@@ -1488,16 +1480,17 @@ static char        *fw_SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
 
 /**
  * \struct SID_entry
- * A cache of SIDs for `print_user_id()` and `print_package_id()`.
+ * A cache of SIDs for `print_user_id()` and `print_package_id()`.<br>
+ * SIDs = *Security Identifier*.
  */
 struct SID_entry {
-       SID  *sid_copy;
-       char *sid_str;
-       char  domain [MAX_DOMAIN_SZ];
-       char  account[MAX_ACCOUNT_SZ];
+       SID  *sid_copy;                /**< A copy of the SID used to create this entry */
+       char *sid_str;                 /**< A string representing this SID */
+       char  domain [MAX_DOMAIN_SZ];  /**< The `domain` name it belongs to */
+       char  account[MAX_ACCOUNT_SZ]; /**< The `domain\\user` it belowngs to */
      };
 
-static smartlist_t *fw_SID_list;             /**< A cache of SIDs (Security Identifier) */
+static smartlist_t *SID_entries;             /**< A dynamic list of `SID_entry` items */
 static char         fw_logged_on_user [100]; /**< The name of the logged on user */
 
 /**
@@ -1547,11 +1540,11 @@ static void fw_check_n_format (BOOL init, BOOL push)
  * A cache of filter-IDs and names for `print_filter_rule()`, `print_filter_rule2()` and `print_layer_item2()`.
  */
 struct filter_entry {
-       UINT64 value;
-       char   name [50];
+       UINT64 value;        /**< The filter-value of this item */
+       char   name [50];    /**< The filter-name of this item */
      };
 
-static smartlist_t *fw_filter_list;
+static smartlist_t *filter_entries;  /**< A dynamic list of `struct filter_entry` items */
 
 static char  fw_buf [2000];
 static char *fw_ptr  = fw_buf;
@@ -1649,10 +1642,21 @@ static void fw_add_long_line (const char *start, size_t indent, int brk_ch)
 }
 
 /**
- * \def FW_EVENT_CALLBACK
+ * \def FW_EVENT_CALLBACK(event_ver, callback_ver, allow_member1, allow_member2, drop_member1, drop_member2
  *  The macro for defining the event-callback functions for API-levels 0 - 4.
  *
  *  (since C does not support C++-like templates, do it with this hack).
+ *
+ * \param[in] event_ver      The API-level 0 - 4.
+ * \param[in] callback_ver   The `_FWPM_NET_EVENT_X` version of the event-type. 1 - 5.
+ * \param[in] allow_member1  The `_FWPM_NET_EVENT_X` event member for the `classifyAllow` member.
+ *                           Or NULL for `event_ver` 0 or 1.
+ * \param[in] allow_member2  The `_FWPM_NET_EVENT_X` event member for the `capabilityAllow`.
+ *                           Or NULL for `event_ver` 0 or 1.
+ * \param[in] drop_member1   The `_FWPM_NET_EVENT_X` event member for the `classifyDrop` member.
+ *                           Never NULL.
+ * \param[in] drop_member2   The `_FWPM_NET_EVENT_X` event member for the `capabilityDrop` member.
+ *                           Or NULL for `event_ver` 0 or 1.
  */
 #define FW_EVENT_CALLBACK(event_ver, callback_ver, allow_member1, allow_member2, drop_member1, drop_member2) \
         static void CALLBACK                                                                                 \
@@ -1855,8 +1859,8 @@ BOOL fw_init (void)
    */
   api_version = FW_REDSTONE2_BINARY_VERSION;
 
-  fw_SID_list    = smartlist_new();
-  fw_filter_list = smartlist_new();
+  SID_entries    = smartlist_new();
+  filter_entries = smartlist_new();
   fw_num_rules   = 0;
 
   fw_have_ip2loc4 = (ip2loc_num_ipv4_entries() > 0);
@@ -1892,7 +1896,7 @@ BOOL fw_init (void)
 
 /**
  * `smartlist_wipe()` helper.
- * Free an item `_e` in the `fw_SID_list` smartlist.
+ * Free an item `_e` in the `SID_entries` smartlist.
  */
 static void fw_SID_free (void *_e)
 {
@@ -1915,11 +1919,11 @@ void fw_exit (void)
 
   fw_monitor_stop (FALSE);
 
-  smartlist_wipe (fw_SID_list, fw_SID_free);
-  smartlist_wipe (fw_filter_list, free);
-  smartlist_wipe (fw_SBL_ref_list, free);
+  smartlist_wipe (SID_entries, fw_SID_free);
+  smartlist_wipe (filter_entries, free);
+  smartlist_wipe (SBL_entries, free);
 
-  fw_SID_list = fw_filter_list = fw_SBL_ref_list = NULL;
+  SID_entries = filter_entries = SBL_entries = NULL;
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
@@ -2147,7 +2151,7 @@ BOOL fw_monitor_start (void)
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
 
-  fw_num_events = fw_num_ignored = fw_num_SBL_hits = 0;
+  fw_num_events = fw_num_ignored = num_SBL_hits = 0;
 
   if (ws_sema_inherited && !fw_force_init)
   {
@@ -2876,9 +2880,8 @@ _DEFINE_GUID (FWPM_LAYER_INBOUND_RESERVED2,
               0x46D8,
               0xA2, 0xC7, 0x6A, 0x4C, 0x72, 0x2C, 0xA4, 0xED);
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `_FWPM_LAYER_X` value and it's name to the `fwpm_GUID[]` array.
+/*
+ * Add a `_FWPM_LAYER_X` value and it's name to the `fwpm_GUID[]` array.
  */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { &_FWPM_LAYER_##v, "FWPM_LAYER_" #v }
@@ -3159,7 +3162,7 @@ static BOOL fw_dump_events (void)
   if (!fw_create_engine())
      return (FALSE);
 
-  fw_num_events = fw_num_ignored = fw_num_SBL_hits = 0UL;
+  fw_num_events = fw_num_ignored = num_SBL_hits = 0UL;
 
   event_template.numFilterConditions      = 0;
   event_template.filterCondition          = filter_conditions;
@@ -3274,9 +3277,8 @@ quit:
   return (fw_errno == ERROR_SUCCESS);
 }
 
-/**
- * \def ADD_VALUE(v)
- *  Add a `FWPM_APPC_NETWORK_CAPABILITY_X` value and it's name to the `network_capabilities[]` array.
+/*
+ * Add a `FWPM_APPC_NETWORK_CAPABILITY_X` value and it's name to the `network_capabilities[]` array.
  */
 #undef  ADD_VALUE
 #define ADD_VALUE(v)  { FWPM_APPC_NETWORK_CAPABILITY_##v , "FWPM_APPC_NETWORK_CAPABILITY_" #v }
@@ -3293,7 +3295,7 @@ static const char *get_network_capability_id (int id)
 }
 
 /**
- * Lookup the entry for a `filter` value in the `fw_filter_list` cache.
+ * Lookup the entry for a `filter` value in the `filter_entries` cache.
  * If not found, add an entry for it.
  *
  * \note a `filter == 0` is never valid.
@@ -3308,10 +3310,10 @@ static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
   if (filter == 0UL)
      return (&null_filter);
 
-  max = smartlist_len (fw_filter_list);
+  max = smartlist_len (filter_entries);
   for (i = 0; i < max; i++)
   {
-    fe = smartlist_get (fw_filter_list, i);
+    fe = smartlist_get (filter_entries, i);
     if (filter == fe->value)
        return (fe);
   }
@@ -3325,7 +3327,7 @@ static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
     WideCharToMultiByte (fw_acp, 0, filter_item->displayData.name, -1, fe->name, (int)sizeof(fe->name), NULL, NULL);
     (*p_FwpmFreeMemory0) ((void**)&filter_item);
   }
-  smartlist_add (fw_filter_list, fe);
+  smartlist_add (filter_entries, fe);
   return (fe);
 }
 
@@ -3449,20 +3451,20 @@ static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
   if (!rc || !sbl_ref)
      return;
 
-  if (!fw_SBL_ref_list)
-     fw_SBL_ref_list = smartlist_new();
+  if (!SBL_entries)
+     SBL_entries = smartlist_new();
 
-  max = smartlist_len (fw_SBL_ref_list);
+  max = smartlist_len (SBL_entries);
   for (i = 0; i < max && !found; i++)
-      if (!strcmp(smartlist_get(fw_SBL_ref_list, i), sbl_ref))
+      if (!strcmp(smartlist_get(SBL_entries, i), sbl_ref))
          found = TRUE;
 
   if (!found)
-     smartlist_add (fw_SBL_ref_list, strdup(sbl_ref));
+     smartlist_add (SBL_entries, strdup(sbl_ref));
 
   fw_play_sound (&g_cfg.firewall.sound.beep.event_DNSBL);
 
-  fw_num_SBL_hits++;   /* Increment total "SpamHaus Block List" hits */
+  num_SBL_hits++;   /* Increment total "SpamHaus Block List" hits */
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
 }
 
@@ -3703,9 +3705,23 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
   w_name = (LPCWSTR) header->appId.data;
   w_len  = header->appId.size;
 
+#if 1
+  {
+    int   a_len = w_len + 1;
+    char *a_buf = alloca (a_len);
+
+    a_buf [a_len-1] = L'\0';
+
+    if (WideCharToMultiByte(fw_acp, 0, w_name, w_len, a_buf, a_len, NULL, NULL) == 0)
+         _strlcpy (a_name, "?", sizeof(a_name));
+    else _strlcpy (a_name, volume_to_path(a_buf), a_len);
+  }
+#else
+
   if (WideCharToMultiByte(fw_acp, 0, w_name, w_len, a_name, (int)sizeof(a_name), NULL, NULL) == 0)
        _strlcpy (a_name, "?", sizeof(a_name));
   else _strlcpy (a_name, volume_to_path(a_name), sizeof(a_name));
+#endif
 
   a_base = basename (a_name);
 
@@ -3802,20 +3818,20 @@ static BOOL lookup_account_SID (const SID *sid, const char *sid_str, char *accou
 }
 
 /**
- * Lookup the entry for the `sid` in the `fw_SID_list` cache.
+ * Lookup the entry for the `sid` in the `SID_entries` cache.
  * If not found, add an entry for it.
  *
- * \retval The found or newly allocated `SID_entry`.
+ * \retval `SID_entry` the found or newly allocated `SID_entry`.
  */
 static struct SID_entry *lookup_or_add_SID (SID *sid)
 {
   struct SID_entry *se;
   DWORD  len;
-  int    i, max = smartlist_len (fw_SID_list);
+  int    i, max = smartlist_len (SID_entries);
 
   for (i = 0; i < max; i++)
   {
-    se = smartlist_get (fw_SID_list, i);
+    se = smartlist_get (SID_entries, i);
     if (EqualSid(sid, se->sid_copy))
        return (se);
   }
@@ -3827,7 +3843,7 @@ static struct SID_entry *lookup_or_add_SID (SID *sid)
   ConvertSidToStringSid (sid, &se->sid_str);
 
   lookup_account_SID (sid, se->sid_str, se->account, se->domain);
-  smartlist_add (fw_SID_list, se);
+  smartlist_add (SID_entries, se);
   return (se);
 }
 
@@ -4078,14 +4094,14 @@ void fw_print_statistics (FWPM_STATISTICS *stats)
       if (g_cfg.firewall.show_ipv6)
          trace_printf ("Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
     }
-    if (g_cfg.DNSBL.enable && fw_SBL_ref_list)
+    if (g_cfg.DNSBL.enable && SBL_entries)
     {
-      int i, max = smartlist_len (fw_SBL_ref_list);
+      int i, max = smartlist_len (SBL_entries);
 
       trace_printf ("%d unique remote addresses found in DNSBL block lists. Goto:\n", max);
       for (i = 0; i < max; i++)
           trace_printf ("  ~2%s/SBL%s~0\n",
-                        fw_SpamHaus_URL, (const char*)smartlist_get(fw_SBL_ref_list, i));
+                        SpamHaus_URL, (const char*)smartlist_get(SBL_entries, i));
       trace_puts ("  for more information.\n");
     }
     else
@@ -4186,8 +4202,8 @@ static void fw_console_stats (void)
   if (last_num_events == fw_num_events)
      return;
 
-  if (g_cfg.DNSBL.enable && fw_SBL_ref_list)
-       _itoa (fw_num_SBL_hits, num_DNSBL, 10);
+  if (g_cfg.DNSBL.enable && SBL_entries)
+       _itoa (num_SBL_hits, num_DNSBL, 10);
   else strcpy (num_DNSBL, "-");
 
   snprintf (buf, sizeof(buf), "%s, events: %lu, DNSBL: %s",
@@ -4309,6 +4325,10 @@ int main (int argc, char **argv)
 
   program = set_net_program (argc-optind, argv+optind);
 
+  if (dump_events || dump_rules || dump_callouts || log_file)
+     g_cfg.firewall.sound.enable = FALSE;
+
+
   /* Because we use `getservbyport()` above, we need to call `WSAStartup()` first.
    */
   if (WSAStartup(ver, &wsa) != 0 || wsa.wVersion < ver)
@@ -4364,9 +4384,6 @@ int main (int argc, char **argv)
   }
   else if (fw_monitor_start())
   {
-    if (log_file)
-       g_cfg.firewall.sound.enable = FALSE;
-
     fw_console_stats();  /* Clear the console title bar */
     signal (SIGINT, sig_handler);
     rc = run_program (program);
