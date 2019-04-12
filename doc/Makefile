@@ -1,5 +1,5 @@
 #
-# This is a GNU-make Makefile for Wsock-Trace's './doc'
+# This is a GNU-make Makefile for Wsock-Trace's './doc/wsock_trace.chm'
 #
 LOG_FILE = doxygen.log
 

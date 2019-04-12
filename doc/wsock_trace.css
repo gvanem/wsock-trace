@@ -9,10 +9,10 @@ table     { border="0" cellspacing="0" cellpadding="0" }
 
 h1, h2, h3, h4, h5, h6, th { color = darkblue }
 
-h1   { border-top:solid 5pt; font-size:300% }
+h1   { border-top:solid 5pt; font-size:200% }
 h2   { margin-top:20pt; margin-left:0ex; font-style:italic; border-top:solid 1pt }
-h3   { margin-top:20pt; font-style:italic; font-size:140% }
-h4   { margin-top:20pt; font-style:italic; font-size:180% }
+h3   { margin-top:20pt; font-style:italic; font-size:120% }
+h4   { margin-top:20pt; font-style:italic; font-size:160% }
 code { color: #4665A2; }
 
 td { background:#fffff3 }
@@ -24,7 +24,7 @@ a:hover { color:black; background:yellow }
 
 .name      { text-align: left }
 .pfooter   { margin-top:4ex; border-top:thin solid; margin-left=-3ex }
-.pheader   { font-style:normal; margin-top:0; margin-left:-3ex; margin-bottom:4ex }
+.pheader   { font-style:normal; margin-top:0; margin-left:-3ex; margin-bottom:1pt }
 .stdhead   { background:#804080; color:#FFFFBF }
 .sbemu th  { border-left:solid 1pt; border-right:solid 1pt; text-align:left }
 
@@ -38,5 +38,5 @@ pre.fragment {
   font-size:  9pt;
   line-height: 125%;
   font-family: monospace, fixed;
-  font-size: 105%;
+  font-size: 100%;
 }
