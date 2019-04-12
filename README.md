@@ -353,7 +353,7 @@ Note that some virus scanners may find the behaviour of programs linked to
       Do it for selected processes only.
 
    5. Deny certain applications to use `AF_INET6` protocols (return `-1` on
-      `socket(AF_INET6,...)`.
+      `socket(AF_INET6,...)`).
 
    6. Make it possible to switch network stacks at run-time:
       select amongst Winsock2, **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
