@@ -51,3 +51,5 @@ wsock_trace.appveyor
 ws_trace.lck
 ws_trace.hnd
 ws_trace.hnd-journal
+doc/doxygen.log
+doc/output/
