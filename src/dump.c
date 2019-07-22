@@ -1590,7 +1590,7 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
          comment = " (in 'hosts' file)";
     else comment = "";
 
-    trace_indent (g_cfg.trace_indent+4);
+    trace_indent (g_cfg.trace_indent+2);
     addr_len = (const int*)&ai->ai_addrlen;
 
     trace_printf ("ai_canonname: %s, ai_addr: %s%s\n",
