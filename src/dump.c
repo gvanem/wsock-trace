@@ -1580,7 +1580,7 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
     const char *comment;
 
     trace_indent (g_cfg.trace_indent+2);
-    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
+    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s,\n",
                   ai_flags_decode(ai->ai_flags),
                   socket_family(ai->ai_family),
                   socket_type(ai->ai_socktype),
