@@ -17,7 +17,6 @@
  */
 struct host_entry {
        char   host_name [MAX_HOST_LEN];  /**< name of `etc/hosts` entry */
-       size_t addr_size;                 /**< size of this adresses (4 or 16) */
        int    addr_type;                 /**< type AF_INET or AF_INET6 */
        char   addr [IN6ADDRSZ];          /**< the actual address */
      };
@@ -27,19 +26,29 @@ static smartlist_t *hosts_list;
 /**
  * Add an entry to the given `smartlist_t` that becomes `hosts_list`.
  */
-static void add_entry (smartlist_t *sl, const char *name, const void *addr, size_t size, int af_type)
+static void add_entry (smartlist_t *sl, const char *name, const void *addr, int af_type)
 {
   struct host_entry *he;
+  int    asize;
 
-  assert (size <= sizeof(struct in6_addr));
+  switch (af_type)
+  {
+    case AF_INET:
+         asize = sizeof(struct in_addr);
+         break;
+    case AF_INET6:
+         asize = sizeof(struct in6_addr);
+         break;
+    default:
+         assert (0);
+  }
 
   he = calloc (1, sizeof(*he));
   if (he)
   {
     he->addr_type = af_type;
-    he->addr_size = size;
     _strlcpy (he->host_name, name, sizeof(he->host_name));
-    memcpy (&he->addr, addr, size);
+    memcpy (&he->addr, addr, asize);
     smartlist_add (sl, he);
   }
 }
@@ -93,25 +102,35 @@ static void parse_hosts (smartlist_t *sl, const char *line)
   char           *ip   = _strtok_r (p, " \t", &tok_buf);
   char           *name = _strtok_r (NULL, " \t", &tok_buf);
 
-  TRACE (3, "ip: '%s', name: '%s'\n", ip, name);
-
   if (!name || !ip)
-     return;
+  {
+    TRACE (3, "Bogus, ip: '%s', name: '%s'\n", ip, name);
+    return;
+  }
 
   if (_wsock_trace_inet_pton(AF_INET, ip, (u_char*)&in4) == 1)
-       add_entry (sl, name, &in4, sizeof(in4), AF_INET);
+  {
+    TRACE (3, "AF_INET:  '%s', name: '%s'\n", ip, name);
+    add_entry (sl, name, &in4, AF_INET);
+  }
   else if (_wsock_trace_inet_pton(AF_INET6, ip, (u_char*)&in6) == 1)
-       add_entry (sl, name, &in6, sizeof(in6), AF_INET6);
+  {
+    TRACE (3, "AF_INET6: '%s', name: '%s'\n", ip, name);
+    add_entry (sl, name, &in6, AF_INET6);
+  }
+  else
+    TRACE (3, "Bogus, ip: '%s', name: '%s'\n", ip, name);
 }
 
 /**
  * Print the `hosts_list` if `g_cfg.trace_level >= 3`.
  */
-static void hosts_file_dump (void)
+static void hosts_file_dump (int max, int duplicates)
 {
-  int i, max = smartlist_len (hosts_list);
+  int i;
 
-  trace_printf ("\n%d entries in \"%s\" sorted on name:\n", max, g_cfg.hosts_file);
+  trace_printf ("\n%d entries in \"%s\" sorted on name (%d duplicates):\n",
+                max, g_cfg.hosts_file, duplicates);
 
   for (i = 0; i < max; i++)
   {
@@ -120,7 +139,7 @@ static void hosts_file_dump (void)
 
     wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
     trace_printf ("%3d: %-40s %-20s AF_INET%c\n",
-                  i, he->host_name, buf,
+                  i+1, he->host_name, buf,
                   (he->addr_type == AF_INET6) ? '6' : ' ');
   }
 }
@@ -146,10 +165,16 @@ void hosts_file_init (void)
                  smartlist_read_file (g_cfg.hosts_file, parse_hosts) : NULL;
   if (hosts_list)
   {
-    smartlist_sort (hosts_list, hosts_compare_name);
+    int dups, max;
 
+    smartlist_sort (hosts_list, hosts_compare_name);
+    dups = smartlist_make_uniq (hosts_list, hosts_compare_name, free);
+
+    /* The new length after the duplicates were removed.
+     */
+    max = smartlist_len (hosts_list);
     if (g_cfg.trace_level >= 3)
-       hosts_file_dump();
+       hosts_file_dump (max, dups);
   }
 }
 
@@ -160,7 +185,7 @@ int hosts_file_check_hostent (const char *name, const struct hostent *host)
 {
   const char              **addresses;
   const struct host_entry  *he;
-  int                       i, num = 0;
+  int                       i, asize, num = 0;
 
   addresses = (const char**) host->h_addr_list;
 
@@ -173,8 +198,19 @@ int hosts_file_check_hostent (const char *name, const struct hostent *host)
 
   for (i = num = 0; he && addresses[i]; i++)
   {
+    switch (he->addr_type)
+    {
+      case AF_INET:
+           asize = sizeof(struct in_addr);
+           break;
+      case AF_INET6:
+           asize = sizeof(struct in6_addr);
+           break;
+      default:
+           return (num);
+    }
     if (he->addr_type == host->h_addrtype &&
-        !memcmp(addresses[i], &he->addr, he->addr_size))
+        !memcmp(addresses[i], &he->addr, asize))
        num++;
   }
   return (num);
