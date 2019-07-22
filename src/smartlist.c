@@ -391,12 +391,13 @@ int smartlist_duplicates (smartlist_t *sl, smartlist_sort_func compare)
  * \param[in] sl      the smartlist to operate on.
  * \param[in] compare the comparison function used to check for duplicate members.
  * \param[in] free_fn the function used to free a duplicate member. Optional.
+ * \retval            the number of duplicate members.
  *
  * \note Preserves the list order.
  */
-void smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*free_fn)(void *a))
+int smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*free_fn)(void *a))
 {
-  int i;
+  int i, dups = 0;
 
   for (i = 1; i < sl->num_used; i++)
   {
@@ -406,8 +407,10 @@ void smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*f
       if (free_fn)
         (*free_fn) (sl->list[i]);
       smartlist_del_keeporder (sl, i--);
+      dups++;
     }
   }
+  return (dups);
 }
 
 /**

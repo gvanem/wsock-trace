@@ -60,7 +60,7 @@ extern void         smartlist_insert (smartlist_t *sl, int idx, void *val);
 extern void         smartlist_append (smartlist_t *sl1, const smartlist_t *sl2);
 extern void         smartlist_sort (smartlist_t *sl, smartlist_sort_func compare);
 extern int          smartlist_duplicates (smartlist_t *sl, smartlist_sort_func compare);
-extern void         smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*free_fn)(void *a));
+extern int          smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*free_fn)(void *a));
 extern smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse);
 
 extern int   smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
