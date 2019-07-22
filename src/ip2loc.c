@@ -75,7 +75,7 @@
  */
 #define API_VERSION_MAJOR   8
 #define API_VERSION_MINOR   0
-#define API_VERSION_MICRO   7
+#define API_VERSION_MICRO   8
 
 /**
  * Flags used to determine what to look for in `IP2Location_read_record()`.
