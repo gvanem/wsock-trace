@@ -1,11 +1,10 @@
-; Spamhaus IPv6 DROP List 2019/07/06 - (c) 2019 The Spamhaus Project
+; Spamhaus IPv6 DROP List 2019/07/19 - (c) 2019 The Spamhaus Project
 ; https://www.spamhaus.org/drop/dropv6.txt
 ; Last-Modified: Tue, 11 Jun 2019 08:41:25 GMT
-; Expires: Sat, 06 Jul 2019 08:21:40 GMT
+; Expires: Fri, 19 Jul 2019 19:45:03 GMT
 2a0d:ae40::/29 ; SBL448391
 2a0c:7b40::/29 ; SBL444253
 2a09:9f00::/29 ; SBL447797
-2a0c:fb40::/29 ; SBL448785
 2a0b:38c0::/29 ; SBL448393
 2a0a:d700::/29 ; SBL335705
 2804:1b3c::/32 ; SBL439741
