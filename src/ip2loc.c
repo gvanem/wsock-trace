@@ -165,6 +165,11 @@ typedef struct ipv_t {
  */
 static struct IP2Location *ip2loc_handle;
 
+/**
+ * Set to TRUE in case `open_file()` found the .bin-file to be junk.
+ */
+static BOOL ip2loc_bad;
+
 /** Number of loops in `IP2Location_get_ipv4_record()` to find an IPv4 entry.
  */
 static DWORD num_4_loops;
@@ -239,6 +244,13 @@ static IP2Location *open_file (const char *fname)
   else if (IPvX == loc->ipv4_db_count && loc->ipv6_db_count == 0)
      is_IPv4_only = TRUE;
 
+  if (loc->db_day == 0 || loc->db_day > 31 || loc->db_month == 0 || loc->db_month >= 12)
+  {
+    ip2loc_bad = TRUE;   /* Do not attempt this again */
+    ip2loc_exit();
+    WARNING ("IP2Loc file '%s' seems to contain junk.\n", fname);
+  }
+  else
   {
     static const char *months [13] = { "",
                                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -264,7 +276,7 @@ static IP2Location *open_file (const char *fname)
  */
 BOOL ip2loc_init (void)
 {
-  if (!g_cfg.geoip_enable || !g_cfg.ip2location_bin_file)
+  if (!g_cfg.geoip_enable || !g_cfg.ip2location_bin_file || ip2loc_bad)
      return (FALSE);
 
   if (!ip2loc_handle)
