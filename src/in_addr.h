@@ -53,9 +53,9 @@
 /*
  * In MS's <ws2tcpip.h> header, the 'addr' parameter in 'inet_ntop()'
  * sensible is defined as 'const void *'.
- * But in some older MinGW/CygWin it is 'void *'.
+ * But in some older MinGW it is 'void *'.
  */
-#if (defined(__MINGW64_VERSION_MAJOR) && (__MINGW64_VERSION_MAJOR <= 4)) || defined(__CYGWIN__)
+#if (defined(__MINGW64_VERSION_MAJOR) && (__MINGW64_VERSION_MAJOR <= 4))
   #define INET_NTOP_ADDR void *
   #define INET_NTOP_RET  PCSTR
 #else
