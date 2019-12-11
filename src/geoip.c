@@ -1862,22 +1862,46 @@ static void test_addr_common (const struct in_addr  *a4,
   }
 }
 
+static struct addrinfo *resolve_addr_or_name (const char *addr_or_host, int af)
+{
+  struct addrinfo hints, *res = NULL;
+
+  memset (&hints, '\0', sizeof(hints));
+  hints.ai_family   = af;
+  hints.ai_socktype = SOCK_STREAM;
+  if (getaddrinfo(addr_or_host, NULL, &hints, &res) == 0)
+     return (res);
+  return (NULL);
+}
+
 static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
 {
-  struct in_addr addr;
+  struct addrinfo *ai = resolve_addr_or_name (ip4_addr, AF_INET);
 
-  if (wsock_trace_inet_pton4((const char*)ip4_addr, (u_char*)&addr) == 1)
-       test_addr_common (&addr, NULL, use_ip2loc);
-  else printf ("'%s': Invalid address: %s.\n", ip4_addr, get_ws_error());
+  if (ai)
+  {
+    const struct sockaddr_in *sa = (struct sockaddr_in*) ai->ai_addr;
+
+    test_addr_common (&sa->sin_addr, NULL, use_ip2loc);
+    freeaddrinfo (ai);
+  }
+  else
+    printf ("'%s': Invalid address: %s.\n", ip4_addr, get_ws_error());
 }
 
 static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
 {
-  struct in6_addr addr;
+  struct addrinfo *ai = resolve_addr_or_name (ip6_addr, AF_INET6);
 
-  if (wsock_trace_inet_pton6(ip6_addr,(u_char*)&addr) == 1)
-       test_addr_common (NULL, &addr, use_ip2loc);
-  else printf ("Invalid address: %s.\n", get_ws_error());
+  if (ai)
+  {
+    const struct sockaddr_in6 *sa = (struct sockaddr_in6*) ai->ai_addr;
+
+    test_addr_common (NULL, &sa->sin6_addr, use_ip2loc);
+    freeaddrinfo (ai);
+  }
+  else
+    printf ("'%s': Invalid address: %s.\n", ip6_addr, get_ws_error());
 }
 
 /**
@@ -2265,6 +2289,9 @@ int main (int argc, char **argv)
   else
   {
     smartlist_t *list = make_argv_list (argc, argv);
+    WSADATA wsa;
+
+    WSAStartup (MAKEWORD(1,1), &wsa);
 
     if (do_4)
        test_addr_list (list, use_ip2loc, test_addr4);
