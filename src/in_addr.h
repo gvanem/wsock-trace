@@ -52,17 +52,20 @@
 
 /*
  * In MS's <ws2tcpip.h> header, the 'addr' parameter in 'inet_ntop()'
- * sensible is defined as 'const void *'. But in MinGW/CygWin it is 'void *'.
+ * sensible is defined as 'const void *'.
+ * But in some older MinGW/CygWin it is 'void *'.
  */
-#if defined(__MINGW32__) || defined(__CYGWIN__)
+#if (defined(__MINGW64_VERSION_MAJOR) && (__MINGW64_VERSION_MAJOR <= 4)) || defined(__CYGWIN__)
   #define INET_NTOP_ADDR void *
+  #define INET_NTOP_RET  PCSTR
 #else
   #define INET_NTOP_ADDR const void *
+  #define INET_NTOP_RET  LPCSTR
 #endif
 
 #if !defined(NTDDI_VERSION) || (NTDDI_VERSION < NTDDI_VISTA) || defined(__MINGW32__) || defined(__CYGWIN__)
-  EXPORT PCSTR WSAAPI inet_ntop (INT family, INET_NTOP_ADDR addr, PSTR string_buf, size_t string_buf_size);
-  EXPORT INT   WSAAPI inet_pton (INT family, PCSTR addr_string, void *addr_buf);
+  EXPORT WSAAPI INET_NTOP_RET inet_ntop (INT family, INET_NTOP_ADDR addr, PSTR string_buf, size_t string_buf_size);
+  EXPORT WSAAPI INT           inet_pton (INT family, PCSTR addr_string, void *addr_buf);
 #endif
 
 extern BOOL       call_WSASetLastError, leading_zeroes;

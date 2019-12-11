@@ -58,7 +58,7 @@ BOOL is_ip4_addr (const char *str)
  *
  * \author Paul Vixie, 1996.
  */
-/* EXPORT */ PCSTR WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, size_t size)
+/* EXPORT */ INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, size_t size)
 {
   switch (af)
   {
