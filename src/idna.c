@@ -220,7 +220,7 @@ BOOL IDNA_CheckCodePage (UINT cp)
   smartlist_sort (cp_list, cp_compare);
   max = smartlist_len (cp_list);
 
-  TRACE (3, "%d Built-in CodePages:\n", max);
+  TRACE (3, "%d built-in CodePages:\n", max);
 
   for (i = 0; i < max; i++)
   {
@@ -624,7 +624,7 @@ BOOL IDNA_convert_to_ACE (
   len = name - in_name;
   *name = '\0';
   *size = len;
-  TRACE (3, "IDNA_convert_to_ACE: `%s', %u bytes\n", in_name, (unsigned)len);
+  TRACE (2, "IDNA_convert_to_ACE() -> `%s', %u bytes\n", in_name, (unsigned)len);
   rc = TRUE;
 
 quit:
