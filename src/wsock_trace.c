@@ -670,8 +670,8 @@ static const char *inet_ntop2 (const char *addr, int family)
   PCSTR  rc;
 
   WSAERROR_PUSH();
-  rc  = (*p_inet_ntop) (family, (void*)addr, buf, sizeof(buf));
 
+  rc = (*p_inet_ntop) (family, (void*)addr, buf, sizeof(buf));
   if (!rc)
      strcpy (buf, "??");
 
