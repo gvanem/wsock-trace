@@ -522,7 +522,7 @@ static FILE *open_config_file (const char *base_name)
     }
   }
   else
-    snprintf (fname, sizeof(fname), "%s\\%s", curr_dir, base_name);
+    snprintf (fname, sizeof(fname), "%s\\%.30s", curr_dir, base_name);
 
   fil = fopen (fname, "r");
   if (!fil)
