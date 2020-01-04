@@ -171,8 +171,8 @@ $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXP
 	@del $(WSOCK_TRACE_LIB:.lib=.exp)
 
 install: all
-	copy $(WSOCK_TRACE_LIB)               "$(LIB_TARGET)"
-	copy $(WSOCK_TRACE_DLL)               "$(BIN_TARGET)"
+	copy $(WSOCK_TRACE_LIB)         "$(LIB_TARGET)"
+	copy $(WSOCK_TRACE_DLL)         "$(BIN_TARGET)"
 	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
 
 uninstall:
