@@ -263,12 +263,28 @@
 #define IPV6_RECVTCLASS 40
 #endif
 
-#ifndef IP_WFP_REDIRECT_CONTEXT
-#define IP_WFP_REDIRECT_CONTEXT 48 // ??
+#ifndef IP_WFP_REDIRECT_RECORDS
+#define IP_WFP_REDIRECT_RECORDS 60  /* WFP's Connection Redirect Records. */
 #endif
 
-#ifndef IP_WFP_REDIRECT_RECORDS
-#define IP_WFP_REDIRECT_RECORDS 49 // ??
+#ifndef IP_WFP_REDIRECT_CONTEXT
+#define IP_WFP_REDIRECT_CONTEXT 70   /* WFP's Connection Redirect Context. */
+#endif
+
+#ifndef IP_MTU_DISCOVER
+#define IP_MTU_DISCOVER         71   /* Set/get path MTU discover state. */
+#endif
+
+#ifndef IP_MTU
+#define IP_MTU                  73   /* Get path MTU. */
+#endif
+
+#ifndef IP_NRT_INTERFACE
+#define IP_NRT_INTERFACE        74   /* Set NRT interface constraint (outbound). */
+#endif
+
+#ifndef IP_RECVERR
+#define IP_RECVERR              75   /* Receive ICMP errors. */
 #endif
 
 /*
@@ -871,8 +887,12 @@ static const struct search_list ip4_options[] = {
                     ADD_VALUE (IP_TCLASS),
                     ADD_VALUE (IP_RECVTCLASS),
                     ADD_VALUE (IP_ORIGINAL_ARRIVAL_IF),
-                    ADD_VALUE (IP_WFP_REDIRECT_CONTEXT),
                     ADD_VALUE (IP_WFP_REDIRECT_RECORDS),
+                    ADD_VALUE (IP_WFP_REDIRECT_CONTEXT),
+                    ADD_VALUE (IP_MTU_DISCOVER),
+                    ADD_VALUE (IP_MTU),
+                    ADD_VALUE (IP_NRT_INTERFACE),
+                    ADD_VALUE (IP_RECVERR),
                     ADD_VALUE (IP_UNSPECIFIED_TYPE_OF_SERVICE)  /* == -1 = UINT_MAX */
                   };
 
