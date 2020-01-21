@@ -2007,14 +2007,14 @@ static int trace_printf_cc (const char            *country_code,
 
   if (country_code && isalpha((int)*country_code))
   {
-   /* Print Country-code (and location) only once for a host with multiple addresses.
-    * Like with 'www.google.no':
-    *   193.212.4.117, 193.212.4.120, 193.212.4.123, 193.212.4.119,
-    *   193.212.4.122, 193.212.4.121, 193.212.4.116, 193.212.4.118
-    *
-    * PS. there should be no way to have 'location != NULL' and a
-    *     'country_code == NULL'.
-    */
+    /* Print Country-code (and location) only once for a host with multiple addresses.
+     * Like with 'www.google.no':
+     *   193.212.4.117, 193.212.4.120, 193.212.4.123, 193.212.4.119,
+     *   193.212.4.122, 193.212.4.121, 193.212.4.116, 193.212.4.118
+     *
+     * PS. there should be no way to have 'location != NULL' and a
+     *     'country_code == NULL'.
+     */
     cc_equal = (cc_last && !strcmp(country_code,cc_last));
     if (!cc_equal)
        trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
