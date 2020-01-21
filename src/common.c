@@ -189,9 +189,9 @@ static const struct WSAE_search_list err_list[] = {
   ADD_VALUE (WSA_QOS_RESERVED_PETYPE,   "A reserved policy element was found in the QOS provider-specific buffer"),
 
   /* WSAx overlapped errors */
-  ADD_VALUE (WSA_IO_PENDING,            "Overlapped I/O operation in progress"),
-  ADD_VALUE (WSA_IO_INCOMPLETE,         "Overlapped I/O operation not in signalled status"),
-  ADD_VALUE (WSA_INVALID_HANDLE,        "Invalid handle")
+  ADD_VALUE (WSA_IO_PENDING,            "Overlapped I/O operation in progress"),              /* == ERROR_IO_PENDING == 997 */
+  ADD_VALUE (WSA_IO_INCOMPLETE,         "Overlapped I/O operation not in signalled status"),  /* == ERROR_IO_INCOMPLETE == 996 */
+  ADD_VALUE (WSA_INVALID_HANDLE,        "Invalid handle")                                     /* == WSANOTSOCK == 10038 */
 };
 
 /*
@@ -199,22 +199,38 @@ static const struct WSAE_search_list err_list[] = {
  */
 char *ws_strerror (DWORD err, char *buf, size_t len)
 {
+  #define CHECK_AND_JUMP(err_val, idx)               \
+          do {                                       \
+            if (err == err_val) {                    \
+               el = &err_list [DIM(err_list) - idx]; \
+               goto fill;                            \
+            }                                        \
+          } while (0)
+
   const struct WSAE_search_list *el = err_list;
-  size_t i;
+  size_t i = 0;
 
   if (err == 0)
      return ("No error");
 
-  /* Some programs (notably Nmap and Nping) calls 'WSAGetLastError()'
+  /* First check for 'WSAx overlapped errors' to get an English text for
+   * the one in the above table.
+   *
+   * Some programs (notably Nmap and Nping) calls 'WSAGetLastError()'
    * when they ought to call 'GetLastError()'. Handle this so tracing
    * of e.g. 'WSAGetLastError()' returns the correct error-string.
    */
+  CHECK_AND_JUMP (WSA_IO_PENDING, 3);
+  CHECK_AND_JUMP (WSA_IO_INCOMPLETE, 2);
+  CHECK_AND_JUMP (WSA_INVALID_HANDLE, 1);
+
   if (err > 0 && err < WSABASEERR)
      return win_strerror (err);
 
-  for (i = 0; i < DIM(err_list); i++, el++)
+  for ( ; i < DIM(err_list); i++, el++)
       if (err == el->err)
       {
+      fill:
         if (g_cfg.short_errors)
              snprintf (buf, len, "%s (%lu)", el->short_name, DWORD_CAST(err));
         else snprintf (buf, len, "%s: %s (%lu)", el->short_name, el->full_name, DWORD_CAST(err));
