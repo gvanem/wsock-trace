@@ -29,7 +29,7 @@ static smartlist_t *hosts_list;
 static void add_entry (smartlist_t *sl, const char *name, const void *addr, int af_type)
 {
   struct host_entry *he;
-  int    asize;
+  int    asize = 0;
 
   switch (af_type)
   {
@@ -44,7 +44,7 @@ static void add_entry (smartlist_t *sl, const char *name, const void *addr, int 
   }
 
   he = calloc (1, sizeof(*he));
-  if (he)
+  if (he && asize)
   {
     he->addr_type = af_type;
     _strlcpy (he->host_name, name, sizeof(he->host_name));
