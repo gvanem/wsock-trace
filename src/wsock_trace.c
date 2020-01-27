@@ -1520,10 +1520,10 @@ EXPORT int WINAPI gethostname (char *buf, int buf_len)
 
   ENTER_CRIT();
 
-  WSTRACE ("gethostname (->%.*s) --> %s", buf_len, buf, get_error(rc));
+  WSTRACE ("gethostname (0x%p, %d) --> \"%.*s\", %s", buf, buf_len, buf_len, buf, get_error(rc));
 
   LEAVE_CRIT();
- return (rc);
+  return (rc);
 }
 
 EXPORT int WINAPI listen (SOCKET s, int backlog)
