@@ -70,10 +70,13 @@ static DWORD crc_bytes (const char *buf, size_t len);
 
 #define TRACE_BUF_SIZE (2*1024)
 
+/* \todo: these should be "Thread Local" variables.
+ */
 static char *trace_ptr, *trace_end;
 static char  trace_buf [TRACE_BUF_SIZE];
 
 static BOOL tilde_escape = TRUE;
+static BOOL trace_get_color = FALSE;
 
 void common_init (void)
 {
@@ -1089,8 +1092,7 @@ int trace_vprintf (const char *fmt, va_list args)
 
 int trace_putc (int ch)
 {
-  static BOOL get_color = FALSE;  /* \todo: this must be a "Thread Local" value */
-  int    rc = 0;
+  int rc = 0;
 
   if (!trace_ptr || !trace_end)
      return (0);
@@ -1098,12 +1100,12 @@ int trace_putc (int ch)
   assert (trace_ptr >= trace_buf);
   assert (trace_ptr < trace_end-1);
 
-  if (tilde_escape && get_color && !g_cfg.test_trace)
+  if (tilde_escape && trace_get_color && !g_cfg.test_trace)
   {
     const WORD *color;
     int         col_idx;
 
-    get_color = FALSE;
+    trace_get_color = FALSE;
 
     /* If we got "~~", print a single "~"
     */
@@ -1161,7 +1163,7 @@ int trace_putc (int ch)
 
   if (tilde_escape && ch == '~' && !g_cfg.test_trace)
   {
-    get_color = TRUE;
+    trace_get_color = TRUE;
     return (1);
   }
 
