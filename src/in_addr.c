@@ -29,6 +29,8 @@
 #include "common.h"
 #include "in_addr.h"
 
+/* \todo: these publics should be "Thread Local" variables.
+ */
 BOOL call_WSASetLastError = TRUE;
 BOOL leading_zeroes       = FALSE;
 
