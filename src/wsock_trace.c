@@ -1460,9 +1460,22 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
   LEAVE_CRIT();
 
-  /* The 'select()' can block for a long time. And other calls from other
+  /**
+   * The `select()` can block for a long time. And other calls from other
    * threads can call us. Therefore we must not be in a critical section
-   * while 'select()' is blocking.
+   * while `select()` is blocking.
+   *
+   * \note
+   * Several POSIX programs uses `select()` like this:
+   *
+   *   30.812 sec: src/Ntop.cpp(553) (Ntop::start+1018):
+   *     select (n=1, rd, NULL, NULL, {tv=0.711000s}) --> (rc=-1) WSAEINVAL (10022).
+   *     fd_input  -> rd: <no fds>
+   *                  wr: <not set>
+   *                  ex: <not set>
+   *
+   * In this case a `usleep (711000)` which Winsock does not like since no sockets
+   * are set in `rd_fd`. Maybe we should just add a dummy socket to `rd_fd`?
    */
   rc = (*p_select) (nfds, rd_fd, wr_fd, ex_fd, tv);
 
