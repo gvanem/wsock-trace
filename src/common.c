@@ -487,7 +487,7 @@ const char *list_lookup_name (unsigned value, const struct search_list *list, in
     num--;
     list++;
   }
-  return _itoa (value,buf,10);
+  return _itoa (value, buf, 10);
 }
 
 /*
