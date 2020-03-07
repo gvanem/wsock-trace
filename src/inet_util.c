@@ -1283,7 +1283,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
   if (!stricmp(str,"LocalSubnet"))
   {
     *cidr_len = 32;
-    memset (ip4, '\0xFF', sizeof(*ip4));
+    memset (ip4, 0xFF, sizeof(*ip4));
     return (TRUE);
   }
 
@@ -1334,7 +1334,7 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
   if (!stricmp(str,"LocalSubnet"))
   {
     *cidr_len = 32;
-    memset (ip6, '\0xFF', sizeof(*ip6));
+    memset (ip6, 0xFF, sizeof(*ip6));
     return (TRUE);
   }
 
