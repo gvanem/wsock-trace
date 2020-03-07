@@ -1170,8 +1170,6 @@ const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_ad
 
 /*
  * Figure out the prefix length when given an IPv4 "low" and "high" address.
- *
- * Currently not used.
  */
 int INET_util_network_len32 (DWORD hi, DWORD lo)
 {
@@ -1259,6 +1257,100 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
   }
   *p = '\0';
   return strlwr (buf);
+}
+
+/*
+ * Convert a string like '213.199.179.0-213.199.179.255' to CIDR notation '213.199.179/24'.
+ *
+ * \param[in]  `str`       The string to convert to CIDR form.
+ * \param[out] `res`       The resulting `struct in_addr`.
+ * \param[out] `cidr_len`  The resulting length of the CIDR network mask.
+ *                         This is 0 if `str` is not on a `IPa-IPb` form.
+ * \retval      TRUE if `str` is valid.
+ */
+BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, int *cidr_len)
+{
+  struct in_addr a4_low, a4_high;
+  char  *copy, *dash;
+  size_t sz;
+
+  sz = strlen(str) + 1;
+  copy = alloca (sz);
+  memcpy (copy, str, sz);
+
+  /* For now, use these values
+   */
+  if (!stricmp(str,"LocalSubnet"))
+  {
+    *cidr_len = 32;
+    memset (ip4, '\0xFF', sizeof(*ip4));
+    return (TRUE);
+  }
+
+  *cidr_len = 0;
+  memset (ip4, '\0', sizeof(*ip4));
+
+  dash = strchr (copy, '-');
+  if (dash)
+     *dash = '\0';
+
+  if (_wsock_trace_inet_pton(AF_INET, copy, (u_char*)&a4_low) != 1)
+     return (FALSE);
+
+  if (!dash)
+  {
+    *ip4 = a4_low;
+    return (TRUE);
+  }
+  if (_wsock_trace_inet_pton(AF_INET, dash+1, (u_char*)&a4_high) != 1)
+     return (FALSE);
+
+  *ip4 = a4_low;
+  *cidr_len = 32 - INET_util_network_len32 (a4_high.s_addr, a4_low.s_addr);
+  return (TRUE);
+}
+
+/*
+ * Convert a string like 'fe80::/64' to CIDR notation.
+ * Simplified version of the IPv4 version.
+ *
+ * \param[in]  `str`       The string to convert to CIDR form.
+ * \param[out] `res`       The resulting `struct in6_addr`.
+ * \param[out] `cidr_len`  The resulting length of the CIDR network mask.
+ * \retval      TRUE if `str` is valid.
+ */
+BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6, int *cidr_len)
+{
+  struct in6_addr a6;
+  char  *copy, *dash;
+  size_t sz;
+
+  sz = strlen(str) + 1;
+  copy = alloca (sz);
+  memcpy (copy, str, sz);
+
+  /* For now, use these values
+   */
+  if (!stricmp(str,"LocalSubnet"))
+  {
+    *cidr_len = 32;
+    memset (ip6, '\0xFF', sizeof(*ip6));
+    return (TRUE);
+  }
+
+  *cidr_len = 0;
+  memset (ip6, '\0', sizeof(*ip6));
+
+  dash = strchr (copy, '/');
+  if (dash)
+     *dash = '\0';
+
+  if (_wsock_trace_inet_pton(AF_INET6, copy, (u_char*)&a6) != 1)
+     return (FALSE);
+
+  *ip6 = a6;
+  *cidr_len = dash ? atoi (dash+1) : 0;
+  return (TRUE);
 }
 
 /**
