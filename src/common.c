@@ -887,7 +887,6 @@ char *fix_drive (char *path)
 const char *shorten_path (const char *path)
 {
   const char *real_name = fname_cache_get (path);
-  size_t      len       = strlen (prog_dir);
 
   if (!real_name)
   {
@@ -895,9 +894,13 @@ const char *shorten_path (const char *path)
     if (!real_name)
        return (path);
   }
-  if (!g_cfg.use_full_path && len >= 3 && !strnicmp(prog_dir,path,len))
-     return (real_name + len);
+  if (!g_cfg.use_full_path)
+  {
+    size_t len = strlen (prog_dir);
 
+    if (len >= 3 && !strnicmp(prog_dir,path,len))
+       return (real_name + len);
+  }
   return (real_name);
 }
 
@@ -913,7 +916,6 @@ static const char *fname_cache_get (const char *fname)
     return (NULL);
   }
   max = smartlist_len (fname_list);
-
   for (i = 0; i < max; i++)
   {
     fe = smartlist_get (fname_list, i);
@@ -1061,7 +1063,7 @@ size_t trace_flush (void)
 
 int trace_printf (const char *fmt, ...)
 {
-  char    buf [800];
+  char    buf [2000];
   int     l1, l2;
   va_list args;
 
@@ -1079,7 +1081,7 @@ int trace_printf (const char *fmt, ...)
 
 int trace_vprintf (const char *fmt, va_list args)
 {
-  char buf [800];
+  char buf [2000];
   int  l1, l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
 
   l1 = trace_puts (buf);
