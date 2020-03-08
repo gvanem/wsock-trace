@@ -9,37 +9,43 @@
  * geoip.c - Part of Wsock-Trace.
  *
  * \todo
- *   Optionally use MaxMind's `GeoLite2-City.mmdb` file and print the location (city) too.
+ *   Use MaxMind's `GeoLite2-City.mmdb` [1] or `DBIP*.mmdb` [2] files and print the location (city + location) too.
  *   This will have to be coded in `geoip_get_location_by_ipv4()` and `geoip_get_location_by_ipv6()`.
  *   Emulate what this command does:
  *     \code
- *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions 0 names en
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip 102.12.212.12 country names en
  *     \endcode
  *   giving:
  *     \code
- *     "New York" <utf8_string>
+ *     "Egypt" <utf8_string>
  *     \endcode
+ *
  *   Or this command:
  *     \code
- *     mmdblookup.exe -f GeoLite2-City.mmdb --ip x.x.x.x subdivisions location
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip 102.12.212.12 city names en
+ *     \endcode
+ *   giving:
+ *     \code
+ *    "Cairo" <utf8_string>
+ *     \endcode
+ *
+ *   Or this command:
+ *     \code
+ *     mmdblookup.exe -f GeoLite2-City.mmdb --ip 102.12.212.12 location
  *     \endcode
  *   giving:
  *     \code
  *     {
- *       "accuracy_radius":
- *         1000 <uint16>
  *       "latitude":
- *         43.048100 <double>
+ *        30.063100 <double>
  *       "longitude":
- *         -76.147400 <double>
- *       "metro_code":
- *         555 <uint16>
- *       "time_zone":
- *         "America/New_York" <utf8_string>
+ *        31.231200 <double>
  *     }
  *     \endcode
  *
- * Ref: https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
+ * Refs:
+ *  [1] https://github.com/maxmind/libmaxminddb/blob/master/doc/libmaxminddb.md
+ *  [2] https://db-ip.com/db
  *
  * \todo Put this inside a `#ifdef USE_MAXMINDDB` section later.
  */
