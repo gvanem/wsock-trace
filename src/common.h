@@ -241,6 +241,7 @@ extern char       *win_strerror (DWORD err);
 extern char       *basename (const char *fname);
 extern char       *dirname (const char *fname);
 extern char       *fix_path (const char *path);
+extern char       *fix_drive (char *path);
 extern char       *copy_path (char *out_path, const char *in_path, char use);
 extern char       *str_replace (int ch1, int ch2, char *str);
 extern const char *shorten_path (const char *path);

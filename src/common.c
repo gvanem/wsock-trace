@@ -867,7 +867,7 @@ const char *path_ltrim (const char *p1, const char *p2)
 /**
  * For consistency, report drive-letter in lower case.
  */
-char *_fix_drive (char *path)
+char *fix_drive (char *path)
 {
   size_t len = strlen (path);
 
@@ -942,7 +942,7 @@ static const char *fname_cache_add (const char *fname)
   if (GetLongPathName(fname, buf, sizeof(buf)))
   {
     fn->real_name = str_replace ('\\', '/', strdup(buf));
-    _fix_drive (fn->real_name);
+    fix_drive (fn->real_name);
   }
   else
     fn->real_name = NULL;
