@@ -939,9 +939,9 @@ static int parse_config_file (FILE *file)
   char        last_section[40];
   unsigned    line  = 0;
   unsigned    lines = 0;
+  BOOL        done = FALSE;
 
   str_replace ('\\', '/', fname);
-  TRACE (4, "file: %s.\n", fname);
 
   /* If for some reason the config-file is missing a "[section]", the
    * default section is "core". This can happen with an old 'wsock_trace'
@@ -962,6 +962,9 @@ static int parse_config_file (FILE *file)
       case CFG_CORE:
            parse_core_settings (key, val, line);
            strcpy (last_section, "core");
+           if (!done)
+              TRACE (1, "Parsing config-file \"%s\" for \"%s\".\n", fname, get_builder());
+           done = TRUE;
            break;
       case CFG_LUA:
            parse_lua_settings (key, val, line);
@@ -1104,6 +1107,9 @@ static void trace_report (void)
     trace_printf ("  # of IP2Location shared-mem index errors: %lu\n",
                   DWORD_CAST(ip2loc_index_errors()));
   }
+
+  if (g_cfg.firewall.enable)
+     fw_report();
 }
 #endif /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
@@ -1140,7 +1146,6 @@ void wsock_trace_exit (void)
   }
 #endif
 
-#if !defined(__WATCOMC__)
   if (g_cfg.firewall.enable)
   {
     TRACE (2, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
@@ -1149,7 +1154,6 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
-#endif
 #endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
   common_exit();
@@ -1427,10 +1431,9 @@ void wsock_trace_init (void)
   TRACE (3, "curr_prog:           '%s'\n"
             "                curr_dir:            '%s'\n"
             "                prog_dir:            '%s'\n"
-            "                get_builder():        %s\n"
             "                get_dll_short_name(): %s\n"
             "                get_dll_build_date(): %s\n",
-         curr_prog, curr_dir, prog_dir, get_builder(), get_dll_short_name(), get_dll_build_date());
+         curr_prog, curr_dir, prog_dir, get_dll_short_name(), get_dll_build_date());
 
   geoip_init (NULL, NULL);
 
@@ -1488,7 +1491,7 @@ void init_ptr (const void **ptr, const char *ptr_name)
   }
 
   if (cleaned_up)
-     TRACE (0, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
+     TRACE (1, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
 #endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
