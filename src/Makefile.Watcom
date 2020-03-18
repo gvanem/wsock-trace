@@ -31,6 +31,7 @@ WSOCK_TRACE_OBJS = $(OBJ_DIR)\wsock_trace.obj     &
                    $(OBJ_DIR)\cpu.obj             &
                    $(OBJ_DIR)\dnsbl.obj           &
                    $(OBJ_DIR)\dump.obj            &
+                   $(OBJ_DIR)\firewall.obj        &
                    $(OBJ_DIR)\geoip.obj           &
                    $(OBJ_DIR)\geoip-null.obj      &
                    $(OBJ_DIR)\overlap.obj         &

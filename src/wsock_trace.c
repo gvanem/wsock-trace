@@ -775,13 +775,11 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   if (startup_count < INT_MAX)
      startup_count++;
 
-#if !defined(__WATCOMC__)
   if (startup_count == 1 && g_cfg.firewall.enable)
   {
     fw_init();
     fw_monitor_start();
   }
-#endif
 
   ENTER_CRIT();
   WSTRACE ("WSAStartup (%u.%u) --> %s",
@@ -1778,7 +1776,10 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   if (rc == NO_ERROR)
   {
     /* If the transfer is overlapped this counter should be
-     * updated in 'WSAGetOverlappedResult()'
+     * updated in 'WSAGetOverlappedResult()'.
+     *
+     * But this may not work so maybe we need to hook
+     * 'PostQueuedCompletionStatus()' and update the recv/transmit counters there?
      */
     g_cfg.counts.recv_bytes += size;
   }
