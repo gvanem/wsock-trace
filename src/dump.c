@@ -1837,8 +1837,8 @@ static void dump_provider_path (const GUID *guid, const void *provider_path_func
   func_WSCGetProviderPath p_WSCGetProviderPath = (func_WSCGetProviderPath) provider_path_func;
 
   (*p_WSCGetProviderPath) ((GUID*)guid, path, &path_len, &error);
-
-  dump_one_proto_infof ("Provider Path:      \"%" WCHAR_FMT "\"\n", path);
+  dump_one_proto_infof ("Provider Path:      \"%s\"\n", get_path(NULL,path,NULL,NULL));
+#endif
 }
 
 void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)

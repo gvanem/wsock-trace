@@ -1910,64 +1910,6 @@ static char *get_native_path (const char *path)
 }
 
 /**
- * Returns the true casing for a wide-char `wpath`.
- *
- * \param[in]     apath      The ASCIIe-char path to work on.
- * \param[in]     wpath      The wide-char path to work on.
- * \param[in,out] exist      Optionally check if the file exists.
- * \param[in,out] is_native  If a file `"%WinDir\\System32\xx"` does not exists, check if the
- *                           `"%WinDir\\sysnative\xx"` file exists.
- *                           And return that file-name instead and set `is_native == TRUE`.
- *
- * \retval a ASCII-string with the true casing for the `wpath`.
- *
- * \note if the `wpath` does not exist, the casing remains unchanged.
- */
-static const char *fw_get_path (const char    *apath,
-                                const wchar_t *wpath,
-                                BOOL          *exist,
-                                BOOL          *is_native)
-{
-  static char ret [_MAX_PATH];
-  static char path [_MAX_PATH];
-  char   *p;
-  int     save;
-
-  if (exist)
-     *exist = TRUE;       /* assume the 'wpath' exists */
-  if (is_native)
-     *is_native = FALSE;  /* assume it's not a native file */
-
-  if (wpath)
-       snprintf (path, sizeof(path), "%S", wpath);
-  else _strlcpy (path, apath, sizeof(path));
-
-  if (!stricmp(path, "System"))    /* No more to do for this path */
-     return (path);
-
-  p = volume_to_path (path);
-  if (strchr (p,'%'))
-     p = getenv_expand (p, path, sizeof(path));
-
-  save = g_cfg.use_full_path;
-  g_cfg.use_full_path = 1;
-  copy_path (ret, shorten_path(p), '\\');
-  fix_drive (ret);
-  g_cfg.use_full_path = save;
-
-  if (exist)
-  {
-    *exist = file_exists (ret);
-    if (!*exist && is_native && (p = get_native_path(ret)) != NULL)
-    {
-      *exist = *is_native = TRUE;
-      return (p);
-    }
-  }
-  return (ret);
-}
-
-/**
  * Beep the speaker.
  */
 static void fw_play_sound (const struct FREQ_MILLISEC *sound)
@@ -2478,7 +2420,7 @@ static void fw_dump_rule (const FW_RULE *rule)
 
   if (rule->wszLocalApplication)
   {
-    fw_buf_add ("     ~2prog:~0    %s", fw_get_path(NULL, rule->wszLocalApplication, &fexist, &is_native));
+    fw_buf_add ("     ~2prog:~0    %s", get_path(NULL, rule->wszLocalApplication, &fexist, &is_native));
     if (!fexist)
        fw_buf_add ("  (does not exist)");
     else if (is_native)
@@ -2487,7 +2429,7 @@ static void fw_dump_rule (const FW_RULE *rule)
   }
 
   if (rule->wszEmbeddedContext)
-     fw_buf_add ("     ~2context:~0 %s\n", fw_get_path(NULL, rule->wszEmbeddedContext, NULL, NULL));
+     fw_buf_add ("     ~2context:~0 %s\n", get_path(NULL, rule->wszEmbeddedContext, NULL, NULL));
 
   fw_buf_addc ('\n');
   fw_buf_flush();
@@ -2535,7 +2477,7 @@ static void SID_dump (const SID *sid)
 static char *add_app (const char *app, BOOL *exist, BOOL *is_native)
 {
 #if 1
-  const char *p = fw_get_path (app, NULL, exist, is_native);
+  const char *p = get_path (app, NULL, exist, is_native);
   return strdup (p);
 #else
   char *exp, *p, path[_MAX_PATH];
@@ -4339,7 +4281,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
       !header->appId.data || header->appId.size == 0)
      return (TRUE);    /* Can't exclude a `appId` based on this */
 
-  a_name = fw_get_path (NULL, (LPCWSTR)header->appId.data, &fexist, &is_native);
+  a_name = get_path (NULL, (LPCWSTR)header->appId.data, &fexist, &is_native);
   a_base = basename (a_name);
 
   if (g_cfg.firewall.show_all == 0)
