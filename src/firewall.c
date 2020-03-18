@@ -49,13 +49,6 @@
   #define MIN_WINNT 0x600
 #endif
 
-#if defined(__WATCOMC__)
-  /*
-   * OpenWatcom 2.x is hardly able to compile and use anything here.
-   */
-  #error "This module if not for Watcom / OpenWatcom."
-#endif
-
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT)
   #undef  _WIN32_WINNT
   #define _WIN32_WINNT MIN_WINNT
@@ -71,6 +64,40 @@
 #include "dnsbl.h"
 #include "inet_util.h"
 #include "wsock_trace.h"
+
+#if defined(__WATCOMC__)
+  /*
+   * OpenWatcom 2.x is hardly able to compile anything here.
+   */
+  static void unimplemented (const char *func, const char *file, unsigned line)
+  {
+    fprintf (stderr, "%s(%u): Function \"%s()\" not implemented for __WATCOMC__.\n", file, line, func);
+  }
+  #define UNIMPLEMENTED(ret) unimplemented (__FUNCTION__, __FILE__, __LINE__); return ret
+
+  BOOL fw_init (void)
+  {
+    UNIMPLEMENTED (FALSE);
+  }
+  void fw_exit (void)
+  {
+    UNIMPLEMENTED();
+  }
+  void fw_report (void)
+  {
+    UNIMPLEMENTED();
+  }
+  BOOL fw_monitor_start (void)
+  {
+    UNIMPLEMENTED (FALSE);
+  }
+
+  void fw_monitor_stop (BOOL force)
+  {
+    ARGSUSED (force);
+    UNIMPLEMENTED();
+  }
+#else  /* Rest of file */
 
 typedef LONG NTSTATUS;
 
@@ -141,8 +168,9 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
  *  The number of spaces to indent a printed line.
  */
 #if defined(TEST_FIREWALL)
-  #define TIME_STRING_FMT  "\n~1%s"
-  #define INDENT_SZ        2
+  #define TIME_STRING_FMT   "\n~1%s"
+  #define EVENT_STRING_FMT  " ~4%s~0"
+  #define INDENT_SZ         2
 
   /* Used for the reference-timestamp value in `get_time_string (NULL)`.
    */
@@ -154,9 +182,12 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 #else
 
   /* Similar as to how wsock_trace.c shows a time-stamp.
+   * Use format '~3' for the time-value.
+   * Use format '~5' for the event-name.
    */
-  #define TIME_STRING_FMT "\n  ~1* %s"
-  #define INDENT_SZ        (2 + g_cfg.trace_indent)
+  #define TIME_STRING_FMT   "\n  ~1* ~3%s"
+  #define EVENT_STRING_FMT  " ~2%s~0"
+  #define INDENT_SZ         (2 + g_cfg.trace_indent)
 #endif
 
 DWORD fw_errno;
@@ -1068,12 +1099,12 @@ typedef void (CALLBACK *_FWPM_NET_EVENT_CALLBACK4) (void                   *cont
  * \def DEF_FUNC(ret, f, args)
  *  Macro to both define and declare the function-pointer.
  *
- * \param[in] ret  The return value of the typdef'ed function-pointer.
- * \param[in] f    The function name.
- * \param[in] args The function arguments as a list of `(arg1, arg2, ...)`.
+ * \param[in] ret   The return value of the typedef'ed function-pointer.
+ * \param[in] func  The function name.
+ * \param[in] args  The function arguments as a list of `(arg1, arg2, ...)`.
  */
-#define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
-                                static func_##f  p_##f = NULL
+#define DEF_FUNC(ret, func, args)  typedef ret (WINAPI *func_##func) args; \
+                                   static func_##func  p_##func = NULL
 
 /*
  * "FwpUclnt.dll" typedefs and functions pointers:
@@ -1491,10 +1522,10 @@ static const char  *SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
  * SIDs = *Security Identifier*.
  */
 struct SID_entry {
-       SID  *sid_copy;                /**< A copy of the SID used to create this entry */
-       char *sid_str;                 /**< A string representing this SID */
-       char  domain [MAX_DOMAIN_SZ];  /**< The `domain` name it belongs to */
-       char  account[MAX_ACCOUNT_SZ]; /**< The `domain\\user` it belowngs to */
+       SID  *sid_copy;                 /**< A copy of the SID used to create this entry */
+       char *sid_str;                  /**< A string representing this SID */
+       char  domain [MAX_DOMAIN_SZ];   /**< The `domain` name it belongs to */
+       char  account[MAX_ACCOUNT_SZ];  /**< The `domain\\user` it belowngs to */
      };
 
 static smartlist_t *SID_entries;             /**< A dynamic list of `SID_entry` items */
@@ -1508,15 +1539,20 @@ static struct SID_entry *lookup_or_add_SID (SID *sid);
  */
 struct rule_entry {
        char                   *value;
+       char                   *data;
        char                   *action;
        char                   *dir;
-       char                   *RA4;
-       char                   *RA6;
        char                   *app;
+       BOOL                    app_exist;
+       BOOL                    app_native;
        char                   *embed_ctxt;
        char                   *app_pkg_id;
        const struct SID_entry *se;          /**< An element from `*SID_entries` */
        unsigned                protocol;
+       struct in_addr          RA4;
+       struct in6_addr         RA6;
+       int                     RA4_cidr_len;
+       int                     RA6_cidr_len;
      };
 
 /** A dynamic list of `rule_entry` items
@@ -1567,7 +1603,7 @@ static void fw_check_n_format (BOOL init, BOOL push)
 
 /**
  * \struct filter_entry
- * A cache of filter-IDs and names for `print_filter_rule()`, `print_filter_rule2()` and `print_layer_item2()`.
+ * A cache of filter-IDs and names for `print_filter_rule0()`, `print_filter_rule2()` and `print_layer_item0()`.
  */
 struct filter_entry {
        UINT64 value;        /**< The filter-value of this item */
@@ -1819,6 +1855,119 @@ static const char *get_time_string (const FILETIME *ts)
 }
 
 /**
+ * Check for a path starting with "\\device\\harddiskvolume[0-9]\\" and map
+ * to a drive letter the easy way.
+ *
+ * E.g. "\\device\\harddiskvolume1\\x" -> "d:\\x"
+ *
+ * Somewhat related:
+ *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
+ */
+static char *volume_to_path (char *path)
+{
+  #define VOLUME "\\Device\\HarddiskVolume"
+  char *p;
+
+  if (strnicmp(path, VOLUME, sizeof(VOLUME)-1))
+     return (path);
+
+  p = path + sizeof(VOLUME) - 1;
+
+  if (!isdigit(*p) || p[1] != '\\')
+     return (path);
+
+  p--;
+  p[0] = 'a' - '0' + p[1];
+  p[1] = ':';
+  return (p);
+}
+
+static char *get_native_path (const char *path)
+{
+  static char win_root[_MAX_PATH] = { "" };
+  static char sys_dir [_MAX_PATH] = { "" };
+  static char ret [_MAX_PATH];
+
+  if (!win_root[0])
+  {
+    const char *p = getenv ("WinDir");
+
+    _strlcpy (win_root, p ? p : "?", sizeof(win_root));
+    fix_drive (win_root);
+    snprintf (sys_dir, sizeof(sys_dir), "%s\\System32\\", win_root);
+  }
+  if (!strnicmp(path,sys_dir,strlen(sys_dir)))
+  {
+    BOOL exist;
+
+    snprintf (ret, sizeof(ret), "%s\\sysnative\\%s", win_root, path+strlen(sys_dir));
+    exist = file_exists (ret);
+    TRACE (2, "ret: '%s', exist: %d\n", ret, exist);
+    if (exist)
+       return (ret);
+  }
+  return (NULL);
+}
+
+/**
+ * Returns the true casing for a wide-char `wpath`.
+ *
+ * \param[in]     apath      The ASCIIe-char path to work on.
+ * \param[in]     wpath      The wide-char path to work on.
+ * \param[in,out] exist      Optionally check if the file exists.
+ * \param[in,out] is_native  If a file `"%WinDir\\System32\xx"` does not exists, check if the
+ *                           `"%WinDir\\sysnative\xx"` file exists.
+ *                           And return that file-name instead and set `is_native == TRUE`.
+ *
+ * \retval a ASCII-string with the true casing for the `wpath`.
+ *
+ * \note if the `wpath` does not exist, the casing remains unchanged.
+ */
+static const char *fw_get_path (const char    *apath,
+                                const wchar_t *wpath,
+                                BOOL          *exist,
+                                BOOL          *is_native)
+{
+  static char ret [_MAX_PATH];
+  static char path [_MAX_PATH];
+  char   *p;
+  int     save;
+
+  if (exist)
+     *exist = TRUE;       /* assume the 'wpath' exists */
+  if (is_native)
+     *is_native = FALSE;  /* assume it's not a native file */
+
+  if (wpath)
+       snprintf (path, sizeof(path), "%S", wpath);
+  else _strlcpy (path, apath, sizeof(path));
+
+  if (!stricmp(path, "System"))    /* No more to do for this path */
+     return (path);
+
+  p = volume_to_path (path);
+  if (strchr (p,'%'))
+     p = getenv_expand (p, path, sizeof(path));
+
+  save = g_cfg.use_full_path;
+  g_cfg.use_full_path = 1;
+  copy_path (ret, shorten_path(p), '\\');
+  fix_drive (ret);
+  g_cfg.use_full_path = save;
+
+  if (exist)
+  {
+    *exist = file_exists (ret);
+    if (!*exist && is_native && (p = get_native_path(ret)) != NULL)
+    {
+      *exist = *is_native = TRUE;
+      return (p);
+    }
+  }
+  return (ret);
+}
+
+/**
  * Beep the speaker.
  */
 static void fw_play_sound (const struct FREQ_MILLISEC *sound)
@@ -1893,7 +2042,6 @@ BOOL fw_init (void)
   filter_entries = smartlist_new();
   SBL_entries    = smartlist_new();
   rule_entries   = smartlist_new();
-  fw_num_rules   = 0;
 
   fw_have_ip2loc4 = (ip2loc_num_ipv4_entries() > 0);
   fw_have_ip2loc6 = (ip2loc_num_ipv6_entries() > 0);
@@ -1901,6 +2049,9 @@ BOOL fw_init (void)
   if ((g_cfg.trace_stream == stdout || g_cfg.trace_stream == stderr) && isatty(fileno(g_cfg.trace_stream)))
        fw_acp = GetConsoleCP();
   else fw_acp = CP_ACP;
+
+  if (g_cfg.firewall.api_level > 0)
+    fw_api = g_cfg.firewall.api_level;
 
   user_len = sizeof(fw_logged_on_user);
   GetUserName (fw_logged_on_user, &user_len);
@@ -1947,9 +2098,9 @@ static void fw_rule_free (void *_r)
 {
   struct rule_entry *r = (struct rule_entry*) _r;
 
+  FREE (r->data);
   FREE (r->action);
   FREE (r->dir);
-  FREE (r->RA4);
   FREE (r->app);
   FREE (r->embed_ctxt);
   FREE (r->app_pkg_id);
@@ -1976,6 +2127,44 @@ void fw_exit (void)
   SID_entries = filter_entries = SBL_entries = NULL;
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
+}
+
+/**
+ * Report statistics for this module.
+ */
+void fw_report (void)
+{
+  trace_printf ("\n  Firewall statistics:\n"
+                "    Got %lu events, %lu ignored.\n",
+                DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
+
+  if (fw_num_events > 0UL || fw_num_ignored > 0UL)
+  {
+    DWORD num_ip4, num_ip6;
+    int   i, max;
+
+    if (!g_cfg.geoip_enable)
+       return;
+
+    geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);
+
+    if (g_cfg.firewall.show_ipv4)
+       trace_printf ("    Unique IPv4 countries: %lu.\n", DWORD_CAST(num_ip4));
+    if (g_cfg.firewall.show_ipv6)
+       trace_printf ("    Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
+
+    max = smartlist_len (SBL_entries);
+    if (max == 0)
+       trace_puts ("    No remote addresses found in DNSBL block lists.\n");
+    else
+    {
+      trace_printf ("    %d unique remote addresses found in DNSBL block lists. Goto:\n", max);
+      for (i = 0; i < max; i++)
+          trace_printf ("    ~2%s/SBL%s~0\n",
+                        SpamHaus_URL, (const char*)smartlist_get(SBL_entries, i));
+      trace_puts ("    for more information.\n");
+    }
+  }
 }
 
 /**
@@ -2264,6 +2453,7 @@ static void fw_dump_rule (const FW_RULE *rule)
                     (rule->Direction == FW_DIR_BOTH)    ? "BOTH": "?";
   char ascii [300];
   int  indent = 6;
+  BOOL fexist, is_native;
 
   fw_buf_reset();
 
@@ -2287,10 +2477,17 @@ static void fw_dump_rule (const FW_RULE *rule)
   }
 
   if (rule->wszLocalApplication)
-     fw_buf_add ("     ~2prog:~0    %S\n", rule->wszLocalApplication);
+  {
+    fw_buf_add ("     ~2prog:~0    %s", fw_get_path(NULL, rule->wszLocalApplication, &fexist, &is_native));
+    if (!fexist)
+       fw_buf_add ("  (does not exist)");
+    else if (is_native)
+       fw_buf_add ("  (native file)");
+    fw_buf_addc ('\n');
+  }
 
   if (rule->wszEmbeddedContext)
-     fw_buf_add ("     ~2context:~0 %S\n", rule->wszEmbeddedContext);
+     fw_buf_add ("     ~2context:~0 %s\n", fw_get_path(NULL, rule->wszEmbeddedContext, NULL, NULL));
 
   fw_buf_addc ('\n');
   fw_buf_flush();
@@ -2333,6 +2530,38 @@ static void SID_dump (const SID *sid)
 }
 
 /*
+ * Add an "App" to the rule-entry.
+ */
+static char *add_app (const char *app, BOOL *exist, BOOL *is_native)
+{
+#if 1
+  const char *p = fw_get_path (app, NULL, exist, is_native);
+  return strdup (p);
+#else
+  char *exp, *p, path[_MAX_PATH];
+  int   save;
+
+  if (!stricmp(app,"System"))
+  {
+    *exist = TRUE;
+    return strdup (app);
+  }
+  exp = getenv_expand (app, path, sizeof(path));
+  if (!isalpha(exp[0]) || exp[1] != ':')
+     return strdup (exp);
+
+  save = g_cfg.use_full_path;
+  g_cfg.use_full_path = 1;
+  p = (char*) shorten_path (exp);
+  g_cfg.use_full_path = save;
+  p = copy_path (malloc(strlen(p)+1), p, '\\');
+  fix_drive (p);
+  *exist = file_exists (p);
+  return (p);
+#endif
+}
+
+/*
  * Break apart the `rule` and extract the `Action`, `Dir`, the program-name. etc.
  *
  * Look only for lines that looks like:
@@ -2341,10 +2570,17 @@ static void SID_dump (const SID *sid)
  * or:
  *   v2.10|Action=Allow|Active=TRUE|Dir=In|Protocol=17|Profile=Private|App=F:\gv\dx-radio\pothos-sdr\bin\gqrx.exe|...
  */
-static struct rule_entry *parse_program_rule (char *rule)
+static struct rule_entry *parse_program_rule (const char *_rule)
 {
-  char  *strtok_end, *ver_str, *action_str, *active_str, *dir_str;
+  char  *strtok_end, *ver_str, *action_str, *active_str, *dir_str, *rule;
   struct rule_entry *r;
+  size_t rule_sz;
+
+  /* Create a copy of '_rule'
+   */
+  rule_sz = strlen(_rule) + 1;
+  rule = alloca (rule_sz);
+  memcpy (rule, _rule, rule_sz);
 
   /* We ignore the ICF version.
    */
@@ -2373,8 +2609,8 @@ static struct rule_entry *parse_program_rule (char *rule)
 
   /* Loop over the rule to find the other keywords:
    * - "Protocol=xx"  - normally 6 or 17
-   * - "RA4=xx"       - Router Alert?
-   * - "RA6=xx"
+   * - "RA4=xx"       - Router Alert IPv4?
+   * - "RA6=xx"       - Router Alert IPv6?
    * - "App=xx"
    * - "EmbedCtxt=xx" - This should be the same as the 'rule->wszEmbeddedContext' value.
    * - "AppPkgId=xx"
@@ -2390,29 +2626,23 @@ static struct rule_entry *parse_program_rule (char *rule)
     {
       r->protocol = atoi (w+9);
     }
-    else if (!r->RA4 && !strncmp(w,"RA4=",4))
+    else if (!strncmp(w,"RA4=",4))
     {
-      /* \todo Convert a string like '213.199.179.0-213.199.179.255'
-       *       to CIDR notation '213.199.179/24'
-       */
-      r->RA4 = strdup (w + 4);
+      INET_util_get_CIDR_from_IPv4_string (w+4, &r->RA4, &r->RA4_cidr_len);
     }
-    else if (!r->RA6 && !strncmp(w,"RA6=",4))
+    else if (!strncmp(w,"RA6=",4))
     {
-      r->RA6 = strdup (w + 4);
+      INET_util_get_CIDR_from_IPv6_string (w+4, &r->RA6, &r->RA6_cidr_len);
     }
     else if (!r->app && !strncmp(w,"App=",4))
     {
-      char *exp, path [_MAX_PATH];
-
-      exp = getenv_expand (w+4, path, sizeof(path));
-      r->app = strdup (exp);
+      r->app = add_app (w+4, &r->app_exist, &r->app_native);
     }
     else if (!r->embed_ctxt && !strncmp(w,"EmbedCtxt=",10))
     {
-      char *exp, context [_MAX_PATH];
+      char  context [_MAX_PATH];
+      char *exp = getenv_expand (w+10, context, sizeof(context));
 
-      exp = getenv_expand (w+10, context, sizeof(context));
       r->embed_ctxt = strdup (exp);
     }
     else if (!r->app_pkg_id && !strncmp(w,"AppPkgId=",9))
@@ -2420,7 +2650,7 @@ static struct rule_entry *parse_program_rule (char *rule)
       SID *sid = NULL;
 
       r->app_pkg_id = strdup (w + 9);
-      if (ConvertStringSidToSid(r->app_pkg_id, &sid))
+      if (ConvertStringSidToSid(r->app_pkg_id, (PSID*)&sid))
            r->se = lookup_or_add_SID (sid);
       else TRACE (1, "ConvertStringSidToSid() failed; %s\n", win_strerror(GetLastError()));
       if (g_cfg.trace_level >= 2)
@@ -2435,51 +2665,168 @@ static struct rule_entry *parse_program_rule (char *rule)
 /**
  * Print the Firewall rules.
  */
-static void print_program_rule (int idx, const struct rule_entry *r)
+static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
 {
-  if (idx == 0)
+  char proto_str [10];
+  int  rc = 0;
+
+  if (++fw_num_rules == 1)
+     trace_puts ("Firewall ACTIVE program rules from Registry:\n");
+
+  if (RA4_only && !r->RA4.s_addr)
+     return (0);
+
+  trace_printf ("%3lu: Action:   %s\n", DWORD_CAST(fw_num_rules), r->action);
+  trace_printf ("     Dir:      %s\n", r->dir);
+
+  if (r->protocol == 0)
+       strcpy (proto_str, "Any");
+  else if (r->protocol == 6)
+       strcpy (proto_str, "TCP");
+  else if (r->protocol == 17)
+       strcpy (proto_str, "UDP");
+  else _itoa (r->protocol, proto_str, 10); /* \todo use 'getprotobynumber()' */
+
+  trace_printf ("     Protocol: %s\n", proto_str);
+
+  if (r->app)
   {
-    trace_puts ("Firewall ACTIVE program rules from Registry:\n");
-    trace_puts ("  Action   Dir Protocol   RA4/6                          "
-                "App                                                Ctxt"
-                "                                               AppId\n"
-                " ------------------------------------------------------------------------------------"
-                "-------------------------------------------------------------------------------------\n");
+    trace_printf ("     App:      %s%s%s\n",
+                  r->app, r->app_exist ? "" : " (does not exist)",
+                  r->app_native ? " (native file)" : "");
+    if (!r->app_exist)
+       rc++;
   }
 
-  trace_printf ("  %-5.5s    %-3.3s ", r->action, r->dir);
-  if (r->protocol)
-       trace_printf ("%-10d ", r->protocol);  /* \todo use 'getprotobynumber()' to get the name */
-  else trace_puts ("Any        ");
+  if (r->embed_ctxt)
+     trace_printf ("     Context:  %s\n", r->embed_ctxt);
 
-  if (r->RA4 || r->RA6)
-       trace_printf ("%-30.30s ", r->RA4 ? r->RA4 : r->RA6);
-  else trace_printf ("%-30.30s ", "-");
+  if (r->app_pkg_id)
+     trace_printf ("     PkgId:    %s\n", r->app_pkg_id);
 
-  trace_printf ("%-50.50s ", r->app ? r->app : "-");
-  trace_printf ("%-50.50s ", r->embed_ctxt ? r->embed_ctxt : "-");
-  trace_printf ("%-50.50s", r->app_pkg_id ? r->app_pkg_id : "-");
-#if 0
+  if (r->RA4.s_addr)
+  {
+    char RA4_addr [40];
+    char CIDR [100] = "";
+    const char *cc, *loc;
+
+    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&r->RA4, RA4_addr, sizeof(RA4_addr));
+    if (r->RA4_cidr_len > 0 && r->RA4_cidr_len < 32)
+       snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA4_addr, r->RA4_cidr_len);
+    trace_printf ("     RA4:      %s\n", CIDR[0] ? CIDR : RA4_addr);
+
+    cc  = geoip_get_country_by_ipv4 (&r->RA4);
+    loc = geoip_get_location_by_ipv4 (&r->RA4);
+
+    if (cc && cc[0] != '-')
+       trace_printf ("     GeoIP:    %s, %s\n", cc, loc);
+  }
+  else if (r->RA6.s6_addr[0])
+  {
+    char RA6_addr [80];
+    char CIDR [120] = "";
+    const char *cc, *loc;
+
+    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&r->RA6, RA6_addr, sizeof(RA6_addr));
+    if (r->RA6_cidr_len > 0 && r->RA6_cidr_len < 128)
+       snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA6_addr, r->RA6_cidr_len);
+    trace_printf ("     RA6:      %s\n", CIDR[0] ? CIDR : RA6_addr);
+
+    cc  = geoip_get_country_by_ipv6 (&r->RA6);
+    loc = geoip_get_location_by_ipv6 (&r->RA6);
+
+    if (cc && cc[0] != '-')
+       trace_printf ("     GeoIP:    %s, %s\n", cc, loc);
+  }
   if (r->se)
-     trace_printf (" SE: %s\\%s", r->se->domain[0] ? r->se->domain : "?", r->se->account[0] ? r->se->account : "?");
-#endif
+       trace_printf ("     SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
+  else trace_printf ("     SidEntry: <none>\n");
+
+  if (g_cfg.firewall.show_all)
+  {
+    trace_printf ("     RegValue: %s\n", r->value);
+    trace_printf ("     RegData:  %s\n", r->data);
+  }
   trace_putc ('\n');
+  return (rc);
 }
-#endif
+
+/**
+ * smartlist_sort() helper; compare on this order:
+ *  `action`, `dir`, `app`, `RA4`, `RA6`, `embed_ctx`,
+ *  `app_pkg_id`, `value`, `data`, and finally `protocol`.
+ */
+static int rule_compare_action (const void **_a, const void **_b)
+{
+  const struct rule_entry *a = *_a;
+  const struct rule_entry *b = *_b;
+  const char *a_app, *b_app;
+  const char *a_ctx, *b_ctx;
+  const char *a_pkg, *b_pkg;
+  int   rc;
+
+  rc = stricmp (a->action, b->action);
+  if (rc)
+     return (rc);
+
+  rc = stricmp (a->dir, b->dir);
+  if (rc)
+     return (rc);
+
+  a_app = a->app ? a->app : "-";
+  b_app = b->app ? b->app : "-";
+  rc = stricmp (a_app, b_app);
+  if (rc)
+     return (rc);
+
+  if (a->RA4.s_addr && b->RA4.s_addr)
+  {
+    rc = memcmp (&a->RA4, &b->RA4, sizeof(a->RA4));
+    if (rc)
+       return (rc);
+  }
+  if (a->RA6.s6_words[0] && b->RA6.s6_words[0])
+  {
+    rc = memcmp (&a->RA6, &b->RA6, sizeof(a->RA6));
+    if (rc)
+       return (rc);
+  }
+
+  a_ctx = a->embed_ctxt ? a->embed_ctxt : "-";
+  b_ctx = b->embed_ctxt ? b->embed_ctxt : "-";
+  rc = stricmp (a_ctx, b_ctx);
+  if (rc)
+     return (rc);
+
+  a_pkg = a->app_pkg_id ? a->app_pkg_id : "-";
+  b_pkg = b->app_pkg_id ? b->app_pkg_id : "-";
+  rc = stricmp (a_pkg, b_pkg);
+  if (rc)
+     return (rc);
+
+  rc = stricmp (a->value, b->value);
+  if (rc)
+     return (rc);
+
+  if (a->data && b->data)
+  {
+    rc = stricmp (a->data, b->data);
+    if (rc)
+       return (rc);
+  }
+  return ((int)a->protocol - (int)b->protocol);
+}
 
 /**
  * Enumerate the Firewall rules from:
  *   HKLM\SYSTEM\ControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules
  */
-int fw_enumerate_programs (void)
+static int fw_enumerate_programs (BOOL RA4_only)
 {
   struct rule_entry *r;
   HKEY     key = NULL;
   DWORD    num, rc;
-  unsigned found = 0;
-#if defined(TEST_FIREWALL)
-  unsigned i;
-#endif
+  int      i, max, orphans = 0;
 
   rc = RegOpenKeyEx (HKEY_LOCAL_MACHINE,
                      "SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules",
@@ -2492,7 +2839,6 @@ int fw_enumerate_programs (void)
   {
     char  value [1000] = "\0";
     char  data [1000]  = "\0";
-    char  result [1000]  = "\0";
     DWORD value_size  = sizeof(value);
     DWORD data_size   = sizeof(data);
     DWORD type        = REG_NONE;
@@ -2504,30 +2850,34 @@ int fw_enumerate_programs (void)
     if (type == REG_SZ && (r = parse_program_rule(data)) != NULL)
     {
       r->value = strdup (value);
+      r->data  = strdup (data);
       smartlist_add (rule_entries, r);
     }
   }
   if (key)
      RegCloseKey (key);
 
-  found = smartlist_len (rule_entries);
+  smartlist_sort (rule_entries, rule_compare_action);
+  max = smartlist_len (rule_entries);
 
-#if defined(TEST_FIREWALL)
-  for (i = 0; i < found; i++)
+  fw_num_rules = 0;
+  for (i = 0; i < max; i++)
   {
     r = smartlist_get (rule_entries, i);
-    print_program_rule (i, r);
+    orphans += print_program_rule (r, RA4_only);
   }
-#endif
-  trace_printf ("Found %u program-rules.\n", found);
-  return (found);
+  trace_printf ("Found %d program-rules. ", max);
+  if (orphans)
+     trace_printf ("Found %d orphaned programs (run CCleaner).\n", orphans);
+  return (max);
 }
 
 /**
+ * Call `FWEnumFirewallRules()` and print the Firewall rules.
  *
- *
+ * Note: many of the files in `prog:` does normally not exist.
  */
-int fw_enumerate_rules (void)
+static int fw_enumerate_rules (void)
 {
   int      num;
   FW_RULE *rule, *rules = NULL;
@@ -2538,9 +2888,14 @@ int fw_enumerate_rules (void)
                    FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION |
                    FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD;
 
-  FW_PROFILE_TYPE  profile = (g_cfg.firewall.show_all ? FW_PROFILE_TYPE_ALL : FW_PROFILE_TYPE_CURRENT);
+  FW_PROFILE_TYPE profile = (g_cfg.firewall.show_all ? FW_PROFILE_TYPE_ALL : FW_PROFILE_TYPE_CURRENT);
 
   trace_puts ("Firewall rules from FWEnumFirewallRules():\n");
+  if (!p_FWEnumFirewallRules)
+  {
+    TRACE (0, "FWEnumFirewallRules() not found.\n");
+    return (-1);
+  }
 
   rc = (*p_FWEnumFirewallRules) (fw_policy_handle, FW_RULE_STATUS_CLASS_ALL, profile,
                                  (FW_ENUM_RULES_FLAGS)flags, &rule_count, &rules);
@@ -2551,9 +2906,10 @@ int fw_enumerate_rules (void)
     return (-1);
   }
 
-  TRACE (1, "Got rule_count: %lu.\n", DWORD_CAST(rule_count));
+  TRACE (2, "Got rule_count: %lu.\n", DWORD_CAST(rule_count));
 
   fw_check_n_format (FALSE, TRUE);
+  fw_num_rules = 0;
 
   for (num = 0, rule = rules; rule && num < (int)rule_count; rule = rule->pNext, num++)
       fw_dump_rule (rule);
@@ -2567,6 +2923,7 @@ int fw_enumerate_rules (void)
      TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
   return (num);
 }
+#endif  /* TEST_FIREWALL */
 
 /**
  * Get the `FWPM_LAYER_xx` name from `<fwpmu.h>` for this layer.
@@ -3362,7 +3719,7 @@ BOOL fw_enumerate_callouts (void)
     else strcpy (descr, "<None>");
 
     fw_buf_add ("~4%2u~0: calloutId: ~3%u:~0\n", i, entry->calloutId);
-    fw_buf_add ("    ~4name~0:            %S\n", entry->displayData.name);
+    fw_buf_add ("    ~4name:~0            %S\n", entry->displayData.name);
 
     indent = fw_buf_add ("    ~4descr:~0           ") - 4;
     fw_add_long_line (descr, indent, ' ');
@@ -3421,12 +3778,14 @@ static BOOL fw_dump_events (void)
 {
   HANDLE  fw_enum_handle = INVALID_HANDLE_VALUE;
   UINT32  i, num_in, num_out;
+  BOOL    show_all = FALSE;
   DWORD   rc;
   int     api_level = fw_api;
   void   *entries = NULL;
 
-  _FWPM_FILTER_CONDITION0        filter_conditions[5] = { 0 };
-  _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
+  _FWPM_FILTER_CONDITION0         filter_conditions[5] = { 0 };
+  _FWPM_NET_EVENT_ENUM_TEMPLATE0  event_template = { 0 };
+  _FWPM_NET_EVENT_ENUM_TEMPLATE0 *p_event_template = &event_template;
 
   if (api_level < FW_API_LOW || api_level > FW_API_HIGH)
   {
@@ -3447,13 +3806,21 @@ static BOOL fw_dump_events (void)
 
   fw_num_events = fw_num_ignored = num_SBL_hits = 0UL;
 
-  event_template.numFilterConditions      = 0;
-  event_template.filterCondition          = filter_conditions;
-  event_template.startTime.dwLowDateTime  = 0UL;
-  event_template.startTime.dwHighDateTime = 0UL;
-  GetSystemTimeAsFileTime (&event_template.endTime);
+  if (g_cfg.firewall.show_all)
+  {
+    p_event_template = NULL;
+    show_all = TRUE;
+  }
+  else
+  {
+    event_template.numFilterConditions      = 0;
+    event_template.filterCondition          = filter_conditions;
+    event_template.startTime.dwLowDateTime  = 0UL;
+    event_template.startTime.dwHighDateTime = 0UL;
+    GetSystemTimeAsFileTime (&event_template.endTime);
+  }
 
-  rc = (*p_FwpmNetEventCreateEnumHandle0) (fw_engine_handle, &event_template, &fw_enum_handle);
+  rc = (*p_FwpmNetEventCreateEnumHandle0) (fw_engine_handle, p_event_template, &fw_enum_handle);
   if (rc != ERROR_SUCCESS)
   {
     TRACE (1, "FwpmNetEventCreateEnumHandle0() failed: %s.\n", win_strerror(rc));
@@ -3518,28 +3885,24 @@ static BOOL fw_dump_events (void)
   *   https://github.com/Microsoft/Windows-classic-samples/blob/master/Samples/Win7Samples/netds/wfp/diagevents/diagevents.c#L188
   * for an example use.
   */
-  #define GET_ENUM_ENTRIES(N, allow_member1, allow_member2, drop_member1, drop_member2)     \
-          do {                                                                              \
-            if (api_level == N && p_FwpmNetEventEnum##N)                                    \
-            {                                                                               \
-              _FWPM_NET_EVENT##N **entries##N = NULL;                                       \
-                                                                                            \
-              TRACE (2, "Trying FwpmNetEventEnum%d().\n", N);                               \
-              rc = (*p_FwpmNetEventEnum##N) (fw_engine_handle, fw_enum_handle,              \
-                                             num_in, &entries##N, &num_out);                \
-              if (rc != ERROR_SUCCESS)                                                      \
-              {                                                                             \
-                fw_errno = rc;                                                              \
-                TRACE (1, "FwpmNetEventEnum%d() failed: %s\n", N, win_strerror(fw_errno));  \
-              }                                                                             \
-              else                                                                          \
-              {                                                                             \
-                entries = (void**) entries##N;                                              \
-                DO_ENUM_LOOP (N, allow_member1, allow_member2, drop_member1, drop_member2); \
-              }                                                                             \
-              goto quit;                                                                    \
-            }                                                                               \
-          } while (0)
+  #define GET_ENUM_ENTRIES(N, allow_member1, allow_member2, drop_member1, drop_member2) do { \
+          if (api_level == N && p_FwpmNetEventEnum##N) {                                     \
+            _FWPM_NET_EVENT##N **entries##N = NULL;                                          \
+                                                                                             \
+            TRACE (2, "Trying FwpmNetEventEnum%d().\n", N);                                  \
+            rc = (*p_FwpmNetEventEnum##N) (fw_engine_handle, fw_enum_handle,                 \
+                                           num_in, &entries##N, &num_out);                   \
+            if (rc != ERROR_SUCCESS) {                                                       \
+              fw_errno = rc;                                                                 \
+              TRACE (1, "FwpmNetEventEnum%d() failed: %s\n", N, win_strerror(fw_errno));     \
+            }                                                                                \
+            else {                                                                           \
+              entries = (void**) entries##N;                                                 \
+              DO_ENUM_LOOP (N, allow_member1, allow_member2, drop_member1, drop_member2);    \
+            }                                                                                \
+            goto quit;                                                                       \
+          }                                                                                  \
+        } while (0)
 
   GET_ENUM_ENTRIES (4, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
   GET_ENUM_ENTRIES (3, entry->classifyAllow, entry->capabilityAllow, entry->classifyDrop, entry->capabilityDrop);
@@ -3618,8 +3981,8 @@ static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
   return (fe);
 }
 
-static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
-                              const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
+static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
+                               const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
   FWPM_LAYER0 *layer_item = NULL;
   UINT16       id = 0;
@@ -3637,7 +4000,7 @@ static BOOL print_layer_item (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
   return (id != 0);
 }
 
-static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+static BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
                                const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
   const char *capability_id_str   = "?";
@@ -3669,8 +4032,8 @@ static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_eve
   return (filter_id != 0);
 }
 
-static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
-                               const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
+static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
+                                const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
   UINT64 filter_id = 0UL;
 
@@ -3689,18 +4052,20 @@ static BOOL print_filter_rule (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
   return (FALSE);
 }
 
-static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+static BOOL print_filter_rule0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
                                 const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
-  const struct filter_entry *fe = NULL;
+  UINT64 filter_id = 0UL;
 
   if (drop_event)
-     fe = lookup_or_add_filter (drop_event->filterId);
+     filter_id = drop_event->filterId;
   else if (allow_event)
-     fe = lookup_or_add_filter (allow_event->filterId);
+     filter_id = allow_event->filterId;
 
-  if (fe)
+  if (filter_id)
   {
+    const struct filter_entry *fe = lookup_or_add_filter (filter_id);
+
     fw_buf_add ("%-*sfilter:  (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
     return (TRUE);
   }
@@ -3726,13 +4091,13 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
     /* Location is known. Print as "country, city/region".
      */
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
-    fw_buf_add ("%-*scountry: %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
+    fw_buf_add ("%-*sgeo-IP : %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
   }
   else
   {
     /* Location is unknown. Just print the country.
      */
-    fw_buf_add ("%-*scountry: %s\n", INDENT_SZ, "", country);
+    fw_buf_add ("%-*geo-IP:  %s\n", INDENT_SZ, "", country);
   }
 }
 
@@ -3847,7 +4212,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET)
   {
     ia4_loc.s_addr = _byteswap_ulong (*(DWORD*)&header->localAddrV4);
-    inet_ntop (AF_INET, (INET_NTOP_ADDR)&ia4_loc, local_addr, sizeof(local_addr));
+    _wsock_trace_inet_ntop (AF_INET, (INET_NTOP_ADDR)&ia4_loc, local_addr, sizeof(local_addr));
   }
   else
     strcpy (local_addr, "-");
@@ -3855,7 +4220,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     ia4_rem.s_addr = _byteswap_ulong (*(DWORD*)&header->remoteAddrV4);
-    inet_ntop (AF_INET, (INET_NTOP_ADDR)&ia4_rem, remote_addr, sizeof(remote_addr));
+    _wsock_trace_inet_ntop (AF_INET, (INET_NTOP_ADDR)&ia4_rem, remote_addr, sizeof(remote_addr));
   }
   else
     strcpy (remote_addr, "-");
@@ -3913,7 +4278,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET)
   {
     memcpy (&ia6_loc, &header->localAddrV6, sizeof(ia6_loc));
-    inet_ntop (AF_INET6, (INET_NTOP_ADDR)&ia6_loc, local_addr, sizeof(local_addr));
+    _wsock_trace_inet_ntop (AF_INET6, (INET_NTOP_ADDR)&ia6_loc, local_addr, sizeof(local_addr));
   }
   else
     strcpy (local_addr, "-");
@@ -3921,7 +4286,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     memcpy (&ia6_rem, &header->remoteAddrV6, sizeof(ia6_rem));
-    inet_ntop (AF_INET6, (INET_NTOP_ADDR)&ia6_rem, remote_addr, sizeof(remote_addr));
+    _wsock_trace_inet_ntop (AF_INET6, (INET_NTOP_ADDR)&ia6_rem, remote_addr, sizeof(remote_addr));
   }
   else
     strcpy (remote_addr, "-");
@@ -3963,66 +4328,18 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
 }
 
 /**
- * Map a "\\device\\harddiskvolume[0-9]\\" string to a drive letter the easy way.
- *
- * Somewhat related:
- *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
- */
-static const char *volume_to_path (const char *volume)
-{
-  #define VOLUME "\\Device\\HarddiskVolume"
-  const  char *p;
-  static char  path [_MAX_PATH];
-
-  if (!strnicmp(volume, VOLUME, sizeof(VOLUME)-1))
-  {
-    p = volume + sizeof(VOLUME) - 1;
-    if (isdigit(*p) && p[1] == '\\')
-    {
-      path[0] = 'a' - '0' + *p;
-      path[1] = ':';
-      _strlcpy (path+2, p+1, sizeof(path));
-      return (path);
-    }
-  }
-  return (volume);
-}
-
-/**
  * Process the `header->appId` field.
  */
 static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
 {
-  char    a_name [_MAX_PATH];
-  char   *a_base;
-  LPCWSTR w_name;
-  int     w_len;
+  const char *a_name, *a_base;
+  BOOL  fexist, is_native;
 
   if ((header->flags & FWPM_NET_EVENT_FLAG_APP_ID_SET) == 0 ||
       !header->appId.data || header->appId.size == 0)
      return (TRUE);    /* Can't exclude a `appId` based on this */
 
-  w_name = (LPCWSTR) header->appId.data;
-  w_len  = header->appId.size;
-
-#if 1
-  {
-    int   a_len = w_len + 1;
-    char *a_buf = alloca (a_len);
-
-    a_buf [a_len-1] = L'\0';
-
-    if (WideCharToMultiByte(fw_acp, 0, w_name, w_len, a_buf, a_len, NULL, NULL) == 0)
-         _strlcpy (a_name, "?", sizeof(a_name));
-    else _strlcpy (a_name, volume_to_path(a_buf), a_len);
-  }
-#else
-
-  if (WideCharToMultiByte(fw_acp, 0, w_name, w_len, a_name, (int)sizeof(a_name), NULL, NULL) == 0)
-       _strlcpy (a_name, "?", sizeof(a_name));
-  else _strlcpy (a_name, volume_to_path(a_name), sizeof(a_name));
-#endif
-
+  a_name = fw_get_path (NULL, (LPCWSTR)header->appId.data, &fexist, &is_native);
   a_base = basename (a_name);
 
   if (g_cfg.firewall.show_all == 0)
@@ -4042,7 +4359,14 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
     return (FALSE);
   }
 
-  fw_buf_add ("%-*sapp:     %s\n", INDENT_SZ, "", a_name);
+  fw_buf_add ("%-*sapp:     %s", INDENT_SZ, "", a_name);
+
+  if (!fexist)
+     fw_buf_add (" (does not exist)");
+  else if (is_native)
+     fw_buf_add ("  (native file)");
+
+  fw_buf_addc ('\n');
   return (TRUE);
 }
 
@@ -4252,7 +4576,7 @@ static void CALLBACK
    */
   event_name = list_lookup_name (event_type, events, DIM(events));
 
-  fw_buf_add (TIME_STRING_FMT "~4%s~0",
+  fw_buf_add (TIME_STRING_FMT EVENT_STRING_FMT,
               get_time_string(&header->timeStamp), event_name);
 
   if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
@@ -4277,8 +4601,8 @@ static void CALLBACK
          fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
     else fw_buf_addc ('\n');
 
-    print_layer_item (drop_event1, NULL);
-    print_filter_rule (drop_event1, NULL);
+    print_layer_item2 (drop_event1, NULL);
+    print_filter_rule2 (drop_event1, NULL);
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW)
   {
@@ -4302,8 +4626,8 @@ static void CALLBACK
          fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
     else fw_buf_addc ('\n');
 
-    print_layer_item (NULL, allow_event1);
-    print_filter_rule (NULL, allow_event1);
+    print_layer_item2 (NULL, allow_event1);
+    print_filter_rule2 (NULL, allow_event1);
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
   {
@@ -4312,8 +4636,8 @@ static void CALLBACK
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
 
-    print_layer_item2 (NULL, allow_event2);
-    print_filter_rule2 (NULL, allow_event2);
+    print_layer_item0 (NULL, allow_event2);
+    print_filter_rule0 (NULL, allow_event2);
   }
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
@@ -4322,8 +4646,8 @@ static void CALLBACK
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
 
-    print_layer_item2 (drop_event2, NULL);
-    print_filter_rule2 (drop_event2, NULL);
+    print_layer_item0 (drop_event2, NULL);
+    print_filter_rule0 (drop_event2, NULL);
   }
   else
     return;  /* Impossible */
@@ -4383,40 +4707,6 @@ static void CALLBACK
   if (unhandled_flags)
      TRACE (1, "Unhandled %s header->flags: %s\n",
             event_name, flags_decode(unhandled_flags, ev_flags, DIM(ev_flags)));
-}
-
-void fw_print_statistics (FWPM_STATISTICS *stats)
-{
-  trace_printf ("Got %lu events, %lu ignored.\n", DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
-
-  if (fw_num_events > 0UL || fw_num_ignored > 0UL)
-  {
-    DWORD num_ip4, num_ip6;
-    int   i, max;
-
-    if (!g_cfg.geoip_enable)
-       return;
-
-    geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);
-
-    if (g_cfg.firewall.show_ipv4)
-       trace_printf ("Unique IPv4 countries: %lu.\n", DWORD_CAST(num_ip4));
-    if (g_cfg.firewall.show_ipv6)
-       trace_printf ("Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
-
-    max = smartlist_len (SBL_entries);
-    if (max == 0)
-       trace_puts ("No remote addresses found in DNSBL block lists.\n");
-    else
-    {
-      trace_printf ("%d unique remote addresses found in DNSBL block lists. Goto:\n", max);
-      for (i = 0; i < max; i++)
-          trace_printf ("  ~2%s/SBL%s~0\n",
-                        SpamHaus_URL, (const char*)smartlist_get(SBL_entries, i));
-      trace_puts ("  for more information.\n");
-    }
-  }
-  ARGSUSED (stats);
 }
 
 /*
@@ -4479,6 +4769,7 @@ static int show_help (const char *my_name)
           "    -l:  print to \"log-file\" only.\n"
           "    -p:  print events for the below program only (implies your \"user-activity\" only).\n"
           "    -r:  only dump the firewall rules and programs.\n"
+          "    -R:  with option '-r', only show program-rules with an IPv4/6 address.\n"
           "    -v:  sets \"g_cfg.firewall.show_all = 1\".\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
@@ -4532,14 +4823,14 @@ static int test_SID (void)
   SID        *sid = NULL;
 
   g_cfg.trace_level = 2;
-  if (!ConvertStringSidToSid(sid_str, &sid))
+  if (!ConvertStringSidToSid(sid_str, (PSID*)&sid))
   {
     printf ("ConvertStringSidToSid() failed.\n");
     return (1);
   }
   account[0] = domain[0] = '\0';
   lookup_account_SID (sid, sid_str, account, domain);
-  printf ("SID: %s -> %s\\%s\n", sid_str, domain[0] ? domain : "?", account[0] ? account : "?");
+  printf ("SID: %s -> %s\n", sid_str, account[0] ? account : "?");
   LocalFree (sid);
   return (0);
 }
@@ -4584,6 +4875,7 @@ int main (int argc, char **argv)
   int     dump_rules = 0;
   int     dump_callouts = 0;
   int     dump_events = 0;
+  int     RA4_only = 0;
   int     program_only = 0;  /* Capture 'appId' matching program or 'userId' matching logged-on user only. */
   char   *program;
   char   *log_file = NULL;
@@ -4596,8 +4888,9 @@ int main (int argc, char **argv)
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_indent  = 0;
   g_cfg.trace_report  = 1;
+  g_cfg.firewall.show_all = 0;
 
-  while ((ch = getopt(argc, argv, "a:fh?cel:prtv")) != EOF)
+  while ((ch = getopt(argc, argv, "a:fh?cel:prRtv")) != EOF)
     switch (ch)
     {
       case 'a':
@@ -4620,6 +4913,9 @@ int main (int argc, char **argv)
            break;
       case 'r':
            dump_rules = 1;
+           break;
+      case 'R':
+           RA4_only = 1;
            break;
       case 't':
            return test_SID();
@@ -4668,7 +4964,6 @@ int main (int argc, char **argv)
          *space = '\0';
       exclude_list_add (fw_module, EXCL_PROGRAM);
     }
-    g_cfg.firewall.show_all  = 0;
     g_cfg.firewall.show_user = 1;
     TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
   }
@@ -4683,8 +4978,9 @@ int main (int argc, char **argv)
   {
     if (dump_rules)
     {
-      fw_enumerate_rules();
-      fw_enumerate_programs();
+      if (!RA4_only)
+         fw_enumerate_rules();
+      fw_enumerate_programs (RA4_only);
     }
 
     if (dump_events)
@@ -4707,7 +5003,7 @@ int main (int argc, char **argv)
   }
 
 quit:
-  fw_print_statistics (NULL);
+  fw_report();
 
   free (program);
   free (log_file);
@@ -11864,3 +12160,4 @@ static void fw_warning_sound (void)
      sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
 }
 #endif  /* TEST_FIREWALL */
+#endif  /* __WATCOMC__ */
