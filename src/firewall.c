@@ -1855,61 +1855,6 @@ static const char *get_time_string (const FILETIME *ts)
 }
 
 /**
- * Check for a path starting with "\\device\\harddiskvolume[0-9]\\" and map
- * to a drive letter the easy way.
- *
- * E.g. "\\device\\harddiskvolume1\\x" -> "d:\\x"
- *
- * Somewhat related:
- *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
- */
-static char *volume_to_path (char *path)
-{
-  #define VOLUME "\\Device\\HarddiskVolume"
-  char *p;
-
-  if (strnicmp(path, VOLUME, sizeof(VOLUME)-1))
-     return (path);
-
-  p = path + sizeof(VOLUME) - 1;
-
-  if (!isdigit(*p) || p[1] != '\\')
-     return (path);
-
-  p--;
-  p[0] = 'a' - '0' + p[1];
-  p[1] = ':';
-  return (p);
-}
-
-static char *get_native_path (const char *path)
-{
-  static char win_root[_MAX_PATH] = { "" };
-  static char sys_dir [_MAX_PATH] = { "" };
-  static char ret [_MAX_PATH];
-
-  if (!win_root[0])
-  {
-    const char *p = getenv ("WinDir");
-
-    _strlcpy (win_root, p ? p : "?", sizeof(win_root));
-    fix_drive (win_root);
-    snprintf (sys_dir, sizeof(sys_dir), "%s\\System32\\", win_root);
-  }
-  if (!strnicmp(path,sys_dir,strlen(sys_dir)))
-  {
-    BOOL exist;
-
-    snprintf (ret, sizeof(ret), "%s\\sysnative\\%s", win_root, path+strlen(sys_dir));
-    exist = file_exists (ret);
-    TRACE (2, "ret: '%s', exist: %d\n", ret, exist);
-    if (exist)
-       return (ret);
-  }
-  return (NULL);
-}
-
-/**
  * Beep the speaker.
  */
 static void fw_play_sound (const struct FREQ_MILLISEC *sound)
