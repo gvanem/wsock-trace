@@ -268,7 +268,7 @@ static void hook_extension_func (const GUID *in_guid, extension_func *in_out)
   #define CASE_HOOK(x)  case ex_##x:                                \
                              orig_##x = (LPFN_##x) *orig;           \
                              *in_out = (extension_func) hooked_##x; \
-                             break;
+                             break
   switch (ex)
   {
     case ex_NONE:
