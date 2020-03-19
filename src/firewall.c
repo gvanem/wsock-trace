@@ -1859,6 +1859,8 @@ static const char *get_time_string (const FILETIME *ts)
  */
 static void fw_play_sound (const struct FREQ_MILLISEC *sound)
 {
+  static BOOL warned = FALSE;
+
 #if defined(TEST_FIREWALL) && 0
   static void fw_warning_sound (void);
 
@@ -1866,6 +1868,17 @@ static void fw_play_sound (const struct FREQ_MILLISEC *sound)
      fw_warning_sound();
   else
 #endif
+
+  if (!g_cfg.firewall.sound.enable)
+     return;
+
+  if (!g_cfg.firewall.enable && !warned)
+  {
+    WARNING ("'%s()' called with 'g_cfg.firewall.enable == TRUE'!!\n", __FUNCTION__);
+    warned = TRUE;
+    return;
+  }
+
   if (g_cfg.firewall.sound.enable && sound->frequency > 0 && sound->milli_sec > 0)
      Beep (sound->frequency, sound->milli_sec);
 }

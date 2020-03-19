@@ -236,6 +236,8 @@
 
   #
   # Enable a beeping sound for a firewall event.
+  # This requires '[firewall:enable = 1]'.
+  #
   # Format is frequency, period; "Hertz, milli-seconds".
   # Frequeny is bounded range 0 - 10000.
   # Period is bounded in range 0 - 1000.
