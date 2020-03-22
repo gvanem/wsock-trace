@@ -109,6 +109,7 @@
         } QOS;
 
   typedef void (__stdcall *LPWSAOVERLAPPED_COMPLETION_ROUTINE) (DWORD, DWORD, void*, DWORD);
+  typedef int  (__stdcall *LPCONDITIONPROC) (WSABUF*, WSABUF*, QOS*, QOS*, WSABUF*, WSABUF*, GROUP *, DWORD_PTR);
 
 #elif !defined(__WATCOMC__)
   #define WINSOCK_API_LINKAGE  EXPORT
