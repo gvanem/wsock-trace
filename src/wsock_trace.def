@@ -24,6 +24,7 @@ EXPORTS
  _WSAAddressToStringW@20
  _WSAStringToAddressA@20
  _WSAStringToAddressW@20
+ _WSAAccept@20
  _WSARecv@28
  _WSARecvEx@16
  _WSARecvFrom@36
@@ -87,7 +88,6 @@ EXPORTS
 ;
 ;   WPUCompleteOverlappedRequest@20
 ;   WSApSetPostRoutine@4
-;   WSAAccept@20
 ;   WSAEnumNameSpaceProvidersA@8
 ;   WSAEnumNameSpaceProvidersW@8
 ;   WSAGetQOSByName@12

@@ -229,6 +229,12 @@ DEF_FUNC (int, WSAAsyncSelect, (SOCKET       s,
                                 unsigned int msg,
                                 __LONG32     net_ev));
 
+DEF_FUNC (SOCKET, WSAAccept, (SOCKET       s,
+                              struct sockaddr *sa,
+                              int             *sa_len,
+                              LPCONDITIONPROC  condition,
+                              DWORD_PTR        callback_data));
+
 DEF_FUNC (int, WSARecv, (SOCKET                             s,
                          WSABUF                            *bufs,
                          DWORD                              num_bufs,
@@ -429,6 +435,7 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSASetEvent),
               ADD_VALUE (0, "ws2_32.dll", WSAEventSelect),
               ADD_VALUE (0, "ws2_32.dll", WSAAsyncSelect),
+              ADD_VALUE (0, "ws2_32.dll", WSAAccept),
               ADD_VALUE (0, "ws2_32.dll", WSAAddressToStringA),
               ADD_VALUE (0, "ws2_32.dll", WSAAddressToStringW),
               ADD_VALUE (0, "ws2_32.dll", WSAStringToAddressA),
@@ -1269,10 +1276,51 @@ EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, __LONG32
   return (rc);
 }
 
+/*
+ * The `condition` handler is not traced (only the address is printed).
+ * It has the following signature:
+ *  int CALLBACK ConditionFunc (
+ *   IN     LPWSABUF    lpCallerId,
+ *   IN     LPWSABUF    lpCallerData,
+ *   IN OUT LPQOS       lpSQOS,
+ *   IN OUT LPQOS       lpGQOS,
+ *   IN     LPWSABUF    lpCalleeId,
+ *   IN     LPWSABUF    lpCalleeData,
+ *   OUT    GROUP FAR * g,
+ *   IN     DWORD_PTR   dwCallbackData);
+ *
+ * From:
+ *   https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaaccept
+ */
+EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
+                                LPCONDITIONPROC condition, DWORD_PTR callback_data)
+{
+  SOCKET rc;
+
+  INIT_PTR (p_WSAAccept);
+  rc = (*p_WSAAccept) (s, addr, addr_len, condition, callback_data);
+
+  ENTER_CRIT();
+
+  WSTRACE ("WSAAccept (%s, %s, 0x%p, 0x%p) -> %s",
+           socket_number(s), sockaddr_str2(addr,addr_len),
+           condition, callback_data, socket_or_error(rc));
+
+  if (!exclude_this)
+  {
+    if (g_cfg.geoip_enable)
+       dump_countries_sockaddr (addr);
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (addr);
+  }
+
+  LEAVE_CRIT();
+  return (rc);
+}
+
 #if !defined(_MSC_VER)
 EXPORT
 #endif
-
 int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
 {
   int     rc;
