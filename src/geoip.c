@@ -2246,7 +2246,11 @@ int main (int argc, char **argv)
 
   /** Possibly call `ip2loc_init()` again.
    */
-  use_ip2loc ? (void)ip2loc_init() : (void)ip2loc_exit();
+  if (use_ip2loc)
+  {
+    ip2loc_exit();
+    ip2loc_init();
+  }
 
   if (do_update)
   {
