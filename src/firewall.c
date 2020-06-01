@@ -2320,19 +2320,29 @@ BOOL fw_monitor_start (void)
   return fw_monitor_subscribe (&subscription);
 }
 
+/**
+ * Close the handles to the Firewall monitor.
+ *
+ * Some issue when running under a debugger causes illegal-handle exception
+ * (code 0xC0000008) in ' ntdll!NtClose()'. So do not close those handles then.
+ */
 void fw_monitor_stop (BOOL force)
 {
   if (force)
   {
+    BOOL dbg_active = IsDebuggerPresent();
+
     if (fw_event_handle && fw_event_handle != INVALID_HANDLE_VALUE)
     {
-      TRACE (2, "CloseHandle (0x%p).\n", fw_event_handle);
-      CloseHandle (fw_event_handle);
+      TRACE (2, "CloseHandle (0x%p), dbg_active: %d.\n", fw_event_handle, dbg_active);
+      if (!dbg_active)
+         CloseHandle (fw_event_handle);
     }
     if (fw_engine_handle && fw_engine_handle != INVALID_HANDLE_VALUE)
     {
-      TRACE (2, "CloseHandle (0x%p).\n", fw_engine_handle);
-      CloseHandle (fw_engine_handle);
+      TRACE (2, "CloseHandle (0x%p), dbg_active: %d.\n", fw_engine_handle, dbg_active);
+      if (!dbg_active)
+         CloseHandle (fw_engine_handle);
     }
   }
   else
