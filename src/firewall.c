@@ -2324,18 +2324,23 @@ void fw_monitor_stop (BOOL force)
 {
   if (force)
   {
-    if (fw_event_handle != INVALID_HANDLE_VALUE)
-       CloseHandle (fw_event_handle);
-    if (fw_engine_handle != INVALID_HANDLE_VALUE)
-       CloseHandle (fw_engine_handle);
+    if (fw_event_handle && fw_event_handle != INVALID_HANDLE_VALUE)
+    {
+      TRACE (2, "CloseHandle (0x%p).\n", fw_event_handle);
+      CloseHandle (fw_event_handle);
+    }
+    if (fw_engine_handle && fw_engine_handle != INVALID_HANDLE_VALUE)
+    {
+      TRACE (2, "CloseHandle (0x%p).\n", fw_engine_handle);
+      CloseHandle (fw_engine_handle);
+    }
   }
   else
   {
-    if (fw_engine_handle != INVALID_HANDLE_VALUE &&
-        fw_event_handle  != INVALID_HANDLE_VALUE && p_FwpmNetEventUnsubscribe0)
+    if (fw_event_handle && fw_event_handle != INVALID_HANDLE_VALUE && p_FwpmNetEventUnsubscribe0)
        (*p_FwpmNetEventUnsubscribe0) (fw_engine_handle, fw_event_handle);
 
-    if (fw_engine_handle != INVALID_HANDLE_VALUE && p_FwpmEngineClose0)
+    if (fw_engine_handle && fw_engine_handle != INVALID_HANDLE_VALUE && p_FwpmEngineClose0)
        (*p_FwpmEngineClose0) (fw_engine_handle);
   }
   fw_event_handle = fw_engine_handle = INVALID_HANDLE_VALUE;
@@ -2822,6 +2827,19 @@ static int fw_enumerate_rules (void)
   if (num != (int)rule_count)
      TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
   return (num);
+}
+
+const struct LoadTable *find_ws2_func_by_name (const char *func)
+{
+  return (NULL);
+}
+
+void hosts_file_exit (void)
+{
+}
+
+void check_all_search_lists (void)
+{
 }
 #endif  /* TEST_FIREWALL */
 
@@ -4042,13 +4060,11 @@ static void get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *po
    * Hence we cannot call `getservbyport()` after a `WSACleanup()`.
    * Just return the port-number as a string.
    */
-#if !defined(TEST_FIREWALL)
   if (cleaned_up)
   {
     _itoa (port, port_str, 10);
     return;
   }
-#endif
 
   /* Do not use 'WSTRACE()' on 'getservbyport()' here.
    */
@@ -4631,6 +4647,10 @@ const char *fw_strerror (DWORD err)
  */
 const char *program_name = "firewall_test.exe";
 static int  quit;
+
+int volatile cleaned_up = 0;
+int volatile startup_count = 0;
+
 
 /**
  * Return a `malloc()`ed string of the program (with arguments) to pass to `_popen()`.

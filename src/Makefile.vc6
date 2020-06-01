@@ -146,7 +146,9 @@ FIREWALL_TEST_OBJ = $(OBJ_DIR)\common.obj     \
                     $(OBJ_DIR)\inet_util.obj  \
                     $(OBJ_DIR)\init_1.obj     \
                     $(OBJ_DIR)\ip2loc.obj     \
-                    $(OBJ_DIR)\smartlist.obj
+                    $(OBJ_DIR)\overlap.obj    \
+                    $(OBJ_DIR)\smartlist.obj  \
+                    $(OBJ_DIR)\stkwalk.obj
 
 IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
            $(OBJ_DIR)\getopt.obj \
@@ -257,7 +259,7 @@ $(OBJ_DIR)\idna_1.obj: idna.c
 	$(CC) $(CFLAGS) -DTEST_IDNA -Fo$*.obj -c idna.c
 
 $(OBJ_DIR)\init_1.obj: init.c
-	$(CC) $(CFLAGS) -DTEST_GEOIP -Fo$*.obj -c init.c
+	$(CC) $(CFLAGS) -DTEST_GEOIP -DTEST_FIREWALL -Fo$*.obj -c init.c
 
 #
 # The default fall-back rule for other .obj-files.
