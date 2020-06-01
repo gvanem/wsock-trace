@@ -1376,8 +1376,16 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
 
   ENTER_CRIT();
 
-  WSTRACE ("bind (%s, %s) --> %s",
-           socket_number(s), sockaddr_str2(addr,&addr_len), get_error(rc));
+  if (addr->sa_family == AF_UNIX)
+  {
+    WSTRACE ("bind (%s, \"%s\") --> %s",
+             socket_number(s), sockaddr_str_port (addr, &addr_len), get_error(rc));
+  }
+  else
+  {
+    WSTRACE ("bind (%s, %s) --> %s",
+             socket_number(s), sockaddr_str2 (addr, &addr_len), get_error(rc));
+  }
 
   if (!exclude_this)
   {
