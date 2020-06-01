@@ -291,6 +291,7 @@
  * These are a rewrite of the enums in <ws2def.h> and <wsrm.h>.
  * Since many of these are missing in e.g. MinGW, using `#ifndef IPPROTO_x` around them are not safe.
  */
+#define _IPPROTO_IP                    0
 #define _IPPROTO_HOPOPTS               0
 #define _IPPROTO_ICMP                  1
 #define _IPPROTO_IGMP                  2
@@ -1020,6 +1021,7 @@ static const struct search_list getnameinfo_flgs[] = {
 #define ADD_PROTO(p)   { _##p, #p }
 
 static const struct search_list protocols[] = {
+                    ADD_PROTO (IPPROTO_IP),      /* == 0 */
                     ADD_PROTO (IPPROTO_ICMP),
                     ADD_PROTO (IPPROTO_IGMP),
                     ADD_PROTO (BTHPROTO_RFCOMM),
