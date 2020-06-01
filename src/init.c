@@ -1446,7 +1446,7 @@ void wsock_trace_init (void)
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
-#if !defined(TEST_BACKTRACE)
+#if !defined(TEST_BACKTRACE) && !defined(TEST_FIREWALL)
   load_ws2_funcs();
   hosts_file_init();
 #endif
