@@ -728,7 +728,7 @@ static char *volume_to_path (char *path)
 
   p = path + sizeof(VOLUME) - 1;
 
-  if (!isdigit(*p) || p[1] != '\\')
+  if (!isdigit((int)*p) || p[1] != '\\')
      return (path);
 
   p--;
@@ -736,6 +736,13 @@ static char *volume_to_path (char *path)
   p[1] = ':';
   return (p);
 }
+
+/*
+ * Ignore stuff like:
+ *   warning: '\System32\' directive output may be truncated writing 10 bytes into a
+ *            region of size between 1 and 256 [-Wformat-truncation=]
+ */
+GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
 
 static char *get_native_path (const char *path)
 {

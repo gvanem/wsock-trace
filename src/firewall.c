@@ -2445,7 +2445,7 @@ static void SID_dump (const SID *sid)
 
   trace_printf ("SID->SubAuthority[%u]:     ", sid->SubAuthorityCount);
   for (i = 0; i < sid->SubAuthorityCount; i++)
-      trace_printf ("%lu ", sid->SubAuthority[i]);
+      trace_printf ("%lu ", DWORD_CAST(sid->SubAuthority[i]));
   trace_putc ('\n');
 }
 

@@ -1304,7 +1304,7 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
 
   WSTRACE ("WSAAccept (%s, %s, 0x%p, 0x%p) -> %s",
            socket_number(s), sockaddr_str2(addr,addr_len),
-           condition, callback_data, socket_or_error(rc));
+           condition, (const void*)callback_data, socket_or_error(rc));
 
   if (!exclude_this)
   {
