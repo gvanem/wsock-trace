@@ -729,6 +729,10 @@ typedef struct FW_RULE {
 #define FWPM_SESSION_FLAG_DYNAMIC      0x00000001
 #endif
 
+#ifndef FWPM_NET_EVENT_KEYWORD_PORT_SCANNING_DROP  /* In NTDDI_WIN10_19H1 */
+#define FWPM_NET_EVENT_KEYWORD_PORT_SCANNING_DROP  0x00000020
+#endif
+
 typedef struct _FWPM_NET_EVENT_CLASSIFY_DROP0 {
         UINT64  filterId;
         UINT16  layerId;
@@ -2147,7 +2151,8 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   if (g_cfg.firewall.show_all)
      value.uint32 += FWPM_NET_EVENT_KEYWORD_CLASSIFY_ALLOW |
                      FWPM_NET_EVENT_KEYWORD_INBOUND_MCAST  |
-                     FWPM_NET_EVENT_KEYWORD_INBOUND_BCAST;
+                     FWPM_NET_EVENT_KEYWORD_INBOUND_BCAST  |
+                     FWPM_NET_EVENT_KEYWORD_PORT_SCANNING_DROP;
 
   rc = (*p_FwpmEngineSetOption0) (fw_engine_handle, FWPM_ENGINE_NET_EVENT_MATCH_ANY_KEYWORDS, &value);
   if (rc != ERROR_SUCCESS)
