@@ -43,6 +43,9 @@ EXPORTS
  _WSAWaitForMultipleEvents@20
  _WSAPoll@12
 
+ _InetPtonW@12
+ _InetNtopW@16
+
  _accept@12
  _bind@12
  _closesocket@4

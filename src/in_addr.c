@@ -113,6 +113,40 @@ int wsock_trace_inet_pton (int family, const char *addr, void *result)
   return inet_pton (family, addr, result);
 }
 
+/**
+ * These may be needed by some Win-Vista+ applications
+ */
+EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
+{
+  char addr [INET6_ADDRSTRLEN];
+
+  switch (family)
+  {
+    case AF_INET:
+         snprintf (addr, sizeof(addr), "%S", waddr);
+         return wsock_trace_inet_pton4(addr, (u_char*)waddr_dest);
+    case AF_INET6:
+         snprintf (addr, sizeof(addr), "%S", waddr);
+         return wsock_trace_inet_pton6(addr, (u_char*)waddr_dest);
+    default:
+         WSASetLastError (WSAEAFNOSUPPORT);
+         /* fall through */
+  }
+  return (-1);
+}
+
+EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, size_t res_buf_size)
+{
+  char buf [INET6_ADDRSTRLEN];
+
+  if (!inet_ntop(family, (INET_NTOP_ADDR)addr, buf, sizeof(buf)))
+      return (NULL);
+
+  if (!MultiByteToWideChar(CP_ACP, 0, buf, -1, res_buf, res_buf_size))
+     return (NULL);
+  return (res_buf);
+}
+
 char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
 {
   BOOL save = call_WSASetLastError;
