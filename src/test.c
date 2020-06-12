@@ -128,6 +128,8 @@ static void test_WSAAddressToStringWP (void);
 static void test_WSAStringToAddressA (void);
 static void test_WSAStringToAddressW (void);
 static void test_WSAEnumProtocols (void);
+static void test_InetPtonW (void);
+static void test_InetNtopW (void);
 static void test_IDNA_functions (void);
 
 /*
@@ -171,6 +173,8 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAStringToAddressA),
                     ADD_TEST (WSAStringToAddressW),
                     ADD_TEST (WSAEnumProtocols),
+                    ADD_TEST (InetPtonW),
+                    ADD_TEST (InetNtopW),
                     ADD_TEST (WSACleanup)
                   };
 
@@ -548,11 +552,15 @@ static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
   wchar_t            data[256];
   DWORD              size = DIM (data);
 
-  memset (&sa4, 0, sizeof(sa4));
+  memset (&data, '\0', sizeof(data));
+  memset (&sa4, '\0', sizeof(sa4));
   sa4.sin_family = AF_INET;
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
 
   WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, (wchar_t*)&data, &size);
+
+  if (chatty >= 1)
+     printf ("  data: '%S', size: %lu.\n", data, size);
 
   TEST_CONDITION (== 0, wcscmp(data,L"127.0.0.1"));
   TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1")/2));
@@ -627,6 +635,26 @@ static void test_WSAEnumProtocols (void)
   TEST_CONDITION ( > 0, WSAEnumProtocols (NULL, p_info, &len));
 }
 
+static void test_InetPtonW (void)
+{
+  struct in_addr  in4;
+  struct in6_addr in6;
+
+  TEST_CONDITION (== 1, InetPtonW (AF_INET, L"127.0.0.1", &in4));
+  TEST_CONDITION (== 1, InetPtonW (AF_INET6, L"2A00:1450:400F:805::1011", &in6));
+}
+
+static void test_InetNtopW (void)
+{
+  struct in_addr  in4;
+  struct in6_addr in6 = IN6ADDR_LOOPBACK_INIT;
+  wchar_t buf [INET6_ADDRSTRLEN];
+
+  in4.s_addr = inet_addr ("127.0.0.1");
+  TEST_CONDITION (!= 0, InetNtopW (AF_INET, &in4, buf, sizeof(buf)/2));
+  TEST_CONDITION (!= 0, InetNtopW (AF_INET6, &in6, buf, sizeof(buf)/2));
+}
+
 /*
  * per-thread data given to 'thread_worker()' in it's 'arg' parameter.
  */
@@ -645,7 +673,7 @@ struct thr_data {
  *               test.c(538) (thread_worker+44):
  *    WSASetLastError (0=No error).
  */
-static void thread_sub_func (const struct thr_data *td)
+void thread_sub_func (const struct thr_data *td)
 {
   EnterCriticalSection (td->t_crit);
 
@@ -663,7 +691,7 @@ static void thread_sub_func (const struct thr_data *td)
   Sleep (300);
 }
 
-static DWORD WINAPI thread_worker (void *arg)
+DWORD WINAPI thread_worker (void *arg)
 {
   const struct thr_data *td = (const struct thr_data*) arg;
   int   i;
