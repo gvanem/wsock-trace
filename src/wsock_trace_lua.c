@@ -18,7 +18,7 @@
 #endif
 
 #ifndef va_copy
-#define va_copy(dst,src) ((dst) = (src))
+#define va_copy(dst, src) ((dst) = (src))
 #endif
 
 #define LUA_TRACE(level, fmt, ...)                  \
@@ -51,6 +51,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 {
   const char *dll  = get_dll_full_name();
   const char *base = basename (dll);
+  const char *env;
   char        cpath [_MAX_PATH] = { "?" };
   BOOL        rc = TRUE;
 
@@ -69,7 +70,10 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
        rc = FALSE;
     else
     {
-      snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", (int)(base-dll-1), dll);
+      env = getenv ("LUA_CPATH");
+      if (env)
+           snprintf (cpath, sizeof(cpath), "%s;%.*s\\?.dll", env, (int)(base-dll-1), dll);
+      else snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", (int)(base-dll-1), dll);
       _setenv ("LUA_CPATH", cpath, 1);
       wslua_init (g_cfg.lua.init_script);
     }

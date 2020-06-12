@@ -1658,7 +1658,7 @@ int _setenv (const char *env, const char *val, int overwrite)
   }
   else if (overwrite)
   {
-    snprintf (value, sizeof(value), "%s=%s;%s", env, e, val);
+    snprintf (value, sizeof(value), "%s=%s", env, val);
     e = strdup (value);
     if (!e)
     {
@@ -1668,6 +1668,8 @@ int _setenv (const char *env, const char *val, int overwrite)
     free (_environ[i]);
     _environ[i] = e;
   }
+
+  SetEnvironmentVariable (env, e);
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
   return (0);
