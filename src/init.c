@@ -504,6 +504,14 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
  * then in current_dir.
  * then in %APPDATA% or %HOME%.
  */
+
+/*
+ * Ignore stuff like:
+ *   warning: '%.30s' directive output may be truncated writing 11 bytes into a region
+ *            of size between 0 and 259 [-Wformat-truncation=]
+ */
+GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
+
 static char fname [MAX_PATH];
 
 static FILE *open_config_file (const char *base_name)

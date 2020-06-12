@@ -2846,6 +2846,7 @@ static int fw_enumerate_rules (void)
 
 const struct LoadTable *find_ws2_func_by_name (const char *func)
 {
+  ARGSUSED (func);
   return (NULL);
 }
 
