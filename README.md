@@ -34,7 +34,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
   (like [`AcceptEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524.aspx)
-  and [`ConnectEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).<br>
+  and [`ConnectEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).
   Wsock-trace is able to trace these too.
 
 * *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
@@ -389,7 +389,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2018.
+G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2020.
 
 ### Footnotes:
 

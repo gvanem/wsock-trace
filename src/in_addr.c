@@ -124,10 +124,10 @@ EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
   {
     case AF_INET:
          snprintf (addr, sizeof(addr), "%S", waddr);
-         return wsock_trace_inet_pton4(addr, (u_char*)waddr_dest);
+         return wsock_trace_inet_pton4 (addr, (u_char*)waddr_dest);
     case AF_INET6:
          snprintf (addr, sizeof(addr), "%S", waddr);
-         return wsock_trace_inet_pton6(addr, (u_char*)waddr_dest);
+         return wsock_trace_inet_pton6 (addr, (u_char*)waddr_dest);
     default:
          WSASetLastError (WSAEAFNOSUPPORT);
          /* fall through */
