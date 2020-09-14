@@ -1,0 +1,160 @@
+version: 1.0.{build}
+
+#
+# Skipping commits affecting these files.
+#
+skip_commits:
+   files:
+    - '**/*.md'
+    - '**/*.png'
+    - '**/*.jpg'
+
+environment:
+  global:
+    CL: -nologo -MP
+  matrix:
+    - BUILDER: msvc
+      CPU:     x86
+    - BUILDER: msvc
+      CPU:     x64
+    - BUILDER: mingw
+      CPU:     x86
+    - BUILDER: mingw
+      CPU:     x64
+    - BUILDER: cygwin
+      CPU:     x86
+    - BUILDER: cygwin
+      CPU:     x64
+    - BUILDER: watcom
+      CPU:     x86
+
+matrix:
+  #
+  # Immediately finish build if one of the above jobs fails.
+  #
+  fast_finish: true
+  allow_failures:
+     - BUILDER: watcom
+     - BUILDER: cygwin
+
+#
+# todo: Get better version string.
+#
+cache:
+  - wsock-trace-%APPVEYOR_BUILD_NUMBER%
+
+before_build:
+  #
+  # clone the submodules.
+  #
+  - cmd: git submodule update --init --recursive
+
+  #
+  # Download IP2Location Database (with IPv4+IP6 addresses) and decompress using '7z'.
+  #
+  - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
+
+install:
+  #
+  # Add a few locations to our PATH.
+  # And setup the compiler environment for Watcom
+  # (it seems it cannot be done in 'appveyor-script.bat init')
+  #
+  - cmd: set WATCOM=%APPVEYOR_BUILD_FOLDER%\watcom
+  - cmd: set PATH=%APPVEYOR_BUILD_FOLDER%\src;%WATCOM%\binnt;%PATH%
+  - cmd: set NT_INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
+  - cmd: set DISABLEDELAYEDEXPANSION=0
+  - cmd: set CYGWIN_OPT=-qgnNdOA -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com
+
+  #
+  # Set compiler environment for MSVC first.
+  #
+  - cmd: if %BUILDER%-%CPU%. == msvc-x86.   call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
+  - cmd: if %BUILDER%-%CPU%. == msvc-x64.   call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
+  - cmd: if %BUILDER%-%CPU%. == mingw-x86.  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if %BUILDER%-%CPU%. == mingw-x64.  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if %BUILDER%-%CPU%. == cygwin-x64. set PATH=c:\msys64\usr\bin;%PATH%
+
+build_script:
+  - cmd: appveyor-script.bat init
+
+  #
+  # Download and extract OpenWatcom 2.0 using 'curl'
+  #
+  - cmd: if %BUILDER%. == watcom. (
+            curl -O -# http://www.watt-32.net/CI/watcom20.zip &
+            7z x -o%WATCOM% watcom20.zip > NUL)
+
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%\src
+  - cmd: set USE_LUA=1
+  - cmd: set USE_IP2LOCATION=1
+  - cmd: set PLATFORM=%CPU%
+  - cmd: set CYGWIN=nodosfilewarning
+
+  - cmd: if %BUILDER%. == msvc.   nmake -nologo -f Makefile.vc6
+  - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU% USE_CRT_DEBUG=0
+  - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU% USE_CRT_DEBUG=0
+  - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
+
+test_script:
+  - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe
+  - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=1 &                          test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
+
+#
+# Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
+# Prevent the 'watcom' directory to end up in 'artifacts'.
+#
+after_test:
+  - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%
+  - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)
+  - cmd: 7z a %ZIP_FILE% .\README.md  .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua > NUL
+
+#
+# Push %ZIP_FILE% as an artifact.
+# (cannot use the ZIP_FILE env-var here!)
+#
+artifacts:
+  - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+    name: Wsock-Trace
+
+#
+# Run build only if one of the following files is modified on commit
+#
+only_commits:
+  files:
+    - appveyor*
+    - src/*.c
+    - src/*.h
+    - src/Makefile.*
+
+#
+# todo: One day...
+#
+# deploy:
+#   Deploying to NuGet feed
+#   - provider: NuGet
+#     server: https://my.nuget.server/feed
+#     api_key:
+#       secure: FYWX6NfjZIVw==
+#     skip_symbols: false
+#     symbol_server: https://your.symbol.server/feed
+#     artifact: MyPackage.nupkg
+
+#
+#   Deploy to GitHub Releases
+#
+#   - provider: GitHub
+#     artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
+#     draft: false
+#     prerelease: false
+#     on:
+#       branch: master                # release from master branch only
+#       appveyor_repo_tag: true       # deploy on tag push only
