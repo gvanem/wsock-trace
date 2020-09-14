@@ -1024,6 +1024,15 @@ static BOOL set_symbol_search_path (void)
 
   if (GetModuleFileName(NULL, tmp, sizeof(tmp)) && (dir = dirname(tmp)) != NULL)
   {
+#if 0
+    if (!strnicmp(basename(tmp),"python",6))
+    {
+      TRACE (2, "Using Python from: \"%s\".\n", dir);
+      /**
+       * \todo, add the paths of the loaded PYDs to the 'symbolSearchPath'
+       */
+    }
+#endif
     if (strcmp(dir,curr_dir))
     {
       p   += snprintf (p, left, "%s;", dir);
