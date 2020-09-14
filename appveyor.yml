@@ -89,7 +89,7 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
 
-  - cmd: if %BUILDER%. == msvc.   nmake -nologo -p -f Makefile.vc6
+  - cmd: if %BUILDER%. == msvc.   nmake -nologo -f Makefile.vc6
   - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU% USE_CRT_DEBUG=0
   - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU% USE_CRT_DEBUG=0
   - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
@@ -116,40 +116,7 @@ after_test:
 # Push %ZIP_FILE% as an artifact.
 # (cannot use the ZIP_FILE env-var here!)
 #
-artifacts:
-  - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
-    name: Wsock-Trace
+# artifacts:
+#   - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+#     name: Wsock-Trace
 
-#
-# Run build only if one of the following files is modified on commit
-#
-# only_commits:
-#   files:
-#     - appveyor*
-#     - src/*.c
-#     - src/*.h
-#     - src/Makefile.*
-
-#
-# todo: One day...
-#
-# deploy:
-#   Deploying to NuGet feed
-#   - provider: NuGet
-#     server: https://my.nuget.server/feed
-#     api_key:
-#       secure: FYWX6NfjZIVw==
-#     skip_symbols: false
-#     symbol_server: https://your.symbol.server/feed
-#     artifact: MyPackage.nupkg
-
-#
-# Deploy to GitHub Releases
-#
-#   - provider: GitHub
-#     artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
-#     draft: false
-#     prerelease: false
-#     on:
-#       branch: master                # release from master branch only
-#       appveyor_repo_tag: true       # deploy on tag push only

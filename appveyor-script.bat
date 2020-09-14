@@ -86,6 +86,7 @@ echo api_level = 3                                          >> wsock_trace.appve
 ::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
 ::
 echo Generating appveyor-hosts file...
+echo on
 type appveyor_hosts_content.txt > appveyor-hosts
 
 ::
