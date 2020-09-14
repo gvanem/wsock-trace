@@ -1,0 +1,203 @@
+#
+# Wsock-trace makefile for MinGW, MinGW64-w64 or TDM-gcc.
+# This requires GNU make v4 or later.
+#
+# G. Vanem <gvanem@yahoo.no> 2011 - 2018.
+#
+
+USE_CRT_DEBUG ?= 0
+USE_BFD        = 0
+USE_DEF_FILE   = 0
+
+#
+# If you want Lua-script support, set 'USE_LUA = ':
+#
+USE_LUA    ?= 0
+LUAJIT_ROOT = ../LuaJIT
+
+BIN_TARGET  = $(realpath $(MINGW32))/bin
+LIB_TARGET  = $(realpath $(MINGW32))/lib
+
+
+#
+# If '$(CPU)=x64', build 64-bit version. Assuming your MinGW
+# is dual-target capable and supports the '-mxx' option.
+# Otherwise 32-bit programs.
+#
+ifeq ($(CPU),)
+  CPU = x86
+endif
+
+ifeq ($(CPU),X86)
+  CPU = x86
+endif
+
+ifeq ($(CPU),X64)
+  CPU = x64
+endif
+
+CC      = gcc
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces \
+          -Wno-unused-variable -Wno-unused-function
+RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__
+OBJ_DIR = MinGW_obj
+
+ifeq ($(CPU),x64)
+  CFLAGS  += -m64
+  LDFLAGS  = -m64
+  RCFLAGS  += -DBITNESS=64 --target=pe-x86-64
+  X_SUFFIX = _x64
+else
+  CFLAGS  += -m32
+  LDFLAGS  = -m32
+  RCFLAGS  += -DBITNESS=32 --target=pe-i386
+  X_SUFFIX =
+endif
+
+ifeq ($(USE_LUA),1)
+  CFLAGS  += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+  EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
+endif
+
+LDFLAGS += -Wl,--print-map,--sort-common -t
+
+ifeq ($(USE_CRT_DEBUG),1)
+  CFLAGS += -O0 -ggdb -D_DEBUG
+else
+  CFLAGS  += -O3 -fomit-frame-pointer
+  LDFLAGS += # -s
+endif
+
+ifeq ($(USE_BFD),1)
+  CFLAGS  += -DUSE_BFD
+  EX_LIBS += -lbfd -liberty -lintl -lz
+
+  ifeq ($(CPU),x86)
+    CFLAGS += -DBFD_ARCH_SIZE=32
+  else ifeq ($(CPU),x64)
+    CFLAGS += -DBFD_ARCH_SIZE=64
+  else
+    $(error "Unknown CPU")
+  endif
+endif
+
+ifeq ($(USE_DEF_FILE),1)
+  CFLAGS += -DUSE_DEF_FILE
+endif
+
+EX_LIBS += -lole32 -ladvapi32
+
+SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
+          common.c cpu.c dnsbl.c dump.c geoip.c geoip-gen4.c geoip-gen6.c \
+          overlap.c in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c \
+          firewall.c
+
+OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
+NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
+
+GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c \
+            ip2loc.c getopt.c smartlist.c
+GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
+
+all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe firewall_test.exe
+	@echo 'Welcome to Wsock_trace library and examples.'
+
+message:
+	@echo 'Building MinGW version. CPU=$(CPU).'
+
+$(OBJ_DIR):
+	- mkdir $(OBJ_DIR)
+
+libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
+
+WSOCK_DEPS = $(OBJECTS) $(NON_EXPORT_OBJ)
+
+ifeq ($(USE_DEF_FILE),1)
+  DEF_FILE    = wsock_trace$(X_SUFFIX).def
+  WSOCK_DEPS += $(DEF_FILE)
+endif
+
+ifeq ($(USE_LUA),1)
+  WSOCK_DEPS += $(LUAJIT_ROOT)/src/libluajit.a
+endif
+
+libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
+
+wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
+	$(CC) $(LDFLAGS) -shared -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
+          -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
+	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
+
+install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
+	cp --update libwsock_trace.a              $(LIB_TARGET)
+	cp --update wsock_trace_mw$(X_SUFFIX).dll $(BIN_TARGET)
+
+test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
+	$(CC) -o $@ $(LDFLAGS) $^ > test.map
+
+idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
+
+firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c getopt.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
+
+geoip.exe: $(GEOIP_SRC) geoip-null.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip.map
+	geoip.exe -4g geoip-gen4.c
+	geoip.exe -6g geoip-gen6.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^ geoip-gen4.c geoip-gen6.c
+	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
+	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
+
+geoip-gen4.c: geoip.exe
+	@echo 'Generating $@.'
+	geoip.exe -4g $@
+
+geoip-gen6.c: geoip.exe
+	@echo 'Generating $@.'
+	geoip.exe -6g $@
+
+run_test: test.exe
+	test.exe -dd
+
+compile_luajit_0:
+	@echo
+
+#
+# Make sure the '$(LUAJIT_ROOT)/src/Makefile' specifies the same
+# '-m[32|64]' as above. I.e. 'CC = gcc -m32'
+#
+# and that 'BUILDMODE = static'.
+#
+compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
+	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
+	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows
+
+clean:
+	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
+ifeq ($(USE_LUA),1)
+	 - rm -fR $(LUAJIT_ROOT)/src/*.o
+endif
+
+vclean realclean: clean
+	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
+	      idna.exe idna.map geoip.exe geoip.map test.exe test.map firewall_test.exe firewall_test.map \
+	      geoip-gen4.c geoip-gen6.c wsock_trace_mw$(X_SUFFIX).def .depend.MinGW
+	- rmdir $(OBJ_DIR)
+ifeq ($(USE_LUA),1)
+	- rm -f $(LUAJIT_ROOT)/src/libluajit.a
+endif
+
+$(OBJ_DIR)/%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+	@echo
+
+$(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
+	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+
+REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
+
+depend:
+	$(CC) -MM $(CFLAGS) $(SOURCES) non-export.c test.c | $(REPLACE) > .depend.MinGW
+
+-include .depend.MinGW

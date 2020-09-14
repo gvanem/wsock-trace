@@ -1,0 +1,152 @@
+F:\gv\VC_project\ws_trace\src> firewall_test.exe  -4 curl -sLo NUL www.vg.no
+
+Executing curl -sLo NUL www.vg.no while listening for IPv4 Filter events.
+
+00:00:17: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Resource Assignment v4-lag
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume5\mingw32\src\inet\curl\src\curl.exe
+
+00:00:17: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, OUT, IPPROTO_UDP
+  layer-item:  ALE Connect v4-lag
+  filter-item: Default Outbound
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 61747 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume5\mingw32\src\inet\curl\src\curl.exe
+
+00:00:17: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Flow Established v4-lag
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 61747 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume5\mingw32\src\inet\curl\src\curl.exe
+
+00:00:18: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Resource Assignment v4-lag
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume5\mingw32\src\inet\curl\src\curl.exe
+
+00:00:18: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, OUT, IPPROTO_UDP
+  layer-item:  ALE Connect v4-lag
+  filter-item: Default Outbound
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 61748 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume5\mingw32\src\inet\curl\src\curl.exe
+
+00:00:18: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Flow Established v4-lag
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 61748 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume5\mingw32\src\inet\curl\src\curl.exe
+
+00:00:18: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_UDP
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 61747 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+
+00:00:18: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_UDP
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 61748 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Resource Assignment v4-lag
+  filter-item: chrome.exe
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Resource Assignment v4-lag
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume2\windows\system32\svchost.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, OUT, IPPROTO_UDP
+  layer-item:  ALE Connect v4-lag
+  filter-item: Default Outbound
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 58306 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume2\windows\system32\svchost.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Flow Established v4-lag
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 58306 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume2\windows\system32\svchost.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Resource Assignment v4-lag
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume2\windows\system32\svchost.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, OUT, IPPROTO_UDP
+  layer-item:  ALE Connect v4-lag
+  filter-item: Default Outbound
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 51663 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume2\windows\system32\svchost.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Flow Established v4-lag
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 51663 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+  app:  \device\harddiskvolume2\windows\system32\svchost.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Resource Assignment v4-lag
+  filter-item: chrome.exe
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, OUT, IPPROTO_UDP
+  layer-item:  ALE Connect v4-lag
+  filter-item: Default Outbound
+  addr: 10.0.0.10 -> 64.233.163.99, ports: 51664 / 443 (https)
+  loc:  United States, Mountain View/California
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_UDP
+  layer-item:  ALE Flow Established v4-lag
+  addr: 10.0.0.10 -> 64.233.163.99, ports: 51664 / 443 (https)
+  loc:  United States, Mountain View/California
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_TCP
+  layer-item:  ALE Resource Assignment v4-lag
+  addr: 0.0.0.0 -> 0.0.0.0, ports: - / -
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, OUT, IPPROTO_TCP
+  layer-item:  ALE Connect v4-lag
+  filter-item: Default Outbound
+  addr: 10.0.0.10 -> 64.233.163.99, ports: 49588 / 443 (https)
+  loc:  United States, Mountain View/California
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, 14595, IPPROTO_TCP
+  layer-item:  ALE Flow Established v4-lag
+  addr: 10.0.0.10 -> 64.233.163.99, ports: 49588 / 443 (https)
+  loc:  United States, Mountain View/California
+  app:  \device\harddiskvolume2\users\gisle\appdata\local\google\chrome\application\chrome.exe
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP
+  layer-item:  Inbound Transport v4 Discard-lag
+  filter-item: Filter for ? hindre portskanning
+  addr: 136.243.5.162 -> 10.0.0.10, ports: 443 (https) / 49577
+  loc:  Germany, Berlin/Berlin
+00:00:22: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, IN, IPPROTO_IGMP
+  layer-item:  ALE Receive/Accept v4-lag
+  filter-item: Interface Un-quarantine filter
+  addr: 10.0.0.1 -> 224.0.0.1, ports: - / -
+  app:  System
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, IN, IPPROTO_IGMP
+  layer-item:  ALE Receive/Accept v4-lag
+  filter-item: Interface Un-quarantine filter
+  addr: 10.0.0.21 -> 224.0.0.251, ports: - / -
+  app:  System
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW, IN, IPPROTO_IGMP
+  layer-item:  ALE Receive/Accept v4-lag
+  filter-item: Interface Un-quarantine filter
+  addr: 10.0.0.21 -> 239.255.255.250, ports: - / -
+  app:  System
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_UDP
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 58306 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_UDP
+  addr: 10.0.0.10 -> 193.213.112.4, ports: 51663 / 53 (domain)
+  loc:  Norway, Nesoddtangen/Akershus
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_UDP
+  addr: 10.0.0.10 -> 64.233.163.99, ports: 51664 / 443 (https)
+  loc:  United States, Mountain View/California
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_TCP
+  addr: 10.0.0.10 -> 64.233.163.99, ports: 49588 / 443 (https)
+  loc:  United States, Mountain View/California
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_IGMP
+  addr: 224.0.0.1 -> 10.0.0.1, ports: - / -
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_IGMP
+  addr: 224.0.0.251 -> 10.0.0.21, ports: - / -
+00:00:23: ver: 3, FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW, IPPROTO_IGMP
+  addr: 239.255.255.250 -> 10.0.0.21, ports: - / -
+Got 43 events, 11 ignored.

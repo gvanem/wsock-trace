@@ -1,0 +1,25 @@
+curl with USE_THREADS_WIN32 and no USE_ARES.
+I.e. getaddrinfo() is used in a separate thread.
+Lifespan of this thread is negative:
+
+* STATE: INIT => CONNECT handle 0x3d4b208; line 1422 (connection #-5000)
+* Rebuilt URL to: ftp://snurre-tablet/
+* Added connection 0. The cache now contains 1 members
+  wsock_trace.c(3012):   DLL_THREAD_ATTACH. hinstDLL: 0x66A60000, thr-id: 3556.
+* STATE: CONNECT => WAITRESOLVE handle 0x3d4b208; line 1458 (connection #0)
+  * 0.111 sec: F:/MingW32/src/inet/curl/lib/curl_addrinfo.c(122) (Curl_getaddrinfo_ex+38):
+    getaddrinfo (snurre-tablet, 21, <hints>, ...) --> No error
+      hints: ai_flags:    0
+             ai_family:   AF_UNSPEC
+             ai_socktype: SOCK_STREAM
+             ai_protocol: 0.
+    ai_flags: 0, ai_family: AF_INET, ai_socktype: SOCK_STREAM, ai_protocol: 0
+      ai_canonname: (null), ai_addr: 10.0.0.37:21
+    geo-IP: Private
+  * 0.111 sec: F:/MingW32/src/inet/curl/lib/curl_addrinfo.c(199) (Curl_getaddrinfo_ex+470):
+    freeaddrinfo (0x035D9470).
+  wsock_trace.c(3024):   DLL_THREAD_DETACH. hinstDLL: 0x66A60000, thr-id: 3556.
+  kernel-time: 0,000000s, user-time: 0,000000s, life-span: -0,001835s, cycle-time: 11,147,157 clocks, perf-count: 0
+  * 0.123 sec: F:/MingW32/src/inet/curl/lib/memdebug.c(346) (curl_socket+20):
+    socket (AF_INET, SOCK_STREAM, 0) --> 184.
+*   Trying 10.0.0.37...

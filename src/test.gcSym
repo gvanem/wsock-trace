@@ -1,0 +1,350 @@
+#GlowCode symbol file v1.3
+#Module, f:\gv\VC_Project\ws_trace\src\test.exe
+#ModuleTime, 03/09/2017 09:43:03 UTC
+#CommandLine, "F:\ProgramFiler\GlowCode\gcSym.exe"  /module:"f:\gv\VC_Project\ws_trace\src\test.exe" /out:"test.gcSym" /search:".\;f:\gv\VC_2015\lib;f:\gv\dx-radio\gnuradio\MSVC-build\bin;f:\Mingw32\bin;SRV*c:\Windows\symbols*http://msdl.microsoft.com/download/symbols"
+NativeModuleTable.Open, f:\gv\VC_Project\ws_trace\src\test.exe
+#SymCallbackProc: CBA_DEFERRED_SYMBOL_LOAD_START f:\gv\VC_Project\ws_trace\src\test.exe
+#SymCallbackProc: CBA_DEFERRED_SYMBOL_LOAD_PARTIAL f:\gv\VC_Project\ws_trace\src\test.exe
+#SymCallbackProc: CBA_EVENT DBGHELP: No header for f:\gv\VC_Project\ws_trace\src\test.exe.  Searching for image on disk 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\VC_Project\ws_trace\src\test.exe - OK 
+#SymCallbackProc: CBA_EVENT DBGHELP: .\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: .\symbols\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: .\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\VC_2015\lib\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\VC_2015\lib\symbols\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\VC_2015\lib\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\dx-radio\gnuradio\MSVC-build\bin\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\dx-radio\gnuradio\MSVC-build\bin\symbols\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\gv\dx-radio\gnuradio\MSVC-build\bin\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\Mingw32\bin\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\Mingw32\bin\symbols\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT DBGHELP: f:\Mingw32\bin\exe\test.pdb - file not found 
+#SymCallbackProc: CBA_EVENT SYMSRV:  c:\Windows\symbols\test.pdb\3EE176EBAE3147B495041A0CB9932D8E2\test.pdb not found 
+#SymCallbackProc: CBA_EVENT SYMSRV:  http://msdl.microsoft.com/download/symbols/test.pdb/3EE176EBAE3147B495041A0CB9932D8E2/test.pdb not found 
+#SymCallbackProc: CBA_DEFERRED_SYMBOL_LOAD_COMPLETE f:\gv\VC_Project\ws_trace\src\test.exe
+#SymCallbackProc: CBA_EVENT DBGHELP: test - private symbols & lines           f:\gv\VC_Project\ws_trace\src\test.pdb 
+#SymGetModuleInfo64 pdb:f:\gv\VC_Project\ws_trace\src\test.pdb, f:\gv\VC_Project\ws_trace\src\test.exe, f:\gv\VC_Project\ws_trace\src\test.exe, test, NumSyms:0
+#SymFromAddr
+#SrcFile, hook=true, 0, f:\gv\vc_project\ws_trace\src\test.c
+NativeModuleTable.SetSrcFile, f:\gv\vc_project\ws_trace\src\test.c
+NativeModuleTable.AddFunc, true, 0, 71, 0x00001010, 0x5, test_condition, 741
+NativeModuleTable.AddFunc, true, 0, 109, 0x00001060, 0x5, test_string, 752
+NativeModuleTable.AddFunc, true, 0, 33, 0x000010D0, 0x5, test_ptr_or_error32, 722
+NativeModuleTable.AddFunc, true, 0, 33, 0x00001100, 0x5, test_ptr_or_error32b, 727
+NativeModuleTable.AddFunc, true, 0, 38, 0x00001130, 0x5, test_ptr_or_error64, 732
+NativeModuleTable.AddFunc, true, 0, 114, 0x00001160, 0x5, test_WSAStartup, 181
+NativeModuleTable.AddFunc, true, 0, 87, 0x000011E0, 0x5, test_WSACleanup, 188
+NativeModuleTable.AddFunc, true, 0, 690, 0x00001240, 0x5, test_gethostbyaddr, 193
+NativeModuleTable.AddFunc, true, 0, 181, 0x00001500, 0x5, test_gethostbyname, 220
+NativeModuleTable.AddFunc, true, 0, 181, 0x000015C0, 0x5, test_getprotobyname, 229
+NativeModuleTable.AddFunc, true, 0, 178, 0x00001680, 0x5, test_getprotobynumber, 235
+NativeModuleTable.AddFunc, true, 0, 97, 0x00001740, 0x5, test_getservbyname, 244
+NativeModuleTable.AddFunc, true, 0, 104, 0x000017B0, 0x5, test_getservbyport, 249
+NativeModuleTable.AddFunc, true, 0, 802, 0x00001820, 0x5, test_getnameinfo, 254
+NativeModuleTable.AddFunc, true, 0, 280, 0x00001B50, 0x5, test_getaddrinfo, 298
+NativeModuleTable.AddFunc, true, 0, 286, 0x00001C70, 0x5, test_socket, 313
+NativeModuleTable.AddFunc, true, 0, 203, 0x00001D90, 0x5, test_ioctlsocket, 323
+NativeModuleTable.AddFunc, true, 0, 244, 0x00001E60, 0x5, test_connect, 331
+NativeModuleTable.AddFunc, true, 0, 234, 0x00001F60, 0x5, test_select, 346
+NativeModuleTable.AddFunc, true, 0, 145, 0x00002050, 0x5, test_send, 363
+NativeModuleTable.AddFunc, true, 0, 138, 0x000020F0, 0x5, test_WSAPoll, 374
+NativeModuleTable.AddFunc, true, 0, 192, 0x00002180, 0x5, test_WSAFDIsSet, 391
+NativeModuleTable.AddFunc, true, 0, 294, 0x00002240, 0x5, test_WSAAddressToStringA, 397
+NativeModuleTable.AddFunc, true, 0, 9, 0x00002370, 0x5, test_WSAAddressToStringW, 428
+NativeModuleTable.AddFunc, true, 0, 206, 0x00002380, 0x5, test_WSAAddressToStringWP, 436
+NativeModuleTable.AddFunc, true, 0, 123, 0x00002450, 0x5, test_WSAStringToAddressA, 467
+NativeModuleTable.AddFunc, true, 0, 123, 0x000024D0, 0x5, test_WSAStringToAddressW, 476
+NativeModuleTable.AddFunc, true, 0, 158, 0x00002550, 0x5, test_WSAEnumProtocols, 485
+NativeModuleTable.AddFunc, true, 0, 142, 0x000025F0, 0x5, name_match, 763
+NativeModuleTable.AddFunc, true, 0, 105, 0x00002680, 0x5, run_test, 158
+NativeModuleTable.AddFunc, true, 0, 301, 0x000026F0, 0x5, test_WSAAddressToStringW_common, 412
+NativeModuleTable.AddFunc, true, 0, 170, 0x00002820, 0x5, thread_sub_func, 515
+NativeModuleTable.AddFunc, true, 0, 192, 0x000028D0, 0x5, thread_worker, 533
+NativeModuleTable.AddFunc, true, 0, 455, 0x00002990, 0x5, thread_test, 547
+NativeModuleTable.AddFunc, true, 0, 49, 0x00002B60, 0x5, show_help, 587
+NativeModuleTable.AddFunc, true, 0, 60, 0x00002BA0, 0x5, list_tests, 597
+NativeModuleTable.AddFunc, true, 0, 402, 0x00002BE0, 0x5, main, 608
+NativeModuleTable.AddFunc, true, 0, 97, 0x00002D80, 0x5, ptr_or_error32, 682
+NativeModuleTable.AddFunc, true, 0, 105, 0x00002DF0, 0x5, ptr_or_error64, 702
+#SrcFile, hook=true, 0, f:\programfiler-x86\windowskits\include\10.0.10586.0\ucrt\corecrt_stdio_config.h
+NativeModuleTable.SetSrcFile, f:\programfiler-x86\windowskits\include\10.0.10586.0\ucrt\corecrt_stdio_config.h
+NativeModuleTable.AddFunc, true, 0, 6, 0x00002E60, 0x5, __local_stdio_printf_options, 80
+#SrcFile, hook=true, 0, f:\programfiler-x86\windowskits\include\10.0.10586.0\ucrt\stdio.h
+NativeModuleTable.SetSrcFile, f:\programfiler-x86\windowskits\include\10.0.10586.0\ucrt\stdio.h
+NativeModuleTable.AddFunc, true, 0, 36, 0x00002E70, 0x5, _vfprintf_l, 638
+NativeModuleTable.AddFunc, true, 0, 48, 0x00002EA0, 0x5, printf, 950
+NativeModuleTable.AddFunc, true, 0, 51, 0x00002ED0, 0x5, snprintf, 1940
+NativeModuleTable.AddFunc, true, 0, 50, 0x00002F10, 0x5, vsnprintf, 1435
+#SrcFile, hook=true, 0, f:\gv\vc_project\ws_trace\src\getopt.c
+NativeModuleTable.SetSrcFile, f:\gv\vc_project\ws_trace\src\getopt.c
+NativeModuleTable.AddFunc, true, 0, 33, 0x00002F50, 0x5, getopt, 1106
+NativeModuleTable.AddFunc, true, 0, 111, 0x00002F80, 0x5, _getopt_internal, 1080
+NativeModuleTable.AddFunc, true, 0, 3664, 0x00002FF0, 0x5, _getopt_internal_r, 344
+NativeModuleTable.AddFunc, true, 0, 335, 0x00003E40, 0x5, exchange, 142
+NativeModuleTable.AddFunc, true, 0, 206, 0x00003F90, 0x5, _getopt_initialize, 224
+#SrcFile, hook=true, 0, f:\programfiler-x86\windowskits\include\10.0.10586.0\ucrt\stdio.h
+NativeModuleTable.SetSrcFile, f:\programfiler-x86\windowskits\include\10.0.10586.0\ucrt\stdio.h
+NativeModuleTable.AddFunc, true, 0, 51, 0x00004060, 0x5, fprintf, 831
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\misc\i386\alloca16.asm
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\misc\i386\alloca16.asm
+NativeModuleTable.AddFunc, true, 0, 44, 0x00004140, 0x5, _alloca_probe_16, 44
+NativeModuleTable.AddFunc, true, 0, 0, 0x00004156, 0xa, _alloca_probe_8, 59
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+NativeModuleTable.AddFunc, true, 0, 155, 0x0000416C, 0x5, pre_c_initialization, 133
+NativeModuleTable.AddFunc, true, 0, 8, 0x00004207, 0x5, post_pgo_initialization, 179
+NativeModuleTable.AddFunc, true, 0, 18, 0x0000420F, 0x5, pre_cpp_initialization, 190
+NativeModuleTable.AddFunc, true, 0, 10, 0x00004221, 0x5, __scrt_common_main, 302
+NativeModuleTable.AddFunc, true, 0, 380, 0x0000422B, 0x5, __scrt_common_main_seh, 210
+NativeModuleTable.AddFunc, true, 0, 13, 0x000043A7, 0x5, __scrt_narrow_argv_policy::configure_argv, 54
+NativeModuleTable.AddFunc, true, 0, 4, 0x000043B4, 0x5, __scrt_main_policy::get_app_type, 44
+NativeModuleTable.AddFunc, true, 0, 5, 0x000043B8, 0x5, initialize_environment, 68
+NativeModuleTable.AddFunc, true, 0, 37, 0x000043BD, 0x5, invoke_main, 73
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+NativeModuleTable.AddFunc, true, 0, 10, 0x000043E2, 0x5, mainCRTStartup, 15
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\misc\i386\chkstk.asm
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\misc\i386\chkstk.asm
+NativeModuleTable.AddFunc, true, 0, 45, 0x000043F0, 0x5, _chkstk, 65
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+NativeModuleTable.AddFunc, true, 0, 20, 0x0000441D, 0x5, __crt_fast_decode_pointer<void (__cdecl**)(void)>, 486
+NativeModuleTable.AddFunc, true, 0, 29, 0x00004431, 0x5, __crt_fast_encode_pointer<void (__cdecl**)(void)>, 497
+NativeModuleTable.AddFunc, true, 0, 13, 0x0000444E, 0x5, __crt_rotate_pointer_value, 473
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+NativeModuleTable.AddFunc, true, 0, 68, 0x0000445B, 0x5, find_pe_section, 61
+NativeModuleTable.AddFunc, true, 0, 51, 0x0000449F, 0x5, is_potentially_valid_image_base, 28
+#SrcFile, hook=true, 0, f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+NativeModuleTable.SetSrcFile, f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+NativeModuleTable.AddFunc, true, 0, 7, 0x000044D2, 0x5, NtCurrentTeb, 19374
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+NativeModuleTable.AddFunc, true, 0, 53, 0x000044D9, 0x5, __scrt_acquire_startup_lock, 139
+NativeModuleTable.AddFunc, true, 0, 24, 0x0000450E, 0x5, __scrt_dllmain_after_initialize_c, 373
+NativeModuleTable.AddFunc, true, 0, 14, 0x00004526, 0x5, __scrt_dllmain_before_initialize_c, 363
+NativeModuleTable.AddFunc, true, 0, 31, 0x00004534, 0x5, __scrt_dllmain_crt_thread_attach, 426
+NativeModuleTable.AddFunc, true, 0, 13, 0x00004553, 0x5, __scrt_dllmain_crt_thread_detach, 443
+NativeModuleTable.AddFunc, true, 0, 51, 0x00004560, 0x5, __scrt_dllmain_exception_filter, 347
+NativeModuleTable.AddFunc, true, 0, 35, 0x00004593, 0x5, __scrt_dllmain_uninitialize_c, 387
+NativeModuleTable.AddFunc, true, 0, 13, 0x000045B6, 0x5, __scrt_dllmain_uninitialize_critical, 402
+NativeModuleTable.AddFunc, true, 0, 57, 0x000045C3, 0x5, __scrt_initialize_crt, 185
+NativeModuleTable.AddFunc, true, 0, 151, 0x000045FC, 0x5, __scrt_initialize_onexit_tables, 297
+NativeModuleTable.AddFunc, true, 0, 141, 0x00004693, 0x5, __scrt_is_nonwritable_in_current_image, 88
+NativeModuleTable.AddFunc, true, 0, 29, 0x00004720, 0x5, __scrt_release_startup_lock, 160
+NativeModuleTable.AddFunc, true, 0, 40, 0x0000473D, 0x5, __scrt_uninitialize_crt, 209
+NativeModuleTable.AddFunc, true, 0, 59, 0x00004765, 0x5, _onexit, 257
+NativeModuleTable.AddFunc, true, 0, 49, 0x000047A0, 0x5, at_quick_exit, 282
+NativeModuleTable.AddFunc, true, 0, 21, 0x000047D1, 0x5, atexit, 275
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+NativeModuleTable.AddFunc, true, 0, 156, 0x000047E6, 0x5, __security_init_cookie, 78
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+NativeModuleTable.AddFunc, true, 0, 3, 0x00004882, 0x5, _matherr, 21
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+NativeModuleTable.AddFunc, true, 0, 4, 0x00004885, 0x5, _get_startup_argv_mode, 14
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+NativeModuleTable.AddFunc, true, 0, 3, 0x00004889, 0x5, _get_startup_commit_mode, 14
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+NativeModuleTable.AddFunc, true, 0, 6, 0x0000488C, 0x5, _get_startup_file_mode, 15
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+NativeModuleTable.AddFunc, true, 0, 3, 0x00004892, 0x5, _get_startup_new_mode, 17
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+NativeModuleTable.AddFunc, true, 0, 3, 0x00004895, 0x5, _get_startup_thread_locale_mode, 11
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+NativeModuleTable.AddFunc, true, 0, 12, 0x00004898, 0x5, __scrt_initialize_type_info, 16
+NativeModuleTable.AddFunc, true, 0, 12, 0x000048A4, 0x5, __scrt_uninitialize_type_info, 24
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+NativeModuleTable.AddFunc, true, 0, 33, 0x000048B0, 0x5, _initialize_default_precision, 19
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+NativeModuleTable.AddFunc, true, 0, 1, 0x000048D1, 0x5, _initialize_invalid_parameter_handler, 15
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+NativeModuleTable.AddFunc, true, 0, 1, 0x000048D2, 0x5, _initialize_denormal_control, 14
+#SrcFile, hook=true, 0, f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+NativeModuleTable.SetSrcFile, f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+NativeModuleTable.AddFunc, true, 0, 6, 0x000048D3, 0x5, __local_stdio_scanf_options, 89
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+NativeModuleTable.AddFunc, true, 0, 29, 0x000048D9, 0x5, __scrt_initialize_default_local_stdio_options, 16
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+NativeModuleTable.AddFunc, true, 0, 12, 0x000048F6, 0x5, __scrt_is_user_matherr_present, 22
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+NativeModuleTable.AddFunc, true, 0, 6, 0x00004902, 0x5, __scrt_get_dyn_tls_init_callback, 19
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+NativeModuleTable.AddFunc, true, 0, 6, 0x00004908, 0x5, __scrt_get_dyn_tls_dtor_callback, 20
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+NativeModuleTable.AddFunc, true, 0, 283, 0x0000490E, 0x5, __scrt_fastfail, 127
+NativeModuleTable.AddFunc, true, 0, 51, 0x00004A29, 0x5, __scrt_get_show_window_mode, 22
+NativeModuleTable.AddFunc, true, 0, 3, 0x00004A5C, 0x5, __scrt_initialize_winrt, 65
+NativeModuleTable.AddFunc, true, 0, 68, 0x00004A5F, 0x5, __scrt_is_managed_app, 32
+NativeModuleTable.AddFunc, true, 0, 12, 0x00004AA3, 0x5, __scrt_set_unhandled_exception_filter, 82
+NativeModuleTable.AddFunc, true, 0, 65, 0x00004AAF, 0x5, __scrt_unhandled_exception_filter, 71
+NativeModuleTable.AddFunc, true, 0, 8, 0x00004AF0, 0x5, _crt_debugger_hook, 118
+NativeModuleTable.AddFunc, true, 0, 43, 0x00004AF8, 0x5, _RTC_Initialize, 0
+NativeModuleTable.AddFunc, true, 0, 43, 0x00004B23, 0x5, _RTC_Terminate, 0
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+NativeModuleTable.AddFunc, true, 0, 6, 0x00004B4E, 0x5, _guard_check_icall, 62
+NativeModuleTable.AddFunc, true, 0, 70, 0x00004B60, 0x5, __SEH_prolog4, 0
+NativeModuleTable.AddFunc, true, 0, 21, 0x00004BA6, 0x5, __SEH_epilog4, 0
+NativeModuleTable.AddFunc, true, 0, 35, 0x00004BBB, 0x5, _except_handler4, 0
+NativeModuleTable.AddFunc, true, 0, 417, 0x00004BDE, 0x5, __isa_available_init, 0
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+NativeModuleTable.AddFunc, true, 0, 12, 0x00004D7F, 0x5, __scrt_is_ucrt_dll_in_use, 22
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+NativeModuleTable.AddFunc, true, 0, 1, 0x00004D8B, 0x5, _guard_check_icall_nop, 67
+NativeModuleTable.AddFunc, true, 0, 18, 0x00004D8C, 0x5, _guard_icall_checks_enforced, 115
+NativeModuleTable.AddFunc, true, 0, 17, 0x00004D9E, 0x5, __security_check_cookie, 0
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+NativeModuleTable.AddFunc, true, 0, 40, 0x00004DAF, 0x5, __raise_securityfailure, 122
+NativeModuleTable.AddFunc, true, 0, 251, 0x00004DD7, 0x5, __report_gsfailure, 196
+NativeModuleTable.AddFunc, true, 0, 12, 0x00004ED2, 0x5, __report_rangecheckfailure, 537
+NativeModuleTable.AddFunc, true, 0, 208, 0x00004EDE, 0x5, __report_securityfailure, 443
+NativeModuleTable.AddFunc, true, 0, 278, 0x00004FAE, 0x5, __report_securityfailureEx, 318
+#SrcFile, hook=true, 0, f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+NativeModuleTable.SetSrcFile, f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+NativeModuleTable.AddFunc, true, 0, 3, 0x0000525C, 0x5, __scrt_stub_for_acrt_initialize, 18
+NativeModuleTable.AddFunc, true, 0, 3, 0x0000525F, 0x5, __scrt_stub_for_acrt_thread_attach, 33
+NativeModuleTable.AddFunc, true, 0, 3, 0x00005262, 0x5, __scrt_stub_for_acrt_thread_detach, 38
+NativeModuleTable.AddFunc, true, 0, 3, 0x00005265, 0x5, __scrt_stub_for_acrt_uninitialize, 23
+NativeModuleTable.AddFunc, true, 0, 3, 0x00005268, 0x5, __scrt_stub_for_acrt_uninitialize_critical, 28
+NativeModuleTable.AddFunc, true, 0, 3, 0x0000526B, 0x5, __scrt_stub_for_is_c_termination_complete, 43
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006000, 0xa, _imp__GetCurrentProcess, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006004, 0xa, _imp__GetCurrentThreadId, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006008, 0xa, _imp__CreateThread, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000600C, 0xa, _imp__Sleep, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006010, 0xa, _imp__WaitForSingleObject, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006014, 0xa, _imp__DeleteCriticalSection, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006018, 0xa, _imp__LeaveCriticalSection, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000601C, 0xa, _imp__EnterCriticalSection, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006020, 0xa, _imp__InitializeCriticalSection, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006024, 0xa, _imp__CloseHandle, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006028, 0xa, _imp__GetCurrentProcessId, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000602C, 0xa, _imp__GetSystemTimeAsFileTime, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006030, 0xa, _imp__InitializeSListHead, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006034, 0xa, _imp__IsDebuggerPresent, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006038, 0xa, _imp__UnhandledExceptionFilter, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000603C, 0xa, _imp__SetUnhandledExceptionFilter, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006040, 0xa, _imp__GetStartupInfoW, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006044, 0xa, _imp__TerminateProcess, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006048, 0xa, _imp__QueryPerformanceCounter, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000604C, 0xa, _imp__GetModuleHandleW, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006050, 0xa, _imp__IsProcessorFeaturePresent, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006054, 0xa, KERNEL32_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006058, 0xa, _imp__memset, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000605C, 0xa, _imp__strchr, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006060, 0xa, _imp____telemetry_main_invoke_trigger, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006064, 0xa, _imp____telemetry_main_return_trigger, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006068, 0xa, _imp____std_type_info_destroy_list, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000606C, 0xa, _imp___except_handler4_common, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006070, 0xa, VCRUNTIME140_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006074, 0xa, _imp__atoi, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006078, 0xa, api-ms-win-crt-convert-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000607C, 0xa, _imp__getenv, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006080, 0xa, api-ms-win-crt-environment-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006084, 0xa, _imp__calloc, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006088, 0xa, _imp___set_new_mode, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000608C, 0xa, _imp__free, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006090, 0xa, api-ms-win-crt-heap-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006094, 0xa, _imp___configthreadlocale, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006098, 0xa, api-ms-win-crt-locale-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000609C, 0xa, _imp____setusermatherr, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060A0, 0xa, api-ms-win-crt-math-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060A4, 0xa, _imp__terminate, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060A8, 0xa, _imp___controlfp_s, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060AC, 0xa, _imp___crt_at_quick_exit, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060B0, 0xa, _imp___crt_atexit, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060B4, 0xa, _imp___execute_onexit_table, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060B8, 0xa, _imp___register_onexit_function, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060BC, 0xa, _imp___initialize_onexit_table, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060C0, 0xa, _imp___seh_filter_dll, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060C4, 0xa, _imp___register_thread_local_exe_atexit_callback, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060C8, 0xa, _imp___cexit, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060CC, 0xa, _imp____p___argv, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060D0, 0xa, _imp____p___argc, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060D4, 0xa, _imp___exit, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060D8, 0xa, _imp___initterm_e, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060DC, 0xa, _imp___initterm, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060E0, 0xa, _imp___get_initial_narrow_environment, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060E4, 0xa, _imp___initialize_narrow_environment, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060E8, 0xa, _imp___configure_narrow_argv, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060EC, 0xa, _imp___c_exit, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060F0, 0xa, _imp___set_app_type, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060F4, 0xa, _imp___seh_filter_exe, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060F8, 0xa, _imp__exit, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000060FC, 0xa, api-ms-win-crt-runtime-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006100, 0xa, _imp____acrt_iob_func, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006104, 0xa, _imp____stdio_common_vsprintf, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006108, 0xa, _imp____p__commode, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000610C, 0xa, _imp__puts, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006110, 0xa, _imp__setvbuf, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006114, 0xa, _imp__fflush, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006118, 0xa, _imp___set_fmode, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000611C, 0xa, _imp____stdio_common_vfprintf, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006120, 0xa, api-ms-win-crt-stdio-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006124, 0xa, _imp__toupper, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006128, 0xa, _imp__strcmp, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000612C, 0xa, _imp__strlen, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006130, 0xa, _imp__strncmp, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006134, 0xa, api-ms-win-crt-string-l1-1-0_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006138, 0xa, _imp__gethostbyname, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000613C, 0xa, _imp__getservbyport, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006140, 0xa, _imp__getservbyname, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006144, 0xa, _imp__getprotobynumber, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006148, 0xa, _imp__getprotobyname, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000614C, 0xa, _imp__select, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006150, 0xa, _imp__WSACleanup, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006154, 0xa, _imp__WSASetLastError, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006158, 0xa, _imp__WSAGetLastError, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000615C, 0xa, _imp__inet_addr, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006160, 0xa, _imp__htons, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006164, 0xa, _imp__send, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006168, 0xa, _imp__WSAEnumProtocolsA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000616C, 0xa, _imp__WSAAddressToStringA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006170, 0xa, _imp__WSAAddressToStringW, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006174, 0xa, _imp__WSAStringToAddressA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006178, 0xa, _imp__WSAStringToAddressW, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000617C, 0xa, _imp__WSAPoll, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006180, 0xa, _imp__getaddrinfo, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006184, 0xa, _imp__getnameinfo, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006188, 0xa, _imp__socket, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000618C, 0xa, _imp__htonl, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006190, 0xa, _imp__inet_pton, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006194, 0xa, _imp__ioctlsocket, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006198, 0xa, _imp__WSAStartup, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000619C, 0xa, _imp__connect, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000061A0, 0xa, _imp__gethostbyaddr, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000061A4, 0xa, _imp____WSAFDIsSet, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000061A8, 0xa, wsock_trace_NULL_THUNK_DATA, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006684, 0xa, _IMPORT_DESCRIPTOR_wsock_trace, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006698, 0xa, _IMPORT_DESCRIPTOR_KERNEL32, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000066AC, 0xa, _IMPORT_DESCRIPTOR_VCRUNTIME140, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000066C0, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-stdio-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000066D4, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-heap-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000066E8, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-runtime-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000066FC, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-convert-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006710, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-string-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006724, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-environment-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006738, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-math-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x0000674C, 0xa, _IMPORT_DESCRIPTOR_api-ms-win-crt-locale-l1-1-0, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x00006760, 0xa, _NULL_IMPORT_DESCRIPTOR, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000090B0, 0xa, `__local_stdio_printf_options'::`2'::_OptionsStorage, 0
+NativeModuleTable.AddFunc, true, 0, 0, 0x000093F0, 0xa, `__local_stdio_printf_options'::`2'::_OptionsStorage, 0
+NativeModuleTable.Close, 252 functions
