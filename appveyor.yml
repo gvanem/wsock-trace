@@ -47,6 +47,7 @@ before_build:
   #
   # Download IP2Location Database (with IPv4+IP6 addresses) and decompress using '7z'.
   #
+  - cmd: cd
   - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
   - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
 
@@ -56,8 +57,8 @@ install:
   # And setup the compiler environment for Watcom
   # (it seems it cannot be done in 'appveyor-script.bat init')
   #
-  - cmd: set WATCOM=%APPVEYOR_BUILD_FOLDER%\watcom
-  - cmd: set PATH=%APPVEYOR_BUILD_FOLDER%\src;%WATCOM%\binnt;%PATH%
+  - cmd: set WATCOM=%CD%\watcom
+  - cmd: set PATH=%CD%\src;%WATCOM%\binnt;%PATH%
   - cmd: set NT_INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
   - cmd: set DISABLEDELAYEDEXPANSION=0
   - cmd: set CYGWIN_OPT=-qgnNdOA -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com
@@ -82,7 +83,7 @@ build_script:
             curl -O -# http://www.watt-32.net/CI/watcom20.zip &
             7z x -o%WATCOM% watcom20.zip > NUL)
 
-  - cmd: cd %APPVEYOR_BUILD_FOLDER%\src
+  - cmd: cd src
   - cmd: set USE_LUA=1
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
@@ -108,7 +109,6 @@ test_script:
 #
 after_test:
   - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
-  - cmd: cd %APPVEYOR_BUILD_FOLDER%
   - cmd: if %BUILDER%. == watcom. (echo Removing Watcom tree & rm -fR watcom/* & rmdir watcom)
   - cmd: 7z a %ZIP_FILE% .\README.md  .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua > NUL
 
