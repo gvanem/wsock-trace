@@ -13,11 +13,11 @@ environment:
   global:
     CL: -nologo -MP
   matrix:
-    - BUILDER: mingw
+    - BUILDER: msvc
       CPU:     x86
     - BUILDER: msvc
       CPU:     x64
-    - BUILDER: msvc
+    - BUILDER: mingw
       CPU:     x86
     - BUILDER: mingw
       CPU:     x64
