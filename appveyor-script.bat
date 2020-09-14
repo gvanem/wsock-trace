@@ -86,7 +86,7 @@ echo api_level = 3                                          >> wsock_trace.appve
 ::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
 ::
 echo Generating appveyor-hosts file...
-type appveyor_host_content.txt > appveyor-hosts
+type appveyor_hosts_content.txt > appveyor-hosts
 
 ::
 :: These should survive until 'build_script' for 'msvc', 'mingw', 'cygwin', or 'watcom' get to run.
