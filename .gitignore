@@ -53,11 +53,8 @@ ws_trace.hnd
 ws_trace.hnd-journal
 doc/doxygen.log
 doc/output/
-EasyHook-master/*
-windows-firewall-configuration-truly-block-everything/*
-windows-firewall-docs/*
-sample6.bin.*
-spybrowser.history
+Makefile.Windows
+Makefile.inc
 fw-test-*.bat
 AFUnix-issue.c
 cl-lshift.txt
