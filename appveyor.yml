@@ -45,11 +45,6 @@ cache:
 
 before_build:
   #
-  # clone the submodules.
-  #
-  # - cmd: git submodule update --init --recursive
-
-  #
   # Download IP2Location Database (with IPv4+IP6 addresses) and decompress using '7z'.
   #
   - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
@@ -128,12 +123,12 @@ artifacts:
 #
 # Run build only if one of the following files is modified on commit
 #
-only_commits:
-  files:
-    - appveyor*
-    - src/*.c
-    - src/*.h
-    - src/Makefile.*
+# only_commits:
+#   files:
+#     - appveyor*
+#     - src/*.c
+#     - src/*.h
+#     - src/Makefile.*
 
 #
 # todo: One day...
@@ -149,7 +144,7 @@ only_commits:
 #     artifact: MyPackage.nupkg
 
 #
-#   Deploy to GitHub Releases
+# Deploy to GitHub Releases
 #
 #   - provider: GitHub
 #     artifact: /.*\.nupkg/           # upload all NuGet packages to release assets
