@@ -23,7 +23,7 @@ USE_DEF_FILE = 1
 #
 # If you want Lua-script support, change these:
 #
-# Default value is 0.
+# Default value is 0. In AppVeyor it's '1'.
 #
 !if "$(USE_LUA)" == ""
 USE_LUA     = 1
