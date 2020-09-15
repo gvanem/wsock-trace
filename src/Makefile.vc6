@@ -21,12 +21,9 @@ USE_DEF_FILE = 1
 !endif
 
 #
-# If you want Lua-script support, change these:
+# Support for Lua-scripting:
 #
-# Default value is 0. In AppVeyor it's '1'.
-#
-!if "$(USE_LUA)" == ""
-USE_LUA     = 1
+!if "$(USE_LUA)" == "1"
 LUAJIT_ROOT = ..\LuaJIT
 !endif
 
@@ -207,7 +204,7 @@ firewall_test.exe: $(FIREWALL_TEST_OBJ)
 run_test: test.exe
 	test.exe -dd
 
-compile_luajit_0:
+compile_luajit_ compile_luajit_0:
 	@echo
 
 compile_luajit_1:

@@ -65,8 +65,7 @@ install:
   #
   # Set compiler environment for MSVC first.
   #
-  - cmd: if %BUILDER%-%CPU%. == msvc-x86.   call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
-  - cmd: if %BUILDER%-%CPU%. == msvc-x64.   call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
+  - cmd: if %BUILDER%.       == msvc.       call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
   - cmd: if %BUILDER%-%CPU%. == mingw-x86.  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if %BUILDER%-%CPU%. == mingw-x64.  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
@@ -82,6 +81,7 @@ build_script:
             curl -O -# http://www.watt-32.net/CI/watcom20.zip &
             7z x -o%WATCOM% watcom20.zip > NUL)
 
+  - cmd: if %CPU%. == x86. set USE_LUA=1
   - cmd: cd src
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
