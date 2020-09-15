@@ -1986,7 +1986,25 @@ static int geoip_generate_array (int family, const char *out_file)
            "{\n"
            "  return geoip_smartlist_fixed (&ipv%c_gen_array, sizeof(ipv%c_gen_array[0]), %d);\n"
            "}\n\n", fam, fam, fam, len);
-  fclose (out);
+
+  if (out != stdout)
+  {
+    struct utimbuf time;
+    struct stat    st;
+
+    fclose (out);
+
+    /* Set the timestamp of the generated file to 1 sec prior to the generator program.
+     * Thus a makefile will hopefully not do too much work.
+     */
+    if (stat("geoip-null.exe", &st) == 0 ||
+        stat("geoip.exe", &st) == 0)
+    {
+      time.actime  = st.st_mtime - 1;
+      time.modtime = st.st_mtime - 1;
+      utime (out_file, &time);
+    }
+  }
   return (0);
 }
 
