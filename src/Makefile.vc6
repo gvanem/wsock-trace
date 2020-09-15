@@ -176,17 +176,27 @@ uninstall:
 	-del "$(BIN_TARGET)\$(WSOCK_TRACE_DLL)"
 	-del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
 
-geoip-gen4.c geoip-gen6.c: geoip.exe
+geoip-gen4.c: geoip-null.exe
+	@echo Generating $@.
+	geoip-null.exe -4g $@
+
+geoip-gen6.c: geoip-null.exe
+	@echo Generating $@.
+	geoip-null.exe -6g $@
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
 	type link.tmp >> test.map
 
-geoip.exe: $(GEOIP_SRC) geoip-null.c
+#
+# The first-time 'geoip' generator program used before we have generated
+# 'geoip-gen4.c' and 'geoip-gen6.c'
+#
+geoip-null.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) $(CFLAGS) -DTEST_GEOIP $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib
-	geoip.exe -4g geoip-gen4.c
-	geoip.exe -6g geoip-gen6.c
-	$(CC) -c $(CFLAGS) geoip-gen4.c geoip-gen6.c
+
+geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
+	$(CC) -c $(CFLAGS) $**
 	link.exe $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib
 	del $(GEOIP_OBJ)
 
@@ -220,7 +230,8 @@ clean:
 vclean realclean: clean
 	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map        wsock_trace.pdb
 	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map    wsock_trace_x64.pdb
-	-del geoip.exe           geoip.map           geoip.pdb geoip-gen4.c geoip-gen6.c
+	-del geoip.exe           geoip.map           geoip.pdb              geoip-gen4.c geoip-gen6.c
+	-del geoip-null.exe      geoip-null.map      geoip-null.pdb
 	-del idna.exe            idna.map            idna.pdb  test.exe     test.pdb
 	-del firewall_test.exe   firewall_test.map   firewall_test.pdb
 	-rd $(OBJ_DIR)
