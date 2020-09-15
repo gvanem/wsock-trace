@@ -59,7 +59,7 @@ static char *search_symbols_list (ULONG_PTR addr);
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-  #pragma optimize("y", off)   /* Enable frame pointer generation; 'cl -Oy-' */
+  #pragma optimize("y", off)   /* Disable "elimination of frame pointer generation"; 'cl -Oy-' */
 #endif
 
 /*
