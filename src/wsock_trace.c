@@ -691,7 +691,7 @@ const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
          strcpy (buf, "abstract");
     else if (su->sun_path[0] && su->sun_path[1])
          _strlcpy (buf, su->sun_path, sizeof(buf));
-    else if (WideCharToMultiByte(CP_ACP, 0, path, wcslen(path), buf, sizeof(buf), NULL, NULL) == 0)
+    else if (WideCharToMultiByte(CP_ACP, 0, path, (int)wcslen(path), buf, (int)sizeof(buf), NULL, NULL) == 0)
          strcpy (buf, "??");
     return (buf);
   }
@@ -3137,9 +3137,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          reason_str = "DLL_PROCESS_ATTACH";
          crtdbg_init();
          wsock_trace_init();
-#if 0
-         smartlist_add (thread_list, tid);
-#endif
+      // smartlist_add (thread_list, tid);
+
 #if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);
 #endif
@@ -3147,9 +3146,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
     case DLL_PROCESS_DETACH:
          tid = GetCurrentThreadId();
-#if 0
-         smartlist_remove (thread_list, tid);
-#endif
+      // smartlist_remove (thread_list, tid);
+
 #if defined(USE_LUA)
          wslua_DllMain (instDLL, reason);
 #endif

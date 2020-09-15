@@ -142,7 +142,7 @@ EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, siz
   if (!inet_ntop(family, (INET_NTOP_ADDR)addr, buf, sizeof(buf)))
       return (NULL);
 
-  if (!MultiByteToWideChar(CP_ACP, 0, buf, -1, res_buf, res_buf_size))
+  if (!MultiByteToWideChar(CP_ACP, 0, buf, -1, res_buf, (int)res_buf_size))
      return (NULL);
   return (res_buf);
 }
