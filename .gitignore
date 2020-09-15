@@ -65,3 +65,13 @@ wx-stkwalk.*
 fw.*
 *.vbs
 t.*
+
+appveyor-hosts
+bsdly.net.traplist.withcc
+dbip-city-lite*
+dbip-country-lite*
+get-master.bat
+hosts-full.txt
+install.bat
+misc-stuff
+link.args
