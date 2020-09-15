@@ -66,6 +66,7 @@ fw.*
 *.vbs
 t.*
 
+EasyHook-master/*
 appveyor-hosts
 bsdly.net.traplist.withcc
 dbip-city-lite*
