@@ -1849,7 +1849,7 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       wsock_trace_inet_ntop4 ((const u_char*)a4, addr, sizeof(addr));
-      printf ("    %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
   else if (a6) // (INET_util_addr_is_global(NULL, a6))
@@ -1863,7 +1863,7 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       wsock_trace_inet_ntop6 ((const u_char*)a6, addr, sizeof(addr));
-      printf ("    %s listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
 }
@@ -1911,8 +1911,8 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
 }
 
 /**
- * Called on `geoip.exe -g4 <file>` or \n
- *           `geoip.exe -g6 <file>` to generate a `<file>` with
+ * Called on `geoip.exe -4g <file>` or \n
+ *           `geoip.exe -6g <file>` to generate a `<file>` with
  * fixed IPv4 or IPv6 arrays: \n
  *   `static struct ipv4_node ipv4_gen_array [NNN]` and
  *   `static struct ipv6_node ipv6_gen_array [NNN]`.
