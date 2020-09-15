@@ -1816,6 +1816,13 @@ const char *get_dll_build_date (void)
  */
 const char *get_builder (void)
 {
+#if defined(_M_X64) || defined(__x86_64__)
+  /*
+   * Do this since a '-DBITNESS=64' could be missing from makefiles
+   */
+  return (RC_BUILDER " (x64)");
+#else
   return (RC_BUILDER " (" RC_BITNESS ")");
+#endif
 }
 
