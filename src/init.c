@@ -732,6 +732,9 @@ static void parse_lua_settings (const char *key, const char *val, unsigned line)
   else if (!stricmp(key,"trace_level"))
        g_cfg.lua.trace_level = atoi (val);
 
+  else if (!stricmp(key,"profile"))
+       g_cfg.lua.profile = atoi (val);
+
   else if (!stricmp(key,"color_head"))
        get_color (val, &g_cfg.lua.color_head);
 

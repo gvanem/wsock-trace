@@ -2,7 +2,7 @@
  * \ingroup Lua
  *
  * \brief
- *  A Lua interface for Wsock-Trace.
+ *  A LuaJIT interface for Wsock-Trace.
  */
 #include "common.h"
 
@@ -11,6 +11,7 @@
 #include "init.h"
 #include "wsock_trace_lua.h"
 
+#include "luajit.h"
 #include "lj_arch.h"
 
 #if !defined(LJ_HASFFI) || (LJ_HASFFI == 0)
@@ -24,14 +25,20 @@
 #define LUA_TRACE(level, fmt, ...)                  \
         do {                                        \
           if (g_cfg.lua.trace_level >= level)       \
+             ENTER_CRIT();                          \
              trace_printf ("~8%s(%u): ~9" fmt "~0", \
                            __FILE__, __LINE__,      \
                            ## __VA_ARGS__);         \
+             LEAVE_CRIT();                          \
         } while (0)
 
-#define LUA_WARNING(fmt, ...)               \
-        trace_printf ("~8LUA: ~9" fmt "~0", \
-                      ## __VA_ARGS__)
+#define LUA_WARNING(fmt, ...)                 \
+        do {                                  \
+          ENTER_CRIT();                       \
+          trace_printf ("~8LUA: ~9" fmt "~0", \
+                        ## __VA_ARGS__);      \
+          LEAVE_CRIT();                       \
+        } while (0)
 
 /* There is only one Lua-state variable.
  */
@@ -52,6 +59,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
   const char *dll  = get_dll_full_name();
   const char *base = basename (dll);
   const char *env;
+  const char *reason_str = NULL;
   char        cpath [_MAX_PATH] = { "?" };
   BOOL        rc = TRUE;
 
@@ -60,6 +68,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
   if (reason == DLL_PROCESS_ATTACH)
   {
+    reason_str = "DLL_PROCESS_ATTACH";
     if (!g_cfg.lua.color_head)
        get_color (NULL, &g_cfg.lua.color_head);
 
@@ -80,19 +89,22 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
   }
   else if (reason == DLL_PROCESS_DETACH)
   {
+    reason_str = "DLL_PROCESS_DETACH";
     wslua_exit (g_cfg.lua.exit_script);
   }
   else if (reason == DLL_THREAD_ATTACH)
   {
+    reason_str = "DLL_THREAD_ATTACH";
     /** \todo */
   }
   else if (reason == DLL_THREAD_DETACH)
   {
+    reason_str = "DLL_THREAD_DETACH";
     /** \todo */
   }
 
-  LUA_TRACE (1, "rc: %d, dll: %s\n"
-                 "                       %s.\n", rc, dll, cpath);
+  LUA_TRACE (1, "rc: %d, dll: %s, reason_str: %s\n"
+                 "                        %s.\n", rc, dll, reason_str, cpath);
   ARGSUSED (instDLL);
   return (rc);
 }
@@ -214,6 +226,12 @@ static int wslua_set_trace_level (lua_State *l)
   return (1);
 }
 
+static int wslua_get_profiler (lua_State *l)
+{
+  lua_pushnumber (l, g_cfg.lua.profile);
+  return (1);
+}
+
 static int wslua_register_hook (lua_State *l)
 {
   const lua_CFunction func1 = lua_tocfunction (L, LUA_ENVIRONINDEX);
@@ -273,6 +291,18 @@ static int wslua_get_dll_full_name (lua_State *l)
 static int wslua_get_builder (lua_State *l)
 {
   lua_pushstring (l, get_builder());
+  return (1);
+}
+
+static int wslua_get_copyright (lua_State *l)
+{
+  lua_pushstring (l, LUAJIT_COPYRIGHT);
+  return (1);
+}
+
+static int wslua_get_version (lua_State *l)
+{
+  lua_pushstring (l, LUAJIT_VERSION);
   return (1);
 }
 
@@ -348,7 +378,7 @@ static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
 }
 
 /**
- * Called from 'DllMain()' / 'DLL_PROCESS_ATTATACH' to setup Lua
+ * Called from 'DllMain()' / 'DLL_PROCESS_ATTATACH' to setup LuaJIT
  * and optionally run the given 'script'.
  *
  * \todo:
@@ -401,7 +431,7 @@ static void wslua_init (const char *script)
 
 /**
  * Called on 'wslua_DllMain (...DLL_PROCESS_DETACH)' to tear down
- * Lua and optionally run the 'script'.
+ * LuaJIT and optionally run the 'script'.
  * Provided the 'script' in 'wslua_init()' ran okay.
  */
 static void wslua_exit (const char *script)
@@ -423,8 +453,11 @@ static const struct luaL_Reg wslua_table[] = {
   { "get_dll_full_name",   wslua_get_dll_full_name },
   { "get_dll_short_name",  wslua_get_dll_short_name },
   { "get_builder",         wslua_get_builder },
+  { "get_version",         wslua_get_version },
+  { "get_copyright",       wslua_get_copyright },
   { "set_trace_level",     wslua_set_trace_level },
   { "get_trace_level",     wslua_get_trace_level },
+  { "get_profiler",        wslua_get_profiler },
   { NULL,                  NULL }
 };
 
@@ -434,7 +467,7 @@ static int common_open (lua_State *l, const char *func, BOOL is_ours)
   char       *dot = strrchr (dll, '.');
   const char *my_name = func + sizeof("luaopen_") - 1;
 
-  assert (!strncmp(func,"luaopen_",8));
+  assert (!strncmp (func, "luaopen_", 8));
 
   *dot = '\0';
 

@@ -38,6 +38,7 @@ struct pcap_cfg {
 
 struct lua_cfg {
        BOOL    enable;
+       BOOL    profile;
        int     trace_level;
        WORD    color_head;
        WORD    color_body;

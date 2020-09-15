@@ -74,6 +74,18 @@ end
 
 who_am_I = __FILE__()
 
+---
+-- Profiler callback.
+--
+function profile_callback (th, samples, vmmode)
+  ws.trace_puts ("  Hello from profile_callback().\n")
+end
+
+if ws.get_profiler() then
+  profile = require ("jit.profile")
+  profile.start ("m", profile_callback)
+end
+
 if ws.get_trace_level() >= 1 then
   ws.trace_puts (string.format("  ws.get_trace_level: ~1%d~0.\n", ws.get_trace_level()))
 
@@ -99,6 +111,8 @@ if ws.get_trace_level() >= 1 then
 
   ws.trace_puts (string.format("  I'm importing from: ~1%s~0.\n", ws.get_dll_full_name()))
   ws.trace_puts (string.format("  ws.get_builder():   ~1%s~0.\n", ws.get_builder()))
+  ws.trace_puts (string.format("  ws.get_version():   ~1%s~0.\n", ws.get_version()))
+  ws.trace_puts (string.format("  ws.get_copyright(): ~1%s~0.\n", ws.get_copyright()))
 end
 
 --ws.register_hook (WSAStartup, "2")

@@ -140,6 +140,7 @@
 [lua]
   enable      = 1
   trace_level = 1              # The level for LUA_TRACE().
+  profile     = 0              # Experimental; allow a Lua-script to load "jit.profile"
 
   #
   # The colors used in LUA_TRACE() and LUA_WARNING():
