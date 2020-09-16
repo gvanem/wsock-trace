@@ -81,8 +81,7 @@ build_script:
             curl -O -# http://www.watt-32.net/CI/watcom20.zip &
             7z x -o%WATCOM% watcom20.zip > NUL)
 
-  - cmd: if %CPU%.     == x86.    set USE_LUA=1
-  - cmd: if %BUILDER%. == cygwin. set USE_LUA=0
+  - cmd: set USE_LUA=1
   - cmd: cd src
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
@@ -99,8 +98,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=1 &                          test.exe WSAStartup WSACleanup
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_LUA_ENABLE=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 &                          test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).

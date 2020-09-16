@@ -56,7 +56,7 @@ echo ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN         >> wsock_trace.appve
 echo [idna]                                                 >> wsock_trace.appveyor
 echo enable      = 1                                        >> wsock_trace.appveyor
 echo [lua]                                                  >> wsock_trace.appveyor
-echo enable      = %%WSOCK_LUA_ENABLE%%                     >> wsock_trace.appveyor
+echo enable      = %%USE_LUA%%                              >> wsock_trace.appveyor
 echo trace_level = 1                                        >> wsock_trace.appveyor
 echo lua_init    = %CD%\src\wsock_trace_init.lua            >> wsock_trace.appveyor
 echo lua_exit    = %CD%\src\wsock_trace_exit.lua            >> wsock_trace.appveyor
