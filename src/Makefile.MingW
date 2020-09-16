@@ -44,12 +44,14 @@ OBJ_DIR = MinGW_obj
 ifeq ($(CPU),x64)
   CFLAGS  += -m64
   LDFLAGS  = -m64
-  RCFLAGS  += -DBITNESS=64 --target=pe-x86-64
+  RCFLAGS += -DBITNESS=64 --target=pe-x86-64
+  m_BITS   = -m64
   X_SUFFIX = _x64
 else
   CFLAGS  += -m32
   LDFLAGS  = -m32
-  RCFLAGS  += -DBITNESS=32 --target=pe-i386
+  RCFLAGS += -DBITNESS=32 --target=pe-i386
+  m_BITS   = -m32
   X_SUFFIX =
 endif
 
@@ -140,21 +142,21 @@ idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
 firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c getopt.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
 
-geoip.exe: $(GEOIP_SRC) geoip-null.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip.map
-	geoip.exe -4g geoip-gen4.c
-	geoip.exe -6g geoip-gen6.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^ geoip-gen4.c geoip-gen6.c
+geoip-null.exe: $(GEOIP_SRC) geoip-null.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip-null.map
+
+geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^
 	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
 	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
 
-geoip-gen4.c: geoip.exe
+geoip-gen4.c: geoip-null.exe
 	@echo 'Generating $@.'
-	geoip.exe -4g $@
+	geoip-null.exe -4g $@
 
-geoip-gen6.c: geoip.exe
+geoip-gen6.c: geoip-null.exe
 	@echo 'Generating $@.'
-	geoip.exe -6g $@
+	geoip-null.exe -6g $@
 
 run_test: test.exe
 	test.exe -dd
@@ -169,8 +171,7 @@ compile_luajit_0:
 # and that 'BUILDMODE = static'.
 #
 compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
-	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
-	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows
+	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC='gcc $(m_BITS)'
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
@@ -180,7 +181,8 @@ endif
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
-	      idna.exe idna.map geoip.exe geoip.map test.exe test.map firewall_test.exe firewall_test.map \
+	      idna.exe idna.map geoip.exe geoip.map geoip-null.exe geoip-null.map          \
+	      test.exe test.map firewall_test.exe firewall_test.map                        \
 	      geoip-gen4.c geoip-gen6.c wsock_trace_mw$(X_SUFFIX).def .depend.MinGW
 	- rmdir $(OBJ_DIR)
 ifeq ($(USE_LUA),1)
