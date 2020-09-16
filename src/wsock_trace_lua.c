@@ -364,7 +364,7 @@ void wslua_print_stack (void)
     }
     trace_putc ('\n');
   }
-//trace_printf ("Lua stack depth: %d.\n", level-1);
+//trace_printf ("LuaJIT stack depth: %d.\n", level-1);
 }
 
 static int wstrace_lua_panic (lua_State *l)
@@ -444,9 +444,9 @@ static void wslua_init (const char *script)
      return;
 
   L = luaL_newstate();
-  luaL_openlibs (L);    /* Load Lua libraries */
+  luaL_openlibs (L);    /* Load LuaJIT libraries */
 
-  /* Set up the 'panic' handler, which let's us control Lua execution.
+  /* Set up the 'panic' handler, which let's us control LuaJIT execution.
    */
   lua_atpanic (L, wstrace_lua_panic);
 

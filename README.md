@@ -65,7 +65,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   preliminary at the moment. The idea is that `.lua` scripts could change the
   behaviour of Wsock-trace at runtime without rebuilding it. <br>
   Only the absolute minimum of the needed files are in
-  **[./LuaJit](https://github.com/gvanem/wsock-trace/tree/master/LuaJIT)**. <br>
+  **[./LuaJIT](https://github.com/gvanem/wsock-trace/tree/master/LuaJIT)**. <br>
   Goto **[here](https://github.com/LuaJIT/LuaJIT.git)** for the complete LuaJIT.
 
 
