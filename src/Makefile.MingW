@@ -100,7 +100,7 @@ GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c \
             ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe firewall_test.exe
+all: message $(OBJ_DIR) libwsock_trace.a geoip.exe test.exe idna.exe firewall_test.exe
 	@echo 'Welcome to Wsock_trace library and examples.'
 
 message:
@@ -176,7 +176,7 @@ compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 ifeq ($(USE_LUA),1)
-	 - rm -fR $(LUAJIT_ROOT)/src/*.o
+	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
 endif
 
 vclean realclean: clean
