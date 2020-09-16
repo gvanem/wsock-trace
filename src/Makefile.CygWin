@@ -121,10 +121,12 @@ geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
 geoip-gen4.c: geoip-null.exe
 	$(call green_msg, Generating $@.)
 	geoip-null.exe -4g $@
+	@echo
 
 geoip-gen6.c: geoip-null.exe
 	$(call green_msg, Generating $@.)
 	geoip-null.exe -6g $@
+	@echo
 
 run_test: test.exe
 	test.exe
@@ -147,12 +149,14 @@ compile_luajit_1: $(LUAJIT_ROOT)/src/libluajit.a
 $(LUAJIT_ROOT)/src/libluajit.a:
 	$(call green_msg, Building LuaJIT ...)
 	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows DEFAULT_CC='/bin/gcc'
+	@echo
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 ifeq ($(USE_LUA),1)
-	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
 	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
+	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
+	 - rm -f $(LUAJIT_ROOT)/src/libluajit*.a
 endif
 
 vclean realclean: clean
@@ -162,9 +166,6 @@ vclean realclean: clean
 	      firewall_test.exe firewall_test.map cyg-ver.exe cyg-ver.map \
 	      .depend.CygWin
 	- rmdir $(OBJ_DIR)
-ifeq ($(USE_LUA),1)
-	- rm -f $(LUAJIT_ROOT)/src/libluajit*.a
-endif
 
 machine_test:
 	$(call green_msg, CHECK_MACHINE: $(CHECK_MACHINE))

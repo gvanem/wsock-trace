@@ -176,7 +176,9 @@ compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 ifeq ($(USE_LUA),1)
-	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
+	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
+	- rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
+	- rm -f $(LUAJIT_ROOT)/src/libluajit.a
 endif
 
 vclean realclean: clean
@@ -185,9 +187,6 @@ vclean realclean: clean
 	      test.exe test.map firewall_test.exe firewall_test.map                        \
 	      geoip-gen4.c geoip-gen6.c wsock_trace_mw$(X_SUFFIX).def .depend.MinGW
 	- rmdir $(OBJ_DIR)
-ifeq ($(USE_LUA),1)
-	- rm -f $(LUAJIT_ROOT)/src/libluajit.a
-endif
 
 $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
