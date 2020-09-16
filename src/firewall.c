@@ -4821,7 +4821,8 @@ int main (int argc, char **argv)
 
   wsock_trace_init();
 
-  g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
+//g_cfg.trace_use_ods = FALSE;
+  g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_indent  = 0;
   g_cfg.trace_report  = 1;
   g_cfg.firewall.show_all = 0;
