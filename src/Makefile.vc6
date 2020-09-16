@@ -236,7 +236,7 @@ vclean realclean: clean
 	-del firewall_test.exe   firewall_test.map   firewall_test.pdb
 	-rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
-	-del $(LUAJIT_ROOT)\src\lua51_static.lib
+	-del $(LUAJIT_ROOT)\src\lua51*.lib
 !endif
 
 help:
