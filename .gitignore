@@ -38,7 +38,6 @@ src/*.i
 src/Release/*
 src/Debug/*
 src/compile_lua_*bit.bat
-src/cyg-ver.c
 src/init.lua
 src/luac.out
 src/iso3166-countrycodes.txt
