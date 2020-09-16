@@ -108,6 +108,15 @@ static void setprogdir(lua_State *L)
   }
 }
 
+#if defined(__CYGWIN__)
+static char *_ultoa (unsigned long value, char *buf, int radix)
+{
+  assert (radix == 8 || radix == 10);
+  sprintf (buf, (radix == 8) ? "%lo" : "%lu", value);
+  return (buf);
+}
+#endif
+
 static void pusherror(lua_State *L)
 {
   DWORD error = GetLastError();
@@ -118,11 +127,17 @@ static void pusherror(lua_State *L)
       NULL, error, 0, wbuffer, sizeof(wbuffer)/sizeof(wchar_t), NULL) &&
       WideCharToMultiByte(CP_ACP, 0, wbuffer, 128, buffer, 128*2, NULL, NULL))
 #else
-  char buffer[128];
+  char buffer[200];
+  char buffer2[20];
   if (FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-      NULL, error, 0, buffer, sizeof(buffer), NULL))
-#endif
+      NULL, error, 0, buffer, sizeof(buffer) - 10, NULL))
+  {
+    strcat (buffer, " (");
+    strcat (buffer, _ultoa(error, buffer2, 10));
+    strcat (buffer, ")");
     lua_pushstring(L, buffer);
+  }
+#endif
   else
     lua_pushfstring(L, "system error %d\n", error);
 }
