@@ -93,13 +93,13 @@ build_script:
   - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe
+  - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe & set USE_LUA=0
   - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 &                          test.exe WSAStartup WSACleanup
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=0 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1          & test.exe WSAStartup WSACleanup & USE_LUA=0
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
