@@ -13,6 +13,7 @@
 
 #include "luajit.h"
 #include "lj_arch.h"
+#include "lj_debug.h"
 
 #if !defined(LJ_HASFFI) || (LJ_HASFFI == 0)
 #error "LuaJIT needs to be built with 'LJ_HASFFI=1'."
@@ -54,13 +55,42 @@ static BOOL open_ok        = TRUE;
 static void wslua_init (const char *script);
 static void wslua_exit (const char *script);
 
+#include "wsock_trace.rc"
+
+static void wslua_set_path (const char *full_name)
+{
+  const char *env = getenv ("LUA_CPATH");
+  char       *p;
+  char        dll_path [_MAX_PATH] = { "?" };
+  char        lua_cpath [_MAX_PATH] = { "-" };
+  size_t      len, left = sizeof(lua_cpath);
+
+  p = strrchr (full_name, '\\');
+  _strlcpy (dll_path, full_name, p - full_name + 1);
+
+  p = lua_cpath;
+  if (env)
+  {
+    len = snprintf (p, left, "%s;", env);
+    p    += len;
+    left -= len;
+  }
+
+  /* Ensure a 'require("wsock_trace")' in Lua-land will match the correct .DLL.
+   * E.g.
+   *   for Cygwin / x64, our RC_DLL_NAME == "wsock_trace_cyg_x64", so the
+   *   'lua_cpath' MUST end with "?_cyg_x64.dll".
+   */
+  snprintf (p, left, "%s\\?%s.dll", dll_path, RC_DLL_NAME + strlen("wsock_trace"));
+
+  _setenv ("LUA_CPATH", lua_cpath, 1);
+  LUA_TRACE (1, "LUA_CPATH: %s.\n", lua_cpath);
+}
+
 BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 {
-  const char *dll  = get_dll_full_name();
-  const char *base = basename (dll);
-  const char *env;
+  const char *dll        = get_dll_short_name();
   const char *reason_str = NULL;
-  char        cpath [_MAX_PATH] = { "?" };
   BOOL        rc = TRUE;
 
   if (!g_cfg.lua.enable)
@@ -68,22 +98,28 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
   if (reason == DLL_PROCESS_ATTACH)
   {
+    const char *full_name = get_dll_full_name();   /* Set by the real 'DllMain()' */
+    const char *loaded;
+
     reason_str = "DLL_PROCESS_ATTACH";
+
+    *ljit_trace_level() = g_cfg.lua.trace_level;
+
     if (!g_cfg.lua.color_head)
        get_color (NULL, &g_cfg.lua.color_head);
 
     if (!g_cfg.lua.color_body)
        get_color (NULL, &g_cfg.lua.color_body);
 
-    if (stricmp(base,get_dll_short_name()))
-       rc = FALSE;
+    loaded = basename (full_name);
+    if (stricmp(loaded, dll))
+    {
+      LUA_WARNING ("Expected %s, but loaded DLL was '%s:\n", dll, loaded);
+      rc = FALSE;
+    }
     else
     {
-      env = getenv ("LUA_CPATH");
-      if (env)
-           snprintf (cpath, sizeof(cpath), "%s;%.*s\\?.dll", env, (int)(base-dll-1), dll);
-      else snprintf (cpath, sizeof(cpath), "%.*s\\?.dll", (int)(base-dll-1), dll);
-      _setenv ("LUA_CPATH", cpath, 1);
+      wslua_set_path (full_name);
       wslua_init (g_cfg.lua.init_script);
     }
   }
@@ -103,8 +139,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     /** \todo */
   }
 
-  LUA_TRACE (1, "rc: %d, dll: %s, reason_str: %s\n"
-                 "                        %s.\n", rc, dll, reason_str, cpath);
+  LUA_TRACE (1, "rc: %d, dll: %s, reason_str: %s\n", rc, dll, reason_str);
   ARGSUSED (instDLL);
   return (rc);
 }
@@ -436,6 +471,7 @@ static void wslua_init (const char *script)
  */
 static void wslua_exit (const char *script)
 {
+  LUA_TRACE (1, "In %s(), L=%p\n", __FUNCTION__, L);
   if (!L)
      return;
 
@@ -461,83 +497,33 @@ static const struct luaL_Reg wslua_table[] = {
   { NULL,                  NULL }
 };
 
-static int common_open (lua_State *l, const char *func, BOOL is_ours)
-{
-  char       *dll = strdup (get_dll_short_name());
-  char       *dot = strrchr (dll, '.');
-  const char *my_name = func + sizeof("luaopen_") - 1;
+/*
+ * The open() function for LuaJIT must be marked as a DLL-export.
+ */
+__declspec(dllexport) int luaopen_wsock_trace (lua_State *l);
 
-  assert (!strncmp (func, "luaopen_", 8));
+int luaopen_wsock_trace (lua_State *l)
+{
+  char *dll = strdup (get_dll_short_name());
+  char *dot = strrchr (dll, '.');
 
   *dot = '\0';
 
-  if (stricmp(dll, my_name))
-  {
-    LUA_WARNING ("require (\"%s\") does not match our .dll basename: \"%s\"~0\n", dll, my_name);
-    open_ok = FALSE;
-    is_ours = FALSE;
-  }
-
-  if (is_ours)
-  {
 #if (LUA_VERSION_NUM >= 502)
-    /*
-     * From:
-     *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
-     */
-    lua_newtable (l);
-    luaL_setfuncs (l, wslua_table, 0);
-    lua_setglobal (l, dll);
+  /*
+   * From:
+   *   https://stackoverflow.com/questions/19041215/lual-openlib-replacement-for-lua-5-2
+   */
+  lua_newtable (l);
+  luaL_setfuncs (l, wslua_table, 0);
+  lua_setglobal (l, dll);
 #else
-    luaL_register (l, dll, wslua_table);
+  luaL_register (l, dll, wslua_table);
 #endif
-  }
 
-  LUA_TRACE (1, "%s(), is_ours: %d, dll: \"%s\".\n", func, is_ours, dll);
+  LUA_TRACE (1, "%s(), dll: \"%s.dll\".\n", __FUNCTION__, dll);
   free (dll);
-  return (is_ours ? 1 : 0);
+  return (1);
 }
-
-#define IS_MSVC   0
-#define IS_MINGW  0
-#define IS_CYGWIN 0
-
-#if defined(_MSC_VER) || defined(__clang__)
-  #undef  IS_MSVC
-  #define IS_MSVC 1
-
-#elif defined(__MINGW32__)
-  #undef  IS_MINGW
-  #define IS_MINGW 1
-
-#elif defined(__CYGWIN__)
-  #undef  IS_CYGWIN
-  #define IS_CYGWIN 1
-#endif
-
-/*
- * The open() functions for Lua-5.x.
- * These functions are marked as a DLL-export.
- *
- * Note: It is possible that if a script says:
- *  local ws = require "wsock_trace"
- *
- * and if the running program is linked to e.g. "wsock_trace_mw.dll",
- * we will get re-entered here.
- */
-#define OPEN_EXPORT(func, ours)                                  \
-        __declspec(dllexport) int luaopen_##func (lua_State *l); \
-        int luaopen_##func (lua_State *l)                        \
-        {                                                        \
-          return common_open (l, __FUNCTION__, ours);            \
-        }
-
-OPEN_EXPORT (wsock_trace,         IS_WIN64 == 0 && IS_MSVC)
-OPEN_EXPORT (wsock_trace_x64,     IS_WIN64 == 1 && IS_MSVC)
-OPEN_EXPORT (wsock_trace_mw,      IS_WIN64 == 0 && IS_MINGW)
-OPEN_EXPORT (wsock_trace_mw_x64,  IS_WIN64 == 1 && IS_MINGW)
-OPEN_EXPORT (wsock_trace_cyg,     IS_WIN64 == 0 && IS_CYGWIN)
-OPEN_EXPORT (wsock_trace_cyg_x64, IS_WIN64 == 1 && IS_CYGWIN)
-
 #endif /* USE_LUA */
 
