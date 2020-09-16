@@ -45,6 +45,10 @@
   #define FILE_FLG    0
 #endif
 
+#if (IS_WIN64 == 1) && !defined(BITNESS) && !defined(RC_INVOKED)
+  #define BITNESS 64
+#endif
+
 #if defined(BITNESS) && (BITNESS == 64)
   #define RC_BITNESS "64-bit"
   #define RC_SUFFIX  "_x64"
