@@ -19,6 +19,11 @@
 #include "lj_jit.h"
 #endif
 
+#if LJ_TARGET_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 /* -- Frames -------------------------------------------------------------- */
 
 /* Get frame corresponding to a level. */
@@ -703,3 +708,35 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
   lua_concat(L, (int)(L->top - L->base) - top);
 }
 
+#if LJ_TARGET_WINDOWS
+#include <stdio.h>
+
+/*
+ * For 'LJ_TRACE()' macro in 'lj_debug.h':
+ */
+LUALIB_API void ljit_set_color (int color)
+{
+  static HANDLE console_hnd = NULL;
+  static CONSOLE_SCREEN_BUFFER_INFO console_info;
+
+  if (!console_hnd)
+  {
+    console_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo (console_hnd, &console_info);
+  }
+  fflush (stdout);
+  if (console_hnd != INVALID_HANDLE_VALUE)
+  {
+    if (color == 0)
+         SetConsoleTextAttribute (console_hnd, console_info.wAttributes);
+    else SetConsoleTextAttribute (console_hnd, (console_info.wAttributes & ~7) |
+                                  (FOREGROUND_INTENSITY | FOREGROUND_GREEN));
+  }
+}
+
+LUALIB_API int *ljit_trace_level (void)
+{
+  static int zero = 0;
+  return (&zero);
+}
+#endif

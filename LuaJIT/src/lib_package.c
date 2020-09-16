@@ -16,6 +16,7 @@
 #include "lj_obj.h"
 #include "lj_err.h"
 #include "lj_lib.h"
+#include "lj_debug.h"
 
 /* ------------------------------------------------------------------------ */
 
@@ -134,6 +135,12 @@ static void ll_unloadlib(void *lib)
 static void *ll_load(lua_State *L, const char *path, int gl)
 {
   HINSTANCE lib = LJ_WIN_LOADLIBA(path);
+
+#if LJ_TARGET_UWP
+  LJ_TRACE (1, "LoadPackagedLibrary (\"%s\") -> %p.\n", path, lib);
+#else
+  LJ_TRACE (1, "LoadLibraryExA (\"%s\") -> %p.\n", path, lib);
+#endif
   if (lib == NULL) pusherror(L);
   UNUSED(gl);
   return lib;
@@ -142,6 +149,8 @@ static void *ll_load(lua_State *L, const char *path, int gl)
 static lua_CFunction ll_sym(lua_State *L, void *lib, const char *sym)
 {
   lua_CFunction f = (lua_CFunction)GetProcAddress((HINSTANCE)lib, sym);
+
+  LJ_TRACE (1, "GetProcAddress (\"%s\") -> %p.\n", sym, f);
   if (f == NULL) pusherror(L);
   return f;
 }
@@ -152,20 +161,26 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
 static const char *ll_bcsym(void *lib, const char *sym)
 {
+  const char *p;
+
   if (lib) {
-    return (const char *)GetProcAddress((HINSTANCE)lib, sym);
-  } else {
+    p = (const char *)GetProcAddress((HINSTANCE)lib, sym);
+  }
+  else {
 #if LJ_TARGET_UWP
-    return (const char *)GetProcAddress((HINSTANCE)&__ImageBase, sym);
+    p = (const char *)GetProcAddress((HINSTANCE)&__ImageBase, sym);
 #else
     HINSTANCE h = GetModuleHandleA(NULL);
-    const char *p = (const char *)GetProcAddress(h, sym);
+
+    p = (const char *)GetProcAddress(h, sym);
     if (p == NULL && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-					(const char *)ll_bcsym, &h))
+                                        (const char *)ll_bcsym, &h))
       p = (const char *)GetProcAddress(h, sym);
-    return p;
 #endif
   }
+  LJ_TRACE (1, "ll_bcsym (%p, \"%s\") -> GetProcAddress (\"%s\") -> %p.\n",
+            lib, sym, sym, p);
+  return p;
 }
 
 #else

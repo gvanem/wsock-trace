@@ -63,4 +63,25 @@ enum {
   VARNAME__MAX
 };
 
+#if LJ_TARGET_WINDOWS
+  /*
+   * In 'lj_debug.c'
+   */
+  LUALIB_API int *ljit_trace_level (void);
+  LUALIB_API void ljit_set_color (int color);
+
+  #define LJ_TRACE(level, fmt, ...)             \
+          do {                                  \
+            if (*ljit_trace_level() >= level) { \
+               ljit_set_color (1);              \
+               printf ("LuaJIT: %s(%u): " fmt,  \
+                       __FILE__, __LINE__,      \
+                       ##__VA_ARGS__);          \
+               ljit_set_color (0);              \
+            }                                   \
+          } while (0)
+#else
+  #define LJ_TRACE(level, fmt, ...)   ((void)0)
+#endif
+
 #endif
