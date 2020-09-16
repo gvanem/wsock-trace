@@ -832,7 +832,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
   {
 #if defined(HAVE_WINHTTP_H)
     funcs    = winhttp_funcs;
-    tab_size = DIM(winhttp_funcs);
+    tab_size = DIM (winhttp_funcs);
     tab_dll  = "WinHttp.dll";
 #else
     TRACE (1, "WinHttp.dll cannot be used with this compiler.\n");
@@ -842,7 +842,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
   else
   {
     funcs    = wininet_funcs;
-    tab_size = DIM(wininet_funcs);
+    tab_size = DIM (wininet_funcs);
     tab_dll  = "WinInet.dll";
   }
 

@@ -560,7 +560,7 @@ static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
   WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, (wchar_t*)&data, &size);
 
   if (chatty >= 1)
-     printf ("  data: '%S', size: %lu.\n", data, size);
+     printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
 
   TEST_CONDITION (== 0, wcscmp(data,L"127.0.0.1"));
   TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1")/2));

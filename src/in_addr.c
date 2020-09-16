@@ -135,7 +135,13 @@ EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
   return (-1);
 }
 
-EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, size_t res_buf_size)
+/* Cygwin < v3.1 has a slightly different prototype for this function.
+ */
+#if defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED < 3001000)
+  EXPORT LPCWSTR WINAPI InetNtopW (int family, void *addr, LPWSTR res_buf, size_t res_buf_size)
+#else
+  EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, size_t res_buf_size)
+#endif
 {
   char buf [INET6_ADDRSTRLEN];
 

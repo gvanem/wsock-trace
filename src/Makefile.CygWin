@@ -2,9 +2,8 @@
 # Wsock-trace makefile for CygWin32 / CygWin64.
 # This requires GNU make v4 or later.
 #
-# G. Vanem <gvanem@yahoo.no> 2011 - 2018.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2020.
 #
-
 USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
 
@@ -18,10 +17,27 @@ BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS -fmax-errors=5
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS -fmax-errors=5 -Wno-pragmas
 LDFLAGS = -Wl,--print-map,--sort-common -t
 RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
 OBJ_DIR = Cygwin_obj
+
+#
+# Check if we use a 32 or a 64-bit Cygwin gcc:
+#  "i686-pc-cygwin"   - a 32-bit
+#  "x86_64-pc-cygwin" - a 64-bit
+#
+CHECK_MACHINE = $(shell gcc -dumpmachine)
+
+ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
+  WSOCK_TRACE_A   = libwsock_trace_cyg.a
+  WSOCK_TRACE_DLL = wsock_trace_cyg.dll
+  CYG_VER         = 32-bit
+else
+  WSOCK_TRACE_A   = libwsock_trace_cyg_x64.a
+  WSOCK_TRACE_DLL = wsock_trace_cyg_x64.dll
+  CYG_VER         = 64-bit
+endif
 
 ifeq ($(USE_CRT_DEBUG),1)
   CFLAGS += -O0 -ggdb
@@ -53,16 +69,16 @@ GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.
             getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) libwsock_trace.a test.exe idna.exe firewall_test.exe
-	@echo 'Welcome to Wsock_trace library and example.'
+all: message $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
+	$(call green_msg, Welcome to Wsock_trace library and example.)
 
 message:
-	@echo 'Building CygWin version.'
+	$(call green_msg, Building CygWin $(CYG_VER) version.)
 
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
 
-libwsock_trace.a: wsock_trace_cyg.dll
+$(WSOCK_TRACE_A): $(WSOCK_TRACE_DLL)
 
 WSOCK_DEPS = $(OBJECTS) $(NON_EXPORT_OBJ)
 
@@ -70,20 +86,21 @@ ifeq ($(USE_LUA),1)
   WSOCK_DEPS += $(LUAJIT_ROOT)/src/libluajit.a
 endif
 
-wsock_trace_cyg.dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
-	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(EX_LIBS) > wsock_trace_cyg.map
-	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
+$(WSOCK_TRACE_DLL): $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
+	$(call green_msg, Linking $@.)
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_TRACE_A) -o $@ $(OBJECTS) $(EX_LIBS) > $(WSOCK_TRACE_DLL:.dll=.map)
+	ar rs $(WSOCK_TRACE_A) $(NON_EXPORT_OBJ)
 	@echo
 
-install: libwsock_trace.a wsock_trace_cyg.dll
-	cp --update libwsock_trace.a    $(LIB_TARGET)
-	cp --update wsock_trace_cyg.dll $(BIN_TARGET)
+install: $(WSOCK_TRACE_A) $(WSOCK_TRACE_DLL)
+	cp --update $(WSOCK_TRACE_A)   $(LIB_TARGET)
+	cp --update $(WSOCK_TRACE_DLL) $(BIN_TARGET)
 
-test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
+test.exe: $(OBJ_DIR)/test.o $(WSOCK_TRACE_A)
 	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
 	@echo
 
-idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
+idna.exe: idna.c getopt.c common.c smartlist.c $(WSOCK_TRACE_A)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
@@ -91,16 +108,23 @@ firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
 	@echo
 
-geoip.exe: $(GEOIP_SRC) geoip-null.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip.map
-	geoip.exe -4g geoip-gen4.c
-	geoip.exe -6g geoip-gen6.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^ geoip-gen4.c geoip-gen6.c
-	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
-	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
+geoip-null.exe: $(GEOIP_SRC) geoip-null.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip-null.map
 	@echo
 
-geoip-gen4.c geoip-gen6.c: geoip.exe
+geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^
+	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
+	rm -f $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o
+	@echo
+
+geoip-gen4.c: geoip-null.exe
+	$(call green_msg, Generating $@.)
+	geoip-null.exe -4g $@
+
+geoip-gen6.c: geoip-null.exe
+	$(call green_msg, Generating $@.)
+	geoip-null.exe -6g $@
 
 run_test: test.exe
 	test.exe
@@ -109,32 +133,64 @@ compile_luajit_0:
 	@echo
 
 #
-# Make sure the '$(LUAJIT_ROOT)/src/Makefile' specifies the same
-# '-m[32|64]' as above. I.e. 'CC = gcc -m32'
+# Just a simple Cygwin version test program.
 #
-# and that 'BUILDMODE = static'.
+cyg-ver.exe: cyg-ver.c
+	$(CC) -o $@ $(LDFLAGS) $(CFLAGS) $< > cyg-ver.map
+	@echo
+
 #
-compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
-	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows
+# Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
+#
+compile_luajit_1: $(LUAJIT_ROOT)/src/libluajit.a
+
+$(LUAJIT_ROOT)/src/libluajit.a:
+	$(call green_msg, Building LuaJIT ...)
+	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows DEFAULT_CC='/bin/gcc'
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 ifeq ($(USE_LUA),1)
-	 - rm -fR $(LUAJIT_ROOT)/src/*.o
+	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
+	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
 endif
 
 vclean realclean: clean
-	rm -f libwsock_trace.a wsock_trace_cyg.dll wsock_trace_cyg.map \
+	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map \
 	      geoip-gen4.c geoip-gen6.c idna.exe idna.map geoip.exe geoip.map \
-	      test.exe test.map firewall_test.exe firewall_test.map .depend.CygWin
+	      geoip-null.exe geoip-null.map test.exe test.map \
+	      firewall_test.exe firewall_test.map cyg-ver.exe cyg-ver.map \
+	      .depend.CygWin
 	- rmdir $(OBJ_DIR)
 ifeq ($(USE_LUA),1)
-	- rm -f $(LUAJIT_ROOT)/src/libluajit.a
+	- rm -f $(LUAJIT_ROOT)/src/libluajit*.a
+endif
+
+machine_test:
+	$(call green_msg, CHECK_MACHINE: $(CHECK_MACHINE))
+ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
+	$(call yellow_msg, Using a 32-bit Cygwin.)
+else ifeq ($(CHECK_MACHINE),x86_64-pc-cygwin)
+	$(call yellow_msg, Using a 64-bit Cygwin.
+else
+	$(call yellow_msg, Using an unknown Cygwin.)
 endif
 
 $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 	@echo
+
+#
+# The following codes used in macro 'colour_msg' uses Cygwin's echo with colour support.
+#
+BRIGHT_RED    = \e[1;31m
+BRIGHT_GREEN  = \e[1;32m
+BRIGHT_YELLOW = \e[1;33m
+
+colour_msg = @echo -e "$(1)\e[0m"
+red_msg    = $(call colour_msg,$(BRIGHT_RED)$(strip $(1)))
+green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
+yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 
 $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
@@ -142,6 +198,6 @@ $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
 depend:
-	$(CC) -M $(CFLAGS) $(SOURCES) non-export.c | $(REPLACE) > .depend.CygWin
+	$(CC) -M $(CFLAGS) $(SOURCES) non-export.c test.c | $(REPLACE) > .depend.CygWin
 
 -include .depend.CygWin

@@ -58,6 +58,11 @@
 #if (defined(__MINGW64_VERSION_MAJOR) && (__MINGW64_VERSION_MAJOR <= 4))
   #define INET_NTOP_ADDR void *
   #define INET_NTOP_RET  PCSTR
+
+#elif defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED < 3001000)
+  #define INET_NTOP_ADDR void *
+  #define INET_NTOP_RET  LPCSTR
+
 #else
   #define INET_NTOP_ADDR const void *
   #define INET_NTOP_RET  const char *

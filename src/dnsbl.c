@@ -22,6 +22,10 @@
 #include "inet_util.h"
 #include "dnsbl.h"
 
+#ifdef __CYGWIN__
+#include <sys/cygwin.h>
+#endif
+
 typedef enum {
         DNSBL_DROP,
         DNSBL_EDROP,
@@ -454,9 +458,10 @@ static int update_file (const char *fname, const char *tmp_file, const char *url
     TRACE (2, "File \"%s\" doesn't exist. Forcing a download from \"%s\".\n",
            tmp_file, url);
   }
-  else
-  if (st.st_size == 0)
-     TRACE (2, "Updating truncated \"%s\" from \"%s\"\n", tmp_file, url);
+  else if (st.st_size == 0)
+  {
+    TRACE (2, "Updating truncated \"%s\" from \"%s\"\n", tmp_file, url);
+  }
   else
   {
     /* Currently for an AppVeyor build, 'g_cfg.DNSBL.max_days' is '0'.
@@ -478,6 +483,19 @@ static int update_file (const char *fname, const char *tmp_file, const char *url
     if (st.st_mtime > 0)
        TRACE (2, "Updating \"%s\" from \"%s\"\n", tmp_file, url);
   }
+
+#ifdef __CYGWIN__
+  /*
+   * Since 'CopyFile()' does not understand a POSIX-path like "/cygdrive/c/TEMP\\drop.txt".
+   */
+  if (!strnicmp(tmp_file, "/cygdrive/", 10))
+  {
+    char tmp_result [_MAX_PATH];
+
+    if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, tmp_file, tmp_result, sizeof(tmp_result)) == 0)
+       tmp_file = tmp_result;
+  }
+#endif
 
   if (INET_util_download_file(tmp_file, url) > 0)
   {

@@ -63,7 +63,7 @@ enum {
   VARNAME__MAX
 };
 
-#if LJ_TARGET_WINDOWS
+#if LJ_TARGET_WINDOWS || LJ_TARGET_CYGWIN
   /*
    * In 'lj_debug.c'
    */

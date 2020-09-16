@@ -1966,10 +1966,8 @@ static int geoip_generate_array (int family, const char *out_file)
            " */\n"
            "#include \"geoip.h\"\n"
            "\n"
-           "#if defined(__GNUC__)\n"
-           "  #pragma GCC diagnostic ignored   \"-Wmissing-braces\"\n"
-           "#elif defined(__clang__)\n"
-           "  #pragma clang diagnostic ignored \"-Wmissing-braces\"\n"
+           "#if defined(__GNUC__) || defined(__clang__)\n"
+           "#pragma GCC diagnostic ignored  \"-Wmissing-braces\"\n"
            "#endif\n"
            "\n", out_file, ctime(&now), fam, out_file, get_builder());
 

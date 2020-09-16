@@ -1775,7 +1775,7 @@ static char full_name [_MAX_PATH];
 
 void set_dll_full_name (HINSTANCE inst_dll)
 {
-  if (!full_name[0])  /* prevent reentey from the same .dll */
+  if (!full_name[0])  /* prevent re-entry from the same .dll */
      GetModuleFileName (inst_dll, full_name, sizeof(full_name));
 }
 

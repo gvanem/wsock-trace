@@ -19,7 +19,7 @@
 #include "lj_jit.h"
 #endif
 
-#if LJ_TARGET_WINDOWS
+#if LJ_TARGET_WINDOWS || LJ_TARGET_CYGWIN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
@@ -708,7 +708,7 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
   lua_concat(L, (int)(L->top - L->base) - top);
 }
 
-#if LJ_TARGET_WINDOWS
+#if LJ_TARGET_WINDOWS || LJ_TARGET_CYGWIN
 #include <stdio.h>
 
 /*

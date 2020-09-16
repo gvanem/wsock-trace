@@ -27,10 +27,15 @@ NODOTABIVER= 51
 DEFAULT_CC ?= gcc
 
 #
-# For a TDM-MinGW 'gcc -m32' the CFLAGS are:
+# For a TDM-MinGW 'gcc -m32', the CFLAGS are:
 #
 #  gcc -m32  -O2 -fomit-frame-pointer -Wall -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -U_FORTIFY_SOURCE
 #      -march=i686 -msse -msse2 -mfpmath=sse -c -o lib_table.o lib_table.c
+#
+# For a CygWin64, the CFLAGS are:
+#
+#  /bin/gcc -O2 -fomit-frame-pointer -Wall -I. -DLUAJIT_TARGET=LUAJIT_ARCH_x64 -DLJ_ARCH_HASFPU=1 -DLJ_ABI_SOFTFP=0
+#           -c -o host/buildvm_asm.o host/buildvm_asm.c
 
 #
 # LuaJIT builds as a native 32 or 64 bit binary by default.

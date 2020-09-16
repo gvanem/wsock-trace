@@ -960,7 +960,7 @@ static int parse_config_file (FILE *file)
    */
   section = "core";
 
-  while (config_get_line(file,&line,&key,&val,&section))
+  while (config_get_line(file, &line, &key, &val, &section))
   {
     TRACE (4, "line %u: '%s' = '%s' (section: '%s')\n", line, key, val, section);
     lines++;

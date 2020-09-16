@@ -18,44 +18,23 @@ function __FUNC__()
   return debug.getinfo(2,'n').name
 end
 
+function local_trace (str)
+  if ws.get_trace_level() >= 1 then
+    ws.trace_puts (str)
+  else
+    io.write (str)
+  end
+end
+
 WSAStartup = function (arg)
-  io.write (string.format("Hello from %s().\n", __FUNC__()))
+  local_trace ("Hello from WSAStartup().\n")
 end
 
---- Try the MinGW base names first.
-
---- if jit.arch == "x64" then
----   ws_name = "wsock_trace_mw_x64"
---- else
----   ws_name = "wsock_trace_mw"
---- end
----
---- if not package.loaded [ws_name] then
----   ws = require (ws_name)
---- else
----   --- Then if 'ws == nil', try the MSVC base names.
----
----   if jit.arch == "x64" then
----     ws_name = "wsock_trace_x64"
----   else
----     ws_name = "wsock_trace"
----   end
----   ws = require (ws_name)
---- end
-
-if nil then
-  if jit.arch == "x64" then
-    ws_name = "wsock_trace_cyg_x64"
-  else
-    ws_name = "wsock_trace_cyg"
-  end
-else
-  if jit.arch == "x64" then
-    ws_name = "wsock_trace_x64"
-  else
-    ws_name = "wsock_trace"
-  end
+WSAStartup2 = function (arg)
+  local_trace ("Hello from WSAStartup2().\n")
 end
+
+ws_name = "wsock_trace"
 
 if package.loaded [ws_name] then
   ws.trace_puts (string.format("  Package ~2%s~0 already loaded; ~1ws -> %p~0\n", ws_name, ws))
@@ -67,7 +46,7 @@ function trace_printf (fmt, ...)
   ws.trace_puts ("  trace_printf():\n")
   ws.trace_puts ("    fmt: " .. string.gsub(fmt,"\n","") .. "\n")
   tab = {...}
-  for key, val in  pairs(tab) do
+  for key, val in pairs(tab) do
     ws.trace_puts ("    key: " .. key .. ", val: " .. val .. "\n")
   end
 end
@@ -78,7 +57,7 @@ who_am_I = __FILE__()
 -- Profiler callback.
 --
 function profile_callback (th, samples, vmmode)
-  ws.trace_puts ("  Hello from profile_callback().\n")
+  local_trace ("  Hello from profile_callback().\n")
 end
 
 if ws.get_profiler() then
@@ -115,6 +94,6 @@ if ws.get_trace_level() >= 1 then
   ws.trace_puts (string.format("  ws.get_copyright(): ~1%s~0.\n", ws.get_copyright()))
 end
 
---ws.register_hook (WSAStartup, "2")
+-- ws.register_hook (WSAStartup2, "2")
 
 WSAStartup()
