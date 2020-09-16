@@ -30,12 +30,12 @@ DEFAULT_CC ?= gcc
 # For a TDM-MinGW 'gcc -m32', the CFLAGS are:
 #
 #  gcc -m32  -O2 -fomit-frame-pointer -Wall -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -U_FORTIFY_SOURCE
-#      -march=i686 -msse -msse2 -mfpmath=sse -c -o lib_table.o lib_table.c
+#      -DLUAJIT_ENABLE_LUA52COMPAT -march=i686 -msse -msse2 -mfpmath=sse -c -o lib_table.o lib_table.c
 #
 # For a CygWin64, the CFLAGS are:
 #
 #  /bin/gcc -O2 -fomit-frame-pointer -Wall -I. -DLUAJIT_TARGET=LUAJIT_ARCH_x64 -DLJ_ARCH_HASFPU=1 -DLJ_ABI_SOFTFP=0
-#           -c -o host/buildvm_asm.o host/buildvm_asm.c
+#           -DLUAJIT_ENABLE_LUA52COMPAT -c -o host/buildvm_asm.o host/buildvm_asm.c
 
 #
 # LuaJIT builds as a native 32 or 64 bit binary by default.
@@ -113,7 +113,8 @@ XCFLAGS=
 # enabled by default. Some other features that *might* break some existing
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
-#XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
+XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
+
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT
