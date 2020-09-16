@@ -44,7 +44,7 @@ struct lua_cfg {
        WORD    color_body;
 
        /*
-        * Path-names for the Lua init/exit script-files.
+        * Path-names for the LuaJIT init/exit script-files.
         * These are effective only if built with 'USE_LUA'.
         */
        char   *init_script;
