@@ -65,6 +65,7 @@ wx-stkwalk.*
 fw.*
 *.vbs
 t.*
+LuaJIT/src/host/*.o
 
 EasyHook-master
 appveyor-hosts
@@ -76,4 +77,5 @@ hosts-full.txt
 install.bat
 misc-stuff
 link.args
+cc.args
 vmdef.lua
