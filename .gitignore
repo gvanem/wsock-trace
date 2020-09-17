@@ -64,7 +64,14 @@ wx-stkwalk.*
 fw.*
 *.vbs
 t.*
+LuaJIT/src/*.o
 LuaJIT/src/host/*.o
+LuaJIT/src/host/buildvm_arch.h
+LuaJIT/src/lj_bcdef.h
+LuaJIT/src/lj_ffdef.h
+LuaJIT/src/lj_folddef.h
+LuaJIT/src/lj_libdef.h
+LuaJIT/src/lj_recdef.h
 
 EasyHook-master
 appveyor-hosts
