@@ -59,7 +59,7 @@
   #define INET_NTOP_ADDR void *
   #define INET_NTOP_RET  PCSTR
 
-#elif defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED < 3001000)
+#elif defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED < 3000000)
   #define INET_NTOP_ADDR void *
   #define INET_NTOP_RET  LPCSTR
 
