@@ -1322,6 +1322,10 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_stream)
   {
+#if defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 3001000)
+    g_cfg.no_buffering = 1;
+#endif
+
     if (g_cfg.no_buffering)
        setvbuf (g_cfg.trace_stream, NULL, _IONBF, 0);
 
