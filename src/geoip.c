@@ -2038,7 +2038,7 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   }
 }
 
-static int show_help (const char *my_name)
+static int show_help (const char *my_name, int err_code)
 {
   printf ("Usage: %s [-cdfGinruh] [-g file] <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
@@ -2058,7 +2058,7 @@ static int show_help (const char *my_name)
           "   Or from 'stdin': \"geoip.exe -4 < file-with-addr\".\n"
           "   Built by %s\n", get_builder());
   wsock_trace_exit();
-  return (0);
+  return (err_code);
 }
 
 typedef void (*test_func) (const char *addr, BOOL use_ip2loc);
@@ -2200,11 +2200,11 @@ static int check_requirements (BOOL check_geoip4, BOOL check_geoip6)
 
 int main (int argc, char **argv)
 {
-  int c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
-  int do_update = 0, do_dump = 0, do_rand = 0, do_generate = 0;
-  int  use_ip2loc = 1;
-  int loops = 10;
-  int rc = 0;
+  int         c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
+  int         do_update = 0, do_dump = 0, do_rand = 0, do_generate = 0;
+  int         use_ip2loc = 1;
+  int         loops = 10;
+  int         rc = 0;
   const char *my_name = argv[0];
   const char *g_file = NULL;
   WSADATA     wsa;
@@ -2217,7 +2217,7 @@ int main (int argc, char **argv)
     {
       case '?':
       case 'h':
-           return show_help (my_name);
+           return show_help (my_name, 0);
       case 'c':
            do_cidr = 1;
            break;
@@ -2256,10 +2256,12 @@ int main (int argc, char **argv)
       case '6':
            do_6 = 1;
            break;
+      default:
+           return show_help (my_name, 1);
     }
 
   if (!do_4 && !do_6)
-     return show_help (my_name);
+     return show_help (my_name, 1);
 
   /** Possibly call `ip2loc_init()` again.
    */
