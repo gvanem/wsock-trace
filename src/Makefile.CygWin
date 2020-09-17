@@ -141,6 +141,9 @@ cyg-ver.exe: cyg-ver.c
 	$(CC) -o $@ $(LDFLAGS) $(CFLAGS) $< > cyg-ver.map
 	@echo
 
+print_cyg-ver: cyg-ver.exe
+	$(call green_msg, $(shell ./cyg-ver.exe))
+
 #
 # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
 #
