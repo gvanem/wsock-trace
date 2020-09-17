@@ -535,7 +535,7 @@ static void module_free (void *m)
   struct ModuleEntry *me = (struct ModuleEntry*) m;
 
 #ifdef USE_BFD
-  BFD_unload_debug_symbols (me->module_mame);
+  BFD_unload_debug_symbols (me->module_name);
 #endif
   free (me);
 }
