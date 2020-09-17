@@ -69,7 +69,7 @@ GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.
             getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
-all: message $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
+all: message print_cyg-ver $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
 	$(call green_msg, Welcome to Wsock_trace library and example.)
 
 message:
