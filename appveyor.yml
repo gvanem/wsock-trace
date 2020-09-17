@@ -68,7 +68,7 @@ install:
   - cmd: if %BUILDER%.       == msvc.       call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
   - cmd: if %BUILDER%-%CPU%. == mingw-x86.  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if %BUILDER%-%CPU%. == mingw-x64.  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
+  - cmd: if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% > NUL & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if %BUILDER%-%CPU%. == cygwin-x64. set PATH=c:\msys64\usr\bin;%PATH%
 
 build_script:
@@ -91,15 +91,15 @@ build_script:
   - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU% USE_CRT_DEBUG=0
   - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU% USE_CRT_DEBUG=0
   - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
+  - cmd: set USE_LUA=0
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=1 & test.exe & set USE_LUA=0
-  - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865 & idna.exe           www.seoghør.no
-  - cmd: set WSOCK_TRACE_LEVEL=0 &            idna.exe -c1252 -w www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & test.exe & set USE_LUA=0
+  - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865      & idna.exe           www.seoghør.no
+  - cmd: set WSOCK_TRACE_LEVEL=0 &                 idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1          & test.exe WSAStartup WSACleanup & set USE_LUA=0
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set WSOCK_DNSBL_TEST=1 & test.exe WSAStartup WSACleanup
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set TEST_DNSBL=1 & test.exe WSAStartup WSACleanup
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
