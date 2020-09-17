@@ -637,15 +637,18 @@ static void test_WSAEnumProtocols (void)
 
 static void test_InetPtonW (void)
 {
+#if !defined(__WATCOMC__)
   struct in_addr  in4;
   struct in6_addr in6;
 
   TEST_CONDITION (== 1, InetPtonW (AF_INET, L"127.0.0.1", &in4));
   TEST_CONDITION (== 1, InetPtonW (AF_INET6, L"2A00:1450:400F:805::1011", &in6));
+#endif
 }
 
 static void test_InetNtopW (void)
 {
+#if !defined(__WATCOMC__)
   struct in_addr  in4;
   struct in6_addr in6 = IN6ADDR_LOOPBACK_INIT;
   wchar_t buf [INET6_ADDRSTRLEN];
@@ -653,6 +656,7 @@ static void test_InetNtopW (void)
   in4.s_addr = inet_addr ("127.0.0.1");
   TEST_CONDITION (!= 0, InetNtopW (AF_INET, &in4, buf, sizeof(buf)/2));
   TEST_CONDITION (!= 0, InetNtopW (AF_INET6, &in6, buf, sizeof(buf)/2));
+#endif
 }
 
 /*
