@@ -19,18 +19,17 @@ if %1. == -h. (
 
 if %1. == -d. (
   set WSOCK_TRACE_LEVEL=2
+  echo on
   shift
 )
 
 if %1. == --ip2loc_4. (
-  shift
   call :generate_test_input_4
-  %~dp0geoip.exe -4 %* < %TEST_INPUT_4%
+  %~dp0geoip.exe -4 %2 %3 %4 < %TEST_INPUT_4%
   exit /b 0
 )
 
 if %1. == --ip2loc_6. (
-  shift
   call :generate_test_input_6
   %~dp0geoip.exe -6 %2 %3 %4 < %TEST_INPUT_6%
   exit /b 0
