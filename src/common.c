@@ -251,8 +251,8 @@ char *str_rip (char *s)
 {
   char *p;
 
-  if ((p = strchr(s,'\n')) != NULL) *p = '\0';
-  if ((p = strchr(s,'\r')) != NULL) *p = '\0';
+  if ((p = strchr (s, '\n')) != NULL) *p = '\0';
+  if ((p = strchr (s, '\r')) != NULL) *p = '\0';
   return (s);
 }
 
@@ -264,8 +264,8 @@ wchar_t *str_ripw (wchar_t *s)
 {
   wchar_t *p;
 
-  if ((p = wcschr(s,L'\n')) != NULL) *p = L'\0';
-  if ((p = wcschr(s,L'\r')) != NULL) *p = L'\0';
+  if ((p = wcschr (s, L'\n')) != NULL) *p = L'\0';
+  if ((p = wcschr (s, L'\r')) != NULL) *p = L'\0';
   return (s);
 }
 
@@ -276,7 +276,7 @@ char *str_ltrim (char *s)
 {
   assert (s != NULL);
 
-  while (s[0] && s[1] && isspace((int)s[0]))
+  while (s[0] && s[1] && isspace ((int)s[0]))
        s++;
   return (s);
 }
@@ -497,7 +497,7 @@ unsigned list_lookup_value (const char *name, const struct search_list *list, in
 {
   while (num > 0 && list->name)
   {
-    if (!stricmp(name,list->name))
+    if (!stricmp(name, list->name))
        return (list->value);
     num--;
     list++;
@@ -758,11 +758,11 @@ static char *get_native_path (const char *path)
     fix_drive (win_root);
     snprintf (sys_dir, sizeof(sys_dir), "%s\\System32\\", win_root);
   }
-  if (!strnicmp(path,sys_dir,strlen(sys_dir)))
+  if (!strnicmp(path, sys_dir, strlen(sys_dir)))
   {
     BOOL exist;
 
-    snprintf (ret, sizeof(ret), "%s\\sysnative\\%s", win_root, path+strlen(sys_dir));
+    snprintf (ret, sizeof(ret), "%s\\sysnative\\%s", win_root, path + strlen(sys_dir));
     exist = file_exists (ret);
     TRACE (2, "ret: '%s', exist: %d\n", ret, exist);
     if (exist)
@@ -797,6 +797,7 @@ const char *get_path (const char    *apath,
 
   if (exist)
      *exist = TRUE;       /* assume the 'wpath' exists */
+
   if (is_native)
      *is_native = FALSE;  /* assume it's not a native file */
 
@@ -808,7 +809,7 @@ const char *get_path (const char    *apath,
      return (path);
 
   p = volume_to_path (path);
-  if (strchr (p,'%'))
+  if (strchr (p, '%'))
      p = getenv_expand (p, path, sizeof(path));
 
   save = g_cfg.use_full_path;
@@ -1018,7 +1019,7 @@ const char *shorten_path (const char *path)
   {
     size_t len = strlen (prog_dir);
 
-    if (len >= 3 && !strnicmp(prog_dir,path,len))
+    if (len >= 3 && !strnicmp(prog_dir, path, len))
        return (real_name + len);
   }
   return (real_name);
@@ -1188,8 +1189,15 @@ int trace_printf (const char *fmt, ...)
   va_list args;
 
   va_start (args, fmt);
+
+#if 0  /* todo ? */
+  l2 = vsnprintf (trace_ptr, trace_end - trace_ptr - 1, fmt, args);
+  trace_ptr += l2;
+  l1 = trace_puts (trace_ptr);
+#else
   l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
   l1 = trace_puts (buf);
+#endif
 
   if (l1 < l2)
     FATAL ("l1: %d, l2: %d. trace_buf: '%.*s',\nbuf: '%s'\n",
@@ -1416,7 +1424,6 @@ FILE *fopen_excl (const char *file, const char *mode)
  *
  * Use 4 buffers in round-robin.
  */
-#if 1 /* Use this instead since there is   problems below */
 const char *qword_str (unsigned __int64 val)
 {
   static char buf[4][30];
@@ -1428,21 +1435,21 @@ const char *qword_str (unsigned __int64 val)
   {
     sprintf (rc, "%lu", (u_long)val);
   }
-  else if (val < U64_SUFFIX(1000000))         /* 1E6 */
+  else if (val < U64_SUFFIX(1000000))       /* < 1E6 */
   {
     sprintf (rc, "%lu,%03lu", (u_long)(val/1000UL), (u_long)(val % 1000UL));
   }
-  else if (val < U64_SUFFIX(1000000000))      /* 1E9 */
+  else if (val < U64_SUFFIX(1000000000))    /* < 1E9 */
   {
     sprintf (tmp, "%9" U64_FMT, val);
     sprintf (rc, "%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6);
   }
-  else if (val < U64_SUFFIX(1000000000000))   /* 1E12 */
+  else if (val < U64_SUFFIX(1000000000000)) /* < 1E12 */
   {
     sprintf (tmp, "%12" U64_FMT, val);
     sprintf (rc, "%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9);
   }
-  else                                        /* >= 1E12 */
+  else                                      /* >= 1E12 */
   {
     sprintf (tmp, "%15" U64_FMT, val);
     sprintf (rc, "%.3s,%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9, tmp+12);
@@ -1450,28 +1457,6 @@ const char *qword_str (unsigned __int64 val)
   idx &= 3;
   return str_ltrim (rc);
 }
-
-#else
-const char *qword_str (unsigned __int64 val)
-{
-  static char buf [4][30];
-  static int  idx = 0;
-  char   tmp [30], *p;
-  int    i, j, len = snprintf (tmp, sizeof(tmp), "%" U64_FMT, val);
-
-  p = buf[idx++] + len;
-  *p-- = '\0';
-
-  for (i = len, j = -1; i >= 0; i--, j++)
-  {
-    if (j > 0 && (j % 3) == 0)
-      *p-- = ',';
-    *p-- = tmp[i];
-  }
-  idx &= 3;
-  return (p+1);
-}
-#endif
 
 const char *dword_str (DWORD val)
 {
@@ -1603,13 +1588,13 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
     env = buf1;
     variable = buf1;
   }
-  if (strchr(variable,'%'))
+  if (strchr(variable, '%'))
   {
     /* buf2 == variable if not expanded.
      */
     ret = ExpandEnvironmentStrings (variable, buf2, sizeof(buf2));
     if (ret > 0 && ret < sizeof(buf2) &&
-        !strchr(buf2,'%'))    /* no variables still un-expanded */
+        !strchr(buf2, '%'))    /* no variables still un-expanded */
       env = buf2;
   }
 
@@ -1630,7 +1615,7 @@ int _setenv (const char *env, const char *val, int overwrite)
   size_t len, i = 0;
   char *e, value [_MAX_PATH] = { "?" };
 
-  if (strchr(env,'='))
+  if (strchr(env, '='))
   {
     errno = EINVAL;
     return (-1);
@@ -1638,9 +1623,9 @@ int _setenv (const char *env, const char *val, int overwrite)
 
   for (e = _environ[i]; e; e = _environ[++i])
   {
-    len = strchr (e,'=') - e;
+    len = strchr (e, '=') - e;
     TRACE (3, "e: '%s'.\n", e);
-    if (!strnicmp(env,e,len))
+    if (!strnicmp(env, e, len))
        break;
   }
 
@@ -1665,7 +1650,12 @@ int _setenv (const char *env, const char *val, int overwrite)
       errno = ENOMEM;
       return (-1);
     }
+
+    /* Some crash-issue on MinGW-w64 (x64) with this 'free()'.
+     */
+#if !(defined(__MINGW64_VERSION_MAJOR) && IS_WIN64)
     free (_environ[i]);
+#endif
     _environ[i] = e;
   }
 
@@ -1677,8 +1667,8 @@ int _setenv (const char *env, const char *val, int overwrite)
 }
 
 /*
- *  These CRC functions are derived from code in chapter 19 of the book
- *  "C Programmer's Guide to Serial Communications", by Joe Campbell.
+ * These CRC functions are derived from code in chapter 19 of the book
+ * "C Programmer's Guide to Serial Communications", by Joe Campbell.
  */
 #define CRC_BITS    32
 #define CRC_HIBIT   ((DWORD) (1L << (CRC_BITS-1)))
@@ -1793,8 +1783,8 @@ const char *get_dll_full_name (void)
  * Returns the `.dll` basename.
  *
  * \retval
- *   "wsock_trace.dll"          for 32-bit Visual-C
- *   "wsock_trace_x64.dll"      for 64-bit Visual-C
+ *   "wsock_trace.dll"          for 32-bit Visual-C / clang-cl
+ *   "wsock_trace_x64.dll"      for 64-bit Visual-C / clang-cl
  *   "wsock_trace_mw.dll"       for 32-bit MinGW
  *   "wsock_trace_mw_x64.dll"   for 64-bit MinGW
  *   "wsock_trace_cyg.dll"      for 32-bit CygWin
