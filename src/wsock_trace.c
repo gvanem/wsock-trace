@@ -3014,12 +3014,15 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     WSAERROR_POP();
   }
 
+#ifndef USE_BFD /* Avoid a '-Wunused-label' warning */
 quit:
+#endif
+
   reentry--;
   return (ret);
 }
 
-#if defined(USE_BFD)  /* MinGW implied */
+#if defined(USE_BFD)  /* MinGW / CygWin implied */
 
 extern ULONG_PTR _image_base__;
 
@@ -3029,6 +3032,7 @@ extern ULONG_PTR _image_base__;
 static void test_get_caller (const void *from)
 {
   ULONG_PTR stack_addr [3];
+  ULONG_PTR frame_diff;
   void     *frames [5];
   int       i, num;
   char      buf[100];
@@ -3061,8 +3065,8 @@ static void test_get_caller (const void *from)
   TRACE (1, "BFD_get_function_name(stack_addr[2]): %s\n", buf);
 
   BFD_get_function_name (10 + (ULONG_PTR)from, buf, sizeof(buf));
-  TRACE (1, "BFD_get_function_name(from): %s, frames[0] - from: 0x%02lX\n",
-            buf, (DWORD) (ADDR_CAST(frames[0]) - ADDR_CAST(from)));
+  frame_diff = ADDR_CAST(frames[0]) - ADDR_CAST(from);
+  TRACE (1, "BFD_get_function_name(from): %s, frames[0] - from: 0x%02lX\n", buf, DWORD_CAST(frame_diff));
   exit (0);
 }
 
