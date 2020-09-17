@@ -79,7 +79,9 @@ if ws.get_trace_level() >= 1 then
                   who_am_I, os_details(), 10, "hello")
   end
 
-  -- ws.trace_printf ("Hello from: ~1%s~0.\nVersion:            ~1%s~0.\n", who_am_I, os_details())
+  -- ws.trace_printf ("testing ws.trace_printf():\n" ..
+  --                  "  arg1 = ~1%s~0.\n" ..
+  --                  "  arg2 = ~1%s~0.\n", who_am_I, os_details())
 
   ws.trace_puts (string.format("  Hello from:         ~1%s~0.\n", who_am_I))
   ws.trace_puts (string.format("  Version:            ~1%s~0.\n", os_details()))
