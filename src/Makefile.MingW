@@ -6,21 +6,19 @@
 #
 USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
-USE_DEF_FILE   = 0
 
 #
-# If you want Lua-script support, set 'USE_LUA = ':
+# If you want Lua-script support, set 'USE_LUA = 1':
 #
 USE_LUA    ?= 0
 LUAJIT_ROOT = ../LuaJIT
 
-BIN_TARGET  = $(realpath $(MINGW32))/bin
-LIB_TARGET  = $(realpath $(MINGW32))/lib
-
+BIN_TARGET = $(realpath $(MINGW32))/bin
+LIB_TARGET = $(realpath $(MINGW32))/lib
 
 #
 # If '$(CPU)=x64', build 64-bit version. Assuming your MinGW
-# is dual-target capable and supports the '-mxx' option.
+# is dual-target capable and supports the '-m32' / '-m64' options.
 # Otherwise 32-bit programs.
 #
 ifeq ($(CPU),)
@@ -36,31 +34,25 @@ ifeq ($(CPU),X64)
 endif
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-missing-braces \
-          -Wno-unused-variable -Wno-unused-function
-RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__
 OBJ_DIR = MinGW_obj
 
 ifeq ($(CPU),x64)
-  CFLAGS  += -m64
-  LDFLAGS  = -m64
-  RCFLAGS += -DBITNESS=64 --target=pe-x86-64
-  m_BITS   = -m64
+  RCFLAGS  = --target=pe-x86-64
+  BITS     = 64
   X_SUFFIX = _x64
 else
-  CFLAGS  += -m32
-  LDFLAGS  = -m32
-  RCFLAGS += -DBITNESS=32 --target=pe-i386
-  m_BITS   = -m32
+  RCFLAGS  = --target=pe-i386
+  BITS     = 32
   X_SUFFIX =
 endif
 
-ifeq ($(USE_LUA),1)
-  CFLAGS  += -DUSE_LUA -I$(LUAJIT_ROOT)/src
-  EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
-endif
+CFLAGS  = -Wall -m$(BITS) -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-unused-variable -Wno-unused-function
+LDFLAGS = -m$(BITS) -Wl,--print-map,--sort-common -t
+RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 
-LDFLAGS += -Wl,--print-map,--sort-common -t
+ifeq ($(USE_LUA),1)
+  CFLAGS += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+endif
 
 ifeq ($(USE_CRT_DEBUG),1)
   CFLAGS += -O0 -ggdb -D_DEBUG
@@ -70,8 +62,8 @@ else
 endif
 
 ifeq ($(USE_BFD),1)
-  CFLAGS  += -DUSE_BFD
-  EX_LIBS += -lbfd -liberty -lintl -lz
+  CFLAGS += -DUSE_BFD
+  EX_LIBS = -lbfd -liberty -lintl -lz
 
   ifeq ($(CPU),x86)
     CFLAGS += -DBFD_ARCH_SIZE=32
@@ -80,10 +72,6 @@ ifeq ($(USE_BFD),1)
   else
     $(error "Unknown CPU")
   endif
-endif
-
-ifeq ($(USE_DEF_FILE),1)
-  CFLAGS += -DUSE_DEF_FILE
 endif
 
 EX_LIBS += -lole32 -ladvapi32
@@ -96,38 +84,35 @@ SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c \
-            ip2loc.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a geoip.exe test.exe idna.exe firewall_test.exe
-	@echo 'Welcome to Wsock_trace library and examples.'
+	$(call green_msg, Welcome to Wsock_trace library and examples.)
 
 message:
-	@echo 'Building MinGW version. CPU=$(CPU).'
+	$(call green_msg, Building MinGW version. CPU=$(CPU).)
 
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
 
 libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
 
-WSOCK_DEPS = $(OBJECTS) $(NON_EXPORT_OBJ)
-
-ifeq ($(USE_DEF_FILE),1)
-  DEF_FILE    = wsock_trace$(X_SUFFIX).def
-  WSOCK_DEPS += $(DEF_FILE)
-endif
-
 ifeq ($(USE_LUA),1)
-  WSOCK_DEPS += $(LUAJIT_ROOT)/src/libluajit.a
-endif
-
-libwsock_trace.a: wsock_trace_mw$(X_SUFFIX).dll
-
-wsock_trace_mw$(X_SUFFIX).dll: $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
-	$(CC) $(LDFLAGS) -shared -Wl,--output-def,wsock_trace_mw$(X_SUFFIX).def \
-          -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(DEF_FILE) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
+wsock_trace_mw$(X_SUFFIX).dll: $(OBJECTS) $(NON_EXPORT_OBJ) $(LUAJIT_ROOT)/src/libluajit.a
+	$(call green_msg, Linking $@.)
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) \
+          $(LUAJIT_ROOT)/src/libluajit.a $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
 	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
+	@echo
+
+else
+wsock_trace_mw$(X_SUFFIX).dll: $(OBJECTS) $(NON_EXPORT_OBJ)
+	$(call green_msg, Linking $@.)
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,libwsock_trace.a -o $@ $(OBJECTS) $(EX_LIBS) > wsock_trace_mw$(X_SUFFIX).map
+	ar rs libwsock_trace.a $(NON_EXPORT_OBJ)
+	@echo
+endif
 
 install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
 	cp --update libwsock_trace.a              $(LIB_TARGET)
@@ -135,43 +120,45 @@ install: libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll
 
 test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) -o $@ $(LDFLAGS) $^ > test.map
+	@echo
 
-idna.exe: idna.c getopt.c common.c smartlist.c libwsock_trace.a
+idna.exe: idna.c common.c smartlist.c libwsock_trace.a
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
+	@echo
 
-firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c getopt.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
+	@echo
 
 geoip-null.exe: $(GEOIP_SRC) geoip-null.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip-null.map
+	@echo
 
 geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
 	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^
 	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
 	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
+	@echo
 
 geoip-gen4.c: geoip-null.exe
-	@echo 'Generating $@.'
+	$(call green_msg, Generating $@.)
 	geoip-null.exe -4g $@
+	@echo
 
 geoip-gen6.c: geoip-null.exe
-	@echo 'Generating $@.'
+	$(call green_msg, Generating $@.)
 	geoip-null.exe -6g $@
+	@echo
 
 run_test: test.exe
 	test.exe -dd
 
-compile_luajit_0:
-	@echo
-
 #
-# Make sure the '$(LUAJIT_ROOT)/src/Makefile' specifies the same
-# '-m[32|64]' as above. I.e. 'CC = gcc -m32'
+# Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
 #
-# and that 'BUILDMODE = static'.
-#
-compile_luajit_1 $(LUAJIT_ROOT)/src/libluajit.a:
-	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC='gcc $(m_BITS)'
+$(LUAJIT_ROOT)/src/libluajit.a:
+	$(call green_msg, Building LuaJIT ...)
+	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)'
 
 clean:
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
@@ -191,6 +178,16 @@ vclean realclean: clean
 $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 	@echo
+
+#
+# The following codes used in macro 'colour_msg' uses Cygwin's echo with colour support.
+#
+BRIGHT_GREEN  = \e[1;32m
+BRIGHT_YELLOW = \e[1;33m
+
+colour_msg = @echo -e "$(1)\e[0m"
+green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
+yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 
 $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
