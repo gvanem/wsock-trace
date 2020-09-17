@@ -30,6 +30,11 @@
 #ifndef _GETOPT_H_
 #define _GETOPT_H_
 
+#if defined(__CYGWIN__) || defined(__MINGW32__)
+  #include_next <getopt.h>
+
+#else  /* Rest of file */
+
 /** \file    getopt.h
  *  \ingroup Misc
  *
@@ -69,4 +74,5 @@ extern int   optind;  /**< the index of the next element to be processed in `arg
 extern int   opterr;  /**< if caller set this to zero, an error-message will never be printed. */
 extern int   optopt;  /**< on errors, an unrecognised option character is stored in `optopt`. */
 
+#endif  /* __CYGWIN__ || __MINGW32__ */
 #endif  /* !_GETOPT_H_ */

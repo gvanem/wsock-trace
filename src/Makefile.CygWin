@@ -64,8 +64,7 @@ SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c \
-            getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message print_cyg-ver $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
@@ -104,11 +103,11 @@ test.exe: $(OBJ_DIR)/test.o $(WSOCK_TRACE_A)
 	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
 	@echo
 
-idna.exe: idna.c getopt.c common.c smartlist.c $(WSOCK_TRACE_A)
+idna.exe: idna.c common.c smartlist.c $(WSOCK_TRACE_A)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
-firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c getopt.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
 	@echo
 
@@ -186,12 +185,10 @@ $(OBJ_DIR)/%.o: %.c
 #
 # The following codes used in macro 'colour_msg' uses Cygwin's echo with colour support.
 #
-BRIGHT_RED    = \e[1;31m
 BRIGHT_GREEN  = \e[1;32m
 BRIGHT_YELLOW = \e[1;33m
 
 colour_msg = @echo -e "$(1)\e[0m"
-red_msg    = $(call colour_msg,$(BRIGHT_RED)$(strip $(1)))
 green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
 yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 

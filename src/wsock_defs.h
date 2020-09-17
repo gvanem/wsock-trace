@@ -16,14 +16,6 @@
 #include <sys/stat.h>
 
 #if defined(__CYGWIN__)
-  /*
-   * We use a local "getopt.h" which is slightly
-   * incompatible with CygWin's standard getopt.h.
-   * So do not include it via <unistd.h>.
-   */
-  #define __GETOPT_H__      /* CygWin header guard for <getopt.h> */
-  #define __UNISTD_GETOPT__ /* No getopt() in CygWin's <unistd.h> */
-
   #include <cygwin/version.h>
   #include <sys/stat.h>
   #include <unistd.h>
