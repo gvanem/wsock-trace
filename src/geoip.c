@@ -2207,6 +2207,7 @@ int main (int argc, char **argv)
   int rc = 0;
   const char *my_name = argv[0];
   const char *g_file = NULL;
+  WSADATA     wsa;
 
   wsock_trace_init();
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
@@ -2305,6 +2306,7 @@ int main (int argc, char **argv)
        dump_num_ip_blocks_by_country();
   }
 
+  WSAStartup (MAKEWORD(1,1), &wsa);
   if (do_rand)
   {
     if (do_4)
@@ -2315,9 +2317,6 @@ int main (int argc, char **argv)
   else
   {
     smartlist_t *list = make_argv_list (argc, argv);
-    WSADATA wsa;
-
-    WSAStartup (MAKEWORD(1,1), &wsa);
 
     if (do_4)
        test_addr_list (list, use_ip2loc, test_addr4);
