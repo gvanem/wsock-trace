@@ -47,13 +47,12 @@ else
 endif
 
 ifeq ($(USE_BFD),1)
-  CFLAGS  += -DUSE_BFD
+  CFLAGS  += -DUSE_BFD -Wno-unused-but-set-variable -Wno-unused-variable
   EX_LIBS += -lbfd -liberty -lintl -lz
 endif
 
 ifeq ($(USE_LUA),1)
-  CFLAGS  += -DUSE_LUA -I$(LUAJIT_ROOT)/src
-  EX_LIBS += $(LUAJIT_ROOT)/src/libluajit.a
+  CFLAGS += -DUSE_LUA -I$(LUAJIT_ROOT)/src
 endif
 
 EX_LIBS += -lole32 -ladvapi32
@@ -72,25 +71,30 @@ GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 all: message print_cyg-ver $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
 	$(call green_msg, Welcome to Wsock_trace library and example.)
 
+comma := ,
+
 message:
-	$(call green_msg, Building CygWin $(CYG_VER) version.)
+	$(call green_msg, Building CygWin $(CYG_VER) version. \
+	                  USE_LUA=$(USE_LUA)$(comma) USE_CRT_DEBUG=$(USE_CRT_DEBUG)$(comma) USE_BFD=$(USE_BFD).)
 
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
 
 $(WSOCK_TRACE_A): $(WSOCK_TRACE_DLL)
 
-WSOCK_DEPS = $(OBJECTS) $(NON_EXPORT_OBJ)
-
 ifeq ($(USE_LUA),1)
-  WSOCK_DEPS += $(LUAJIT_ROOT)/src/libluajit.a
-endif
-
-$(WSOCK_TRACE_DLL): $(WSOCK_DEPS) compile_luajit_$(USE_LUA)
+$(WSOCK_TRACE_DLL): $(OBJECTS) $(NON_EXPORT_OBJ) $(LUAJIT_ROOT)/src/libluajit.a
+	$(call green_msg, Linking $@.)
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_TRACE_A) -o $@ $(OBJECTS) $(LUAJIT_ROOT)/src/libluajit.a $(EX_LIBS) > $(WSOCK_TRACE_DLL:.dll=.map)
+	ar rs $(WSOCK_TRACE_A) $(NON_EXPORT_OBJ)
+	@echo
+else
+$(WSOCK_TRACE_DLL): $(OBJECTS) $(NON_EXPORT_OBJ)
 	$(call green_msg, Linking $@.)
 	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_TRACE_A) -o $@ $(OBJECTS) $(EX_LIBS) > $(WSOCK_TRACE_DLL:.dll=.map)
 	ar rs $(WSOCK_TRACE_A) $(NON_EXPORT_OBJ)
 	@echo
+endif
 
 install: $(WSOCK_TRACE_A) $(WSOCK_TRACE_DLL)
 	cp --update $(WSOCK_TRACE_A)   $(LIB_TARGET)
@@ -131,9 +135,6 @@ geoip-gen6.c: geoip-null.exe
 run_test: test.exe
 	test.exe
 
-compile_luajit_0:
-	@echo
-
 #
 # Just a simple Cygwin version test program.
 #
@@ -147,11 +148,9 @@ print_cyg-ver: cyg-ver.exe
 #
 # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
 #
-compile_luajit_1: $(LUAJIT_ROOT)/src/libluajit.a
-
 $(LUAJIT_ROOT)/src/libluajit.a:
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a TARGET_SYS=Windows DEFAULT_CC='/bin/gcc'
+	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a $(LUAJIT_EXTRAS)
 	@echo
 
 clean:
