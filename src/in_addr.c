@@ -26,6 +26,14 @@
 #include <string.h>
 #include <ctype.h>
 
+#if defined(__CYGWIN__)
+  /*
+   * A hack to hide the different prototypes of 'InetNtopW()' in
+   * various version of CygWin's <ws2tcpip.h>.
+   */
+  #define InetNtopW orig_InetNtopW
+#endif
+
 #include "common.h"
 #include "in_addr.h"
 
@@ -135,13 +143,13 @@ EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
   return (-1);
 }
 
-/* Cygwin < v3.0 has a slightly different prototype for this function.
+/* Undo the Cygwin hack at top.
  */
-#if defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED < 3000000)
-  EXPORT LPCWSTR WINAPI InetNtopW (int family, void *addr, LPWSTR res_buf, size_t res_buf_size)
-#else
-  EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, size_t res_buf_size)
+#if defined(__CYGWIN__)
+#undef InetNtopW
 #endif
+
+EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, size_t res_buf_size)
 {
   char buf [INET6_ADDRSTRLEN];
 
