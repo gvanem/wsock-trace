@@ -98,8 +98,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & test.exe & set USE_LUA=0
   - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865      & idna.exe           www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 &                 idna.exe -c1252 -w www.seoghør.no
-  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat -d --ip2loc_4
-  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat -d --ip2loc_6
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
   - cmd: set WSOCK_TRACE_LEVEL=1 & set TEST_DNSBL=1 & test.exe WSAStartup WSACleanup
 
 #
