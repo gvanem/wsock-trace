@@ -307,7 +307,7 @@ int DNSBL_test (void)
   int    i;
   BOOL   rc;
   static const struct test_list tests[] = {
-                    { AF_INET,  "108.166.224.2", "235333" },  /* in drop.txt */
+                    { AF_INET,  "192.219.208.2", "103496" },  /* in drop.txt */
                     { AF_INET,  "24.233.0.21",   "210084" },
                     { AF_INET,  "8.8.8.8",       "<none>" },  /* Google's NS */
                     { AF_INET,  "193.25.48.3",   "211796" },
