@@ -138,9 +138,9 @@
 #   Lua-scripts for init and exit.
 #
 [lua]
-  enable      = 1
+  enable      = 1              # Indepenent of a 'trace_level = 0' in the [core] section.
   trace_level = 1              # The level for LUA_TRACE().
-  profile     = 0              # Experimental; allow a Lua-script to load "jit.profile"
+  profile     = 0              # Experimental; allow a Lua-script to load "jit.profile".
 
   #
   # The colors used in LUA_TRACE() and LUA_WARNING():

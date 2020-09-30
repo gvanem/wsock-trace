@@ -3,6 +3,16 @@
  *
  * \brief
  *  A LuaJIT interface for Wsock-Trace.
+ *
+ * A WSock LuaJIT script could be run like:
+ *
+ *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
+ *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe wsock_trace_init.lua
+ *
+ * Or to enter interactive mode after loading:
+ *
+ *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
+ *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe -l wsock_trace -i
  */
 #include "common.h"
 
@@ -31,6 +41,7 @@
                            __FILE__, __LINE__,      \
                            ## __VA_ARGS__);         \
              LEAVE_CRIT();                          \
+             trace_flush();                         \
         } while (0)
 
 #define LUA_WARNING(fmt, ...)                 \
@@ -54,38 +65,7 @@ static BOOL open_ok        = TRUE;
 
 static void wslua_init (const char *script);
 static void wslua_exit (const char *script);
-
-#include "wsock_trace.rc"
-
-static void wslua_set_path (const char *full_name)
-{
-  const char *env = getenv ("LUA_CPATH");
-  char       *p;
-  char        dll_path [_MAX_PATH] = { "?" };
-  char        lua_cpath [_MAX_PATH] = { "-" };
-  size_t      len, left = sizeof(lua_cpath);
-
-  p = strrchr (full_name, '\\');
-  _strlcpy (dll_path, full_name, p - full_name + 1);
-
-  p = lua_cpath;
-  if (env)
-  {
-    len = snprintf (p, left, "%s;", env);
-    p    += len;
-    left -= len;
-  }
-
-  /* Ensure a 'require("wsock_trace")' in Lua-land will match the correct .DLL.
-   * E.g.
-   *   for Cygwin / x64, our RC_DLL_NAME == "wsock_trace_cyg_x64", so the
-   *   'lua_cpath' MUST end with "?_cyg_x64.dll".
-   */
-  snprintf (p, left, "%s\\?%s.dll", dll_path, RC_DLL_NAME + strlen("wsock_trace"));
-
-  _setenv ("LUA_CPATH", lua_cpath, 1);
-  LUA_TRACE (1, "LUA_CPATH: %s.\n", lua_cpath);
-}
+static void wslua_set_path (const char *full_name);
 
 BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 {
@@ -480,6 +460,46 @@ static void wslua_exit (const char *script)
   lua_sethook (L, NULL, 0, 0);
   lua_close (L);
   L = NULL;
+}
+
+#include "wsock_trace.rc"
+
+/**
+ * Setup the "LUA_CPATH" for LuaJIT to load the correct Wsock-trace .dll.
+ */
+static void wslua_set_path (const char *full_name)
+{
+  const char *env = getenv ("LUA_CPATH");
+  char       *p;
+  char        dll_path [_MAX_PATH] = { "?" };
+  char        lua_cpath [_MAX_PATH] = { "-" };
+  size_t      len, left = sizeof(lua_cpath);
+
+  p = strrchr (full_name, '\\');
+  _strlcpy (dll_path, full_name, p - full_name + 1);
+
+  p = lua_cpath;
+
+  /* Ensure a 'require("wsock_trace")' in Lua-land will match the correct .DLL.
+   * E.g.
+   *   for Cygwin / x64, our RC_DLL_NAME == "wsock_trace_cyg_x64", so the
+   *   'lua_cpath' MUST end with "?_cyg_x64.dll".
+   *
+   *   But if "LUA_CPATH=?_cyg.dll" is already defined, set our 'lua_cpath' first.
+   *   Otherwise 'LoadLibrary()' in LuaJIT erros with code 193; ERROR_BAD_EXE_FORMAT
+   */
+  len = snprintf (p, left, "%s\\?%s.dll", dll_path, RC_DLL_NAME + strlen("wsock_trace"));
+  p    += len;
+  left -= len;
+
+  if (env && left > strlen(env)+2)
+  {
+    *p++ = ';';
+    _strlcpy (p, env, left-1);
+  }
+
+  _setenv ("LUA_CPATH", lua_cpath, 1);
+  LUA_TRACE (1, "LUA_CPATH: %s.\n", lua_cpath);
 }
 
 static const struct luaL_Reg wslua_table[] = {
