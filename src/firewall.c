@@ -1967,8 +1967,10 @@ BOOL fw_init (void)
 
   TRACE (2, "fw_module: '%s', fw_logged_on_user: '%s'.\n", fw_module, fw_logged_on_user);
 
+#if 0  /* todo ? */
   if (g_cfg.firewall.show_all == 0)
      exclude_list_add (fw_module, EXCL_PROGRAM);
+#endif
 
   fw_check_n_format (TRUE, FALSE);
 

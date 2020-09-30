@@ -1192,8 +1192,8 @@ int trace_printf (const char *fmt, ...)
 
 #if 0  /* todo ? */
   l2 = vsnprintf (trace_ptr, trace_end - trace_ptr - 1, fmt, args);
-  trace_ptr += l2;
   l1 = trace_puts (trace_ptr);
+  trace_ptr += l2;
 #else
   l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
   l1 = trace_puts (buf);
