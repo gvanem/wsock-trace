@@ -132,9 +132,20 @@ static void pusherror(lua_State *L)
   if (FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
       NULL, error, 0, buffer, sizeof(buffer) - 10, NULL))
   {
+    char *p = strrchr (buffer, '\r');
+
+    if (p)
+       *p = '\0';
+    p = strrchr (buffer, '\n');
+    if (p)
+       *p = '\0';
+    p = strrchr (buffer, '.');
+    if (p && p[1] == '\0')
+       *p = '\0';
+
     strcat (buffer, " (");
     strcat (buffer, _ultoa(error, buffer2, 10));
-    strcat (buffer, ")");
+    strcat (buffer, ").");
     lua_pushstring(L, buffer);
   }
 #endif
