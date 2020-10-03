@@ -14,6 +14,7 @@
  * iana.c - Part of Wsock-Trace.
  */
 #include <limits.h>
+#include <errno.h>
 
 #include "common.h"
 #include "smartlist.h"
