@@ -731,6 +731,13 @@ int iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *out
   return (0);
 }
 
+/*
+ * Ignore the gcc warning on 'loop' initialisation.
+ */
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored  "-Wmissing-braces"
+#endif
+
 /**
  * Find an IANA record based on an IPv6 address.
  *
@@ -779,8 +786,6 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
 #ifdef TEST_IANA
 
 #define DO_NOTHING(f)  void f(void) {}
-
-GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
 DO_NOTHING (ip2loc_init)
 DO_NOTHING (ip2loc_exit)
