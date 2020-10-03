@@ -64,7 +64,7 @@ SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
+GEOIP_SRC = geoip.c common.c dnsbl.c iana.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message print_cyg-ver $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
