@@ -1,6 +1,8 @@
 -- wsock_trace_init.lua
 --
 
+-- io = require ("io")
+
 function os_details()
   return string.format ("%s on %s (%s)", jit.version, jit.os, jit.arch);
 end
@@ -66,6 +68,8 @@ if ws.get_profiler() then
 end
 
 if ws.get_trace_level() >= 1 then
+  -- io.setvbuf (io.stdbuf, "line")
+
   ws.trace_puts (string.format("  ws.get_trace_level: ~1%d~0.\n", ws.get_trace_level()))
 
   if nil then
