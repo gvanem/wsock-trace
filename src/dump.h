@@ -28,6 +28,10 @@ extern void dump_countries          (int type, const char **addresses);
 extern void dump_countries_sockaddr (const struct sockaddr *sa);
 extern void dump_countries_addrinfo (const struct addrinfo *ai);
 
+extern void dump_IANA_addresses (int type, const char **addresses);
+extern void dump_IANA_sockaddr  (const struct sockaddr *sa);
+extern void dump_IANA_addrinfo  (const struct addrinfo *ai);
+
 extern void dump_DNSBL          (int type, const char **addresses);
 extern void dump_DNSBL_sockaddr (const struct sockaddr *sa);
 extern void dump_DNSBL_addrinfo (const struct addrinfo *ai);

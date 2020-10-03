@@ -105,6 +105,7 @@
     <ClCompile Include="geoip-gen6.c" />
     <ClCompile Include="geoip.c" />
     <ClCompile Include="hosts.c" />
+    <ClCompile Include="iana.c" />
     <ClCompile Include="idna.c" />
     <ClCompile Include="init.c" />
     <ClCompile Include="in_addr.c" />

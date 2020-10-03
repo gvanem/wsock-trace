@@ -15,6 +15,7 @@
 #include "in_addr.h"
 #include "init.h"
 #include "geoip.h"
+#include "iana.h"
 #include "idna.h"
 #include "hosts.h"
 #include "wsock_trace.h"
@@ -2108,8 +2109,8 @@ void dump_countries (int type, const char **addresses)
        trace_puts (", ");
   }
   if (i == 0)
-       trace_puts ("None!?~0\n");
-  else trace_puts ("~0\n");
+     trace_puts ("None!?");
+  trace_puts ("~0\n");
 
   WSAERROR_POP();
 }
@@ -2191,10 +2192,112 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
       trace_puts (", ");
   }
   if (num == 0)
-       trace_puts ("None!?~0\n");
-  else trace_puts ("~0\n");
+     trace_puts ("None!?");
+  trace_puts ("~0\n");
 
   WSAERROR_POP();
+}
+
+/*
+ * Dump the IANA information for the given addresses.
+ */
+void dump_IANA_addresses (int family, const char **addresses)
+{
+  int i;
+
+  if (g_cfg.trace_level <= 0)
+     return;
+
+  trace_indent (g_cfg.trace_indent+2);
+  trace_printf ("~4IANA:   ");
+
+  for (i = 0; addresses && addresses[i]; i++)
+  {
+    struct IANA_record rec;
+
+    if (family == AF_INET)
+    {
+      iana_find_by_ip4_address ((const struct in_addr*)addresses[i], &rec);
+      iana_print_rec (&rec);
+    }
+    else if (family == AF_INET6)
+    {
+      iana_find_by_ip6_address ((const struct in6_addr*)addresses[i], &rec);
+      iana_print_rec (&rec);
+    }
+    else
+    {
+      trace_printf ("Unknown family: %d", family);
+      break;
+    }
+  }
+  if (i == 0)
+     trace_puts ("None!?");
+  trace_puts ("~0\n");
+}
+
+void dump_IANA_sockaddr (const struct sockaddr *sa)
+{
+  const char                *addr[2];
+  const struct sockaddr_in  *sa4;
+  const struct sockaddr_in6 *sa6;
+
+  if (!sa || g_cfg.trace_level <= 0)
+     return;
+
+  if (sa->sa_family == AF_INET)
+  {
+    sa4 = (const struct sockaddr_in*) sa;
+    addr[0] = (const char*) &sa4->sin_addr;
+    addr[1] = NULL;
+    dump_IANA_addresses (AF_INET, addr);
+  }
+  else if (sa->sa_family == AF_INET6)
+  {
+    sa6 = (const struct sockaddr_in6*) sa;
+    addr[0] = (const char*) &sa6->sin6_addr;
+    addr[1] = NULL;
+    dump_IANA_addresses (AF_INET6, addr);
+  }
+}
+
+void dump_IANA_addrinfo  (const struct addrinfo *ai)
+{
+  int num;
+
+  if (g_cfg.trace_level <= 0)
+     return;
+
+  trace_indent (g_cfg.trace_indent+2);
+  trace_printf ("~4IANA:   ");
+
+  for (num = 0; ai; ai = ai->ai_next, num++)
+  {
+    struct IANA_record rec;
+
+    if (ai->ai_family == AF_INET)
+    {
+      const struct sockaddr_in *sa4 = (const struct sockaddr_in*) ai->ai_addr;
+
+      iana_find_by_ip4_address (&sa4->sin_addr, &rec);
+      iana_print_rec (&rec);
+    }
+    else if (ai->ai_family == AF_INET6)
+    {
+      const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) ai->ai_addr;
+
+      iana_find_by_ip6_address (&sa6->sin6_addr, &rec);
+      iana_print_rec (&rec);
+    }
+    else
+    {
+      trace_printf ("Unknown family: %d", ai->ai_family);
+      break;
+    }
+  }
+  if (num == 0)
+     trace_puts ("None!?");
+  trace_puts ("~0\n");
 }
 
 void dump_nameinfo (const char *host, const char *serv, DWORD flags)

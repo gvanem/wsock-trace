@@ -22,6 +22,7 @@ LINK_ARG = $(OBJ_DIR)\wlink.arg
 WSOCK_TRACE_OBJS = $(OBJ_DIR)\wsock_trace.obj     &
                    $(OBJ_DIR)\wsock_trace_lua.obj &
                    $(OBJ_DIR)\hosts.obj           &
+                   $(OBJ_DIR)\iana.obj            &
                    $(OBJ_DIR)\idna.obj            &
                    $(OBJ_DIR)\init.obj            &
                    $(OBJ_DIR)\in_addr.obj         &
@@ -44,6 +45,7 @@ GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
             $(OBJ_DIR)\geoip-null.obj &
             $(OBJ_DIR)\common.obj     &
             $(OBJ_DIR)\dnsbl.obj      &
+            $(OBJ_DIR)\iana.obj       &
             $(OBJ_DIR)\idna.obj       &
             $(OBJ_DIR)\in_addr.obj    &
             $(OBJ_DIR)\init.obj       &
@@ -84,6 +86,7 @@ vclean realclean: clean .SYMBOLIC
 $(WSOCK_DLL) $(WSOCK_LIB): $(WSOCK_TRACE_OBJS) $(OBJ_DIR)\wsock_trace.res $(NON_EXPORT_OBJ) $(LINK_ARG)
 	wlink system nt dll name $(WSOCK_DLL) @$(LINK_ARG)
 	wlib -q -b -c $(WSOCK_LIB) +-$(NON_EXPORT_OBJ)
+	@echo.
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	wrc -dDEBUG=0 -D__WATCOMC__ -q -r -zm -fo=$@ $[@
@@ -112,14 +115,14 @@ geoip.exe: geoip.c init.c $(GEOIP_OBJ)
 	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\init.obj  init.c
 	wlink $(LDFLAGS) name $@ file { $(GEOIP_OBJ) } &
 	                         library clib3$(STACK_OR_REG).lib, ws2_32.lib
-	rm -f $(OBJ_DIR)\init.obj $(OBJ_DIR)\geoip.obj
+	rm -f $(OBJ_DIR)/init.obj $(OBJ_DIR)/geoip.obj
 	@echo.
 
 idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
 	*$(CC) $(CFLAGS) -DTEST_IDNA -fo=$(OBJ_DIR)\idna.obj idna.c
 	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\idna.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj } &
 	                         library clib3$(STACK_OR_REG).lib,$(WSOCK_LIB)
-	rm -f $(OBJ_DIR)\idna.obj
+	rm -f $(OBJ_DIR)/idna.obj
 	@echo.
 
 run_test: test.exe .SYMBOLIC
@@ -130,6 +133,7 @@ $(LINK_ARG): $(__MAKEFILES__)
 	@%append $^@ option implib=$(WSOCK_LIB), map, verbose, quiet,
 	@%append $^@ caseexact, map=$(WSOCK_DLL:.dll=.map), res=$(OBJ_DIR)\wsock_trace.res
 	@%append $^@ file { $(WSOCK_TRACE_OBJS) } library clib3$(STACK_OR_REG).lib
+	@echo.
 
 
 #
@@ -144,6 +148,7 @@ $(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h in_addr.h hosts.
 $(OBJ_DIR)\geoip.obj:       geoip.c common.h inet_util.h smartlist.h init.h in_addr.h geoip.h
 $(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h common.h smartlist.h
 $(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h common.h smartlist.h
+$(OBJ_DIR)\iana.obj:        iana.c common.h init.h inet_util.h in_addr.h smartlist.h iana.h
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h smartlist.h idna.h
 $(OBJ_DIR)\inet_util.obj:   inet_util.c inet_util.h common.h init.h in_addr.h wsock_defs.h
 $(OBJ_DIR)\init.obj:        init.c common.h wsock_trace.h wsock_trace_lua.h &

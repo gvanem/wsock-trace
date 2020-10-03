@@ -152,6 +152,8 @@ There is currently no `install.bat` file for Wsock-trace. So you should copy the
   drop.txt
   edrop.txt
   dropv6.txt
+  ipv4-address-space.csv
+  ipv6-unicast-address-assignments.csv
 ```
 
 These environment variables are on the form:

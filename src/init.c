@@ -28,6 +28,7 @@
 #include "hosts.h"
 #include "firewall.h"
 #include "cpu.h"
+#include "iana.h"
 #include "dnsbl.h"
 #include "in_addr.h"
 #include "init.h"
@@ -118,11 +119,11 @@ static void set_time_format (TS_TYPE *ret, const char *val)
 {
   *ret = TS_NONE;
 
-  if (!stricmp(val,"absolute"))
+  if (!stricmp(val, "absolute"))
      *ret = TS_ABSOLUTE;
-  else if (!stricmp(val,"relative"))
+  else if (!stricmp(val, "relative"))
      *ret = TS_RELATIVE;
-  else if (!stricmp(val,"delta"))
+  else if (!stricmp(val, "delta"))
      *ret = TS_DELTA;
   TRACE (4, "val: %s -> TS_TYPE: %d\n", val, *ret);
 }
@@ -296,7 +297,7 @@ static int config_get_line (FILE        *fil,
   {
     char buf[500];
 
-    if (!fgets(buf,sizeof(buf)-1,fil))   /* EOF */
+    if (!fgets(buf, sizeof(buf)-1, fil))   /* EOF */
        return (0);
 
     for (p = buf; *p && isspace((int)*p); )
@@ -314,7 +315,7 @@ static int config_get_line (FILE        *fil,
     /*
      * Hit a '[section]' line. Let the caller switch to another config-table.
      */
-    if (sscanf(p,"[%[^]\r\n]", section) == 1)
+    if (sscanf(p, "[%[^]\r\n]", section) == 1)
     {
       (*line)++;
       *section_p = section;
@@ -322,7 +323,7 @@ static int config_get_line (FILE        *fil,
       continue;
     }
 
-    if (sscanf(p,"%[^= ] = %[^\r\n]", key, val) != 2)
+    if (sscanf(p, "%[^= ] = %[^\r\n]", key, val) != 2)
     {
       (*line)++;
       continue;
@@ -486,7 +487,7 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
     tok_fmt = ",";
   }
 
-  for (tok = strtok(p,tok_fmt); tok; tok = strtok(NULL,tok_fmt))
+  for (tok = strtok(p, tok_fmt); tok; tok = strtok(NULL, tok_fmt))
   {
     if (exclude_which & EXCL_PROGRAM)
        while (*tok == ' ')
@@ -558,166 +559,166 @@ const char *config_file_name (void)
  */
 static void parse_core_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"trace_level"))
+  if (!stricmp(key, "trace_level"))
      g_cfg.trace_level = atoi (val);
 
-  else if (!stricmp(key,"trace_overlap"))
+  else if (!stricmp(key, "trace_overlap"))
      g_cfg.trace_overlap = atoi (val);
 
-  else if (!stricmp(key,"trace_file"))
+  else if (!stricmp(key, "trace_file"))
      g_cfg.trace_file = strdup (val);
 
-  else if (!stricmp(key,"trace_binmode"))
+  else if (!stricmp(key, "trace_binmode"))
      g_cfg.trace_binmode = atoi (val);
 
-  else if (!stricmp(key,"trace_caller"))
+  else if (!stricmp(key, "trace_caller"))
      g_cfg.trace_caller = atoi (val);
 
-  else if (!stricmp(key,"trace_indent"))
+  else if (!stricmp(key, "trace_indent"))
   {
     g_cfg.trace_indent = atoi (val);
     g_cfg.trace_indent = max (0, g_cfg.trace_indent);
   }
 
-  else if (!stricmp(key,"trace_report"))
+  else if (!stricmp(key, "trace_report"))
      g_cfg.trace_report = atoi (val);
 
-  else if (!stricmp(key,"trace_max_len") || !stricmp(key,"trace_max_length"))
+  else if (!stricmp(key, "trace_max_len") || !stricmp(key, "trace_max_length"))
      g_cfg.trace_max_len = atoi (val);
 
-  else if (!stricmp(key,"trace_time"))
+  else if (!stricmp(key, "trace_time"))
      set_time_format (&g_cfg.trace_time_format, val);
 
-  else if (!stricmp(key,"pcap_enable"))
+  else if (!stricmp(key, "pcap_enable"))
      g_cfg.pcap.enable = atoi (val);
 
-  else if (!stricmp(key,"pcap_dump"))
+  else if (!stricmp(key, "pcap_dump"))
     g_cfg.pcap.dump_fname = strdup (val);
 
-  else if (!stricmp(key,"show_caller"))
+  else if (!stricmp(key, "show_caller"))
      g_cfg.show_caller = atoi (val);
 
-  else if (!stricmp(key,"demangle") || !stricmp(key,"cpp_demangle"))
+  else if (!stricmp(key, "demangle") || !stricmp(key, "cpp_demangle"))
      g_cfg.cpp_demangle = atoi (val);
 
-  else if (!stricmp(key,"callee_level"))
+  else if (!stricmp(key, "callee_level"))
      g_cfg.callee_level = atoi (val);   /* Control how many stack-frames to show. Not used yet */
 
-  else if (!stricmp(key,"exclude"))
+  else if (!stricmp(key, "exclude"))
      exclude_list_add (val, EXCL_FUNCTION);
 
-  else if (!stricmp(key,"hook_extensions"))
+  else if (!stricmp(key, "hook_extensions"))
      g_cfg.hook_extensions = atoi (val);
 
-  else if (!stricmp(key,"short_errors"))
+  else if (!stricmp(key, "short_errors"))
      g_cfg.short_errors = atoi (val);
 
-  else if (!stricmp(key,"pdb_report"))
+  else if (!stricmp(key, "pdb_report"))
      g_cfg.pdb_report = atoi (val);
 
-  else if (!stricmp(key,"use_sema"))
+  else if (!stricmp(key, "use_sema"))
      g_cfg.use_sema = atoi (val);
 
-  else if (!stricmp(key,"recv_delay"))
+  else if (!stricmp(key, "recv_delay"))
      g_cfg.recv_delay = (DWORD) _atoi64 (val);
 
-  else if (!stricmp(key,"send_delay"))
+  else if (!stricmp(key, "send_delay"))
      g_cfg.send_delay = (DWORD) _atoi64 (val);
 
-  else if (!stricmp(key,"select_delay"))
+  else if (!stricmp(key, "select_delay"))
      g_cfg.select_delay = (DWORD) _atoi64 (val);
 
-  else if (!stricmp(key,"poll_delay"))
+  else if (!stricmp(key, "poll_delay"))
      g_cfg.poll_delay = (DWORD) _atoi64 (val);
 
-  else if (!stricmp(key,"use_toolhlp32"))
+  else if (!stricmp(key, "use_toolhlp32"))
      g_cfg.use_toolhlp32 = atoi (val);
 
-  else if (!stricmp(key,"use_ole32"))
+  else if (!stricmp(key, "use_ole32"))
      g_cfg.use_ole32 = atoi (val);
 
-  else if (!stricmp(key,"use_full_path"))
+  else if (!stricmp(key, "use_full_path"))
      g_cfg.use_full_path = atoi (val);
 
-  else if (!stricmp(key,"color_file"))
+  else if (!stricmp(key, "color_file"))
      get_color (val, &g_cfg.color_file);
 
-  else if (!stricmp(key,"color_time"))
+  else if (!stricmp(key, "color_time"))
      get_color (val, &g_cfg.color_time);
 
-  else if (!stricmp(key,"color_func"))
+  else if (!stricmp(key, "color_func"))
      get_color (val, &g_cfg.color_func);
 
-  else if (!stricmp(key,"color_trace"))
+  else if (!stricmp(key, "color_trace"))
      get_color (val, &g_cfg.color_trace);
 
-  else if (!stricmp(key,"color_data"))
+  else if (!stricmp(key, "color_data"))
      get_color (val, &g_cfg.color_data);
 
-  else if (!stricmp(key,"compact"))
+  else if (!stricmp(key, "compact"))
      g_cfg.compact = atoi (val);
 
-  else if (!stricmp(key,"dump_select"))
+  else if (!stricmp(key, "dump_select"))
      g_cfg.dump_select = atoi (val);
 
-  else if (!stricmp(key,"dump_nameinfo"))
+  else if (!stricmp(key, "dump_nameinfo"))
      g_cfg.dump_nameinfo = atoi (val);
 
-  else if (!stricmp(key,"dump_protoent"))
+  else if (!stricmp(key, "dump_protoent"))
      g_cfg.dump_protoent = atoi (val);
 
-  else if (!stricmp(key,"dump_modules"))
+  else if (!stricmp(key, "dump_modules"))
      g_cfg.dump_modules = atoi (val);
 
-  else if (!stricmp(key,"dump_hostent"))
+  else if (!stricmp(key, "dump_hostent"))
      g_cfg.dump_hostent = atoi (val);
 
-  else if (!stricmp(key,"dump_servent"))
+  else if (!stricmp(key, "dump_servent"))
      g_cfg.dump_servent = atoi (val);
 
-  else if (!stricmp(key,"dump_data"))
+  else if (!stricmp(key, "dump_data"))
      g_cfg.dump_data = atoi (val);
 
-  else if (!stricmp(key,"dump_wsaprotocol_info"))
+  else if (!stricmp(key, "dump_wsaprotocol_info"))
      g_cfg.dump_wsaprotocol_info = atoi (val);
 
-  else if (!stricmp(key,"dump_wsanetwork_events"))
+  else if (!stricmp(key, "dump_wsanetwork_events"))
      g_cfg.dump_wsanetwork_events = atoi (val);
 
-  else if (!stricmp(key,"max_data"))
+  else if (!stricmp(key, "max_data"))
      g_cfg.max_data = atoi (val);
 
-  else if (!stricmp(key,"max_fd_set") || !stricmp(key,"max_fd_sets"))
+  else if (!stricmp(key, "max_fd_set") || !stricmp(key, "max_fd_sets"))
      g_cfg.max_fd_sets = atoi (val);
 
-  else if (!stricmp(key,"max_displacement"))
+  else if (!stricmp(key, "max_displacement"))
      g_cfg.max_displacement = atoi (val);
 
-  else if (!stricmp(key,"start_new_line"))
+  else if (!stricmp(key, "start_new_line"))
      g_cfg.start_new_line = atoi (val);
 
-  else if (!stricmp(key,"test_trace"))
+  else if (!stricmp(key, "test_trace"))
      g_cfg.test_trace = atoi (val);
 
-  else if (!stricmp(key,"msvc_only"))
+  else if (!stricmp(key, "msvc_only"))
      g_cfg.msvc_only = atoi (val);
 
-  else if (!stricmp(key,"mingw_only"))
+  else if (!stricmp(key, "mingw_only"))
      g_cfg.mingw_only = atoi (val);
 
-  else if (!stricmp(key,"cygwin_only"))
+  else if (!stricmp(key, "cygwin_only"))
      g_cfg.cygwin_only = atoi (val);
 
-  else if (!stricmp(key,"no_buffering"))
+  else if (!stricmp(key, "no_buffering"))
      g_cfg.no_buffering = atoi (val);
 
-  else if (!stricmp(key,"hosts_file"))
+  else if (!stricmp(key, "hosts_file"))
      g_cfg.hosts_file = strdup (val);
 
-  else if (!stricmp(key,"use_winhttp"))
+  else if (!stricmp(key, "use_winhttp"))
      g_cfg.use_winhttp = atoi (val);
 
-  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
 
@@ -726,28 +727,28 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
  */
 static void parse_lua_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"enable"))
+  if (!stricmp(key, "enable"))
        g_cfg.lua.enable = atoi (val);
 
-  else if (!stricmp(key,"trace_level"))
+  else if (!stricmp(key, "trace_level"))
        g_cfg.lua.trace_level = atoi (val);
 
-  else if (!stricmp(key,"profile"))
+  else if (!stricmp(key, "profile"))
        g_cfg.lua.profile = atoi (val);
 
-  else if (!stricmp(key,"color_head"))
+  else if (!stricmp(key, "color_head"))
        get_color (val, &g_cfg.lua.color_head);
 
-  else if (!stricmp(key,"color_body"))
+  else if (!stricmp(key, "color_body"))
        get_color (val, &g_cfg.lua.color_body);
 
-  else if (!stricmp(key,"lua_init"))
+  else if (!stricmp(key, "lua_init"))
        g_cfg.lua.init_script = strdup (val);
 
-  else if (!stricmp(key,"lua_exit"))
+  else if (!stricmp(key, "lua_exit"))
        g_cfg.lua.exit_script = strdup (val);
 
-  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
 
@@ -756,31 +757,31 @@ static void parse_lua_settings (const char *key, const char *val, unsigned line)
  */
 static void parse_geoip_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"enable"))
-       g_cfg.geoip_enable = (*val > '0') ? 1 : 0;
+  if (!stricmp(key, "enable"))
+       g_cfg.geoip_enable = (*val > '0') ? TRUE : FALSE;
 
-  else if (!stricmp(key,"use_generated"))
+  else if (!stricmp(key, "use_generated"))
        g_cfg.geoip_use_generated = atoi (val);
 
-  else if (!stricmp(key,"geoip4_file"))
+  else if (!stricmp(key, "geoip4_file"))
        g_cfg.geoip4_file = strdup (val);
 
-  else if (!stricmp(key,"geoip6_file"))
+  else if (!stricmp(key, "geoip6_file"))
        g_cfg.geoip6_file = strdup (val);
 
-  else if (!stricmp(key,"geoip4_url"))
+  else if (!stricmp(key, "geoip4_url"))
        g_cfg.geoip4_url = strdup (val);
 
-  else if (!stricmp(key,"geoip6_url"))
+  else if (!stricmp(key, "geoip6_url"))
        g_cfg.geoip6_url = strdup (val);
 
-  else if (!stricmp(key,"proxy"))
+  else if (!stricmp(key, "proxy"))
        g_cfg.geoip_proxy = strdup (val);
 
-  else if (!stricmp(key,"max_days"))
+  else if (!stricmp(key, "max_days"))
        g_cfg.geoip_max_days = atoi (val);
 
-  else if (!stricmp(key,"ip2location_bin_file"))
+  else if (!stricmp(key, "ip2location_bin_file"))
   {
     if (g_cfg.ip2location_bin_file)
     {
@@ -790,7 +791,7 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
     g_cfg.ip2location_bin_file = strdup (val);
   }
 
-  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
 
@@ -799,16 +800,16 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
  */
 static void parse_idna_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"enable"))
+  if (!stricmp(key, "enable"))
        g_cfg.idna_enable = atoi (val);
 
-  else if (!stricmp(key,"winidn"))
+  else if (!stricmp(key, "winidn"))
        g_cfg.idna_winidn = atoi (val);
 
-  else if (!stricmp(key,"codepage"))
+  else if (!stricmp(key, "codepage"))
        g_cfg.idna_cp = atoi (val);
 
-  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
 
@@ -817,34 +818,34 @@ static void parse_idna_settings (const char *key, const char *val, unsigned line
  */
 static void parse_DNSBL_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"enable"))
+  if (!stricmp(key, "enable"))
        g_cfg.DNSBL.enable = atoi (val);
 
-  else if (!stricmp(key,"test"))
+  else if (!stricmp(key, "test"))
        g_cfg.DNSBL.test = atoi (val);
 
-  else if (!stricmp(key,"drop_file"))
+  else if (!stricmp(key, "drop_file"))
        g_cfg.DNSBL.drop_file = strdup (val);
 
-  else if (!stricmp(key,"dropv6_file"))
+  else if (!stricmp(key, "dropv6_file"))
        g_cfg.DNSBL.dropv6_file = strdup (val);
 
-  else if (!stricmp(key,"edrop_file"))
+  else if (!stricmp(key, "edrop_file"))
        g_cfg.DNSBL.edrop_file = strdup (val);
 
-  else if (!stricmp(key,"drop_url"))
+  else if (!stricmp(key, "drop_url"))
        g_cfg.DNSBL.drop_url = strdup (val);
 
-  else if (!stricmp(key,"dropv6_url"))
+  else if (!stricmp(key, "dropv6_url"))
        g_cfg.DNSBL.dropv6_url = strdup (val);
 
-  else if (!stricmp(key,"edrop_url"))
+  else if (!stricmp(key, "edrop_url"))
        g_cfg.DNSBL.edrop_url = strdup (val);
 
-  else if (!stricmp(key,"max_days"))
+  else if (!stricmp(key, "max_days"))
        g_cfg.DNSBL.max_days = atoi (val);
 
-  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
 
@@ -874,40 +875,58 @@ static void get_freq_msec (const char *val, struct FREQ_MILLISEC *out)
  */
 static void parse_firewall_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key,"enable"))
+  if (!stricmp(key, "enable"))
        g_cfg.firewall.enable = atoi (val);
 
-  else if (!stricmp(key,"show_ipv4"))
+  else if (!stricmp(key, "show_ipv4"))
        g_cfg.firewall.show_ipv4 = atoi (val);
 
-  else if (!stricmp(key,"show_ipv6"))
+  else if (!stricmp(key, "show_ipv6"))
        g_cfg.firewall.show_ipv6 = atoi (val);
 
-  else if (!stricmp(key,"show_all"))
+  else if (!stricmp(key, "show_all"))
        g_cfg.firewall.show_all = atoi (val);
 
-  else if (!stricmp(key,"api_level"))
+  else if (!stricmp(key, "api_level"))
        g_cfg.firewall.api_level = atoi (val);
 
-  else if (!stricmp(key,"console_title"))
+  else if (!stricmp(key, "console_title"))
        g_cfg.firewall.console_title = atoi (val);
 
-  else if (!stricmp(key,"exclude"))
+  else if (!stricmp(key, "exclude"))
        exclude_list_add (val, EXCL_PROGRAM | EXCL_ADDRESS);
 
-  else if (!stricmp(key,"sound.enable"))
+  else if (!stricmp(key, "sound.enable"))
       g_cfg.firewall.sound.enable = atoi (val);
 
-  else if (!stricmp(key,"sound.beep.event_drop"))
+  else if (!stricmp(key, "sound.beep.event_drop"))
       get_freq_msec (val, &g_cfg.firewall.sound.beep.event_drop);
 
-  else if (!stricmp(key,"sound.beep.event_allow"))
+  else if (!stricmp(key, "sound.beep.event_allow"))
       get_freq_msec (val, &g_cfg.firewall.sound.beep.event_allow);
 
-  else if (!stricmp(key,"sound.beep.event_DNSBL"))
+  else if (!stricmp(key, "sound.beep.event_DNSBL"))
       get_freq_msec (val, &g_cfg.firewall.sound.beep.event_DNSBL);
 
-  else TRACE (0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
+/*
+ * Handler for '[IANA]' section.
+ */
+static void parse_iana_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key, "enable"))
+       g_cfg.IANA.enable = atoi (val);
+
+  else if (!stricmp(key, "ip4_file"))
+       g_cfg.IANA.ip4_file = strdup (val);
+
+  else if (!stricmp(key, "ip6_file"))
+       g_cfg.IANA.ip6_file = strdup (val);
+
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
 
@@ -916,6 +935,7 @@ enum cfg_sections {
      CFG_CORE,
      CFG_LUA,
      CFG_GEOIP,
+     CFG_IANA,
      CFG_IDNA,
      CFG_DNSBL,
      CFG_FIREWALL
@@ -926,17 +946,19 @@ enum cfg_sections {
  */
 static enum cfg_sections lookup_section (const char *section)
 {
-  if (!section || !stricmp(section,"core"))
+  if (!section || !stricmp(section, "core"))
      return (CFG_CORE);
-  if (section && !stricmp(section,"lua"))
+  if (section && !stricmp(section, "lua"))
      return (CFG_LUA);
-  if (section && !stricmp(section,"geoip"))
+  if (section && !stricmp(section, "geoip"))
      return (CFG_GEOIP);
-  if (section && !stricmp(section,"idna"))
+  if (section && !stricmp(section, "iana"))
+     return (CFG_IANA);
+  if (section && !stricmp(section, "idna"))
      return (CFG_IDNA);
-  if (section && !stricmp(section,"dnsbl"))
+  if (section && !stricmp(section, "dnsbl"))
      return (CFG_DNSBL);
-  if (section && !stricmp(section,"firewall"))
+  if (section && !stricmp(section, "firewall"))
      return (CFG_FIREWALL);
   return (CFG_NONE);
 }
@@ -997,6 +1019,10 @@ static int parse_config_file (FILE *file)
            parse_firewall_settings (key, val, line);
            strcpy (last_section, "firewall");
            break;
+      case CFG_IANA:
+           parse_iana_settings (key, val, line);
+           strcpy (last_section, "iana");
+           break;
 
       /* \todo: handle more 'key' / 'val' here by extending lookup_section().
        */
@@ -1014,7 +1040,7 @@ static int parse_config_file (FILE *file)
   return (lines);
 }
 
-#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 static void trace_report (void)
 {
   const struct exclude *ex;
@@ -1119,10 +1145,13 @@ static void trace_report (void)
                   DWORD_CAST(ip2loc_index_errors()));
   }
 
+  if (g_cfg.IANA.enable)
+     iana_report();
+
   if (g_cfg.firewall.enable)
      fw_report();
 }
-#endif /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
 /*
  * Called from DllMain(): dwReason == DLL_PROCESS_DETACH
@@ -1134,7 +1163,7 @@ void wsock_trace_exit (void)
   if (fatal_error)
      g_cfg.trace_report = FALSE;
 
-#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 #if 0
   if (!cleaned_up || startup_count > 0)
@@ -1165,7 +1194,7 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
-#endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif  /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
   common_exit();
 
@@ -1195,6 +1224,7 @@ void wsock_trace_exit (void)
 
   DNSBL_exit();
   geoip_exit();
+  iana_exit();
   IDNA_exit();
 
   if (ws_sema)
@@ -1353,7 +1383,8 @@ void wsock_trace_init (void)
   if (g_cfg.trace_level > 0 &&
       (g_cfg.trace_use_ods || (!g_cfg.trace_file_device && g_cfg.trace_file_okay)))
     trace_printf ("\n------- Trace started at %s --------"
-                  "------ %s, %s. Build-date: %s.\n", now, get_builder(), get_dll_short_name(), get_dll_build_date());
+                  "------ %s, %s. Build-date: %s.\n",
+                  now, get_builder(), get_dll_short_name(), get_dll_build_date());
 
   memset (&console_info, 0, sizeof(console_info));
 
@@ -1452,7 +1483,7 @@ void wsock_trace_init (void)
 
   geoip_init (NULL, NULL);
 
-#if defined(TEST_GEOIP) || defined(TEST_NLM)
+#if defined(TEST_IANA) || defined(TEST_GEOIP) || defined(TEST_NLM)
   DNSBL_init (TRUE);
 
 #else
@@ -1472,6 +1503,7 @@ void wsock_trace_init (void)
 
   StackWalkInit();
   overlap_init();
+  iana_init();
 
 #if defined(USE_LWIP)
   ws_lwip_init();
@@ -1479,10 +1511,10 @@ void wsock_trace_init (void)
 
   if (g_cfg.DNSBL.test)
      DNSBL_test();
-#endif  /* TEST_GEOIP || TEST_NLM */
+#endif  /* TEST_IANA || TEST_GEOIP || TEST_NLM */
 }
 
-#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 /*
  * Used as e.g. 'INIT_PTR (p_WSAStartup)' which expands to
@@ -1508,7 +1540,7 @@ void init_ptr (const void **ptr, const char *ptr_name)
   if (cleaned_up)
      TRACE (1, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
-#endif  /* !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif  /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
 static const struct search_list colors[] = {
                               { 0, "black"   },
@@ -1734,7 +1766,7 @@ struct tcp_header {
      };
 
 /*
- * Udp protocol header.
+ * UDP protocol header.
  * Per RFC 768, September, 1981.
  */
 struct udp_header {
@@ -1839,7 +1871,7 @@ static void _gettimeofday (struct pcap_timeval *tv)
   FILETIME ft;
   uint64   tim;
 
-#if !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
   if (p_GetSystemTimePreciseAsFileTime)
     (*p_GetSystemTimePreciseAsFileTime) (&ft);
   else

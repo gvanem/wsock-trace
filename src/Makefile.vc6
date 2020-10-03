@@ -106,6 +106,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
                   $(OBJ_DIR)\geoip.obj           \
                   $(OBJ_DIR)\geoip-gen4.obj      \
                   $(OBJ_DIR)\geoip-gen6.obj      \
+                  $(OBJ_DIR)\iana.obj            \
                   $(OBJ_DIR)\idna.obj            \
                   $(OBJ_DIR)\ip2loc.obj          \
                   $(OBJ_DIR)\inet_util.obj       \
@@ -135,6 +136,7 @@ FIREWALL_TEST_OBJ = $(OBJ_DIR)\common.obj     \
                     $(OBJ_DIR)\geoip-gen4.obj \
                     $(OBJ_DIR)\geoip-gen6.obj \
                     $(OBJ_DIR)\getopt.obj     \
+                    $(OBJ_DIR)\iana.obj       \
                     $(OBJ_DIR)\idna.obj       \
                     $(OBJ_DIR)\in_addr.obj    \
                     $(OBJ_DIR)\inet_util.obj  \
@@ -152,7 +154,7 @@ IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
 #
 # Source and .obj-files for 'geoip.exe'.
 #
-GEOIP_SRC = geoip.c common.c dnsbl.c idna.c inet_util.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
+GEOIP_SRC = geoip.c common.c dnsbl.c iana.c idna.c inet_util.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
 
 all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe idna.exe firewall_test.exe
@@ -172,9 +174,9 @@ install: all
 	copy wsock_trace$(X_SUFFIX).pdb "$(BIN_TARGET)"
 
 uninstall:
-	-del "$(LIB_TARGET)\$(WSOCK_TRACE_LIB)"
-	-del "$(BIN_TARGET)\$(WSOCK_TRACE_DLL)"
-	-del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
+	- del "$(LIB_TARGET)\$(WSOCK_TRACE_LIB)"
+	- del "$(BIN_TARGET)\$(WSOCK_TRACE_DLL)"
+	- del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
 
 geoip-gen4.c: geoip-null.exe
 	@echo Generating $@.
@@ -224,19 +226,19 @@ compile_luajit_1:
 	   copy lua51.lib lua51_static.lib )
 
 clean:
-	-del link.tmp vc1*.pdb geoip-null.obj geoip-gen4.obj geoip-gen6.obj $(OBJ_DIR)\*.obj \
-	     $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
+	- del link.tmp vc1*.pdb geoip-null.obj geoip-gen4.obj geoip-gen6.obj $(OBJ_DIR)\*.obj \
+	      $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
 
 vclean realclean: clean
-	-del wsock_trace.lib     wsock_trace.dll     wsock_trace.map        wsock_trace.pdb
-	-del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map    wsock_trace_x64.pdb
-	-del geoip.exe           geoip.map           geoip.pdb              geoip-gen4.c geoip-gen6.c
-	-del geoip-null.exe      geoip-null.map      geoip-null.pdb
-	-del idna.exe            idna.map            idna.pdb  test.exe     test.pdb
-	-del firewall_test.exe   firewall_test.map   firewall_test.pdb
-	-rd $(OBJ_DIR)
+	- del wsock_trace.lib     wsock_trace.dll     wsock_trace.map        wsock_trace.pdb
+	- del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map    wsock_trace_x64.pdb
+	- del geoip.exe           geoip.map           geoip.pdb              geoip-gen4.c geoip-gen6.c
+	- del geoip-null.exe      geoip-null.map      geoip-null.pdb
+	- del idna.exe            idna.map            idna.pdb  test.exe     test.pdb
+	- del firewall_test.exe   firewall_test.map   firewall_test.pdb
+	- rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
-	-del $(LUAJIT_ROOT)\src\lua51*.lib
+	- del $(LUAJIT_ROOT)\src\lua51*.lib
 !endif
 
 help:

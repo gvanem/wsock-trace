@@ -63,6 +63,12 @@ struct DNSBL_cfg {
        int     max_days;
      };
 
+struct IANA_cfg {
+       BOOL    enable;
+       char   *ip4_file;
+       char   *ip6_file;
+     };
+
 typedef struct FREQ_MILLISEC {
         unsigned  frequency;
         unsigned  milli_sec;
@@ -164,6 +170,7 @@ struct config_table {
        struct lua_cfg      lua;
        struct pcap_cfg     pcap;
        struct DNSBL_cfg    DNSBL;
+       struct IANA_cfg     IANA;
        struct firewall_cfg firewall;
        struct statistics   counts;
        DWORD  reentries;

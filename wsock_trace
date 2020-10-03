@@ -184,6 +184,19 @@
   ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DB11.IPV6.BIN
 
 #
+# IANA settings.
+#
+[iana]
+  enable   = 1                                               # Show IANA info for addresses in traced functions
+  ip4_file = %APPDATA%\ipv4-address-space.csv                # The IANA 'IPv4 Address Space Registry' .csv file
+  ip6_file = %APPDATA%\ipv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file (TODO)
+
+  #
+  # Note: there are no 'ip4_url' and 'ip6_url' for the above files
+  # (similar to 'DNSBL::drop_url') since the above files gets updated very seldom.
+  #
+
+#
 # IDNA settings. Internationalizing Domain Names in Applications.
 #
 [idna]
