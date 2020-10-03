@@ -187,7 +187,7 @@
 # IANA settings.
 #
 [iana]
-  enable   = 1                                               # Show IANA info for addresses in traced functions
+  enable   = 0                                               # Show IANA info for addresses in traced functions
   ip4_file = %APPDATA%\ipv4-address-space.csv                # The IANA 'IPv4 Address Space Registry' .csv file
   ip6_file = %APPDATA%\ipv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file (TODO)
 
