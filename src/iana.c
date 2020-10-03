@@ -209,14 +209,14 @@ static void iana_load_and_parse (int family, const char *file)
 
   if (!file || !file_exists(file))
   {
-    TRACE (2, "file \"%s\" does not exist.\n", file);
+    TRACE (1, "file \"%s\" does not exist.\n", file);
     return;
   }
 
   f = fopen (file, "rt");
   if (!f)
   {
-    TRACE (2, "Failed to open file \"%s\". errno: %d\n", file, errno);
+    TRACE (1, "Failed to open file \"%s\". errno: %d\n", file, errno);
     return;
   }
 
