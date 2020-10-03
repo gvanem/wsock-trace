@@ -432,7 +432,7 @@ static const struct IANA_record *iana_parse_file_ip4 (FILE *f, unsigned *rec_num
                          } while (0)
 
   GET_FIELD (0);
-  if (sscanf(val, "%lu/%d", &rec.net_num.ip4.s_addr, &rec.mask) != 2)
+  if (sscanf(val, "%lu/%d", (unsigned long*)&rec.net_num.ip4.s_addr, &rec.mask) != 2)
      goto quit;
 
   GET_FIELD (1);
@@ -650,7 +650,7 @@ static int compare_on_netnum_prefix_ip4 (const void *key, const void **member)
   _wsock_trace_inet_ntop (AF_INET, (const u_char*)ip4, ip4_buf, sizeof(ip4_buf));
 
   TRACE (2, "key: %s, net_num: %lu, mask: %d, rc: %d\n",
-         ip4_buf, rec->net_num.ip4.s_addr, rec->mask, rc);
+         ip4_buf, (unsigned long*)rec->net_num.ip4.s_addr, rec->mask, rc);
   return (rc);
 }
 
