@@ -659,7 +659,7 @@ static int compare_on_netnum_prefix_ip4 (const void *key, const void **member)
   _wsock_trace_inet_ntop (AF_INET, (const u_char*)ip4, ip4_buf, sizeof(ip4_buf));
 
   TRACE (2, "key: %s, net_num: %lu, mask: %d, rc: %d\n",
-         ip4_buf, (unsigned long*)rec->net_num.ip4.s_addr, rec->mask, rc);
+         ip4_buf, (unsigned long)rec->net_num.ip4.s_addr, rec->mask, rc);
   return (rc);
 }
 
