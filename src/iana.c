@@ -16,6 +16,15 @@
 #include <limits.h>
 #include <errno.h>
 
+#if defined(__WATCOMC__)
+  /*
+   * Required to define `IN6_IS_ADDR_LOOPBACK()` etc. in
+   * OpenWatcom's <ws2ipdef.h>.
+   */
+  #undef  NTDDI_VERSION
+  #define NTDDI_VERSION 0x05010000
+#endif
+
 #include "common.h"
 #include "smartlist.h"
 #include "inet_util.h"
