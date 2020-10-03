@@ -660,14 +660,13 @@ static int compare_on_netnum_prefix_ip6 (const void *key, const void **member)
 {
   const struct IANA_record *rec = *member;
   const struct in6_addr    *ip6 = key;
+  struct in6_addr mask;
   char  ip6_buf [MAX_IP6_SZ+1];
   char  net6_buf[MAX_IP6_SZ+1];
   int   rc;
 
-
   g_num_compares++;
 
-  struct in6_addr mask;
   INET_util_get_mask6 (&mask, rec->mask);
 
   rc = INET_util_range6cmp (ip6, &rec->net_num.ip6, rec->mask);
