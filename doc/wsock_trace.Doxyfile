@@ -779,6 +779,7 @@ INPUT = main_page.dox            \
        ../src/geoip-gen6.c       \
        ../src/geoip-null.c       \
        ../src/hosts.c            \
+       ../src/iana.c             \
        ../src/idna.c             \
        ../src/inet_util.c        \
        ../src/init.c             \
@@ -801,6 +802,7 @@ INPUT = main_page.dox            \
        ../src/firewall.h         \
        ../src/geoip.h            \
        ../src/hosts.h            \
+       ../src/iana.h             \
        ../src/idna.h             \
        ../src/inet_util.h        \
        ../src/init.h             \
