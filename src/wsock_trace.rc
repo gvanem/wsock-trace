@@ -2,8 +2,8 @@
 
 /* LANGUAGE 0x09,0x01 */
 
-#define RC_VERSION  0,3,5,0
-#define RC_VER_STR "0.3.5"
+#define RC_VERSION  0,3,7,0
+#define RC_VER_STR "0.3.7"
 
 /* The CygWin define must come before MinGW since MinGW's windres is
  * used to compile the resource.

@@ -1,4 +1,4 @@
-## Wsock-trace v. 0.3.5:
+## Wsock-trace v. 0.3.7:
 
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/gvanem/wsock-trace?branch=master&svg=true)](https://ci.appveyor.com/project/gvanem/wsock-trace)
 
