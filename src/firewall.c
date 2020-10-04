@@ -2049,7 +2049,7 @@ void fw_report (void)
     DWORD num_ip4, num_ip6;
     int   i, max;
 
-    if (!g_cfg.geoip_enable)
+    if (!g_cfg.GEOIP.enable)
        return;
 
     geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);

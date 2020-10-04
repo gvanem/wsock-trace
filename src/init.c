@@ -758,37 +758,37 @@ static void parse_lua_settings (const char *key, const char *val, unsigned line)
 static void parse_geoip_settings (const char *key, const char *val, unsigned line)
 {
   if (!stricmp(key, "enable"))
-       g_cfg.geoip_enable = (*val > '0') ? TRUE : FALSE;
+       g_cfg.GEOIP.enable = (*val > '0') ? TRUE : FALSE;
 
   else if (!stricmp(key, "use_generated"))
-       g_cfg.geoip_use_generated = atoi (val);
+       g_cfg.GEOIP.use_generated = atoi (val);
 
-  else if (!stricmp(key, "geoip4_file"))
-       g_cfg.geoip4_file = strdup (val);
+  else if (!stricmp(key, "ip4_file"))
+       g_cfg.GEOIP.ip4_file = strdup (val);
 
-  else if (!stricmp(key, "geoip6_file"))
-       g_cfg.geoip6_file = strdup (val);
+  else if (!stricmp(key, "ip6_file"))
+       g_cfg.GEOIP.ip6_file = strdup (val);
 
-  else if (!stricmp(key, "geoip4_url"))
-       g_cfg.geoip4_url = strdup (val);
+  else if (!stricmp(key, "ip4_url"))
+       g_cfg.GEOIP.ip4_url = strdup (val);
 
-  else if (!stricmp(key, "geoip6_url"))
-       g_cfg.geoip6_url = strdup (val);
+  else if (!stricmp(key, "ip6_url"))
+       g_cfg.GEOIP.ip6_url = strdup (val);
 
   else if (!stricmp(key, "proxy"))
-       g_cfg.geoip_proxy = strdup (val);
+       g_cfg.GEOIP.proxy = strdup (val);
 
   else if (!stricmp(key, "max_days"))
-       g_cfg.geoip_max_days = atoi (val);
+       g_cfg.GEOIP.max_days = atoi (val);
 
   else if (!stricmp(key, "ip2location_bin_file"))
   {
-    if (g_cfg.ip2location_bin_file)
+    if (g_cfg.GEOIP.ip2location_bin_file)
     {
       WARNING ("'ip2location_bin_file' already set. Replacing with '%s'\n", val);
-      free (g_cfg.ip2location_bin_file);
+      free (g_cfg.GEOIP.ip2location_bin_file);
     }
-    g_cfg.ip2location_bin_file = strdup (val);
+    g_cfg.GEOIP.ip2location_bin_file = strdup (val);
   }
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
@@ -1130,7 +1130,7 @@ static void trace_report (void)
   if (g_cfg.use_sema)
      trace_printf ("    Semaphore wait: %13s\n",        qword_str(g_cfg.counts.sema_waits));
 
-  if (g_cfg.geoip_enable)
+  if (g_cfg.GEOIP.enable)
   {
     DWORD num_ip4, num_ip6, num_ip2loc4, num_ip2loc6;
 
@@ -1209,12 +1209,12 @@ void wsock_trace_exit (void)
   FREE (g_cfg.pcap.dump_fname);
   FREE (g_cfg.lua.init_script);
   FREE (g_cfg.lua.exit_script);
-  FREE (g_cfg.geoip4_file);
-  FREE (g_cfg.geoip6_file);
-  FREE (g_cfg.geoip4_url);
-  FREE (g_cfg.geoip6_url);
-  FREE (g_cfg.geoip_proxy);
-  FREE (g_cfg.ip2location_bin_file);
+  FREE (g_cfg.GEOIP.ip4_file);
+  FREE (g_cfg.GEOIP.ip6_file);
+  FREE (g_cfg.GEOIP.ip4_url);
+  FREE (g_cfg.GEOIP.ip6_url);
+  FREE (g_cfg.GEOIP.proxy);
+  FREE (g_cfg.GEOIP.ip2location_bin_file);
   FREE (g_cfg.DNSBL.drop_file);
   FREE (g_cfg.DNSBL.dropv6_file);
   FREE (g_cfg.DNSBL.edrop_file);

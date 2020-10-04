@@ -518,9 +518,9 @@ static BOOL download_init (struct download_context *context)
   const char *proxy_name   = NULL;
   const char *proxy_bypass = NULL;
 
-  if (g_cfg.geoip_proxy && g_cfg.geoip_proxy[0])
+  if (g_cfg.GEOIP.proxy && g_cfg.GEOIP.proxy[0])
   {
-    proxy_name   = g_cfg.geoip_proxy;
+    proxy_name   = g_cfg.GEOIP.proxy;
     proxy_bypass = "<local>";
     access_type  = INTERNET_OPEN_TYPE_PROXY;
   }

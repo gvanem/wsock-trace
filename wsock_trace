@@ -159,11 +159,11 @@
   use_generated = 0    # use IPV4/IP6 records from pre-generated records only
   max_days      = 10   # max allowed days old before forcing an update
 
-  geoip4_file = %APPDATA%\geoip
-  geoip6_file = %APPDATA%\geoip6
+  ip4_file = %APPDATA%\geoip
+  ip6_file = %APPDATA%\geoip6
 
-  geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
-  geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
+  ip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
+  ip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
 
   #
   # The address of (a local) proxy-host to fetch the above URLs from.

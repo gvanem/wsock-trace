@@ -276,11 +276,11 @@ static IP2Location *open_file (const char *fname)
  */
 BOOL ip2loc_init (void)
 {
-  if (!g_cfg.geoip_enable || !g_cfg.ip2location_bin_file || ip2loc_bad)
+  if (!g_cfg.GEOIP.enable || !g_cfg.GEOIP.ip2location_bin_file || ip2loc_bad)
      return (FALSE);
 
   if (!ip2loc_handle)
-     ip2loc_handle = open_file (g_cfg.ip2location_bin_file);
+     ip2loc_handle = open_file (g_cfg.GEOIP.ip2location_bin_file);
 
   return (ip2loc_handle != NULL);
 }
@@ -766,7 +766,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
  * Return number of index-errors to the shared-memory area.
  *
  * This seems to be an issue when >= 2 processes are accessing the
- * `g_cfg.ip2location_bin_file` at the same time. The latter process
+ * `g_cfg.GEOIP.ip2location_bin_file` at the same time. The latter process
  * (using wsock_trace.dll) will get junk returned for locations.
  * This is just an attempt to detect it.
  */

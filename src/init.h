@@ -69,6 +69,18 @@ struct IANA_cfg {
        char   *ip6_file;
      };
 
+struct GEOIP_cfg {
+       BOOL    enable;
+       BOOL    use_generated;
+       int     max_days;
+       char   *ip4_file;
+       char   *ip6_file;
+       char   *ip4_url;
+       char   *ip6_url;
+       char   *ip2location_bin_file;
+       char   *proxy;
+     };
+
 typedef struct FREQ_MILLISEC {
         unsigned  frequency;
         unsigned  milli_sec;
@@ -142,18 +154,8 @@ struct config_table {
        WORD    color_trace;
        WORD    color_data;
 
-       BOOL    geoip_enable;
-       BOOL    geoip_use_generated;
-       int     geoip_max_days;
-       char   *geoip4_file;
-       char   *geoip6_file;
-       char   *geoip4_url;
-       char   *geoip6_url;
-       char   *ip2location_bin_file;
        char   *hosts_file;
-       char   *geoip_proxy;
        BOOL    use_winhttp;
-
        BOOL    idna_enable;
        BOOL    idna_winidn;
        UINT    idna_cp;
@@ -171,6 +173,7 @@ struct config_table {
        struct pcap_cfg     pcap;
        struct DNSBL_cfg    DNSBL;
        struct IANA_cfg     IANA;
+       struct GEOIP_cfg    GEOIP;
        struct firewall_cfg firewall;
        struct statistics   counts;
        DWORD  reentries;

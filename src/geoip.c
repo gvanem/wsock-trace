@@ -311,14 +311,14 @@ DWORD geoip_load_data (int family)
     geoip_ipv4_entries = geoip_smartlist_fixed_ipv4();
     num = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
     TRACE (2, "Using %lu fixed IPv4 records instead of parsing %s.\n",
-           DWORD_CAST(num), g_cfg.geoip4_file);
+           DWORD_CAST(num), g_cfg.GEOIP.ip4_file);
   }
   else if (family == AF_INET6)
   {
     geoip_ipv6_entries = geoip_smartlist_fixed_ipv6();
     num = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
     TRACE (2, "Using %lu fixed IPv6 records instead of parsing %s.\n",
-           DWORD_CAST(num), g_cfg.geoip6_file);
+           DWORD_CAST(num), g_cfg.GEOIP.ip6_file);
   }
   else
   {
@@ -410,11 +410,11 @@ static DWORD geoip_parse_file (const char *file, int family)
  *
  * \param[in,out]  _num4  Number of IPv4-addresses returned from
  *                        `geoip_smartlist_fixed_ipv4()` or from the
- *                        `g_cfg.geoip4_file` file.
+ *                        `g_cfg.GEOIP.ip4_file` file.
  *
  * \param[in,out]  _num6  Number of IPv6-addresses returned from
  *                        `geoip_smartlist_fixed_ipv6()` or from the
- *                        `g_cfg.geoip6_file` file.
+ *                        `g_cfg.GEOIP.ip6_file` file.
  */
 int geoip_init (DWORD *_num4, DWORD *_num6)
 {
@@ -425,21 +425,21 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
   open_geoip = TRUE;
 #endif
 
-  if (g_cfg.geoip_enable || open_geoip)
+  if (g_cfg.GEOIP.enable || open_geoip)
   {
-    if (!open_geoip && g_cfg.geoip_use_generated)
+    if (!open_geoip && g_cfg.GEOIP.use_generated)
     {
       num4 = geoip_load_data (AF_INET);
       num6 = geoip_load_data (AF_INET6);
     }
     else
     {
-      num4 = geoip_parse_file (g_cfg.geoip4_file, AF_INET);
-      num6 = geoip_parse_file (g_cfg.geoip6_file, AF_INET6);
+      num4 = geoip_parse_file (g_cfg.GEOIP.ip4_file, AF_INET);
+      num6 = geoip_parse_file (g_cfg.GEOIP.ip6_file, AF_INET6);
     }
   }
   if (num4 == 0 && num6 == 0)
-     g_cfg.geoip_enable = FALSE;
+     g_cfg.GEOIP.enable = FALSE;
 
   geoip_stats_init();
   ip2loc_init();
@@ -453,7 +453,7 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
  */
 void geoip_exit (void)
 {
-  if (g_cfg.geoip_use_generated)
+  if (g_cfg.GEOIP.use_generated)
   {
     if (geoip_ipv4_entries)
        smartlist_free (geoip_ipv4_entries);
@@ -1307,7 +1307,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
   struct stat st_tmp,  st_loc;
   BOOL       _st_tmp, _st_loc, equal = FALSE;
   time_t      now  = time (NULL);
-  time_t      past = now - 24 * 3600 * g_cfg.geoip_max_days;
+  time_t      past = now - 24 * 3600 * g_cfg.GEOIP.max_days;
   DWORD       rc = 0;
 
   _st_tmp = (stat(tmp_file, &st_tmp) == 0);
@@ -1318,7 +1318,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
   if (!force_update && _st_loc && st_loc.st_mtime >= past)
   {
     TRACE (1, "update not needed for \"%s\". Try again in %ld days.\n",
-           loc_file, g_cfg.geoip_max_days + (long int)(now-st_loc.st_mtime)/(24*3600));
+           loc_file, g_cfg.GEOIP.max_days + (long int)(now-st_loc.st_mtime)/(24*3600));
     return (rc);
   }
 
@@ -1349,12 +1349,12 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
 /**
  * Check and download files from: <br>
  * ```
- *   g_cfg.geoip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip   (if family == AF_INET)
- *   g_cfg.geoip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6  (if family == AF_INET6)
+ *   g_cfg.GEOIP.ip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip   (if family == AF_INET)
+ *   g_cfg.GEOIP.ip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6  (if family == AF_INET6)
  * ```
  *
- * \param[in] family        If `AF_INET`, check if `g_cfg.geoip4_file` needs to be updated.<br>
- *                          If `AF_INET6`, check if `g_cfg.geoip6_file` needs to be updated.
+ * \param[in] family        If `AF_INET`, check if `g_cfg.GEOIP.ip4_file` needs to be updated.<br>
+ *                          If `AF_INET6`, check if `g_cfg.GEOIP.ip6_file` needs to be updated.
  * \param[in] force_update  If TRUE, download the `%TEMP%/geoip.tmp` / `%TEMP%/geoip6.tmp` regardless.
  */
 void geoip_update_file (int family, BOOL force_update)
@@ -1365,12 +1365,12 @@ void geoip_update_file (int family, BOOL force_update)
   if (family == AF_INET)
   {
     snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, "geoip.tmp");
-    update_file (g_cfg.geoip4_file, tmp_file, g_cfg.geoip4_url, force_update);
+    update_file (g_cfg.GEOIP.ip4_file, tmp_file, g_cfg.GEOIP.ip4_url, force_update);
   }
   else if (family == AF_INET6)
   {
     snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, "geoip6.tmp");
-    update_file (g_cfg.geoip6_file, tmp_file, g_cfg.geoip6_url, force_update);
+    update_file (g_cfg.GEOIP.ip6_file, tmp_file, g_cfg.GEOIP.ip6_url, force_update);
   }
   else
     TRACE (0, "Unknown address-family %d\n", family);
@@ -2180,17 +2180,17 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
 
 static int check_requirements (BOOL check_geoip4, BOOL check_geoip6)
 {
-  if (check_geoip4 && (!g_cfg.geoip4_file || !file_exists(g_cfg.geoip4_file)))
+  if (check_geoip4 && (!g_cfg.GEOIP.ip4_file || !file_exists(g_cfg.GEOIP.ip4_file)))
   {
-    printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip4_file);
+    printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip4_file);
     return (0);
   }
-  if (check_geoip6 && (!g_cfg.geoip6_file || !file_exists(g_cfg.geoip6_file)))
+  if (check_geoip6 && (!g_cfg.GEOIP.ip6_file || !file_exists(g_cfg.GEOIP.ip6_file)))
   {
-    printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.geoip6_file);
+    printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip6_file);
     return (0);
   }
-  if (!g_cfg.geoip_enable)
+  if (!g_cfg.GEOIP.enable)
   {
     printf ("'[geoip]' section must have 'enable=1' in %s to use this option.\n", config_file_name());
     return (0);
@@ -2233,7 +2233,7 @@ int main (int argc, char **argv)
            break;
       case 'G':
            geoip_exit();
-           g_cfg.geoip_use_generated = TRUE;
+           g_cfg.GEOIP.use_generated = TRUE;
            geoip_load_data (AF_INET);
            geoip_load_data (AF_INET6);
            geoip_stats_init();
@@ -2278,7 +2278,7 @@ int main (int argc, char **argv)
     if (do_6)
        geoip_update_file (AF_INET6, do_force);
   }
-  else if (!g_cfg.geoip_use_generated)
+  else if (!g_cfg.GEOIP.use_generated)
   {
     if (!check_requirements(TRUE, TRUE))
        return (0);

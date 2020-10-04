@@ -1308,7 +1308,7 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
 
   if (!exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (addr);
 
     if (g_cfg.IANA.enable)
@@ -1361,7 +1361,7 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
 
   if (!exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (addr);
 
     if (g_cfg.IANA.enable)
@@ -1397,7 +1397,7 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
 
   if (!exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (addr);
 
     if (g_cfg.IANA.enable)
@@ -1447,7 +1447,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
 
   if (!exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (addr);
 
     if (g_cfg.IANA.enable)
@@ -1710,7 +1710,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
     if (rc > 0 && g_cfg.dump_data)
        dump_data (buf, rc);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (from);
 
     if (g_cfg.IANA.enable)
@@ -1802,7 +1802,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
     if (g_cfg.dump_data)
        dump_data (buf, buf_len);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (to);
 
     if (g_cfg.DNSBL.enable)
@@ -1931,7 +1931,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
     if (rc > 0 && g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (from);
 
     if (g_cfg.DNSBL.enable)
@@ -2109,7 +2109,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (to);
 
     if (g_cfg.IANA.enable)
@@ -2573,7 +2573,7 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
 
   if (rc && !exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
 
     if (g_cfg.IANA.enable)
@@ -2611,7 +2611,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
     if (rc && g_cfg.dump_hostent)
        dump_hostent (rc->h_name, rc);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
     {
       if (rc)
          dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
@@ -2753,7 +2753,7 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
 
   if (!exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (name);
 
     if (g_cfg.IANA.enable)
@@ -2781,7 +2781,7 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
 
   if (!exclude_this)
   {
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (name);
 
     if (g_cfg.IANA.enable)
@@ -2850,7 +2850,7 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
     if (rc == 0 && g_cfg.dump_nameinfo)
        dump_nameinfo (host, serv_buf, flags);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (sa);
 
     if (g_cfg.IANA.enable)
@@ -2902,7 +2902,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
     if (g_cfg.dump_data)
        dump_addrinfo (host_name, *res);
 
-    if (g_cfg.geoip_enable)
+    if (g_cfg.GEOIP.enable)
        dump_countries_addrinfo (*res);
 
     if (g_cfg.IANA.enable)
