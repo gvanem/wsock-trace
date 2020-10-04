@@ -782,7 +782,7 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   if (startup_count < INT_MAX)
      startup_count++;
 
-  if (startup_count == 1 && g_cfg.firewall.enable)
+  if (startup_count == 1 && g_cfg.FIREWALL.enable)
   {
     fw_init();
     fw_monitor_start();
@@ -1659,7 +1659,7 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
        dump_data (buf, rc);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
@@ -1720,7 +1720,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
        dump_DNSBL_sockaddr (from);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
@@ -1761,7 +1761,7 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
        dump_data (buf, buf_len);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packet (s, buf, buf_len, TRUE);
 
   LEAVE_CRIT();
@@ -1809,7 +1809,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
        dump_DNSBL_sockaddr (to);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packet (s, buf, buf_len, TRUE);
 
   LEAVE_CRIT();
@@ -1878,7 +1878,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
        overlap_store (s, ov, size, TRUE);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
   LEAVE_CRIT();
@@ -1941,7 +1941,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
        overlap_store (s, ov, size, TRUE);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packetv (s, bufs, num_bufs, FALSE);
 
   LEAVE_CRIT();
@@ -1983,7 +1983,7 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
        dump_data (buf, rc);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packet (s, buf, buf_len, FALSE);
 
   LEAVE_CRIT();
@@ -2059,7 +2059,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
        overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
   LEAVE_CRIT();
@@ -2122,7 +2122,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
        overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
      write_pcap_packetv (s, bufs, num_bufs, TRUE);
 
   LEAVE_CRIT();

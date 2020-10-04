@@ -35,7 +35,7 @@
 
 #define LUA_TRACE(level, fmt, ...)                  \
         do {                                        \
-          if (g_cfg.lua.trace_level >= level)       \
+          if (g_cfg.LUA.trace_level >= level)       \
              ENTER_CRIT();                          \
              trace_printf ("~8%s(%u): ~9" fmt "~0", \
                            __FILE__, __LINE__,      \
@@ -73,7 +73,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
   const char *reason_str = NULL;
   BOOL        rc = TRUE;
 
-  if (!g_cfg.lua.enable)
+  if (!g_cfg.LUA.enable)
      return (TRUE);
 
   if (reason == DLL_PROCESS_ATTACH)
@@ -83,13 +83,13 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
     reason_str = "DLL_PROCESS_ATTACH";
 
-    *ljit_trace_level() = g_cfg.lua.trace_level;
+    *ljit_trace_level() = g_cfg.LUA.trace_level;
 
-    if (!g_cfg.lua.color_head)
-       get_color (NULL, &g_cfg.lua.color_head);
+    if (!g_cfg.LUA.color_head)
+       get_color (NULL, &g_cfg.LUA.color_head);
 
-    if (!g_cfg.lua.color_body)
-       get_color (NULL, &g_cfg.lua.color_body);
+    if (!g_cfg.LUA.color_body)
+       get_color (NULL, &g_cfg.LUA.color_body);
 
     loaded = basename (full_name);
     if (stricmp(loaded, dll))
@@ -100,13 +100,13 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     else
     {
       wslua_set_path (full_name);
-      wslua_init (g_cfg.lua.init_script);
+      wslua_init (g_cfg.LUA.init_script);
     }
   }
   else if (reason == DLL_PROCESS_DETACH)
   {
     reason_str = "DLL_PROCESS_DETACH";
-    wslua_exit (g_cfg.lua.exit_script);
+    wslua_exit (g_cfg.LUA.exit_script);
   }
   else if (reason == DLL_THREAD_ATTACH)
   {
@@ -145,7 +145,7 @@ static const char *get_func_sig (void)
  */
 int wslua_WSAStartup (WORD ver, WSADATA *data)
 {
-  if (g_cfg.lua.enable)
+  if (g_cfg.LUA.enable)
      LUA_TRACE (1, "wslua_func_sig: ~9'%s'\n", get_func_sig());
   ARGSUSED (ver);
   ARGSUSED (data);
@@ -154,7 +154,7 @@ int wslua_WSAStartup (WORD ver, WSADATA *data)
 
 int wslua_WSACleanup (void)
 {
-  if (g_cfg.lua.enable)
+  if (g_cfg.LUA.enable)
      LUA_TRACE (1, "wslua_func_sig: ~9'%s'\n", get_func_sig());
   return (0);
 }
@@ -224,7 +224,7 @@ static BOOL wslua_run_zipfile (lua_State *l, const char *zipfile, const char *sc
 
 static int wslua_get_trace_level (lua_State *l)
 {
-  lua_pushnumber (l, g_cfg.lua.trace_level);
+  lua_pushnumber (l, g_cfg.LUA.trace_level);
   return (1);
 }
 
@@ -232,18 +232,18 @@ static int wslua_set_trace_level (lua_State *l)
 {
   if (!lua_isnumber(L, 1))
   {
-    lua_pushstring (L, "incorrect argument to 'g_cfg.lua.trace_level'");
+    lua_pushstring (L, "incorrect argument to 'g_cfg.LUA.trace_level'");
     lua_error (L);
   }
   else
-    g_cfg.lua.trace_level = (int) lua_tonumber (L, 1);
+    g_cfg.LUA.trace_level = (int) lua_tonumber (L, 1);
   ARGSUSED (l);
   return (1);
 }
 
 static int wslua_get_profiler (lua_State *l)
 {
-  lua_pushnumber (l, g_cfg.lua.profile);
+  lua_pushnumber (l, g_cfg.LUA.profile);
   return (1);
 }
 
@@ -438,7 +438,7 @@ static void wslua_init (const char *script)
   lua_setglobal (L, "set_trace_level");
 #endif
 
-  if (g_cfg.lua.trace_level >= 3)
+  if (g_cfg.LUA.trace_level >= 3)
      lua_sethook (L, wstrace_lua_hook, LUA_MASKCALL | LUA_HOOKRET | LUA_MASKLINE, 0);
 
   init_script_ok = wslua_run_script (L, script);
@@ -473,6 +473,7 @@ static void wslua_set_path (const char *full_name)
   char       *p;
   char        dll_path [_MAX_PATH] = { "?" };
   char        lua_cpath [_MAX_PATH] = { "-" };
+  const char *dll_ofs;
   size_t      len, left = sizeof(lua_cpath);
 
   p = strrchr (full_name, '\\');
@@ -488,7 +489,8 @@ static void wslua_set_path (const char *full_name)
    *   But if "LUA_CPATH=?_cyg.dll" is already defined, set our 'lua_cpath' first.
    *   Otherwise 'LoadLibrary()' in LuaJIT erros with code 193; ERROR_BAD_EXE_FORMAT
    */
-  len = snprintf (p, left, "%s\\?%s.dll", dll_path, RC_DLL_NAME + strlen("wsock_trace"));
+  dll_ofs = (const char*) RC_DLL_NAME + strlen ("wsock_trace");
+  len = snprintf (p, left, "%s\\?%s.dll", dll_path, dll_ofs);
   p    += len;
   left -= len;
 

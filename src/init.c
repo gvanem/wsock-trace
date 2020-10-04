@@ -590,10 +590,10 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
      set_time_format (&g_cfg.trace_time_format, val);
 
   else if (!stricmp(key, "pcap_enable"))
-     g_cfg.pcap.enable = atoi (val);
+     g_cfg.PCAP.enable = atoi (val);
 
   else if (!stricmp(key, "pcap_dump"))
-    g_cfg.pcap.dump_fname = strdup (val);
+    g_cfg.PCAP.dump_fname = strdup (val);
 
   else if (!stricmp(key, "show_caller"))
      g_cfg.show_caller = atoi (val);
@@ -728,25 +728,25 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 static void parse_lua_settings (const char *key, const char *val, unsigned line)
 {
   if (!stricmp(key, "enable"))
-       g_cfg.lua.enable = atoi (val);
+       g_cfg.LUA.enable = atoi (val);
 
   else if (!stricmp(key, "trace_level"))
-       g_cfg.lua.trace_level = atoi (val);
+       g_cfg.LUA.trace_level = atoi (val);
 
   else if (!stricmp(key, "profile"))
-       g_cfg.lua.profile = atoi (val);
+       g_cfg.LUA.profile = atoi (val);
 
   else if (!stricmp(key, "color_head"))
-       get_color (val, &g_cfg.lua.color_head);
+       get_color (val, &g_cfg.LUA.color_head);
 
   else if (!stricmp(key, "color_body"))
-       get_color (val, &g_cfg.lua.color_body);
+       get_color (val, &g_cfg.LUA.color_body);
 
   else if (!stricmp(key, "lua_init"))
-       g_cfg.lua.init_script = strdup (val);
+       g_cfg.LUA.init_script = strdup (val);
 
   else if (!stricmp(key, "lua_exit"))
-       g_cfg.lua.exit_script = strdup (val);
+       g_cfg.LUA.exit_script = strdup (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -876,37 +876,37 @@ static void get_freq_msec (const char *val, struct FREQ_MILLISEC *out)
 static void parse_firewall_settings (const char *key, const char *val, unsigned line)
 {
   if (!stricmp(key, "enable"))
-       g_cfg.firewall.enable = atoi (val);
+       g_cfg.FIREWALL.enable = atoi (val);
 
   else if (!stricmp(key, "show_ipv4"))
-       g_cfg.firewall.show_ipv4 = atoi (val);
+       g_cfg.FIREWALL.show_ipv4 = atoi (val);
 
   else if (!stricmp(key, "show_ipv6"))
-       g_cfg.firewall.show_ipv6 = atoi (val);
+       g_cfg.FIREWALL.show_ipv6 = atoi (val);
 
   else if (!stricmp(key, "show_all"))
-       g_cfg.firewall.show_all = atoi (val);
+       g_cfg.FIREWALL.show_all = atoi (val);
 
   else if (!stricmp(key, "api_level"))
-       g_cfg.firewall.api_level = atoi (val);
+       g_cfg.FIREWALL.api_level = atoi (val);
 
   else if (!stricmp(key, "console_title"))
-       g_cfg.firewall.console_title = atoi (val);
+       g_cfg.FIREWALL.console_title = atoi (val);
 
   else if (!stricmp(key, "exclude"))
        exclude_list_add (val, EXCL_PROGRAM | EXCL_ADDRESS);
 
   else if (!stricmp(key, "sound.enable"))
-      g_cfg.firewall.sound.enable = atoi (val);
+      g_cfg.FIREWALL.sound.enable = atoi (val);
 
   else if (!stricmp(key, "sound.beep.event_drop"))
-      get_freq_msec (val, &g_cfg.firewall.sound.beep.event_drop);
+      get_freq_msec (val, &g_cfg.FIREWALL.sound.beep.event_drop);
 
   else if (!stricmp(key, "sound.beep.event_allow"))
-      get_freq_msec (val, &g_cfg.firewall.sound.beep.event_allow);
+      get_freq_msec (val, &g_cfg.FIREWALL.sound.beep.event_allow);
 
   else if (!stricmp(key, "sound.beep.event_DNSBL"))
-      get_freq_msec (val, &g_cfg.firewall.sound.beep.event_DNSBL);
+      get_freq_msec (val, &g_cfg.FIREWALL.sound.beep.event_DNSBL);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -1148,7 +1148,7 @@ static void trace_report (void)
   if (g_cfg.IANA.enable)
      iana_report();
 
-  if (g_cfg.firewall.enable)
+  if (g_cfg.FIREWALL.enable)
      fw_report();
 }
 #endif /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
@@ -1186,7 +1186,7 @@ void wsock_trace_exit (void)
   }
 #endif
 
-  if (g_cfg.firewall.enable)
+  if (g_cfg.FIREWALL.enable)
   {
     TRACE (2, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
            startup_count, cleaned_up);
@@ -1206,9 +1206,9 @@ void wsock_trace_exit (void)
 
   FREE (g_cfg.trace_file);
   FREE (g_cfg.hosts_file);
-  FREE (g_cfg.pcap.dump_fname);
-  FREE (g_cfg.lua.init_script);
-  FREE (g_cfg.lua.exit_script);
+  FREE (g_cfg.PCAP.dump_fname);
+  FREE (g_cfg.LUA.init_script);
+  FREE (g_cfg.LUA.exit_script);
   FREE (g_cfg.GEOIP.ip4_file);
   FREE (g_cfg.GEOIP.ip6_file);
   FREE (g_cfg.GEOIP.ip4_url);
@@ -1366,9 +1366,9 @@ void wsock_trace_init (void)
     }
   }
 
-  if (g_cfg.pcap.enable)
+  if (g_cfg.PCAP.enable)
   {
-    g_cfg.pcap.dump_stream = fopen_excl (g_cfg.pcap.dump_fname, "w+b");
+    g_cfg.PCAP.dump_stream = fopen_excl (g_cfg.PCAP.dump_fname, "w+b");
     write_pcap_header();
   }
 
@@ -1892,7 +1892,7 @@ size_t write_pcap_header (void)
   struct pcap_file_header pf_hdr;
   size_t rc;
 
-  if (!g_cfg.pcap.dump_stream)
+  if (!g_cfg.PCAP.dump_stream)
      return (-1);
 
   memset (&pf_hdr, 0, sizeof(pf_hdr));
@@ -1905,7 +1905,7 @@ size_t write_pcap_header (void)
   pf_hdr.snap_len      = 64*1024;
   pf_hdr.linktype      = DLT_IPV4;
 
-  rc = fwrite (&pf_hdr, 1, sizeof(pf_hdr), g_cfg.pcap.dump_stream);
+  rc = fwrite (&pf_hdr, 1, sizeof(pf_hdr), g_cfg.PCAP.dump_stream);
   return (rc == 0 ? -1 : rc);
 }
 
@@ -1914,7 +1914,7 @@ size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
   struct pcap_pkt_header pc_hdr;
   size_t rc, pcap_len;
 
-  if (!g_cfg.pcap.dump_stream)
+  if (!g_cfg.PCAP.dump_stream)
      return (-1);
 
   pcap_len = len + sizeof(struct ip_header) + sizeof(struct tcp_header);
@@ -1923,32 +1923,32 @@ size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
   pc_hdr.len    = (DWORD) pcap_len;
   pc_hdr.caplen = (DWORD) pcap_len;
 
-  fwrite (&pc_hdr, sizeof(pc_hdr), 1, g_cfg.pcap.dump_stream);
+  fwrite (&pc_hdr, sizeof(pc_hdr), 1, g_cfg.PCAP.dump_stream);
 
 #if 0
   switch (lookup_sk_proto(s))
   {
     case IPPROTO_TCP:
-         fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
-         fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.pcap.dump_stream);
+         fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.PCAP.dump_stream);
+         fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.PCAP.dump_stream);
          break;
     case IPPROTO_UDP:
-         fwrite (make_ip_hdr(len + sizeof(struct udp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
-         fwrite (make_udp_hdr(len), sizeof(struct udp_header), 1, g_cfg.pcap.dump_stream);
+         fwrite (make_ip_hdr(len + sizeof(struct udp_header)), sizeof(struct ip_header), 1, g_cfg.PCAP.dump_stream);
+         fwrite (make_udp_hdr(len), sizeof(struct udp_header), 1, g_cfg.PCAP.dump_stream);
          break;
     default:
          return (0);
   }
 
 #else
-  fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.pcap.dump_stream);
-  fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.pcap.dump_stream);
+  fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.PCAP.dump_stream);
+  fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.PCAP.dump_stream);
 
   ARGSUSED (s);
   ARGSUSED (out);
 #endif
 
-  rc = fwrite (pkt, 1, len, g_cfg.pcap.dump_stream);
+  rc = fwrite (pkt, 1, len, g_cfg.PCAP.dump_stream);
   return (rc == 0 ? -1 : pcap_len);
 }
 

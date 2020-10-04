@@ -1264,10 +1264,10 @@ int trace_putc (int ch)
            color = &g_cfg.color_func;
            break;
       case 8:
-           color = &g_cfg.lua.color_head;
+           color = &g_cfg.LUA.color_head;
            break;
       case 9:
-           color = &g_cfg.lua.color_body;
+           color = &g_cfg.LUA.color_body;
            break;
       default:
 #if defined(_DEBUG) || defined(__NO_INLINE__)

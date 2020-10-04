@@ -1868,22 +1868,22 @@ static void fw_play_sound (const struct FREQ_MILLISEC *sound)
 #if defined(TEST_FIREWALL) && 0
   static void fw_warning_sound (void);
 
-  if (sound == &g_cfg.firewall.sound.beep.event_DNSBL)
+  if (sound == &g_cfg.FIREWALL.sound.beep.event_DNSBL)
      fw_warning_sound();
   else
 #endif
 
-  if (!g_cfg.firewall.sound.enable)
+  if (!g_cfg.FIREWALL.sound.enable)
      return;
 
-  if (!g_cfg.firewall.enable && !warned)
+  if (!g_cfg.FIREWALL.enable && !warned)
   {
-    WARNING ("'%s()' called with 'g_cfg.firewall.enable == TRUE'!!\n", __FUNCTION__);
+    WARNING ("'%s()' called with 'g_cfg.FIREWALL.enable == TRUE'!!\n", __FUNCTION__);
     warned = TRUE;
     return;
   }
 
-  if (g_cfg.firewall.sound.enable && sound->frequency > 0 && sound->milli_sec > 0)
+  if (g_cfg.FIREWALL.sound.enable && sound->frequency > 0 && sound->milli_sec > 0)
      Beep (sound->frequency, sound->milli_sec);
 }
 
@@ -1954,8 +1954,8 @@ BOOL fw_init (void)
        fw_acp = GetConsoleCP();
   else fw_acp = CP_ACP;
 
-  if (g_cfg.firewall.api_level > 0)
-    fw_api = g_cfg.firewall.api_level;
+  if (g_cfg.FIREWALL.api_level > 0)
+    fw_api = g_cfg.FIREWALL.api_level;
 
   user_len = sizeof(fw_logged_on_user);
   GetUserName (fw_logged_on_user, &user_len);
@@ -1968,7 +1968,7 @@ BOOL fw_init (void)
   TRACE (2, "fw_module: '%s', fw_logged_on_user: '%s'.\n", fw_module, fw_logged_on_user);
 
 #if 0  /* todo ? */
-  if (g_cfg.firewall.show_all == 0)
+  if (g_cfg.FIREWALL.show_all == 0)
      exclude_list_add (fw_module, EXCL_PROGRAM);
 #endif
 
@@ -2054,9 +2054,9 @@ void fw_report (void)
 
     geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);
 
-    if (g_cfg.firewall.show_ipv4)
+    if (g_cfg.FIREWALL.show_ipv4)
        trace_printf ("    Unique IPv4 countries: %lu.\n", DWORD_CAST(num_ip4));
-    if (g_cfg.firewall.show_ipv6)
+    if (g_cfg.FIREWALL.show_ipv6)
        trace_printf ("    Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
 
     max = smartlist_len (SBL_entries);
@@ -2150,7 +2150,7 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   value.uint32 = FWPM_NET_EVENT_KEYWORD_CAPABILITY_DROP |
                  FWPM_NET_EVENT_KEYWORD_CAPABILITY_ALLOW;
 
-  if (g_cfg.firewall.show_all)
+  if (g_cfg.FIREWALL.show_all)
      value.uint32 += FWPM_NET_EVENT_KEYWORD_CLASSIFY_ALLOW |
                      FWPM_NET_EVENT_KEYWORD_INBOUND_MCAST  |
                      FWPM_NET_EVENT_KEYWORD_INBOUND_BCAST  |
@@ -2664,7 +2664,7 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
        trace_printf ("     SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
   else trace_printf ("     SidEntry: <none>\n");
 
-  if (g_cfg.firewall.show_all)
+  if (g_cfg.FIREWALL.show_all)
   {
     trace_printf ("     RegValue: %s\n", r->value);
     trace_printf ("     RegData:  %s\n", r->data);
@@ -2810,7 +2810,7 @@ static int fw_enumerate_rules (void)
                    FW_ENUM_RULES_FLAG_RESOLVE_APPLICATION |
                    FW_ENUM_RULES_FLAG_RESOLVE_KEYWORD;
 
-  FW_PROFILE_TYPE profile = (g_cfg.firewall.show_all ? FW_PROFILE_TYPE_ALL : FW_PROFILE_TYPE_CURRENT);
+  FW_PROFILE_TYPE profile = (g_cfg.FIREWALL.show_all ? FW_PROFILE_TYPE_ALL : FW_PROFILE_TYPE_CURRENT);
 
   trace_puts ("Firewall rules from FWEnumFirewallRules():\n");
   if (!p_FWEnumFirewallRules)
@@ -3700,7 +3700,7 @@ fail:
  */
 static BOOL fw_check_ignore (_FWPM_NET_EVENT_TYPE type)
 {
-  if (g_cfg.firewall.show_all ||
+  if (g_cfg.FIREWALL.show_all ||
       type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP || type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
      return (FALSE);
   fw_num_ignored++;
@@ -3742,7 +3742,7 @@ static BOOL fw_dump_events (void)
 
   fw_num_events = fw_num_ignored = num_SBL_hits = 0UL;
 
-  if (g_cfg.firewall.show_all)
+  if (g_cfg.FIREWALL.show_all)
   {
     p_event_template = NULL;
     show_all = TRUE;
@@ -4061,7 +4061,7 @@ static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
   if (!found)
      smartlist_add (SBL_entries, strdup(sbl_ref));
 
-  fw_play_sound (&g_cfg.firewall.sound.beep.event_DNSBL);
+  fw_play_sound (&g_cfg.FIREWALL.sound.beep.event_DNSBL);
 
   num_SBL_hits++;   /* Increment total "SpamHaus Block List" hits */
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
@@ -4276,7 +4276,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
   a_name = get_path (NULL, (LPCWSTR)header->appId.data, &fexist, &is_native);
   a_base = basename (a_name);
 
-  if (g_cfg.firewall.show_all == 0)
+  if (g_cfg.FIREWALL.show_all == 0)
   {
     if (!stricmp(fw_module, a_name) || !stricmp(fw_module, a_base))
     {
@@ -4425,7 +4425,7 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   /* Show activity for logged-on user only
    */
-  if (g_cfg.firewall.show_user && !stricmp(se->account, fw_logged_on_user))
+  if (g_cfg.FIREWALL.show_user && !stricmp(se->account, fw_logged_on_user))
      return (FALSE);
 
   fw_buf_add ("%-*suser:    %s\\%s\n",
@@ -4448,7 +4448,7 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
   if (!se)
      return (FALSE);
 
-  if (se->sid_str && (g_cfg.firewall.show_all || strcmp(NULL_SID, se->sid_str)))
+  if (se->sid_str && (g_cfg.FIREWALL.show_all || strcmp(NULL_SID, se->sid_str)))
   {
     fw_buf_add ("%-*spackage: %s\n", INDENT_SZ, "", se->sid_str);
     return (TRUE);
@@ -4492,8 +4492,8 @@ static void CALLBACK
 
   if (header->flags & FWPM_NET_EVENT_FLAG_IP_VERSION_SET)
   {
-    if ((header->ipVersion == FWP_IP_VERSION_V4 && !g_cfg.firewall.show_ipv4) ||
-        (header->ipVersion == FWP_IP_VERSION_V6 && !g_cfg.firewall.show_ipv6))
+    if ((header->ipVersion == FWP_IP_VERSION_V4 && !g_cfg.FIREWALL.show_ipv4) ||
+        (header->ipVersion == FWP_IP_VERSION_V6 && !g_cfg.FIREWALL.show_ipv6))
     {
       fw_num_ignored++;
       TRACE (2, "Ignoring IPv%d event.\n", header->ipVersion == FWP_IP_VERSION_V4 ? 4 : 6);
@@ -4619,11 +4619,11 @@ static void CALLBACK
 
     if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_ALLOW ||
         event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_ALLOW)
-       fw_play_sound (&g_cfg.firewall.sound.beep.event_allow);
+       fw_play_sound (&g_cfg.FIREWALL.sound.beep.event_allow);
     else
     if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP ||
         event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
-       fw_play_sound (&g_cfg.firewall.sound.beep.event_drop);
+       fw_play_sound (&g_cfg.FIREWALL.sound.beep.event_drop);
 
 #ifdef TEST_FIREWALL
     fw_console_stats();
@@ -4708,7 +4708,7 @@ static int show_help (const char *my_name)
           "    -p:  print events for the below program only (implies your \"user-activity\" only).\n"
           "    -r:  only dump the firewall rules and programs.\n"
           "    -R:  with option '-r', only show program-rules with an IPv4/6 address.\n"
-          "    -v:  sets \"g_cfg.firewall.show_all = 1\".\n"
+          "    -v:  sets \"g_cfg.FIREWALL.show_all = 1\".\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
           "    Does not work with GUI programs. Event may come in late. So an extra \"sleep\" is handy.\n"
@@ -4733,7 +4733,7 @@ static void fw_console_stats (void)
   char         buf [_MAX_PATH+100];
   char         num_DNSBL [20];
 
-  if (!g_cfg.firewall.console_title)
+  if (!g_cfg.FIREWALL.console_title)
      return;
 
   if (last_num_events == fw_num_events)
@@ -4779,9 +4779,9 @@ static int run_program (const char *program)
   char  p_buf [1000];
   const char *what;
 
-  what = g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv4/6 " :
-         g_cfg.firewall.show_ipv4 && !g_cfg.firewall.show_ipv6 ? "IPv4 "   :
-        !g_cfg.firewall.show_ipv4 &&  g_cfg.firewall.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ";
+  what = g_cfg.FIREWALL.show_ipv4 &&  g_cfg.FIREWALL.show_ipv6 ? "IPv4/6 " :
+         g_cfg.FIREWALL.show_ipv4 && !g_cfg.FIREWALL.show_ipv6 ? "IPv4 "   :
+        !g_cfg.FIREWALL.show_ipv4 &&  g_cfg.FIREWALL.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ";
 
   trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
                 program ? program : "no program", what);
@@ -4827,7 +4827,7 @@ int main (int argc, char **argv)
   g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_indent  = 0;
   g_cfg.trace_report  = 1;
-  g_cfg.firewall.show_all = 0;
+  g_cfg.FIREWALL.show_all = 0;
 
   while ((ch = getopt(argc, argv, "a:fh?cel:prRtv")) != EOF)
     switch (ch)
@@ -4859,7 +4859,7 @@ int main (int argc, char **argv)
       case 't':
            return test_SID();
       case 'v':
-           g_cfg.firewall.show_all = 1;
+           g_cfg.FIREWALL.show_all = 1;
            break;
       case '?':
       case 'h':
@@ -4869,7 +4869,7 @@ int main (int argc, char **argv)
   program = set_net_program (argc-optind, argv+optind);
 
   if (dump_events || dump_rules || dump_callouts || log_file)
-     g_cfg.firewall.sound.enable = FALSE;
+     g_cfg.FIREWALL.sound.enable = FALSE;
 
 
   /* Because we use `getservbyport()` above, we need to call `WSAStartup()` first.
@@ -4903,7 +4903,7 @@ int main (int argc, char **argv)
          *space = '\0';
       exclude_list_add (fw_module, EXCL_PROGRAM);
     }
-    g_cfg.firewall.show_user = 1;
+    g_cfg.FIREWALL.show_user = 1;
     TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
   }
 
@@ -12095,7 +12095,7 @@ static const BYTE warning_sound[] = {
  */
 static void fw_warning_sound (void)
 {
-  if (g_cfg.firewall.sound.enable)
+  if (g_cfg.FIREWALL.sound.enable)
      sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
 }
 #endif  /* TEST_FIREWALL */

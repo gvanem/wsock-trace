@@ -30,13 +30,13 @@ typedef enum TS_TYPE {  /* Time-Stamp enum type */
         TS_DELTA,
       } TS_TYPE;
 
-struct pcap_cfg {
+struct PCAP_cfg {
        BOOL    enable;
        char   *dump_fname;
        FILE   *dump_stream;
      };
 
-struct lua_cfg {
+struct LUA_cfg {
        BOOL    enable;
        BOOL    profile;
        int     trace_level;
@@ -86,7 +86,7 @@ typedef struct FREQ_MILLISEC {
         unsigned  milli_sec;
       } FREQ_MILLISEC;
 
-struct firewall_cfg {
+struct FIREWALL_cfg {
        BOOL    enable;
        BOOL    show_ipv4;
        BOOL    show_ipv6;
@@ -108,6 +108,7 @@ struct firewall_cfg {
 struct config_table {
        char   *trace_file;
        FILE   *trace_stream;
+       char   *hosts_file;
        BOOL    trace_binmode;
        BOOL    trace_caller;
        BOOL    trace_report;
@@ -154,7 +155,6 @@ struct config_table {
        WORD    color_trace;
        WORD    color_data;
 
-       char   *hosts_file;
        BOOL    use_winhttp;
        BOOL    idna_enable;
        BOOL    idna_winidn;
@@ -168,19 +168,19 @@ struct config_table {
        BOOL    stdout_redirected;
        WORD    screen_width;
        WORD    screen_heigth;
+       DWORD   reentries;
 
-       struct lua_cfg      lua;
-       struct pcap_cfg     pcap;
+       TS_TYPE trace_time_format;
+       uint64  start_ticks;
+       uint64  clocks_per_usec;
+
+       struct LUA_cfg      LUA;
+       struct PCAP_cfg     PCAP;
        struct DNSBL_cfg    DNSBL;
        struct IANA_cfg     IANA;
        struct GEOIP_cfg    GEOIP;
-       struct firewall_cfg firewall;
+       struct FIREWALL_cfg FIREWALL;
        struct statistics   counts;
-       DWORD  reentries;
-
-       TS_TYPE    trace_time_format;
-       uint64     start_ticks;
-       uint64     clocks_per_usec;
      };
 
 extern struct config_table g_cfg;
