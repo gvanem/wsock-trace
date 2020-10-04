@@ -50,8 +50,8 @@ echo [geoip]                                                   >> wsock_trace.ap
 echo   enable                 = 1                              >> wsock_trace.appveyor
 echo   use_generated          = 0                              >> wsock_trace.appveyor
 echo   max_days               = 10                             >> wsock_trace.appveyor
-echo   geoip4_file            = %CD%\geoip                     >> wsock_trace.appveyor
-echo   geoip6_file            = %CD%\geoip6                    >> wsock_trace.appveyor
+echo   ip4_file               = %CD%\geoip                     >> wsock_trace.appveyor
+echo   ip6_file               = %CD%\geoip6                    >> wsock_trace.appveyor
 echo   ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN          >> wsock_trace.appveyor
 echo [iana]                                                    >> wsock_trace.appveyor
 echo   enable      = 1                                         >> wsock_trace.appveyor
