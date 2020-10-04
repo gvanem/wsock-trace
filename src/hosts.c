@@ -12,12 +12,13 @@
 #include "in_addr.h"
 #include "hosts.h"
 
-/**\struct host_entry
+/**
+ * \struct host_entry
  * The structure for host-entries we read from a file.
  */
 struct host_entry {
        char   host_name [MAX_HOST_LEN];  /**< name of `etc/hosts` entry */
-       int    addr_type;                 /**< type AF_INET or AF_INET6 */
+       int    addr_type;                 /**< type `AF_INET` or `AF_INET6` */
        char   addr [IN6ADDRSZ];          /**< the actual address */
      };
 
@@ -34,10 +35,10 @@ static void add_entry (smartlist_t *sl, const char *name, const void *addr, int 
   switch (af_type)
   {
     case AF_INET:
-         asize = sizeof(struct in_addr);
+         asize = sizeof (struct in_addr);
          break;
     case AF_INET6:
-         asize = sizeof(struct in6_addr);
+         asize = sizeof (struct in6_addr);
          break;
     default:
          assert (0);
@@ -54,7 +55,7 @@ static void add_entry (smartlist_t *sl, const char *name, const void *addr, int 
 }
 
 /**
- * smartlist_sort() helper; compare on names.
+ * `smartlist_sort()` and `smartlist_make_uniq()` helper; compare on names.
  */
 static int hosts_compare_name (const void **_a, const void **_b)
 {
@@ -70,7 +71,7 @@ static int hosts_compare_name (const void **_a, const void **_b)
 }
 
 /**
- * smartlist_bsearch() helper; compare on names.
+ * `smartlist_bsearch()` helper; compare on names.
  */
 static int hosts_bsearch_name (const void *key, const void **member)
 {
@@ -96,7 +97,7 @@ static void parse_hosts (smartlist_t *sl, const char *line)
 {
   struct in_addr  in4;
   struct in6_addr in6;
-  char            buf[500];
+  char            buf [500];
   char           *tok_buf;
   char           *p    = _strlcpy (buf, line, sizeof(buf));
   char           *ip   = _strtok_r (p, " \t", &tok_buf);

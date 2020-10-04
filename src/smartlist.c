@@ -295,9 +295,9 @@ void smartlist_del_keeporder (smartlist_t *sl, int idx)
   --sl->num_used;
   if (idx < sl->num_used)
   {
-    void *src = sl->list+idx+1;
-    void *dst = sl->list+idx;
-    size_t sz = (sl->num_used - idx) * sizeof(void*);
+    void  *src = sl->list + idx + 1;
+    void  *dst = sl->list + idx;
+    size_t sz  = (sl->num_used - idx) * sizeof(void*);
 
     memmove (dst, src, sz);
   }
@@ -314,6 +314,7 @@ void smartlist_insert (smartlist_t *sl, int idx, void *val)
   ASSERT_VAL (sl);
   assert (idx >= 0);
   assert (idx <= sl->num_used);
+
   if (idx == sl->num_used)
      smartlist_add (sl, val);
   else
@@ -325,7 +326,7 @@ void smartlist_insert (smartlist_t *sl, int idx, void *val)
     if (idx < sl->num_used)
        memmove (sl->list + idx + 1, sl->list + idx, (sl->num_used-idx)*sizeof(void*));
     sl->num_used++;
-    sl->list[idx] = val;
+    sl->list [idx] = val;
   }
 }
 
@@ -350,7 +351,7 @@ void smartlist_append (smartlist_t *sl1, const smartlist_t *sl2)
   assert (new_size >= (size_t)sl1->num_used);    /* check for folding overflow. */
 
   smartlist_ensure_capacity (sl1, new_size);
-  memcpy (sl1->list + sl1->num_used, sl2->list, sl2->num_used*sizeof(void*));
+  memcpy (sl1->list + sl1->num_used, sl2->list, sl2->num_used * sizeof(void*));
   sl1->num_used = (int) new_size;
 }
 
@@ -380,7 +381,7 @@ int smartlist_duplicates (smartlist_t *sl, smartlist_sort_func compare)
   {
     if ((*compare)((const void**)&sl->list[i-1],
                    (const void**)&sl->list[i]) == 0)
-     dups++;
+      dups++;
   }
   return (dups);
 }
@@ -425,9 +426,10 @@ int smartlist_make_uniq (smartlist_t *sl, smartlist_sort_func compare, void (*fr
  *  \li less than 0 if `key` is less than member,
  *  \li and greater than 0 if `key` is greater then member.
  */
-int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
-                           int (*compare)(const void *key, const void **member),
-                           int *found_out)
+int smartlist_bsearch_idx (const smartlist_t *sl,
+                           const void        *key,
+                           int              (*compare) (const void *key, const void **member),
+                           int               *found_out)
 {
   int hi, lo, cmp, mid, len, diff;
 
@@ -472,7 +474,7 @@ int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
      * then hi = lo + diff, mid = (lo + lo + diff) / 2 = lo + (diff / 2).
      */
     mid = lo + (diff / 2);
-    cmp = (*compare) (key, (const void**) &(sl->list[mid]));
+    cmp = (*compare) (key, (const void**) &sl->list[mid]);
     if (cmp == 0)
     {
       /* sl[mid] == key; we found it
@@ -548,12 +550,12 @@ int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
 
   if (lo < len)
   {
-    cmp = (*compare) (key, (const void**) &(sl->list[lo]));
+    cmp = (*compare) (key, (const void**) &sl->list[lo]);
     assert (cmp < 0);
   }
   else
   {
-    cmp = (*compare) (key, (const void**) &(sl->list[len-1]));
+    cmp = (*compare) (key, (const void**) &sl->list[len-1]);
     assert (cmp > 0);
   }
 
@@ -569,8 +571,9 @@ int smartlist_bsearch_idx (const smartlist_t *sl, const void *key,
  *  \li less than 0 if key is less than member,
  *  \li and greater than 0 if key is greater then member.
  */
-void *smartlist_bsearch (const smartlist_t *sl, const void *key,
-                         int (*compare)(const void *key, const void **member))
+void *smartlist_bsearch (const smartlist_t *sl,
+                         const void        *key,
+                         int              (*compare)(const void *key, const void **member))
 {
   int found, idx = smartlist_bsearch_idx (sl, key, compare, &found);
 
@@ -598,7 +601,7 @@ smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse)
   {
     char buf[500], *p;
 
-    if (!fgets(buf,sizeof(buf)-1,f))   /* EOF */
+    if (!fgets(buf, sizeof(buf)-1, f))   /* EOF */
        break;
 
     str_rip (buf);
