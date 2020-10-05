@@ -1,3 +1,7 @@
+/**
+ * \file vm_dump.h
+ * \ingroup Misc
+ */
 #ifndef _VM_DUMP_H
 #define _VM_DUMP_H
 

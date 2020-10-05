@@ -1,5 +1,9 @@
-/*
- * vm_dump.c
+/**
+ * \file vm_dump.c
+ * \ingroup Misc
+ *
+ * \brief
+ * A backtrace-like module. Currently only used from backtrace.c.
  *
  * Copyright (C) 2004-2007 Koichi Sasada
  *

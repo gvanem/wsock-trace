@@ -1,3 +1,6 @@
+/**\file    idna.h
+ * \ingroup Misc
+ */
 #ifndef _IDNA_H
 #define _IDNA_H
 

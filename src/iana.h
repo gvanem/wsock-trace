@@ -1,3 +1,6 @@
+/**\file    iana.h
+ * \ingroup IANA
+ */
 #ifndef _IANA_H
 #define _IANA_H
 

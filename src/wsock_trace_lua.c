@@ -5,14 +5,16 @@
  *  A LuaJIT interface for Wsock-Trace.
  *
  * A WSock LuaJIT script could be run like:
- *
+ * ```
  *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
  *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe wsock_trace_init.lua
+ * ```
  *
  * Or to enter interactive mode after loading:
- *
+ * ```
  *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
  *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe -l wsock_trace -i
+ * ```
  */
 #include "common.h"
 

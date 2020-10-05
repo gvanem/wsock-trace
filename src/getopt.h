@@ -27,6 +27,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**\file    getopt.h
+ * \ingroup Misc
+ */
 #ifndef _GETOPT_H_
 #define _GETOPT_H_
 
@@ -35,9 +38,7 @@
 
 #else  /* Rest of file */
 
-/** \file    getopt.h
- *  \ingroup Misc
- *
+/**
  * GNU-like getopt_long() / getopt_long_only() with 4.4BSD optreset extension.
  * getopt() is declared here too for GNU programs.
  */

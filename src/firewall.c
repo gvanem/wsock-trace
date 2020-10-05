@@ -2,7 +2,7 @@
  * \ingroup Misc
  *
  * \brief
- *  Function for listening for "Windows Filtering Platform (WFP)" events
+ *  Functions for listening for "Windows Filtering Platform (WFP)" events
  *
  *  The `fw_init()` and `fw_monitor_start()` needs Administrator privileges. <br>
  *  Running `firewall_test.exe` as a normal non-elevated user will normally cause an
@@ -36,22 +36,21 @@
  *        {8B3A0D7F-1F30-4402-B753-C4B2C7607C97}  FWCFG.DLL      firewall
  *        {3BB6DA1D-AC0C-4972-AC05-B22F49DEA9B6}  NSHWFP.DLL     wfp
  * ```
- *
  */
 
-/**
+/*
  * For MSVC/clang We need at least a Win-Vista SDK here.
  * But for MinGW (tdm-gcc) we need a Win-7 SDK (0x601).
  */
 #if defined(__MINGW32__)
-  #define MIN_WINNT 0x601
+  #define MIN_WINNT_VALUE 0x601
 #else
-  #define MIN_WINNT 0x600
+  #define MIN_WINNT_VALUE 0x600
 #endif
 
-#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT)
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT_VALUE)
   #undef  _WIN32_WINNT
-  #define _WIN32_WINNT MIN_WINNT
+  #define _WIN32_WINNT MIN_WINNT_VALUE
 #endif
 
 #include "common.h"
@@ -1528,7 +1527,7 @@ static const char  *SpamHaus_URL = "https://www.spamhaus.org/sbl/query";
 struct SID_entry {
        SID  *sid_copy;                 /**< A copy of the SID used to create this entry */
        char *sid_str;                  /**< A string representing this SID */
-       char  domain [MAX_DOMAIN_SZ];   /**< The `domain` name it belongs to */
+       char  domain [MAX_DOMAIN_SZ];   /**< The `domain`-name it belongs to */
        char  account[MAX_ACCOUNT_SZ];  /**< The `domain\\user` it belowngs to */
      };
 
@@ -2292,6 +2291,9 @@ static BOOL fw_check_sizes (void)
   return (TRUE);
 }
 
+/**
+ * This functions starts the event-subscription.
+ */
 BOOL fw_monitor_start (void)
 {
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };

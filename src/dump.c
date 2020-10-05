@@ -28,14 +28,14 @@
   #include <ws2bth.h>
 
 #elif defined(__MINGW32__)
-  typedef struct pollfd WSAPOLLFD;  /* Missing in MinGW */
+  typedef struct pollfd WSAPOLLFD;  /* Missing in MinGW.org */
 #endif
 
 #include <MSWSock.h>
 
 #define ADD_VALUE(v)  { v, #v }
 
-/*
+/**
  * Handle printing of option names
  */
 #ifndef TCP_EXPEDITED_1122
@@ -86,8 +86,8 @@
 #define TCP_DELAY_FIN_ACK 13
 #endif
 
-/*
- * Missing 'SOL_x' levels.
+/**
+ * Missing `SOL_x` levels.
  */
 #ifndef SOL_RFCOMM
 #define SOL_RFCOMM  0x0003
@@ -105,8 +105,8 @@
 #define SOL_SDP     0x0101
 #endif
 
-/*
- * Missing 'SO_x' codes.
+/**
+ * Missing `SO_x` codes.
  */
 #ifndef SO_BSP_STATE
 #define SO_BSP_STATE              0x1009
@@ -288,8 +288,8 @@
 #define IP_RECVERR              75   /* Receive ICMP errors. */
 #endif
 
-/*
- * These are a rewrite of the enums in <ws2def.h> and <wsrm.h>.
+/**
+ * These are a rewrite of the enums in `<ws2def.h>` and `<wsrm.h>`. <br>
  * Since many of these are missing in e.g. MinGW, using `#ifndef IPPROTO_x` around them are not safe.
  */
 #define _IPPROTO_IP                    0
@@ -379,7 +379,7 @@
 #define MSG_WAITALL 0x8
 #endif
 
-/*
+/**
  * struct addrinfo::flags.
  */
 #ifndef AI_ALL
@@ -422,22 +422,22 @@
 #define AI_DISABLE_IDN_ENCODING   0x00080000
 #endif
 
-/*
- * WSAPROTOCOL_INFO::ServiceFlags1
+/**
+ * `WSAPROTOCOL_INFO::ServiceFlags1`
  */
 #ifndef XP1_SAN_SUPPORT_SDP
 #define XP1_SAN_SUPPORT_SDP         0x00080000
 #endif
 
-/*
- * WSAPROTOCOL_INFO::ProviderFlags
+/**
+ * `WSAPROTOCOL_INFO::ProviderFlags`
  */
 #ifndef PFL_NETWORKDIRECT_PROVIDER
 #define PFL_NETWORKDIRECT_PROVIDER  0x00000010
 #endif
 
-/*
- * WSASocket() flags
+/**
+ * `WSASocket()` flags
  */
 #ifndef WSA_FLAG_ACCESS_SYSTEM_SECURITY
 #define WSA_FLAG_ACCESS_SYSTEM_SECURITY 0x40
@@ -447,8 +447,8 @@
 #define WSA_FLAG_NO_HANDLE_INHERIT      0x80
 #endif
 
-/*
- * All 'SIO_x' codes presently in MS's Windows headers.
+/**
+ * All `SIO_x` codes currently in MS's Windows headers.
  */
 #ifndef SIO_ASSOCIATE_HANDLE
 #define SIO_ASSOCIATE_HANDLE                         _WSAIOW (IOC_WS2, 1)
@@ -794,6 +794,9 @@
 #define SIO_GET_ATM_CONNECTION_ID                    0x50160004
 #endif
 
+/**
+ * The options and their names used in `setsockopt (s, SOL_SOCKET, opt, ...)` etc.
+ */
 static const struct search_list sol_options[] = {
                     ADD_VALUE (SO_DEBUG),
                     ADD_VALUE (SO_ACCEPTCONN),
@@ -844,6 +847,9 @@ static const struct search_list sol_options[] = {
                     ADD_VALUE (PVD_CONFIG)
                   };
 
+/**
+ * The options and their names used in `setsockopt (s, IPPROTO_TCP, opt, ...)` etc.
+ */
 static const struct search_list tcp_options[] = {
                     ADD_VALUE (TCP_NODELAY),
                     ADD_VALUE (TCP_MAXSEG),
@@ -860,6 +866,10 @@ static const struct search_list tcp_options[] = {
                     ADD_VALUE (TCP_DELAY_FIN_ACK),
                   };
 
+/**
+ * The IPv4 options and their names used in:
+ *   `setsockopt (s, IPPROTO_IP, opt, ...)` and `setsockopt (s, IPPROTO_ICMP, opt, ...)` etc.
+ */
 static const struct search_list ip4_options[] = {
                     ADD_VALUE (IP_OPTIONS),
                     ADD_VALUE (IP_HDRINCL),
@@ -898,6 +908,9 @@ static const struct search_list ip4_options[] = {
                     ADD_VALUE (IP_UNSPECIFIED_TYPE_OF_SERVICE)  /* == -1 = UINT_MAX */
                   };
 
+/**
+ * The IPv6 options and their names used in `setsockopt (s, IPPROTO_IPV6, opt, ...)` etc.
+ */
 static const struct search_list ip6_options[] = {
                     ADD_VALUE (IPV6_HOPOPTS),
                     ADD_VALUE (IPV6_HDRINCL),
@@ -925,6 +938,9 @@ static const struct search_list ip6_options[] = {
                     ADD_VALUE (IPV6_RECVTCLASS)
                   };
 
+/**
+ * The address-families and their names used in many WinSock functions.
+ */
 static const struct search_list families[] = {
                     ADD_VALUE (AF_UNSPEC),
                     ADD_VALUE (AF_UNIX),
@@ -964,6 +980,9 @@ static const struct search_list families[] = {
                     ADD_VALUE (AF_HYPERV)
                   };
 
+/**
+ * The socket-levels and their names used in `getsockopt()` and `setsockopt()`.
+ */
 static const struct search_list levels[] = {
                     ADD_VALUE (SOL_SOCKET),
                     ADD_VALUE (SOL_IRLMP),
@@ -977,6 +996,9 @@ static const struct search_list levels[] = {
                     ADD_VALUE (IPPROTO_RM),
                   };
 
+/**
+ * The socket-types and their names used in `socket()` etc.
+ */
 static const struct search_list types[] = {
                     ADD_VALUE (SOCK_STREAM),
                     ADD_VALUE (SOCK_DGRAM),
@@ -985,6 +1007,9 @@ static const struct search_list types[] = {
                     ADD_VALUE (SOCK_SEQPACKET)
                   };
 
+/**
+ * The flags and their names used in `WSASocketA()`, `WSASocketW()` and `WSAGetOverlappedResult()`.
+ */
 static const struct search_list wsasocket_flags[] = {
                     ADD_VALUE (WSA_FLAG_OVERLAPPED),
                     ADD_VALUE (WSA_FLAG_MULTIPOINT_C_ROOT),
@@ -995,6 +1020,9 @@ static const struct search_list wsasocket_flags[] = {
                     ADD_VALUE (WSA_FLAG_NO_HANDLE_INHERIT)
                   };
 
+/**
+ * The flags and their names used in `getaddrinfo()`.
+ */
 static const struct search_list ai_flgs[] = {
                     ADD_VALUE (AI_PASSIVE),
                     ADD_VALUE (AI_CANONNAME),
@@ -1011,6 +1039,9 @@ static const struct search_list ai_flgs[] = {
                     ADD_VALUE (AI_FQDN)
                  };
 
+/**
+ * The flags and their names used in `getnameinfo()`.
+ */
 static const struct search_list getnameinfo_flgs[] = {
                     ADD_VALUE (NI_NOFQDN),
                     ADD_VALUE (NI_NUMERICHOST),
@@ -1021,6 +1052,9 @@ static const struct search_list getnameinfo_flgs[] = {
 
 #define ADD_PROTO(p)   { _##p, #p }
 
+/**
+ * The protocols and their names used in `socket()`, `WSASocketA()` etc.
+ */
 static const struct search_list protocols[] = {
                     ADD_PROTO (IPPROTO_IP),      /* == 0 */
                     ADD_PROTO (IPPROTO_ICMP),
@@ -1066,6 +1100,21 @@ static const struct search_list protocols[] = {
                   };
 
 #if !defined(__WATCOMC__)
+/**
+ * The codes and names used to decode `WSAPROTOCOL_INFOA` and `WSAPROTOCOL_INFOW` in `WSASocketA()` etc.
+ */
+static const struct search_list wsaprotocol_info_ProviderFlags[] = {
+                    ADD_VALUE (PFL_MULTIPLE_PROTO_ENTRIES),
+                    ADD_VALUE (PFL_RECOMMENDED_PROTO_ENTRY),
+                    ADD_VALUE (PFL_HIDDEN),
+                    ADD_VALUE (PFL_MATCHES_PROTOCOL_ZERO),
+                    ADD_VALUE (PFL_NETWORKDIRECT_PROVIDER)
+                  };
+
+/**
+ * Used to decode `WSAPROTOCOL_INFOA::dwServiceFlags1` and `WSAPROTOCOL_INFOW::dwServiceFlags1`
+ * in `WSASocketA()` etc.
+ */
 static const struct search_list wsaprotocol_info_ServiceFlags1[] = {
                     ADD_VALUE (XP1_CONNECTIONLESS),
                     ADD_VALUE (XP1_GUARANTEED_DELIVERY),
@@ -1088,16 +1137,11 @@ static const struct search_list wsaprotocol_info_ServiceFlags1[] = {
                     ADD_VALUE (XP1_PARTIAL_MESSAGE),
                     ADD_VALUE (XP1_SAN_SUPPORT_SDP)
                  };
-
-static const struct search_list wsaprotocol_info_ProviderFlags[] = {
-                    ADD_VALUE (PFL_MULTIPLE_PROTO_ENTRIES),
-                    ADD_VALUE (PFL_RECOMMENDED_PROTO_ENTRY),
-                    ADD_VALUE (PFL_HIDDEN),
-                    ADD_VALUE (PFL_MATCHES_PROTOCOL_ZERO),
-                    ADD_VALUE (PFL_NETWORKDIRECT_PROVIDER)
-                  };
 #endif /* !__WATCOMC__ */
 
+/**
+ * The event values and names used for `WSAEventSelect()` etc.
+ */
 static const struct search_list wsa_events_flgs[] = {
                     ADD_VALUE (FD_READ),
                     ADD_VALUE (FD_WRITE),
@@ -1111,6 +1155,9 @@ static const struct search_list wsa_events_flgs[] = {
                     ADD_VALUE (FD_ADDRESS_LIST_CHANGE)
                   };
 
+/**
+ * The command-codes used in `ioctlsocket()` for option-groups `f` or `s`.
+ */
 static const struct search_list ioctl_commands[] = {
                     ADD_VALUE (FIONREAD),
                     ADD_VALUE (FIONBIO),
@@ -1122,6 +1169,9 @@ static const struct search_list ioctl_commands[] = {
                     ADD_VALUE (SIOCATMARK)
                   };
 
+/**
+ * The codes used in `WSAIoctl()`.
+ */
 static const struct search_list sio_codes[] = {
                     ADD_VALUE (SIO_ABSORB_RTRALERT),
                     ADD_VALUE (SIO_ACQUIRE_PORT_RESERVATION),
@@ -1295,13 +1345,16 @@ const char *event_bits_decode (__LONG32 flag)
 }
 
 /**
- * Return the name for a 'SIO_x' code.
+ * Return the name for a `sio_codes` code.
  *
  * \todo
- *  Should also get more info on the value this 'SIO_x' reads or writes.
- *  E.g for 'SIO_IDEAL_SEND_BACKLOG_QUERY' -> _IOR ('t', 123, ULONG),
- *  we should get the 'ULONG' value read by it. '_IOR()' means it's
- *  a 'read' value.
+ *  Should also get more information on the value this `SIO_x` reads or writes. <br>
+ *  \eg{.} for:
+ * ```
+ *   SIO_IDEAL_SEND_BACKLOG_QUERY -> _IOR ('t', 123, ULONG),
+ * ```
+ *
+ * we should get the `ULONG` value read by it. `_IOR()` means it's a `read` value.
  */
 const char *get_sio_name (DWORD code)
 {

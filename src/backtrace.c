@@ -1,5 +1,6 @@
-/** \file   stkwalk.c
+/** \file   backtrace.c
  *  \ingroup Misc
+ *
  *  \brief
  *    Another stack-walker implementation for Win32 (MSVC, clang-cl and MinGW).
  *    Will completely replace the functions in stkwalk.c when finished in

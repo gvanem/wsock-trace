@@ -38,7 +38,7 @@ PROJECT_NAME           = "Wsock-Trace"
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = "0.3.5 - A tracing library for Winsock calls."
+PROJECT_NUMBER         = "0.3.7 - A tracing library for Winsock calls."
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -778,6 +778,7 @@ INPUT = main_page.dox            \
        ../src/geoip-gen4.c       \
        ../src/geoip-gen6.c       \
        ../src/geoip-null.c       \
+       ../src/getopt.c           \
        ../src/hosts.c            \
        ../src/iana.c             \
        ../src/idna.c             \
@@ -801,6 +802,7 @@ INPUT = main_page.dox            \
        ../src/dump.h             \
        ../src/firewall.h         \
        ../src/geoip.h            \
+       ../src/getopt.h           \
        ../src/hosts.h            \
        ../src/iana.h             \
        ../src/idna.h             \
@@ -813,7 +815,8 @@ INPUT = main_page.dox            \
        ../src/vm_dump.h          \
        ../src/wsock_defs.h       \
        ../src/wsock_trace.h      \
-       ../src/wsock_trace_lua.h
+       ../src/wsock_trace_lua.h  \
+       ../src/wsock_trace.rc
 
 #
 # This is for including ../README.md and ../screenshot-*.png
@@ -1384,7 +1387,7 @@ INCLUDE_FILE_PATTERNS  = *.h
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = __DOXYGEN__:=1 NOT_USED:=1 _Printf_format_string_=1 _MSC_VER:=1900 _DEBUG:=1 \
-                         WIN32:=1 _WIN32:=1 USE_IP2LOCATION=1 TEST_GEOIP=1 USE_DEF_FILE:=1
+                         WIN32:=1 _WIN32:=1 USE_IP2LOCATION=1 TEST_GEOIP=1 USE_DEF_FILE:=1 USE_BFD:=1
 
 SKIP_FUNCTION_MACROS   = NO
 
@@ -1438,7 +1441,7 @@ EXTERNAL_PAGES         = YES
 # interpreter (i.e. the result of 'which perl').
 # The default file (with absolute path) is: /usr/bin/perl.
 
-PERL_PATH              = /usr/bin/perl
+# PERL_PATH              = /usr/bin/perl
 
 #---------------------------------------------------------------------------
 # Configuration options related to the dot tool
@@ -1460,14 +1463,7 @@ CLASS_DIAGRAMS         = NO
 # the mscgen tool resides. If left empty the tool is assumed to be found in the
 # default search path.
 
-MSCGEN_PATH           =
-
-# You can include diagrams made with dia in doxygen documentation. Doxygen will
-# then run dia to produce the diagram and insert it in the documentation. The
-# DIA_PATH tag allows you to specify the directory where the dia binary resides.
-# If left empty dia is assumed to be found in the default search path.
-
-DIA_PATH               =
+# MSCGEN_PATH           =
 
 # If set to YES the inheritance and collaboration graphs will hide inheritance
 # and usage relations if the target is undocumented or is not a class.
@@ -1647,12 +1643,6 @@ DOTFILE_DIRS           =
 # command).
 
 MSCFILE_DIRS           =
-
-# The DIAFILE_DIRS tag can be used to specify one or more directories that
-# contain dia files that are included in the documentation (see the \diafile
-# command).
-
-DIAFILE_DIRS           =
 
 # The DOT_GRAPH_MAX_NODES tag can be used to set the maximum number of nodes
 # that will be shown in the graph. If the number of nodes in a graph becomes

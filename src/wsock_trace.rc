@@ -1,3 +1,14 @@
+/**\file wsock_trace.rc
+ * \ingroup Main
+ *
+ * \brief
+ * The *Windows Resource* file that gets passed through the `rc` or `windres`
+ * programs to create `winsock_trace.res`.
+ *
+ * This file is also included from common.c and wsock_trace_lua.c for
+ * obtaining the `RC_BASENAME`. Only the code inside the `RC_INVOKED` block
+ * gets parsed by the `.res` generator program.
+ */
 #include <winver.h>
 
 /* LANGUAGE 0x09,0x01 */
@@ -59,9 +70,9 @@
 
 #define RC_DLL_NAME RC_BASENAME RC_SUFFIX
 
-/*
- * Since this file is also included in 'wsock_trace.c', this
- * 'if defined' test is needed.
+/**
+ * Since this file is also included from `common.c` and `wsock_trace_lua.c`,
+ * this test is needed.
  */
 #if defined(RC_INVOKED)  /* Rest of file */
 
@@ -87,7 +98,7 @@ BEGIN
       VALUE "ProductName",      RC_DLL_NAME ".dll Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
-                                "\t\t\tCopyright 2012-2018, Gisle Vanem <gvanem@yahoo.no>."
+                                "\t\t\tCopyright 2012-2020, Gisle Vanem <gvanem@yahoo.no>."
     END
   END
 

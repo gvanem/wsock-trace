@@ -10,6 +10,7 @@ OUTPUT_GENERATED = $(addprefix ./output/, \
 all: wsock_trace.chm
 
 wsock_trace.chm: Makefile wsock_trace.Doxyfile main_page.dox wsock_trace.css ../src/*.[ch]
+	export LIBRARY_PATH= ; export MINGW32=     ; \
 	rm -f output/msc*.png                      ; \
 	doxygen wsock_trace.Doxyfile > $(LOG_FILE) ; \
 	cd output                                  ; \

@@ -82,7 +82,7 @@
  *
  * \def FLG_COUNTRY_SHORT
  *  Look up the 2 letter ISO-3166 country code.
- * \ref `geoip_get_long_name_by_A2()` and `c_list[]`.
+ * \ref geoip_get_long_name_by_A2() and c_list[].
  *
  * \def FLG_COUNTRY_LONG
  *  Look up the complete country name.

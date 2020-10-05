@@ -1959,6 +1959,7 @@ static int geoip_generate_array (int family, const char *out_file)
            "/**\n"
            " * \\file    %s\n"
            " * \\ingroup Geoip\n"
+           " * \\brief   Generated data.\n"
            " *\n"
            " * This file was generated at %.24s.\n"
            " * by the Makefile command: \"geoip.exe -%cg %s\"\n"

@@ -8,19 +8,20 @@
  * produce PDB-symbols.
  */
 
-/*
- * Usage (MSVC):
- *   link with wsock_trace.lib instead of the system's ws32_2.lib. Thus
- *   most normal Winsock calls are traced on entry and exit.
+/**
+ * Usage (MSVC): <br>
+ *   link with `wsock_trace.lib` instead of the system's `ws32_2.lib`.
  *
- * Usage (MinGW/CygWin):
- *   link with libwsock_trace.a instead of the system's libws32_2.a.
- *   I.e. copy it to a directory in $(LIBRARY_PATH) and use '-lwsock_trace'
- *   to link. The Makefile.MinGW already does the copying to $(MINGW32)/lib.
+ * Usage (MinGW/CygWin): <br>
+ *   link with libwsock_trace.a instead of the system's `libws2_32.a`. <br>
+ *   I.e. copy it to a directory in `$(LIBRARY_PATH)` and use `-lwsock_trace`
+ *   to link. The `Makefile.MinGW` already does the copying to `$(MINGW32)/lib`.
  *
- * Ignore warnings like:
+ * Ignore warnings like: <br>
+ * ```
  *   foo.obj : warning LNK4049: locally defined symbol _closesocket@4
  *             imported in bar().
+ * ```
  */
 
 #define IN_WSOCK_TRACE_C
@@ -44,7 +45,8 @@
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
-/* Keep track of number of calls to WSAStartup() and WSACleanup().
+/**
+ * Keep track of number of calls to `WSAStartup()` and `WSACleanup()`.
  */
 int volatile cleaned_up = 0;
 int volatile startup_count = 0;
@@ -57,10 +59,11 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
   static void test_get_caller (const void *from);
 #endif
 
-/*
- * All 'p_function' pointers below are checked before use with this
- * macro. 'init_ptr()' makes sure 'wsock_trace_init()' is called once
- * and 'p_function' is not NULL.
+/**
+ * \def INIT_PTR()
+ *   All `p_function` pointers below are checked before use with this
+ *   macro. `init_ptr()` makes sure `wsock_trace_init()` is called once
+ *   and `p_function` is not NULL.
 */
 #if defined(USE_DETOURS)   /* \todo */
   #define INIT_PTR(ptr)    /* */
@@ -68,15 +71,16 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
   #define INIT_PTR(ptr) init_ptr ((const void**)&ptr, #ptr)
 #endif
 
-/*
- * A WSTRACE() macro for the WinSock calls we support.
- * This macro is used like 'WSTRACE ("WSAStartup (%u.%u) --> %s", args).'
- * Note:
- *   Do NOT add a trailing ".~0\n"; it's done in this macro.
+/**
+ * \def WSTRACE()
+ *   A macro for the WinSock calls we support. <br>
+ *   This macro is used like `WSTRACE ("WSAStartup (%u.%u) --> %s", args).`
+ *   \note
+ *     Do NOT add a trailing `".~0\n"`; it's done in this macro.
  *
- * If "g_cfg.trace_caller == 0" or "WSAStartup" is in the
- * 'exclude_list' smartlist, the '!exclude_list_get("WSAStartup...", EXCL_FUNCTION)'
- * returns FALSE.
+ *   If `"g_cfg.trace_caller == 0"` or `"WSAStartup"` is in the
+ *   `exclude_list` smartlist, the `!exclude_list_get("WSAStartup...", EXCL_FUNCTION)`
+ *   returns `FALSE`.
  */
 #define WSTRACE(fmt, ...)                                        \
         do {                                                     \
@@ -141,13 +145,14 @@ static void wstrace_printf (BOOL first_line,
                             _Printf_format_string_ const char *fmt, ...)
                             ATTR_PRINTF (2,3);
 
-/*
+/**
  * Hooking and tracing of Winsock extension functions returned in
- * 'WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER,...)'.
+ * `WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER,...)`.
  */
 #include "wsock_hooks.c"
 
-/*
+/**
+ * \def DEF_FUNC()
  * Handy macro to both define and declare the function-pointer.
  */
 #define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
@@ -403,14 +408,14 @@ DEF_FUNC (int, WSCGetProviderPath, (GUID    *provider_id,
                                     wchar_t *provider_dll_path,
                                     int     *provider_dll_path_len,
                                     int     *error));
-/*
+/**
  * Windows-Vista functions.
  */
 DEF_FUNC (INT,   inet_pton, (int family, const char *string, void *res));
 DEF_FUNC (PCSTR, inet_ntop, (int family, const void *addr, char *string, size_t string_size));
 DEF_FUNC (int,   WSAPoll,   (WSAPOLLFD *fd_array, ULONG fds, int timeout));
 
-/*
+/**
  * In ntdll.dll
  */
 DEF_FUNC (USHORT, RtlCaptureStackBackTrace, (ULONG  frames_to_skip,
@@ -569,14 +574,14 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
   va_end (args);
 }
 
-/*
+/**
  * Save and restore WSA error-state:
- *   pop = 0: WSAGetLastError()
- *   pop = 1: WSASetLastError()
+ * \param[in]  pop  if = 0: return value from `WSAGetLastError()`.
+ *                  if = 1: calls `WSASetLastError (err)`.
  */
 int WSAError_save_restore (int pop)
 {
-  static int err = 0;
+  static int err = 0;  /**\todo This should be per thread, use TlsAlloc()? */
 
   if (pop)
        (*p_WSASetLastError) (err);
@@ -1537,15 +1542,17 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
    *
    * \note
    * Several POSIX programs uses `select()` like this:
-   *
+   * ```
    *   30.812 sec: src/Ntop.cpp(553) (Ntop::start+1018):
    *     select (n=1, rd, NULL, NULL, {tv=0.711000s}) --> (rc=-1) WSAEINVAL (10022).
    *     fd_input  -> rd: <no fds>
    *                  wr: <not set>
    *                  ex: <not set>
+   * ```
    *
-   * In this case a `usleep (711000)` which Winsock does not like since no sockets
-   * are set in `rd_fd`. Maybe we should just add a dummy socket to `rd_fd`?
+   * In this case a `tv->tv_usec = 711000` gets ignored (winsock returns immediately). <br>
+   * Since it does not like that no sockets are set in `rd_fd`. <br>
+   * Maybe we should just add a dummy socket to `rd_fd`?
    */
   rc = (*p_select) (nfds, rd_fd, wr_fd, ex_fd, tv);
 

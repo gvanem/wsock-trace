@@ -146,7 +146,7 @@ void iana_print_rec (const IANA_record *rec)
 }
 
 /**
- * Dump the IANA smartlist.
+ * Dump the IANA smartlists of IPv4/IPv6 records.
  */
 void iana_dump (void)
 {

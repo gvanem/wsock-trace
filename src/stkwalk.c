@@ -41,7 +41,7 @@
  * Aug 2011   Adapted for Wsock_trace - G. Vanem (gvanem@yahoo.no)
  *            No longer Unicode aware.
  *            Simplified and rewritten from C++ to pure C.
- *            Removed the IMHO awful Hungarian notation.
+ *            Removed the Hungarian notation etc, etc.
  */
 
 #if defined(UNICODE) || defined(_UNICODE)

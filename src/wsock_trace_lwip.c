@@ -1,5 +1,9 @@
-/*
- * lwIP interface for WSock-Trace.
+/**
+ * \file wsock_trace_lwip.c
+ *
+ * \brief A preliminary lwIP interface for WSock-Trace.
+ *        It does nothing at the moment. But the idea is to
+ *        make it possible to switch network stacks at run-time.
  */
 #include <stdio.h>
 #include <stdlib.h>

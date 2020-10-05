@@ -3,10 +3,10 @@
  *
  * \brief
  *   Functions for dealing with overlapped operations in `WSA` functions.
- *   All Winsock function that this can apply to is:
+ *   All Winsock function that this can apply to is: <br>
  *     `AcceptEx()`, `ConnectEx()`, `DisconnectEx()`, `TransmitFile()`,
- *     `TransmitPackets()`, `WSARecv()`, `WSARecvFrom()`, `WSARecvMsg()`,
- *     `WSASend()`, `WSASendMsg()`, `WSASendTo()`, and `WSAIoctl()`.
+ *     `TransmitPackets()`, `WSARecv()`, `WSARecvFrom()`, `WSARecvMsg()`, `WSASend()`, <br>
+ *     `WSASendMsg()`, `WSASendTo()`, and `WSAIoctl()`.
  *
  * Allthough Wsock-Trace does support only a few of these.
  */
@@ -33,33 +33,41 @@
 
 func_WSAGetOverlappedResult  p_WSAGetOverlappedResult = NULL;
 
-/*
+/** \struct overlapped
+ *
  * Structure for remembering a socket and an overlapped structure.
  * Used in overlapped send and receive to update the recv
- * and transmit counters in 'WSAGetOverlappedResult()'.
+ * and transmit counters in `WSAGetOverlappedResult()`.
  */
 struct overlapped {
-       /*
-        * TRUE:  this is an overlapped WSARecv() or WSARecvFrom().
-        * FALSE: this an overlapped WSASend() or WSASendTo().
+       /**
+        * \li `TRUE:`  this is an overlapped `WSARecv()` or `WSARecvFrom()`.
+        * \li `FALSE:` this an overlapped `WSASend()` or `WSASendTo()`.
         */
        BOOL is_recv;
 
-       /* Number of bytes expected in WSARecv() / WSARecvFrom() or
-        * number of bytes given in WSASend() or WSASendTo().
+       /**
+        * Number of bytes expected in `WSARecv()` / `WSARecvFrom()` or <br>
+        * number of bytes given in `WSASend()` or `WSASendTo()`.
         */
        DWORD bytes;
 
-       /* The socket, event and overlapped pointer the call was issued with.
+       /**
+        * The socket, event and overlapped pointer the call was issued with.
         */
        SOCKET         sock;
        WSAEVENT       event;
        WSAOVERLAPPED *ov;
      };
 
-static smartlist_t *ov_list;
-static DWORD        num_overlaps;
+static smartlist_t *ov_list;       /**< The dynamic list of `struct overlapped` */
+static DWORD        num_overlaps;  /**< Number of overlapped operations pending */
 
+/**
+ * \li Report any non-completed overlapped operations.
+ * \li Free the memory allocated for the overlapped list.
+ * \li Called from `wsock_trace_exit()`.
+ */
 void overlap_exit (void)
 {
   struct overlapped *ov;
@@ -86,11 +94,20 @@ void overlap_exit (void)
   ov_list = NULL;
 }
 
+/**
+ * Initialiser for overlapped operations.
+ * Just create the dynamic list.
+ */
 void overlap_init (void)
 {
   ov_list = smartlist_new();
 }
 
+/**
+ * Trace an overlapped operation:
+ * \li if `i == -1`, trace all elements in the list.
+ * \li if `i != -1`, trace the element with index `i`.
+ */
 static void overlap_trace (int i, const struct overlapped *ov)
 {
   if (i == -1)
@@ -109,6 +126,15 @@ static void overlap_trace (int i, const struct overlapped *ov)
            i, ov->is_recv, ov->event, SOCKET_CAST(ov->sock));
 }
 
+/**
+ * Remember an overlapped operation for `overlap_recall()`.
+ *
+ * \param[in] s          The socket for this overlapped operation.
+ * \param[in] o          The overlapped structure itself.
+ * \param[in] num_bytes  The number of bytes in the array of `WSABUF` structure the operlapping function was called with.
+ * \param[in] is_recv    TRUE: We were called from `WSARecv()` or `WSARecvFrom()`.
+ *                       FALSE: We were called from `WSASend()` or `WSASendTo()`.
+ */
 void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
 {
   struct overlapped *ov = NULL;
@@ -144,7 +170,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   overlap_trace (-1, NULL);
 }
 
-/*
+/**
  * Try to update all overlapped operations matching this event.
  */
 void overlap_recall_all (const WSAEVENT *event)
@@ -178,10 +204,11 @@ void overlap_recall_all (const WSAEVENT *event)
   }
 }
 
-/*
- * Match the socket 's' and 'o' value against a previous overlapped
- * 'WSARecvXX()' / 'WSASendXX()' and update the 'g_cfg.counts.recv_bytes'
- * or 'g_cfg.counts.send_bytes' statistics with the 'bytes' value.
+/**
+ * Match the socket `s` and overlapped pointer `o` against a previous overlapped
+ * `WSARecvXX()` / `WSASendXX()` call. <br>
+ * And do update the `g_cfg.counts.recv_bytes`
+ * or `g_cfg.counts.send_bytes` statistics with the `bytes` value.
  */
 void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
 {
@@ -214,8 +241,8 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
   }
 }
 
-/*
- * Remove an overlap entry matching socket 's'.
+/**
+ * Remove an overlap entry matching socket `s`.
  */
 void overlap_remove (SOCKET s)
 {

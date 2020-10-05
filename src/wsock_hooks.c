@@ -1,3 +1,11 @@
+/**
+ * \file wsock_hooks.c
+ *
+ * \brief Hooking and tracing of Winsock extension functions returned in
+ *   `WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER,...)`. <br>
+ *   This file **must** be included from wsock_trace.c since it needs several
+ *   static data defintions.
+ */
 #if !defined(IN_WSOCK_TRACE_C)
 #error "Include this file in wsock_trace.c only."
 #endif

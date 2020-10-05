@@ -1,11 +1,12 @@
-/*
- * non-export.c - Part of Wsock-Trace.
+/**
+ * \file non-export.c
  *
- * The resulting 'wsock_trace.lib' (or 'libwsock_trace.a') is an import-lib for
- * 'wsock_trace.dll' (or 'wsock_trace_mw.dll' / 'wsock_trace_cyg.dll').
+ * \brief
+ *  The resulting `wsock_trace.lib` (or `libwsock_trace.a` etc.) is an import-lib for
+ * `wsock_trace.dll` (or `wsock_trace_mw.dll` / `wsock_trace_cyg.dll` etc.).
  *
- * Since the SDK header <ws2ipdef.h> declares the below data with no export
- * declaration, this non-export.obj is simply added to the imp-lib.
+ * Since the SDK header `<ws2ipdef.h>` declares the below data with no export
+ * declaration, this `non-export.obj` is simply added to the import-library.
  */
 
 #if defined(__MINGW32__) || defined(__CYGWIN__)

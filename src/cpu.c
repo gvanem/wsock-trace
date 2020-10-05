@@ -1,5 +1,5 @@
 /**\file    cpu.c
- * \ingroup Micc
+ * \ingroup Misc
  *
  * \brief
  *  `cpu_init()` is for obtaining the number of CPU cores and the
@@ -7,7 +7,6 @@
  *
  * cpu.c - Part of Wsock-Trace.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

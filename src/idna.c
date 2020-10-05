@@ -1,9 +1,12 @@
-/*
- * idna.c - Part of Wsock-Trace.
+/**\file idna.c
+ * \ingroup Misc
  *
+ * \brief
  * Code for enabling lookup of names with non-ASCII letters via
  * ACE and IDNA (Internationalizing Domain Names in Applications)
  * Ref. RFC-3490.
+ *
+ * idna.c - Part of Wsock-Trace.
  */
 
 /* Do not pull in <winsock.h> in <windows.h>

@@ -1,6 +1,6 @@
-/*
- *  File:
- *    stkwalk.h
+/**
+ * \file stkwalk.h
+ * \ingroup Misc
  *
  *  Original author:
  *    Jochen Kalmbach

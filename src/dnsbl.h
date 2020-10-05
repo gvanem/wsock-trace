@@ -1,3 +1,6 @@
+/**\file    dnsbl.h
+ * \ingroup DNSBL
+ */
 #ifndef _DNSBL_H
 #define _DNSBL_H
 

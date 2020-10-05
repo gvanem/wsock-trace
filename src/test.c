@@ -1,6 +1,9 @@
-/*
- * test.c - test the printout of some of the hooked functions in Wsock_trace.
- * Make sure 'trace_level = 1' (or higher) in your '%APPDATA%/wsock_trace'.
+/**
+ * \file test.c
+ *
+ * \brief
+ * test the printout of some of the hooked functions in Wsock_trace. <br>
+ * Ensure `trace_level = 1` (or higher) in your `%APPDATA%/wsock_trace`.
  */
 #if 0
   #define UNICODE
@@ -61,7 +64,8 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
   extern wchar_t *gai_strerrorW (int err);
 #endif
 
-/* Prevent MinGW globbing the cmd-line if we do 'test *'.
+/**
+ * Prevent MinGW globbing the cmd-line if we do `test *`.
  */
 int _CRT_glob = 0;
 
@@ -83,7 +87,8 @@ struct test_struct {
 static int chatty = 0;
 static int last_result = 0;
 
-/* For getopt.c.
+/**
+ * Set the prigram-name for getopt.c.
  */
 const char *program_name = "test.exe";
 
@@ -251,8 +256,8 @@ static void test_gethostbyname (void)
   TEST_CONDITION (!= 0, gethostbyname ("google-public-dns-a.google.com"));
 }
 
-/*
- * Test returns from the %SystemRoot\system32\drivers\etc\protocol file
+/**
+ * Test returns from the `%SystemRoot\system32\drivers\etc\protocol` file
  */
 static void test_getprotobyname (void)
 {
@@ -266,17 +271,17 @@ static void test_getprotobynumber (void)
   TEST_CONDITION (== 0, getprotobynumber (9999));
 }
 
-/* Test idna.c functions
+/** Test idna.c functions
  */
 static void test_IDNA_functions (void)
 {
-  TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /* ACE: www.xn--seoghr-fya.no (www.lookhere.no) */
-  TEST_CONDITION (!= 0, gethostbyname ("www.Bücher.ch"));   /* ACE: www.xn--bcher-kva.ch (www.books.ch) */
-  TEST_CONDITION (!= 0, gethostbyname ("öbb.at"));          /* From: http://unicode.org/faq/idn.html */
+  TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /**< ACE: `www.xn--seoghr-fya.no` (www.lookhere.no) */
+  TEST_CONDITION (!= 0, gethostbyname ("www.Bücher.ch"));   /**< ACE: `www.xn--bcher-kva.ch` (www.books.ch) */
+  TEST_CONDITION (!= 0, gethostbyname ("öbb.at"));          /**< From: http://unicode.org/faq/idn.html */
 }
 
-/*
- * Test returns from the %SystemRoot\system32\drivers\etc\services file
+/**
+ * Test returns from the `%SystemRoot\system32\drivers\etc\services` file
  */
 static void test_getservbyname (void)
 {
@@ -447,8 +452,8 @@ static void test_select (void)
   TEST_CONDITION (== -1, select (0, &fd1, &fd2, &fd2, &tv));
 }
 
-/*
- * Test if 'select()' dumps huge fd_sets okay.
+/**
+ * Test if `select()` dumps huge `fd_sets` okay.
  */
 #undef  FD_SET
 #define FD_SET(s,fd) ((fd_set*)(fd))->fd_array [((fd_set*)(fd))->fd_count++] = s
@@ -471,9 +476,9 @@ static void test_select2 (void)
 }
 
 /**
- * Since 'test_select3()' takes a long time, it is NOT in the 'tests[]' table.
+ * Since `test_select3()` takes a long time, it is NOT in the `tests[]` table.
  *
- * \todo Poll keyboard too just for show.
+ * \todo Poll keyboard too just for fun.
  *
  * \note This function is not `static` since that caused it to be inlined in below `main()`.
  */
@@ -571,18 +576,21 @@ static void test_WSAAddressToStringW (void)
   test_WSAAddressToStringW_common (NULL);
 }
 
-/*
- * As above, but with the 'WSAPROTOCOL_INFOW' parameter.
+/**
+ * As above, but with the `WSAPROTOCOL_INFOW` parameter.
  */
 static void test_WSAAddressToStringWP (void)
 {
   WSAPROTOCOL_INFOW p_info;
   GUID              guid;
 
-  /* Just to test dump_wsaprotocol_info(). I assume the GUID:
-   * {E70F1AA0-AB8B-11CF-8CA3-00805F48A192} is unique on all versions of Windows.
+  /**
+   * Test `dump_wsaprotocol_info()`.
+   * I assume the GUID: <br>
+   * `{E70F1AA0-AB8B-11CF-8CA3-00805F48A192}` is unique on all versions of Windows.
+   *
    * (seems the case from Win_XP to Win-10).
-   * This GUID is the "MSAFD Tcpip [TCP/IP]" provider.
+   * This GUID is the `"MSAFD Tcpip [TCP/IP]"` provider.
    */
   memset (&p_info, 0, sizeof(p_info));
   memset (&guid, 0, sizeof(guid));
@@ -659,8 +667,8 @@ static void test_InetNtopW (void)
 #endif
 }
 
-/*
- * per-thread data given to 'thread_worker()' in it's 'arg' parameter.
+/**
+ * Per-thread data given to `thread_worker()` in it's `arg` parameter.
  */
 struct thr_data {
        char              t_name[20];
@@ -670,12 +678,14 @@ struct thr_data {
        CRITICAL_SECTION *t_crit;  /* the same for all threads */
      };
 
-/*
- * This sub-routine checks if tracing of 'callee_level > 1' works.
- * Like:
+/**
+ * This sub-routine checks if tracing of `callee_level > 1` works.
+ * Like: <br>
+ * ```
  *  * 0.038 sec: test.c(523) (thread_sub_func+35)
  *               test.c(538) (thread_worker+44):
  *    WSASetLastError (0=No error).
+ * ```
  */
 void thread_sub_func (const struct thr_data *td)
 {
@@ -705,8 +715,8 @@ DWORD WINAPI thread_worker (void *arg)
   return (0);
 }
 
-/*
- * Create and start 'num_threads-1' sub-threads.
+/**
+ * Create and start `num_threads-1` sub-threads. <br>
  * Thread 0 is the main-thread.
  */
 static int thread_test (int num_threads)
@@ -922,9 +932,9 @@ static void test_ptr_or_error64 (void)
   TEST_STRING ("0x11223344AABBCCDD", ptr_or_error64(0x11223344AABBCCDD));
 }
 
-/*
- * \todo: Also test if the output of the tracing is sensible.
- * \todo: print in color (OKAY=green, FAIL=red).
+/**
+ * \todo Also test if the output of the tracing is sensible.
+ * \todo print in color (OKAY=green, FAIL=red).
  */
 static void test_condition (int okay, const char *function)
 {

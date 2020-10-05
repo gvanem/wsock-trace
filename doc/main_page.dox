@@ -1,22 +1,20 @@
 /* Define all the groups here: */
 
 /**
- *\addtogroup BFD       BFD Library
- *\addtogroup DNSBL     Domain Name System Black Lists
- *\addtogroup IANA      IANA Registry
- *\addtogroup Geoip     IP-address to location support
- *\addtogroup inet_util IP-address utilities
- *\addtogroup Lua       Lua script support
- *\addtogroup Main      Wsock-trace core functions
- *\addtogroup Misc      Various support functions
+ * \addtogroup BFD       BFD Library
+ * \addtogroup DNSBL     Domain Name System Black Lists
+ * \addtogroup IANA      IANA Registry
+ * \addtogroup Geoip     IP-address to location support
+ * \addtogroup inet_util IP-address utilities
+ * \addtogroup Lua       Lua script support
+ * \addtogroup Main      Wsock-trace core functions
+ * \addtogroup Misc      Various support functions
  */
 
 /**
 
 \mainpage Wsock-trace
 \ingroup  Main
-
-\image html screenshot_ahost-msdn-com-win10.png
 
 <h2>Introduction</h2>
 
@@ -27,6 +25,8 @@ It works best for MSVC since the stack-walking code requires the program's
 PDB-symbols (GNU-debugger instead relies on the archaic <b>BFD</b> library). So currently,
 the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
 functions.
+
+\image html screenshot_ahost-msdn-com-win10.png
 
 <h2>Options & Features</h2>
 
