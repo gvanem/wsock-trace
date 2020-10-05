@@ -12,6 +12,8 @@
 #include "init.h"
 #include "csv.h"
 
+#define PARSE_BUF_SIZE 1000
+
 /**
  * A simple state-machine for parsing CSV records.
  *
@@ -97,8 +99,8 @@ static CSV_STATE state_escaped (struct CSV_context *ctx)
 static const char *CSV_get_next_field (struct CSV_context *ctx)
 {
   char      *out = ctx->parse_buf;
-  CSV_STATE  state;
   unsigned   line;
+  CSV_STATE  state;
 
   ctx->c_in = 0;
   while (1)
@@ -107,7 +109,7 @@ static const char *CSV_get_next_field (struct CSV_context *ctx)
     ctx->c_out = 0;
     state = (*ctx->state_func) (ctx);
 
-    if (ctx->c_out && out < out + sizeof(ctx->parse_buf) - 1)
+    if (ctx->c_out && out < out + PARSE_BUF_SIZE - 1)
        *out++ = ctx->c_out;
 
     if (state == STATE_STOP)
@@ -202,10 +204,17 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     TRACE (1, "'ctx->callback' must be set.\n");
     return (0);
   }
+  ctx->parse_buf = malloc (PARSE_BUF_SIZE);
+  if (!ctx->parse_buf)
+  {
+    TRACE (1, "Allocation of 'parse_buf' failed.\n");
+    return (0);
+  }
   ctx->file = fopen (ctx->file_name, "rt");
   if (!ctx->file)
   {
     TRACE (1, "Failed to open file \"%s\". errno: %d\n", ctx->file_name, errno);
+    free (ctx->parse_buf);
     return (0);
   }
 
@@ -236,6 +245,7 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
   }
   fclose (ctx->file);
   ctx->file = NULL;
+  free (ctx->parse_buf);
   return (ctx->rec_num);
 }
 

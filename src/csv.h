@@ -37,7 +37,7 @@ typedef struct CSV_context {
         unsigned    rec_max;
         unsigned    line_num;
         unsigned    parse_errors;
-        char        parse_buf [1000];
+        char       *parse_buf;
         csv_state_t state_func;
         CSV_STATE   state_change;
         int         c_in, c_out;
