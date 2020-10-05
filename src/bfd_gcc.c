@@ -120,7 +120,7 @@ int BFD_load_debug_symbols (const char *fname, bfd_vma base_addr, DWORD mod_size
   if (!ok1 || !ok2)
   {
     err = bfd_errmsg (bfd_get_error());
-    TRACE (1, "Unable to get symbols from %s; err: %s\n", fname, err);
+    TRACE (2, "Unable to get symbols from %s; err: %s\n", fname, err);
     bfd_close (_bfd);
     return (0);
   }
@@ -162,7 +162,7 @@ int BFD_load_debug_symbols (const char *fname, bfd_vma base_addr, DWORD mod_size
     if (sym->flags == BSF_LOCAL || !strncmp(".weak",sym->name,5))
        continue;
 
-    memset (&ret, 0, sizeof(ret));
+    memset (&ret, '\0', sizeof(ret));
     bfd_get_symbol_info ((struct bfd*)BFD->BFD, sym, &ret);
 
     /* Section name (ret.name) is mapped to these archaic POSIX/BSD
@@ -217,7 +217,7 @@ void BFD_unload_debug_symbols (const char *module)
   int    i, found;
 
   for (BFD = BFD_table, i = 0; i < BFD_table_top; i++, BFD++)
-      if (!strcmp(module,BFD->module))
+      if (!strcmp(module, BFD->module))
          break;
 
   found = (i < BFD_table_top);
@@ -610,7 +610,7 @@ static DWORD get_module_base (DWORD address)
   return (0);
 }
 
-#define SPRINTF_VMA(buf,val) sprintf (buf, VMA_X_FMT, val)
+#define SPRINTF_VMA(buf, val) sprintf (buf, VMA_X_FMT, val)
 
 extern char _image_base__;
 
