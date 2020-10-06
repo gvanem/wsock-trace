@@ -12,85 +12,147 @@
 #include "init.h"
 #include "csv.h"
 
-#define PARSE_BUF_SIZE 1000
+#define DEFAULT_BUF_SIZE 1000
+
+#define PUTC(c)  do {                                                    \
+                   if (ctx->parse_ptr < ctx->parse_buf + ctx->line_size) \
+                      *ctx->parse_ptr++ = c;                             \
+                 } while (0)
 
 /**
  * A simple state-machine for parsing CSV records.
  *
  * The parser starts in this state.
  */
-static CSV_STATE state_normal (struct CSV_context *ctx)
+static void state_normal (struct CSV_context *ctx)
 {
   if (ctx->c_in == ctx->delimiter)
-     return (STATE_STOP);
-
+  {
+    ctx->state = STATE_STOP;
+    return;
+  }
   switch (ctx->c_in)
   {
-    case -1:       /* EOF */
-         return (STATE_STOP);
+    case -1:
+         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+                __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
+         ctx->state = STATE_EOF;
+         break;
     case '"':
-         return (STATE_QUOTED);
+         ctx->state = STATE_QUOTED;
+         break;
     case '\r':     /* ignore */
          break;
     case '\n':
          ctx->line_num++;
-         return (STATE_STOP);
+         if (ctx->field_num > 0)     /* If field == 0, ignore empty lines */
+            ctx->state = STATE_STOP;
+         break;
+    case '#':
+         if (ctx->field_num == 0)    /* If field == 0, ignore comment lines */
+              ctx->state = STATE_COMMENT;
+         else PUTC (ctx->c_in);
+         break;
     default:
-         ctx->c_out = ctx->c_in;
+         PUTC (ctx->c_in);
          break;
   }
-  return (STATE_NO_CHANGE);
 }
 
 /**
  * If the parser find a quote (`"`) in `state_normal()`, it enters this state
  * to find the end of the quote. Ignoring escaped quotes (i.e. a `\\"`).
  */
-static CSV_STATE state_quoted (struct CSV_context *ctx)
+static void state_quoted (struct CSV_context *ctx)
 {
   switch (ctx->c_in)
   {
-    case -1:        /* EOF */
-         return (STATE_STOP);
+    case -1:
+         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+                __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
+         ctx->state = STATE_EOF;
+         break;
     case '"':
-         return (STATE_NORMAL);
+         ctx->state = STATE_NORMAL;
+         break;
     case '\r':     /* ignore, but should not occur since `fopen (file, "rt")` was used */
          break;
     case '\n':     /* add a space in this field */
-         ctx->c_out = ' ';
+         PUTC (' ');
          ctx->line_num++;
          break;
     case '\\':
-         return (STATE_ESCAPED);
+         ctx->state = STATE_ESCAPED;
+         break;
     default:
-         ctx->c_out = ctx->c_in;
+         PUTC (ctx->c_in);
          break;
   }
-  return (STATE_NO_CHANGE);
 }
 
 /**
  * Look for an escaped quote. <br>
  * Go back to `state_quoted()` when found.
  */
-static CSV_STATE state_escaped (struct CSV_context *ctx)
+static void state_escaped (struct CSV_context *ctx)
 {
   switch (ctx->c_in)
   {
-    case -1:        /* EOF */
-         return (STATE_STOP);
+    case -1:
+         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+                __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
+         ctx->state = STATE_EOF;
+         break;
     case '"':       /* '\"' -> '"' */
-         ctx->c_out = '"';
-         return (STATE_QUOTED);
+         PUTC ('"');
+         ctx->state = STATE_QUOTED;
+         break;
     case '\r':
          break;
     case '\n':
          ctx->line_num++;
          break;
     default:
-         return (STATE_QUOTED); /* Unsupported ctrl-char. Go back */
+         ctx->state = STATE_QUOTED; /* Unsupported ctrl-char. Go back */
+         break;
   }
-  return (STATE_NO_CHANGE);
+}
+
+/**
+ * Do nothing until a newline. <br>
+ * Go back to `state_normal()` when found.
+ */
+static void state_comment (struct CSV_context *ctx)
+{
+  switch (ctx->c_in)
+  {
+    case -1:
+         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+                __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
+         ctx->state = STATE_EOF;
+         break;
+    case '\n':
+         ctx->line_num++;
+         ctx->state = STATE_NORMAL;
+         break;
+  }
+}
+
+static void state_illegal (struct CSV_context *ctx)
+{
+  TRACE (2, "%s(): I did not expect this!\n", __FUNCTION__);
+  ctx->state = STATE_EOF;
+}
+
+static const char *state_name (CSV_STATE state)
+{
+  return (state == STATE_ILLEGAL ? "STATE_ILLEGAL" :
+          state == STATE_NORMAL  ? "STATE_NORMAL " :
+          state == STATE_QUOTED  ? "STATE_QOUTED " :
+          state == STATE_ESCAPED ? "STATE_ESCAPED" :
+          state == STATE_COMMENT ? "STATE_COMMENT" :
+          state == STATE_STOP    ? "STATE_STOP   " :
+          state == STATE_EOF     ? "STATE_EOF    " : "??");
 }
 
 /**
@@ -98,49 +160,60 @@ static CSV_STATE state_escaped (struct CSV_context *ctx)
  */
 static const char *CSV_get_next_field (struct CSV_context *ctx)
 {
-  char      *out = ctx->parse_buf;
+  char      *ret;
+  CSV_STATE  new_state = STATE_ILLEGAL;
+  CSV_STATE  old_state = STATE_ILLEGAL;
   unsigned   line;
-  CSV_STATE  state;
 
-  ctx->c_in = 0;
+  ctx->parse_ptr = ctx->parse_buf;
+
   while (1)
   {
-    ctx->c_in  = fgetc (ctx->file);
-    ctx->c_out = 0;
-    state = (*ctx->state_func) (ctx);
+    ctx->c_in = fgetc (ctx->file);
 
-    if (ctx->c_out && out < out + PARSE_BUF_SIZE - 1)
-       *out++ = ctx->c_out;
+    old_state = ctx->state;  (*ctx->state_func) (ctx);
+    new_state = ctx->state;
 
-    if (state == STATE_STOP)
+    /* Set new state for this context. (Or stay in ame state).
+     */
+    switch (new_state)
+    {
+      case STATE_NORMAL:
+           ctx->state_func = state_normal;
+           break;
+      case STATE_QUOTED:
+           ctx->state_func = state_quoted;
+           break;
+      case STATE_ESCAPED:
+           ctx->state_func = state_escaped;
+           break;
+      case STATE_COMMENT:
+           ctx->state_func = state_comment;
+           break;
+      case STATE_ILLEGAL:   /* Avoid compiler warning */
+      case STATE_STOP:
+      case STATE_EOF:
+           break;
+    }
+    if (new_state != old_state)
+       TRACE (3, "%s -> %s\n", state_name(old_state), state_name(new_state));
+
+    if (new_state == STATE_STOP || new_state == STATE_EOF)
        break;
-    if (state == STATE_NORMAL)
-       ctx->state_func = state_normal;
-    else if (state == STATE_QUOTED)
-       ctx->state_func = state_quoted;
-    else if (state == STATE_ESCAPED)
-       ctx->state_func = state_escaped;
   }
-  ctx->state_change = state;   /* New state of of this context */
-  *out = '\0';                 /* 0-terminate this field in this context */
 
-  /* Check for empty lines or lines with leading space or comments in file.
-   * Do it by recursing.
-   */
-  out = str_ltrim (ctx->parse_buf);
-#if 1
-  if (*out == '#' || *out == ';' || (ctx->c_in != ctx->delimiter && *out == '\0'))
-  {
-    ctx->line_num++;
-    return CSV_get_next_field (ctx);
-  }
-#endif
+  *ctx->parse_ptr = '\0';
+  ret = str_ltrim (ctx->parse_buf);
 
   line = ctx->line_num;
   if (ctx->c_in == '\n')
      line--;
-  TRACE (3, "rec: %u, line: %2u, field: %d: '%s'.\n", ctx->rec_num, line, ctx->field_num, out);
-  return (out);
+
+  TRACE (2, "rec: %u, line: %u, field: %u: '%s'.\n", ctx->rec_num, line, ctx->field_num, ret);
+
+  if (new_state == STATE_EOF)
+     return (NULL);
+  return (ret);
 }
 
 /**
@@ -153,21 +226,26 @@ static int CSV_parse_file (struct CSV_context *ctx)
 {
   for (ctx->field_num = 0; ctx->field_num < ctx->num_fields; ctx->field_num++)
   {
-    const char *val = CSV_get_next_field (ctx);
-    unsigned    line = ctx->line_num;
-    int   rc;
+    const char *val;
+    unsigned    line;
+    int         rc;
 
+    ctx->state = STATE_NORMAL;
+    ctx->state_func = state_normal;
+
+    val  = CSV_get_next_field (ctx);
+    line = ctx->line_num;
     if (!val)
        goto quit;
 
-     if (ctx->c_in == '\n')   /* Fix the line-number if the last char read was a newline */
-        ctx->line_num--;
+    if (ctx->c_in == '\n')   /* Fix the line-number if the last char read was a newline */
+       ctx->line_num--;
 
-     rc = (*ctx->callback) (ctx, val);
-     ctx->line_num = line;    /* Restore line-number */
+    rc = (*ctx->callback) (ctx, val);
+    ctx->line_num = line;    /* Restore line-number */
 
-     if (!rc)
-        break;
+    if (!rc)
+       break;
   }
 
   ctx->rec_num++;
@@ -177,10 +255,15 @@ static int CSV_parse_file (struct CSV_context *ctx)
 quit:
   if (ctx->line_num == 1)
   {
-    TRACE (2, "  Ignoring parse-error on line %d, field %d.\n", ctx->line_num, ctx->field_num);
+    TRACE (2, "  Ignoring parse-error on line %u, field %u.\n", ctx->line_num, ctx->field_num);
     return (1);
   }
-  TRACE (2, "  Unable to parse line %u, field %d.\n", ctx->line_num, ctx->field_num);
+  if (ctx->state == STATE_EOF)
+  {
+    TRACE (2, "  Reached EOF on line %u, field %u.\n", ctx->line_num, ctx->field_num);
+    return (0);
+  }
+  TRACE (2, "  Unable to parse line %u, field %u.\n", ctx->line_num, ctx->field_num);
   ctx->parse_errors++;
   return (0);
 }
@@ -199,12 +282,30 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     TRACE (1, "'ctx->num_fields' must be > 0.\n");
     return (0);
   }
+
+  if (!ctx->delimiter)
+     ctx->delimiter = ',';
+
+  if (strchr("#\"\r\n", ctx->delimiter))
+  {
+    TRACE (1, "Illegal field delimiter '%c'.\n", ctx->delimiter);
+    return (0);
+  }
+  TRACE (2, "Using field-delimiter: '%c'.\n", ctx->delimiter);
+
+  if (ctx->rec_max == 0)
+     ctx->rec_max = UINT_MAX;
+
   if (!ctx->callback)
   {
     TRACE (1, "'ctx->callback' must be set.\n");
     return (0);
   }
-  ctx->parse_buf = malloc (PARSE_BUF_SIZE);
+
+  if (ctx->line_size == 0)
+     ctx->line_size = DEFAULT_BUF_SIZE;
+
+  ctx->parse_buf = malloc (ctx->line_size+1);
   if (!ctx->parse_buf)
   {
     TRACE (1, "Allocation of 'parse_buf' failed.\n");
@@ -218,12 +319,8 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     return (0);
   }
 
-  if (!ctx->delimiter)
-     ctx->delimiter = ',';
-
-  TRACE (2, "Using field-delimiter: '%c'.\n", ctx->delimiter);
-
-  ctx->state_func = state_normal;
+  ctx->state_func = state_illegal;
+  ctx->state      = STATE_ILLEGAL;
   ctx->rec_num    = 0;
   ctx->line_num   = 1;
   return (1);
@@ -237,10 +334,9 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
   if (!CSV_check_and_fill_ctx(ctx))
      return (0);
 
-  while (!feof(ctx->file))
+  while (1)
   {
-    CSV_parse_file (ctx);
-    if (ctx->rec_num > ctx->rec_max)
+    if (!CSV_parse_file(ctx) || ctx->rec_num > ctx->rec_max)
        break;
   }
   fclose (ctx->file);
@@ -273,25 +369,23 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
  */
 char *str_ltrim (char *s)
 {
-  assert (s != NULL);
-
   while (s[0] && s[1] && isspace ((int)s[0]))
        s++;
   return (s);
 }
 
 /*
- * A do-nothing callback. Just report the parsed records.
+ * A do-nothing callback. Just report the parsed record and fields.
  */
 static int csv_callback (struct CSV_context *ctx, const char *value)
 {
-  TRACE (2, "rec: %u, line %u, field %u, value: '%s'.\n", ctx->rec_num, ctx->line_num, ctx->field_num, value);
+  TRACE (0, "rec: %u, line: %u, field: %u, value: '%s'.\n", ctx->rec_num, ctx->line_num, ctx->field_num, value);
   return (1);
 }
 
 static int usage (void)
 {
-  puts ("Usage: csv.exe [-d] [-f field-delimiter] <file.csv>");
+  puts ("Usage: csv.exe [-d] [-f field-delimiter] <-n number-of-fields> <file.csv>");
   return (1);
 }
 
@@ -306,21 +400,27 @@ int main (int argc, char **argv)
   {
     argc--;
     argv++;
-    g_cfg.trace_level = 2;
+    g_cfg.trace_level = 3;
   }
 
   memset (&ctx, '\0', sizeof(ctx));
+
   if (!strcmp(argv[1], "-f"))
   {
     ctx.delimiter = argv[2][0];
     argc -= 2;
     argv += 2;
   }
+  if (!strcmp(argv[1], "-n"))
+  {
+    ctx.num_fields = atoi (argv[2]);
+    argc -= 2;
+    argv += 2;
+  }
 
-  ctx.file_name  = argv[1];
-  ctx.rec_max    = 4;
-  ctx.num_fields = 7;
-  ctx.callback   = csv_callback;
+  ctx.file_name = argv[1];
+//ctx.rec_max   = 4;
+  ctx.callback  = csv_callback;
   return CSV_open_and_parse_file (&ctx) > 0 ? 0 : 1;
 }
 #endif  /* TEST_CSV */
