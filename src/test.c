@@ -257,7 +257,10 @@ static void test_gethostbyname (void)
 }
 
 /**
- * Test returns from the `%SystemRoot\system32\drivers\etc\protocol` file
+ * Test results from:
+ * ```
+ *   %SystemRoot\system32\drivers\etc\protocol
+ * ```
  */
 static void test_getprotobyname (void)
 {
@@ -281,7 +284,10 @@ static void test_IDNA_functions (void)
 }
 
 /**
- * Test returns from the `%SystemRoot\system32\drivers\etc\services` file
+ * Test results from:
+ * ```
+ *   `%SystemRoot\system32\drivers\etc\services`
+ * ```
  */
 static void test_getservbyname (void)
 {
