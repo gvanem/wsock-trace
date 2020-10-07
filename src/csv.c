@@ -398,7 +398,7 @@ int main (int argc, char **argv)
 {
   struct CSV_context ctx;
 
-  if (argc < 2)
+  if (argc < 3)
      return usage();
 
   if (!strcmp(argv[1], "-d"))
