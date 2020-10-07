@@ -712,11 +712,14 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "no_buffering"))
      g_cfg.no_buffering = atoi (val);
 
-  else if (!stricmp(key, "hosts_file"))
-     g_cfg.hosts_file = strdup (val);
-
   else if (!stricmp(key, "use_winhttp"))
      g_cfg.use_winhttp = atoi (val);
+
+  else if (!stricmp(key, "hosts_file"))
+  {
+    if (g_cfg.num_hosts_files < DIM(g_cfg.hosts_file))
+       g_cfg.hosts_file [g_cfg.num_hosts_files++] = strdup (val);
+  }
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -1201,11 +1204,15 @@ void wsock_trace_exit (void)
   if (g_cfg.trace_stream)
      fclose (g_cfg.trace_stream);
 
+  {
+    int i;
+    for (i = 0; i < DIM(g_cfg.hosts_file); i++)
+        FREE (g_cfg.hosts_file[i]);
+  }
+
   g_cfg.trace_file_okay = FALSE;
   g_cfg.trace_stream = NULL;
-
   FREE (g_cfg.trace_file);
-  FREE (g_cfg.hosts_file);
   FREE (g_cfg.PCAP.dump_fname);
   FREE (g_cfg.LUA.init_script);
   FREE (g_cfg.LUA.exit_script);

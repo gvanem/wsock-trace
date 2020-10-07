@@ -108,7 +108,8 @@ struct FIREWALL_cfg {
 struct config_table {
        char   *trace_file;
        FILE   *trace_stream;
-       char   *hosts_file;
+       char   *hosts_file [3];  /* Handle loading of 3 hosts files */
+       int     num_hosts_files;
        BOOL    trace_binmode;
        BOOL    trace_caller;
        BOOL    trace_report;
