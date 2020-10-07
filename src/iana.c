@@ -254,6 +254,11 @@ static void iana_load_and_parse (int family, const char *file)
 }
 
 /**
+ * The CSV callback to add a record to the `iana_entries_ip4` smart-list.
+ *
+ * \param[in]  ctx   the CSV context structure.
+ * \param[in]  value the value for this CSV field in record `ctx->rec_num`.
+ *
  * Match the fields for a record like this (family == AF_INET):
  * ```
  *   014/8,Administered by APNIC,2010-04,whois.apnic.net,https://rdap.apnic.net/,ALLOCATED,NOTE
@@ -270,44 +275,49 @@ static void iana_load_and_parse (int family, const char *file)
 static int iana_CSV_add4 (struct CSV_context *ctx, const char *value)
 {
   static struct IANA_record rec;
+  char  *space;
   int    rc = 1;
 
-  if (ctx->field_num == 0)
-     sscanf (value, "%lu/%d", (unsigned long*)&rec.net_num.ip4.s_addr, &rec.mask);
-
-  else if (ctx->field_num == 1)
-     _strlcpy (rec.misc, value, sizeof(rec.misc));
-
-  else if (ctx->field_num == 2)
-    _strlcpy (rec.date, value, sizeof(rec.date));
-
-  else if (ctx->field_num == 3)
-     _strlcpy (rec.whois, value, sizeof(rec.whois));
-
-  else if (ctx->field_num == 4)
+  switch (ctx->field_num)
   {
-    char *space;
-
-    _strlcpy (rec.url, value, sizeof(rec.url));
-    space = strchr (rec.url, ' ');
-    if (space)
-       *space = '\0';
-  }
-  else if (ctx->field_num == 5)
-     _strlcpy (rec.status, value, sizeof(rec.status));
-
-  else if (ctx->field_num == 6)   /* The value in this 'NOTE' field is ignored */
-  {
-    rec.family = AF_INET;
-    rc = iana_add_entry (&rec);
-    memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
-    rec.family = rec.mask = -1;
-    rec.net_num.ip4.s_addr = INADDR_NONE;
+    case 0:
+         sscanf (value, "%lu/%d", (unsigned long*)&rec.net_num.ip4.s_addr, &rec.mask);
+         break;
+    case 1:
+         _strlcpy (rec.misc, value, sizeof(rec.misc));
+         break;
+    case 2:
+         _strlcpy (rec.date, value, sizeof(rec.date));
+         break;
+    case 3:
+         _strlcpy (rec.whois, value, sizeof(rec.whois));
+         break;
+    case 4:
+         _strlcpy (rec.url, value, sizeof(rec.url));
+         space = strchr (rec.url, ' ');
+         if (space)
+            *space = '\0';
+         break;
+    case 5:
+         _strlcpy (rec.status, value, sizeof(rec.status));
+         break;
+    case 6:   /* The value in this 'NOTE' field is ignored */
+         rec.family = AF_INET;
+         rc = iana_add_entry (&rec);
+         memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
+         rec.family = rec.mask = -1;
+         rec.net_num.ip4.s_addr = INADDR_NONE;
+         break;
   }
   return (rc);
 }
 
 /**
+ * The CSV callback to add a record to the `iana_entries_ip6` smart-list.
+ *
+ * \param[in]  ctx   the CSV context structure.
+ * \param[in]  value the value for this CSV field in record `ctx->rec_num`.
+ *
  * Match the fields for a record like this:
  * ```
  *   Prefix,Designation,Date,WHOIS,RDAP,Status,Note
@@ -328,41 +338,40 @@ static int iana_CSV_add6 (struct CSV_context *ctx, const char *value)
 {
   static struct IANA_record rec;
   static char   ip6_addr [MAX_IP6_SZ+1];
+  char  *space;
   int    rc = 1;
 
-  if (ctx->field_num == 0)
+  switch (ctx->field_num)
   {
-    sscanf (value, "%50[^/]/%d", ip6_addr, &rec.mask);
-    wsock_trace_inet_pton6 (ip6_addr, (u_char*)&rec.net_num.ip6);
-  }
-  else if (ctx->field_num == 1)
-     _strlcpy (rec.misc, value, sizeof(rec.misc));
-
-  else if (ctx->field_num == 2)
-    _strlcpy (rec.date, value, sizeof(rec.date));
-
-  else if (ctx->field_num == 3)
-     _strlcpy (rec.whois, value, sizeof(rec.whois));
-
-  else if (ctx->field_num == 4)
-  {
-    char *space;
-
-    _strlcpy (rec.url, value, sizeof(rec.url));
-    space = strchr (rec.url, ' ');
-    if (space)
-       *space = '\0';
-  }
-  else if (ctx->field_num == 5)
-     _strlcpy (rec.status, value, sizeof(rec.status));
-
-  else if (ctx->field_num == 6)   /* The value in this 'NOTE' field is ignored */
-  {
-    rec.family = AF_INET6;
-    rc = iana_add_entry (&rec);
-    memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
-    rec.family = rec.mask = -1;
-    memset (&rec.net_num.ip6, '\0', sizeof(rec.net_num.ip6)); /* IN6_IS_ADDR_UNSPECIFIED() */
+    case 0:
+         sscanf (value, "%50[^/]/%d", ip6_addr, &rec.mask);
+         _wsock_trace_inet_pton (AF_INET6, ip6_addr, (u_char*)&rec.net_num.ip6);
+         break;
+    case 1:
+         _strlcpy (rec.misc, value, sizeof(rec.misc));
+         break;
+    case 2:
+         _strlcpy (rec.date, value, sizeof(rec.date));
+         break;
+    case 3:
+         _strlcpy (rec.whois, value, sizeof(rec.whois));
+         break;
+    case 4:
+         _strlcpy (rec.url, value, sizeof(rec.url));
+         space = strchr (rec.url, ' ');
+         if (space)
+            *space = '\0';
+         break;
+    case 5:
+         _strlcpy (rec.status, value, sizeof(rec.status));
+         break;
+    case 6:                                   /* The value in this 'NOTE' field is ignored */
+         rec.family = AF_INET6;
+         rc = iana_add_entry (&rec);
+         memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
+         rec.family = rec.mask = -1;
+         memset (&rec.net_num.ip6, '\0', sizeof(rec.net_num.ip6)); /* IN6_IS_ADDR_UNSPECIFIED() */
+         break;
   }
   return (rc);
 }
