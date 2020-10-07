@@ -279,7 +279,7 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
 {
   if (ctx->num_fields == 0)
   {
-    TRACE (1, "'ctx->num_fields' must be > 0.\n");
+    TRACE (0, "'ctx->num_fields' must be > 0.\n");
     return (0);
   }
 
@@ -288,7 +288,7 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
 
   if (strchr("#\"\r\n", ctx->delimiter))
   {
-    TRACE (1, "Illegal field delimiter '%c'.\n", ctx->delimiter);
+    TRACE (0, "Illegal field delimiter '%c'.\n", ctx->delimiter);
     return (0);
   }
   TRACE (2, "Using field-delimiter: '%c'.\n", ctx->delimiter);
@@ -298,7 +298,12 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
 
   if (!ctx->callback)
   {
-    TRACE (1, "'ctx->callback' must be set.\n");
+    TRACE (0, "'ctx->callback' must be set.\n");
+    return (0);
+  }
+  if (!ctx->file_name)
+  {
+    TRACE (0, "'ctx->file_name' must be set.\n");
     return (0);
   }
 
