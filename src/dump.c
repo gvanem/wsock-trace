@@ -2072,30 +2072,30 @@ static int trace_printf_cc (const char            *country_code,
      * PS. there should be no way to have 'location != NULL' and a
      *     'country_code == NULL'.
      */
-    cc_equal = (cc_last && !strcmp(country_code,cc_last));
+    cc_equal = (cc_last && !strcmp(country_code, cc_last));
     if (!cc_equal)
        trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
 
-    loc_equal = (location && loc_last && !strcmp(location,loc_last));
+    loc_equal = (location && loc_last && !strcmp(location, loc_last));
     if (location && !loc_equal)
        trace_printf (", %s", location);
 
     cc_last  = country_code;
     loc_last = location;
   }
-  else if (INET_util_addr_is_special(a4,a6,&remark))
+  else if (INET_util_addr_is_special(a4, a6, &remark))
   {
     trace_puts ("Special");
     if (remark)
        trace_printf (" (%s)", remark);
   }
-  else if (country_code && *country_code == '-')
+  else if (country_code && *country_code != '-')
        trace_puts ("Private");
-  else if (INET_util_addr_is_zero(a4,a6))
+  else if (INET_util_addr_is_zero(a4, a6))
        trace_puts ("NULL-addr");
-  else if (INET_util_addr_is_multicast(a4,a6))
+  else if (INET_util_addr_is_multicast(a4, a6))
        trace_puts ("Multicast");
-  else if (!INET_util_addr_is_global(a4,a6))
+  else if (!INET_util_addr_is_global(a4, a6))
        trace_puts ("Not global");
   else trace_puts ("None");
 
