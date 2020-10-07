@@ -210,6 +210,8 @@ DEF_FUNC (int,  WSACleanup,      (void));
 DEF_FUNC (int,  WSAGetLastError, (void));
 DEF_FUNC (void, WSASetLastError, (int err));
 
+extern void (WINAPI *g_WSASetLastError)(int); /* In in_addr.c */
+
 DEF_FUNC (int,  WSAIoctl, (SOCKET                             s,
                            DWORD                              code,
                            void                              *vals,
@@ -515,6 +517,8 @@ static struct LoadTable dyn_funcs [] = {
 void load_ws2_funcs (void)
 {
   load_dynamic_table (dyn_funcs, DIM(dyn_funcs));
+
+  g_WSASetLastError = p_WSASetLastError;
 
   if (p_RtlCaptureStackBackTrace == NULL)
       g_cfg.trace_caller = 0;
@@ -840,7 +844,7 @@ EXPORT int WINAPI WSAGetLastError (void)
 EXPORT void WINAPI WSASetLastError (int err)
 {
   INIT_PTR (p_WSASetLastError);
-  (*p_WSASetLastError)(err);
+  (*p_WSASetLastError) (err);
 
   ENTER_CRIT();
   WSTRACE ("WSASetLastError (%s%s)",
