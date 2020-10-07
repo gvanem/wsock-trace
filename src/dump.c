@@ -2089,7 +2089,7 @@ static int trace_printf_cc (const char            *country_code,
     if (remark)
        trace_printf (" (%s)", remark);
   }
-  else if (country_code && *country_code != '-')
+  else if (country_code && country_code[0] == '-' && country_code[1] != '-')
        trace_puts ("Private");
   else if (INET_util_addr_is_zero(a4, a6))
        trace_puts ("NULL-addr");
@@ -2367,7 +2367,7 @@ void dump_hostent (const char *name, const struct hostent *host)
   const char *comment;
 
   if (hosts_file_check_hostent(name, host) > 0)
-       comment = " (in 'hosts' file)";
+       comment = " (in a 'hosts' file)";
   else comment = "";
 
   trace_indent (g_cfg.trace_indent+2);
@@ -2459,7 +2459,7 @@ void dump_DNSBL (int type, const char **addresses)
     else if (type == AF_INET6)
          DNSBL_check_ipv6 (a6, &sbl_ref);
     if (sbl_ref)
-       trace_printf ("%*s~4DNSBL: SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+       trace_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }
 }
 
@@ -2509,7 +2509,7 @@ void dump_DNSBL_addrinfo (const struct addrinfo *ai)
       DNSBL_check_ipv6 (&sa6->sin6_addr, &sbl_ref);
     }
     if (sbl_ref)
-       trace_printf ("%*s~4DNSBL: SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+       trace_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }
 }
 
