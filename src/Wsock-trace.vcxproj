@@ -98,6 +98,7 @@
   <ItemGroup>
     <ClCompile Include="common.c" />
     <ClCompile Include="cpu.c" />
+    <ClCompile Include="csv.c" />
     <ClCompile Include="dnsbl.c" />
     <ClCompile Include="dump.c" />
     <ClCompile Include="firewall.c" />

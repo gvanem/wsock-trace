@@ -30,6 +30,7 @@ WSOCK_TRACE_OBJS = $(OBJ_DIR)\wsock_trace.obj     &
                    $(OBJ_DIR)\ip2loc.obj          &
                    $(OBJ_DIR)\common.obj          &
                    $(OBJ_DIR)\cpu.obj             &
+                   $(OBJ_DIR)\csv.obj             &
                    $(OBJ_DIR)\dnsbl.obj           &
                    $(OBJ_DIR)\dump.obj            &
                    $(OBJ_DIR)\firewall.obj        &
@@ -44,6 +45,7 @@ NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
             $(OBJ_DIR)\geoip-null.obj &
             $(OBJ_DIR)\common.obj     &
+            $(OBJ_DIR)\csv.obj        &
             $(OBJ_DIR)\dnsbl.obj      &
             $(OBJ_DIR)\iana.obj       &
             $(OBJ_DIR)\idna.obj       &

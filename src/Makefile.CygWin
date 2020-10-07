@@ -58,13 +58,13 @@ endif
 EX_LIBS += -lole32 -ladvapi32
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
-          common.c cpu.c dnsbl.c dump.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c \
+          common.c cpu.c csv.c dnsbl.c dump.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c \
           iana.c in_addr.c ip2loc.c overlap.c smartlist.c stkwalk.c bfd_gcc.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c dnsbl.c iana.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
+GEOIP_SRC = geoip.c common.c csv.c dnsbl.c iana.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
 GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
 
 all: message print_cyg-ver $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
@@ -107,7 +107,7 @@ idna.exe: idna.c common.c smartlist.c $(WSOCK_TRACE_A)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
-firewall_test.exe: common.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+firewall_test.exe: common.c csv.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
 	@echo
 

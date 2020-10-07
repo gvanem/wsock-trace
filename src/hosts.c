@@ -10,6 +10,7 @@
 #include "init.h"
 #include "smartlist.h"
 #include "in_addr.h"
+#include "csv.h"
 #include "hosts.h"
 
 /**
@@ -17,17 +18,21 @@
  * The structure for host-entries we read from a file.
  */
 struct host_entry {
-       char   host_name [MAX_HOST_LEN];  /**< name of `etc/hosts` entry */
-       int    addr_type;                 /**< type `AF_INET` or `AF_INET6` */
-       char   addr [IN6ADDRSZ];          /**< the actual address */
+       char        host_name [MAX_HOST_LEN];  /**< name of `etc/hosts` entry */
+       int         addr_type;                 /**< type `AF_INET` or `AF_INET6` */
+       char        addr [IN6ADDRSZ];          /**< the address; 16 bytes to hold an IPv6 address */
+       const char *file;                      /**< which `g_cfg.hosts_file[]` is this entry from? */
      };
 
 static smartlist_t *hosts_list;
+static int          current_hosts_file;
+static unsigned     num_af_inet;
+static unsigned     num_af_inet6;
 
 /**
  * Add an entry to the given `smartlist_t` that becomes `hosts_list`.
  */
-static void add_entry (smartlist_t *sl, const char *name, const void *addr, int af_type)
+static void add_entry (const void *addr, const char *name, int af_type)
 {
   struct host_entry *he;
   int    asize = 0;
@@ -50,7 +55,8 @@ static void add_entry (smartlist_t *sl, const char *name, const void *addr, int 
     he->addr_type = af_type;
     _strlcpy (he->host_name, name, sizeof(he->host_name));
     memcpy (&he->addr, addr, asize);
-    smartlist_add (sl, he);
+    he->file = g_cfg.hosts_file [current_hosts_file];
+    smartlist_add (hosts_list, he);
   }
 }
 
@@ -85,63 +91,99 @@ static int hosts_bsearch_name (const void *key, const void **member)
 }
 
 /**
- * Parse the file for lines matching `"ip host"`. <br>
- * Do not care about aliases.
+ * Handle field 0 which is the ip address (AF_INET or AF_INET6). Or: <br>
+ * Handle field 1 which is the host name.
  *
- * \note the Windows `hosts` file support both `AF_INET` and `AF_INET6` addresses. <br>
- *       That's the reason we call `_wsock_trace_pton()`. Since passing
- *       an IPv6-addresses to `wsock_trace_inet_pton4()` will call `WSASetLastError()`. <br>
- *       And vice-versa.
+ * Do not care about aliases.
+ * Ignore IPv6 records with a scoped address. Like `FE80::94F3:7B8:2773:8B31%5`.
+ *
+ * \note
+ * The Windows `hosts` file support both `AF_INET` and `AF_INET6` addresses. <br>
+ * That's the reason we call `_wsock_trace_pton()`. Since passing
+ * an IPv6-addresses to `wsock_trace_inet_pton4()` will call `WSASetLastError()`. <br>
+ * And vice-versa.
  */
-static void parse_hosts (smartlist_t *sl, const char *line)
+static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
 {
-  struct in_addr  in4;
-  struct in6_addr in6;
-  char            buf [500];
-  char           *tok_buf;
-  char           *p    = _strlcpy (buf, line, sizeof(buf));
-  char           *ip   = _strtok_r (p, " \t", &tok_buf);
-  char           *name = _strtok_r (NULL, " \t", &tok_buf);
+  static struct in_addr  ip4;
+  static struct in6_addr ip6;
+  static int    family = -1;
 
-  if (!name || !ip)
+  switch (ctx->field_num)
   {
-    TRACE (3, "Bogus, ip: '%s', name: '%s'\n", ip, name);
-    return;
+    case 0:
+         if (strchr(value, '%'))
+         {
+           TRACE (1, "Ignoring scoped addr: '%s'\n", value);
+           family = -1;
+         }
+         else if (_wsock_trace_inet_pton(AF_INET, value, (u_char*)&ip4) == 1)
+         {
+           TRACE (3, "AF_INET: addr: '%s'\n", value);
+           family = AF_INET;
+         }
+         else if (_wsock_trace_inet_pton(AF_INET6, value, (u_char*)&ip6) == 1)
+         {
+           TRACE (3, "AF_INET6: addr: '%s'\n", value);
+           family = AF_INET6;
+         }
+         else
+         {
+           TRACE (3, "Bogus field 0 value: '%s'\n", value);
+           family = -1;
+         }
+         break;
+    case 1:
+         if (family == AF_INET)
+         {
+           add_entry (&ip4, value, family);
+           num_af_inet++;
+         }
+         else if (family == AF_INET6)
+         {
+           add_entry (&ip6, value, family);
+           num_af_inet6++;
+         }
+         family = -1;
+         memset (&ip4, '\0', sizeof(ip4));
+         memset (&ip6, '\0', sizeof(ip6));
+         break;
   }
-
-  if (_wsock_trace_inet_pton(AF_INET, ip, (u_char*)&in4) == 1)
-  {
-    TRACE (3, "AF_INET:  '%s', name: '%s'\n", ip, name);
-    add_entry (sl, name, &in4, AF_INET);
-  }
-  else if (_wsock_trace_inet_pton(AF_INET6, ip, (u_char*)&in6) == 1)
-  {
-    TRACE (3, "AF_INET6: '%s', name: '%s'\n", ip, name);
-    add_entry (sl, name, &in6, AF_INET6);
-  }
-  else
-    TRACE (3, "Bogus, ip: '%s', name: '%s'\n", ip, name);
+  return (1);
 }
 
 /**
- * Print the `hosts_list` if `g_cfg.trace_level >= 3`.
+ * Print the details of the `hosts_list` and some additional statistics.
  */
-static void hosts_file_dump (int max, int duplicates)
+static void hosts_file_dump (int max, int duplicates, const struct CSV_context *ctx)
 {
   int i;
 
-  trace_printf ("\n%d entries in \"%s\" sorted on name (%d duplicates):\n",
-                max, g_cfg.hosts_file, duplicates);
+  trace_printf ("\nA total of %d entries in these files:\n", max);
+  for (i = 0; g_cfg.hosts_file[i]; i++)
+      trace_printf ("  %d: \"%s\"\n", i, g_cfg.hosts_file[i]);
 
+  trace_printf ("  duplicates: %d, num_af_inet: %u, num_af_inet6: %u.\n"
+                "  ctx->rec_num: %u, ctx->line_num: %u, ctx->parse_errors: %u, ctx->comment_lines: %u.\n\n",
+                duplicates, num_af_inet, num_af_inet6, ctx->rec_num, ctx->line_num,
+                ctx->parse_errors, ctx->comment_lines);
+
+  trace_puts ("Entries sorted on name:\n");
   for (i = 0; i < max; i++)
   {
     const struct host_entry *he = smartlist_get (hosts_list, i);
     char  buf [MAX_IP6_SZ+1];
+    int   file_idx;
 
+    for (file_idx = 0; g_cfg.hosts_file [file_idx]; file_idx++)
+    {
+      if (he->file == g_cfg.hosts_file [file_idx])
+         break;
+    }
     wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
-    trace_printf ("%3d: %-40s %-20s AF_INET%c\n",
-                  i+1, he->host_name, buf,
-                  (he->addr_type == AF_INET6) ? '6' : ' ');
+    trace_printf ("%3d: %-70s %-20s AF_INET%c  (hosts-file: %d)\n",
+                  i, he->host_name, buf,
+                  (he->addr_type == AF_INET6) ? '6' : ' ', file_idx);
   }
 }
 
@@ -158,29 +200,42 @@ void hosts_file_exit (void)
 /**
  * Build the `hosts_file` smartlist.
  *
- * \todo: support loading multiple `/etc/hosts` files.
+ * We support loading multiple `/etc/hosts` files;
+ * Currently max 3.
  */
 void hosts_file_init (void)
 {
-  hosts_list = g_cfg.hosts_file ?
-                 smartlist_read_file (g_cfg.hosts_file, parse_hosts) : NULL;
-  if (hosts_list)
+  struct CSV_context ctx;
+  int    dups, max;
+
+  assert (hosts_list == NULL);
+  hosts_list = smartlist_new();
+  if (!hosts_list)
+     return;
+
+  for (current_hosts_file = 0; g_cfg.hosts_file[current_hosts_file];
+       current_hosts_file++)
   {
-    int dups, max;
-
-    smartlist_sort (hosts_list, hosts_compare_name);
-    dups = smartlist_make_uniq (hosts_list, hosts_compare_name, free);
-
-    /* The new length after the duplicates were removed.
-     */
-    max = smartlist_len (hosts_list);
-    if (g_cfg.trace_level >= 3)
-       hosts_file_dump (max, dups);
+    memset (&ctx, '\0', sizeof(ctx));
+    ctx.file_name  = g_cfg.hosts_file [current_hosts_file];
+    ctx.num_fields = 2;
+    ctx.delimiter  = ' ';
+    ctx.callback   = hosts_CSV_add;
+    CSV_open_and_parse_file (&ctx);
   }
+
+  smartlist_sort (hosts_list, hosts_compare_name);
+  dups = smartlist_make_uniq (hosts_list, hosts_compare_name, free);
+
+  /* The new length after the duplicates were removed.
+   */
+  max = smartlist_len (hosts_list);
+  if (g_cfg.trace_level >= 2)
+     hosts_file_dump (max, dups, &ctx);
 }
 
 /*
- * Check if one of the addresses for `name` is from the hosts-file.
+ * Check if one of the addresses for `name` is from a hosts-file.
  */
 int hosts_file_check_hostent (const char *name, const struct hostent *host)
 {

@@ -61,6 +61,7 @@
 #include "init.h"
 #include "in_addr.h"
 #include "inet_util.h"
+#include "csv.h"
 #include "geoip.h"
 
 /** Number of calls for `smartlist_bsearch()` to find an IPv4 entry. <br>
@@ -73,8 +74,8 @@ static DWORD num_4_compare;
  */
 static DWORD num_6_compare;
 
-static int  geoip4_parse_entry (char *buf, unsigned *line, DWORD *num);
-static int  geoip6_parse_entry (char *buf, unsigned *line, DWORD *num);
+static int  geoip4_CSV_add (struct CSV_context *ctx, const char *value);
+static int  geoip6_CSV_add (struct CSV_context *ctx, const char *value);
 static int  geoip4_add_entry (DWORD low, DWORD high, const char *country);
 static int  geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *high, const char *country);
 static void geoip_stats_init (void);
@@ -91,15 +92,15 @@ static int  geoip_get_num_addr (DWORD *num4, DWORD *num6);
  * \param[in] el_size  the size of an array element.
  * \param[in] num      the number of array elements.
  */
-smartlist_t *geoip_smartlist_fixed (void *start, size_t el_size, unsigned num)
+smartlist_t *geoip_smartlist_fixed (const void *start, size_t el_size, unsigned num)
 {
   smartlist_t *sl = smartlist_new();
-  char        *ofs = (char*) start;
+  const char  *ofs = (const char*) start;
   size_t       i;
 
   smartlist_ensure_capacity (sl, num);
   for (i = 0; i < num; i++, ofs += el_size)
-     smartlist_add (sl, ofs);
+     smartlist_add (sl, (void*)ofs);
   return (sl);
 }
 
@@ -336,9 +337,8 @@ DWORD geoip_load_data (int family)
  */
 static DWORD geoip_parse_file (const char *file, int family)
 {
-  unsigned line = 0;
-  DWORD    num  = 0;
-  FILE    *f;
+  struct CSV_context ctx;
+  DWORD  num = 0;
 
   TRACE (4, "address-family: %d, file: %s.\n", family, file);
 
@@ -366,28 +366,14 @@ static DWORD geoip_parse_file (const char *file, int family)
     return (0);
   }
 
-  f = fopen (file, "rt");
-  if (!f)
-  {
-    TRACE (2, "Failed to open Geoip-file \"%s\". errno: %d\n", file, errno);
-    return (0);
-  }
+  memset (&ctx, '\0', sizeof(ctx));
+  ctx.file_name  = file;
+  ctx.num_fields = 3;
+  ctx.delimiter  = ',';
+  ctx.callback   = (family == AF_INET ? geoip4_CSV_add : geoip6_CSV_add);
 
-  while (!feof(f))
-  {
-    char buf[512];
-    int  rc;
-
-    if (fgets(buf, (int)sizeof(buf), f) == NULL)
-       break;
-    if (family == AF_INET)
-         rc = geoip4_parse_entry (buf, &line, &num);
-    else rc = geoip6_parse_entry (buf, &line, &num);
-    if (rc < 0)  /* malloc() failed, give up */
-       break;
-  }
-
-  fclose (f);
+  CSV_open_and_parse_file (&ctx);
+  num = ctx.rec_num;
 
   if (family == AF_INET)
   {
@@ -474,93 +460,62 @@ void geoip_exit (void)
 }
 
 /**
- * Parse and add an IPv4 entry to the `geoip_ipv4_entries` smart-list.
+ * The CSV callback to add an IPv4 entry to the `geoip_ipv4_entries` smart-list.
  *
- * \param[in]     buf  the buffer from `fgets()` to parse.
- * \param[in,out] line the line-counter for the parsed line. Used in the below `TRACE()` only.
- * \param[in,out] num  the counter that gets incremented if `buf` matches an IPv4 address.
+ * \param[in]  ctx   the CSV context structure.
+ * \param[in]  value the value for this CSV field in record `ctx->rec_num`.
  */
-static int geoip4_parse_entry (char *buf, unsigned *line, DWORD *num)
+static int geoip4_CSV_add (struct CSV_context *ctx, const char *value)
 {
-  char       *p = buf;
-  char        country[3];
-  int         rc = 0;
-#ifdef __CYGWIN__
-  unsigned long low, high;
-#else
-  DWORD         low, high;
-#endif
+  static char        country[3];
+  static __ms_u_long low, high;
+  int    rc = 1;
 
-  for ( ; *p && isspace((int)*p); )
-      p++;
-
-  if (*p == '#' || *p == ';')
+  switch (ctx->field_num)
   {
-    (*line)++;
-    return (1);
+    case 0:
+         low = (u_long) _atoi64 (value);
+         break;
+    case 1:
+         high = (u_long) _atoi64 (value);
+         break;
+    case 2:
+         memcpy (&country, value, sizeof(country));
+         rc = geoip4_add_entry (low, high, country);
+         low = high = country[0] = 0;
+         break;
   }
-
-  if (sscanf(buf,"%lu,%lu,%2s", &low, &high, country) == 3 ||
-      sscanf(buf,"\"%lu\",\"%lu\",\"%2s\",", &low, &high, country) == 3)
-  {
-    rc = geoip4_add_entry (low, high, country);
-    (*num)++;
-  }
-  (*line)++;
-
-  if (rc == 0)
-     TRACE (0, "Unable to parse line %u in GEOIP IPv4 file.\n", *line);
   return (rc);
 }
 
 /**
- * Parse and add an IPv6 entry to the `geoip_ipv6_entries` smart-list.
+ * The CSV callback to add an IPv6 entry to the `geoip_ipv6_entries` smart-list.
  *
- * \param[in]     buf   the buffer from `fgets()` to parse.
- * \param[in,out] line  the line-counter for the parsed line. Used in the below `TRACE()` only.
- * \param[in,out] num   the counter that gets incremented if `buf` matches an IPv6 address.
+ * \param[in]  ctx   the CSV context structure.
+ * \param[in]  value the value for this CSV field in record `ctx->rec_num`.
  */
-static int geoip6_parse_entry (char *buf, unsigned *line, DWORD *num)
+static int geoip6_CSV_add (struct CSV_context *ctx, const char *value)
 {
-  struct in6_addr low, high;
-  char           *p = buf;
-  char           *country, *low_str, *high_str, *strtok_state;
-  int             rc = 0;
+  static char            country[3];
+  static struct in6_addr low, high;
+  int    rc = 1;
 
-  for ( ; *p && isspace((int)*p); )
-      p++;
-
-  if (*p == '#' || *p == ';')
+  switch (ctx->field_num)
   {
-    (*line)++;
-    return (1);
+    case 0:
+          _wsock_trace_inet_pton (AF_INET6, value, (u_char*)&low);
+          break;
+     case 1:
+          _wsock_trace_inet_pton (AF_INET6, value, (u_char*)&high);
+          break;
+     case 2:
+          memcpy (&country, value, sizeof(country));
+          rc = geoip6_add_entry (&low, &high, country);
+          memset (&low, '\0', sizeof(low));
+          memset (&high, '\0', sizeof(high));
+          country[0] = '\0';
+          break;
   }
-
-  low_str = _strtok_r (buf, ",", &strtok_state);
-  if (!low_str)
-     goto fail;
-
-  high_str = _strtok_r (NULL, ",", &strtok_state);
-  if (!high_str)
-     goto fail;
-
-  country = _strtok_r (NULL, "\n", &strtok_state);
-  if (!country)
-     goto fail;
-
-  if (strlen(country) == 2 &&
-      wsock_trace_inet_pton6(low_str, (u_char*)&low) == 1 &&
-      wsock_trace_inet_pton6(high_str, (u_char*)&high) == 1)
-  {
-    rc = geoip6_add_entry (&low, &high, country);
-    (*num)++;
-  }
-
-fail:
-  (*line)++;
-
-  if (rc == 0)
-     TRACE (0, "Unable to parse line %u in GEOIP IPv6 file.\n", *line);
   return (rc);
 }
 
@@ -577,13 +532,11 @@ static int geoip4_add_entry (DWORD low, DWORD high, const char *country)
   struct ipv4_node *entry = malloc (sizeof(*entry));
 
   if (!entry)
-     return (-1);
+     return (0);
 
   entry->low  = low;
   entry->high = high;
-  if (country)
-       memcpy (&entry->country, country, sizeof(entry->country));
-  else entry->country[0] = '\0';
+  memcpy (&entry->country, country, sizeof(entry->country));
   smartlist_add (geoip_ipv4_entries, entry);
   return (1);
 }
@@ -601,13 +554,11 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
   struct ipv6_node *entry = malloc (sizeof(*entry));
 
   if (!entry)
-     return (-1);
+     return (0);
 
   memcpy (&entry->low, low, sizeof(entry->low));
   memcpy (&entry->high, high, sizeof(entry->high));
-  if (country)
-       memcpy (&entry->country, country, sizeof(entry->country));
-  else entry->country[0] = '\0';
+  memcpy (&entry->country, country, sizeof(entry->country));
   smartlist_add (geoip_ipv6_entries, entry);
   return (1);
 }
@@ -644,7 +595,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   num = ip2loc_num_ipv4_entries();
   TRACE (4, "Looking for %s in %u elements.\n", buf, num);
 
-  if (num > 0 && INET_util_addr_is_global(addr,NULL) && ip2loc_get_ipv4_entry(addr, &g_ip2loc_entry))
+  if (num > 0 && INET_util_addr_is_global(addr, NULL) && ip2loc_get_ipv4_entry(addr, &g_ip2loc_entry))
   {
     if (g_cfg.trace_report)
        geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV4 | GEOIP_VIA_IP2LOC);
@@ -689,7 +640,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   num = ip2loc_num_ipv6_entries();
   TRACE (4, "Looking for %s in %u elements.\n", buf, num);
 
-  if (num > 0 && INET_util_addr_is_global(NULL,addr) && ip2loc_get_ipv6_entry(addr, &g_ip2loc_entry))
+  if (num > 0 && INET_util_addr_is_global(NULL, addr) && ip2loc_get_ipv6_entry(addr, &g_ip2loc_entry))
   {
     if (g_cfg.trace_report)
        geoip_stats_update (g_ip2loc_entry.country_short, GEOIP_STAT_IPV6 | GEOIP_VIA_IP2LOC);
@@ -1636,12 +1587,12 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
 
     if (raw)
     {
-      fputs (" { {", out);
+      fputs (" { { ", out);
       hex_dump (out, &entry->low, sizeof(entry->low));
-      fputs ("},\n"
-             "   {", out);
+      fputs (" },\n"
+             "   { ", out);
       hex_dump (out, &entry->high, sizeof(entry->high));
-      fputs ("}, ", out);
+      fputs (" }, ", out);
     }
     else if (dump_cidr)
     {
@@ -1914,8 +1865,8 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
  * Called on `geoip.exe -4g <file>` or \n
  *           `geoip.exe -6g <file>` to generate a `<file>` with
  * fixed IPv4 or IPv6 arrays: \n
- *   `static struct ipv4_node ipv4_gen_array [NNN]` and
- *   `static struct ipv6_node ipv6_gen_array [NNN]`.
+ *   `static const struct ipv4_node ipv4_gen_array [NNN]` and
+ *   `static const struct ipv6_node ipv6_gen_array [NNN]`.
  *
  * These files are then compiled into normal obj-files and the arrays are
  * accessed via these functions (also generated):
@@ -1968,11 +1919,11 @@ static int geoip_generate_array (int family, const char *out_file)
            "#include \"geoip.h\"\n"
            "\n"
            "#if defined(__GNUC__) || defined(__clang__)\n"
-           "#pragma GCC diagnostic ignored  \"-Wmissing-braces\"\n"
-           "#endif\n"
-           "\n", out_file, ctime(&now), fam, out_file, get_builder());
+           "#pragma GCC diagnostic ignored \"-Wmissing-braces\"\n"
+           "#endif\n\n",
+           out_file, ctime(&now), fam, out_file, get_builder());
 
-  fprintf (out, "static struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
+  fprintf (out, "static const struct ipv%c_node ipv%c_gen_array [%d] = {\n", fam, fam, len);
 
   if (family == AF_INET)
        dump_ipv4_entries (out, 0, 1);
