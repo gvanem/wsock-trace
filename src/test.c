@@ -259,7 +259,7 @@ static void test_gethostbyname (void)
 /**
  * Test results from:
  * ```
- *   %SystemRoot\system32\drivers\etc\protocol
+ *   %SystemRoot\\system32\\drivers\\etc\\protocol
  * ```
  */
 static void test_getprotobyname (void)
