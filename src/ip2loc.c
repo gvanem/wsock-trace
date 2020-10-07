@@ -730,7 +730,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
          INET_util_get_ip_num(addr, NULL), out->country_short, DWORD_CAST(num_4_loops));
-  return (out->country_short[0] != '\0');
+  return (out->country_short[0] != '\0' && out->country_short[1] != '\0');
 }
 
 /**
@@ -759,7 +759,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",
          INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),
          out->country_short, DWORD_CAST(num_6_loops));
-  return (out->country_short[0] != '\0');
+  return (out->country_short[0] != '\0' && out->country_short[1] != '\0');
 }
 
 /**
