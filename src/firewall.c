@@ -4029,7 +4029,7 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
     /* Location is known. Print as "country, city/region".
      */
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
-    fw_buf_add ("%-*sgeo-IP : %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
+    fw_buf_add ("%-*sgeo-IP:  %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
   }
   else
   {

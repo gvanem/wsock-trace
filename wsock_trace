@@ -71,7 +71,7 @@
   pcap_enable = 0
   pcap_dump   = %TEMP%\wstrace.pcap
 
-  callee_level   = 1                 # How many stack-frames to unwind and show callers
+  callee_level   = 1                 # How many stack-frames to unwind and show for callers?
   cpp_demangle   = 1
   short_errors   = 1
   use_full_path  = 1                 # Report with full file-names in traces.
