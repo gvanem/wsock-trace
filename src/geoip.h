@@ -57,11 +57,11 @@ extern void geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
  * To build a version of `geoip.exe` that should support `g_cfg.GEOIP.use_generated`,
  * is bit of an "chicken and egg" problem. These 2 commands:
  * ```
- *   geoip.exe -4g geoip-gen4.c
- *   geoip.exe -6g geoip-gen6.c
+ *   geoip-null.exe -4g geoip-gen4.c
+ *   geoip-null.exe -6g geoip-gen6.c
  * ```
  *
- * will generate these files. The above `geoip.exe` is linked to the simple `geoip-null.c`
+ * will generate these files. The above `geoip-null.exe` is linked to the simple `geoip-null.c`
  * with only dummy functions for `geoip_smartlist_fixed_ipv4()` and `geoip_smartlist_fixed_ipv6()`.
  *
  * Then `geoip.exe` (or `wsock_trace.dll`) must be rebuilt and used with `g_cfg.GEOIP.use_generated = 1`
@@ -71,7 +71,7 @@ extern void geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
  *  \li `geoip_smartlist_fixed_ipv4()` in `gen-geoip4.c` and
  *  \li `geoip_smartlist_fixed_ipv6()` in `geoip-gen6.c`.
  */
-extern smartlist_t *geoip_smartlist_fixed (void *start, size_t el_size, unsigned num);
+extern smartlist_t *geoip_smartlist_fixed (const void *start, size_t el_size, unsigned num);
 
 /** These generated functions are defined in `gen-geoip4.c` and `geoip-gen6.c`.
  */
