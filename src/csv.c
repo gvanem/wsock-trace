@@ -46,12 +46,17 @@ static void state_normal (struct CSV_context *ctx)
     case '\n':
          ctx->line_num++;
          if (ctx->field_num > 0)     /* If field == 0, ignore empty lines */
-            ctx->state = STATE_STOP;
+              ctx->state = STATE_STOP;
+         else ctx->empty_lines++;
          break;
     case '#':
          if (ctx->field_num == 0)    /* If field == 0, ignore comment lines */
-              ctx->state = STATE_COMMENT;
-         else PUTC (ctx->c_in);
+         {
+           ctx->state = STATE_COMMENT;
+           ctx->comment_lines++;
+         }
+         else
+           PUTC (ctx->c_in);
          break;
     default:
          PUTC (ctx->c_in);
@@ -209,7 +214,7 @@ static const char *CSV_get_next_field (struct CSV_context *ctx)
   if (ctx->c_in == '\n')
      line--;
 
-  TRACE (2, "rec: %u, line: %u, field: %u: '%s'.\n", ctx->rec_num, line, ctx->field_num, ret);
+  TRACE (3, "rec: %u, line: %u, field: %u: '%s'.\n", ctx->rec_num, line, ctx->field_num, ret);
 
   if (new_state == STATE_EOF)
      return (NULL);
