@@ -174,11 +174,11 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
   if (g_cfg.trace_level >= 3)
   {
     struct in6_addr start_ip, end_ip;
-    char net_str     [MAX_IP6_SZ+1];
-    char mask_str    [MAX_IP6_SZ+1];
-    char ip_str      [MAX_IP6_SZ+1];
-    char start_ip_str[MAX_IP6_SZ+1];
-    char end_ip_str  [MAX_IP6_SZ+1];
+    char   net_str     [MAX_IP6_SZ+1];
+    char   mask_str    [MAX_IP6_SZ+1];
+    char   ip_str      [MAX_IP6_SZ+1];
+    char   start_ip_str[MAX_IP6_SZ+1];
+    char   end_ip_str  [MAX_IP6_SZ+1];
 
     _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.network, net_str, sizeof(net_str));
     _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.mask, mask_str, sizeof(mask_str));
@@ -228,14 +228,14 @@ static BOOL DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr
 
 BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
 {
-  if (!INET_util_addr_is_global(ip4,NULL))
+  if (!INET_util_addr_is_global(ip4, NULL))
      return (FALSE);
   return DNSBL_check_common (ip4, NULL, sbl_ref);
 }
 
 BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
 {
-  if (!INET_util_addr_is_global(NULL,ip6))
+  if (!INET_util_addr_is_global(NULL, ip6))
      return (FALSE);
   return DNSBL_check_common (NULL, ip6, sbl_ref);
 }
@@ -375,6 +375,12 @@ int DNSBL_test (void)
   return (rc);
 }
 
+/**
+ * Load and parse a DROP file.
+ * On first call, the `*prev` list is empty.
+ * Thus on the 2nd etc. call, this function appends the current smart-list to `*prev`
+ * and frees the current smart-list.
+ */
 static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist_parse_func parser)
 {
   if (file)
@@ -541,6 +547,9 @@ static int DNSBL_update_files (void)
   return (num);
 }
 
+/**
+ * Parser common to all DROP-type files.
+ */
 static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
 {
   struct DNSBL_info *dnsbl;
@@ -568,18 +577,24 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   smartlist_add (sl, dnsbl);
 }
 
+/**
+ * Parser for a "drop.txt" file.
+ */
 static void MS_CDECL DNSBL_parse_DROP (smartlist_t *sl, const char *line)
 {
   DNSBL_parse4 (sl, line, DNSBL_DROP);
 }
 
+/**
+ * Parser for a "edrop.txt" file.
+ */
 static void MS_CDECL DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
 {
   DNSBL_parse4 (sl, line, DNSBL_EDROP);
 }
 
-/*
- * Parse a "dropv6.txt" file.
+/**
+ * Parser for a "dropv6.txt" file.
  */
 static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 {
