@@ -73,23 +73,24 @@
   EXPORT INT           WSAAPI inet_pton (INT family, PCSTR addr_string, void *addr_buf);
 #endif
 
-extern BOOL       call_WSASetLastError, leading_zeroes;
+extern BOOL IPv6_leading_zeroes;
 
-extern BOOL       is_ip4_addr (const char *str);
-
-extern char       *wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
-extern int         wsock_trace_inet_pton (int family, const char *addr, void *dst);
-
-/*
- * As above, but does 'call_WSASetLastError = FALSE'.
- */
-extern char       *_wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
-extern int         _wsock_trace_inet_pton (int family, const char *addr, void *dst);
+extern char *wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
+extern int   wsock_trace_inet_pton (int family, const char *addr, void *dst);
 
 extern const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size);
 extern const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size);
 extern int         wsock_trace_inet_pton4 (const char *src, u_char *dst);
 extern int         wsock_trace_inet_pton6 (const char *src, u_char *dst);
+
+/*
+ * As above, but for for internal use or to be used before
+ * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
+ *
+ * These do 'call_WSASetLastError = FALSE'.
+ */
+extern char *_wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size);
+extern int   _wsock_trace_inet_pton (int family, const char *addr, void *dst);
 
 #endif
 

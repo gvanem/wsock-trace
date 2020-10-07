@@ -1441,7 +1441,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
    * Print an IPv6-address chunk like this:
    * `2001:0800::` (not like `2001:800::` which is default).
    */
-  leading_zeroes = TRUE;
+  IPv6_leading_zeroes = TRUE;
 
   trace_printf (head_fmt,       "bit",
                 cidr_width,     "CIDR",
@@ -1538,7 +1538,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
                   ip_width, mask_str,
                   total_str);
   }
-  leading_zeroes = FALSE;
+  IPv6_leading_zeroes = FALSE;
 }
 
 /**

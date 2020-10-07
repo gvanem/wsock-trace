@@ -35,19 +35,50 @@
 #endif
 
 #include "common.h"
+#include "init.h"
 #include "in_addr.h"
 
-/* \todo: these publics should be "Thread Local" variables.
+/**
+ * \todo: these publics should be "Thread Local" variables.
+ *
+ * Print an IPv6 address with leading zeros in each 16-bit chunk. Like:
+ * ```
+ *  2001:0800::
+ * ```
+ *
+ * and not like (which is default):
+ * ```
+ *  2001:800::
+ * ```
  */
-BOOL call_WSASetLastError = TRUE;
-BOOL leading_zeroes       = FALSE;
+BOOL IPv6_leading_zeroes = FALSE;
+
+/**
+ * Call the real `WSASetLastError()`.
+ */
+static BOOL call_WSASetLastError = TRUE;
 
 static const char hex_chars[] = "0123456789abcdef";
+
+/* Set to `p_WSASetLastError` in wsock_trace.c
+ */
+void (__stdcall *g_WSASetLastError)(int err) = NULL;
+
+#define WSA_SET_LAST_ERROR(err, force)          \
+        do {                                    \
+          if (call_WSASetLastError || force) {  \
+            TRACE (1, "err: %d from line %u\n", \
+                   err, __LINE__);              \
+            if (!g_WSASetLastError || 1)        \
+                  WSASetLastError (err);        \
+            else (*g_WSASetLastError) (err);    \
+          }                                     \
+        } while (0)
 
 /**
  * Check if `str` is simply an IPv4 address.
  */
-BOOL is_ip4_addr (const char *str)
+static BOOL is_ip4_addr (const char *str)
 {
   int ch;
 
@@ -77,8 +108,7 @@ BOOL is_ip4_addr (const char *str)
     case AF_INET6:
          return wsock_trace_inet_ntop6 ((const u_char*)src, dst, size);
     default:
-         if (call_WSASetLastError)
-            WSASetLastError (WSAEAFNOSUPPORT);
+         WSA_SET_LAST_ERROR (WSAEAFNOSUPPORT, 0);
          return (NULL);
   }
 }
@@ -102,8 +132,7 @@ EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
     case AF_INET6:
          return wsock_trace_inet_pton6 (src, (u_char*)dst);
     default:
-         if (call_WSASetLastError)
-            WSASetLastError (WSAEAFNOSUPPORT);
+         WSA_SET_LAST_ERROR (WSAEAFNOSUPPORT, 0);
          return (-1);
   }
 }
@@ -137,13 +166,13 @@ EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
          snprintf (addr, sizeof(addr), "%S", waddr);
          return wsock_trace_inet_pton6 (addr, (u_char*)waddr_dest);
     default:
-         WSASetLastError (WSAEAFNOSUPPORT);
+         WSA_SET_LAST_ERROR (WSAEAFNOSUPPORT, 1);
          /* fall through */
   }
   return (-1);
 }
 
-/* Undo the Cygwin hack at top.
+/* Undo the Cygwin hack at the top.
  */
 #if defined(__CYGWIN__)
 #undef InetNtopW
@@ -161,6 +190,10 @@ EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, siz
   return (res_buf);
 }
 
+/**
+ * This function is for internal use or to be used before
+ * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
+ */
 char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
 {
   BOOL save = call_WSASetLastError;
@@ -172,6 +205,10 @@ char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t
   return (rc);
 }
 
+/**
+ * This function is for internal use or to be used before
+ * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
+ */
 int _wsock_trace_inet_pton (int family, const char *addr, void *result)
 {
   BOOL save = call_WSASetLastError;
@@ -199,8 +236,7 @@ const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size)
 
   if ((size_t)sprintf(tmp,"%u.%u.%u.%u",src[0],src[1],src[2],src[3]) > size)
   {
-    if (call_WSASetLastError)
-       WSASetLastError (WSAEINVAL);
+    WSA_SET_LAST_ERROR (WSAEINVAL, 0);
     return (NULL);
   }
   return strcpy (dst, tmp);
@@ -297,7 +333,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
       tp += strlen (tp);
       break;
     }
-    if (leading_zeroes)
+    if (IPv6_leading_zeroes)
          tp += sprintf (tp, "%04lx", words[i]);
     else tp += sprintf (tp, "%lx", words[i]);
   }
@@ -314,8 +350,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
      return strcpy (dst, tmp);
 
 inval:
-  if (call_WSASetLastError)
-     WSASetLastError (WSAEINVAL);
+  WSA_SET_LAST_ERROR (WSAEINVAL, 0);
   return (NULL);
 }
 
@@ -378,8 +413,7 @@ int wsock_trace_inet_pton4 (const char *src, u_char *dst)
   }
 
 inval:
-  if (call_WSASetLastError)
-     WSASetLastError (WSAEINVAL);
+  WSA_SET_LAST_ERROR (WSAEINVAL, 0);
   return (0);
 }
 
@@ -495,12 +529,10 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
   return (1);
 
 inval:
-  if (call_WSASetLastError)
-     WSASetLastError (WSAEINVAL);
+  WSA_SET_LAST_ERROR (WSAEINVAL, 0);
   return (0);
 
 toolong:
-  if (call_WSASetLastError)
-     WSASetLastError (WSAENAMETOOLONG);
+  WSA_SET_LAST_ERROR (WSAENAMETOOLONG, 0);
   return (0);
 }
