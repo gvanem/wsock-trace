@@ -14,7 +14,6 @@
  * iana.c - Part of Wsock-Trace.
  */
 #include <limits.h>
-#include <errno.h>
 
 #if defined(__WATCOMC__)
   /*
@@ -26,23 +25,25 @@
 #endif
 
 #include "common.h"
+#include "csv.h"
 #include "smartlist.h"
 #include "inet_util.h"
 #include "in_addr.h"
 #include "init.h"
 #include "iana.h"
 
-static unsigned     rec_max = UINT_MAX;
-static unsigned     parse_errors_ip4;
-static unsigned     parse_errors_ip6;
+#ifdef TEST_IANA
+  static unsigned  rec_max = UINT_MAX;
+#endif
+
 static smartlist_t *iana_entries_ip4;
 static smartlist_t *iana_entries_ip6;
 
-static void                      iana_sort_lists (void);
-static void                      iana_load_and_parse (int family, const char *file);
-static int                       iana_add_entry (int family, const struct IANA_record *rec);
-static const struct IANA_record *iana_parse_file_ip4 (FILE *f, unsigned *rec_num, unsigned *line);
-static const struct IANA_record *iana_parse_file_ip6 (FILE *f, unsigned *rec_num, unsigned *line);
+static void iana_sort_lists (void);
+static void iana_load_and_parse (int family, const char *file);
+static int  iana_add_entry (const struct IANA_record *rec);
+static int  iana_CSV_add4 (struct CSV_context *ctx, const char *value);
+static int  iana_CSV_add6 (struct CSV_context *ctx, const char *value);
 
 /**
  * The main init function for this module.
@@ -157,9 +158,9 @@ void iana_dump (void)
   for (i = 0; i < max4; i++)
   {
     if (i == 0)
-       printf ("Dumping %d IANA IPv4 records (parse_errors_ip4: %u):\n"
+       printf ("Dumping %d IANA IPv4 records:\n"
                "   #  Net/mask misc                 date     whois                url"
-               "                     status\n", max4, parse_errors_ip4);
+               "                     status\n", max4);
 
     rec = smartlist_get (iana_entries_ip4, i);
     printf (" %3d: %s\n", i, iana_get_rec4(rec, TRUE));
@@ -169,10 +170,10 @@ void iana_dump (void)
   for (i = 0; i < max6; i++)
   {
     if (i == 0)
-       printf ("%sDumping %d IANA IPv6 records (parse_errors_ip6: %u):\n"
+       printf ("%sDumping %d IANA IPv6 records:\n"
                "   #  Net/mask         misc             date         whois"
                "                url                   status\n",
-               max4 > 0 ? "\n" : "", max6, parse_errors_ip6);
+               max4 > 0 ? "\n" : "", max6);
 
     rec = smartlist_get (iana_entries_ip6, i);
     printf (" %3d: %s\n", i, iana_get_rec6(rec, TRUE));
@@ -209,26 +210,12 @@ void iana_report (void)
  *  "IANA IPv4 Address Space Registry" or a
  *  "IPv6 Global Unicast Address Assignments" file.
  *
- * \param[in] family  the address family; AF_INET ir AF_INET6.
+ * \param[in] family  the address family; AF_INET or AF_INET6.
  * \param[in] file    the CSV file to read and parse.
  */
 static void iana_load_and_parse (int family, const char *file)
 {
-  unsigned line, rec_num;
-  FILE    *f;
-
-  if (!file || !file_exists(file))
-  {
-    TRACE (1, "file \"%s\" does not exist.\n", file);
-    return;
-  }
-
-  f = fopen (file, "rt");
-  if (!f)
-  {
-    TRACE (1, "Failed to open file \"%s\". errno: %d\n", file, errno);
-    return;
-  }
+  struct CSV_context ctx;
 
   assert (family == AF_INET || family == AF_INET6);
 
@@ -247,330 +234,143 @@ static void iana_load_and_parse (int family, const char *file)
        return;
   }
 
-  rec_num = 0;
-  line = 1;
-
-  while (!feof(f))
+  if (!file || !file_exists(file))
   {
-    const struct IANA_record *rec;
-    int   rc;
-
-    if (family == AF_INET)
-         rec = iana_parse_file_ip4 (f, &rec_num, &line);
-    else rec = iana_parse_file_ip6 (f, &rec_num, &line);
-
-    if (rec)
-         rc = iana_add_entry (family, rec);
-    else rc = 0;
-
-    if (rc < 0)  /* calloc() failed, give up */
-       break;
-    if (rec_num > rec_max)
-       break;
+    TRACE (1, "file \"%s\" does not exist.\n", file);
+    return;
   }
-  fclose (f);
+
+  memset (&ctx, '\0', sizeof(ctx));
+  ctx.file_name  = file;
+  ctx.num_fields = 7;
+  ctx.delimiter  = ',';
+  ctx.callback   = family == AF_INET ? iana_CSV_add4 : iana_CSV_add6;
+
+  #ifdef TEST_IANA
+  ctx.rec_max = rec_max;
+  #endif
+
+  CSV_open_and_parse_file (&ctx);
 }
 
 /**
- * A simple state-machine for parsing CSV records.
- */
-typedef enum STATE {
-        STATE_NO_CHANGE = 0,
-        STATE_NORMAL,
-        STATE_QUOTED,
-        STATE_ESCAPED,
-        STATE_STOP
-      } STATE;
-
-typedef STATE (*state_t) (int c_in, int *c_out, unsigned *line_num);
-
-static STATE state_normal (int c_in, int *c_out, unsigned *line_num)
-{
-  switch (c_in)
-  {
-    case -1:       /* EOF */
-    case ',':
-         return (STATE_STOP);
-    case '"':
-         return (STATE_QUOTED);
-    case '\r':     /* ignore */
-         break;
-    case '\n':
-         (*line_num)++;
-         return (STATE_STOP);
-    default:
-         *c_out = c_in;
-         break;
-  }
-  return (STATE_NO_CHANGE);
-}
-
-static STATE state_quoted (int c_in, int *c_out, unsigned *line_num)
-{
-  switch (c_in)
-  {
-    case -1:        /* EOF */
-         return (STATE_STOP);
-    case '"':
-         return (STATE_NORMAL);
-    case '\r':     /* ignore, but should not occur since `fopen (file, "rt")` was used */
-         break;
-    case '\n':     /* add a space in this field */
-         *c_out = ' ';
-         (*line_num)++;
-         break;
-    case '\\':
-         return (STATE_ESCAPED);
-    default:
-         *c_out = c_in;
-         break;
-  }
-  return (STATE_NO_CHANGE);
-}
-
-static STATE state_escaped (int c_in, int *c_out, unsigned *line_num)
-{
-  switch (c_in)
-  {
-    case -1:        /* EOF */
-         return (STATE_STOP);
-    case '"':       /* '\"' -> '"' */
-         *c_out = '"';
-         return (STATE_QUOTED);
-    case '\r':
-         break;
-    case '\n':
-         (*line_num)++;
-         break;
-    default:
-         return (STATE_QUOTED); /* Unsupported ctrl-char. Go back */
-  }
-  return (STATE_NO_CHANGE);
-}
-
-
-static const char *get_next_field (FILE *f, int field, unsigned rec_num, unsigned *line_num)
-{
-  static char buf [1000];
-  static state_t state = state_normal;
-  static STATE state_change = STATE_NO_CHANGE;
-  int    line, c_in, c_out;
-  char  *out = buf;
-
-  c_in = 0;
-  while (1)
-  {
-    c_in = fgetc (f);
-    c_out = 0;
-    state_change = (*state) (c_in, &c_out, line_num);
-
-    if (c_out && out < out + sizeof(buf) - 1)
-       *out++ = c_out;
-    if (state_change == STATE_STOP)
-       break;
-    if (state_change == STATE_NORMAL)
-       state = state_normal;
-    else if (state_change == STATE_QUOTED)
-       state = state_quoted;
-    else if (state_change == STATE_ESCAPED)
-       state = state_escaped;
-  }
-  *out = '\0';
-
-  /* There are no empty lines or lines with leading space or
-   * comments in an IANA file. But check for it anyway by recursing.
-   */
-  out = str_ltrim (buf);
-#if 0
-  if (*out == '#' || *out == ';' || (c_in != ',' && *out == '\0'))
-  {
-    (*line_num)++;
-    return get_next_field (f, field, rec_num, line_num);
-  }
-#endif
-
-  line = *line_num;
-  if (c_in == '\n')
-     line--;
-  TRACE (3, "rec: %u, line: %2u, field: %d: '%s'.\n", rec_num, line, field, out);
-  return (out);
-}
-
-/**
- * Parse IANA file and extract one IPv4 record.
+ * Match the fields for a record like this (family == AF_INET):
+ * ```
+ *   014/8,Administered by APNIC,2010-04,whois.apnic.net,https://rdap.apnic.net/,ALLOCATED,NOTE
+ *   ^   ^ ^                     ^       ^               ^                       ^         ^
+ *   |   | |                     |       |__ rec.whois   |                       |         |___ ignored
+ *   |   | |_ rec.misc           |__________ rec.date    |___ rec.url            |____ rec.status
+ *   |   |___ rec.mask                                        can be quoted
+ *   |_______ rec.net_num.ip4
+ * ```
  *
- * \param[in]      f          the file to read from.
- * \param[in,out]  rec_num    the record-counter. Starts at 0.
- * \param[in,out]  line_num   the line-counter for the record. Starts at 1.
- *
- * \retval  NULL   if the CSV-record could not be parsed.
- * \retval  `&rec` if the CSV-record was parsed and found to be valid.
+ * Note: The `rec.url` can be quoted and contain 2 URLs.
+ *       We split this and ignore this 2nd URL.
  */
-static const struct IANA_record *iana_parse_file_ip4 (FILE *f, unsigned *rec_num, unsigned *line_num)
+static int iana_CSV_add4 (struct CSV_context *ctx, const char *value)
 {
   static struct IANA_record rec;
-  const char *val;
-  char       *space;
-  int         field = 0;
+  int    rc = 1;
 
-  /* Clear the previous record.
-   */
-  memset (&rec, '\0', sizeof(rec));
-  rec.family = rec.mask = -1;
-  rec.net_num.ip4.s_addr = INADDR_NONE;
+  if (ctx->field_num == 0)
+     sscanf (value, "%lu/%d", (unsigned long*)&rec.net_num.ip4.s_addr, &rec.mask);
 
-  /**
-   * Match the fields for a record like this (family == AF_INET):
-   * ```
-   *   014/8,Administered by APNIC,2010-04,whois.apnic.net,https://rdap.apnic.net/,ALLOCATED,NOTE
-   *   ^   ^ ^                     ^       ^               ^                       ^         ^
-   *   |   | |                     |       |__ rec.whois   |                       |         |___ ignored
-   *   |   | |_ rec.misc           |__________ rec.date    |___ rec.url            |____ rec.status
-   *   |   |___ rec.mask                                        can be quoted
-   *   |_______ rec.net_num.ip4
-   * ```
-   *
-   * Note: The `rec.url` can be quoted and contain 2 URLs.
-   *       We split this and ignore this 2nd URL.
-   */
-  #define GET_FIELD(N)  do {                                               \
-                          field = N;                                       \
-                          val = get_next_field (f, N, *rec_num, line_num); \
-                          if (!val)                                        \
-                             goto quit;                                    \
-                         } while (0)
+  else if (ctx->field_num == 1)
+     _strlcpy (rec.misc, value, sizeof(rec.misc));
 
-  GET_FIELD (0);
-  if (sscanf(val, "%lu/%d", (unsigned long*)&rec.net_num.ip4.s_addr, &rec.mask) != 2)
-     goto quit;
+  else if (ctx->field_num == 2)
+    _strlcpy (rec.date, value, sizeof(rec.date));
 
-  GET_FIELD (1);
-  _strlcpy (rec.misc, val, sizeof(rec.misc));
+  else if (ctx->field_num == 3)
+     _strlcpy (rec.whois, value, sizeof(rec.whois));
 
-  GET_FIELD (2);
-  _strlcpy (rec.date, val, sizeof(rec.date));
-
-  GET_FIELD (3);
-  _strlcpy (rec.whois, val, sizeof(rec.whois));
-
-  GET_FIELD (4);
-  _strlcpy (rec.url, val, sizeof(rec.url));
-  space = strchr (rec.url, ' ');
-  if (space)
-     *space = '\0';
-
-  GET_FIELD (5);
-  _strlcpy (rec.status, val, sizeof(rec.status));
-
-  GET_FIELD (6);  /* This 'NOTE' field is ignored */
-
-  rec.family = AF_INET;
-  (*rec_num)++;
-  TRACE (3, "\n");
-  return (&rec);
-
-quit:
-  if (*line_num == 1)
+  else if (ctx->field_num == 4)
   {
-    TRACE (2, "  Ignoring parse-error on line %d, field %d.\n", *line_num, field);
+    char *space;
+
+    _strlcpy (rec.url, value, sizeof(rec.url));
+    space = strchr (rec.url, ' ');
+    if (space)
+       *space = '\0';
   }
-  else
+  else if (ctx->field_num == 5)
+     _strlcpy (rec.status, value, sizeof(rec.status));
+
+  else if (ctx->field_num == 6)   /* The value in this 'NOTE' field is ignored */
   {
-    TRACE (2, "  Unable to parse line %u, field %d.\n", *line_num, field);
-    parse_errors_ip4++;
+    rec.family = AF_INET;
+    rc = iana_add_entry (&rec);
+    memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
+    rec.family = rec.mask = -1;
+    rec.net_num.ip4.s_addr = INADDR_NONE;
   }
-  return (NULL);
+  return (rc);
 }
 
 /**
- * Parse IANA file and extract one IPv6 record.
+ * Match the fields for a record like this:
+ * ```
+ *   Prefix,Designation,Date,WHOIS,RDAP,Status,Note
  *
- * \param[in]      f          the file to read from.
- * \param[in,out]  rec_num    the record-counter. Starts at 0.
- * \param[in,out]  line_num   the line-counter for the record. Starts at 1.
+ *   2001:1a00::/23,RIPE NCC,2004-01-01,whois.ripe.net,https://rdap.db.ripe.net/,ALLOCATED,
+ *   ^           ^  ^        ^          ^              ^                         ^         ^
+ *   |           |  |        |          |__ rec.whois  |__ rec.url               |         |__ Note; thield field can be very long.
+ *   |           |  |        |__ rec.date                                        |             And over multiple lines. But then it's quoted.
+ *   |           |  |_ rec.misc                                                  |____ rec.status
+ *   |           |_ __ rec.mask
+ *   |________________ rec.net_num.ip6
+ * ```
  *
- * \retval  NULL   if the CSV-record could not be parsed.
- * \retval  `&rec` if the CSV-record was parsed and found to be valid.
+ * Note: The `rec.url` can be quoted and contain 2 URLs.
+ *       We split this and ignore this 2nd URL.
  */
-static const struct IANA_record *iana_parse_file_ip6 (FILE *f, unsigned *rec_num, unsigned *line_num)
+static int iana_CSV_add6 (struct CSV_context *ctx, const char *value)
 {
   static struct IANA_record rec;
-  const char *val;
-  char       *space;
-  char        ip6_addr [MAX_IP6_SZ+1];
-  int         field = 0;
+  static char   ip6_addr [MAX_IP6_SZ+1];
+  int    rc = 1;
 
-  /* Clear the previous record.
-   */
-  memset (&rec, '\0', sizeof(rec));
-  rec.family = rec.mask = -1;
-  memset (&rec.net_num.ip6, '\0', sizeof(rec.net_num.ip6)); /* IN6_IS_ADDR_UNSPECIFIED() */
-
-  /**
-   * Match the fields for a record like this:
-   * ```
-   *   Prefix,Designation,Date,WHOIS,RDAP,Status,Note
-   *
-   *   2001:1a00::/23,RIPE NCC,2004-01-01,whois.ripe.net,https://rdap.db.ripe.net/,ALLOCATED,
-   *   ^           ^  ^        ^          ^              ^                         ^         ^
-   *   |           |  |        |          |__ rec.whois  |__ rec.url               |         |__ Note; thield field can be very long.
-   *   |           |  |        |__ rec.date                                        |             And over multiple lines. But then it's quoted.
-   *   |           |  |_ rec.misc                                                  |____ rec.status
-   *   |           |_ __ rec.mask
-   *   |________________ rec.net_num.ip6
-   * ```
-   *
-   * Note: The `rec.url` can be quoted and contain 2 URLs.
-   *       We split this and ignore this 2nd URL.
-   */
-  GET_FIELD (0);
-
-  if (sscanf(val, "%50[^/]/%d", ip6_addr, &rec.mask) != 2)
-     goto quit;
-  wsock_trace_inet_pton6 (ip6_addr, (u_char*)&rec.net_num.ip6);
-
-  GET_FIELD (1);
-  _strlcpy (rec.misc, val, sizeof(rec.misc));
-
-  GET_FIELD (2);
-  _strlcpy (rec.date, val, sizeof(rec.date));
-
-  GET_FIELD (3);
-  _strlcpy (rec.whois, val, sizeof(rec.whois));
-
-  GET_FIELD (4);
-  _strlcpy (rec.url, val, sizeof(rec.url));
-  space = strchr (rec.url, ' ');
-  if (space)
-     *space = '\0';
-
-  GET_FIELD (5);
-  _strlcpy (rec.status, val, sizeof(rec.status));
-
-  GET_FIELD (6);   /* This 'NOTE' field is ignored */
-
-  rec.family = AF_INET6;
-  (*rec_num)++;
-  TRACE (3, "\n");
-  return (&rec);
-
-quit:
-  if (*line_num == 1)
+  if (ctx->field_num == 0)
   {
-    TRACE (2, "  Ignoring parse-error on line %d, field %d.\n", *line_num, field);
+    sscanf (value, "%50[^/]/%d", ip6_addr, &rec.mask);
+    wsock_trace_inet_pton6 (ip6_addr, (u_char*)&rec.net_num.ip6);
   }
-  else
+  else if (ctx->field_num == 1)
+     _strlcpy (rec.misc, value, sizeof(rec.misc));
+
+  else if (ctx->field_num == 2)
+    _strlcpy (rec.date, value, sizeof(rec.date));
+
+  else if (ctx->field_num == 3)
+     _strlcpy (rec.whois, value, sizeof(rec.whois));
+
+  else if (ctx->field_num == 4)
   {
-    TRACE (2, "  Unable to parse line %u, field %d.\n", *line_num, field);
-    parse_errors_ip6++;
+    char *space;
+
+    _strlcpy (rec.url, value, sizeof(rec.url));
+    space = strchr (rec.url, ' ');
+    if (space)
+       *space = '\0';
   }
-  return (NULL);
+  else if (ctx->field_num == 5)
+     _strlcpy (rec.status, value, sizeof(rec.status));
+
+  else if (ctx->field_num == 6)   /* The value in this 'NOTE' field is ignored */
+  {
+    rec.family = AF_INET6;
+    rc = iana_add_entry (&rec);
+    memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
+    rec.family = rec.mask = -1;
+    memset (&rec.net_num.ip6, '\0', sizeof(rec.net_num.ip6)); /* IN6_IS_ADDR_UNSPECIFIED() */
+  }
+  return (rc);
 }
 
 /**
  * Add an IANA record to the `iana_entries_ip4` ir `iana_entries_ip6` smart-list.
  */
-static int iana_add_entry (int family, const struct IANA_record *rec)
+static int iana_add_entry (const struct IANA_record *rec)
 {
   struct IANA_record *copy = malloc (sizeof(*copy));
 
@@ -578,7 +378,7 @@ static int iana_add_entry (int family, const struct IANA_record *rec)
      return (0);
 
   memcpy (copy, rec, sizeof(*copy));
-  if (family == AF_INET)
+  if (rec->family == AF_INET)
        smartlist_add (iana_entries_ip4, copy);
   else smartlist_add (iana_entries_ip6, copy);
   return (1);
@@ -803,8 +603,6 @@ DO_NOTHING (ip2loc_get_ipv6_entry)
 DO_NOTHING (ip2loc_num_ipv4_entries)
 DO_NOTHING (ip2loc_num_ipv6_entries)
 
-// struct config_table g_cfg;
-
 static int usage (void)
 {
   puts ("Usage: 'iana.exe [-d] <ipv4-address-space.csv>'\n"
@@ -834,12 +632,11 @@ int main (int argc, char **argv)
               */
              { AF_INET6, { 0 }, { 0x3F, 0xFE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5 } },
 
-             /* This is the address from test.c (Nairobi/Kenya):
-              * Part of the block:
+             /* This address is part of the block:
               *   2c00:0000::/12,AFRINIC,2006-10-03,whois.afrinic.net,"https://rdap.afrinic.net/rdap/
-               */
-             { AF_INET6, { 0 }, { 0x2C, 0x0F, 0xF4, 0x08 } },  /* But it fails?! */
-             { AF_INET6, { 0 }, { 0x2C, 0x01, 0xA0, 0x08 } }   /* Try this instead */
+              */
+             { AF_INET6, { 0 }, { 0x2C, 0xF0, 0xA0, 0x08 } },
+             { AF_INET6, { 0 }, { 0x2C, 0xF1, 0xA0, 0x08 } }  /* 1 address above */
 
            };
   int i, do_ip6 = 0;
@@ -851,13 +648,13 @@ int main (int argc, char **argv)
   {
     argc--;
     argv++;
-    g_cfg.trace_level = 2;
+    g_cfg.trace_level = 3;
   }
   else if (!strcmp(argv[1], "-d6"))
   {
     argc--;
     argv++;
-    g_cfg.trace_level = 2;
+    g_cfg.trace_level = 3;
     do_ip6 = 1;
   }
   if (!strcmp(argv[1], "-6"))
@@ -875,7 +672,7 @@ int main (int argc, char **argv)
        g_cfg.IANA.ip6_file = strdup (argv[1]);
   else g_cfg.IANA.ip4_file = strdup (argv[1]);
 
-//  rec_max = 4;
+// rec_max = 4;
 
   InitializeCriticalSection (&crit_sect);
   common_init();
