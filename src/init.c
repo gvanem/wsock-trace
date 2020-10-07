@@ -135,7 +135,10 @@ static void set_time_format (TS_TYPE *ret, const char *val)
   #if (CYGWIN_VERSION_DLL_COMBINED >= 2009000)
     #define HAVE_FMODL
   #endif
-#elif !defined(__WATCOMC__)
+#elif defined(__WATCOMC__)
+  #define HAVE_FMODL
+  #define fmodl(x, y) fmod(x, y)
+#else
   #define HAVE_FMODL
 #endif
 
