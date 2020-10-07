@@ -1116,7 +1116,7 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
 {
    if (ip4)
    {
-     /* Global for IPv4 means not status "RESERVED" by IANA
+     /** Global for IPv4 means not status "RESERVED" by IANA
       */
      if (ip4->S_un.S_un_b.s_b1 != 0x0  &&                       /* not 0/8        */
          ip4->S_un.S_un_b.s_b1 != 0x7F &&                       /* not 127/8      */
@@ -1128,11 +1128,22 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
    }
    else if (ip6)
    {
-     /*
+     /**
       * As IANA does not apply masks > 8-bit for Global Unicast block,
       * only the first 8-bit are significant for this test.
+      *
+      * According to:
+      *   https://www.iana.org/assignments/ipv6-unicast-address-assignments/ipv6-unicast-address-assignments.xhtml
+      *
+      * all 2001 - 2C00 blocks are ALLOCATED. So just that.
+      *
+      * \todo But use `iana_find_by_ip6_address()` to verify this.
       */
-     if ((ip6->s6_bytes[0] & 0xE0) == 0x20)
+#if 0
+     if ((ip6->s6_bytes[0] & 0xE0) == 0x20)   /* FALSE for e.g. '2c00::' */
+#else
+     if (swap16(ip6->s6_words[0]) >= 0x2001 && swap16(ip6->s6_words[0]) <= 0x2C00)
+#endif
      {
        /*
         * This may be extended in future as IANA assigns further ranges
