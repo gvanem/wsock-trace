@@ -203,6 +203,12 @@ static const char *CSV_get_next_field (struct CSV_context *ctx)
     if (new_state != old_state)
        TRACE (3, "%s -> %s\n", state_name(old_state), state_name(new_state));
 
+    if (new_state == STATE_STOP && ctx->delimiter == ' ')
+    {
+      while ((ctx->c_in = fgetc (ctx->file)) == ' ') ;
+      ungetc (ctx->c_in, ctx->file);
+    }
+
     if (new_state == STATE_STOP || new_state == STATE_EOF)
        break;
   }
@@ -359,6 +365,13 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
  * A simple test program for the above CVS-parser.
  */
 #ifdef TEST_CSV
+
+#include "getopt.h"
+
+/* For getopt.c.
+ */
+const char *program_name = "csv.exe";
+
 struct config_table g_cfg;
 
 /*
@@ -395,41 +408,47 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
 
 static int usage (void)
 {
-  puts ("Usage: csv.exe [-d] [-f field-delimiter] <-n number-of-fields> <file.csv>");
-  return (1);
+  puts ("Usage: csv.exe [-d] [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
+        "       -d: increase trace-level            (optional).\n"
+        "       -f: set field delimiter             (optional, default is ',').\n"
+        "       -m: max number of records to handle (optional).\n"
+        "       -n: number of fields in CSV-records (mandatory).");
+  exit (0);
 }
 
 int main (int argc, char **argv)
 {
   struct CSV_context ctx;
-
-  if (argc < 3)
-     return usage();
-
-  if (!strcmp(argv[1], "-d"))
-  {
-    argc--;
-    argv++;
-    g_cfg.trace_level = 3;
-  }
+  int    ch;
 
   memset (&ctx, '\0', sizeof(ctx));
 
-  if (!strcmp(argv[1], "-f"))
-  {
-    ctx.delimiter = argv[2][0];
-    argc -= 2;
-    argv += 2;
+  while ((ch = getopt(argc, argv, "df:m:n:h?")) != EOF)
+     switch (ch)
+     {
+       case 'f':
+            ctx.delimiter = optarg[0];
+            break;
+       case 'm':
+            ctx.rec_max = atoi (optarg);
+            break;
+       case 'n':
+            ctx.num_fields = atoi (optarg);
+            break;
+       case 'd':
+            g_cfg.trace_level++;
+            break;
+       case '?':
+       case 'h':
+       default:
+            usage();
+            break;
   }
-  if (!strcmp(argv[1], "-n"))
-  {
-    ctx.num_fields = atoi (argv[2]);
-    argc -= 2;
-    argv += 2;
-  }
+  argv += optind;
+  if (!*argv)
+     usage();
 
-  ctx.file_name = argv[1];
-//ctx.rec_max   = 4;
+  ctx.file_name = argv[0];
   ctx.callback  = csv_callback;
   return CSV_open_and_parse_file (&ctx) > 0 ? 0 : 1;
 }
