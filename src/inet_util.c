@@ -1556,7 +1556,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
  * Check that `INET_util_get_mask4()` is correct.
  *
  * Attempt to create a "Table of sample ranges" similar to this: \n
- *   https://www.mediawiki.org/wiki/Help:Range_blocks
+ *   https://www.mediawiki.org/wiki/Help:Range_blocks#Table
  */
 void INET_util_test_mask4 (void)
 {
@@ -1568,7 +1568,7 @@ void INET_util_test_mask4 (void)
  * Check that `INET_util_get_mask6()` is correct.
  *
  * Attempt to create a "Range Table" similar to this: \n
- *   https://www.mediawiki.org/wiki/Help:Range_blocks/IPv6
+ *   https://www.mediawiki.org/wiki/Help:Range_blocks/IPv6#Range_table
  */
 void INET_util_test_mask6 (void)
 {
