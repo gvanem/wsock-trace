@@ -49,6 +49,7 @@ echo   use_winhttp            = 0                              >> wsock_trace.ap
 echo [geoip]                                                   >> wsock_trace.appveyor
 echo   enable                 = 1                              >> wsock_trace.appveyor
 echo   use_generated          = 0                              >> wsock_trace.appveyor
+echo   show_position          = 1                              >> wsock_trace.appveyor
 echo   max_days               = 10                             >> wsock_trace.appveyor
 echo   ip4_file               = %CD%\geoip                     >> wsock_trace.appveyor
 echo   ip6_file               = %CD%\geoip6                    >> wsock_trace.appveyor
