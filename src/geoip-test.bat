@@ -12,6 +12,8 @@ if %1. == -h. (
   echo Usage: %0 [-h ^| -d ^| --ip2loc_4 ^| --ip2loc_6]
   echo ^    -h:         this help.
   echo ^    -d:         sets "WSOCK_TRACE_LEVEL=2".
+  echo ^    -r4:        test 10 random IPv4 addresses.
+  echo ^    -r6:        test 10 random IPv6 addresses.
   echo ^    --ip2loc_4: test using addresses in "%TEST_INPUT_4%".
   echo ^    --ip2loc_6: test using addresses in "%TEST_INPUT_6%".
   exit /b 0
@@ -21,6 +23,16 @@ if %1. == -d. (
   set WSOCK_TRACE_LEVEL=2
   echo on
   shift
+)
+
+if %1. == -r4. (
+  %~dp0geoip.exe %1 %2 %3 %4
+  exit /b 0
+)
+
+if %1. == -r6. (
+  %~dp0geoip.exe %1 %2 %3 %4
+  exit /b 0
 )
 
 if %1. == --ip2loc_4. (
