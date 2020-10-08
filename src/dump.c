@@ -2313,6 +2313,11 @@ void dump_IANA_addresses (int family, const char **addresses)
       trace_printf ("Unknown family: %d", family);
       break;
     }
+    if (addresses[i+1])  /* add a newline if there is another address after this */
+    {
+      trace_putc ('\n');
+      trace_indent (g_cfg.trace_indent + 2 + strlen("IANA:   "));
+    }
   }
   if (i == 0)
      trace_puts ("None!?");
@@ -2376,6 +2381,11 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
     {
       trace_printf ("Unknown family: %d", ai->ai_family);
       break;
+    }
+    if (ai->ai_next)  /* add a newline if there is another address after this */
+    {
+      trace_putc ('\n');
+      trace_indent (g_cfg.trace_indent + 2 + strlen("IANA:   "));
     }
   }
   if (num == 0)
