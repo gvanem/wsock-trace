@@ -114,7 +114,7 @@ static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
     case 0:
          if (strchr(value, '%'))
          {
-           TRACE (1, "Ignoring scoped addr: '%s'\n", value);
+           TRACE (2, "Ignoring scoped addr: '%s'\n", value);
            family = -1;
          }
          else if (_wsock_trace_inet_pton(AF_INET, value, (u_char*)&ip4) == 1)
