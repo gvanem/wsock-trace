@@ -34,7 +34,7 @@ static void state_normal (struct CSV_context *ctx)
   switch (ctx->c_in)
   {
     case -1:
-         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+         TRACE (3, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
                 __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
          ctx->state = STATE_EOF;
          break;
@@ -73,7 +73,7 @@ static void state_quoted (struct CSV_context *ctx)
   switch (ctx->c_in)
   {
     case -1:
-         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+         TRACE (3, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
                 __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
          ctx->state = STATE_EOF;
          break;
@@ -104,7 +104,7 @@ static void state_escaped (struct CSV_context *ctx)
   switch (ctx->c_in)
   {
     case -1:
-         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+         TRACE (3, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
                 __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
          ctx->state = STATE_EOF;
          break;
@@ -132,7 +132,7 @@ static void state_comment (struct CSV_context *ctx)
   switch (ctx->c_in)
   {
     case -1:
-         TRACE (2, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
+         TRACE (3, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
                 __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
          ctx->state = STATE_EOF;
          break;
@@ -302,7 +302,7 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     TRACE (0, "Illegal field delimiter '%c'.\n", ctx->delimiter);
     return (0);
   }
-  TRACE (2, "Using field-delimiter: '%c'.\n", ctx->delimiter);
+  TRACE (3, "Using field-delimiter: '%c'.\n", ctx->delimiter);
 
   if (ctx->rec_max == 0)
      ctx->rec_max = UINT_MAX;
