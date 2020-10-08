@@ -2426,7 +2426,7 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
          err = "WSA_WAIT_IO_COMPLETION";
     else if (rc == WSA_WAIT_TIMEOUT)
          err = "WSA_WAIT_TIMEOUT";
-    else if (rc >= WSA_WAIT_EVENT_0 && rc < (WSA_WAIT_EVENT_0 + num_ev))
+    else if (rc < (WSA_WAIT_EVENT_0 + num_ev))
     {
       if (wait_all)
            strcpy (buf, ", all completed");
@@ -2443,7 +2443,7 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
 
     /* Update all sockets with overlapped operations that matches this event.
      */
-    if (rc >= WSA_WAIT_EVENT_0 && rc < (WSA_WAIT_EVENT_0 + num_ev))
+    if (rc < (WSA_WAIT_EVENT_0 + num_ev))
        overlap_recall_all (ev);
   }
 
