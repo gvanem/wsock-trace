@@ -9,7 +9,7 @@
 #define IN6ADDRSZ   16
 
 #if defined(IN_WSOCK_TRACE_C) && defined(__WATCOMC__)
-  #define u_char unsigned char
+#define u_char unsigned char
 #endif
 
 /*
@@ -43,11 +43,11 @@
 #endif
 
 #if !defined(s6_bytes)  /* mingw.org */
-  #define s6_bytes _s6_bytes
+#define s6_bytes _s6_bytes
 #endif
 
 #if !defined(s6_words)  /* mingw.org */
-  #define s6_words _s6_words
+#define s6_words _s6_words
 #endif
 
 /*
