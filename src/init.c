@@ -769,6 +769,12 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   else if (!stricmp(key, "use_generated"))
        g_cfg.GEOIP.use_generated = atoi (val);
 
+  else if (!stricmp(key, "show_position"))
+       g_cfg.GEOIP.show_position = atoi (val);
+
+  else if (!stricmp(key, "show_map_url"))
+       g_cfg.GEOIP.show_map_url = atoi (val);
+
   else if (!stricmp(key, "ip4_file"))
        g_cfg.GEOIP.ip4_file = strdup (val);
 

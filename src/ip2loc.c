@@ -97,17 +97,26 @@
 #define FLG_COUNTRY_LONG    0x00002
 #define FLG_REGION          0x00004
 #define FLG_CITY            0x00008
+#define FLG_ISP             0x00010   /* never used */
+#define FLG_LATITUDE        0x00020
+#define FLG_LONGITUDE       0x00040
 
 /**
  * \def IP2LOC_FLAGS
  *
- * The flags used to look up an database-entry for an IPv4/IPv6-address
+ * The default flags used to look up an database-entry for an IPv4/IPv6-address
  * with these members:
  *
  *  \li `struct ip2loc_entry::country_short`,
  *  \li `struct ip2loc_entry::country_long`,
  *  \li `struct ip2loc_entry::city`,
  *  \li `struct ip2loc_entry::region`.
+ *
+ * And optionally:
+ *  \li `struct ip2loc_entry::latitude`.
+ *  \li `struct ip2loc_entry::longitude`.
+ *
+ * if `g_cfg.GEOIP.show_position` or `g_cfg.GEOIP.show_map_url` is TRUE.
  */
 
 #if 0
@@ -120,6 +129,8 @@
    */
   #define IP2LOC_FLAGS  (FLG_COUNTRY_SHORT | FLG_REGION | FLG_CITY)
 #endif
+
+static uint32_t lookup_flags = IP2LOC_FLAGS;
 
 #define MAX_IPV4_RANGE      4294967295U /* ULONG_MAX */
 #define IPV4                0
@@ -178,14 +189,17 @@ static DWORD num_4_loops;
  */
 static DWORD num_6_loops;
 
-static uint8_t COUNTRY_POSITION[25] = { 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
-static uint8_t REGION_POSITION[25]  = { 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
-static uint8_t CITY_POSITION[25]    = { 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
+static uint8_t COUNTRY_POSITION[25]   = { 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+static uint8_t REGION_POSITION[25]    = { 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+static uint8_t CITY_POSITION[25]      = { 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
+static uint8_t LATITUDE_POSITION[25]  = { 0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
+static uint8_t LONGITUDE_POSITION[25] = { 0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 };
 
 static void        IP2Location_initialize (IP2Location *loc);
 static void        IP2Location_read_ipv6_addr (IP2Location *loc, uint32_t position, struct in6_addr *addr);
 static uint32_t    IP2Location_read32 (IP2Location *loc, uint32_t position);
 static uint8_t     IP2Location_read8 (IP2Location *loc, uint32_t position);
+static float       IP2Location_read_float (IP2Location *loc, uint32_t position);
 static int32_t     IP2Location_DB_set_shared_memory (IP2Location *loc);
 static void        IP2Location_close (IP2Location *loc);
 static const char *IP2Location_api_version_str (void);
@@ -281,6 +295,9 @@ BOOL ip2loc_init (void)
 
   if (!ip2loc_handle)
      ip2loc_handle = open_file (g_cfg.GEOIP.ip2location_bin_file);
+
+  if (g_cfg.GEOIP.show_position || g_cfg.GEOIP.show_map_url)
+     lookup_flags |= (FLG_LATITUDE + FLG_LONGITUDE);
 
   return (ip2loc_handle != NULL);
 }
@@ -436,7 +453,7 @@ static void IP2Location_read_str (IP2Location *loc, uint32_t position, char *ret
  *
  * \param[in] loc      the current database structure; equals `ip2loc_handle`.
  * \param[in] rowaddr  the database row.
- * \param[in] mode     the flags used for lookup; equals `IP2LOC_FLAGS`.
+ * \param[in] mode     the flags used for lookup; equals `lookup_flags`.
  * \param[out] out     the entry to return.
  *
  * \note
@@ -452,21 +469,30 @@ static void IP2Location_read_record (IP2Location *loc, uint32_t rowaddr, uint32_
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val, out->country_short, sizeof(out->country_short));
   }
+
   if ((mode & FLG_COUNTRY_LONG) && COUNTRY_POSITION[dbtype])  /* No need to call this. Remove? */
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (COUNTRY_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val+3, out->country_long, sizeof(out->country_long));
   }
+
   if ((mode & FLG_REGION) && REGION_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (REGION_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val, out->region, sizeof(out->region));
   }
+
   if ((mode & FLG_CITY) && CITY_POSITION[dbtype])
   {
     val = IP2Location_read32 (loc, rowaddr + 4 * (CITY_POSITION[dbtype]-1));
     IP2Location_read_str (loc, val, out->city, sizeof(out->city));
   }
+
+  if ((mode & FLG_LATITUDE) && (LATITUDE_POSITION[dbtype]))
+     out->latitude = IP2Location_read_float (loc, rowaddr + 4 * (LATITUDE_POSITION[dbtype] - 1));
+
+  if ((mode & FLG_LONGITUDE) && (LONGITUDE_POSITION[dbtype]))
+     out->longitude = IP2Location_read_float (loc, rowaddr + 4 * (LONGITUDE_POSITION[dbtype]-1));
 }
 
 /**
@@ -714,6 +740,23 @@ static uint8_t IP2Location_read8 (IP2Location *loc, uint32_t position)
 }
 
 /**
+ * Read a float value from shared-memory.
+ */
+static float IP2Location_read_float (IP2Location *loc, uint32_t position)
+{
+  float ret = 0.0;
+
+  if ((uint64)loc->sh_mem_ptr + position >= loc->sh_mem_max)
+  {
+    loc->sh_mem_index_errors++;
+    return (0.0);
+  }
+  memcpy (&ret, &loc->sh_mem_ptr[position-1], 4);
+  return (ret);
+}
+
+
+/**
  * This avoids the call to `inet_pton()` since the passed `addr`
  * should be a valid IPv4-address.
  */
@@ -725,7 +768,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
   parsed_ipv.ipv4   = _byteswap_ulong (addr->s_addr);
 
   memset (out, '\0', sizeof(*out));
-  if (!IP2Location_get_ipv4_record(ip2loc_handle, IP2LOC_FLAGS, parsed_ipv, out))
+  if (!IP2Location_get_ipv4_record(ip2loc_handle, lookup_flags, parsed_ipv, out))
      return (FALSE);
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
@@ -753,7 +796,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
   }
 
   memset (out, '\0', sizeof(*out));
-  if (!IP2Location_get_ipv6_record(ip2loc_handle, IP2LOC_FLAGS, parsed_ipv, out))
+  if (!IP2Location_get_ipv6_record(ip2loc_handle, lookup_flags, parsed_ipv, out))
      return (FALSE);
 
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",

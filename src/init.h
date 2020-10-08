@@ -72,6 +72,8 @@ struct IANA_cfg {
 struct GEOIP_cfg {
        BOOL    enable;
        BOOL    use_generated;
+       BOOL    show_position;
+       BOOL    show_map_url;
        int     max_days;
        char   *ip4_file;
        char   *ip6_file;

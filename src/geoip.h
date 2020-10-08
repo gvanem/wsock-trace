@@ -30,11 +30,21 @@ struct ipv6_node {
  * A structure as returned from functions in ip2loc.c.
  */
 struct ip2loc_entry {
-       char country_short[3];       /**< The short country name of this entry */
-       char country_long[30];       /**< The full country name of this entry */
-       char city[40];               /**< The city name of this entry (if any) */
-       char region[40];             /**< The region name of this entry (if any) */
+       char  country_short[3];      /**< The short country name of this entry */
+       char  country_long[30];      /**< The full country name of this entry */
+       char  city[40];              /**< The city name of this entry (if any) */
+       char  region[40];            /**< The region name of this entry (if any) */
+       float latitude;              /**< The latitude of this entry (if any) */
+       float longitude;             /**< The longitude of this entry (if any) */
      };
+
+/**\typedef position
+ * A structure returned from `geoip_get_position_by_ipv4()` and `geoip_get_position_by_ipv6()`.
+ */
+typedef struct position {
+        float latitude;            /**< The latitude of this entry (if any) */
+        float longitude;           /**< The longitude of this entry (if any) */
+      } position;
 
 extern int         geoip_init (DWORD *_num4, DWORD *_num6);
 extern void        geoip_exit (void);
@@ -44,6 +54,8 @@ extern const char *geoip_get_long_name_by_id (int number);
 extern const char *geoip_get_long_name_by_A2 (const char *short_name);
 extern const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4);
 extern const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6);
+const position    *geoip_get_position_by_ipv4 (const struct in_addr  *ip4);
+const position    *geoip_get_position_by_ipv6 (const struct in6_addr *ip6);
 extern uint64      geoip_get_stats_by_idx    (int idx);
 extern uint64      geoip_get_stats_by_number (int number);
 extern void        geoip_ipv4_add_specials (void);

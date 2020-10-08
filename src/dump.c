@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <limits.h>
+#include <math.h>
 #include <assert.h>
 #include <ctype.h>
 
@@ -2052,8 +2053,10 @@ static const char *dump_aliases (char **aliases)
  */
 static const char *cc_last   = NULL;  /* CountryCode of previous address */
 static const char *loc_last  = NULL;  /* Location of previous address */
+static position    pos_last;          /* Position of previous address */
 static BOOL        cc_equal  = FALSE;
 static BOOL        loc_equal = FALSE;
+static BOOL        pos_equal = FALSE;
 
 static int trace_printf_cc (const char            *country_code,
                             const char            *location,
@@ -2079,6 +2082,30 @@ static int trace_printf_cc (const char            *country_code,
     loc_equal = (location && loc_last && !strcmp(location, loc_last));
     if (location && !loc_equal)
        trace_printf (", %s", location);
+
+    if (g_cfg.GEOIP.show_position || g_cfg.GEOIP.show_map_url)
+    {
+      const position *pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
+
+      if (pos)
+           pos_equal = !memcmp(pos, &pos_last, sizeof(*pos));
+      else pos_equal = FALSE;
+
+      if (pos && !pos_equal)
+      {
+        if (g_cfg.GEOIP.show_position)
+           trace_printf (", Pos: %.3f%c, %.3f%c",
+                         fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
+                         fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
+
+        if (g_cfg.GEOIP.show_map_url)
+           trace_printf ("\n%*s        URL: https://www.google.com/maps/@%.5f,%.5f,10z",
+                         g_cfg.trace_indent+2, "", pos->latitude, pos->longitude);
+      }
+      if (pos)
+           memcpy (&pos_last, pos, sizeof(pos_last));
+      else memset (&pos_last, '\0', sizeof(pos_last));
+    }
 
     cc_last  = country_code;
     loc_last = location;
@@ -2140,18 +2167,21 @@ void dump_countries (int type, const char **addresses)
     const struct in6_addr *a6  = NULL;
     const char            *cc  = NULL;
     const char            *loc = NULL;
+    const position        *pos = NULL;
 
     if (type == AF_INET)
     {
       a4  = (const struct in_addr*) addresses[i];
       cc  = geoip_get_country_by_ipv4 (a4);
       loc = geoip_get_location_by_ipv4 (a4);
+      pos = geoip_get_position_by_ipv4 (a4);
     }
     else if (type == AF_INET6)
     {
       a6  = (const struct in6_addr*) addresses[i];
       cc  = geoip_get_country_by_ipv6 (a6);
       loc = geoip_get_location_by_ipv6 (a6);
+      pos = geoip_get_position_by_ipv6 (a6);
     }
     else
     {

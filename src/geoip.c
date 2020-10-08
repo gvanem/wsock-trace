@@ -53,6 +53,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <errno.h>
+#include <math.h>
 #include <windows.h>
 #include <wininet.h>
 
@@ -564,7 +565,7 @@ static int geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *
 }
 
 /**
- * This is global here to get the location (city and region) later on.
+ * This is global here to get the location (city, region and optionally latitude/longitude) later on.
  */
 static struct ip2loc_entry g_ip2loc_entry;
 
@@ -664,7 +665,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
  * Assumes `geoip_get_country_by_ipv4()` was just called for this address.
  * Currently only works when `ip2location_bin_file` is present.
  *
- * \param[in] ip4  The IPv4 address to get the location for.
+ * \param[in] ip4  The IPv4 address to get the location for (not used though).
  */
 const char *geoip_get_location_by_ipv4 (const struct in_addr *ip4)
 {
@@ -695,6 +696,58 @@ const char *geoip_get_location_by_ipv6 (const struct in6_addr *ip6)
   {
     snprintf (buf, sizeof(buf), "%s/%s", g_ip2loc_entry.city, g_ip2loc_entry.region);
     return (buf);
+  }
+  ARGSUSED (ip6);
+  return (NULL);
+}
+
+/**
+ * Given an IPv4 address, return the position (latitude+longitude).
+ *
+ * Assumes `geoip_get_country_by_ipv4()` was just called for this address.
+ * Currently only works when `ip2location_bin_file` is present.
+ *
+ * \param[in] ip4   The IPv4 address to get the location for (not used though).
+ * \retval    NULL  if last IP2Location lookup failed.
+ *            !NULL if last IP2Location lookup succeeded.
+ *            But both `ret->longitude` and `ret->latitude` could be 0.0 depending on the
+ *            IP2location file used.
+ */
+const position *geoip_get_position_by_ipv4 (const struct in_addr *ip4)
+{
+  static struct position ret;
+
+  if (IP2LOC_IS_GOOD())
+  {
+    ret.latitude  = g_ip2loc_entry.latitude;   /* Both of these could be 0.0 depending on the IP2location file used. */
+    ret.longitude = g_ip2loc_entry.longitude;
+    return (&ret);
+  }
+  ARGSUSED (ip4);
+  return (NULL);
+}
+
+/**
+ * Given an IPv6 address, return the position (latitude+longitude).
+ *
+ * Assumes `geoip_get_country_by_ipv6()` was just called for this address.
+ * Currently only works when `ip2location_bin_file` is present.
+ *
+ * \param[in] ip6   The IPv4 address to get the location for (not used though).
+ * \retval    NULL  if last IP2Location lookup failed.
+ *            !NULL if last IP2Location lookup succeeded.
+ *            But both `ret->longitude` and `ret->latitude` could be 0.0 depending on the
+ *            IP2location file used.
+ */
+const position *geoip_get_position_by_ipv6 (const struct in6_addr *ip6)
+{
+  static struct position ret;
+
+  if (IP2LOC_IS_GOOD())
+  {
+    ret.latitude  = g_ip2loc_entry.latitude;   /* Both of these could be 0.0 depending on the IP2location file used. */
+    ret.longitude = g_ip2loc_entry.longitude;
+    return (&ret);
   }
   ARGSUSED (ip6);
   return (NULL);
@@ -1706,6 +1759,7 @@ static void test_addr_common (const struct in_addr  *a4,
   const char *remark   = NULL;
   const char *cc;
   const BYTE *nibble;
+  const position *pos;
   int   save, flag, width = 0;
   char  buf1 [100];
   char  buf2 [100];
@@ -1745,20 +1799,20 @@ static void test_addr_common (const struct in_addr  *a4,
   }
   else
   {
-    if (INET_util_addr_is_zero(a4,a6))
+    if (INET_util_addr_is_zero(a4, a6))
        comment = "NULL-addr";
-    else if (INET_util_addr_is_multicast(a4,a6))
+    else if (INET_util_addr_is_multicast(a4, a6))
        comment = "Multicast";
-    else if (INET_util_addr_is_special(a4,a6,&remark))
+    else if (INET_util_addr_is_special(a4, a6, &remark))
        comment = "Special";
-    else if (!INET_util_addr_is_global(a4,a6))
+    else if (!INET_util_addr_is_global(a4, a6))
        comment = "Not global";
     else
        comment = "Unallocated?";
 
     if (remark)
     {
-      if (!strcmp(remark,"6to4"))
+      if (!strcmp(remark, "6to4"))
       {
         nibble = (const BYTE*) &a6->s6_words[1]; /* = IN6_EXTRACT_V4ADDR_FROM_6TO4 (a6); */
         snprintf (buf1, sizeof(buf1), "%s (6to4: %u.%u.%u.%u)",
@@ -1786,6 +1840,26 @@ static void test_addr_common (const struct in_addr  *a4,
   width = 60;
 
   printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
+
+  pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
+
+  if (g_cfg.GEOIP.show_position)
+  {
+    if (pos)
+         printf ("  Pos: %.3f%c, %.3f%c\n",
+                 fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
+                 fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
+    else printf ("  Pos: <none>\n");
+  }
+
+  if (g_cfg.GEOIP.show_map_url)
+  {
+    const char *zoom = "10z";
+
+    if (pos)
+         printf ("  URL: https://www.google.com/maps/@%.5f,%.5f,%s\n\n", pos->latitude, pos->longitude, zoom);
+    else printf ("  URL: <none>\n\n");
+  }
 
   /** Check the global IPv4 / IPv6 address for membership in a SpamHaus `DROP` / `EDROP` list
    */
