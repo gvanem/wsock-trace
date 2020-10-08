@@ -1521,12 +1521,16 @@ void wsock_trace_init (void)
 
 #if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
-/*
- * Used as e.g. 'INIT_PTR (p_WSAStartup)' which expands to
- *   'init_ptr ((const void**)&p_WSAStartup, "p_WSAStartup")'.
+/**
+ * Check if a Winsock function pointer was set.
+ * If it was not set and is not an optional function,
+ * ause a `FATAL()` exit.
+ *
+ * Used as e.g. 'CHECK_PTR (p_WSAStartup)' which expands to
+ *   'check_ptr ((const void**)&p_WSAStartup, "p_WSAStartup")'.
  * Hence 'func_name' should be 'ptr_name + 2'.
  */
-void init_ptr (const void **ptr, const char *ptr_name)
+void check_ptr (const void **ptr, const char *ptr_name)
 {
   const char *func_name = ptr_name + 2;
 

@@ -60,15 +60,15 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 #endif
 
 /**
- * \def INIT_PTR()
+ * \def CHECK_PTR()
  *   All `p_function` pointers below are checked before use with this
- *   macro. `init_ptr()` makes sure `wsock_trace_init()` is called once
+ *   macro. `check_ptr()` makes sure `wsock_trace_init()` is called once
  *   and `p_function` is not NULL.
 */
 #if defined(USE_DETOURS)   /* \todo */
-  #define INIT_PTR(ptr)    /* */
+  #define CHECK_PTR(ptr)    /* */
 #else
-  #define INIT_PTR(ptr) init_ptr ((const void**)&ptr, #ptr)
+  #define CHECK_PTR(ptr) check_ptr ((const void**)&ptr, #ptr)
 #endif
 
 /**
@@ -783,7 +783,7 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 {
   int rc;
 
-  INIT_PTR (p_WSAStartup);
+  CHECK_PTR (p_WSAStartup);
   rc = (*p_WSAStartup) (ver, data);
 
   cleaned_up = 0;
@@ -810,7 +810,7 @@ EXPORT int WINAPI WSACleanup (void)
 {
   int rc;
 
-  INIT_PTR (p_WSACleanup);
+  CHECK_PTR (p_WSACleanup);
   rc = (*p_WSACleanup)();
 
   ENTER_CRIT();
@@ -832,7 +832,7 @@ EXPORT int WINAPI WSAGetLastError (void)
 {
   int rc;
 
-  INIT_PTR (p_WSAGetLastError);
+  CHECK_PTR (p_WSAGetLastError);
   rc = (*p_WSAGetLastError)();
 
   ENTER_CRIT();
@@ -843,7 +843,7 @@ EXPORT int WINAPI WSAGetLastError (void)
 
 EXPORT void WINAPI WSASetLastError (int err)
 {
-  INIT_PTR (p_WSASetLastError);
+  CHECK_PTR (p_WSASetLastError);
   (*p_WSASetLastError) (err);
 
   ENTER_CRIT();
@@ -858,7 +858,7 @@ EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
 {
   SOCKET rc;
 
-  INIT_PTR (p_WSASocketA);
+  CHECK_PTR (p_WSASocketA);
   rc = (*p_WSASocketA) (af, type, protocol, proto_info, group, flags);
 
   ENTER_CRIT();
@@ -881,7 +881,7 @@ EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol,
 {
   SOCKET rc;
 
-  INIT_PTR (p_WSASocketW);
+  CHECK_PTR (p_WSASocketW);
   rc = (*p_WSASocketW) (af, type, protocol, proto_info, group, flags);
 
   ENTER_CRIT();
@@ -902,7 +902,7 @@ EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_I
 {
   int rc;
 
-  INIT_PTR (p_WSADuplicateSocketA);
+  CHECK_PTR (p_WSADuplicateSocketA);
   rc = (*p_WSADuplicateSocketA) (s, process_id, proto_info);
 
   ENTER_CRIT();
@@ -921,7 +921,7 @@ EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_I
 {
   int rc;
 
-  INIT_PTR (p_WSADuplicateSocketW);
+  CHECK_PTR (p_WSADuplicateSocketW);
   rc = (*p_WSADuplicateSocketW) (s, process_id, proto_info);
 
   ENTER_CRIT();
@@ -944,7 +944,7 @@ EXPORT INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
 {
   INT rc;
 
-  INIT_PTR (p_WSAAddressToStringA);
+  CHECK_PTR (p_WSAAddressToStringA);
   rc = (*p_WSAAddressToStringA) (address, address_len, proto_info,
                                  result_string, result_string_len);
   ENTER_CRIT();
@@ -966,7 +966,7 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
 {
   INT rc;
 
-  INIT_PTR (p_WSAAddressToStringW);
+  CHECK_PTR (p_WSAAddressToStringW);
   rc = (*p_WSAAddressToStringW) (address, address_len, proto_info,
                                  result_string, result_string_len);
   ENTER_CRIT();
@@ -990,7 +990,7 @@ EXPORT INT WINAPI WSAStringToAddressA (char              *address_str,
 {
   INT rc;
 
-  INIT_PTR (p_WSAStringToAddressA);
+  CHECK_PTR (p_WSAStringToAddressA);
   rc = (*p_WSAStringToAddressA) (address_str, address_fam, protocol_info, address, address_len);
 
   ENTER_CRIT();
@@ -1007,7 +1007,7 @@ EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *address_str,
 {
   INT rc;
 
-  INIT_PTR (p_WSAStringToAddressW);
+  CHECK_PTR (p_WSAStringToAddressW);
   rc = (*p_WSAStringToAddressW) (address_str, address_fam, protocol_info, address, address_len);
 
   ENTER_CRIT();
@@ -1024,7 +1024,7 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, void *vals, DWORD size_in,
   const char *in_out = "";
   int   rc;
 
-  INIT_PTR (p_WSAIoctl);
+  CHECK_PTR (p_WSAIoctl);
   rc = (*p_WSAIoctl) (s, code, vals, size_in, out_buf, out_size, size_ret, ov, func);
 
   ENTER_CRIT();
@@ -1071,7 +1071,7 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
 {
   int rc;
 
-  INIT_PTR (p_WSAConnect);
+  CHECK_PTR (p_WSAConnect);
   rc = (*p_WSAConnect) (s, name, namelen, caller_data, callee_data, SQOS, GQOS);
 
   ENTER_CRIT();
@@ -1105,7 +1105,7 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
   BOOL rc;
   char tv_buf[30];
 
-  INIT_PTR (p_WSAConnectByNameA);
+  CHECK_PTR (p_WSAConnectByNameA);
   rc = (*p_WSAConnectByNameA) (s, node_name, service_name, local_addr_len, local_addr,
                                remote_addr_len, remote_addr, tv, reserved);
 
@@ -1139,7 +1139,7 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
   BOOL rc;
   char tv_buf[30];
 
-  INIT_PTR (p_WSAConnectByNameW);
+  CHECK_PTR (p_WSAConnectByNameW);
   rc = (*p_WSAConnectByNameW) (s, node_name, service_name, local_addr_len, local_addr,
                                remote_addr_len, remote_addr, tv, reserved);
 
@@ -1172,7 +1172,7 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
   BOOL rc;
   char tv_buf[30];
 
-  INIT_PTR (p_WSAConnectByList);
+  CHECK_PTR (p_WSAConnectByList);
   rc = (*p_WSAConnectByList) (s, socket_addr_list, local_addr_len, local_addr,
                               remote_addr_len, remote_addr, tv, reserved);
 
@@ -1197,7 +1197,7 @@ EXPORT WSAEVENT WINAPI WSACreateEvent (void)
 {
   WSAEVENT ev;
 
-  INIT_PTR (p_WSACreateEvent);
+  CHECK_PTR (p_WSACreateEvent);
   ev = (*p_WSACreateEvent)();
 
   ENTER_CRIT();
@@ -1212,7 +1212,7 @@ EXPORT BOOL WINAPI WSASetEvent (WSAEVENT ev)
 {
   BOOL rc;
 
-  INIT_PTR (p_WSASetEvent);
+  CHECK_PTR (p_WSASetEvent);
   rc = (*p_WSASetEvent) (ev);
 
   ENTER_CRIT();
@@ -1227,7 +1227,7 @@ EXPORT BOOL WINAPI WSACloseEvent (WSAEVENT ev)
 {
   BOOL rc;
 
-  INIT_PTR (p_WSACloseEvent);
+  CHECK_PTR (p_WSACloseEvent);
   rc = (*p_WSACloseEvent) (ev);
 
   ENTER_CRIT();
@@ -1242,7 +1242,7 @@ EXPORT BOOL WINAPI WSAResetEvent (WSAEVENT ev)
 {
   BOOL rc;
 
-  INIT_PTR (p_WSAResetEvent);
+  CHECK_PTR (p_WSAResetEvent);
   rc = (*p_WSAResetEvent) (ev);
 
   ENTER_CRIT();
@@ -1257,7 +1257,7 @@ EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, __LONG32 net_ev)
 {
   int rc;
 
-  INIT_PTR (p_WSAEventSelect);
+  CHECK_PTR (p_WSAEventSelect);
   rc = (*p_WSAEventSelect) (s, ev, net_ev);
 
   ENTER_CRIT();
@@ -1273,7 +1273,7 @@ EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, __LONG32
 {
   int rc;
 
-  INIT_PTR (p_WSAAsyncSelect);
+  CHECK_PTR (p_WSAAsyncSelect);
   rc = (*p_WSAAsyncSelect) (s, wnd, msg, net_ev);
 
   ENTER_CRIT();
@@ -1306,7 +1306,7 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
 {
   SOCKET rc;
 
-  INIT_PTR (p_WSAAccept);
+  CHECK_PTR (p_WSAAccept);
   rc = (*p_WSAAccept) (s, addr, addr_len, condition, callback_data);
 
   ENTER_CRIT();
@@ -1339,7 +1339,7 @@ int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
   int     rc;
   unsigned _s = (unsigned) s;
 
-  INIT_PTR (p___WSAFDIsSet);
+  CHECK_PTR (p___WSAFDIsSet);
   rc = (*p___WSAFDIsSet) (s, fd);
 
   ENTER_CRIT();
@@ -1360,7 +1360,7 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
 {
   SOCKET rc;
 
-  INIT_PTR (p_accept);
+  CHECK_PTR (p_accept);
   rc = (*p_accept) (s, addr, addr_len);
 
   ENTER_CRIT();
@@ -1388,7 +1388,7 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
 {
   int rc;
 
-  INIT_PTR (p_bind);
+  CHECK_PTR (p_bind);
   rc = (*p_bind) (s, addr, addr_len);
 
   ENTER_CRIT();
@@ -1424,7 +1424,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
 {
   int rc;
 
-  INIT_PTR (p_closesocket);
+  CHECK_PTR (p_closesocket);
   rc = (*p_closesocket) (s);
 
   ENTER_CRIT();
@@ -1445,7 +1445,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
   const struct sockaddr_in *sa = (const struct sockaddr_in*)addr;
   int   rc;
 
-  INIT_PTR (p_connect);
+  CHECK_PTR (p_connect);
   ENTER_CRIT();
 
   rc = (*p_connect) (s, addr, addr_len);
@@ -1474,7 +1474,7 @@ EXPORT int WINAPI ioctlsocket (SOCKET s, __LONG32 opt, __ms_u_long *argp)
   char arg[10] = "?";
   int  rc;
 
-  INIT_PTR (p_ioctlsocket);
+  CHECK_PTR (p_ioctlsocket);
   rc = (*p_ioctlsocket) (s, opt, argp);
 
   ENTER_CRIT();
@@ -1504,7 +1504,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   size_t  sz;
   BOOL    _exclude_this;
 
-  INIT_PTR (p_select);
+  CHECK_PTR (p_select);
   ENTER_CRIT();
 
   /* Set the global and local 'exclude_this' values
@@ -1609,7 +1609,7 @@ EXPORT int WINAPI gethostname (char *buf, int buf_len)
 {
   int rc;
 
-  INIT_PTR (p_gethostname);
+  CHECK_PTR (p_gethostname);
   rc = (*p_gethostname) (buf, buf_len);
 
   ENTER_CRIT();
@@ -1624,7 +1624,7 @@ EXPORT int WINAPI listen (SOCKET s, int backlog)
 {
   int rc;
 
-  INIT_PTR (p_listen);
+  CHECK_PTR (p_listen);
   rc = (*p_listen) (s, backlog);
 
   ENTER_CRIT();
@@ -1639,7 +1639,7 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
 {
   int rc;
 
-  INIT_PTR (p_recv);
+  CHECK_PTR (p_recv);
   rc = (*p_recv) (s, buf, buf_len, flags);
 
   ENTER_CRIT();
@@ -1685,7 +1685,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 {
   int rc;
 
-  INIT_PTR (p_recvfrom);
+  CHECK_PTR (p_recvfrom);
   rc = (*p_recvfrom) (s, buf, buf_len, flags, from, from_len);
 
   ENTER_CRIT();
@@ -1746,7 +1746,7 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
 {
   int rc;
 
-  INIT_PTR (p_send);
+  CHECK_PTR (p_send);
   rc = (*p_send) (s, buf, buf_len, flags);
 
   ENTER_CRIT();
@@ -1787,7 +1787,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
 {
   int rc;
 
-  INIT_PTR (p_sendto);
+  CHECK_PTR (p_sendto);
   rc = (*p_sendto) (s, buf, buf_len, flags, to, to_len);
 
   ENTER_CRIT();
@@ -1852,7 +1852,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   DWORD size;
   int   rc;
 
-  INIT_PTR (p_WSARecv);
+  CHECK_PTR (p_WSARecv);
   rc = (*p_WSARecv) (s, bufs, num_bufs, num_bytes, flags, ov, func);
 
   ENTER_CRIT();
@@ -1907,7 +1907,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
   DWORD size;
   int   rc;
 
-  INIT_PTR (p_WSARecvFrom);
+  CHECK_PTR (p_WSARecvFrom);
   rc = (*p_WSARecvFrom) (s, bufs, num_bufs, num_bytes, flags, from, from_len, ov, func);
 
   ENTER_CRIT();
@@ -1967,7 +1967,7 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
 {
   int rc;
 
-  INIT_PTR (p_WSARecvEx);
+  CHECK_PTR (p_WSARecvEx);
   rc = (*p_WSARecvEx) (s, buf, buf_len, flags);
 
   ENTER_CRIT();
@@ -2009,7 +2009,7 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 {
   int rc;
 
-  INIT_PTR (p_WSARecvDisconnect);
+  CHECK_PTR (p_WSARecvDisconnect);
   rc = (*p_WSARecvDisconnect) (s, disconnect_data);
 
   ENTER_CRIT();
@@ -2033,7 +2033,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 {
   int rc;
 
-  INIT_PTR (p_WSASend);
+  CHECK_PTR (p_WSASend);
   rc = (*p_WSASend) (s, bufs, num_bufs, num_bytes, flags, ov, func);
 
   ENTER_CRIT();
@@ -2087,7 +2087,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 {
   int rc;
 
-  INIT_PTR (p_WSASendTo);
+  CHECK_PTR (p_WSASendTo);
   rc = (*p_WSASendTo) (s, bufs, num_bufs, num_bytes, flags, to, to_len, ov, func);
 
   ENTER_CRIT();
@@ -2149,7 +2149,7 @@ EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_byt
 {
   int rc;
 
-  INIT_PTR (p_WSASendMsg);
+  CHECK_PTR (p_WSASendMsg);
   rc = (*p_WSASendMsg) (s, msg, flags, num_bytes_sent, ov, func);
 
   ENTER_CRIT();
@@ -2177,7 +2177,7 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
   char  xfer[10]  = "<N/A>";
   const char *flg = "<N/A>";
 
-  INIT_PTR (p_WSAGetOverlappedResult);
+  CHECK_PTR (p_WSAGetOverlappedResult);
   rc = (*p_WSAGetOverlappedResult) (s, ov, &bytes, wait, flags);
 
   ENTER_CRIT();
@@ -2216,7 +2216,7 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
   else memset (&in_events, '\0', sizeof(in_events));
 #endif
 
-  INIT_PTR (p_WSAEnumNetworkEvents);
+  CHECK_PTR (p_WSAEnumNetworkEvents);
   rc = (*p_WSAEnumNetworkEvents) (s, ev, events);
 
   ENTER_CRIT();
@@ -2243,7 +2243,7 @@ EXPORT int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_in
   char buf[50], *p = buf;
   int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsaprotocol_info);
 
-  INIT_PTR (p_WSAEnumProtocolsA);
+  CHECK_PTR (p_WSAEnumProtocolsA);
   rc = (*p_WSAEnumProtocolsA) (protocols, proto_info, buf_len);
 
   ENTER_CRIT();
@@ -2276,7 +2276,7 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
   char buf[50], *p = buf;
   int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsaprotocol_info);
 
-  INIT_PTR (p_WSAEnumProtocolsW);
+  CHECK_PTR (p_WSAEnumProtocolsW);
   rc = (*p_WSAEnumProtocolsW) (protocols, proto_info, buf_len);
 
   ENTER_CRIT();
@@ -2308,7 +2308,7 @@ EXPORT int WINAPI WSACancelBlockingCall (void)
 {
   int rc;
 
-  INIT_PTR (p_WSACancelBlockingCall);
+  CHECK_PTR (p_WSACancelBlockingCall);
   rc = (*p_WSACancelBlockingCall)();
 
   ENTER_CRIT();
@@ -2324,7 +2324,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout)
   int        rc;
   WSAPOLLFD *fd_in = NULL;
 
-  INIT_PTR (p_WSAPoll);
+  CHECK_PTR (p_WSAPoll);
 
   if (!p_WSAPoll)
      return (0);
@@ -2406,7 +2406,7 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
   }
   else
   {
-    INIT_PTR (p_WSAWaitForMultipleEvents);
+    CHECK_PTR (p_WSAWaitForMultipleEvents);
     rc = (*p_WSAWaitForMultipleEvents) (num_ev, ev, wait_all, timeout, alertable);
   }
 
@@ -2456,7 +2456,7 @@ EXPORT int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val,
 {
   int rc;
 
-  INIT_PTR (p_setsockopt);
+  CHECK_PTR (p_setsockopt);
   rc = (*p_setsockopt) (s, level, opt, opt_val, opt_len);
 
   ENTER_CRIT();
@@ -2474,7 +2474,7 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
 {
   int rc;
 
-  INIT_PTR (p_getsockopt);
+  CHECK_PTR (p_getsockopt);
   rc = (*p_getsockopt) (s, level, opt, opt_val, opt_len);
 
   ENTER_CRIT();
@@ -2502,7 +2502,7 @@ EXPORT int WINAPI shutdown (SOCKET s, int how)
 {
   int rc;
 
-  INIT_PTR (p_shutdown);
+  CHECK_PTR (p_shutdown);
   rc = (*p_shutdown) (s, how);
 
   ENTER_CRIT();
@@ -2517,7 +2517,7 @@ EXPORT SOCKET WINAPI socket (int family, int type, int protocol)
 {
   SOCKET rc;
 
-  INIT_PTR (p_socket);
+  CHECK_PTR (p_socket);
   rc = (*p_socket) (family, type, protocol);
 
   ENTER_CRIT();
@@ -2534,7 +2534,7 @@ EXPORT struct servent *WINAPI getservbyport (int port, const char *proto)
 {
   struct servent *rc;
 
-  INIT_PTR (p_getservbyport);
+  CHECK_PTR (p_getservbyport);
   rc = (*p_getservbyport) (port, proto);
 
   ENTER_CRIT();
@@ -2553,7 +2553,7 @@ EXPORT struct servent *WINAPI getservbyname (const char *serv, const char *proto
 {
   struct servent *rc;
 
-  INIT_PTR (p_getservbyname);
+  CHECK_PTR (p_getservbyname);
   rc = (*p_getservbyname) (serv, proto);
 
   ENTER_CRIT();
@@ -2572,7 +2572,7 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
 {
   struct hostent *rc;
 
-  INIT_PTR (p_gethostbyname);
+  CHECK_PTR (p_gethostbyname);
   rc = (*p_gethostbyname) (name);
 
   ENTER_CRIT();
@@ -2601,7 +2601,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
 {
   struct hostent *rc;
 
-  INIT_PTR (p_gethostbyaddr);
+  CHECK_PTR (p_gethostbyaddr);
   rc = (*p_gethostbyaddr) (addr, len, type);
 
   ENTER_CRIT();
@@ -2671,7 +2671,7 @@ EXPORT u_short WINAPI htons (u_short x)
 {
   u_short rc;
 
-  INIT_PTR (p_htons);
+  CHECK_PTR (p_htons);
   rc = (*p_htons) (x);
 
   ENTER_CRIT();
@@ -2684,7 +2684,7 @@ EXPORT u_short WINAPI ntohs (u_short x)
 {
   u_short rc;
 
-  INIT_PTR (p_ntohs);
+  CHECK_PTR (p_ntohs);
   rc = (*p_ntohs) (x);
 
   ENTER_CRIT();
@@ -2697,7 +2697,7 @@ EXPORT __ms_u_long WINAPI htonl (__ms_u_long x)
 {
   __ms_u_long rc;
 
-  INIT_PTR (p_htonl);
+  CHECK_PTR (p_htonl);
   rc = (*p_htonl) (x);
 
   ENTER_CRIT();
@@ -2710,7 +2710,7 @@ EXPORT __ms_u_long WINAPI ntohl (__ms_u_long x)
 {
   __ms_u_long rc;
 
-  INIT_PTR (p_ntohl);
+  CHECK_PTR (p_ntohl);
   rc = (*p_ntohl) (x);
 
   ENTER_CRIT();
@@ -2723,7 +2723,7 @@ EXPORT __ULONG32 WINAPI inet_addr (const char *addr)
 {
   __ULONG32 rc;
 
-  INIT_PTR (p_inet_addr);
+  CHECK_PTR (p_inet_addr);
   rc = (*p_inet_addr) (addr);
 
   ENTER_CRIT();
@@ -2736,7 +2736,7 @@ EXPORT char * WINAPI inet_ntoa (struct in_addr addr)
 {
   char *rc;
 
-  INIT_PTR (p_inet_ntoa);
+  CHECK_PTR (p_inet_ntoa);
   rc = (*p_inet_ntoa) (addr);
 
   ENTER_CRIT();
@@ -2754,7 +2754,7 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
 {
   int rc;
 
-  INIT_PTR (p_getpeername);
+  CHECK_PTR (p_getpeername);
   rc = (*p_getpeername) (s, name, name_len);
 
   ENTER_CRIT();
@@ -2782,7 +2782,7 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
 {
   int rc;
 
-  INIT_PTR (p_getsockname);
+  CHECK_PTR (p_getsockname);
   rc = (*p_getsockname) (s, name, name_len);
 
   ENTER_CRIT();
@@ -2810,7 +2810,7 @@ EXPORT struct protoent * WINAPI getprotobynumber (int num)
 {
   struct protoent *rc;
 
-  INIT_PTR (p_getprotobynumber);
+  CHECK_PTR (p_getprotobynumber);
   rc = (*p_getprotobynumber) (num);
 
   ENTER_CRIT();
@@ -2828,7 +2828,7 @@ EXPORT struct protoent * WINAPI getprotobyname (const char *name)
 {
   struct protoent *rc;
 
-  INIT_PTR (p_getprotobyname);
+  CHECK_PTR (p_getprotobyname);
   rc = (*p_getprotobyname) (name);
 
   ENTER_CRIT();
@@ -2848,7 +2848,7 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
 {
   int rc;
 
-  INIT_PTR (p_getnameinfo);
+  CHECK_PTR (p_getnameinfo);
   rc = (*p_getnameinfo) (sa, sa_len, host, host_size, serv_buf, serv_buf_size, flags);
 
   ENTER_CRIT();
@@ -2880,7 +2880,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 {
   int rc;
 
-  INIT_PTR (p_getaddrinfo);
+  CHECK_PTR (p_getaddrinfo);
 
   ENTER_CRIT();
 
@@ -2929,7 +2929,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
 EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
 {
-  INIT_PTR (p_freeaddrinfo);
+  CHECK_PTR (p_freeaddrinfo);
   (*p_freeaddrinfo) (ai);
 
   ENTER_CRIT();

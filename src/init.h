@@ -206,7 +206,7 @@ extern void set_color (const WORD *col);
 extern void get_color (const char *str, WORD *col);
 extern int  get_column (void);
 
-extern void init_ptr (const void **ptr, const char *ptr_name);
+extern void check_ptr (const void **ptr, const char *ptr_name);
 
 typedef enum exclude_type {
         EXCL_NONE     = 0x00,
