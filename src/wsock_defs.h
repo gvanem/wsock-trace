@@ -48,6 +48,31 @@
   #include <crtdbg.h>
 #endif
 
+/*
+ * Tests for 'fmodl()' used in init.c:
+ */
+#if defined(__CYGWIN__)
+  #if (CYGWIN_VERSION_DLL_COMBINED >= 2009000)
+  #define HAVE_FMODL
+  #endif
+#elif defined(__WATCOMC__)
+  #define HAVE_FMODL
+  #define fmodl(x, y) fmod(x, y)
+#else
+  #define HAVE_FMODL
+#endif
+
+/*
+ * Various tests for missing functions in OpenWatcom:
+ */
+#if defined(__WATCOMC__)
+  #include <math.h>
+  #include <time.h>
+
+  #define _timezone   (*__get_timezone_ptr())
+  #define fabsf(val)  fabs (val)
+#endif
+
 #define loBYTE(w)       (BYTE)(w)
 #define hiBYTE(w)       (BYTE)((WORD)(w) >> 8)
 #define DIM(x)          (int) (sizeof(x) / sizeof((x)[0]))

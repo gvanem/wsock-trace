@@ -131,17 +131,6 @@ static void set_time_format (TS_TYPE *ret, const char *val)
 /*
  * Return the preferred time-stamp string.
  */
-#if defined(__CYGWIN__)
-  #if (CYGWIN_VERSION_DLL_COMBINED >= 2009000)
-    #define HAVE_FMODL
-  #endif
-#elif defined(__WATCOMC__)
-  #define HAVE_FMODL
-  #define fmodl(x, y) fmod(x, y)
-#else
-  #define HAVE_FMODL
-#endif
-
 const char *get_timestamp (void)
 {
   static LARGE_INTEGER last = {{ S64_SUFFIX(0) }};
@@ -1898,10 +1887,6 @@ static void _gettimeofday (struct pcap_timeval *tv)
   tv->tv_sec  = (DWORD) (tim / 1000000L);
   tv->tv_usec = (DWORD) (tim % 1000000L);
 }
-
-#if defined(__WATCOMC__)
-  #define _timezone (*__get_timezone_ptr())
-#endif
 
 size_t write_pcap_header (void)
 {
