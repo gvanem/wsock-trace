@@ -1041,7 +1041,7 @@ static int parse_config_file (FILE *file)
   return (lines);
 }
 
-#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 static void trace_report (void)
 {
   const struct exclude *ex;
@@ -1152,7 +1152,7 @@ static void trace_report (void)
   if (g_cfg.FIREWALL.enable)
      fw_report();
 }
-#endif /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
 /*
  * Called from DllMain(): dwReason == DLL_PROCESS_DETACH
@@ -1164,7 +1164,7 @@ void wsock_trace_exit (void)
   if (fatal_error)
      g_cfg.trace_report = FALSE;
 
-#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 #if 0
   if (!cleaned_up || startup_count > 0)
@@ -1195,7 +1195,7 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
-#endif  /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif  /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
   common_exit();
 
@@ -1497,7 +1497,7 @@ void wsock_trace_init (void)
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
-#if !defined(TEST_BACKTRACE) && !defined(TEST_FIREWALL)
+#if !defined(TEST_BACKTRACE) && !defined(TEST_CSV) && !defined(TEST_FIREWALL)
   load_ws2_funcs();
   hosts_file_init();
 #endif
@@ -1519,7 +1519,7 @@ void wsock_trace_init (void)
 #endif  /* TEST_IANA || TEST_GEOIP || TEST_NLM */
 }
 
-#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 /**
  * Check if a Winsock function pointer was set.
@@ -1549,7 +1549,7 @@ void check_ptr (const void **ptr, const char *ptr_name)
   if (cleaned_up)
      TRACE (1, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
-#endif  /* !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif  /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
 
 static const struct search_list colors[] = {
                               { 0, "black"   },
@@ -1693,7 +1693,6 @@ int get_column (void)
 
   return (int) (ci.dwCursorPosition.X);
 }
-
 
 /*
  * Functions for writing dump-file in pcap-format.
