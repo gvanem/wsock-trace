@@ -33,7 +33,8 @@
 #include "iana.h"
 
 #ifdef TEST_IANA
-  static unsigned  rec_max = UINT_MAX;
+  static unsigned rec_max = UINT_MAX;
+  static unsigned rec_illegal;
 #endif
 
 static smartlist_t *iana_entries_ip4;
@@ -76,7 +77,6 @@ static const char *iana_get_rec4 (const IANA_record *rec, BOOL aligned)
   static const char *fmt[2] = { "%03lu/%d, %s, %s, %s, %s, %s",
                                 "%03lu/%-2d   %-20.20s %-8.8s %-20.20s %-22.22s  %s"
                               };
-
   if (rec->family != AF_INET)
      return ("Illegal");
 
@@ -274,7 +274,7 @@ static void iana_load_and_parse (int family, const char *file)
  */
 static int iana_CSV_add4 (struct CSV_context *ctx, const char *value)
 {
-  static struct IANA_record rec;
+  static struct IANA_record rec = { -1 };
   char  *space;
   int    rc = 1;
 
@@ -336,7 +336,7 @@ static int iana_CSV_add4 (struct CSV_context *ctx, const char *value)
  */
 static int iana_CSV_add6 (struct CSV_context *ctx, const char *value)
 {
-  static struct IANA_record rec;
+  static struct IANA_record rec = { -1 };
   static char   ip6_addr [MAX_IP6_SZ+1];
   char  *space;
   int    rc = 1;
@@ -385,6 +385,13 @@ static int iana_add_entry (const struct IANA_record *rec)
 
   if (!copy)
      return (0);
+
+#ifdef TEST_IANA
+   if (rec->family == AF_INET && rec->mask == -1)
+      rec_illegal++;
+   else if (rec->family == AF_INET6 && IN6_IS_ADDR_UNSPECIFIED(&rec->net_num.ip6))
+      rec_illegal++;
+#endif
 
   memcpy (copy, rec, sizeof(*copy));
   if (rec->family == AF_INET)
@@ -603,6 +610,12 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
 
 #ifdef TEST_IANA
 
+#include "getopt.h"
+
+/* For getopt.c.
+ */
+const char *program_name = "iana.exe";
+
 #define DO_NOTHING(f)  void f(void) {}
 
 DO_NOTHING (ip2loc_init)
@@ -612,11 +625,12 @@ DO_NOTHING (ip2loc_get_ipv6_entry)
 DO_NOTHING (ip2loc_num_ipv4_entries)
 DO_NOTHING (ip2loc_num_ipv6_entries)
 
-static int usage (void)
+static void usage (void)
 {
-  puts ("Usage: 'iana.exe [-d] <ipv4-address-space.csv>'\n"
-        "or     'iana.exe [-d] -6 <ipv6-unicast-address-assignments.csv>'");
-  return (1);
+  puts ("Usage: iana.exe [-d] [-m max] <ipv4-address-space.csv>\n"
+        "  or   iana.exe [-d] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
+        "  option '-m' stops after 'max' records.");
+  exit (0);
 }
 
 typedef struct TEST_ADDR {
@@ -648,44 +662,49 @@ int main (int argc, char **argv)
              { AF_INET6, { 0 }, { 0x2C, 0xF1, 0xA0, 0x08 } }  /* 1 address above */
 
            };
-  int i, do_ip6 = 0;
+  int i, ch, do_ip6 = 0;
 
   if (argc < 2)
-     return usage();
+     usage();
 
-  if (!strcmp(argv[1], "-d"))
-  {
-    argc--;
-    argv++;
-    g_cfg.trace_level = 3;
+  while ((ch = getopt(argc, argv, "d6m:h?")) != EOF)
+     switch (ch)
+     {
+       case '6':
+            do_ip6 = 1;
+            break;
+       case 'm':
+            rec_max = atoi (optarg);
+            break;
+       case 'd':
+            g_cfg.trace_level = 3;
+            break;
+       case '?':
+       case 'h':
+       default:
+            usage();
+            break;
   }
-  else if (!strcmp(argv[1], "-d6"))
-  {
-    argc--;
-    argv++;
-    g_cfg.trace_level = 3;
-    do_ip6 = 1;
-  }
-  if (!strcmp(argv[1], "-6"))
-  {
-    argc--;
-    argv++;
-    do_ip6 = 1;
-  }
+  argv += optind;
+  if (!*argv)
+     usage();
 
   g_cfg.trace_stream = stdout;
   g_cfg.show_caller  = 1;
   g_cfg.IANA.enable  = 1;
 
   if (do_ip6)
-       g_cfg.IANA.ip6_file = strdup (argv[1]);
-  else g_cfg.IANA.ip4_file = strdup (argv[1]);
-
-// rec_max = 4;
+       g_cfg.IANA.ip6_file = strdup (argv[0]);
+  else g_cfg.IANA.ip4_file = strdup (argv[0]);
 
   InitializeCriticalSection (&crit_sect);
   common_init();
   iana_init();
+
+  if (rec_illegal > 0)
+     printf ("File %s does not look like a valid IPv%c assignment file.\n",
+             do_ip6 ? g_cfg.IANA.ip6_file : g_cfg.IANA.ip4_file,
+             do_ip6 ? '6' : '4');
 
   for (i = 0; i < DIM(test_addr); i++)
   {
