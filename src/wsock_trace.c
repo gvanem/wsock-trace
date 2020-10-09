@@ -47,11 +47,16 @@
 
 /**
  * Keep track of number of calls to `WSAStartup()` and `WSACleanup()`.
+ *
+ * \todo: these (and the statics below) should be "Thread Local" variables.
  */
 int volatile cleaned_up = 0;
 int volatile startup_count = 0;
 
-static BOOL exclude_this = FALSE;
+static BOOL    exclude_this = FALSE;
+static fd_set *last_rd_fd = NULL;
+static fd_set *last_wr_fd = NULL;
+static fd_set *last_ex_fd = NULL;
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 
@@ -86,7 +91,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
         do {                                                     \
           exclude_this = TRUE;                                   \
           if (g_cfg.trace_level > 0 &&                           \
-              !exclude_list_get(fmt, EXCL_FUNCTION))             \
+              !exclude_list_get (fmt, EXCL_FUNCTION))            \
           {                                                      \
             exclude_this = FALSE;                                \
             wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",            \
@@ -127,7 +132,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
     return (ebp);
   }
 
-#elif defined(__WATCOMC__)
+#elif defined(__WATCOMC__)  /* OpenWatcom is x86 only */
   extern ULONG_PTR get_EBP (void);
   #pragma aux  get_EBP = \
           "mov eax, ebp" \
@@ -136,10 +141,6 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 #else
   #error "Unsupported compiler."
 #endif
-
-static fd_set *last_rd_fd = NULL;
-static fd_set *last_wr_fd = NULL;
-static fd_set *last_ex_fd = NULL;
 
 static void wstrace_printf (BOOL first_line,
                             _Printf_format_string_ const char *fmt, ...)
@@ -2894,7 +2895,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
     _strlcpy (buf, host_name, sizeof(buf));
     size = strlen (buf);
-    if (IDNA_convert_to_ACE(buf,&size))
+    if (IDNA_convert_to_ACE(buf, &size))
     {
       host_name = buf;
       rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
@@ -3004,7 +3005,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     CONTEXT ctx;
     HANDLE  thr = GetCurrentThread();
 
-#if !defined(USE_BFD)       /* I.e. MSVC/clang-cl/Watcom, not gcc */
+#if !defined(USE_BFD)       /* All compilers if 'USE_BFD' is undefined for MinGW/CygWin */
     void   *frames [10];
     USHORT  num_frames;
 

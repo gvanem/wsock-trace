@@ -548,7 +548,7 @@ static int DNSBL_update_files (void)
 }
 
 /**
- * Parser common to all DROP-type files.
+ * Parser for "drop.txt" and "edrop.txt" files.
  */
 static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
 {
