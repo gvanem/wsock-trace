@@ -222,6 +222,8 @@ extern BOOL exclude_list_free (void);
 extern const char *config_file_name (void);
 extern const char *get_timestamp (void);
 extern const char *get_timestamp2 (void);
+extern const char *get_date_str (const SYSTEMTIME *st);
+extern const char *get_time_now (void);
 
 extern double FILETIME_to_sec        (const FILETIME *ft);
 extern int64  FILETIME_to_usec       (const FILETIME *ft);

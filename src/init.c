@@ -209,19 +209,29 @@ const char *get_timestamp2 (void)
   return (buf);
 }
 
-static const char *get_time_now (void)
+/**
+ * Format a date string from a `SYSTEMTIME*`.
+ */
+const char *get_date_str (const SYSTEMTIME *st)
 {
-  static const char *months [12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-                                   };
+  static char time [30];
+  static char months [3*12] = { "JanFebMarAprMayJunJulAugSepOctNovDec" };
+  snprintf (time, sizeof(time), "%02d %.3s %04d",
+            st->wDay, months + 3*(st->wMonth-1), st->wYear);
+  return (time);
+}
+
+/**
+ * Format a date/time string for currnt local-time.
+ */
+const char *get_time_now (void)
+{
   static char time[50];
-  SYSTEMTIME start_time;
+  SYSTEMTIME  now;
 
-  GetLocalTime (&start_time);
-
-  snprintf (time, sizeof(time), "%02d %s %d, %02u:%02u:%02u",
-            start_time.wDay, months[start_time.wMonth-1], start_time.wYear,
-            start_time.wHour, start_time.wMinute, start_time.wSecond);
+  GetLocalTime (&now);
+  snprintf (time, sizeof(time), "%s, %02u:%02u:%02u",
+            get_date_str(&now), now.wHour, now.wMinute, now.wSecond);
   return (time);
 }
 

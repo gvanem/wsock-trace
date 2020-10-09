@@ -266,18 +266,19 @@ static IP2Location *open_file (const char *fname)
   }
   else
   {
-    static const char *months [13] = { "",
-                                       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-                                     };
+    SYSTEMTIME st;
+
+    memset (&st, '\0', sizeof(st));
+    st.wDay   = loc->db_day;
+    st.wMonth = loc->db_month;
+    st.wYear  = loc->db_year + 2000;
+
     TRACE (2, "Success: %s\n"
               "                 Database has %s entries. API-version: %s, size: %s bytes\n"
-              "                 Date: %02d %.3s %04d, IPvX: %d, "
-              "IPv4-count: %s, IPv6-count: %s (is_IPv4_only: %d, is_IPv6_only: %d).\n",
-           fname,
-           dword_str(loc->ipv4_db_count), IP2Location_api_version_str(),
-           dword_str(loc->stat_buf.st_size),
-           loc->db_day, months[loc->db_month], 2000+loc->db_year, IPvX,
+              "                 Date: %s, IPvX: %d, IPv4-count: %s, IPv6-count: %s "
+              "(is_IPv4_only: %d, is_IPv6_only: %d).\n",
+           fname, dword_str(loc->ipv4_db_count), IP2Location_api_version_str(),
+           dword_str(loc->stat_buf.st_size), get_date_str(&st), IPvX,
            dword_str(loc->ipv4_db_count), dword_str(loc->ipv6_db_count),
            is_IPv4_only, is_IPv6_only);
   }
@@ -362,7 +363,7 @@ DWORD ip2loc_num_ipv6_entries (void)
 
 /**
  * Close the IP2Location database access to shared-memory.
- * Free the global `loc
+ * Free the global `loc`.
  */
 static void IP2Location_close (IP2Location *loc)
 {
