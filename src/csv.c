@@ -271,7 +271,7 @@ quit:
   }
   if (ctx->state == STATE_EOF)
   {
-    TRACE (2, "  Reached EOF on line %u, field %u.\n", ctx->line_num, ctx->field_num);
+    TRACE (3, "  Reached EOF on line %u, field %u.\n", ctx->line_num, ctx->field_num);
     return (0);
   }
   TRACE (2, "  Unable to parse line %u, field %u.\n", ctx->line_num, ctx->field_num);

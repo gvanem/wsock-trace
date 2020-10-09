@@ -114,7 +114,7 @@ static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
     case 0:
          if (strchr(value, '%'))
          {
-           TRACE (2, "Ignoring scoped addr: '%s'\n", value);
+           TRACE (3, "Ignoring scoped addr: '%s'\n", value);
            family = -1;
          }
          else if (_wsock_trace_inet_pton(AF_INET, value, (u_char*)&ip4) == 1)
@@ -181,9 +181,8 @@ static void hosts_file_dump (int max, int duplicates, const struct CSV_context *
          break;
     }
     wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf));
-    trace_printf ("%3d: %-70s %-20s AF_INET%c  (hosts-file: %d)\n",
-                  i, he->host_name, buf,
-                  (he->addr_type == AF_INET6) ? '6' : ' ', file_idx);
+    trace_printf ("%3d: %-70s %-20s (hosts-file: %d)\n",
+                  i, he->host_name, buf, file_idx);
   }
 }
 
@@ -230,7 +229,7 @@ void hosts_file_init (void)
   /* The new length after the duplicates were removed.
    */
   max = smartlist_len (hosts_list);
-  if (g_cfg.trace_level >= 2)
+  if (g_cfg.trace_level >= 3)
      hosts_file_dump (max, dups, &ctx);
 }
 
