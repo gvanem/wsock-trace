@@ -335,6 +335,9 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     return (0);
   }
 
+  if (setvbuf (ctx->file, NULL, _IOFBF, 2*ctx->line_size))
+     TRACE (1, "Failed to call 'setvbuf()' on \"%s\", errno: %d\n", ctx->file_name, errno);
+
   ctx->state_func = state_illegal;
   ctx->state      = STATE_ILLEGAL;
   ctx->rec_num    = 0;
