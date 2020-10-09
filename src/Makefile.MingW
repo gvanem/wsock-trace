@@ -122,7 +122,7 @@ test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) -o $@ $(LDFLAGS) $^ > test.map
 	@echo
 
-iana.exe: common.c dnsbl.c geoip.c geoip-null.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
+iana.exe: common.c csv.c dnsbl.c geoip.c geoip-null.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -lole32 -ladvapi32 > iana.map
 	@echo
 
