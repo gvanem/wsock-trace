@@ -122,6 +122,10 @@ test.exe: $(OBJ_DIR)/test.o libwsock_trace.a
 	$(CC) -o $@ $(LDFLAGS) $^ > test.map
 	@echo
 
+csv.exe: csv.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_CSV $^ > csv.map
+	@echo
+
 iana.exe: common.c csv.c dnsbl.c geoip.c geoip-null.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -lole32 -ladvapi32 > iana.map
 	@echo
@@ -174,8 +178,8 @@ endif
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
-	      idna.exe idna.map geoip.exe geoip.map geoip-null.exe geoip-null.map          \
-	      test.exe test.map firewall_test.exe firewall_test.map                        \
+	      csv.exe csv.map idna.exe idna.map geoip.exe geoip.map geoip-null.exe         \
+	      geoip-null.map test.exe test.map firewall_test.exe firewall_test.map         \
 	      geoip-gen4.c geoip-gen6.c wsock_trace_mw$(X_SUFFIX).def .depend.MinGW
 	- rmdir $(OBJ_DIR)
 
