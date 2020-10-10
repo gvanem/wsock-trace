@@ -13,6 +13,14 @@
 #undef  _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
+#if defined(__WATCOMC__)
+  /*
+   * Required to pull in `inet_ntop()` in `<ws2tcpip.h>`.
+   */
+  #undef  NTDDI_VERSION
+  #define NTDDI_VERSION 0x06000000
+#endif
+
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -216,7 +224,7 @@ static int run_test (const char *wildcard)
     rc++;
     if (chatty >= 1)
        printf ("\nTesting %s():\n", t->name);
-    WSASetLastError (0);   /* clear any previous error */
+ // WSASetLastError (0);   /* clear any previous error */
     (*t->func)();
   }
   return (rc);
