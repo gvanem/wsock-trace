@@ -10,6 +10,7 @@
 
 #if defined(IN_WSOCK_TRACE_C) && defined(__WATCOMC__)
 #define u_char unsigned char
+#define u_int  unsigned int
 #endif
 
 /**
