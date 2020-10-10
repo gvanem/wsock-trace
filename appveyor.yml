@@ -100,7 +100,7 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 &                 idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
-  - cmd: if %BUILDER%. == msvc. (set WSOCK_TRACE_LEVEL=0 & test.exe -d)
+  - cmd: if %BUILDER%. == msvc. test.exe -d
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
