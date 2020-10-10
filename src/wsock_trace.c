@@ -761,13 +761,6 @@ static __inline const char *uint_ptr_hexval (UINT_PTR val, char *buf)
   return (buf);
 }
 
-static const char *str_or_error (const void *str)
-{
-  if (!str)
-     return get_error (-1, 0);
-  return (str);
-}
-
 static const char *ptr_or_error (const void *ptr)
 {
   static char buf [30];
@@ -3033,8 +3026,8 @@ EXPORT INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, siz
   ENTER_CRIT();
 
   if (ret)
-       WSTRACE ("inet_ntop (%s, 0x%p, 0x%p, %u) --> \"%s\"", socket_family(af), src, dst, size, ret);
-  else WSTRACE ("inet_ntop (%s, 0x%p, 0x%p, %u) --> %s", socket_family(af), src, dst, size, get_error(-1, err));
+       WSTRACE ("inet_ntop (%s, 0x%p, 0x%p, %u) --> \"%s\"", socket_family(af), src, dst, (u_int)size, ret);
+  else WSTRACE ("inet_ntop (%s, 0x%p, 0x%p, %u) --> %s", socket_family(af), src, dst, (u_int)size, get_error(-1, err));
 
   LEAVE_CRIT();
   return (ret);
@@ -3115,9 +3108,9 @@ EXPORT PCWSTR WINAPI InetNtopW (int af, const void *addr, PWSTR res_buf, size_t 
 
   if (!ret)
        WSTRACE ("InetNtopW (%s, 0x%p, 0x%p, %u) --> %s",
-                socket_family(af), addr, res_buf, res_buf_size, get_error(-1, 0));
+                socket_family(af), addr, res_buf, (u_int)res_buf_size, get_error(-1, 0));
   else WSTRACE ("InetNtopW (%s, 0x%p, 0x%p, %u) --> \"%" WCHAR_FMT "\"",
-                socket_family(af), addr, res_buf, res_buf_size, res_buf);
+                socket_family(af), addr, res_buf, (u_int)res_buf_size, res_buf);
 
   LEAVE_CRIT();
   return (ret);
