@@ -469,7 +469,7 @@ static void test_connect (void)
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   sa4.sin_port = htons (1234);
   TEST_CONDITION (== -1, connect (s1, sa, sizeof(sa4)));
-  TEST_CONDITION (== (WSAEWOULDBLOCK || WSAECONNREFUSED), WSAGetLastError());
+  TEST_CONDITION (== WSAEWOULDBLOCK, WSAGetLastError());
 }
 
 static fd_set fd1, fd2;
@@ -606,7 +606,7 @@ static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
   if (chatty >= 1)
      printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
 
-  TEST_CONDITION (== 0, wcscmp(data,L"127.0.0.1"));
+  TEST_CONDITION (== 0, wcscmp(data, L"127.0.0.1"));
   TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1")/2));
 }
 
