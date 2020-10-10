@@ -1996,7 +1996,7 @@ static const char *dump_addr_list (int type, const char **addresses)
   for (i = 0; addresses && addresses[i] && left > 0; i++)
   {
     char  buf [MAX_IP6_SZ+1];
-    char *addr = wsock_trace_inet_ntop (type, addresses[i], buf, sizeof(buf));
+    char *addr = _wsock_trace_inet_ntop (type, addresses[i], buf, sizeof(buf), NULL);
 
     if (!addr)
        addr = "<??>";
@@ -2085,7 +2085,8 @@ static int trace_printf_cc (const char            *country_code,
 
     if (g_cfg.GEOIP.show_position || g_cfg.GEOIP.show_map_url)
     {
-      const position *pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
+      const position *pos = a4 ? geoip_get_position_by_ipv4 (a4) :
+                                 geoip_get_position_by_ipv6 (a6);
 
       if (pos)
            pos_equal = !memcmp(pos, &pos_last, sizeof(*pos));
@@ -2167,21 +2168,18 @@ void dump_countries (int type, const char **addresses)
     const struct in6_addr *a6  = NULL;
     const char            *cc  = NULL;
     const char            *loc = NULL;
-    const position        *pos = NULL;
 
     if (type == AF_INET)
     {
       a4  = (const struct in_addr*) addresses[i];
       cc  = geoip_get_country_by_ipv4 (a4);
       loc = geoip_get_location_by_ipv4 (a4);
-      pos = geoip_get_position_by_ipv4 (a4);
     }
     else if (type == AF_INET6)
     {
       a6  = (const struct in6_addr*) addresses[i];
       cc  = geoip_get_country_by_ipv6 (a6);
       loc = geoip_get_location_by_ipv6 (a6);
-      pos = geoip_get_position_by_ipv6 (a6);
     }
     else
     {

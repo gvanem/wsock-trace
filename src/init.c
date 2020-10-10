@@ -420,8 +420,8 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
 
   if (exclude_which & EXCL_ADDRESS)
   {
-    if (_wsock_trace_inet_pton(AF_INET, name, ia4) == 1 ||
-        _wsock_trace_inet_pton(AF_INET6, name, ia6) == 1)
+    if (_wsock_trace_inet_pton(AF_INET, name, ia4, NULL) == 1 ||
+        _wsock_trace_inet_pton(AF_INET6, name, ia6, NULL) == 1)
        which = EXCL_ADDRESS;
   }
 
@@ -1534,11 +1534,14 @@ void wsock_trace_init (void)
 /**
  * Check if a Winsock function pointer was set.
  * If it was not set and is not an optional function,
- * ause a `FATAL()` exit.
+ * cause a `FATAL()` exit.
  *
- * Used as e.g. 'CHECK_PTR (p_WSAStartup)' which expands to
- *   'check_ptr ((const void**)&p_WSAStartup, "p_WSAStartup")'.
- * Hence 'func_name' should be 'ptr_name + 2'.
+ * Used as e.g. `CHECK_PTR (p_WSAStartup)` which expands to
+ * ```
+ *   check_ptr ((const void**)&p_WSAStartup, "p_WSAStartup")
+ * ```
+ *
+ * Hence `func_name` should be equal to `ptr_name + 2`.
  */
 void check_ptr (const void **ptr, const char *ptr_name)
 {

@@ -1155,7 +1155,7 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
    return (0);
 }
 
-/*
+/**
  * Return an IP-number as a string.
  */
 const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_addr *ip6)
@@ -1179,7 +1179,7 @@ const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_ad
   return (buf);
 }
 
-/*
+/**
  * Figure out the prefix length when given an IPv4 "low" and "high" address.
  */
 int INET_util_network_len32 (DWORD hi, DWORD lo)
@@ -1270,14 +1270,14 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
   return strlwr (buf);
 }
 
-/*
+/**
  * Convert a string like '213.199.179.0-213.199.179.255' to CIDR notation '213.199.179/24'.
  *
- * \param[in]  `str`       The string to convert to CIDR form.
- * \param[out] `res`       The resulting `struct in_addr`.
- * \param[out] `cidr_len`  The resulting length of the CIDR network mask.
- *                         This is 0 if `str` is not on a `IPa-IPb` form.
- * \retval      TRUE if `str` is valid.
+ * \param[in]  str       The string to convert to CIDR form.
+ * \param[out] ip4       The resulting `struct in_addr`.
+ * \param[out] cidr_len  The resulting length of the CIDR network mask.
+ *                       This is 0 if `str` is not on a `IPa-IPb` form.
+ * \retval TRUE if `str` is valid.
  */
 BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, int *cidr_len)
 {
@@ -1291,7 +1291,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
 
   /* For now, use these values
    */
-  if (!stricmp(str,"LocalSubnet"))
+  if (!stricmp(str, "LocalSubnet"))
   {
     *cidr_len = 0;
     memset (ip4, 0xFF, sizeof(*ip4));
@@ -1305,7 +1305,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
   if (dash)
      *dash = '\0';
 
-  if (_wsock_trace_inet_pton(AF_INET, copy, (u_char*)&a4_low) != 1)
+  if (_wsock_trace_inet_pton(AF_INET, copy, &a4_low, NULL) != 1)
      return (FALSE);
 
   if (!dash)
@@ -1313,7 +1313,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
     *ip4 = a4_low;
     return (TRUE);
   }
-  if (_wsock_trace_inet_pton(AF_INET, dash+1, (u_char*)&a4_high) != 1)
+  if (_wsock_trace_inet_pton(AF_INET, dash+1, &a4_high, NULL) != 1)
      return (FALSE);
 
   *ip4 = a4_low;
@@ -1321,14 +1321,14 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
   return (TRUE);
 }
 
-/*
+/**
  * Convert a string like 'fe80::/64' to CIDR notation.
  * Simplified version of the IPv4 version.
  *
- * \param[in]  `str`       The string to convert to CIDR form.
- * \param[out] `res`       The resulting `struct in6_addr`.
- * \param[out] `cidr_len`  The resulting length of the CIDR network mask.
- * \retval      TRUE if `str` is valid.
+ * \param[in]  str       The string to convert to CIDR form.
+ * \param[out] ip6       The resulting `struct in6_addr`.
+ * \param[out] cidr_len  The resulting length of the CIDR network mask.
+ * \retval     TRUE if `str` is valid.
  */
 BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6, int *cidr_len)
 {
@@ -1342,7 +1342,7 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
 
   /* For now, use these values
    */
-  if (!stricmp(str,"LocalSubnet"))
+  if (!stricmp(str, "LocalSubnet"))
   {
     *cidr_len = 0;
     memset (ip6, 0xFF, sizeof(*ip6));
@@ -1356,7 +1356,7 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
   if (dash)
      *dash = '\0';
 
-  if (_wsock_trace_inet_pton(AF_INET6, copy, (u_char*)&a6) != 1)
+  if (_wsock_trace_inet_pton(AF_INET6, copy, &a6, NULL) != 1)
      return (FALSE);
 
   *ip6 = a6;
@@ -1461,11 +1461,10 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
                 ip_width,       "mask",
                 total_str);
 
-  wsock_trace_inet_pton4 (IP4_NET, (u_char*)&network4);
-  wsock_trace_inet_pton6 (IP6_NET, (u_char*)&network6);
-  _wsock_trace_inet_ntop (family, (family == AF_INET6) ?
-                          (const u_char*)&network6 : (const u_char*)&network4,
-                          network_str, sizeof(network_str));
+  _wsock_trace_inet_pton (AF_INET, IP4_NET, &network4, NULL);
+  _wsock_trace_inet_pton (AF_INET6, IP6_NET, &network6, NULL);
+  _wsock_trace_inet_ntop (family, (family == AF_INET6) ? (const void*)&network6 : (const void*)&network4,
+                          network_str, sizeof(network_str), NULL);
 
   for (bits = 0; bits <= max_bits; bits++)
   {
@@ -1504,9 +1503,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
       }
 
-      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
-      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&mask, mask_str, sizeof(mask_str));
+      _wsock_trace_inet_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+      _wsock_trace_inet_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+      _wsock_trace_inet_ntop (AF_INET6, &mask, mask_str, sizeof(mask_str), NULL);
     }
     else
     {
@@ -1530,9 +1529,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         total_ips = swap32 (end_ip.s_addr) - swap32 (start_ip.s_addr) + 1;
       }
 
-      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
-      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&mask, mask_str, sizeof(mask_str));
+      _wsock_trace_inet_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+      _wsock_trace_inet_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+      _wsock_trace_inet_ntop (AF_INET, &mask, mask_str, sizeof(mask_str), NULL);
     }
 
     if (lshift_prob)

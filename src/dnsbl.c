@@ -137,11 +137,11 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
     DWORD start_ip = netw & mask;
     DWORD end_ip   = start_ip | ~mask;
 
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.network, net_str, sizeof(net_str));
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.mask, mask_str, sizeof(mask_str));
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&ia->s_addr, ip_str, sizeof(ip_str));
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-    _wsock_trace_inet_ntop (AF_INET, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+    _wsock_trace_inet_ntop (AF_INET, &dnsbl->u.ip4.network, net_str, sizeof(net_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET, &dnsbl->u.ip4.mask, mask_str, sizeof(mask_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET, &ia->s_addr, ip_str, sizeof(ip_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
 
     TRACE (3, "ip: %-15s net: %-15s (%-12s - %-15s) mask: %-15s rc: %d\n",
            ip_str, net_str, start_ip_str, end_ip_str, mask_str, rc);
@@ -180,11 +180,11 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
     char   start_ip_str[MAX_IP6_SZ+1];
     char   end_ip_str  [MAX_IP6_SZ+1];
 
-    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.network, net_str, sizeof(net_str));
-    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.mask, mask_str, sizeof(mask_str));
-    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&ia->s6_addr, ip_str, sizeof(ip_str));
-    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&start_ip, start_ip_str, sizeof(start_ip_str));
-    _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&end_ip, end_ip_str, sizeof(end_ip_str));
+    _wsock_trace_inet_ntop (AF_INET6, &dnsbl->u.ip6.network, net_str, sizeof(net_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask_str, sizeof(mask_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET6, &ia->s6_addr, ip_str, sizeof(ip_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+    _wsock_trace_inet_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
 
     TRACE (3, "ip: %-20s net: %-20s (%-20s - %-30s)\n"
                "                mask: 0x%s, rc: %d\n",
@@ -262,13 +262,13 @@ static void DNSBL_dump (void)
 
     if (dnsbl->family == AF_INET)
     {
-      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.network, addr, sizeof(addr));
-      _wsock_trace_inet_ntop (AF_INET, (const u_char*)&dnsbl->u.ip4.mask, mask, sizeof(mask));
+      _wsock_trace_inet_ntop (AF_INET, &dnsbl->u.ip4.network, addr, sizeof(addr), NULL);
+      _wsock_trace_inet_ntop (AF_INET, &dnsbl->u.ip4.mask, mask, sizeof(mask), NULL);
     }
     else
     {
-      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.network, addr, sizeof(addr));
-      _wsock_trace_inet_ntop (AF_INET6, (const u_char*)&dnsbl->u.ip6.mask, mask, sizeof(mask));
+      _wsock_trace_inet_ntop (AF_INET6, &dnsbl->u.ip6.network, addr, sizeof(addr), NULL);
+      _wsock_trace_inet_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask, sizeof(mask), NULL);
     }
     snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->bits);
     trace_printf (line_fmt, i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>",
@@ -344,7 +344,7 @@ int DNSBL_test (void)
     const char *country_code, *location, *okay;
     BOOL        res;
 
-    _wsock_trace_inet_pton (test->family, test->addr, (u_char*)&addr);
+    _wsock_trace_inet_pton (test->family, test->addr, &addr, NULL);
 
     if (test->family == AF_INET)
     {
@@ -402,8 +402,7 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
  *
  * This function is called before `load_ws2_funcs()` that dynamically loads
  * all Winsock functions. That means we must NOT call any true Winsock functions.
- * But instead use private functions like `_wsock_trace_inet_pton()` that sets
- * `call_WSASetLastError == FALSE`.
+ * But instead use private functions like `_wsock_trace_inet_pton()`.
  *
  * Since the `DNSBL_test()` test function will call `inet_addr()` (at `trace_level >= 3`)
  * via `IP2Location_get_record()`, the `DNSBL_test()` must be postponed to a later
@@ -566,7 +565,7 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   if (!dnsbl)
      return;
 
-  _wsock_trace_inet_pton (AF_INET, addr, &dnsbl->u.ip4.network);
+  _wsock_trace_inet_pton (AF_INET, addr, &dnsbl->u.ip4.network, NULL);
   INET_util_get_mask4 (&dnsbl->u.ip4.mask, bits);
 
   dnsbl->bits   = bits;
@@ -612,7 +611,7 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
   if (!dnsbl)
      return;
 
-  _wsock_trace_inet_pton (AF_INET6, addr, &dnsbl->u.ip6.network);
+  _wsock_trace_inet_pton (AF_INET6, addr, &dnsbl->u.ip6.network, NULL);
   INET_util_get_mask6 (&dnsbl->u.ip6.mask, bits);
 
   dnsbl->bits   = bits;

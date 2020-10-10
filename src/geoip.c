@@ -257,8 +257,8 @@ void geoip_ipv4_add_specials (void)
   {
     DWORD low, high;
 
-    if (wsock_trace_inet_pton4(priv[i].low, (u_char*)&low) == 1 &&
-        wsock_trace_inet_pton4(priv[i].high, (u_char*)&high) == 1)
+    if (_wsock_trace_inet_pton (AF_INET, priv[i].low, &low, NULL) == 1 &&
+        _wsock_trace_inet_pton (AF_INET, priv[i].high, &high, NULL) == 1)
       geoip4_add_entry (swap32(low), swap32(high), priv[i].remark);
     else
       TRACE (0, "Illegal low/high IPv4 address: %s/%s\n", priv[i].low, priv[i].high);
@@ -290,8 +290,8 @@ void geoip_ipv6_add_specials (void)
   {
     struct in6_addr low, high;
 
-    wsock_trace_inet_pton6 (priv[i].low, (u_char*)&low);
-    wsock_trace_inet_pton6 (priv[i].high, (u_char*)&high);
+    _wsock_trace_inet_pton (AF_INET6, priv[i].low, &low, NULL);
+    _wsock_trace_inet_pton (AF_INET6, priv[i].high, &high, NULL);
     geoip6_add_entry (&low, &high, priv[i].remark);
   }
 }
@@ -504,10 +504,10 @@ static int geoip6_CSV_add (struct CSV_context *ctx, const char *value)
   switch (ctx->field_num)
   {
     case 0:
-          _wsock_trace_inet_pton (AF_INET6, value, (u_char*)&low);
+          _wsock_trace_inet_pton (AF_INET6, value, &low, NULL);
           break;
      case 1:
-          _wsock_trace_inet_pton (AF_INET6, value, (u_char*)&high);
+          _wsock_trace_inet_pton (AF_INET6, value, &high, NULL);
           break;
      case 2:
           memcpy (&country, value, sizeof(country));
@@ -591,7 +591,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   IP2LOC_SET_BAD();
   num_4_compare = 0;
 
-  wsock_trace_inet_ntop4 ((const u_char*)addr, buf, sizeof(buf));
+  _wsock_trace_inet_ntop (AF_INET, addr, buf, sizeof(buf), NULL);
 
   num = ip2loc_num_ipv4_entries();
   TRACE (4, "Looking for %s in %u elements.\n", buf, num);
@@ -636,7 +636,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   IP2LOC_SET_BAD();
   num_6_compare = 0;
 
-  wsock_trace_inet_ntop6 ((const u_char*)addr, buf, sizeof(buf));
+  _wsock_trace_inet_ntop (AF_INET6, addr, buf, sizeof(buf), NULL);
 
   num = ip2loc_num_ipv6_entries();
   TRACE (4, "Looking for %s in %u elements.\n", buf, num);
@@ -1463,7 +1463,7 @@ static int check_ipv4_unallocated (FILE *out, int dump_cidr,
       char low[25] = "?";
       int  nw_len = network_len32 (last->high+1, entry->low-1);
 
-      wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
+      _wsock_trace_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
       len = fprintf (out, "%s/%d", low, nw_len);
     }
     else
@@ -1527,7 +1527,7 @@ static void dump_ipv4_entries (FILE *out, int dump_cidr, int raw)
       int   nw_len = network_len32 (entry->high, entry->low);
       DWORD addr   = swap32 (entry->low);
 
-      wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
+      _wsock_trace_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
       len = fprintf (out, "%6d: %s/%d", i, low, nw_len);
     }
     else
@@ -1579,7 +1579,7 @@ static int check_ipv6_unallocated (FILE *out, int dump_cidr, const struct ipv6_n
       int   nw_len = network_len32 (last->high+1, entry->low-1);
       DWORD addr   = swap32 (last->high+1);
 
-      wsock_trace_inet_ntop4 ((const u_char*)&addr, low, sizeof(low));
+      _wsock_trace_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
       len = fprintf (out, "%s/%d", low, nw_len);
     }
     else
@@ -1635,8 +1635,8 @@ static void dump_ipv6_entries (FILE *out, int dump_cidr, int raw)
     last = entry;
     len = 0;
 
-    wsock_trace_inet_ntop6 ((const u_char*)&entry->low, low, sizeof(low));
-    wsock_trace_inet_ntop6 ((const u_char*)&entry->high, high, sizeof(high));
+    _wsock_trace_inet_ntop (AF_INET6, &entry->low, low, sizeof(low), NULL);
+    _wsock_trace_inet_ntop (AF_INET6, &entry->high, high, sizeof(high), NULL);
 
     if (raw)
     {
@@ -1873,7 +1873,7 @@ static void test_addr_common (const struct in_addr  *a4,
        sbl_ref = " <none>";
     if (rc)
     {
-      wsock_trace_inet_ntop4 ((const u_char*)a4, addr, sizeof(addr));
+      _wsock_trace_inet_ntop (AF_INET, a4, addr, sizeof(addr), NULL);
       printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
@@ -1887,7 +1887,7 @@ static void test_addr_common (const struct in_addr  *a4,
        sbl_ref = " <none>";
     if (rc)
     {
-      wsock_trace_inet_ntop6 ((const u_char*)a6, addr, sizeof(addr));
+      _wsock_trace_inet_ntop (AF_INET6, a6, addr, sizeof(addr), NULL);
       printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
@@ -1971,9 +1971,14 @@ static int geoip_generate_array (int family, const char *out_file)
     return (1);
   }
 
-  if (!strcmp(out_file,"-"))
-       out = stdout;
-  else out = fopen (out_file, "w+t");
+  if (!out_file || !strcmp(out_file, "-"))
+  {
+    out = stdout;
+    out_file = "stdout";
+  }
+  else
+    out = fopen (out_file, "w+t");
+
   if (!out)
   {
     printf ("Failed to create file %s; %s\n", out_file, strerror(errno));
@@ -2051,16 +2056,16 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 
   if (addr4)
   {
-    addr4->S_un.S_un_b.s_b1 = rand_range (1,255);
-    addr4->S_un.S_un_b.s_b2 = rand_range (1,255);
-    addr4->S_un.S_un_b.s_b3 = rand_range (1,255);
-    addr4->S_un.S_un_b.s_b4 = rand_range (1,255);
+    addr4->S_un.S_un_b.s_b1 = rand_range (1, 255);
+    addr4->S_un.S_un_b.s_b2 = rand_range (1, 255);
+    addr4->S_un.S_un_b.s_b3 = rand_range (1, 255);
+    addr4->S_un.S_un_b.s_b4 = rand_range (1, 255);
   }
   if (addr6)
   {
     addr6->s6_words[0] = swap16 (0x2001); /* Since most IPv6 addr has this prefix */
     for (i = 1; i < 8; i++)
-        addr6->s6_words[i] = rand_range (0,0xFFFF);
+        addr6->s6_words[i] = rand_range (0, 0xFFFF);
   }
 }
 
@@ -2119,7 +2124,7 @@ static void rand_test_addr4 (int loops, BOOL use_ip2loc)
     char   buf [20];
 
     make_random_addr (&addr, NULL);
-    wsock_trace_inet_ntop4 ((const u_char*)&addr, buf, sizeof(buf));
+    _wsock_trace_inet_ntop (AF_INET, &addr, buf, sizeof(buf), NULL);
     printf ("%-15s: ", buf);
     test_addr4 (buf, use_ip2loc);
   }
@@ -2140,7 +2145,7 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
     char   buf [MAX_IP6_SZ+1];
 
     make_random_addr (NULL, &addr);
-    wsock_trace_inet_ntop6 ((const u_char*)&addr, buf, sizeof(buf));
+    _wsock_trace_inet_ntop (AF_INET6, &addr, buf, sizeof(buf), NULL);
     printf ("%-40s: ", buf);
     test_addr6 (buf, use_ip2loc);
   }
@@ -2232,7 +2237,7 @@ int main (int argc, char **argv)
   int         loops = 10;
   int         rc = 0;
   const char *my_name = argv[0];
-  const char *g_file = NULL;
+  char       *g_file = NULL;
   WSADATA     wsa;
 
   wsock_trace_init();
@@ -2255,7 +2260,7 @@ int main (int argc, char **argv)
            break;
       case 'g':
            do_generate++;
-           g_file = optarg;
+           g_file = strdup (optarg);
            break;
       case 'G':
            geoip_exit();
@@ -2353,6 +2358,7 @@ int main (int argc, char **argv)
      smartlist_wipe (list, free);
   }
 
+  free (g_file);
   wsock_trace_exit();
   return (rc);
 }

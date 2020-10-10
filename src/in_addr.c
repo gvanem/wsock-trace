@@ -53,27 +53,14 @@
  */
 BOOL IPv6_leading_zeroes = FALSE;
 
-/**
- * Call the real `WSASetLastError()`.
- */
-static BOOL call_WSASetLastError = TRUE;
-
 static const char hex_chars[] = "0123456789abcdef";
 
-/* Set to `p_WSASetLastError` in wsock_trace.c
+/* These are now locals:
  */
-void (__stdcall *g_WSASetLastError)(int err) = NULL;
-
-#define WSA_SET_LAST_ERROR(err, force)          \
-        do {                                    \
-          if (call_WSASetLastError || force) {  \
-            TRACE (1, "err: %d from line %u\n", \
-                   err, __LINE__);              \
-            if (!g_WSASetLastError || 1)        \
-                  WSASetLastError (err);        \
-            else (*g_WSASetLastError) (err);    \
-          }                                     \
-        } while (0)
+static char *_wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err);
+static char *_wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err);
+static int   _wsock_trace_inet_pton4 (const char *src, u_char *dst, int *err);
+static int   _wsock_trace_inet_pton6 (const char *src, u_char *dst, int *err);
 
 /**
  * Check if `str` is simply an IPv4 address.
@@ -92,132 +79,45 @@ static BOOL is_ip4_addr (const char *str)
 }
 
 /**
- * Convert a network format address to presentation format.
- *
- * \retval pointer to presentation format address (`dst`),
- * \retval NULL on error (see `WSAGetLastError()`).
- *
- * \author Paul Vixie, 1996.
+ * This function is for internal use or to be used before
+ * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-/* EXPORT */ INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, size_t size)
+char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size, int *err)
 {
-  switch (af)
-  {
-    case AF_INET:
-         return wsock_trace_inet_ntop4 ((const u_char*)src, dst, size);
-    case AF_INET6:
-         return wsock_trace_inet_ntop6 ((const u_char*)src, dst, size);
-    default:
-         WSA_SET_LAST_ERROR (WSAEAFNOSUPPORT, 0);
-         return (NULL);
-  }
-}
+  int err2;
 
-/**
- * Convert from presentation format (which usually means ASCII printable)
- * to network format (which is usually some kind of binary format).
- *
- * \retval 1  the address was valid for the specified address family.
- * \retval 0  the address wasn't valid (`dst` is untouched in this case).
- * \retval -1 some other error occurred (`dst` is untouched in this case, too).
- *
- * \author Paul Vixie, 1996.
- */
-EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
-{
-  switch (af)
-  {
-    case AF_INET:
-         return wsock_trace_inet_pton4 (src, (u_char*)dst);
-    case AF_INET6:
-         return wsock_trace_inet_pton6 (src, (u_char*)dst);
-    default:
-         WSA_SET_LAST_ERROR (WSAEAFNOSUPPORT, 0);
-         return (-1);
-  }
-}
+  if (!err)
+     err = &err2;
+  *err = 0;
 
-/**
- * inet_ntop() + inet_pton() for internal use.
- */
-char *wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
-{
-  return (char*) inet_ntop (family, (INET_NTOP_ADDR)addr, result, result_size);
-}
+  if (family == AF_INET)
+      return _wsock_trace_inet_ntop4 (addr, result, result_size, err);
+  if (family == AF_INET6)
+      return _wsock_trace_inet_ntop6 (addr, result, result_size, err);
 
-int wsock_trace_inet_pton (int family, const char *addr, void *result)
-{
-  return inet_pton (family, addr, result);
-}
-
-/**
- * These may be needed by some Win-Vista+ applications
- */
-EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
-{
-  char addr [INET6_ADDRSTRLEN];
-
-  switch (family)
-  {
-    case AF_INET:
-         snprintf (addr, sizeof(addr), "%S", waddr);
-         return wsock_trace_inet_pton4 (addr, (u_char*)waddr_dest);
-    case AF_INET6:
-         snprintf (addr, sizeof(addr), "%S", waddr);
-         return wsock_trace_inet_pton6 (addr, (u_char*)waddr_dest);
-    default:
-         WSA_SET_LAST_ERROR (WSAEAFNOSUPPORT, 1);
-         /* fall through */
-  }
-  return (-1);
-}
-
-/* Undo the Cygwin hack at the top.
- */
-#if defined(__CYGWIN__)
-#undef InetNtopW
-#endif
-
-EXPORT PCWSTR WINAPI InetNtopW (int family, const void *addr, PWSTR res_buf, size_t res_buf_size)
-{
-  char buf [INET6_ADDRSTRLEN];
-
-  if (!inet_ntop(family, (INET_NTOP_ADDR)addr, buf, sizeof(buf)))
-      return (NULL);
-
-  if (!MultiByteToWideChar(CP_ACP, 0, buf, -1, res_buf, (int)res_buf_size))
-     return (NULL);
-  return (res_buf);
+  *err = WSAEAFNOSUPPORT;
+  return (NULL);
 }
 
 /**
  * This function is for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size)
+int _wsock_trace_inet_pton (int family, const char *addr, void *result, int *err)
 {
-  BOOL save = call_WSASetLastError;
-  char *rc;
+  int err2;
 
-  call_WSASetLastError = FALSE;
-  rc = (char*) inet_ntop (family, (INET_NTOP_ADDR)addr, result, result_size);
-  call_WSASetLastError = save;
-  return (rc);
-}
+  if (!err)
+     err = &err2;
+  *err = 0;
 
-/**
- * This function is for internal use or to be used before
- * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
- */
-int _wsock_trace_inet_pton (int family, const char *addr, void *result)
-{
-  BOOL save = call_WSASetLastError;
-  int  rc;
+  if (family == AF_INET)
+      return _wsock_trace_inet_pton4 (addr, result, err);
+  if (family == AF_INET6)
+      return _wsock_trace_inet_pton6 (addr, result, err);
 
-  call_WSASetLastError = FALSE;
-  rc = inet_pton (family, addr, result);
-  call_WSASetLastError = save;
-  return (rc);
+  *err = WSAEAFNOSUPPORT;
+  return (0);
 }
 
 /**
@@ -230,13 +130,13 @@ int _wsock_trace_inet_pton (int family, const char *addr, void *result)
  *
  * \author Paul Vixie, 1996.
  */
-const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size)
+static char *_wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err)
 {
   char tmp [sizeof("255.255.255.255")];
 
-  if ((size_t)sprintf(tmp,"%u.%u.%u.%u",src[0],src[1],src[2],src[3]) > size)
+  if ((size_t)sprintf(tmp, "%u.%u.%u.%u", src[0], src[1], src[2], src[3]) > size)
   {
-    WSA_SET_LAST_ERROR (WSAEINVAL, 0);
+    *err = WSAEINVAL;
     return (NULL);
   }
   return strcpy (dst, tmp);
@@ -248,7 +148,7 @@ const char *wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size)
  * \author
  *  Paul Vixie, 1996.
  */
-const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
+static char *_wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err)
 {
   /*
    * Note that int32_t and int16_t need only be "at least" large enough
@@ -328,7 +228,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
     if (i == 6 && best.base == 0 &&
         (best.len == 6 || (best.len == 5 && words[5] == 0xffff)))
     {
-      if (!wsock_trace_inet_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp)))
+      if (!_wsock_trace_inet_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp), err))
          goto inval;
       tp += strlen (tp);
       break;
@@ -350,7 +250,7 @@ const char *wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size)
      return strcpy (dst, tmp);
 
 inval:
-  WSA_SET_LAST_ERROR (WSAEINVAL, 0);
+  *err = WSAEINVAL;
   return (NULL);
 }
 
@@ -366,7 +266,7 @@ inval:
  * \author
  *   Paul Vixie, 1996.
  */
-int wsock_trace_inet_pton4 (const char *src, u_char *dst)
+static int _wsock_trace_inet_pton4 (const char *src, u_char *dst, int *err)
 {
   static const char digits[] = "0123456789";
   int    saw_digit, octets, ch;
@@ -403,7 +303,7 @@ int wsock_trace_inet_pton4 (const char *src, u_char *dst)
       saw_digit = 0;
     }
     else
-     goto inval;
+      goto inval;
   }
 
   if (octets >= 4)
@@ -411,9 +311,8 @@ int wsock_trace_inet_pton4 (const char *src, u_char *dst)
     memcpy (dst, tmp, INADDRSZ);
     return (1);
   }
-
 inval:
-  WSA_SET_LAST_ERROR (WSAEINVAL, 0);
+  *err = WSAEINVAL;
   return (0);
 }
 
@@ -429,7 +328,7 @@ inval:
  * \author Paul Vixie, 1996.
  * \n\b credit: inspired by Mark Andrews.
  */
-int wsock_trace_inet_pton6 (const char *src, u_char *dst)
+static int _wsock_trace_inet_pton6 (const char *src, u_char *dst, int *err)
 {
   u_char  tmp [IN6ADDRSZ];
   u_char *endp, *colonp, *tp = tmp;
@@ -488,11 +387,11 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
       continue;
     }
     if (ch == '.' && ((tp + INADDRSZ) <= endp) &&
-        wsock_trace_inet_pton4(curtok,tp) > 0)
+        _wsock_trace_inet_pton4(curtok, tp, err) > 0)
     {
       tp += INADDRSZ;
       saw_xdigit = 0;
-      break;     /* '\0' was seen by inet_pton4(). */
+      break;     /* '\0' was seen by _wsock_trace_inet_pton4(). */
     }
     goto inval;
   }
@@ -529,10 +428,10 @@ int wsock_trace_inet_pton6 (const char *src, u_char *dst)
   return (1);
 
 inval:
-  WSA_SET_LAST_ERROR (WSAEINVAL, 0);
+  *err = WSAEINVAL;
   return (0);
 
 toolong:
-  WSA_SET_LAST_ERROR (WSAENAMETOOLONG, 0);
+  *err = WSAENAMETOOLONG;
   return (0);
 }
