@@ -68,6 +68,7 @@ static fd_set *last_wr_fd = NULL;
 static fd_set *last_ex_fd = NULL;
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
+static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 
 #if defined(USE_BFD) || defined(__clang__)
   static void test_get_caller (const void *from);
@@ -150,12 +151,6 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 #else
   #error "Unsupported compiler."
 #endif
-
-static void wstrace_printf (BOOL first_line,
-                            _Printf_format_string_ const char *fmt, ...)
-                            ATTR_PRINTF (2,3);
-
-static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 
 /**
  * Hooking and tracing of Winsock extension functions returned in
@@ -556,8 +551,6 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
   DWORD   err = GetLastError();   /* save error status */
   va_list args;
 
-  va_start (args, fmt);
-
   if (first_line)
   {
     /* If stdout or stderr is redirected, we cannot get the cursor column.
@@ -586,10 +579,11 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
   }
 #endif
 
+  va_start (args, fmt);
   trace_vprintf (fmt, args);
+  va_end (args);
 
   SetLastError (err);  /* restore error status */
-  va_end (args);
 }
 
 /**
