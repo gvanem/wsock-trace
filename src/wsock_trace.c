@@ -69,6 +69,7 @@ static fd_set *last_ex_fd = NULL;
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
+static void        wstrace_printf (BOOL first_line, const char *fmt, ...);
 
 #if defined(USE_BFD) || defined(__clang__)
   static void test_get_caller (const void *from);
