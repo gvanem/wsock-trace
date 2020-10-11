@@ -269,10 +269,10 @@ DEF_FUNC (int, WSARecvFrom, (SOCKET                             s,
 DEF_FUNC (int, WSARecvDisconnect, (SOCKET  s,
                                    WSABUF *disconnect_data));
 
-DEF_FUNC (int, WSARecvEx,         (SOCKET s,
-                                   char  *buf,
-                                   int    buf_len,
-                                   int   *flags));
+DEF_FUNC (int, WSARecvEx, (SOCKET s,
+                           char  *buf,
+                           int    buf_len,
+                           int   *flags));
 
 DEF_FUNC (int, WSASend, (SOCKET                             s,
                          WSABUF                            *bufs,
@@ -300,12 +300,12 @@ DEF_FUNC (int, WSASendMsg, (SOCKET                             s,
                             LPWSAOVERLAPPED_COMPLETION_ROUTINE func));
 
 DEF_FUNC (int, WSAConnect, (SOCKET                 s,
-                                 const struct sockaddr *name,
-                                 int                    namelen,
-                                 WSABUF                *caller_data,
-                                 WSABUF                *callee_data,
-                                 QOS                   *SQOS,
-                                 QOS                   *GQOS));
+                            const struct sockaddr *name,
+                            int                    namelen,
+                            WSABUF                *caller_data,
+                            WSABUF                *callee_data,
+                            QOS                   *SQOS,
+                            QOS                   *GQOS));
 
 
 DEF_FUNC (BOOL, WSAConnectByList, (SOCKET               s,
@@ -390,13 +390,13 @@ DEF_FUNC (int, WSAEnumNetworkEvents, (SOCKET            s,
                                       WSAEVENT          ev,
                                       WSANETWORKEVENTS *events));
 
-DEF_FUNC (int, WSAEnumProtocolsA,    (int               *protocols,
-                                      WSAPROTOCOL_INFOA *proto_info,
-                                      DWORD             *buf_len));
+DEF_FUNC (int, WSAEnumProtocolsA, (int               *protocols,
+                                   WSAPROTOCOL_INFOA *proto_info,
+                                   DWORD             *buf_len));
 
-DEF_FUNC (int, WSAEnumProtocolsW,    (int               *protocols,
-                                      WSAPROTOCOL_INFOW *proto_info,
-                                      DWORD             *buf_len));
+DEF_FUNC (int, WSAEnumProtocolsW, (int               *protocols,
+                                   WSAPROTOCOL_INFOW *proto_info,
+                                   DWORD             *buf_len));
 
 DEF_FUNC (DWORD, WSAWaitForMultipleEvents, (DWORD           num_ev,
                                             const WSAEVENT *ev,
@@ -432,7 +432,6 @@ DEF_FUNC (USHORT, RtlCaptureStackBackTrace, (ULONG  frames_to_skip,
                                              ULONG  frames_to_capture,
                                              void **frames,
                                              ULONG *trace_hash));
-
 
 #define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
@@ -516,9 +515,10 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
            // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
 
-             /* Allthough 'WSASendMsg()' seems to be an 'extension-function'
-              * accessible only (?) via the 'WSAID_WSASENDMSG' GUID, it is present in
-              * libws2_32.a in some MinGW distros.
+             /**
+              * Allthough `WSASendMsg()` seems to be an "extension-function"
+              * accessible only (?) via the `WSAID_WSASENDMSG` GUID, it is present
+              * in `libws2_32.a` in some MinGW distros. <br>
               * Add it as an option.
               */
               ADD_VALUE (1, "ws2_32.dll", WSASendMsg),
@@ -594,7 +594,7 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
  */
 int WSAError_save_restore (int pop)
 {
-  static int err = 0;  /**\todo This should be per thread, use TlsAlloc()? */
+  static int err = 0;  /**\todo This should be a "Thread Local" variable */
 
   if (pop)
        (*p_WSASetLastError) (err);
@@ -624,9 +624,9 @@ static const char *get_error (SOCK_RC_TYPE rc, int local_err)
   return ("No error");
 }
 
-/*
- * WSAAddressToStringA() returns the address AND the port in the 'buf'.
- * Like: 127.0.0.1:1234
+/**
+ * `WSAAddressToStringA()` returns the address *and* the port in the `buf`.<br>
+ * Like: `127.0.0.1:1234`
  */
 const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
 {
@@ -641,9 +641,9 @@ const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
   return (buf);
 }
 
-/*
- * Don't call the above 'WSAAddressToStringA()' for AF_INET/AF_INET6 addresses.
- * We do it ourself using the below sockaddr_str_port().
+/**
+ * Don't call the above `WSAAddressToStringA()` for AF_INET/AF_INET6 addresses.
+ * We do it ourself using the below `sockaddr_str_port()`.
  */
 const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
 {
@@ -654,8 +654,9 @@ const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
   return (p);
 }
 
-/*
- * This is in <afunix.h> on recent SDK's.
+/**
+ * \struct fake_sockaddr_un
+ * This is in `<afunix.h>` on recent SDK's.
  */
 struct fake_sockaddr_un {
        short sun_family;       /* AF_UNIX */
@@ -667,10 +668,11 @@ struct fake_sockaddr_un {
 #define AF_UNIX 1
 #endif
 
-/*
- * This returns the address AND the port in the 'buf'.
- * Like: "127.0.0.1:1234"  for an AF_INET sockaddr. And
- *       "[0F::80::]:1234" for an AF_INET6 sockaddr.
+/**
+ * This returns the address *and* the port in the `buf`. <br>
+ * Like:
+ *  \li `"127.0.0.1:1234"`  for an `AF_INET` sockaddr. And
+ *  \li `"[0F::80::]:1234"` for an `AF_INET6` sockaddr.
  */
 const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
 {
@@ -751,7 +753,7 @@ static __inline const char *uint_ptr_hexval (UINT_PTR val, char *buf)
     unsigned idx = val % 16;
 
     val >>= 4;
-    buf[j] = hex_chars [idx];
+    buf [j] = hex_chars [idx];
   }
   return (buf);
 }
@@ -793,7 +795,6 @@ static const char *socket_number (SOCKET s)
 /*
  * The actual Winsock functions we trace.
  */
-
 EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 {
   int rc;
