@@ -1,5 +1,6 @@
 /**
  * \file wsock_hooks.c
+ * \ingroup Main
  *
  * \brief Hooking and tracing of Winsock extension functions returned in
  *   `WSAIoctl (s, SIO_GET_EXTENSION_FUNCTION_POINTER,...)`. <br>
