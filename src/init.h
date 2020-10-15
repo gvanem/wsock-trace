@@ -67,11 +67,11 @@ struct IANA_cfg {
        BOOL    enable;
        char   *ip4_file;
        char   *ip6_file;
+       char   *asn_file;
      };
 
 struct GEOIP_cfg {
        BOOL    enable;
-       BOOL    use_generated;
        BOOL    show_position;
        BOOL    show_map_url;
        int     max_days;

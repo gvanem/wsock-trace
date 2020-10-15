@@ -156,7 +156,6 @@
 #
 [geoip]
   enable        = 1
-  use_generated = 0    # use IPV4/IP6 records from pre-generated records only
   max_days      = 10   # max allowed days old before forcing an update
   show_position = 0    # Show latitude/longitude for IP-position (if available).
   show_map_url  = 0    # Show Google Maps URL for IP-position (if available).
@@ -194,7 +193,8 @@
 [iana]
   enable   = 0                                               # Show IANA info for addresses in traced functions
   ip4_file = %APPDATA%\ipv4-address-space.csv                # The IANA 'IPv4 Address Space Registry' .csv file
-  ip6_file = %APPDATA%\ipv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file (TODO)
+  ip6_file = %APPDATA%\ipv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file
+  asn_file = %APPDATA%\GeoIPASNum.csv                        # The Blockfinder generated ASN .csv file
 
   #
   # Note: there are no 'ip4_url' and 'ip6_url' for the above files

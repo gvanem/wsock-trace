@@ -765,9 +765,6 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   if (!stricmp(key, "enable"))
        g_cfg.GEOIP.enable = (*val > '0') ? TRUE : FALSE;
 
-  else if (!stricmp(key, "use_generated"))
-       g_cfg.GEOIP.use_generated = atoi (val);
-
   else if (!stricmp(key, "show_position"))
        g_cfg.GEOIP.show_position = atoi (val);
 
@@ -936,6 +933,9 @@ static void parse_iana_settings (const char *key, const char *val, unsigned line
 
   else if (!stricmp(key, "ip6_file"))
        g_cfg.IANA.ip6_file = strdup (val);
+
+  else if (!stricmp(key, "asn_file"))
+       g_cfg.IANA.asn_file = strdup (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);

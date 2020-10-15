@@ -40,11 +40,21 @@
 static smartlist_t *iana_entries_ip4;
 static smartlist_t *iana_entries_ip6;
 
+static DWORD g_num_ipv4, g_num_ipv6;
+
 static void iana_sort_lists (void);
 static void iana_load_and_parse (int family, const char *file);
 static int  iana_add_entry (const struct IANA_record *rec);
 static int  iana_CSV_add4 (struct CSV_context *ctx, const char *value);
 static int  iana_CSV_add6 (struct CSV_context *ctx, const char *value);
+
+/**
+ * A smartlist of `struct ASN_record`
+ */
+static smartlist_t *ASN_entries;
+
+static void ASN_load_file (const char *file);
+static int  ASN_CSV_add (struct CSV_context *ctx, const char *value);
 
 /**
  * The main init function for this module.
@@ -57,6 +67,10 @@ void iana_init (void)
 
   iana_load_and_parse (AF_INET, g_cfg.IANA.ip4_file);
   iana_load_and_parse (AF_INET6, g_cfg.IANA.ip6_file);
+
+  if (g_cfg.IANA.asn_file)
+     ASN_load_file (g_cfg.IANA.asn_file);
+
   iana_sort_lists();
 
   if ((!iana_entries_ip4 || smartlist_len(iana_entries_ip4) == 0) &&
@@ -64,7 +78,10 @@ void iana_init (void)
      g_cfg.IANA.enable = FALSE;
 
   if (g_cfg.trace_level >= 2)
-     iana_dump();
+  {
+    iana_dump();
+    ASN_dump();
+  }
 }
 
 static char print_buf [500];
@@ -192,9 +209,13 @@ void iana_exit (void)
   if (iana_entries_ip6)
      smartlist_wipe (iana_entries_ip6, free);
 
-  iana_entries_ip4 = NULL;
+  if (ASN_entries)
+     smartlist_wipe (ASN_entries, free);
+
+  iana_entries_ip4 = iana_entries_ip6 = ASN_entries = NULL;
   free (g_cfg.IANA.ip4_file);
   free (g_cfg.IANA.ip6_file);
+  free (g_cfg.IANA.asn_file);
 }
 
 /**
@@ -203,6 +224,9 @@ void iana_exit (void)
  */
 void iana_report (void)
 {
+  trace_printf ("\n  IANA statistics:\n"
+                "    Got %lu IPv4 records, %lu IPv6 records.\n",
+                DWORD_CAST(g_num_ipv4), DWORD_CAST(g_num_ipv6));
 }
 
 /**
@@ -508,6 +532,9 @@ static int compare_on_netnum_prefix_ip6 (const void *key, const void **member)
 /**
  * Sort both `iana_entries_ip4` and  `iana_entries_ip6` smart-lists on
  * net-number, mask and finally on status.
+ *
+ * \note The `ASN_entries` is already sorted on IPv4 low/high range since
+ *       the .CSV-file the records are read from, was assumed to be sorted.
  */
 static void iana_sort_lists (void)
 {
@@ -538,6 +565,7 @@ int iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *out
   const struct IANA_record *rec;
 
   out_rec->family = -1;  /* Signal an invalid record */
+  out_rec->rir_list = NULL;
 
   if (!iana_entries_ip4)
      return (0);
@@ -551,6 +579,7 @@ int iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *out
   if (rec)
   {
     *out_rec = *rec;
+    g_num_ipv4++;
     return (1);
   }
   return (0);
@@ -574,6 +603,7 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
   const struct IANA_record *rec;
 
   out_rec->family = -1;  /* Signal an invalid record */
+  out_rec->rir_list = NULL;
 
   if (!iana_entries_ip6)
      return (0);
@@ -591,6 +621,7 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
     strcpy (out_rec->whois, "No WHOIS");
     strcpy (out_rec->url, "No RDAP");
     strcpy (out_rec->status, "Fixed status");
+    g_num_ipv6++;
     return (1);
   }
 
@@ -603,9 +634,185 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
   if (rec)
   {
     *out_rec = *rec;
+    g_num_ipv6++;
     return (1);
   }
   return (0);
+}
+
+/**
+ * Open and parse `GeoIPASNum.csv` file. <br>
+ * This must be generated using "Blockfinder" and
+ * `python2 blockfinder --export`.
+ *
+ * \param[in] file  the CSV file to read and parse.
+ */
+static void ASN_load_file (const char *file)
+{
+  struct CSV_context ctx;
+
+  assert (ASN_entries == NULL);
+  ASN_entries = smartlist_new();
+  if (!ASN_entries)
+      return;
+
+  if (!file_exists(file))
+  {
+    TRACE (1, "ASN file \"%s\" does not exist.\n", file);
+    return;
+  }
+
+  memset (&ctx, '\0', sizeof(ctx));
+  ctx.file_name  = file;
+  ctx.num_fields = 5;
+  ctx.callback   = ASN_CSV_add;
+
+  #ifdef TEST_IANA
+  ctx.rec_max = rec_max;
+  #endif
+
+  CSV_open_and_parse_file (&ctx);
+}
+
+/**
+ * Split a string like `{12849,21450}` and add each to
+ * ASN_record::asn[]`.
+ */
+static void ASN_add_asn_numbers (struct ASN_record *rec, const char *value)
+{
+  if (*value == '{')
+  {
+    char val[50], *v, *end;
+    int  i = 0;
+
+    _strlcpy (val, value+1, sizeof(val));
+    for (v = _strtok_r(val, ",", &end); v; v = _strtok_r(NULL, ",", &end))
+       rec->asn[i++] = _atoi64 (v);
+  }
+  else
+    rec->asn[0] = _atoi64 (value);
+}
+
+/**
+ * Currently handles only IPv4 addresses.
+ */
+static int ASN_CSV_add (struct CSV_context *ctx, const char *value)
+{
+  static struct ASN_record rec = { 0 };
+  struct ASN_record *copy;
+
+  switch (ctx->field_num)
+  {
+    case 0:
+    case 1:      /* Ignore the low/high `a.b.c.d` fields */
+         break;
+    case 2:
+         rec.ipv4.low.s_addr = swap32 (_atoi64(value));
+         break;
+    case 3:
+         rec.ipv4.high.s_addr = swap32 (_atoi64(value));
+         break;
+    case 4:
+         ASN_add_asn_numbers (&rec, value);
+         rec.family = AF_INET;
+         copy = malloc (sizeof(*copy));
+         if (copy)
+         {
+           memcpy (copy, &rec, sizeof(*copy));
+           smartlist_add (ASN_entries, copy);
+         }
+         memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
+         break;
+  }
+  return (1);
+}
+
+/**
+ * `smartlist_bsearch()` helper; compare on IPv4 range.
+ */
+static int compare_on_ip4 (const void *key, const void **member)
+{
+  const struct ASN_record *rec  = *member;
+  struct in_addr ipv4;
+  char   low_str  [MAX_IP4_SZ+1];
+  char   high_str [MAX_IP4_SZ+1];
+  char   ipv4_str [MAX_IP4_SZ+1];
+  int    rc;
+
+  g_num_compares++;
+  ipv4.s_addr = *(const u_long*)key;
+
+  if (swap32(ipv4.s_addr) < swap32(rec->ipv4.low.s_addr))
+       rc = -1;
+  else if (swap32(ipv4.s_addr) > swap32(rec->ipv4.high.s_addr))
+       rc = 1;
+  else rc = 0;
+
+  _wsock_trace_inet_ntop (AF_INET, &ipv4, ipv4_str, sizeof(ipv4_str), NULL);
+  _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL);
+  _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL);
+
+  TRACE (1, "\nkey: %s, low: %s, high: %s, rc: %d\n", ipv4_str, low_str, high_str, rc);
+  return (rc);
+}
+
+/**
+ * Find and print the ASN information for an IPv4 address.
+ *
+ * \todo
+ * \li Handle an IPv6 address too.
+ * \li Dump the delegated RIR information for this record.
+ */
+void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6)
+{
+  const struct ASN_record *rec;
+
+  if (ip6 || !ASN_entries || !stricmp(iana->status, "RESERVED"))
+     return;
+
+  g_num_compares = 0;
+  rec = smartlist_bsearch (ASN_entries, ip4, compare_on_ip4);
+  TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+  g_num_compares = 0;
+
+  if (rec)
+  {
+    int i;
+
+    printf ("\n  ASN: ");
+    for (i = 0; rec->asn[i]; i++)
+        printf ("%lu%s", rec->asn[i], (rec->asn[i+1] && i < DIM(rec->asn)) ? ", " : " ");
+    printf ("(status: %s)", iana->status);
+  }
+}
+
+
+/*
+ * Handles only IPv4 addresses now.
+ */
+void ASN_dump (void)
+{
+  int i, j, num = ASN_entries ? smartlist_len (ASN_entries) : 0;
+
+  TRACE (2, "\nParsed %s records from \"%s\":\n",
+         dword_str(num), g_cfg.IANA.asn_file);
+
+  for (i = 0; i < num; i++)
+  {
+    const struct ASN_record *rec = smartlist_get (ASN_entries, i);
+    char   low_str [MAX_IP4_SZ];
+    char   high_str[MAX_IP4_SZ];
+
+    if (_wsock_trace_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
+        _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
+    {
+      printf ("  %3d:  %-15.15s - %-15.15s ASN: ", i, low_str, high_str);
+      for (j = 0; rec->asn[j]; j++)
+          printf ("%lu%s", rec->asn[j], (rec->asn[j+1] && j < DIM(rec->asn)) ? ", " : "\n");
+    }
+    else
+      printf ("  %3d: <bogus>\n", i);
+  }
 }
 
 #ifdef TEST_IANA
@@ -627,8 +834,8 @@ DO_NOTHING (ip2loc_num_ipv6_entries)
 
 static void usage (void)
 {
-  puts ("Usage: iana.exe [-d] [-m max] <ipv4-address-space.csv>\n"
-        "  or   iana.exe [-d] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
+  puts ("Usage: iana.exe [-d] [-a ASN-file] [-m max] <ipv4-address-space.csv>\n"
+        "  or   iana.exe [-d] [-a ASN-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
         "  option '-m' stops after 'max' records.");
   exit (0);
 }
@@ -643,9 +850,11 @@ int main (int argc, char **argv)
 {
   struct IANA_record rec;
   static const TEST_ADDR test_addr[] = {
-             { AF_INET, { 224,  0,  0,  1 } },
-             { AF_INET, { 181, 10, 20, 30 } },
-             { AF_INET, {   8,  8,  8,  8 } },
+             { AF_INET, { 224,   0,  0,  1 } },
+             { AF_INET, { 181,  10, 20, 30 } },
+             { AF_INET, {   8,   8,  8,  8 } },
+             { AF_INET, {   8,   8,  4,  0 } },   /* 8.8.4.0, 8.8.7.255, ASN: 15169 */
+             { AF_INET, {  37, 142, 14, 15 } },   /* 37.142.0.0, 37.142.127.255, ASN: 12849 and ASN: 21450 */
 
              /* A TEREDO address
               */
@@ -667,17 +876,20 @@ int main (int argc, char **argv)
   if (argc < 2)
      usage();
 
-  while ((ch = getopt(argc, argv, "d6m:h?")) != EOF)
+  while ((ch = getopt(argc, argv, "6a:dm:h?")) != EOF)
      switch (ch)
      {
        case '6':
             do_ip6 = 1;
             break;
+       case 'a':
+            g_cfg.IANA.asn_file = strdup (optarg);
+            break;
        case 'm':
             rec_max = atoi (optarg);
             break;
        case 'd':
-            g_cfg.trace_level = 3;
+            g_cfg.trace_level++;
             break;
        case '?':
        case 'h':
@@ -716,14 +928,18 @@ int main (int argc, char **argv)
       _wsock_trace_inet_ntop (AF_INET, &test_addr[i].ip4, ip4_buf, sizeof(ip4_buf), NULL);
       printf ("\niana_find_by_ip4_address (\"%s\"):\n", ip4_buf);
       iana_find_by_ip4_address (&test_addr[i].ip4, &rec);
-      printf ("  %s\n", iana_get_rec4(&rec, FALSE));
+      printf ("  %s", iana_get_rec4(&rec, FALSE));
+      ASN_print (&rec, &test_addr[i].ip4, NULL);
+      puts ("");
     }
     else
     {
       _wsock_trace_inet_ntop (AF_INET6, &test_addr[i].ip6, ip6_buf, sizeof(ip6_buf), NULL);
       printf ("\niana_find_by_ip6_address (\"%s\"):\n", ip6_buf);
       iana_find_by_ip6_address (&test_addr[i].ip6, &rec);
-      printf ("  %s\n", iana_get_rec6(&rec, FALSE));
+      printf ("  %s", iana_get_rec6(&rec, FALSE));
+      ASN_print (&rec, NULL, &test_addr[i].ip6);
+      puts ("");
     }
   }
 
