@@ -687,10 +687,10 @@ static void ASN_add_asn_numbers (struct ASN_record *rec, const char *value)
 
     _strlcpy (val, value+1, sizeof(val));
     for (v = _strtok_r(val, ",", &end); v; v = _strtok_r(NULL, ",", &end))
-       rec->asn[i++] = _atoi64 (v);
+       rec->asn[i++] = (DWORD) _atoi64 (v);
   }
   else
-    rec->asn[0] = _atoi64 (value);
+    rec->asn[0] = (DWORD) _atoi64 (value);
 }
 
 /**
@@ -707,10 +707,10 @@ static int ASN_CSV_add (struct CSV_context *ctx, const char *value)
     case 1:      /* Ignore the low/high `a.b.c.d` fields */
          break;
     case 2:
-         rec.ipv4.low.s_addr = swap32 (_atoi64(value));
+         rec.ipv4.low.s_addr = swap32 ((DWORD)_atoi64(value));
          break;
     case 3:
-         rec.ipv4.high.s_addr = swap32 (_atoi64(value));
+         rec.ipv4.high.s_addr = swap32 ((DWORD)_atoi64(value));
          break;
     case 4:
          ASN_add_asn_numbers (&rec, value);
@@ -760,8 +760,8 @@ static int compare_on_ip4 (const void *key, const void **member)
  * Find and print the ASN information for an IPv4 address.
  *
  * \todo
- * \li Handle an IPv6 address too.
- * \li Dump the delegated RIR information for this record.
+ *  Handle an IPv6 address too. <br>
+ *  Dump the delegated RIR information for this record.
  */
 void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6)
 {
