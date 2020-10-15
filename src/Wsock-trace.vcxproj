@@ -102,8 +102,6 @@
     <ClCompile Include="dnsbl.c" />
     <ClCompile Include="dump.c" />
     <ClCompile Include="firewall.c" />
-    <ClCompile Include="geoip-gen4.c" />
-    <ClCompile Include="geoip-gen6.c" />
     <ClCompile Include="geoip.c" />
     <ClCompile Include="hosts.c" />
     <ClCompile Include="iana.c" />

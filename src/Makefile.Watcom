@@ -35,22 +35,20 @@ WSOCK_TRACE_OBJS = $(OBJ_DIR)\wsock_trace.obj     &
                    $(OBJ_DIR)\dump.obj            &
                    $(OBJ_DIR)\firewall.obj        &
                    $(OBJ_DIR)\geoip.obj           &
-                   $(OBJ_DIR)\geoip-null.obj      &
                    $(OBJ_DIR)\overlap.obj         &
                    $(OBJ_DIR)\smartlist.obj       &
                    $(OBJ_DIR)\stkwalk.obj
 
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
-GEOIP_OBJ = $(OBJ_DIR)\geoip.obj      &
-            $(OBJ_DIR)\geoip-null.obj &
+GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj    &
             $(OBJ_DIR)\common.obj     &
             $(OBJ_DIR)\csv.obj        &
             $(OBJ_DIR)\dnsbl.obj      &
             $(OBJ_DIR)\iana.obj       &
             $(OBJ_DIR)\idna.obj       &
             $(OBJ_DIR)\in_addr.obj    &
-            $(OBJ_DIR)\init.obj       &
+            $(OBJ_DIR)\init_1.obj     &
             $(OBJ_DIR)\inet_util.obj  &
             $(OBJ_DIR)\ip2loc.obj     &
             $(OBJ_DIR)\getopt.obj     &
@@ -81,6 +79,16 @@ vclean realclean: clean .SYMBOLIC
 	- rmdir $(OBJ_DIR)
 
 .ERASE
+$(OBJ_DIR)/init_1.obj: init.c
+	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$@ $[@
+	@echo.
+
+.ERASE
+$(OBJ_DIR)/geoip_1.obj: geoip.c
+	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$@ $[@
+	@echo.
+
+.ERASE
 .c{$(OBJ_DIR)}.obj:
 	*$(CC) $(CFLAGS) -fo=$@ $[@
 	@echo.
@@ -106,18 +114,8 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
 	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
 	@echo.
 
-#
-# Note:
-#   Watcom is unable to compile the large generated files
-#   geoip-gen4.c qand geoip-gen6.c. Therefore it uses only
-#   geoip-null.c.
-#
-geoip.exe: geoip.c init.c $(GEOIP_OBJ)
-	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\geoip.obj geoip.c
-	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$(OBJ_DIR)\init.obj  init.c
-	wlink $(LDFLAGS) name $@ file { $(GEOIP_OBJ) } &
-	                         library clib3$(STACK_OR_REG).lib, ws2_32.lib
-	rm -f $(OBJ_DIR)/init.obj $(OBJ_DIR)/geoip.obj
+geoip.exe: $(GEOIP_OBJ)
+	wlink $(LDFLAGS) name $@ file { $(GEOIP_OBJ) } library clib3$(STACK_OR_REG).lib, ws2_32.lib
 	@echo.
 
 idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
@@ -148,8 +146,6 @@ $(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h geoip.h smartlist.h
 $(OBJ_DIR)\dnsbl.obj:       dnsbl.c dnsbl.h common.h init.h inet_util.h in_addr.h smartlist.h wsock_defs.h
 $(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h in_addr.h hosts.h
 $(OBJ_DIR)\geoip.obj:       geoip.c common.h inet_util.h smartlist.h init.h in_addr.h geoip.h
-$(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h common.h smartlist.h
-$(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h common.h smartlist.h
 $(OBJ_DIR)\iana.obj:        iana.c common.h init.h inet_util.h in_addr.h smartlist.h iana.h
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h smartlist.h idna.h
 $(OBJ_DIR)\inet_util.obj:   inet_util.c inet_util.h common.h init.h in_addr.h wsock_defs.h

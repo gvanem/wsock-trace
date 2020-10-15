@@ -105,8 +105,6 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
                   $(OBJ_DIR)\hosts.obj           \
                   $(OBJ_DIR)\firewall.obj        \
                   $(OBJ_DIR)\geoip.obj           \
-                  $(OBJ_DIR)\geoip-gen4.obj      \
-                  $(OBJ_DIR)\geoip-gen6.obj      \
                   $(OBJ_DIR)\iana.obj            \
                   $(OBJ_DIR)\idna.obj            \
                   $(OBJ_DIR)\ip2loc.obj          \
@@ -135,14 +133,12 @@ FIREWALL_TEST_OBJ = $(OBJ_DIR)\common.obj     \
                     $(OBJ_DIR)\dnsbl.obj      \
                     $(OBJ_DIR)\firewall_1.obj \
                     $(OBJ_DIR)\geoip.obj      \
-                    $(OBJ_DIR)\geoip-gen4.obj \
-                    $(OBJ_DIR)\geoip-gen6.obj \
                     $(OBJ_DIR)\getopt.obj     \
                     $(OBJ_DIR)\iana.obj       \
                     $(OBJ_DIR)\idna.obj       \
                     $(OBJ_DIR)\in_addr.obj    \
                     $(OBJ_DIR)\inet_util.obj  \
-                    $(OBJ_DIR)\init_1.obj     \
+                    $(OBJ_DIR)\init_2.obj     \
                     $(OBJ_DIR)\ip2loc.obj     \
                     $(OBJ_DIR)\overlap.obj    \
                     $(OBJ_DIR)\smartlist.obj  \
@@ -154,10 +150,20 @@ IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
            $(OBJ_DIR)\smartlist.obj
 
 #
-# Source and .obj-files for 'geoip.exe'.
+# .obj-files for 'geoip.exe'.
 #
-GEOIP_SRC = geoip.c common.c csv.c dnsbl.c iana.c idna.c inet_util.c init.c in_addr.c ip2loc.c getopt.c smartlist.c
-GEOIP_OBJ = $(GEOIP_SRC:.c=.obj)
+GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj   \
+            $(OBJ_DIR)\common.obj    \
+            $(OBJ_DIR)\csv.obj       \
+            $(OBJ_DIR)\dnsbl.obj     \
+            $(OBJ_DIR)\iana.obj      \
+            $(OBJ_DIR)\idna.obj      \
+            $(OBJ_DIR)\inet_util.obj \
+            $(OBJ_DIR)\init_1.obj    \
+            $(OBJ_DIR)\in_addr.obj   \
+            $(OBJ_DIR)\ip2loc.obj    \
+            $(OBJ_DIR)\getopt.obj    \
+            $(OBJ_DIR)\smartlist.obj
 
 all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe idna.exe firewall_test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
@@ -180,29 +186,12 @@ uninstall:
 	- del "$(BIN_TARGET)\$(WSOCK_TRACE_DLL)"
 	- del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
 
-geoip-gen4.c: geoip-null.exe
-	@echo Generating $@.
-	geoip-null.exe -4g $@
-
-geoip-gen6.c: geoip-null.exe
-	@echo Generating $@.
-	geoip-null.exe -6g $@
-
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
 	type link.tmp >> test.map
 
-#
-# The first-time 'geoip' generator program used before we have generated
-# 'geoip-gen4.c' and 'geoip-gen6.c'
-#
-geoip-null.exe: $(GEOIP_SRC) geoip-null.c
-	$(CC) $(CFLAGS) -DTEST_GEOIP $** -Fe$@ -link $(LDFLAGS) ws2_32.lib ole32.lib
-
-geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP $**
-	link.exe $(LDFLAGS) -out:$@ $(GEOIP_OBJ) geoip-gen4.obj geoip-gen6.obj ws2_32.lib ole32.lib
-	del $(GEOIP_OBJ)
+geoip.exe: $(GEOIP_OBJ)
+	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib ole32.lib
 
 idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
@@ -228,15 +217,13 @@ compile_luajit_1:
 	   copy lua51.lib lua51_static.lib )
 
 clean:
-	- del link.tmp vc1*.pdb geoip-null.obj geoip-gen4.obj geoip-gen6.obj $(OBJ_DIR)\*.obj \
-	      $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
+	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
 
 vclean realclean: clean
-	- del wsock_trace.lib     wsock_trace.dll     wsock_trace.map        wsock_trace.pdb
-	- del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map    wsock_trace_x64.pdb
-	- del geoip.exe           geoip.map           geoip.pdb              geoip-gen4.c geoip-gen6.c
-	- del geoip-null.exe      geoip-null.map      geoip-null.pdb
-	- del idna.exe            idna.map            idna.pdb  test.exe     test.pdb
+	- del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.pdb
+	- del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.pdb
+	- del geoip.exe           geoip.map           geoip.pdb
+	- del idna.exe            idna.map            idna.pdb  test.exe  test.pdb
 	- del firewall_test.exe   firewall_test.map   firewall_test.pdb
 	- rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
@@ -268,7 +255,13 @@ $(OBJ_DIR)\idna_1.obj: idna.c
 	$(CC) $(CFLAGS) -DTEST_IDNA -Fo$*.obj -c idna.c
 
 $(OBJ_DIR)\init_1.obj: init.c
+	$(CC) $(CFLAGS) -DTEST_GEOIP -Fo$*.obj -c init.c
+
+$(OBJ_DIR)\init_2.obj: init.c
 	$(CC) $(CFLAGS) -DTEST_GEOIP -DTEST_FIREWALL -Fo$*.obj -c init.c
+
+$(OBJ_DIR)\geoip_1.obj: geoip.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP -Fo$(OBJ_DIR)/geoip_1.obj geoip.c
 
 #
 # The default fall-back rule for other .obj-files.
@@ -295,8 +288,6 @@ $(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h geoip.h smartlist.h
 $(OBJ_DIR)\dnsbl.obj:       dnsbl.c dnsbl.h common.h init.h in_addr.h inet_util.h geoip.h smartlist.h wsock_defs.h
 $(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h in_addr.h hosts.h
 $(OBJ_DIR)\geoip.obj:       geoip.c common.h smartlist.h init.h in_addr.h inet_util.h geoip.h
-$(OBJ_DIR)\geoip-gen4.obj:  geoip-gen4.c geoip.h common.h smartlist.h
-$(OBJ_DIR)\geoip-gen6.obj:  geoip-gen6.c geoip.h common.h smartlist.h
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h smartlist.h idna.h
 $(OBJ_DIR)\inet_util.obj:   inet_util.c inet_util.h common.h init.h in_addr.h wsock_defs.h
 $(OBJ_DIR)\init.obj:        init.c common.h wsock_trace.h wsock_trace_lua.h \

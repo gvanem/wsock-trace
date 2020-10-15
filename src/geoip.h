@@ -30,20 +30,20 @@ struct ipv6_node {
  * A structure as returned from functions in ip2loc.c.
  */
 struct ip2loc_entry {
-       char  country_short[3];      /**< The short country name of this entry */
-       char  country_long[30];      /**< The full country name of this entry */
-       char  city[40];              /**< The city name of this entry (if any) */
-       char  region[40];            /**< The region name of this entry (if any) */
-       float latitude;              /**< The latitude of this entry (if any) */
-       float longitude;             /**< The longitude of this entry (if any) */
+       char   country_short[3];     /**< The short country name of this entry */
+       char   country_long[30];     /**< The full country name of this entry */
+       char   city[40];             /**< The city name of this entry (if any) */
+       char   region[40];           /**< The region name of this entry (if any) */
+       float  latitude;             /**< The latitude of this entry (if any) */
+       float  longitude;            /**< The longitude of this entry (if any) */
      };
 
 /**\typedef position
  * A structure returned from `geoip_get_position_by_ipv4()` and `geoip_get_position_by_ipv6()`.
  */
 typedef struct position {
-        float latitude;            /**< The latitude of this entry (if any) */
-        float longitude;           /**< The longitude of this entry (if any) */
+        float  latitude;           /**< The latitude of this entry (if any) */
+        float  longitude;          /**< The longitude of this entry (if any) */
       } position;
 
 extern int         geoip_init (DWORD *_num4, DWORD *_num6);
@@ -58,37 +58,9 @@ const position    *geoip_get_position_by_ipv4 (const struct in_addr  *ip4);
 const position    *geoip_get_position_by_ipv6 (const struct in6_addr *ip6);
 extern uint64      geoip_get_stats_by_idx    (int idx);
 extern uint64      geoip_get_stats_by_number (int number);
-extern void        geoip_ipv4_add_specials (void);
-extern void        geoip_ipv6_add_specials (void);
-extern DWORD       geoip_load_data (int family);
 
 extern void geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
                                         DWORD *num_ip2loc4, DWORD *num_ip2loc6);
-
-/**
- * To build a version of `geoip.exe` that should support `g_cfg.GEOIP.use_generated`,
- * is bit of an "chicken and egg" problem. These 2 commands:
- * ```
- *   geoip-null.exe -4g geoip-gen4.c
- *   geoip-null.exe -6g geoip-gen6.c
- * ```
- *
- * will generate these files. The above `geoip-null.exe` is linked to the simple `geoip-null.c`
- * with only dummy functions for `geoip_smartlist_fixed_ipv4()` and `geoip_smartlist_fixed_ipv6()`.
- *
- * Then `geoip.exe` (or `wsock_trace.dll`) must be rebuilt and used with `g_cfg.GEOIP.use_generated = 1`
- * to make use of this faster feature.
- *
- * This function is defined in `geoip.c`, but called from:
- *  \li `geoip_smartlist_fixed_ipv4()` in `gen-geoip4.c` and
- *  \li `geoip_smartlist_fixed_ipv6()` in `geoip-gen6.c`.
- */
-extern smartlist_t *geoip_smartlist_fixed (const void *start, size_t el_size, unsigned num);
-
-/** These generated functions are defined in `gen-geoip4.c` and `geoip-gen6.c`.
- */
-extern smartlist_t *geoip_smartlist_fixed_ipv4 (void);
-extern smartlist_t *geoip_smartlist_fixed_ipv6 (void);
 
 /** Functions defined in `ip2loc.c`.
  */

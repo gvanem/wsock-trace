@@ -77,15 +77,24 @@ endif
 EX_LIBS += -lole32 -ladvapi32
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
-          common.c cpu.c csv.c dnsbl.c dump.c geoip.c geoip-gen4.c geoip-gen6.c \
-          overlap.c iana.c in_addr.c ip2loc.c smartlist.c stkwalk.c bfd_gcc.c \
-          firewall.c
+          common.c cpu.c csv.c dnsbl.c dump.c geoip.c overlap.c iana.c in_addr.c \
+          ip2loc.c smartlist.c stkwalk.c bfd_gcc.c firewall.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_SRC = geoip.c common.c csv.c dnsbl.c iana.c idna.c inet_util.c init.c in_addr.c ip2loc.c smartlist.c
-GEOIP_OBJ = $(GEOIP_SRC:.c=.o)
+GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
+              geoip_1.o              \
+              common.o               \
+              csv.o                  \
+              dnsbl.o                \
+              iana.o                 \
+              idna.o                 \
+              inet_util.o            \
+              init_1.o               \
+              in_addr.o              \
+              ip2loc.o               \
+              smartlist.o)
 
 all: message $(OBJ_DIR) libwsock_trace.a geoip.exe test.exe idna.exe firewall_test.exe
 	$(call green_msg, Welcome to Wsock_trace library and examples.)
@@ -126,7 +135,7 @@ csv.exe: csv.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_CSV $^ > csv.map
 	@echo
 
-iana.exe: common.c csv.c dnsbl.c geoip.c geoip-null.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
+iana.exe: common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -lole32 -ladvapi32 > iana.map
 	@echo
 
@@ -134,28 +143,12 @@ idna.exe: idna.c common.c smartlist.c libwsock_trace.a
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
-firewall_test.exe: common.c csv.c dnsbl.c firewall.c geoip.c geoip-gen4.c geoip-gen6.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+firewall_test.exe: common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
 	@echo
 
-geoip-null.exe: $(GEOIP_SRC) geoip-null.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_GEOIP $^ -lws2_32 -lole32 > geoip-null.map
-	@echo
-
-geoip.exe: $(GEOIP_SRC) geoip-gen4.c geoip-gen6.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP $^
-	$(CC) -o $@ $(LDFLAGS) $(GEOIP_OBJ) geoip-gen4.o geoip-gen6.o -lws2_32 -lole32 > geoip.map
-	rm -f $(GEOIP_OBJ) geoip-null.o geoip-gen4.o geoip-gen6.o
-	@echo
-
-geoip-gen4.c: geoip-null.exe
-	$(call green_msg, Generating $@.)
-	geoip-null.exe -4g $@
-	@echo
-
-geoip-gen6.c: geoip-null.exe
-	$(call green_msg, Generating $@.)
-	geoip-null.exe -6g $@
+geoip.exe: $(GEOIP_OBJ)
+	$(CC) -o $@ $(LDFLAGS) $^ -lws2_32 -lole32 > geoip.map
 	@echo
 
 run_test: test.exe
@@ -178,10 +171,17 @@ endif
 
 vclean realclean: clean
 	rm -f libwsock_trace.a wsock_trace_mw$(X_SUFFIX).dll wsock_trace_mw$(X_SUFFIX).map \
-	      csv.exe csv.map idna.exe idna.map geoip.exe geoip.map geoip-null.exe         \
-	      geoip-null.map test.exe test.map firewall_test.exe firewall_test.map         \
-	      geoip-gen4.c geoip-gen6.c wsock_trace_mw$(X_SUFFIX).def .depend.MinGW
+	      csv.exe csv.map idna.exe idna.map geoip.exe geoip.map test.exe test.map \
+	      firewall_test.exe firewall_test.map wsock_trace_mw$(X_SUFFIX).def .depend.MinGW
 	- rmdir $(OBJ_DIR)
+
+$(OBJ_DIR)/geoip_1.o: geoip.c
+	$(CC) -o $@ $(CFLAGS) -DTEST_GEOIP $<
+	@echo
+
+$(OBJ_DIR)/init_1.o: init.c
+	$(CC) -o $@ $(CFLAGS) -DTEST_GEOIP $<
+	@echo
 
 $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
