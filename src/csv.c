@@ -153,7 +153,7 @@ static const char *state_name (CSV_STATE state)
 {
   return (state == STATE_ILLEGAL ? "STATE_ILLEGAL" :
           state == STATE_NORMAL  ? "STATE_NORMAL " :
-          state == STATE_QUOTED  ? "STATE_QOUTED " :
+          state == STATE_QUOTED  ? "STATE_QUOTED " :
           state == STATE_ESCAPED ? "STATE_ESCAPED" :
           state == STATE_COMMENT ? "STATE_COMMENT" :
           state == STATE_STOP    ? "STATE_STOP   " :
@@ -355,7 +355,7 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
 
   while (1)
   {
-    if (!CSV_parse_file(ctx) || ctx->rec_num > ctx->rec_max)
+    if (!CSV_parse_file(ctx) || ctx->rec_num >= ctx->rec_max)
        break;
   }
   fclose (ctx->file);
@@ -405,7 +405,12 @@ char *str_ltrim (char *s)
  */
 static int csv_callback (struct CSV_context *ctx, const char *value)
 {
+  static int rec_num = 0;
+
+  if (ctx->rec_num > rec_num)
+     puts ("");
   TRACE (0, "rec: %u, line: %u, field: %u, value: '%s'.\n", ctx->rec_num, ctx->line_num, ctx->field_num, value);
+  rec_num = ctx->rec_num;
   return (1);
 }
 
