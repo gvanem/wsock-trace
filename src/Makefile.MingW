@@ -176,15 +176,15 @@ vclean realclean: clean
 	- rmdir $(OBJ_DIR)
 
 $(OBJ_DIR)/geoip_1.o: geoip.c
-	$(CC) -o $@ $(CFLAGS) -DTEST_GEOIP $<
+	$(CC) -c -o $@ $(CFLAGS) -DTEST_GEOIP $<
 	@echo
 
 $(OBJ_DIR)/init_1.o: init.c
-	$(CC) -o $@ $(CFLAGS) -DTEST_GEOIP $<
+	$(CC) -c -o $@ $(CFLAGS) -DTEST_GEOIP $<
 	@echo
 
 $(OBJ_DIR)/%.o: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) -c $(CFLAGS) -o $@ $<
 	@echo
 
 #
