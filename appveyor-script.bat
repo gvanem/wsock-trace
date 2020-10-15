@@ -52,13 +52,13 @@ echo   use_generated          = 0                              >> wsock_trace.ap
 echo   show_position          = 1                              >> wsock_trace.appveyor
 echo   show_map_url           = 1                              >> wsock_trace.appveyor
 echo   max_days               = 10                             >> wsock_trace.appveyor
-echo   ip4_file               = %CD%\geoip                     >> wsock_trace.appveyor
-echo   ip6_file               = %CD%\geoip6                    >> wsock_trace.appveyor
+echo   ip4_file               = %CD%\GeoIP.csv                 >> wsock_trace.appveyor
+echo   ip6_file               = %CD%\GeoIP6.csv                >> wsock_trace.appveyor
 echo   ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN          >> wsock_trace.appveyor
 echo [iana]                                                    >> wsock_trace.appveyor
 echo   enable      = 1                                         >> wsock_trace.appveyor
-echo   ip4_file    = %CD%\ipv4-address-space.csv               >> wsock_trace.appveyor
-echo   ip6_file    = %CD%\ipv6-unicast-address-assignments.csv >> wsock_trace.appveyor
+echo   ip4_file    = %CD%\IPv4-address-space.csv               >> wsock_trace.appveyor
+echo   ip6_file    = %CD%\IPv6-unicast-address-assignments.csv >> wsock_trace.appveyor
 echo [idna]                                                    >> wsock_trace.appveyor
 echo   enable      = 1                                         >> wsock_trace.appveyor
 echo [lua]                                                     >> wsock_trace.appveyor
@@ -70,9 +70,9 @@ echo [dnsbl]                                                   >> wsock_trace.ap
 echo   enable      = 1                                         >> wsock_trace.appveyor
 echo   test        = %%TEST_DNSBL%%                            >> wsock_trace.appveyor
 echo   max_days    = 1                                         >> wsock_trace.appveyor
-echo   drop_file   = %CD%\drop.txt                             >> wsock_trace.appveyor
-echo   edrop_file  = %CD%\edrop.txt                            >> wsock_trace.appveyor
-echo   dropv6_file = %CD%\dropv6.txt                           >> wsock_trace.appveyor
+echo   drop_file   = %CD%\DROP.txt                             >> wsock_trace.appveyor
+echo   edrop_file  = %CD%\EDROP.txt                            >> wsock_trace.appveyor
+echo   dropv6_file = %CD%\DROPv6.txt                           >> wsock_trace.appveyor
 echo   drop_url    = http://www.spamhaus.org/drop/drop.txt     >> wsock_trace.appveyor
 echo   edrop_url   = http://www.spamhaus.org/drop/edrop.txt    >> wsock_trace.appveyor
 echo   dropv6_url  = http://www.spamhaus.org/drop/dropv6.txt   >> wsock_trace.appveyor

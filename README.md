@@ -40,8 +40,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
   Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
-  (using the CSV files [`geoip`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L161)
-  and [`geoip6`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L162)
+  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L163)
+  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L164)
   are always enabled).
 
 * *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
@@ -147,13 +147,14 @@ There is currently no `install.bat` file for Wsock-trace. So you should copy the
 `%HOME` or `%APPDATA` directory:
 ```
   wsock_trace
-  geoip
-  geoip6
-  drop.txt
-  edrop.txt
-  dropv6.txt
-  ipv4-address-space.csv
-  ipv6-unicast-address-assignments.csv
+  GeoIP.csv
+  GeoIP6.csv
+  GeoIPASNum.csv
+  IPv4-address-space.csv
+  IPv6-unicast-address-assignments.csv
+  DROP.txt
+  EDROP.txt
+  DROPv6.txt
 ```
 
 These environment variables are on the form:

@@ -160,8 +160,8 @@
   show_position = 0    # Show latitude/longitude for IP-position (if available).
   show_map_url  = 0    # Show Google Maps URL for IP-position (if available).
 
-  ip4_file = %APPDATA%\geoip
-  ip6_file = %APPDATA%\geoip6
+  ip4_file = %APPDATA%\GeoIP.csv
+  ip6_file = %APPDATA%\GeoIP6.csv
 
   ip4_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip
   ip6_url = https://gitweb.torproject.org/tor.git/plain/src/config/geoip6
@@ -192,8 +192,8 @@
 #
 [iana]
   enable   = 0                                               # Show IANA info for addresses in traced functions
-  ip4_file = %APPDATA%\ipv4-address-space.csv                # The IANA 'IPv4 Address Space Registry' .csv file
-  ip6_file = %APPDATA%\ipv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file
+  ip4_file = %APPDATA%\IPv4-address-space.csv                # The IANA 'IPv4 Address Space Registry' .csv file
+  ip6_file = %APPDATA%\IPv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file
   asn_file = %APPDATA%\GeoIPASNum.csv                        # The Blockfinder generated ASN .csv file
 
   #
