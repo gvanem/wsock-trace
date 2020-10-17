@@ -48,6 +48,11 @@
  *  [2] https://db-ip.com/db
  *
  * \todo Put this inside a `#ifdef USE_MAXMINDDB` section later.
+ *
+ * Another option is to use `libloc`.
+ * Refs: https://blog.ipfire.org/post/on-retiring-the-maxmind-geoip-database
+ *       https://location.ipfire.org/how-to-use
+ *       https://git.ipfire.org/pub/git/location/libloc.git
  */
 
 #include <assert.h>
@@ -62,6 +67,7 @@
 #include "init.h"
 #include "in_addr.h"
 #include "inet_util.h"
+#include "iana.h"
 #include "csv.h"
 #include "geoip.h"
 
@@ -1743,6 +1749,25 @@ static void test_addr_common (const struct in_addr  *a4,
     else printf ("  URL: <none>\n\n");
   }
 
+  if (g_cfg.IANA.enable)
+  {
+    struct IANA_record rec;
+
+    if (a4 && iana_find_by_ip4_address (a4, &rec))
+    {
+      printf ("  ASN: ");
+      iana_print_rec (&rec);
+      ASN_print (&rec, a4, NULL);
+    }
+    else if (a6 && iana_find_by_ip6_address (a6, &rec))
+    {
+      printf ("  ASN: ");
+      iana_find_by_ip6_address (a6, &rec);
+      iana_print_rec (&rec);
+      ASN_print (&rec, NULL, a6);
+    }
+  }
+
   /** Check the global IPv4 / IPv6 address for membership in a SpamHaus `DROP` / `EDROP` list
    */
   if (INET_util_addr_is_global(a4, NULL))
@@ -1987,14 +2012,14 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
   return (list);
 }
 
-static int check_requirements (BOOL check_geoip4, BOOL check_geoip6)
+static int check_requirements (void)
 {
-  if (check_geoip4 && (!g_cfg.GEOIP.ip4_file || !file_exists(g_cfg.GEOIP.ip4_file)))
+  if (!g_cfg.GEOIP.ip4_file || !file_exists(g_cfg.GEOIP.ip4_file))
   {
     printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip4_file);
     return (0);
   }
-  if (check_geoip6 && (!g_cfg.GEOIP.ip6_file || !file_exists(g_cfg.GEOIP.ip6_file)))
+  if (!g_cfg.GEOIP.ip6_file || !file_exists(g_cfg.GEOIP.ip6_file))
   {
     printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip6_file);
     return (0);
@@ -2077,7 +2102,7 @@ int main (int argc, char **argv)
   }
   else
   {
-    if (!check_requirements(TRUE, TRUE))
+    if (!check_requirements())
        return (0);
   }
 

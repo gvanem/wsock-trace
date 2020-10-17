@@ -782,7 +782,7 @@ void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct
     printf ("\n  ASN: ");
     for (i = 0; rec->asn[i]; i++)
         printf ("%lu%s", rec->asn[i], (rec->asn[i+1] && i < DIM(rec->asn)) ? ", " : " ");
-    printf ("(status: %s)", iana->status);
+    printf ("(status: %s)\n", iana->status);
   }
 }
 
@@ -792,8 +792,12 @@ void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct
  */
 void ASN_dump (void)
 {
-  int i, j, num = ASN_entries ? smartlist_len (ASN_entries) : 0;
+  int i, j, num;
 
+  if (!ASN_entries)
+     return;
+
+  num = smartlist_len (ASN_entries);
   TRACE (2, "\nParsed %s records from \"%s\":\n",
          dword_str(num), g_cfg.IANA.asn_file);
 
@@ -930,7 +934,6 @@ int main (int argc, char **argv)
       iana_find_by_ip4_address (&test_addr[i].ip4, &rec);
       printf ("  %s", iana_get_rec4(&rec, FALSE));
       ASN_print (&rec, &test_addr[i].ip4, NULL);
-      puts ("");
     }
     else
     {
@@ -939,7 +942,6 @@ int main (int argc, char **argv)
       iana_find_by_ip6_address (&test_addr[i].ip6, &rec);
       printf ("  %s", iana_get_rec6(&rec, FALSE));
       ASN_print (&rec, NULL, &test_addr[i].ip6);
-      puts ("");
     }
   }
 

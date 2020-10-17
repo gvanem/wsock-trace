@@ -61,8 +61,8 @@ int  iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *re
 int  iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *rec);
 void iana_print_rec (const IANA_record *rec);
 
-/*
- * For handling ASN numbers and IPv4 net blocks.
+/**
+ * For handling *Autonomous System Number* (ASN) and IPv4 net blocks.
  */
 struct ASN_addr4 {
        struct in_addr low;    /**< The lowest address for this node */
