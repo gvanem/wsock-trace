@@ -92,6 +92,11 @@ exit /b 0
   ::
   echo 23.226.48.10  # part of 23.226.48.0/20  ; SBL322605 >> %TEST_INPUT_4%
   echo 84.238.160.4  # part of 84.238.160.0/22 ; SBL339089 >> %TEST_INPUT_4%
+
+  ::
+  :: Add some IPv4 addresses to test ASNs
+  ::
+  echo 37.142.14.1   # Should be ASN: 12849 and ASN: 21450  >> %TEST_INPUT_4%
   exit /b
 
 :generate_test_input_6
