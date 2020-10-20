@@ -42,11 +42,7 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
     block_size = si.dwAllocationGranularity;
   }
   if (debug == -1)
-  {
-    if (getenv("LIBLOC_DEBUG"))
-         debug = 1;
-    else debug = 0;
-  }
+     debug = (getenv("LIBLOC_DEBUG") ? 1 : 0);
 
   pstart  = (offset / block_size) * block_size;
   poffset = offset - pstart;
@@ -88,34 +84,32 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   if (handle && handle != INVALID_HANDLE_VALUE)
      CloseHandle (handle);
 
+  if (!debug)
+     return (map);
+
   if (map == MAP_FAILED)
   {
     fprintf (stderr, "pstart: %lld, poffset: %lld, psize: %lld\n", pstart, poffset, psize);
     fprintf (stderr, "address: 0x%p, length: %u, protection: %s, flags: %s, fd: %d, err1: %lu, err2: %lu  -> 0x%p\n",
              address, length, prot_str(protection), flags_str(flags), fd, err1, err2, map);
   }
-  else if (debug)
+  else
   {
-    char  *p, *end, x;
+    char  *p = (char*) map;
     size_t len;
 
     fprintf (stderr, "address: 0x%p, length: %u, protection: %s, flags: %s, fd: %d, err1: %lu, err2: %lu  -> 0x%p\n",
              address, length, prot_str(protection), flags_str(flags), fd, err1, err2, map);
 
     /* Now test the low and high end of the mmap'ed region to check
-     * we get no exceptions.
+     * we get no exceptions. Check 'PROT_READ' only since that's the only
+     * protection used in libloc.
      */
-    p = (char*) map;
-    if (protection == PROT_WRITE)
+    if (protection == PROT_READ)
     {
-      p[0] = 'x';
-      p[length-1] = 'x';
-    }
-    else if (protection == PROT_READ)
-    {
-      x = p[0];
-      x = p[length-1];
-      x = p[length];
+      (void) p[0];
+      (void) p[length-1];
+      (void) p[length];
 
       len = min (length, 100);
       hex_dump ("Dumping first %zu bytes:\n", p, len);
@@ -124,14 +118,8 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
       else
         fprintf (stderr, "Last chunk of data covered by the first chunk.\n\n");
     }
-    else if (protection == PROT_READWRITE)
-    {
-      x = p[0];
-      x = p[length-1];
-      p[0] = 'x';
-      p[length-1] = 'x';
-    }
   }
+
   return (map);
 }
 
