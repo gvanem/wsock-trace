@@ -87,6 +87,8 @@ static int  geoip4_add_entry (DWORD low, DWORD high, const char *country);
 static int  geoip6_add_entry (const struct in6_addr *low, const struct in6_addr *high, const char *country);
 static void geoip_stats_init (void);
 static void geoip_stats_exit (void);
+static void geoip_make_c_lists (void);
+static void geoip_free_c_lists (void);
 static void geoip_stats_update (const char *country_A2, int flag);
 static int  geoip_get_num_addr (DWORD *num4, DWORD *num6);
 
@@ -369,6 +371,7 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
   if (num4 == 0 && num6 == 0)
      g_cfg.GEOIP.enable = FALSE;
 
+  geoip_make_c_lists();
   geoip_stats_init();
   ip2loc_init();
 
@@ -388,6 +391,7 @@ void geoip_exit (void)
 
   geoip_ipv4_entries = geoip_ipv6_entries = NULL;
   geoip_stats_exit();
+  geoip_free_c_lists();
   ip2loc_exit();
 }
 
@@ -704,14 +708,30 @@ static int geoip_get_num_addr (DWORD *num4, DWORD *num6)
   return (1);
 }
 
+/**\enum Continent
+ *
+ * The continents of the World.
+ */
+enum Continent {
+     C_NONE = 0, /* None */
+     C_EU,       /* Europe */
+     C_AS,       /* Asia */
+     C_NA,       /* North America */
+     C_SA,       /* South America */
+     C_AF,       /* Africa */
+     C_OC,       /* Ocean Pacific */
+     C_AN        /* Antarctica */
+  };
+
 /**\struct country_list
  *
  * Structure for ISO-3166-2 country information.
  */
 struct country_list {
-       int         country_number; /**< ISO-3166-2 country number */
-       char        short_name[3];  /**< A2 short country code */
-       const char *long_name;      /**< normal (long) country name */
+       int            country_number; /**< ISO-3166-2 country number */
+       char           short_name[3];  /**< A2 short country code */
+       enum Continent continent;      /**< The continet of the country */
+       const char    *long_name;      /**< normal (long) country name */
      };
 
 /**
@@ -722,260 +742,349 @@ struct country_list {
  *  https://en.wikipedia.org/wiki/ISO_3166-2
  */
 static const struct country_list c_list[] = {
-       {   4, "af", "Afghanistan"                          },
-       { 248, "ax", "Åland Island"                         },
-       {   8, "al", "Albania"                              },
-       {  12, "dz", "Algeria"                              },
-       {  16, "as", "American Samoa"                       },
-       {  20, "ad", "Andorra"                              },
-       {  24, "ao", "Angola"                               },
-       { 660, "ai", "Anguilla"                             },
-       {  10, "aq", "Antarctica"                           },
-       {  28, "ag", "Antigua & Barbuda"                    },
-       {  32, "ar", "Argentina"                            },
-       {  51, "am", "Armenia"                              },
-       { 533, "aw", "Aruba"                                },
-       {  36, "au", "Australia"                            },
-       {  40, "at", "Austria"                              },
-       {  31, "az", "Azerbaijan"                           },
-       {  44, "bs", "Bahamas"                              },
-       {  48, "bh", "Bahrain"                              },
-       {  50, "bd", "Bangladesh"                           },
-       {  52, "bb", "Barbados"                             },
-       { 112, "by", "Belarus"                              },
-       {  56, "be", "Belgium"                              },
-       {  84, "bz", "Belize"                               },
-       { 204, "bj", "Benin"                                },
-       {  60, "bm", "Bermuda"                              },
-       {  64, "bt", "Bhutan"                               },
-       {  68, "bo", "Bolivia"                              },
-       { 535, "bq", "Bonaire"                              },
-       {  70, "ba", "Bosnia & Herzegowina"                 },
-       {  72, "bw", "Botswana"                             },
-       {  74, "bv", "Bouvet Island"                        },
-       {  76, "br", "Brazil"                               },
-       {  86, "io", "British Indian Ocean Territory"       },
-       {  96, "bn", "Brunei Darussalam"                    },
-       { 100, "bg", "Bulgaria"                             },
-       { 854, "bf", "Burkina Faso"                         },
-       { 108, "bi", "Burundi"                              },
-       { 116, "kh", "Cambodia"                             },
-       { 120, "cm", "Cameroon"                             },
-       { 124, "ca", "Canada"                               },
-       { 132, "cv", "Cape Verde"                           },
-       { 136, "ky", "Cayman Islands"                       },
-       { 140, "cf", "Central African Republic"             },
-       { 148, "td", "Chad"                                 },
-       { 152, "cl", "Chile"                                },
-       { 156, "cn", "China"                                },
-       { 162, "cx", "Christmas Island"                     },
-       { 166, "cc", "Cocos Islands"                        },
-       { 170, "co", "Colombia"                             },
-       { 174, "km", "Comoros"                              },
-       { 178, "cg", "Congo"                                },
-       { 180, "cd", "Congo"                                },
-       { 184, "ck", "Cook Islands"                         },
-       { 188, "cr", "Costa Rica"                           },
-       { 384, "ci", "Cote d'Ivoire"                        },
-       { 191, "hr", "Croatia"                              },
-       { 192, "cu", "Cuba"                                 },
-       { 531, "cw", "Curaçao"                              },
-       { 196, "cy", "Cyprus"                               },
-       { 203, "cz", "Czech Republic"                       },
-       { 208, "dk", "Denmark"                              },
-       { 262, "dj", "Djibouti"                             },
-       { 212, "dm", "Dominica"                             },
-       { 214, "do", "Dominican Republic"                   },
-       { 218, "ec", "Ecuador"                              },
-       { 818, "eg", "Egypt"                                },
-       { 222, "sv", "El Salvador"                          },
-       { 226, "gq", "Equatorial Guinea"                    },
-       { 232, "er", "Eritrea"                              },
-       { 233, "ee", "Estonia"                              },
-       { 231, "et", "Ethiopia"                             },
-     { 65281, "eu", "European Union"                       }, /* 127.0.255.1 */
-       { 238, "fk", "Falkland Islands"                     },
-       { 234, "fo", "Faroe Islands"                        },
-       { 242, "fj", "Fiji"                                 },
-       { 246, "fi", "Finland"                              },
-       { 250, "fr", "France"                               },
-       { 249, "fx", "France, Metropolitan"                 },
-       { 254, "gf", "French Guiana"                        },
-       { 258, "pf", "French Polynesia"                     },
-       { 260, "tf", "French Southern Territories"          },
-       { 266, "ga", "Gabon"                                },
-       { 270, "gm", "Gambia"                               },
-       { 268, "ge", "Georgia"                              },
-       { 276, "de", "Germany"                              },
-       { 288, "gh", "Ghana"                                },
-       { 292, "gi", "Gibraltar"                            },
-       { 300, "gr", "Greece"                               },
-       { 304, "gl", "Greenland"                            },
-       { 308, "gd", "Grenada"                              },
-       { 312, "gp", "Guadeloupe"                           },
-       { 316, "gu", "Guam"                                 },
-       { 320, "gt", "Guatemala"                            },
-       { 831, "gg", "Guernsey"                             },
-       { 324, "gn", "Guinea"                               },
-       { 624, "gw", "Guinea-Bissau"                        },
-       { 328, "gy", "Guyana"                               },
-       { 332, "ht", "Haiti"                                },
-       { 334, "hm", "Heard & Mc Donald Islands"            },
-       { 336, "va", "Vatican City"                         },
-       { 340, "hn", "Honduras"                             },
-       { 344, "hk", "Hong kong"                            },
-       { 348, "hu", "Hungary"                              },
-       { 352, "is", "Iceland"                              },
-       { 356, "in", "India"                                },
-       { 360, "id", "Indonesia"                            },
-       { 364, "ir", "Iran"                                 },
-       { 368, "iq", "Iraq"                                 },
-       { 372, "ie", "Ireland"                              },
-       { 833, "im", "Isle of Man"                          },
-       { 376, "il", "Israel"                               },
-       { 380, "it", "Italy"                                },
-       { 388, "jm", "Jamaica"                              },
-       { 392, "jp", "Japan"                                },
-       { 832, "je", "Jersey"                               },
-       { 400, "jo", "Jordan"                               },
-       { 398, "kz", "Kazakhstan"                           },
-       { 404, "ke", "Kenya"                                },
-       { 296, "ki", "Kiribati"                             },
-       { 408, "kp", "Korea (north)"                        },
-       { 410, "kr", "Korea (south)"                        },
-       {   0, "xk", "Kosovo"                               },  /* https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2 */
-       { 414, "kw", "Kuwait"                               },
-       { 417, "kg", "Kyrgyzstan"                           },
-       { 418, "la", "Laos"                                 },
-       { 428, "lv", "Latvia"                               },
-       { 422, "lb", "Lebanon"                              },
-       { 426, "ls", "Lesotho"                              },
-       { 430, "lr", "Liberia"                              },
-       { 434, "ly", "Libya"                                },
-       { 438, "li", "Liechtenstein"                        },
-       { 440, "lt", "Lithuania"                            },
-       { 442, "lu", "Luxembourg"                           },
-       { 446, "mo", "Macao"                                },
-       { 807, "mk", "Macedonia"                            },
-       { 450, "mg", "Madagascar"                           },
-       { 454, "mw", "Malawi"                               },
-       { 458, "my", "Malaysia"                             },
-       { 462, "mv", "Maldives"                             },
-       { 466, "ml", "Mali"                                 },
-       { 470, "mt", "Malta"                                },
-       { 584, "mh", "Marshall Islands"                     },
-       { 474, "mq", "Martinique"                           },
-       { 478, "mr", "Mauritania"                           },
-       { 480, "mu", "Mauritius"                            },
-       { 175, "yt", "Mayotte"                              },
-       { 484, "mx", "Mexico"                               },
-       { 583, "fm", "Micronesia"                           },
-       { 498, "md", "Moldova"                              },
-       { 492, "mc", "Monaco"                               },
-       { 496, "mn", "Mongolia"                             },
-       { 499, "me", "Montenegro"                           },
-       { 500, "ms", "Montserrat"                           },
-       { 504, "ma", "Morocco"                              },
-       { 508, "mz", "Mozambique"                           },
-       { 104, "mm", "Myanmar"                              },
-       { 516, "na", "Namibia"                              },
-       { 520, "nr", "Nauru"                                },
-       { 524, "np", "Nepal"                                },
-       { 528, "nl", "Netherlands"                          },
-       { 530, "an", "Netherlands Antilles"                 },
-       { 540, "nc", "New Caledonia"                        },
-       { 554, "nz", "New Zealand"                          },
-       { 558, "ni", "Nicaragua"                            },
-       { 562, "ne", "Niger"                                },
-       { 566, "ng", "Nigeria"                              },
-       { 570, "nu", "Niue"                                 },
-       { 574, "nf", "Norfolk Island"                       },
-       { 580, "mp", "Northern Mariana Islands"             },
-       { 578, "no", "Norway"                               },
-       { 512, "om", "Oman"                                 },
-       { 586, "pk", "Pakistan"                             },
-       { 585, "pw", "Palau"                                },
-       { 275, "ps", "Palestinian Territory"                },
-       { 591, "pa", "Panama"                               },
-       { 598, "pg", "Papua New Guinea"                     },
-       { 600, "py", "Paraguay"                             },
-       { 604, "pe", "Peru"                                 },
-       { 608, "ph", "Philippines"                          },
-       { 612, "pn", "Pitcairn"                             },
-       { 616, "pl", "Poland"                               },
-       { 620, "pt", "Portugal"                             },
-       { 630, "pr", "Puerto Rico"                          },
-       { 634, "qa", "Qatar"                                },
-       { 638, "re", "Reunion"                              },
-       { 642, "ro", "Romania"                              },
-       { 643, "ru", "Russia"                               },
-       { 646, "rw", "Rwanda"                               },
-       {   0, "bl", "Saint Barthélemy"                     }, /* https://en.wikipedia.org/wiki/ISO_3166-2:BL */
-       { 659, "kn", "Saint Kitts & Nevis"                  },
-       { 662, "lc", "Saint Lucia"                          },
-       { 663, "mf", "Saint Martin"                         },
-       { 670, "vc", "Saint Vincent"                        },
-       { 882, "ws", "Samoa"                                },
-       { 674, "sm", "San Marino"                           },
-       { 678, "st", "Sao Tome & Principe"                  },
-       { 682, "sa", "Saudi Arabia"                         },
-       { 686, "sn", "Senegal"                              },
-       { 688, "rs", "Serbia"                               },
-       { 690, "sc", "Seychelles"                           },
-       { 694, "sl", "Sierra Leone"                         },
-       { 702, "sg", "Singapore"                            },
-       { 534, "sx", "Sint Maarten"                         },
-       { 703, "sk", "Slovakia"                             },
-       { 705, "si", "Slovenia"                             },
-       {  90, "sb", "Solomon Islands"                      },
-       { 706, "so", "Somalia"                              },
-       { 710, "za", "South Africa"                         },
-       { 239, "gs", "South Georgia"                        },
-       { 728, "ss", "South Sudan"                          },
-       { 724, "es", "Spain"                                },
-       { 144, "lk", "Sri Lanka"                            },
-       { 654, "sh", "St. Helena"                           },
-       { 666, "pm", "St. Pierre & Miquelon"                },
-       { 736, "sd", "Sudan"                                },
-       { 740, "sr", "Suriname"                             },
-       { 744, "sj", "Svalbard & Jan Mayen Islands"         },
-       { 748, "sz", "Swaziland"                            },
-       { 752, "se", "Sweden"                               },
-       { 756, "ch", "Switzerland"                          },
-       { 760, "sy", "Syrian Arab Republic"                 },
-       { 626, "tl", "Timor-Leste"                          },
-       { 158, "tw", "Taiwan"                               },
-       { 762, "tj", "Tajikistan"                           },
-       { 834, "tz", "Tanzania"                             },
-       { 764, "th", "Thailand"                             },
-       { 768, "tg", "Togo"                                 },
-       { 772, "tk", "Tokelau"                              },
-       { 776, "to", "Tonga"                                },
-       { 780, "tt", "Trinidad & Tobago"                    },
-       { 788, "tn", "Tunisia"                              },
-       { 792, "tr", "Turkey"                               },
-       { 795, "tm", "Turkmenistan"                         },
-       { 796, "tc", "Turks & Caicos Islands"               },
-       { 798, "tv", "Tuvalu"                               },
-       { 800, "ug", "Uganda"                               },
-       { 804, "ua", "Ukraine"                              },
-       { 784, "ae", "United Arab Emirates"                 },
-       { 826, "gb", "United Kingdom"                       },
-       { 840, "us", "United States"                        },
-       { 581, "um", "United States Minor Outlying Islands" },
-       { 858, "uy", "Uruguay"                              },
-       { 860, "uz", "Uzbekistan"                           },
-       { 548, "vu", "Vanuatu"                              },
-       { 862, "ve", "Venezuela"                            },
-       { 704, "vn", "Vietnam"                              },
-       {  92, "vg", "Virgin Islands (British)"             },
-       { 850, "vi", "Virgin Islands (US)"                  },
-       { 876, "wf", "Wallis & Futuna Islands"              },
-       { 732, "eh", "Western Sahara"                       },
-       { 887, "ye", "Yemen"                                },
-       { 894, "zm", "Zambia"                               },
-       { 716, "zw", "Zimbabwe"                             }
+       {   4, "af", C_AS, "Afghanistan"                          },
+       { 248, "ax", C_EU, "Åland Island"                         },
+       {   8, "al", C_EU, "Albania"                              },
+       {  12, "dz", C_AF, "Algeria"                              },
+       {  16, "as", C_OC, "American Samoa"                       },
+       {  20, "ad", C_EU, "Andorra"                              },
+       {  24, "ao", C_AF, "Angola"                               },
+       { 660, "ai", C_NA, "Anguilla"                             },
+       {  10, "aq", C_AN, "Antarctica"                           },
+       {  28, "ag", C_NA, "Antigua & Barbuda"                    },
+       {  32, "ar", C_SA, "Argentina"                            },
+       {  51, "am", C_AS, "Armenia"                              },
+       { 533, "aw", C_NA, "Aruba"                                },
+       {  36, "au", C_OC, "Australia"                            },
+       {  40, "at", C_EU, "Austria"                              },
+       {  31, "az", C_EU, "Azerbaijan"                           },
+       {  44, "bs", C_NA, "Bahamas"                              },
+       {  48, "bh", C_AS, "Bahrain"                              },
+       {  50, "bd", C_AS, "Bangladesh"                           },
+       {  52, "bb", C_NA, "Barbados"                             },
+       { 112, "by", C_EU, "Belarus"                              },
+       {  56, "be", C_EU, "Belgium"                              },
+       {  84, "bz", C_NA, "Belize"                               },
+       { 204, "bj", C_AF, "Benin"                                },
+       {  60, "bm", C_NA, "Bermuda"                              },
+       {  64, "bt", C_AS, "Bhutan"                               },
+       {  68, "bo", C_SA, "Bolivia"                              },
+       { 535, "bq", C_SA, "Bonaire"                              },
+       {  70, "ba", C_EU, "Bosnia & Herzegowina"                 },
+       {  72, "bw", C_AF, "Botswana"                             },
+       {  74, "bv", C_AN, "Bouvet Island"                        },
+       {  76, "br", C_SA, "Brazil"                               },
+       {  86, "io", C_AS, "British Indian Ocean Territory"       },
+       {  96, "bn", C_AS, "Brunei Darussalam"                    },
+       { 100, "bg", C_EU, "Bulgaria"                             },
+       { 854, "bf", C_AF, "Burkina Faso"                         },
+       { 108, "bi", C_AF, "Burundi"                              },
+       { 116, "kh", C_AS, "Cambodia"                             },
+       { 120, "cm", C_AF, "Cameroon"                             },
+       { 124, "ca", C_NA, "Canada"                               },
+       { 132, "cv", C_AF, "Cape Verde"                           },
+       { 136, "ky", C_NA, "Cayman Islands"                       },
+       { 140, "cf", C_AF, "Central African Republic"             },
+       { 148, "td", C_AF, "Chad"                                 },
+       { 152, "cl", C_SA, "Chile"                                },
+       { 156, "cn", C_AS, "China"                                },
+       { 162, "cx", C_AS, "Christmas Island"                     },
+       { 166, "cc", C_AS, "Cocos Islands"                        },
+       { 170, "co", C_SA, "Colombia"                             },
+       { 174, "km", C_AF, "Comoros"                              },
+       { 178, "cg", C_AF, "Congo"                                },
+       { 180, "cd", C_AF, "Congo, Democratic Republic"           },
+       { 184, "ck", C_OC, "Cook Islands"                         },
+       { 188, "cr", C_NA, "Costa Rica"                           },
+       { 384, "ci", C_AF, "Cote d'Ivoire"                        },
+       { 191, "hr", C_EU, "Croatia"                              },
+       { 192, "cu", C_NA, "Cuba"                                 },
+       { 531, "cw", C_SA, "Curaçao"                              },
+       { 196, "cy", C_AS, "Cyprus"                               },
+       { 203, "cz", C_EU, "Czech Republic"                       },
+       { 208, "dk", C_EU, "Denmark"                              },
+       { 262, "dj", C_AF, "Djibouti"                             },
+       { 212, "dm", C_NA, "Dominica"                             },
+       { 214, "do", C_NA, "Dominican Republic"                   },
+       { 218, "ec", C_SA, "Ecuador"                              },
+       { 818, "eg", C_AF, "Egypt"                                },
+       { 222, "sv", C_NA, "El Salvador"                          },
+       { 226, "gq", C_AF, "Equatorial Guinea"                    },
+       { 232, "er", C_AF, "Eritrea"                              },
+       { 233, "ee", C_EU, "Estonia"                              },
+       { 231, "et", C_AF, "Ethiopia"                             },
+     { 65281, "eu", C_EU, "European Union"                       }, /* 127.0.255.1 */
+       { 238, "fk", C_SA, "Falkland Islands"                     },
+       { 234, "fo", C_EU, "Faroe Islands"                        },
+       { 242, "fj", C_OC, "Fiji"                                 },
+       { 246, "fi", C_EU, "Finland"                              },
+       { 250, "fr", C_EU, "France"                               },
+       { 249, "fx", C_EU, "France, Metropolitan"                 },
+       { 254, "gf", C_SA, "French Guiana"                        },
+       { 258, "pf", C_OC, "French Polynesia"                     },
+       { 260, "tf", C_AN, "French Southern Territories"          },
+       { 266, "ga", C_AF, "Gabon"                                },
+       { 270, "gm", C_AF, "Gambia"                               },
+       { 268, "ge", C_AS, "Georgia"                              },
+       { 276, "de", C_EU, "Germany"                              },
+       { 288, "gh", C_AF, "Ghana"                                },
+       { 292, "gi", C_EU, "Gibraltar"                            },
+       { 300, "gr", C_EU, "Greece"                               },
+       { 304, "gl", C_NA, "Greenland"                            },
+       { 308, "gd", C_NA, "Grenada"                              },
+       { 312, "gp", C_NA, "Guadeloupe"                           },
+       { 316, "gu", C_OC, "Guam"                                 },
+       { 320, "gt", C_NA, "Guatemala"                            },
+       { 831, "gg", C_EU, "Guernsey"                             },
+       { 324, "gn", C_AF, "Guinea"                               },
+       { 624, "gw", C_AF, "Guinea-Bissau"                        },
+       { 328, "gy", C_SA, "Guyana"                               },
+       { 332, "ht", C_NA, "Haiti"                                },
+       { 334, "hm", C_AN, "Heard & Mc Donald Islands"            },
+       { 336, "va", C_EU, "Vatican City"                         },
+       { 340, "hn", C_NA, "Honduras"                             },
+       { 344, "hk", C_AS, "Hong kong"                            },
+       { 348, "hu", C_EU, "Hungary"                              },
+       { 352, "is", C_EU, "Iceland"                              },
+       { 356, "in", C_AS, "India"                                },
+       { 360, "id", C_AS, "Indonesia"                            },
+       { 364, "ir", C_AS, "Iran"                                 },
+       { 368, "iq", C_AS, "Iraq"                                 },
+       { 372, "ie", C_EU, "Ireland"                              },
+       { 833, "im", C_EU, "Isle of Man"                          },
+       { 376, "il", C_AS, "Israel"                               },
+       { 380, "it", C_EU, "Italy"                                },
+       { 388, "jm", C_NA, "Jamaica"                              },
+       { 392, "jp", C_AS, "Japan"                                },
+       { 832, "je", C_EU, "Jersey"                               },
+       { 400, "jo", C_AS, "Jordan"                               },
+       { 398, "kz", C_AS, "Kazakhstan"                           },
+       { 404, "ke", C_AF, "Kenya"                                },
+       { 296, "ki", C_OC, "Kiribati"                             },
+       { 408, "kp", C_AS, "Korea (north)"                        },
+       { 410, "kr", C_AS, "Korea (south)"                        },
+       {   0, "xk", C_EU, "Kosovo"                               },  /* https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2 */
+       { 414, "kw", C_AS, "Kuwait"                               },
+       { 417, "kg", C_AS, "Kyrgyzstan"                           },
+       { 418, "la", C_AS, "Laos"                                 },
+       { 428, "lv", C_EU, "Latvia"                               },
+       { 422, "lb", C_AS, "Lebanon"                              },
+       { 426, "ls", C_AF, "Lesotho"                              },
+       { 430, "lr", C_AF, "Liberia"                              },
+       { 434, "ly", C_AF, "Libya"                                },
+       { 438, "li", C_EU, "Liechtenstein"                        },
+       { 440, "lt", C_EU, "Lithuania"                            },
+       { 442, "lu", C_EU, "Luxembourg"                           },
+       { 446, "mo", C_AS, "Macao"                                },
+       { 807, "mk", C_EU, "Macedonia"                            },
+       { 450, "mg", C_AF, "Madagascar"                           },
+       { 454, "mw", C_AF, "Malawi"                               },
+       { 458, "my", C_AS, "Malaysia"                             },
+       { 462, "mv", C_AS, "Maldives"                             },
+       { 466, "ml", C_AF, "Mali"                                 },
+       { 470, "mt", C_EU, "Malta"                                },
+       { 584, "mh", C_OC, "Marshall Islands"                     },
+       { 474, "mq", C_NA, "Martinique"                           },
+       { 478, "mr", C_AF, "Mauritania"                           },
+       { 480, "mu", C_AF, "Mauritius"                            },
+       { 175, "yt", C_AF, "Mayotte"                              },
+       { 484, "mx", C_NA, "Mexico"                               },
+       { 583, "fm", C_OC, "Micronesia"                           },
+       { 498, "md", C_EU, "Moldova"                              },
+       { 492, "mc", C_EU, "Monaco"                               },
+       { 496, "mn", C_AS, "Mongolia"                             },
+       { 499, "me", C_EU, "Montenegro"                           },
+       { 500, "ms", C_NA, "Montserrat"                           },
+       { 504, "ma", C_AF, "Morocco"                              },
+       { 508, "mz", C_AF, "Mozambique"                           },
+       { 104, "mm", C_AS, "Myanmar"                              },
+       { 516, "na", C_AF, "Namibia"                              },
+       { 520, "nr", C_OC, "Nauru"                                },
+       { 524, "np", C_AS, "Nepal"                                },
+       { 528, "nl", C_EU, "Netherlands"                          },
+       { 530, "an", C_NA, "Netherlands Antilles"                 },
+       { 540, "nc", C_OC, "New Caledonia"                        },
+       { 554, "nz", C_OC, "New Zealand"                          },
+       { 558, "ni", C_NA, "Nicaragua"                            },
+       { 562, "ne", C_AF, "Niger"                                },
+       { 566, "ng", C_AF, "Nigeria"                              },
+       { 570, "nu", C_OC, "Niue"                                 },
+       { 574, "nf", C_OC, "Norfolk Island"                       },
+       { 580, "mp", C_OC, "Northern Mariana Islands"             },
+       { 578, "no", C_EU, "Norway"                               },
+       { 512, "om", C_AS, "Oman"                                 },
+       { 586, "pk", C_AS, "Pakistan"                             },
+       { 585, "pw", C_OC, "Palau"                                },
+       { 275, "ps", C_AS, "Palestinian Territory"                },
+       { 591, "pa", C_NA, "Panama"                               },
+       { 598, "pg", C_OC, "Papua New Guinea"                     },
+       { 600, "py", C_SA, "Paraguay"                             },
+       { 604, "pe", C_SA, "Peru"                                 },
+       { 608, "ph", C_AS, "Philippines"                          },
+       { 612, "pn", C_OC, "Pitcairn"                             },
+       { 616, "pl", C_EU, "Poland"                               },
+       { 620, "pt", C_EU, "Portugal"                             },
+       { 630, "pr", C_NA, "Puerto Rico"                          },
+       { 634, "qa", C_AS, "Qatar"                                },
+       { 638, "re", C_AF, "Réunion"                              },
+       { 642, "ro", C_EU, "Romania"                              },
+       { 643, "ru", C_EU, "Russia"                               },
+       { 646, "rw", C_AF, "Rwanda"                               },
+       {   0, "bl", C_NA, "Saint Barthélemy"                     }, /* https://en.wikipedia.org/wiki/ISO_3166-2:BL */
+       { 659, "kn", C_NA, "Saint Kitts & Nevis"                  },
+       { 662, "lc", C_NA, "Saint Lucia"                          },
+       { 663, "mf", C_NA, "Saint Martin"                         },
+       { 670, "vc", C_NA, "Saint Vincent"                        },
+       { 882, "ws", C_OC, "Samoa"                                },
+       { 674, "sm", C_EU, "San Marino"                           },
+       { 678, "st", C_AF, "Sao Tome & Principe"                  },
+       { 682, "sa", C_AS, "Saudi Arabia"                         },
+       { 686, "sn", C_AF, "Senegal"                              },
+       { 688, "rs", C_EU, "Serbia"                               },
+       { 690, "sc", C_AF, "Seychelles"                           },
+       { 694, "sl", C_AF, "Sierra Leone"                         },
+       { 702, "sg", C_AS, "Singapore"                            },
+       { 534, "sx", C_NA, "Sint Maarten"                         },
+       { 703, "sk", C_EU, "Slovakia"                             },
+       { 705, "si", C_EU, "Slovenia"                             },
+       {  90, "sb", C_OC, "Solomon Islands"                      },
+       { 706, "so", C_AF, "Somalia"                              },
+       { 710, "za", C_AF, "South Africa"                         },
+       { 239, "gs", C_AN, "South Georgia"                        },
+       { 728, "ss", C_AF, "South Sudan"                          },
+       { 724, "es", C_EU, "Spain"                                },
+       { 144, "lk", C_AS, "Sri Lanka"                            },
+       { 654, "sh", C_AF, "St. Helena"                           },
+       { 666, "pm", C_NA, "St. Pierre & Miquelon"                },
+       { 736, "sd", C_AF, "Sudan"                                },
+       { 740, "sr", C_SA, "Suriname"                             },
+       { 744, "sj", C_EU, "Svalbard & Jan Mayen Islands"         },
+       { 748, "sz", C_AF, "Swaziland"                            },
+       { 752, "se", C_EU, "Sweden"                               },
+       { 756, "ch", C_EU, "Switzerland"                          },
+       { 760, "sy", C_AS, "Syrian Arab Republic"                 },
+       { 626, "tl", C_AS, "Timor-Leste"                          },
+       { 158, "tw", C_AS, "Taiwan"                               },
+       { 762, "tj", C_AS, "Tajikistan"                           },
+       { 834, "tz", C_AF, "Tanzania"                             },
+       { 764, "th", C_AS, "Thailand"                             },
+       { 768, "tg", C_AF, "Togo"                                 },
+       { 772, "tk", C_OC, "Tokelau"                              },
+       { 776, "to", C_OC, "Tonga"                                },
+       { 780, "tt", C_NA, "Trinidad & Tobago"                    },
+       { 788, "tn", C_AF, "Tunisia"                              },
+       { 792, "tr", C_AS, "Turkey"                               },
+       { 795, "tm", C_AS, "Turkmenistan"                         },
+       { 796, "tc", C_NA, "Turks & Caicos Islands"               },
+       { 798, "tv", C_OC, "Tuvalu"                               },
+       { 800, "ug", C_AF, "Uganda"                               },
+       { 804, "ua", C_EU, "Ukraine"                              },
+       { 784, "ae", C_AS, "United Arab Emirates"                 },
+       { 826, "gb", C_EU, "United Kingdom"                       },
+       { 840, "us", C_NA, "United States"                        },
+       { 581, "um", C_OC, "United States Minor Outlying Islands" },
+       { 858, "uy", C_SA, "Uruguay"                              },
+       { 860, "uz", C_AS, "Uzbekistan"                           },
+       { 548, "vu", C_OC, "Vanuatu"                              },
+       { 862, "ve", C_SA, "Venezuela"                            },
+       { 704, "vn", C_AS, "Vietnam"                              },
+       {  92, "vg", C_NA, "Virgin Islands (British)"             },
+       { 850, "vi", C_NA, "Virgin Islands (US)"                  },
+       { 876, "wf", C_OC, "Wallis & Futuna Islands"              },
+       { 732, "eh", C_AF, "Western Sahara"                       },
+       { 887, "ye", C_AS, "Yemen"                                },
+       { 894, "zm", C_AF, "Zambia"                               },
+       { 716, "zw", C_AF, "Zimbabwe"                             }
      };
+
+static struct country_list *c_list_sorted_on_short_name = NULL;
+static struct country_list *c_list_sorted_on_country_number = NULL;
+
+typedef int (MS_CDECL *Qsort_func) (const void *a, const void *b);
+
+/**
+ * `qsort()` helpers for sorted copies of `c_list[]`.
+ */
+static int compare_on_short_name (const void *_a, const void *_b)
+{
+  const struct country_list *a = (const struct country_list*) _a;
+  const struct country_list *b = (const struct country_list*) _b;
+
+  return memcmp (&a->short_name, &b->short_name, sizeof(a->short_name));
+}
+
+static int compare_on_country_number  (const void *_a, const void *_b)
+{
+  const struct country_list *a = (const struct country_list*) _a;
+  const struct country_list *b = (const struct country_list*) _b;
+
+  return (a->country_number - b->country_number);
+}
+
+/**
+ * `bsearch()` helpers for sorted copies of `c_list[]`.
+ */
+static int compare2_on_short_name (const void *a, const void *b)
+{
+  const char                *key    = (const char*) a;
+  const struct country_list *member = (const struct country_list*) b;
+
+  return memcmp (key, &member->short_name, sizeof(member->short_name));
+}
+
+static int compare2_on_country_number (const void *a, const void *b)
+{
+  int                        key    = (int*) a;
+  const struct country_list *member = (const struct country_list*) b;
+
+  return (key - member->country_number);
+}
+
+static void make_c_list (struct country_list **list_p,
+                         Qsort_func compare,
+                         const char *list_name)
+{
+  struct country_list *list;
+  size_t i, size = sizeof (c_list);
+
+  list = malloc (size);
+  *list_p = list;
+  if (!list)
+     return;
+
+  memcpy (list, &c_list, size);
+  qsort (list, size / sizeof(c_list[0]), sizeof(c_list[0]), compare);
+  if (g_cfg.trace_level >= 3)
+  {
+    trace_printf ("\n%s:\n  #    Num  XX  Continent   long-name\n"
+                  "--------------------------------------------\n",
+                  list_name);
+    for (i = 0; i < DIM(c_list); i++, list++)
+        trace_printf ("%3d: %5d  %c%c  %-10s  %s\n",
+                      i, list->country_number,
+                      toupper(list->short_name[0]), toupper(list->short_name[1]),
+                      geoip_get_continent_name(list->continent), list->long_name);
+  }
+}
+
+/**
+ * Allocate 2 copies of the `c_list[]' array.
+ * One sorted on `short_name` and the other sorted on `country_number`.
+ */
+static void geoip_make_c_lists (void)
+{
+  make_c_list (&c_list_sorted_on_short_name,     compare_on_short_name,     "c_list_sorted_on_short_name, XX");
+  make_c_list (&c_list_sorted_on_country_number, compare_on_country_number, "c_list_sorted_on_country_number");
+}
+
+static void geoip_free_c_lists (void)
+{
+  if (c_list_sorted_on_short_name)
+     free (c_list_sorted_on_short_name);
+  if (c_list_sorted_on_country_number)
+     free (c_list_sorted_on_country_number);
+  c_list_sorted_on_short_name = c_list_sorted_on_country_number = NULL;
+}
 
 /**
  * Return number of countries in the `c_list[]' array.
@@ -986,7 +1095,7 @@ size_t geoip_num_countries (void)
 }
 
 /**
- * Return the short-country name for a index in range `[0... DIM(c_list)]`.
+ * Return the short-country name for an index in range `[0... DIM(c_list)]`.
  *
  * \param[in] idx  the index to get the short-country name for.
  */
@@ -998,20 +1107,47 @@ const char *geoip_get_short_name_by_idx (int idx)
 }
 
 /**
+ * Return the continent name for an `enum Continent` value.
+ *
+ * \param[in] continent  the enum-value to get the continent name for.
+ */
+const char *geoip_get_continent_name (int continent)
+{
+  static const struct search_list continents[] = {
+                    { C_NONE, "??" },
+                    { C_EU,   "Europe" },
+                    { C_AS,   "Asia" },
+                    { C_NA,   "N-America" },
+                    { C_SA,   "S-America" },
+                    { C_AF,   "Africa" },
+                    { C_OC,   "Oceania" },
+                    { C_AN,   "Antarctica" }
+                  };
+  return list_lookup_name (continent, continents, DIM(continents));
+}
+
+/**
  * Given an ISO-3166-2 short-country, return the long-country name for it.
  *
  * \param[in] short_name  the ISO-3166-2 short-country name.
  */
 const char *geoip_get_long_name_by_A2 (const char *short_name)
 {
-  const struct country_list *list = c_list + 0;
+  const struct country_list *list;
   size_t i, num = DIM(c_list);
 
   if (!short_name)
      return ("?");
 
-  /** \todo rewrite this into using bsearch().
-   */
+  if (c_list_sorted_on_short_name)
+  {
+    list = bsearch (short_name, c_list_sorted_on_short_name, DIM(c_list),
+                    sizeof(c_list[0]), compare2_on_short_name);
+    if (list)
+       return (list->long_name);
+  }
+
+  list = c_list + 0;
   for (i = 0; i < num; i++, list++)
   {
     if (!strnicmp(list->short_name, short_name, sizeof(list->short_name)))
@@ -1027,17 +1163,26 @@ const char *geoip_get_long_name_by_A2 (const char *short_name)
  */
 const char *geoip_get_long_name_by_id (int number)
 {
-  const struct country_list *list = c_list + 0;
+  const struct country_list *list;
   size_t i, num = DIM(c_list);
 
-  /** Since some countries above ("Kosovo" and "Saint Barthélemy") have no
-   *  assigned number, we cannot return a sensible name.
+  /**
+   * Since some countries above ("Kosovo" and "Saint Barthélemy") have no
+   * assigned number, we cannot return a sensible name.
+   * But this function is currently not used.
    */
   if (number == 0)
      return ("?");
 
-  /** \todo rewrite this into using bsearch().
-   */
+  if (c_list_sorted_on_country_number)
+  {
+    list = bsearch (number, c_list_sorted_on_country_number, DIM(c_list),
+                    sizeof(c_list[0]), compare2_on_country_number);
+    if (list)
+       return (list->long_name);
+  }
+
+  list = c_list + 0;
   for (i = 0; i < num; i++, list++)
   {
     if (list->country_number == number)
@@ -1202,6 +1347,8 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2l
  * Using `geoip_stats_buf`, count the number of IPv4 and IPv6 addresses found at run-time.
  *
  * \param[in] idx  the index into `c_list[]`.
+ *
+ * \note this function is currently not used.
  */
 uint64 geoip_get_stats_by_idx (int idx)
 {
@@ -1214,6 +1361,8 @@ uint64 geoip_get_stats_by_idx (int idx)
  * Using `geoip_stats_buf`, count the number of IPv4 and IPv6 addresses found at run-time.
  *
  * \param[in] number  the ISO-3166-2 country-number.
+ *
+ * \note this function is currently not used.
  */
 uint64 geoip_get_stats_by_number (int number)
 {
