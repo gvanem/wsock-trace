@@ -1,0 +1,1618 @@
+#
+# override-a2 [.txt]
+#
+# This file contains Autonomous Systems (AS) or IP networks/addresses
+# which are - in fact or with a high level of confidence - belonging
+# to satellite network providers (special country code: A2).
+#
+# Since a satellite uplink connection is possible from almost
+# anywhere in the world, it does not make sense to assign them to a
+# specific country. They will be flagged as "A2" in the database.
+#
+# Please keep this file sorted.
+#
+
+aut-num:				AS4913
+descr:					Speedcast Communications, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS5666
+descr:					Speedcast Communications, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS9229
+descr:					Speedcast Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS10434
+descr:					Satellite Communication Systems, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS12491
+descr:					Gitlat Satcom
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS12684
+descr:					SES ASTRA S.A.
+remarks:				Satellite Internet provider [several satellite dial-in pools]
+is-satellite-provider:	yes
+
+aut-num:				AS15829
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS16360
+descr:					Signalhorn Trusted Networks GmbH / Satlynx
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS19036
+descr:					Telesat Network Services Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS21310
+descr:					Satellite Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS22184
+descr:					IRIDIUM SATELLITE, LLC
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS22351
+descr:					Intelsat Global Service Corporation
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS25222
+descr:					Inmarsat Solutions B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS26243
+descr:					Intelsat
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS27822
+descr:					Emerging Markets Communications / SantanderTeleport / ...
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS29137
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS29286
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider [several satellite dial-in pools]
+is-satellite-provider:	yes
+
+aut-num:				AS30362
+descr:					Hawaii Pacific Teleport LP
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS31515
+descr:					INMARSAT GLOBAL LIMITED
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS31753
+descr:					Inmarsat Government
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS37296
+descr:					Afcom Satellite Networks Nigeria Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS38172
+descr:					IPSTAR Australia Pty. Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS39356
+descr:					Avanti Broadband Ltd
+remarks:				Satellite Internet provider [several satellite dial-in pools]
+is-satellite-provider:	yes
+
+aut-num:				AS34444
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS35550
+descr:					SatTel Corporation, Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS39102
+descr:					SatTel Corporation, Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS39151
+descr:					AXESS Networks Solutions Germany GmbH / CeTEL GmbH / GeoLink
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS41659
+descr:					Arab Satellite Communications Organization
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS43905
+descr:					Telenor Satellite AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS44720
+descr:					SatTel Corporation, Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS45232
+descr:					Spacenet Internet Services Pvt. Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS45603
+descr:					Orion Satellite Systems
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS47339
+descr:					Speedcast Europe B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS47965
+descr:					Signalhorn Trusted Networks GmbH
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+aut-num:				AS56262
+descr:					Dagupan Urban Satellite Vision Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS56804
+descr:					Gilat Satellite Networks Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS58265
+descr:					Level421 GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS57490
+descr:					Satellite Telecom LTD.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS62023
+descr:					NYNEX satellite OHG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS132513
+descr:					Sky Telecom State Company
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS135324
+descr:					IPStar
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+aut-num:				AS139034
+descr:					Sattelite Plus Incorporated
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS139647
+descr:					Alpha Sattelite Network
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS203770
+descr:					Matooma SAS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS393582
+descr:					VIDEO DIRECT SATELLITE & ENTERTAINMENT / WisperISP
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+aut-num:				AS393944
+descr:					Inmarsat Solutions US Inc
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					5.8.184.0/21
+descr:					Skylogic Espana S.L.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					5.22.232.0/21
+descr:					SatPoint AB
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					5.61.192.0/21
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					5.152.168.0/21
+descr:					Skylogic Espana S.L.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					5.175.64.0/20
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					5.255.176.0/20
+descr:					Satellite Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					12.47.179.0/24
+descr:					Iridium Satellite, LLC
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					23.170.160.0/23
+descr:					VIDEO DIRECT SATELLITE & ENTERTAINMENT
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					24.142.96.0/19
+descr:					Telesat Network Services Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.1.160.0/21
+descr:					Skylogic Germany GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.1.168.0/21
+descr:					Skylogic France S.A.S.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.1.176.0/21
+descr:					Skylogic Espana S.L.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.1.184.0/21
+descr:					Skylogic Finland Oy
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.9.176.0/21
+descr:					C.S.G. Cyprus Space Gateways Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.19.24.0/21
+descr:					Satellite Solutions Worldwide Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.19.96.0/21
+descr:					Irish Space Gateways Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.72.192.0/18
+descr:					NordNet / Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.203.192.0/21
+descr:					Irish Space Gateways Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.252.200.0/21
+descr:					Skylogic Germany GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					37.252.200.0/21
+descr:					Skylogic France S.A.S.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.78.252.0/22
+descr:					Afcom Satellite Networks Nigeria Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.138.240.0/20
+descr:					Intersat Africa
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.190.132.0/21
+descr:					Metronet - Infocom Client Networks / Intelsat / SkyVision
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.198.96.0/20
+descr:					IwayAfrica / AfricaOnline
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.198.116.0/22
+descr:					IwayAfrica
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.198.120.0/22
+descr:					IwayAfrica
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.198.125.0/24
+descr:					IwayAfrica
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.198.126.0/24
+descr:					IwayAfrica
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.198.127.0/24
+descr:					IwayAfrica
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.207.96.0/19
+descr:					Intersat Africa
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					41.223.88.0/22
+descr:					Equateur Telecom Congo
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					43.242.36.0/22
+descr:					Spacenet India
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					43.243.40.0/22
+descr:					Speedcast Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					45.174.8.0/24
+descr:					ENLACES GUAYANA, C.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					46.10.162.0/23
+descr:					Vivacom Satellite service
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					46.39.64.0/19
+descr:					Satellite Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					49.128.224.0/19
+descr:					Satcomms Australia
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					58.84.208.0/20
+descr:					IPSTAR Australia Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					63.100.192.0/19
+descr:					New Skies Networks, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					63.210.60.0/23
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					63.251.94.0/24
+descr:					Segovia, Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.19.240.0/20
+descr:					Speedcast Communications, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.28.0/22
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.32.0/20
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.48.0/23
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.50.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.52.0/22
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.56.0/21
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.64.0/18
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.140.0/22
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.144.0/22
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.110.153.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					64.235.112.0/20
+descr:					Inmarsat Government
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.0.0/24
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.0.0/23
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.2.0/23
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.6.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.8.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.9.0/24
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.13.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.14.0/23
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.16.0/21
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.24.0/22
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.33.0/24
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.40.0/24
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.44.0/24
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.48.0/24
+descr:					Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.57.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.133.58.0/23
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.178.0.0/17
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					66.178.74.0/24
+descr:					CM Corporation
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					67.209.96.0/20
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					68.66.176.0/20
+descr:					Stratos Communications Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					72.2.224.0/20
+descr:					Speedcast Communications, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					74.84.32.0/19
+descr:					Inmarsat Government
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					74.119.160.0/21
+descr:					Speedcast Communications, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					77.111.252.0/22
+descr:					Avanti Broadband Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					78.40.64.0/21
+descr:					Inmarsat Solutions AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					79.140.192.0/20
+descr:					CapRock UK Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					80.15.252.0/24
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					80.247.128.0/20
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					80.250.32.0/20
+descr:					CIMECOM NORTIS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					81.88.64.0/20
+descr:					Breiband.no AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					82.103.105.0/24
+descr:					ADH_MOBIL_Basic_and_ADH_MOBIL_Premium
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					84.22.64.0/19
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					84.235.128.0/17
+descr:					Signalhorn Trusted Networks GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					84.254.128.0/18
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					87.238.112.0/21
+descr:					AXESS Networks Solutions Germany GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					87.244.128.0/18
+descr:					Satellite Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					88.202.0.0/17
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					88.210.128.0/18
+descr:					Avanti Broadband Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					89.18.107.0/24
+descr:					Tooway B2C for satellite broadband usage
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					89.18.118.0/24
+descr:					Roslagen Broadband Network AB used for TwoWay service
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					89.150.48.0/24
+descr:					Wavetech SRL
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					89.207.112.0/21
+descr:					Inmarsat Solutions AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					91.102.104.0/21
+descr:					Eutelsat Polska Sp. z o.o.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					91.151.144.0/20
+descr:					AXESS Networks Solutions Germany GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					91.228.162.0/23
+descr:					Gilat Satellite Networks Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					92.250.128.0/17
+descr:					SES Astra S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					93.91.80.0/20
+descr:					Nynex Satellite OHG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					93.91.96.0/20
+descr:					Telenor Satellite AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					93.190.184.0/21
+descr:					SpeedCast Europe B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					94.140.16.0/22
+descr:					IP of AUVEA Network Users
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					95.43.198.0/24
+descr:					Vivacom Satellite2
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					95.128.16.0/21
+descr:					AXESS Networks Solutions Germany GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					95.170.32.0/19
+descr:					NordNet Satellite S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					95.210.0.0/16
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					95.210.9.0/24
+descr:					IP COPTER - SATELLITE INFRASTRUCTURE
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					102.67.168.0/22
+descr:					Radical Technology Network Limited
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					102.177.96.0/22
+descr:					COMMCARRIER SATELLITE SERVICES LIMITED
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.3.80.0/22
+descr:					Dagupan Urban Satellite Vision Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.4.61.0/24
+descr:					VMvault Pty Ltd
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					103.7.98.0/24
+descr:					Inmarsat Australia Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.13.188.0/22
+descr:					Speedcast Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.15.80.0/22
+descr:					Spacenet India
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.17.193.0/24
+descr:					Skybeam
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.27.160.0/22
+descr:					Harris CapRock Communications, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.41.108.0/24
+descr:					Inmarsat Australia Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					103.216.92.0/22
+descr:					Bharat Communication Systems
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					103.246.235.0/24
+descr:					Inmarsat Australia Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					104.193.160.0/21
+descr:					VIDEO DIRECT SATELLITE & ENTERTAINMENT
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					105.73.32.0/24
+descr:					VSAT Internet Ka Morocco
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					109.71.184.0/21
+descr:					SpeedCast Europe B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					109.106.64.0/19
+descr:					NordNet Satellite S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					109.120.64.0/18
+descr:					SES Astra S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					109.232.8.0/21
+descr:					Inmarsat Solutions B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					109.235.200.0/21
+descr:					Nynex Satellite OHG / ...
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					109.236.144.0/20
+descr:					Nynex Satellite OHG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					110.232.248.0/21
+descr:					Spacenet India
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					111.92.176.0/22
+descr:					SpeedCast Pacific Pty Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					111.125.136.0/21
+descr:					Spacenet India
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					114.30.72.0/21
+descr:					Spacenet India
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					122.129.128.0/19
+descr:					IPSTAR Australia Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					122.201.32.0/20
+descr:					SES New Skies
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					123.255.208.0/21
+descr:					IPSTAR Australia Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					125.253.128.0/17
+descr:					Globecomm Systems Asia / Speedcast Limited / Melat VDN Network Afghanistan
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					128.140.128.0/20
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					130.255.16.0/20
+descr:					Satellite Solutions Worldwide Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					145.249.96.0/21
+descr:					Media Broadcast Satellite GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					154.73.28.0/22
+descr:					RAWAFED Libya
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					157.119.228.0/22
+descr:					Bharat Communication Systems
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					161.30.0.0/16
+descr:					Inmarsat
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					164.40.232.0/21
+descr:					EUSANET GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					164.215.104.0/21
+descr:					Freedomsat / tooway / Hylas
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					169.255.8.0/22
+descr:					COMMCARRIER SATELLITE SERVICES LIMITED
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					171.33.160.0/20
+descr:					Tigrisnet
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					172.87.232.0/21
+descr:					Optimera WIFI
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					173.243.96.0/20
+descr:					Ship Equip Inc. / Inmarsat Solutions B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					175.176.144.0/21
+descr:					Tonga Communications Corporation
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					175.176.224.0/19
+descr:					Speedcast Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					176.227.128.0/20
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					178.17.224.0/20
+descr:					Nynex Satellite OHG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					178.73.128.0/18
+descr:					NordNet Satellite S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					178.255.88.0/21
+descr:					BeyonDSL / Satellite Solutions Worldwide Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					180.94.48.0/21
+descr:					Stratos Global
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					182.236.116.0/22
+descr:					OCEANIC BROADBAND SOLUTIONS PTY LTD / SPEEDCAST
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					182.255.40.0/22
+descr:					Dagupan Urban Satellite Vision Inc
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					184.178.52.0/22
+descr:					Cox Communications Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.3.88.0/22
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.4.88.0/22
+descr:					FORTHnet SA
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.4.192.0/22
+descr:					Irish Space Gateways Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.7.12.0/22
+descr:					Speedcast France SAS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.8.242.0/23
+descr:					Eurona_SAT
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.10.92.0/22
+descr:					EUSANET GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.15.32.0/22
+descr:					Skylogic France S.A.S.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.15.100.0/22
+descr:					Skylogic Espana S.L.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.17.44.0/22
+descr:					Satellite Solutions Worldwide Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.20.212.0/22
+descr:					C.S.G. Cyprus Space Gateways Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.23.96.0/22
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.23.240.0/22
+descr:					NET FZE / VSat Networks
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					185.24.160.0/22
+descr:					Satellite Solutions Worldwide Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.27.248.0/22
+descr:					HDI Group Cooperatief U.A.
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					185.28.84.0/22
+descr:					SpeedCast Europe B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.31.4.0/22
+descr:					Nynex Network Solutions
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.34.128.0/22
+descr:					For Viasat Satellite Modems / HKN GmbH / Super Uydu Telekominikasyon Haberlesme Hizm. Ltd. Sti.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.40.16.0/22
+descr:					Digitaria International
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.68.232.0/22
+descr:					Freedomsat / Hylas
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.69.50.0/24
+descr:					ISP SLOVANET / SKYLOGIC
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.70.252.0/22
+descr:					AXESS Networks Solutions Germany GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.71.116.0/22
+descr:					Eser Telekomunikasyon A.S.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.84.12.0/22
+descr:					Telenor UK Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.85.128.0/22
+descr:					Telenor Satellite AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.85.252.0/22
+descr:					Digitaria International
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.151.232.0/22
+descr:					Inmarsat Solutions AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.152.244.0/22
+descr:					Filiago GmbH und Co. KG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.182.100.0/22
+descr:					Satellite Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.200.224.0/22
+descr:					Level421 GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.215.44.0/22
+descr:					ICT TELEKOMUNIKASYON SANAYI TICARET A.S.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					185.231.40.0/22
+descr:					Arab Satellite Communications Organization
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					186.208.32.0/20
+descr:					CapRock Comunicacoes do Brasil Ltda
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					188.164.0.0/17
+descr:					Avanti Broadband Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					192.40.224.0/22
+descr:					Stratos Communications Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					192.58.56.0/22
+descr:					TELIASONERA-FI-BBS-SAT-NET / TeliaSonera Finland Oyj
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					192.137.158.0/24
+descr:					Telesat
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					192.245.108.0/22
+descr:					BMRGG / Geoscience Australia (?)
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					193.84.95.0/24
+descr:					EUSANET GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.92.0.0/16
+descr:					FORTHnet SA
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.109.248.0/23
+descr:					Satellite Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.138.156.0/22
+descr:					Level421 GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.169.184.0/23
+descr:					Level421 GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.189.126.0/23
+descr:					Satellite Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.201.111.0/24
+descr:					Satellite Telecom LTD.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					193.251.135.0/24
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					194.3.118.0/24
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					195.11.59.0/23
+descr:					Caprock UK Ltd
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					195.11.60.0/23
+descr:					Caprock UK Ltd
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					195.234.248.0/22
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					196.201.10.0/23
+descr:					RCS-Communication
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					196.203.237.0/24
+descr:					TopNet
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					197.234.32.0/19
+descr:					Steam Broadcasting and Communications Limited / CoolLink
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					197.242.253.0/24
+descr:					Steam Broadcasting and Communications Limited / CoolLink
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					200.9.185.0/24
+descr:					AITelecom S.A. de C.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					202.174.128.0/19
+descr:					SPEEDCAST Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					203.88.64.0/19
+descr:					SPEEDCAST Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					203.169.16.0/21
+descr:					IPSTAR Australia
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					203.171.252.0/22
+descr:					Indian Ocean Territories Telecom Pty Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					208.25.12.0/24
+descr:					Iridium North America
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					209.198.240.0/21
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					209.221.224.0/20
+descr:					Telesat Network Services Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					209.239.64.0/19
+descr:					Telesat Network Services Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					210.5.192.0/20
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					210.5.208.0/20
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					210.5.224.0/19
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					210.5.255.0/24
+descr:					Newwave Broadband
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					210.89.64.0/19
+descr:					SPEEDCAST Limited
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					212.16.32.0/22
+descr:					SATIP-AT / A1 Telekom Austria AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					212.39.160.0/19
+descr:					CapRock UK Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					212.50.32.0/19
+descr:					Eser Telecom / Eser Telekomunikasyon A.S.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					212.56.224.0/19
+descr:					SES Astra S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					212.165.64.0/18
+descr:					Inmarsat Solutions B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					212.165.128.0/17
+descr:					New Skies Satellites, Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.16.192.0/20
+descr:					FORTHnet SA
+remarks:				Satellite Internet provider [high confidence, but not proofed]
+is-satellite-provider:	yes
+
+net:					213.209.160.0/19
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.138.0.0/19
+descr:					NordNet SA
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.169.96.0/19
+descr:					SES Astra S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.175.128.0/19
+descr:					AXESS Networks Solutions Germany GmbH / CeTEL GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.180.224.0/19
+descr:					Eutelsat S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.208.32.0/21
+descr:					CeTEL GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					213.234.64.0/18
+descr:					Telenor Satellite AS
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.86.240.0/20
+descr:					Stratos Communications Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.129.170.0/23
+descr:					Stratos Global Communications
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.226.200.0/21
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.226.208.0/20
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.226.224.0/19
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.226.240.0/21
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.236.192.0/19
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.144.0/21
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.152.0/23
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.156.0/23
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.155.0/24
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.159.0/24
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.160.0/24
+descr:					SES Americacom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.176.0/20
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.216.0/22
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					216.252.224.0/19
+descr:					Signalhorn AG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					217.26.240.0/20
+descr:					Nynex Network Solutions
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					217.28.32.0/20
+descr:					SES Astra AB
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					217.159.0.0/17
+descr:					Signalhorn Trusted Networks GmbH
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					217.173.48.0/20
+descr:					Telenor UK Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2001:2030:3e::/48
+descr:					Arab Satellite Communications Organization
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2402:1500:8000::/33
+descr:					Stratos Wireless Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2405:1400::/32
+descr:					Asia Broadcast Satellite Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2604:5700::/32
+descr:					SES Americom Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2605:db00::/32
+descr:					Stratos Communications Inc.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2606:ac80::/32
+descr:					VIDEO DIRECT SATELLITE & ENTERTAINMENT
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2607:f910::/32
+descr:					Inmarsat Government
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2803:c0a0::/32
+descr:					SATELLITE CONNECTION NETWORK S.A.S
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a00:4a00::/32
+descr:					Avanti Broadband Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a00:b3a0::/36
+descr:					PoP0 Address Space / NYNEX satellite OHG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a00:ca0::/32
+descr:					SKYLOGIC S.P.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a00:e60::/32
+descr:					NYNEX satellite OHG
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a01:a300::/32
+descr:					Satellite Ltd.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a02::/32
+descr:					SES Astra S.A.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a03:1c80::/32
+descr:					Inmarsat Solutions B.V.
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes
+
+net:					2a04:2880::/30
+descr:					Satellite Solutions Worldwide Ltd
+remarks:				Satellite Internet provider
+is-satellite-provider:	yes

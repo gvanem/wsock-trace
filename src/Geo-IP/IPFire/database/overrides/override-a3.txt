@@ -1,0 +1,310 @@
+#
+# override-a3 [.txt]
+#
+# This file contains Autonomous Systems (AS) or IP networks/addresses
+# which are - in fact or with a high level of confidence - believed
+# to be worldwide anycast instances (special country codes: A3).
+#
+# It does not make sense to assign them to a certain country, they
+# will be flagged as "A3" in the database.
+#
+
+aut-num:	AS69
+descr:		University of Pennsylvania
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS4935
+descr:		DirectNIC, Ltd.
+remarks:	Generic anycast network [high confidence, but not proofed]
+is-anycast:	yes
+
+aut-num:	AS33463
+descr:		Citigroup
+remarks:	Public anycast DNS resolver network [high confidence, but not proofed]
+is-anycast:	yes
+
+aut-num:	AS34868
+descr:		wasted.io Ltd.
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS37177
+descr:		AfriNIC Anycast Services
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS40568
+descr:		Canadian Internet Registration Authority (CIRA)
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS48550
+descr:		Pascal Mathis trading as SnapServ Mathis
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS50069
+descr:		Misaka Network, Inc.
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS58093
+descr:		coreIT.pl
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS60890
+descr:		CentralNic Ltd
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS61005
+descr:		OpenTLD BV
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS61007
+descr:		OpenTLD BV
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS62766
+descr:		SJB Communications
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS134389
+descr:		AusRegistry
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS134393
+descr:		AusRegistry
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS134396
+descr:		AusRegistry
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS198794
+descr:		Thomas Steen Rasmussen / UncensoredDNS / censurfridns.dk
+remarks:	Public anycast DNS resolver network
+is-anycast:	yes
+
+aut-num:	AS199365
+descr:		ProstoDNS
+remarks:	Public anycast DNS resolver network
+is-anycast:	yes
+
+aut-num:	AS201303
+descr:		CentralNic Ltd
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS201304
+descr:		CentralNic Ltd
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS203961
+descr:		CentralNic Ltd
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS204055
+descr:		CentralNic Ltd
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS205157
+descr:		Daniel Cid
+remarks:	Generic anycast network [high confidence, but not proofed]
+is-anycast:	yes
+
+aut-num:	AS205541
+descr:		DEVCLIC SARL
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS207021
+descr:		ipcom GmbH
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS210004
+descr:		Stichting Internet Domeinregistratie Nederland (SIDN)
+remarks:	Generic anycast network
+is-anycast:	yes
+
+aut-num:	AS396981
+descr:		Deteque LLC
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		1.0.0.0/24
+descr:		Cloudflare, Inc.
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		1.1.1.0/24
+descr:		Cloudflare, Inc.
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		8.8.4.0/24
+descr:		Google LLC
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		8.8.8.0/24
+descr:		Google LLC
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		9.9.9.0/24
+descr:		Quad9
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		91.239.100.0/24
+descr:		Thomas Steen Rasmussen / UncensoredDNS / censurfridns.dk
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		149.112.120.0/21
+descr:		Canadian Internet Registration Authority (CIRA)
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		170.52.0.0/21
+descr:		subspace
+remarks:	Generic anycast network [high confidence, but not proofed]
+is-anycast:	yes
+
+net:		185.89.134.0/24
+descr:		Isset
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		185.143.232.0/22
+descr:		Noyan Abr Arvan Co.
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		185.151.140.0/22
+descr:		DENIC eG
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		185.184.222.0/24
+descr:		xTom / dns.sb
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		185.228.168.0/22
+descr:		Daniel Cid
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		185.222.221.0/24
+descr:		xTom / dns.sb
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		185.222.222.0/24
+descr:		xTom / dns.sb
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		196.55.0.0/24
+descr:		Epik Network
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		196.216.168.0/24
+descr:		AfriNIC Anycast Services
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		212.102.32.0/24
+descr:		CDN77
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2001:43f8:120::/48
+descr:		AfriNIC Anycast Services
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2001:470::/32
+descr:		Hurricane Electric LLC
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		2001:4ce8::/29
+descr:		wasted.io Ltd.
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2001:67c:28a4::/48
+descr:		Thomas Steen Rasmussen / UncensoredDNS / censurfridns.dk
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		2606:4700:4700::/48
+descr:		Cloudflare, Inc.
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		2a00:139b::/32
+descr:		Karlsruhe Institute of Technology (KIT)
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2a03:4d40::/29
+descr:		marbis GmbH
+remarks:	Generic anycast network [high confidence, but not proofed]
+is-anycast:	yes
+
+net:		2a06:e881:4001::/48
+descr:		Thomas Harwood
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		2a07:59c6:d006::/48
+descr:		NetShelter
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2a09::/48
+descr:		xTom / dns.sb
+remarks:	Public anycast DNS resolver
+is-anycast:	yes
+
+net:		2a0c:3800:ff::/48
+descr:		Jean-Remy Buchs
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2a0d:2900::/48
+descr:		Misaka Network Anycast
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2a0d:77c0::/29
+descr:		Hostus Solutions LLC
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2a0e:b4c0::/48
+descr:		Link Connectivity Limited
+remarks:	Generic anycast network
+is-anycast:	yes
+
+net:		2a0f:b300:b300::/48
+descr:		Fastservers v6 Anycast
+remarks:	Generic anycast network
+is-anycast:	yes

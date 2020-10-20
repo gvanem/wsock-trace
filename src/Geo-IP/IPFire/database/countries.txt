@@ -1,0 +1,253 @@
+AD	EU	Andorra
+AE	AS	United Arab Emirates
+AF	AS	Afghanistan
+AG	NA	Antigua and Barbuda
+AI	NA	Anguilla
+AL	EU	Albania
+AM	AS	Armenia
+AN	NA	Netherlands Antilles
+AO	AF	Angola
+AP	AS	Asia/Pacific
+AQ	AN	Antarctica
+AR	SA	Argentina
+AS	OC	American Samoa
+AT	EU	Austria
+AU	OC	Australia
+AW	NA	Aruba
+AX	EU	Åland Islands
+AZ	AS	Azerbaijan
+BA	EU	Bosnia and Herzegovina
+BB	NA	Barbados
+BD	AS	Bangladesh
+BE	EU	Belgium
+BF	AF	Burkina Faso
+BG	EU	Bulgaria
+BH	AS	Bahrain
+BI	AF	Burundi
+BJ	AF	Benin
+BL	NA	Saint Barthélemy
+BM	NA	Bermuda
+BN	AS	Brunei Darussalam
+BO	SA	Bolivia, Plurinational State of
+BQ	SA	Bonaire, Sint Eustatius and Saba
+BR	SA	Brazil
+BS	NA	Bahamas
+BT	AS	Bhutan
+BV	AN	Bouvet Island
+BW	AF	Botswana
+BY	EU	Belarus
+BZ	NA	Belize
+CA	NA	Canada
+CC	AS	Cocos (Keeling) Islands
+CD	AF	Congo, Democratic Republic of the
+CF	AF	Central African Republic
+CG	AF	Congo
+CH	EU	Switzerland
+CI	AF	Côte d'Ivoire
+CK	OC	Cook Islands
+CL	SA	Chile
+CM	AF	Cameroon
+CN	AS	China
+CO	SA	Colombia
+CR	NA	Costa Rica
+CU	NA	Cuba
+CV	AF	Cabo Verde
+CW	SA	Curaçao
+CX	AS	Christmas Island
+CY	AS	Cyprus
+CZ	EU	Czechia
+DE	EU	Germany
+DJ	AF	Djibouti
+DK	EU	Denmark
+DM	NA	Dominica
+DO	NA	Dominican Republic
+DZ	AF	Algeria
+EC	SA	Ecuador
+EE	EU	Estonia
+EG	AF	Egypt
+EH	AF	Western Sahara
+ER	AF	Eritrea
+ES	EU	Spain
+ET	AF	Ethiopia
+EU	EU	European Union
+FI	EU	Finland
+FJ	OC	Fiji
+FK	SA	Falkland Islands (Malvinas)
+FM	OC	Micronesia, Federated States of
+FO	EU	Faroe Islands
+FR	EU	France
+FX	EU	France, Metropolitan
+GA	AF	Gabon
+GB	EU	United Kingdom of Great Britain and Northern Ireland
+GD	NA	Grenada
+GE	AS	Georgia
+GF	SA	French Guiana
+GG	EU	Guernsey
+GH	AF	Ghana
+GI	EU	Gibraltar
+GL	NA	Greenland
+GM	AF	Gambia
+GN	AF	Guinea
+GP	NA	Guadeloupe
+GQ	AF	Equatorial Guinea
+GR	EU	Greece
+GS	AN	South Georgia and the South Sandwich Islands
+GT	NA	Guatemala
+GU	OC	Guam
+GW	AF	Guinea-Bissau
+GY	SA	Guyana
+HK	AS	Hong Kong
+HM	AN	Heard Island and McDonald Islands
+HN	NA	Honduras
+HR	EU	Croatia
+HT	NA	Haiti
+HU	EU	Hungary
+ID	AS	Indonesia
+IE	EU	Ireland
+IL	AS	Israel
+IM	EU	Isle of Man
+IN	AS	India
+IO	AS	British Indian Ocean Territory
+IQ	AS	Iraq
+IR	AS	Iran, Islamic Republic of
+IS	EU	Iceland
+IT	EU	Italy
+JE	EU	Jersey
+JM	NA	Jamaica
+JO	AS	Jordan
+JP	AS	Japan
+KE	AF	Kenya
+KG	AS	Kyrgyzstan
+KH	AS	Cambodia
+KI	OC	Kiribati
+KM	AF	Comoros
+KN	NA	Saint Kitts and Nevis
+KP	AS	Korea, Democratic People's Republic of
+KR	AS	Korea, Republic of
+KW	AS	Kuwait
+KY	NA	Cayman Islands
+KZ	AS	Kazakhstan
+LA	AS	Lao People's Democratic Republic
+LB	AS	Lebanon
+LC	NA	Saint Lucia
+LI	EU	Liechtenstein
+LK	AS	Sri Lanka
+LR	AF	Liberia
+LS	AF	Lesotho
+LT	EU	Lithuania
+LU	EU	Luxembourg
+LV	EU	Latvia
+LY	AF	Libya
+MA	AF	Morocco
+MC	EU	Monaco
+MD	EU	Moldova, Republic of
+ME	EU	Montenegro
+MF	NA	Saint Martin (French part)
+MG	AF	Madagascar
+MH	OC	Marshall Islands
+MK	EU	Macedonia, the former Yugoslav Republic of
+ML	AF	Mali
+MM	AS	Myanmar
+MN	AS	Mongolia
+MO	AS	Macao
+MP	OC	Northern Mariana Islands
+MQ	NA	Martinique
+MR	AF	Mauritania
+MS	NA	Montserrat
+MT	EU	Malta
+MU	AF	Mauritius
+MV	AS	Maldives
+MW	AF	Malawi
+MX	NA	Mexico
+MY	AS	Malaysia
+MZ	AF	Mozambique
+NA	AF	Namibia
+NC	OC	New Caledonia
+NE	AF	Niger
+NF	OC	Norfolk Island
+NG	AF	Nigeria
+NI	NA	Nicaragua
+NL	EU	Netherlands
+NO	EU	Norway
+NP	AS	Nepal
+NR	OC	Nauru
+NU	OC	Niue
+NZ	OC	New Zealand
+OM	AS	Oman
+PA	NA	Panama
+PE	SA	Peru
+PF	OC	French Polynesia
+PG	OC	Papua New Guinea
+PH	AS	Philippines
+PK	AS	Pakistan
+PL	EU	Poland
+PM	NA	Saint Pierre and Miquelon
+PN	OC	Pitcairn
+PR	NA	Puerto Rico
+PS	AS	Palestine
+PT	EU	Portugal
+PW	OC	Palau
+PY	SA	Paraguay
+QA	AS	Qatar
+RE	AF	Réunion
+RO	EU	Romania
+RS	EU	Serbia
+RU	EU	Russian Federation
+RW	AF	Rwanda
+SA	AS	Saudi Arabia
+SB	OC	Solomon Islands
+SC	AF	Seychelles
+SD	AF	Sudan
+SE	EU	Sweden
+SG	AS	Singapore
+SH	AF	Saint Helena, Ascension and Tristan da Cunha
+SI	EU	Slovenia
+SJ	EU	Svalbard and Jan Mayen
+SK	EU	Slovakia
+SL	AF	Sierra Leone
+SM	EU	San Marino
+SN	AF	Senegal
+SO	AF	Somalia
+SR	SA	Suriname
+SS	AF	South Sudan
+ST	AF	Sao Tome and Principe
+SV	NA	El Salvador
+SX	NA	Sint Maarten (Dutch part)
+SY	AS	Syrian Arab Republic
+SZ	AF	Swaziland
+TC	NA	Turks and Caicos Islands
+TD	AF	Chad
+TF	AN	French Southern Territories
+TG	AF	Togo
+TH	AS	Thailand
+TJ	AS	Tajikistan
+TK	OC	Tokelau
+TL	AS	Timor-Leste
+TM	AS	Turkmenistan
+TN	AF	Tunisia
+TO	OC	Tonga
+TR	EU	Turkey
+TT	NA	Trinidad and Tobago
+TV	OC	Tuvalu
+TW	AS	Taiwan
+TZ	AF	Tanzania, United Republic of
+UA	EU	Ukraine
+UG	AF	Uganda
+UM	OC	United States Minor Outlying Islands
+US	NA	United States of America
+UY	SA	Uruguay
+UZ	AS	Uzbekistan
+VA	EU	Holy See
+VC	NA	Saint Vincent and the Grenadines
+VE	SA	Venezuela, Bolivarian Republic of
+VG	NA	Virgin Islands, British
+VI	NA	Virgin Islands, U.S.
+VN	AS	Viet Nam
+VU	OC	Vanuatu
+WF	OC	Wallis and Futuna
+WS	OC	Samoa
+YE	AS	Yemen
+YT	AF	Mayotte
+ZA	AF	South Africa
+ZM	AF	Zambia
+ZW	AF	Zimbabwe
