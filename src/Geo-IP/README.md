@@ -13,8 +13,7 @@ Geo-IP libraries:
 
  * **[IPFire's libloc](https://git.ipfire.org/?p=location/libloc.git;a=summary)**.
 
- * **[DB-IP](https://db-ip.com/db/)** and<br>.
-   **[IP-to-ASN](https://db-ip.com/db/download/ip-to-asn-lite/)**
+ * **[DB-IP](https://db-ip.com/db/)** and **[IP-to-ASN](https://db-ip.com/db/download/ip-to-asn-lite/)**
 
 
 It's task would be to show additional information for an IPv4/IPv6 address:
