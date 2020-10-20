@@ -11,7 +11,7 @@ Geo-IP libraries:
 
  * **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
 
- * **[IPFire's libloc](https://git.ipfire.org/pub/git/location/libloc.git)**.
+ * **[IPFire's libloc](https://git.ipfire.org/?p=location/libloc.git;a=summary)**.
 
  * **[DB-IP](https://db-ip.com)**.
 
