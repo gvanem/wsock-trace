@@ -48,7 +48,6 @@ echo   hosts_file             = %CD%\appveyor-hosts            >> wsock_trace.ap
 echo   use_winhttp            = 0                              >> wsock_trace.appveyor
 echo [geoip]                                                   >> wsock_trace.appveyor
 echo   enable                 = 1                              >> wsock_trace.appveyor
-echo   use_generated          = 0                              >> wsock_trace.appveyor
 echo   show_position          = 1                              >> wsock_trace.appveyor
 echo   show_map_url           = 1                              >> wsock_trace.appveyor
 echo   max_days               = 10                             >> wsock_trace.appveyor
