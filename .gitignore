@@ -10,7 +10,6 @@ t
 *.mak
 *.obj
 *.BIN
-*.xz
 src/enum_proto.*
 src/.depend.*
 src/CLANG_obj/*
