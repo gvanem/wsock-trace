@@ -257,6 +257,7 @@
   #define strnicmp    _strnicmp
   #define stricmp     _stricmp
   #define strlwr      _strlwr
+  #define strupr      _strupr
   #define snprintf    _snprintf
   #define vsnprintf   _vsnprintf
   #define fdopen      _fdopen
