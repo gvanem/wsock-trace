@@ -77,8 +77,6 @@ LuaJIT/src/lj_recdef.h
 EasyHook-master
 appveyor-hosts
 bsdly.net.traplist.withcc
-dbip-city-lite*
-dbip-country-lite*
 get-master.bat
 hosts-full.txt
 install.bat
