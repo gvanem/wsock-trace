@@ -37,7 +37,7 @@ loc_log_null(struct loc_ctx *ctx, const char *format, ...) {}
 			loc_log(ctx, prio, __FILE__, __LINE__, __FUNCTION__,  ## __VA_ARGS__); \
 	} while (0)
 
-#undef INFO
+#undef INFO   /* Some of these are in some Windows SDK headers too */
 #undef ERROR
 #undef DEBUG
 

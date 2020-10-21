@@ -54,7 +54,7 @@
 
   #if defined(LIBLOC_PRIVATE)
     extern char  *strsep     (char **stringp, const char *delim);
-    extern char  *strcasestr (const char *haystack_start, const char *needle_start);
+    extern char  *strcasestr (const char *haystack, const char *needle);
     extern char  *strptime   (const char *buf, const char *format, struct tm *tm);
     extern time_t timegm     (struct tm *tm);
 
