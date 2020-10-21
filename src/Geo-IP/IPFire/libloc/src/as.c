@@ -90,7 +90,13 @@ LOC_EXPORT const char* loc_as_get_name(struct loc_as* as) {
 }
 
 LOC_EXPORT int loc_as_set_name(struct loc_as* as, const char* name) {
-	as->name = name ? strdup(name) : strdup("");
+	if (as->name)
+		free(as->name);
+
+	if (name)
+		as->name = strdup(name);
+	else
+		as->name = NULL;
 
 	return 0;
 }
