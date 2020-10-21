@@ -111,6 +111,7 @@ int main(int argc, char** argv) {
 
 	while (as) {
 		printf("Found AS%d: %s\n", loc_as_get_number(as), loc_as_get_name(as));
+		fflush(stdout);
 
 		err = loc_database_enumerator_next_as(enumerator, &as);
 		if (err) {
