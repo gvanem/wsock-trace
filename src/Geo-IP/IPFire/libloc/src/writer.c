@@ -155,6 +155,12 @@ static void loc_writer_free(struct loc_writer* writer) {
 	if (writer->networks)
 		loc_network_tree_unref(writer->networks);
 
+	if (writer->as)
+		free(writer->as);
+
+	if (writer->countries)
+		free(writer->countries);
+
 	// Unref the string pool
 	loc_stringpool_unref(writer->pool);
 
