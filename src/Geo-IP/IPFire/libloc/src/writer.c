@@ -147,19 +147,24 @@ static void loc_writer_free(struct loc_writer* writer) {
 		EVP_PKEY_free(writer->private_key2);
 
 	// Unref all AS
-	for (unsigned int i = 0; i < writer->as_count; i++) {
-		loc_as_unref(writer->as[i]);
+	if (writer->as) {
+		for (unsigned int i = 0; i < writer->as_count; i++) {
+			loc_as_unref(writer->as[i]);
+		}
+		free(writer->as);
+	}
+
+	// Unref all countries
+	if (writer->countries) {
+		for (unsigned int i = 0; i < writer->countries_count; i++) {
+			loc_country_unref(writer->countries[i]);
+		}
+		free(writer->countries);
 	}
 
 	// Release network tree
 	if (writer->networks)
 		loc_network_tree_unref(writer->networks);
-
-	if (writer->as)
-		free(writer->as);
-
-	if (writer->countries)
-		free(writer->countries);
 
 	// Unref the string pool
 	loc_stringpool_unref(writer->pool);
@@ -607,7 +612,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 		goto END;
 	}
 
-	DEBUG(writer->ctx, "Successfully generated signature of %u bytes\n", *length);
+	DEBUG(writer->ctx, "Successfully generated signature of %zu bytes\n", *length);
 	r = 0;
 
 	// Dump signature

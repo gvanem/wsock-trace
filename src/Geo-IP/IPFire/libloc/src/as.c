@@ -145,6 +145,10 @@ int loc_as_match_string(struct loc_as* as, const char* string) {
 	if (!string)
 		return 1;
 
+	// Cannot match anything when name is not set
+	if (!as->name)
+		return 1;
+
 	// Search if string is in name
 	if (strcasestr(as->name, string) != NULL)
 		return 1;
