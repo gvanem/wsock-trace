@@ -19,10 +19,6 @@
 #include <loc/libloc.h>
 #include <loc/database.h>
 
-// #undef  LIBLOC_PRIVATE
-// #define LIBLOC_PRIVATE
-#include <loc/private.h>
-
 #include "locationmodule.h"
 #include "as.h"
 #include "country.h"
