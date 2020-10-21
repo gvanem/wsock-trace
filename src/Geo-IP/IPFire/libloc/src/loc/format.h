@@ -35,10 +35,6 @@ enum loc_database_version {
 #define LOC_DATABASE_PAGE_SIZE		4096
 #define LOC_SIGNATURE_MAX_LENGTH	(LOC_DATABASE_PAGE_SIZE / 2)
 
-#ifdef _MSC_VER
-#pragma pack (push,1)
-#endif
-
 struct loc_database_magic {
 	char magic[7];
 
@@ -127,10 +123,6 @@ struct loc_database_country_v1 {
 	// Name in the string pool
 	uint32_t name;
 };
-
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
 #endif
 #endif
