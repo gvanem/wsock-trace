@@ -8,36 +8,28 @@
 #define DWORD_HI(x)  ((uint64_t)(x) >> 32)
 #define DWORD_LO(x)  ((x) & 0xffffffff)
 
+static int debug = -1;
+
 static void hex_dump (const char *what, const void *data_p, size_t datalen);
 
-static const char *prot_str (int prot)
+void *_mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset,
+             const char *fname, unsigned line)
 {
-  return (prot == PROT_READ ? "PROT_READ" :
-          prot == PROT_WRITE ? "PROT_WRITE" :
-          prot == PROT_READWRITE ? "PROT_READWRITE" : "??");
-}
+  void        *map = NULL;
+  HANDLE       handle = INVALID_HANDLE_VALUE;
+  DWORD        err1 = 0;
+  DWORD        err2 = 0;
+  intptr_t     h = _get_osfhandle (fd);
+  DWORD        access = 0;
+  uint64_t     pstart, psize, poffset;
+  static DWORD block_size = 0;
 
-static const char *flags_str (int access)
-{
-  return (access == MAP_SHARED  ? "MAP_SHARED" :
-          access == MAP_PRIVATE ? "MAP_PRIVATE" : "??");
-}
-
-void *mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset)
-{
-  void         *map = NULL;
-  HANDLE        handle = INVALID_HANDLE_VALUE;
-  DWORD         err1 = 0;
-  DWORD         err2 = 0;
-  intptr_t      h = _get_osfhandle (fd);
-  DWORD         access = 0;
-  uint64_t      pstart, psize, poffset;
-  static DWORD  block_size = 0;
-  static int    debug = -1;
+  (void) flags; /* Not used */
 
   if (block_size == 0)
   {
     SYSTEM_INFO si;
+
     GetSystemInfo (&si);
     block_size = si.dwAllocationGranularity;
   }
@@ -51,7 +43,7 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   switch (protection)
   {
     case PROT_READ:
-         handle = CreateFileMapping ((HANDLE)h, 0, PAGE_READONLY, 0, 0, NULL);
+         handle = CreateFileMapping ((HANDLE)h, 0, PAGE_READONLY, 0, DWORD_LO(pstart), NULL);
          access = FILE_MAP_READ;
          break;
     case PROT_WRITE:
@@ -89,17 +81,17 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
 
   if (map == MAP_FAILED)
   {
-    fprintf (stderr, "pstart: %lld, poffset: %lld, psize: %lld\n", pstart, poffset, psize);
-    fprintf (stderr, "address: 0x%p, length: %u, protection: %s, flags: %s, fd: %d, err1: %lu, err2: %lu  -> 0x%p\n",
-             address, length, prot_str(protection), flags_str(flags), fd, err1, err2, map);
+    fprintf (stderr, "%s(%u): pstart: %lld, poffset: %lld, psize: %lld\n", fname, line, pstart, poffset, psize);
+    fprintf (stderr, "    address: 0x%p, length: %u, %d, err1: %lu, err2: %lu  -> 0x%p\n",
+             address, length, fd, err1, err2, map);
   }
   else
   {
     char  *p = (char*) map;
     size_t len;
 
-    fprintf (stderr, "address: 0x%p, length: %u, protection: %s, flags: %s, fd: %d, err1: %lu, err2: %lu  -> 0x%p\n",
-             address, length, prot_str(protection), flags_str(flags), fd, err1, err2, map);
+    fprintf (stderr, "%s(%u): address: 0x%p, length: %u, fd: %d, offset: %zu, err1: %lu, err2: %lu  -> 0x%p\n",
+             fname, line, address, length, fd, offset, err1, err2, map);
 
     /* Now test the low and high end of the mmap'ed region to check
      * we get no exceptions. Check 'PROT_READ' only since that's the only
@@ -123,10 +115,10 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   return (map);
 }
 
-int munmap (void *map, size_t length)
+int _munmap (void *map, size_t length, const char *fname, unsigned line)
 {
-  if (!UnmapViewOfFile (map))
-     fprintf (stderr, "munmap of 0x%p failed: %lu\n", map, GetLastError());
+  if (!UnmapViewOfFile(map) && debug)
+     fprintf (stderr, "%s(%u): munmap (0x%p) failed: %lu\n", fname, line, map, GetLastError());
   (void) length;
   return (0);
 }
