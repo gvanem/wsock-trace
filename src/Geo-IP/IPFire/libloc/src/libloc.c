@@ -164,9 +164,34 @@ LOC_EXPORT void loc_set_log_priority(struct loc_ctx* ctx, int priority) {
 
 LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct in6_addr* address) {
 
-	DEBUG(ctx, "Parsing IP address %s\n", string);
+	struct in_addr ipv4_address;
 
 	loc_init();
+
+	DEBUG(ctx, "Parsing IP address %s\n", string);
+
+	// Try parsing this as an IPv4 address
+	if (inet_pton(AF_INET, string, &ipv4_address) == 1) {
+		DEBUG(ctx, "%s is an IPv4 address\n", string);
+
+		// Convert to IPv6-mapped address
+#if defined(_WIN32)
+		address->s6_words[0] = 0;
+		address->s6_words[1] = 0;
+		address->s6_words[2] = 0;
+		address->s6_words[3] = 0;
+		address->s6_words[4] = 0;
+		address->s6_words[5] = 0xffff;
+		address->s6_words[6] = 0;
+		address->s6_words[7] = ipv4_address.s_addr;
+#else
+		address->s6_addr32[0] = htonl(0x0000);
+		address->s6_addr32[1] = htonl(0x0000);
+		address->s6_addr32[2] = htonl(0xffff);
+		address->s6_addr32[3] = ipv4_address.s_addr;
+#endif
+		return 0;
+	}
 
 	// Try parsing this as an IPv6 address
 	int r = inet_pton(AF_INET6, string, address);
@@ -174,28 +199,6 @@ LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct
 	// If inet_pton returns one it has been successful
 	if (r == 1) {
 		DEBUG(ctx, "%s is an IPv6 address\n", string);
-		return 0;
-	}
-
-	// Try parsing this as an IPv4 address
-	struct in_addr ipv4_address;
-	r = inet_pton(AF_INET, string, &ipv4_address);
-	if (r == 1) {
-		DEBUG(ctx, "%s is an IPv4 address\n", string);
-
-		// Convert to IPv6-mapped address
-#if defined(_WIN32)
-		*(u_long*) &address->u.Byte[0] = 0;
-		*(u_long*) &address->u.Byte[4] = 0;
-		*(u_long*) &address->u.Byte[8] = 0xffff;
-		*(u_long*) &address->u.Byte[12] = ipv4_address.s_addr;
-#else
-		address->s6_addr32[0] = htonl(0x0000);
-		address->s6_addr32[1] = htonl(0x0000);
-		address->s6_addr32[2] = htonl(0xffff);
-		address->s6_addr32[3] = ipv4_address.s_addr;
-#endif
-
 		return 0;
 	}
 
