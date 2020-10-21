@@ -10,37 +10,52 @@
 #define DIM(arr)     (sizeof(arr) / sizeof(arr[0]))
 
 static int debug = -1;
+static SYSTEM_INFO si;
+
+/**
+ * A small array of 'mmap()' return values we need to remember
+ * until we call `munmap()` on the pointer.
+ */
+struct mmap_info {
+       void  *map;   /* the value from MapViewOfFile() */
+       void  *rval;  /* the value we returned to caller of mmap() */
+     };
+static struct mmap_info mmap_storage[10];
 
 static void *mmap_remember (void *map, off_t offset);
-static void *mmap_forget (void *map);
-static void  hex_dump (const char *what, const void *data_p, size_t datalen);
+static int   mmap_forget (void *map, struct mmap_info *info);
+
+#ifdef EXTRA_DEBUG_PARANOIA
+  static void  hex_dump (const char *what, const void *data_p, size_t datalen);
+#endif
 
 void *_mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset,
              const char *fname, unsigned line)
 {
-  void        *map = NULL;
-  void        *rval = NULL;
-  HANDLE       handle = INVALID_HANDLE_VALUE;
-  DWORD        err1 = 0;
-  DWORD        err2 = 0;
-  intptr_t     h = _get_osfhandle (fd);
-  DWORD        access = 0;
-  uint64_t     pstart, psize, poffset;
-  static DWORD block_size = 0;
+  void     *map = NULL;
+  void     *rval = NULL;
+  HANDLE    handle = INVALID_HANDLE_VALUE;
+  DWORD     err1 = 0;
+  DWORD     err2 = 0;
+  intptr_t  h = _get_osfhandle (fd);
+  DWORD     access = 0;
+  uint64_t  pstart, psize, poffset;
 
-  (void) flags;   /* Not used */
-
-  if (block_size == 0)
-  {
-    SYSTEM_INFO si;
-
-    GetSystemInfo (&si);
-    block_size = si.dwAllocationGranularity;
-  }
   if (debug == -1)
-     debug = (getenv("LIBLOC_DEBUG") ? 1 : 0);
+  {
+     const char *env = getenv ("LIBLOC_DEBUG");
+     int   v;
 
-  pstart  = (offset / block_size) * block_size;
+     debug = 0;
+     GetSystemInfo (&si);
+     if (env)
+     {
+       v = *env - '0';
+       debug = (v > 0 && v < 10);
+     }
+  }
+
+  pstart  = (offset / si.dwAllocationGranularity) * si.dwAllocationGranularity;
   poffset = offset - pstart;
   psize   = poffset + length;
 
@@ -52,7 +67,7 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
          break;
     case PROT_WRITE:
          handle = CreateFileMapping ((HANDLE)h, 0, PAGE_READWRITE, 0, 0, NULL);
-         access = FILE_MAP_WRITE;
+         access = FILE_MAP_WRITE;  /* Or FILE_MAP_COPY? */
          break;
     case PROT_READWRITE:
          handle = CreateFileMapping ((HANDLE)h, 0, PAGE_READWRITE, 0, 0, NULL);
@@ -80,72 +95,82 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
   if (handle && handle != INVALID_HANDLE_VALUE)
      CloseHandle (handle);
 
-  rval = mmap_remember (map, offset);
+  rval = mmap_remember (map, poffset);
 
+#ifdef EXTRA_DEBUG_PARANOIA
   if (!debug)
      return (rval);
 
-  if (map == MAP_FAILED)
+  fprintf (stderr,
+           "%s(%u):\n"
+           "   pstart: %lld, poffset: %lld, psize: %lld, length: %u, fd: %d, offset: %ld,\n"
+           "   err1: %lu, err2: %lu  -> map: 0x%p, 0x%p\n",
+           fname, line, pstart, poffset, psize, length, fd, offset, err1, err2, map, rval);
+
+  /* Now for the paranoia:
+   *
+   * Test the low and high end of the mmap'ed region to check
+   * we get no exceptions. Only test 'PROT_READ' since that's the only
+   * protection used in libloc.
+   */
+  if (map != MAP_FAILED && protection == PROT_READ)
   {
-    fprintf (stderr, "%s(%u): pstart: %lld, poffset: %lld, psize: %lld\n", fname, line, pstart, poffset, psize);
-    fprintf (stderr, "    address: 0x%p, length: %u, %d, err1: %lu, err2: %lu  -> 0x%p\n",
-             address, length, fd, err1, err2, rval);
-  }
-  else
-  {
-    char  *p = (char*) rval;
+    const char  *p = (char*) rval;
+    const char  *p_min = p;
+    const char  *p_max = p + length - 2;
     size_t len;
 
-    fprintf (stderr, "%s(%u): address: 0x%p, length: %u, fd: %d, offset: %zu, err1: %lu, err2: %lu  -> 0x%p\n",
-             fname, line, address, length, fd, offset, err1, err2, rval);
+    BOOL p_min_ok = !IsBadReadPtr (p_min, 1);
+    BOOL p_max_ok = !IsBadReadPtr (p_max, 1);
 
-    /* Now test the low and high end of the mmap'ed region to check
-     * we get no exceptions. Check 'PROT_READ' only since that's the only
-     * protection used in libloc.
-     */
-    if (protection == PROT_READ)
+    if (!p_min_ok || !p_max_ok)
     {
-      len = min (length, 100);
-      hex_dump ("Dumping first %zu bytes:\n", p, len);
-      if (length > 100)
-        hex_dump ("Dumping last %zu bytes:\n", p + length - 100, len);
-      else
-        fprintf (stderr, "Last chunk of data covered by the first chunk.\n\n");
+      fprintf (stderr, "   p_min_ok: %d, p_min: 0x%p, p_max_ok: %d, p_max: 0x%p\n\n",
+               p_min_ok, p_min, p_max_ok, p_max);
+      return (MAP_FAILED);
     }
+
+    len = min (length, 100);
+    hex_dump ("Dumping first %zu bytes:\n", p, len);
+    if (length > 100)
+      hex_dump ("Dumping last %zu bytes:\n", p + length - 100, len);
+    else
+      fprintf (stderr, "Last chunk of data covered by the first chunk.\n\n");
   }
+#endif
   return (rval);
 }
 
 int _munmap (void *map, size_t length, const char *fname, unsigned line)
 {
-  map = mmap_forget (map);
-  if (map == MAP_FAILED)
+  struct mmap_info info;
+
+  if (mmap_forget(map, &info))
   {
-    fprintf (stderr, "%s(%u): munmap (0x%p, %zu) failed: %lu\n", fname, line, map, length, GetLastError());
-    errno = EINVAL;
+    fprintf (stderr, "%s(%u):\n   munmap (0x%p, %zu), EINVAL.\n", fname, line, map, length);
     return (-1);
   }
-  if (!UnmapViewOfFile(map) && debug)
-     fprintf (stderr, "%s(%u): munmap (0x%p, %zu) failed: %lu\n", fname, line, map, length, GetLastError());
+
+  if (!UnmapViewOfFile(info.map) && debug)
+  {
+    fprintf (stderr, "%s(%u):\n   munmap (0x%p, %zu) failed: %lu\n", fname, line, map, length, GetLastError());
+    errno = EFAULT;
+    return (-1);
+  }
   return (0);
 }
 
-/**
- * A small array of 'mmap()' return values we need to remember
- * until we call `munmap()` on the pointer.
- */
-struct mmap_info {
-       void *map;   /* the value we got from MapViewOfFile() */
-       void *rval;  /* the value we returned in mmap() */
-     };
-static struct mmap_info mmap_storage[10];
-
 static void *mmap_remember (void *map, off_t offset)
 {
-  if (map == MAP_FAILED)  /* never rememember this */
-     return (MAP_FAILED);
+  int i;
 
-  for (int i = 0; i < DIM(mmap_storage); i++)
+  if (map == MAP_FAILED)  /* never rememember this */
+  {
+    errno = EFAULT;
+    return (MAP_FAILED);
+  }
+
+  for (i = 0; i < DIM(mmap_storage); i++)
   {
     if (!mmap_storage[i].map)
     {
@@ -154,22 +179,31 @@ static void *mmap_remember (void *map, off_t offset)
       return (mmap_storage[i].rval);
     }
   }
+  errno = EAGAIN;
   return (MAP_FAILED); /* all buckets full */
 }
 
-static void *mmap_forget (void *map)
+static int mmap_forget (void *map, struct mmap_info *info)
 {
-  for (int i = 0; i < DIM(mmap_storage); i++)
+  int i;
+
+  if (info)
+     memset (info, '\0', sizeof(*info));
+  for (i = 0; i < DIM(mmap_storage); i++)
   {
     if (map == mmap_storage[i].rval)
     {
+      if (info)
+         *info = mmap_storage[i];
       mmap_storage[i].map = NULL;   /* reuse this */
-      return (mmap_storage[i].rval);
+      return (0);
     }
   }
-  return (MAP_FAILED);  /* not found! */
+  errno = EINVAL;
+  return (-1);  /* not found! */
 }
 
+#ifdef EXTRA_DEBUG_PARANOIA
 /**
  * Do not use 'hexdump()' in 'loc/private.h'.
  */
@@ -203,4 +237,5 @@ static void hex_dump (const char *what, const void *data_p, size_t datalen)
   }
   putc ('\n', stderr);
 }
+#endif /* EXTRA_DEBUG_PARANOIA */
 
