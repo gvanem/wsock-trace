@@ -94,6 +94,7 @@ static struct in6_addr make_first_address(const struct in6_addr* address, const 
 	for (unsigned int i = 0; i < 4; i++)
 		a.s6_addr32[i] = address->s6_addr32[i] & bitmask->s6_addr32[i];
 #endif
+
 	return a;
 }
 

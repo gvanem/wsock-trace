@@ -195,6 +195,7 @@ LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct
 		address->s6_addr32[2] = htonl(0xffff);
 		address->s6_addr32[3] = ipv4_address.s_addr;
 #endif
+
 		return 0;
 	}
 

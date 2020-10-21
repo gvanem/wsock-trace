@@ -723,7 +723,7 @@ static int loc_database_fetch_network(struct loc_database* db, struct loc_networ
 	}
 
 
-	fprintf (stderr, "Fetching network at position %jd\n", (intmax_t)pos);
+	DEBUG(db->ctx, "Fetching network at position %jd\n", (intmax_t)pos);
 
 	int r;
 	switch (db->version) {
