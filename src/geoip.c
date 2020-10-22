@@ -1914,6 +1914,19 @@ static void test_addr_common (const struct in_addr  *a4,
       iana_find_by_ip6_address (a6, &rec);
       iana_print_rec (&rec);
       ASN_print (&rec, NULL, a6);
+
+    /** \todo
+      * Make the above `ASN_print()` print the information like IPFire's Python3-scipt does.
+      * E.g.:
+      *
+      * f:\gv\VC_project\ws_trace\src\Geo-IP\IPFire\libloc\src> py -3 location.py lookup ::ffff:45.150.206.231
+      *   Network                 : 45.150.206.0/23
+      *   Country                 : Russian Federation
+      *   Autonomous System       : AS35029 - WebLine LTD
+      *   Anonymous Proxy         : yes
+      *
+      * (for an IPv4 address it seems to require the IPv4-mapped syntax `::ffff:45.150.206.231`)
+      */
     }
   }
 

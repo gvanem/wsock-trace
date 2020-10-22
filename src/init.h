@@ -68,6 +68,7 @@ struct IANA_cfg {
        char   *ip4_file;
        char   *ip6_file;
        char   *asn_file;
+       BOOL    asn_binary;
      };
 
 struct GEOIP_cfg {

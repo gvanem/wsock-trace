@@ -53,7 +53,8 @@ static int  iana_CSV_add6 (struct CSV_context *ctx, const char *value);
  */
 static smartlist_t *ASN_entries;
 
-static void ASN_load_file (const char *file);
+static void ASN_load_bin_file (const char *file);
+static void ASN_load_CSV_file (const char *file);
 static int  ASN_CSV_add (struct CSV_context *ctx, const char *value);
 
 /**
@@ -69,7 +70,14 @@ void iana_init (void)
   iana_load_and_parse (AF_INET6, g_cfg.IANA.ip6_file);
 
   if (g_cfg.IANA.asn_file)
-     ASN_load_file (g_cfg.IANA.asn_file);
+  {
+    if (g_cfg.IANA.asn_binary)
+    {
+      ASN_load_bin_file (g_cfg.IANA.asn_file);
+      return;
+    }
+    ASN_load_CSV_file (g_cfg.IANA.asn_file);
+  }
 
   iana_sort_lists();
 
@@ -647,7 +655,7 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
  *
  * \param[in] file  the CSV file to read and parse.
  */
-static void ASN_load_file (const char *file)
+static void ASN_load_CSV_file (const char *file)
 {
   struct CSV_context ctx;
 
@@ -756,6 +764,10 @@ static int compare_on_ip4 (const void *key, const void **member)
   return (rc);
 }
 
+static void ASN_load_bin_file (const char *file)
+{
+}
+
 /**
  * Find and print the ASN information for an IPv4 address.
  *
@@ -785,7 +797,6 @@ void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct
     printf ("(status: %s)\n", iana->status);
   }
 }
-
 
 /*
  * Handles only IPv4 addresses now.
@@ -838,8 +849,9 @@ DO_NOTHING (ip2loc_num_ipv6_entries)
 
 static void usage (void)
 {
-  puts ("Usage: iana.exe [-d] [-a ASN-file] [-m max] <ipv4-address-space.csv>\n"
-        "  or   iana.exe [-d] [-a ASN-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
+  puts ("Usage: iana.exe [-dF] [-a ASN-file] [-m max] <ipv4-address-space.csv>\n"
+        "  or   iana.exe [-dF] [-a ASN-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
+        "  option '-F' assumes the ASN-file is a binary IPFire database.\n"
         "  option '-m' stops after 'max' records.");
   exit (0);
 }
@@ -880,7 +892,7 @@ int main (int argc, char **argv)
   if (argc < 2)
      usage();
 
-  while ((ch = getopt(argc, argv, "6a:dm:h?")) != EOF)
+  while ((ch = getopt(argc, argv, "6a:dFm:h?")) != EOF)
      switch (ch)
      {
        case '6':
@@ -888,6 +900,9 @@ int main (int argc, char **argv)
             break;
        case 'a':
             g_cfg.IANA.asn_file = strdup (optarg);
+            break;
+       case 'F':
+            g_cfg.IANA.asn_binary = 1;
             break;
        case 'm':
             rec_max = atoi (optarg);
