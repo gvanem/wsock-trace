@@ -296,7 +296,7 @@ runtests: $(TEST_PROGS)
 		echo -e "\n\e[1;32mRunning $$p:\e[0m" ; \
 		./$$p ;                                 \
 		if [ $$? -ne 0 ]; then                  \
-			echo -e "\e[1;31Failed!\e[0m" ;     \
+			echo -e "\e[1;31mFailed!\e[0m" ;    \
 		fi ;                                    \
 	done
 
