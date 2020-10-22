@@ -38,7 +38,6 @@ struct loc_ctx;
 struct loc_ctx *loc_ref(struct loc_ctx* ctx);
 struct loc_ctx *loc_unref(struct loc_ctx* ctx);
 
-void loc_init(void);  /* Important for Win32 only */
 int loc_new(struct loc_ctx** ctx);
 void loc_set_log_fn(struct loc_ctx* ctx,
 	void (*log_fn)(struct loc_ctx* ctx,

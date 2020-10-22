@@ -1,7 +1,6 @@
 #include <loc/libloc.h>
 #include <loc/private.h>
 #include <sys/mman.h>
-#include <stdint.h>
 #include <io.h>
 #include <windows.h>
 
@@ -118,10 +117,9 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
     const char  *p = (char*) rval;
     const char  *p_min = p;
     const char  *p_max = p + length - 2;
+    BOOL   p_min_ok = !IsBadReadPtr (p_min, 1);
+    BOOL   p_max_ok = !IsBadReadPtr (p_max, 1);
     size_t len;
-
-    BOOL p_min_ok = !IsBadReadPtr (p_min, 1);
-    BOOL p_max_ok = !IsBadReadPtr (p_max, 1);
 
     if (!p_min_ok || !p_max_ok)
     {

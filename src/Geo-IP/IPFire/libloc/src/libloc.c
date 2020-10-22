@@ -46,13 +46,6 @@ void loc_log(struct loc_ctx* ctx,
 	va_list args;
 
 	va_start(args, format);
-#ifdef _WIN32
-	if (!ctx) {
-		fprintf(stderr, "libloc: %s: ", fn);
-		vfprintf(stderr, format, args);
-	}
-	else
-#endif
 	ctx->log_fn(ctx, priority, file, line, fn, format, args);
 	va_end(args);
 }
@@ -84,6 +77,21 @@ static int log_priority(const char* priority) {
 	return 0;
 }
 
+static void loc_init(void) {
+#ifdef _WIN32
+	static int done = 0;
+	WSADATA wsa;
+
+	if (done)
+	   return;
+
+	done = 1;
+	WSAStartup(MAKEWORD(2,2), &wsa);
+	OpenSSL_add_all_algorithms();
+//  OPENSSL_Applink();
+#endif
+}
+
 LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 	struct loc_ctx* c = calloc(1, sizeof(*c));
 	if (!c)
@@ -92,6 +100,9 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 	c->refcount = 1;
 	c->log_fn = log_stderr;
 	c->log_priority = LOG_ERR;
+
+	// Start Winsock if not done
+	loc_init();
 
 	const char* env = secure_getenv("LOC_LOG");
 	if (env)
@@ -134,28 +145,7 @@ LOC_EXPORT void loc_set_log_fn(struct loc_ctx* ctx,
 }
 
 LOC_EXPORT int loc_get_log_priority(struct loc_ctx* ctx) {
-
-#ifdef _WIN32
-	if (!ctx)
-		return (LOG_DEBUG);
-#endif
 	return ctx->log_priority;
-}
-
-LOC_EXPORT void loc_init(void) {
-#ifdef _WIN32
-	static int done = 0;
-
-	if (!done) {
-		WSADATA wsa;
-
-		DEBUG (NULL,"Calling WSAStartup()\n");
-		WSAStartup(MAKEWORD(2,2), &wsa);
-		OpenSSL_add_all_algorithms();
-		OPENSSL_Applink();
-		done = 1;
-	}
-#endif
 }
 
 LOC_EXPORT void loc_set_log_priority(struct loc_ctx* ctx, int priority) {
@@ -163,35 +153,7 @@ LOC_EXPORT void loc_set_log_priority(struct loc_ctx* ctx, int priority) {
 }
 
 LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct in6_addr* address) {
-
-	struct in_addr ipv4_address;
-
-	loc_init();
-
 	DEBUG(ctx, "Parsing IP address %s\n", string);
-
-	// Try parsing this as an IPv4 address
-	if (inet_pton(AF_INET, string, &ipv4_address) == 1) {
-		DEBUG(ctx, "%s is an IPv4 address\n", string);
-
-		// Convert to IPv6-mapped address
-#if defined(_WIN32)
-		address->s6_words[0] = 0;
-		address->s6_words[1] = 0;
-		address->s6_words[2] = 0;
-		address->s6_words[3] = 0;
-		address->s6_words[4] = 0;
-		address->s6_words[5] = 0xffff;
-		address->s6_words[6] = 0;
-		address->s6_words[7] = ipv4_address.s_addr;
-#else
-		address->s6_addr32[0] = htonl(0x0000);
-		address->s6_addr32[1] = htonl(0x0000);
-		address->s6_addr32[2] = htonl(0xffff);
-		address->s6_addr32[3] = ipv4_address.s_addr;
-#endif
-		return 0;
-	}
 
 	// Try parsing this as an IPv6 address
 	int r = inet_pton(AF_INET6, string, address);
@@ -199,6 +161,29 @@ LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct
 	// If inet_pton returns one it has been successful
 	if (r == 1) {
 		DEBUG(ctx, "%s is an IPv6 address\n", string);
+		return 0;
+	}
+
+	// Try parsing this as an IPv4 address
+	struct in_addr ipv4_address;
+	r = inet_pton(AF_INET, string, &ipv4_address);
+	if (r == 1) {
+		DEBUG(ctx, "%s is an IPv4 address\n", string);
+
+		// Convert to IPv6-mapped address
+#ifdef _WIN32
+		struct ws2_in6_addr *_address = (struct ws2_in6_addr*) address;
+		_address->s6_addr32[0] = 0;
+		_address->s6_addr32[1] = 0;
+		_address->s6_addr32[2] = 0xffff;
+		_address->s6_addr32[3] = ipv4_address.s_addr;
+#else
+		address->s6_addr32[0] = htonl(0x0000);
+		address->s6_addr32[1] = htonl(0x0000);
+		address->s6_addr32[2] = htonl(0xffff);
+		address->s6_addr32[3] = ipv4_address.s_addr;
+#endif
+
 		return 0;
 	}
 

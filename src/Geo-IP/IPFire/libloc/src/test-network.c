@@ -26,6 +26,8 @@
 #include <loc/network.h>
 #include <loc/writer.h>
 
+#define IPV4_TEST 0
+
 int main(int argc, char** argv) {
 	int err;
 
@@ -116,7 +118,8 @@ int main(int argc, char** argv) {
 	}
 
 	size_t nodes = loc_network_tree_count_nodes(tree);
-	printf("The tree has %zu nodes\n", nodes);
+	printf("The tree has %zu IPv6-only nodes with %zu networks\n", nodes,
+	       loc_network_tree_count_networks(tree));
 
 	// Check subnet function
 	err = loc_network_is_subnet_of(network1, network2);
@@ -160,6 +163,25 @@ int main(int argc, char** argv) {
 	// Set ASN
 	loc_network_set_asn(network4, 1024);
 
+#if IPV4_TEST
+	struct loc_network* network5;
+	err = loc_writer_add_network(writer, &network5, "1.2.3.4/16");
+	if (err) {
+		fprintf(stderr, "Could not add IPv4 network\n");
+		exit(EXIT_FAILURE);
+	}
+
+	// Set country code
+	loc_network_set_country_code(network4, "ZZ");
+
+	// Set ASN
+	loc_network_set_asn(network4, 1234);
+	loc_network_tree_dump(tree);
+	printf("The tree has %zu IPv4/6-mixed nodes with %zu networks\n",
+	       loc_network_tree_count_nodes(tree),
+	       loc_network_tree_count_networks(tree));
+#endif
+
 	FILE* f = tmpfile();
 	if (!f) {
 		fprintf(stderr, "Could not open file for writing: %s\n", strerror(errno));
@@ -202,6 +224,15 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 	loc_network_unref(network1);
+
+#if IPV4_TEST
+	err = loc_database_lookup_from_string(db, "1.2.3.4", &network5);
+	if (err) {
+		fprintf(stderr, "Could not look up 1.2.3.4\n");
+		exit(EXIT_FAILURE);
+	}
+	loc_network_unref(network5);
+#endif
 
 	loc_unref(ctx);
 	fclose(f);

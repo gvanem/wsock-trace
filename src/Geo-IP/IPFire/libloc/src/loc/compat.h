@@ -36,6 +36,7 @@
   #endif
 
 #elif defined(_WIN32)
+  #include <stdint.h>
   #include <time.h>
   #include <intrin.h>
 
@@ -53,6 +54,15 @@
   #define htobe64(x)  _byteswap_uint64 (x)
 
   #if defined(LIBLOC_PRIVATE)
+    // Since <winsock2.h> does not define the 's6_addr32' union-field,
+    // use this overlayed structure in some places.
+    struct ws2_in6_addr {
+      union {
+        uint8_t  s6_addr8[16];
+        uint16_t s6_addr16[8];
+        uint32_t s6_addr32[4];
+      };
+    };
     extern char  *strsep     (char **stringp, const char *delim);
     extern char  *strcasestr (const char *haystack, const char *needle);
     extern char  *strptime   (const char *buf, const char *format, struct tm *tm);

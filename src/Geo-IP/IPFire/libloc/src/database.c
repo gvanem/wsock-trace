@@ -435,7 +435,7 @@ static void loc_database_free(struct loc_database* db) {
 	}
 
 	// Remove mapped network nodes section
-	if (db->network_nodes_v1 && db->network_nodes_v1 != MAP_FAILED) {
+	if (db->network_nodes_v1) {
 		r = munmap(db->network_nodes_v1, db->network_nodes_count * sizeof(*db->network_nodes_v1));
 		if (r)
 			ERROR(db->ctx, "Could not unmap network nodes section: %s\n", strerror(errno));
@@ -616,14 +616,6 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 	clock_t end = clock();
 	DEBUG(db->ctx, "Signature checked in %.4fms\n",
 		(double)(end - start) / CLOCKS_PER_SEC * 1000);
-
-	if (db->signature1)
-		INFO(db->ctx, "EVP_DigestVerifyFinal() okay. signature1: %02x,%02x,%02x,%02x, ...\n",
-			 db->signature1[0], db->signature1[1], db->signature1[2], db->signature1[3]);
-
-	if (db->signature2)
-		INFO(db->ctx, "EVP_DigestVerifyFinal() okay. signature2: %02x,%02x,%02x,%02x, ...\n",
-			 db->signature2[0], db->signature2[1], db->signature2[2], db->signature2[3]);
 
 CLEANUP:
 	// Cleanup

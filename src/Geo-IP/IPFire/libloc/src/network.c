@@ -31,7 +31,7 @@
 #include <loc/private.h>
 
 #ifdef _WIN32
-  static char err_buf[20];
+  static char err_buf[20];   // Add to the 'context'?
   #define GET_NETERR() itoa(WSAGetLastError(), err_buf, 10)
 #else
   #define GET_NETERR() strerror(errno)
@@ -87,7 +87,7 @@ static struct in6_addr make_first_address(const struct in6_addr* address, const 
 	struct in6_addr a;
 
 	// Perform bitwise AND
-#if defined(_WIN32)
+#ifdef _WIN32
 	for (unsigned int i = 0; i < 8; i++)
 		a.s6_words[i] = address->s6_words[i] & bitmask->s6_words[i];
 #else
@@ -102,7 +102,7 @@ static struct in6_addr make_last_address(const struct in6_addr* address, const s
 	struct in6_addr a;
 
 	// Perform bitwise OR
-#if defined(_WIN32)
+#ifdef _WIN32
 	for (unsigned int i = 0; i < 8; i++)
 		a.s6_words[i] = address->s6_words[i] | ~bitmask->s6_words[i];
 #else
@@ -251,8 +251,10 @@ static int format_ipv6_address(const struct in6_addr* address, char* string, siz
 static int format_ipv4_address(const struct in6_addr* address, char* string, size_t length) {
 	struct in_addr ipv4_address;
 
-#if defined(_WIN32)
-	ipv4_address.s_addr = *(u_long*) &address->s6_words[6];
+#ifdef _WIN32
+	struct ws2_in6_addr *_address = (struct ws2_in6_addr*) address;
+
+	ipv4_address.s_addr = _address->s6_addr32[3];
 #else
 	ipv4_address.s_addr = address->s6_addr32[3];
 #endif

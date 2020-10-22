@@ -108,8 +108,6 @@ static struct PyModuleDef location_module = {
 };
 
 PyMODINIT_FUNC PyInit__location(void) {
-	// Initialise Winsock2
-	loc_init();
 
 	// Initialise loc context
 	int r = loc_new(&loc_ctx);

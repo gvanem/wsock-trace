@@ -31,8 +31,6 @@
 int main(int argc, char** argv) {
 	int err;
 
-	loc_init();
-
 	// Open public key
 	FILE* public_key = fopen(ABS_SRCDIR "/examples/public-key.pem", "r");
 	if (!public_key) {

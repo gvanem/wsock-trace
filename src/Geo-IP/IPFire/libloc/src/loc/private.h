@@ -42,11 +42,7 @@ loc_log_null(struct loc_ctx *ctx, const char *format, ...) {}
 #undef DEBUG
 
 #ifdef ENABLE_DEBUG
-#  ifdef _WIN32
-#    define DEBUG(ctx, ...) loc_log_cond(NULL, LOG_DEBUG, ## __VA_ARGS__)
-#  else
-#    define DEBUG(ctx, ...) loc_log_cond(ctx, LOG_DEBUG, ## __VA_ARGS__)
-#  endif
+#  define DEBUG(ctx, ...) loc_log_cond(ctx, LOG_DEBUG, ## __VA_ARGS__)
 #else
 #  define DEBUG(ctx, ...) loc_log_null(ctx, ## __VA_ARGS__)
 #endif
