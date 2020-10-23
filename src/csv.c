@@ -405,7 +405,7 @@ char *str_ltrim (char *s)
  */
 static int csv_callback (struct CSV_context *ctx, const char *value)
 {
-  static int rec_num = 0;
+  static unsigned rec_num = 0;
 
   if (ctx->rec_num > rec_num)
      puts ("");
