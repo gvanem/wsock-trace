@@ -1123,7 +1123,7 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
          ip4->S_un.S_un_b.s_b1 != 0x0A &&                       /* not 10/8       */
          (swap16(ip4->S_un.S_un_w.s_w1) & 0xFFF0) != 0xAC10 &&  /* not 172.16/12  */
          swap16(ip4->S_un.S_un_w.s_w1) != 0xC0A8 &&             /* not 192.168/16 */
-         !INET_util_addr_is_multicast(ip4,NULL))                /* not 224/3      */
+         !INET_util_addr_is_multicast(ip4, NULL))               /* not 224/3      */
         return (1);
    }
    else if (ip6)
@@ -1135,7 +1135,7 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
       * According to:
       *   https://www.iana.org/assignments/ipv6-unicast-address-assignments/ipv6-unicast-address-assignments.xhtml
       *
-      * all 2001 - 2C00 blocks are ALLOCATED. So just that.
+      * all 2001 - 2C00 blocks are ALLOCATED. So use that.
       *
       * \todo But use `iana_find_by_ip6_address()` to verify this.
       */
@@ -1164,7 +1164,7 @@ const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_ad
   const u_long *dword;
 
   if (ip4)
-      return _ultoa (swap32(ip4->s_addr), buf, 10);
+     return _ultoa (swap32(ip4->s_addr), buf, 10);
   if (ip6)
   {
     dword = (const u_long*) &ip6->s6_bytes[0];
