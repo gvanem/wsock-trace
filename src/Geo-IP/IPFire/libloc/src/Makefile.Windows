@@ -190,11 +190,11 @@ PY_SRC = $(addprefix python/, \
 PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
            $(notdir $(PY_SRC:.c=.$(O))))
 
-all: $(OBJ_DIR) $(TARGETS) py3_module epilogue
+all: $(OBJ_DIR) $(TARGETS) epilogue
 
 epilogue:
 	$(call yellow_msg, \nWelcome to libloc library and test programs.)
-	$(call yellow_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests $(BRIGHT_YELLOW)too.)
+	$(call yellow_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) [py3_module | runtests] $(BRIGHT_YELLOW)too.)
 
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
@@ -207,8 +207,8 @@ $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
             $(OBJ_DIR)/test-stringpool.$(O) \
             $(OBJ_DIR)/test-signature.$(O)
 
-$(STATIC_LIB): $(LIBLOC_OBJ)
-	lib -nologo -out:$@ $^
+$(STATIC_LIB): $(OBJ_DIR) $(LIBLOC_OBJ)
+	lib -nologo -out:$@ $(LIBLOC_OBJ)
 	@echo
 
 $(IMPORT_LIB): libloc.dll

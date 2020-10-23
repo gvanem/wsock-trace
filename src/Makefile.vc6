@@ -20,11 +20,22 @@ USE_CRT_DEBUG = 0
 USE_DEF_FILE = 1
 !endif
 
+!if "$(USE_LIBLOC)" == ""
+USE_LIBLOC = 1
+!endif
+
 #
 # Support for Lua-scripting:
 #
 !if "$(USE_LUA)" == "1"
 LUAJIT_ROOT = ..\LuaJIT
+!endif
+
+#
+# Support for IPFire's 'libloc' library:
+#
+!if "$(USE_LIBLOC)" == "1"
+LIBLOC_ROOT = Geo-IP\IPFire\libloc
 !endif
 
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
@@ -82,6 +93,12 @@ LDFLAGS_DEF = -def:$(WSOCK_DEF)
 CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
 EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
+!endif
+
+!if "$(USE_LIBLOC)" == "1"
+CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DUSE_LIBLOC
+EX_LIBS   = $(LIBLOC_ROOT)/src/libloc.lib dnsapi.lib
+WSOCK_DEP = $(LIBLOC_ROOT)/src/libloc.lib
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib advapi32.lib
@@ -180,7 +197,8 @@ IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
            $(OBJ_DIR)\getopt.obj    \
            $(OBJ_DIR)\smartlist.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) compile_libloc_$(USE_LIBLOC) \
+     $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
@@ -206,10 +224,10 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 	type link.tmp >> test.map
 
 geoip.exe: $(GEOIP_OBJ)
-	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib ole32.lib
+	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib $(EX_LIBS)
 
 iana.exe: $(IANA_OBJ)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib > link.tmp
+	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib $(EX_LIBS) > link.tmp
 	type link.tmp >> iana.map
 
 idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
@@ -220,7 +238,7 @@ idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
 # This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
 #
 firewall_test.exe: $(FIREWALL_TEST_OBJ)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib advapi32.lib winmm.lib > link.tmp
+	link.exe $(LDFLAGS) -verbose -out:$@ $** $(EX_LIBS) ws2_32.lib winmm.lib > link.tmp
 	type link.tmp >> firewall_test.map
 
 run_test: test.exe
@@ -235,8 +253,18 @@ compile_luajit_1:
 	   msvcbuild.bat debug static &    \
 	   copy lua51.lib lua51_static.lib )
 
+compile_libloc_ compile_libloc_0:
+	@echo
+
+compile_libloc_1:
+	make -f Makefile.Windows --directory=$(LIBLOC_ROOT)\src CC=cl USE_CRT_DEBUG=$(USE_CRT_DEBUG) libloc.lib
+	@echo
+
 clean:
 	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
+!if "$(USE_LIBLOC)" == "1"
+	make -f Makefile.Windows --directory=$(LIBLOC_ROOT)\src CC=cl clean
+!endif
 
 vclean realclean: clean
 	- del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.pdb
@@ -248,6 +276,9 @@ vclean realclean: clean
 !if "$(USE_LUA)" == "1"
 	- del $(LUAJIT_ROOT)\src\lua51*.lib
 !endif
+!if "$(USE_LIBLOC)" == "1"
+	- del $(LIBLOC_ROOT)\src\libloc.lib
+!endif
 
 help:
 	@type <<
@@ -257,8 +288,10 @@ Run one of the following targets:
 where VAR can have of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
+  USE_LIBLOC       (default: $(USE_LIBLOC))
   USE_LUA          (default: $(USE_LUA))
   LUAJIT_ROOT      (default: $(LUAJIT_ROOT))
+  LIBLOC_ROOT      (default: $(LIBLOC_ROOT))
   CPU              (default: $(CPU))
   LIB_TARGET       (default: $(LIB_TARGET))
   BIN_TARGET       (default: $(BIN_TARGET))
