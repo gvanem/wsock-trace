@@ -108,7 +108,6 @@ static struct PyModuleDef location_module = {
 };
 
 PyMODINIT_FUNC PyInit__location(void) {
-
 	// Initialise loc context
 	int r = loc_new(&loc_ctx);
 	if (r)

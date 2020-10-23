@@ -7,9 +7,10 @@ My initial port of **[LibLoc](https://git.ipfire.org/?p=location/libloc.git;a=tr
   ```
   py -3 location.py dump > database.txt
   ```
-  which will generate an apperoximately 115 Mbyte file!
-
-
+  which will generate an approximately 115 Mbyte file!
+  But use the binary database from:
+   * https://location.ipfire.org/databases/1/location.db.xz  -- the latest most up-to-date version
+   * https://location.ipfire.org/databases/1/archive/        -- older versions
 
 
 
