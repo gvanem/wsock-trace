@@ -67,8 +67,8 @@ struct IANA_cfg {
        BOOL    enable;
        char   *ip4_file;
        char   *ip6_file;
-       char   *asn_file;
-       BOOL    asn_binary;
+       char   *asn_csv_file;
+       char   *asn_bin_file;
      };
 
 struct GEOIP_cfg {
@@ -131,7 +131,7 @@ struct config_table {
        UINT    max_fd_sets;
        int     max_displacement;
        BOOL    use_sema;
-       BOOL    test_trace;
+       BOOL    trace_raw;
        BOOL    start_new_line;
        BOOL    dump_data;
        BOOL    dump_select;

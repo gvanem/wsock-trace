@@ -699,9 +699,6 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "start_new_line"))
      g_cfg.start_new_line = atoi (val);
 
-  else if (!stricmp(key, "test_trace"))
-     g_cfg.test_trace = atoi (val);
-
   else if (!stricmp(key, "msvc_only"))
      g_cfg.msvc_only = atoi (val);
 
@@ -934,8 +931,11 @@ static void parse_iana_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "ip6_file"))
        g_cfg.IANA.ip6_file = strdup (val);
 
-  else if (!stricmp(key, "asn_file"))
-       g_cfg.IANA.asn_file = strdup (val);
+  else if (!stricmp(key, "asn_csv_file"))
+       g_cfg.IANA.asn_csv_file = strdup (val);
+
+  else if (!stricmp(key, "asn_bin_file"))
+       g_cfg.IANA.asn_bin_file = strdup (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -1680,13 +1680,11 @@ void set_color (const WORD *col)
       attr = console_info.wAttributes & ~7;
       attr &= ~8;  /* Since 'wAttributes' could have been hi-intensity at startup. */
     }
-    else attr = bg << 4;
+    else
+      attr = bg << 4;
 
     attr |= fg;
   }
-
-  if (!g_cfg.trace_use_ods && g_cfg.trace_file_device)
-     TRACE (6, "fg: %d, bg: %d, attr: 0x%04X, last_attr: 0x%04X\n", (int)fg, (int)bg, attr, last_attr);
 
   if (attr != last_attr)
      SetConsoleTextAttribute (console_hnd, attr);

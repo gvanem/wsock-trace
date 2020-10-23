@@ -1483,8 +1483,8 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
 
   _trace_printf = verbose ? trace_printf : null_printf;
 
-  save = g_cfg.test_trace;
-  g_cfg.test_trace = 1;
+  save = g_cfg.trace_raw;
+  g_cfg.trace_raw = 1;
 
 #if !defined(_MSC_VER) && !defined(__clang__)
   if (!stricmp(g_module,module))
@@ -1512,7 +1512,7 @@ check_mingw_map_file:
 #endif
 #endif
 
-  g_cfg.test_trace = save;
+  g_cfg.trace_raw = save;
 
   /* Only do the sorting when the last module is processed.
    * Wastefull otherwise, since no modules should have overlapping base-addresses.

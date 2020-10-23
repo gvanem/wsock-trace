@@ -1109,26 +1109,29 @@ static void fname_cache_free (void)
  */
 void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 {
-  static int save;
+  int     save1, save2;
   va_list args;
 
-  /* Since 'g_cfg.test_trace=0' below, ensure colorised messages from 'WSTRACE()'
+  /* Since 'g_cfg.trace_raw = 0' below, ensure colorised messages from 'WSTRACE()'
    * cannot interrupt this piece of code (we'd then get colours here).
    * Thus make this a critical region.
    */
   ENTER_CRIT();
 
-  save = g_cfg.test_trace;
-  g_cfg.test_trace = 1;
-  trace_indent (g_cfg.trace_indent);
+  save1 = g_cfg.trace_raw;
+  save2 = g_cfg.trace_indent;
+  g_cfg.trace_raw    = 1;
+  g_cfg.trace_indent = 0;
 
   if (g_cfg.show_caller && file)
      trace_printf ("%s(%u): ", basename(file), line);
 
   va_start (args, fmt);
   trace_vprintf (fmt, args);
-  g_cfg.test_trace = save;
   va_end (args);
+
+  g_cfg.trace_raw    = save1;
+  g_cfg.trace_indent = save2;
   LEAVE_CRIT();
 }
 
@@ -1137,13 +1140,20 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
  */
 int trace_indent (size_t indent)
 {
+#if 1
   int rc = 0;
+
+  while (indent--)
+    rc += trace_putc_raw (' ');
+#else
   int save = tilde_escape;
+  int rc = 0;
 
   tilde_escape = FALSE;  /* never look for '~' now */
   while (indent--)
     rc += trace_putc (' ');
   tilde_escape = save;
+#endif
   return (rc);
 }
 
@@ -1230,7 +1240,7 @@ int trace_putc (int ch)
   assert (trace_ptr >= trace_buf);
   assert (trace_ptr < trace_end-1);
 
-  if (tilde_escape && trace_get_color && !g_cfg.test_trace)
+  if (tilde_escape && trace_get_color && !g_cfg.trace_raw)
   {
     const WORD *color;
     int         col_idx;
@@ -1291,7 +1301,7 @@ int trace_putc (int ch)
     return (1);
   }
 
-  if (tilde_escape && ch == '~' && !g_cfg.test_trace)
+  if (tilde_escape && ch == '~' && !g_cfg.trace_raw)
   {
     trace_get_color = TRUE;
     return (1);
