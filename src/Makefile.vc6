@@ -21,7 +21,7 @@ USE_DEF_FILE = 1
 !endif
 
 !if "$(USE_LIBLOC)" == ""
-USE_LIBLOC = 1
+USE_LIBLOC = 0
 !endif
 
 #
@@ -96,9 +96,9 @@ WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 !if "$(USE_LIBLOC)" == "1"
-CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DUSE_LIBLOC
-EX_LIBS   = $(LIBLOC_ROOT)/src/libloc.lib dnsapi.lib
-WSOCK_DEP = $(LIBLOC_ROOT)/src/libloc.lib
+CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DLIBLOC_NO_OPENSSL -DUSE_LIBLOC
+EX_LIBS   = libloc.lib dnsapi.lib
+WSOCK_DEP = libloc.lib
 !endif
 
 EX_LIBS = $(EX_LIBS) ole32.lib advapi32.lib
@@ -197,8 +197,21 @@ IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
            $(OBJ_DIR)\getopt.obj    \
            $(OBJ_DIR)\smartlist.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) compile_libloc_$(USE_LIBLOC) \
-     $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
+#
+# .obj-files for 'libloc.lib'.
+#
+LIBLOC_OBJ = $(OBJ_DIR)\as.obj         \
+             $(OBJ_DIR)\country.obj    \
+             $(OBJ_DIR)\database.obj   \
+             $(OBJ_DIR)\libloc.obj     \
+             $(OBJ_DIR)\network.obj    \
+             $(OBJ_DIR)\resolv.obj     \
+             $(OBJ_DIR)\stringpool.obj \
+             $(OBJ_DIR)\writer.obj     \
+             $(OBJ_DIR)\win_str.obj    \
+             $(OBJ_DIR)\win_mmap.obj
+
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
@@ -253,17 +266,14 @@ compile_luajit_1:
 	   msvcbuild.bat debug static &    \
 	   copy lua51.lib lua51_static.lib )
 
-compile_libloc_ compile_libloc_0:
-	@echo
-
-compile_libloc_1:
-	make -f Makefile.Windows --directory=$(LIBLOC_ROOT)\src CC=cl USE_CRT_DEBUG=$(USE_CRT_DEBUG) libloc.lib
+libloc.lib: $(LIBLOC_OBJ)
+	lib -out:libloc.lib $(LIBLOC_OBJ)
 	@echo
 
 clean:
 	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
 !if "$(USE_LIBLOC)" == "1"
-	make -f Makefile.Windows --directory=$(LIBLOC_ROOT)\src CC=cl clean
+	- del libloc.lib
 !endif
 
 vclean realclean: clean
@@ -275,9 +285,6 @@ vclean realclean: clean
 	- rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
 	- del $(LUAJIT_ROOT)\src\lua51*.lib
-!endif
-!if "$(USE_LIBLOC)" == "1"
-	- del $(LIBLOC_ROOT)\src\libloc.lib
 !endif
 
 help:
@@ -317,6 +324,41 @@ $(OBJ_DIR)\init_2.obj: init.c
 
 $(OBJ_DIR)\geoip_1.obj: geoip.c
 	$(CC) -c $(CFLAGS) -DTEST_GEOIP -Fo$(OBJ_DIR)/geoip_1.obj geoip.c
+
+#
+# The rules for '$(LIBLOC_OBJ)' files.
+#
+LOC_CFLAGS = $(CFLAGS) -DLIBLOC_PRIVATE -I$(LIBLOC_ROOT)\src\loc\windows
+
+$(OBJ_DIR)\as.obj: $(LIBLOC_ROOT)\src\as.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\country.obj: $(LIBLOC_ROOT)\src\country.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\database.obj: $(LIBLOC_ROOT)\src\database.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\libloc.obj: $(LIBLOC_ROOT)\src\libloc.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\network.obj: $(LIBLOC_ROOT)\src\network.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\resolv.obj: $(LIBLOC_ROOT)\src\resolv.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\stringpool.obj: $(LIBLOC_ROOT)\src\stringpool.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\writer.obj: $(LIBLOC_ROOT)\src\writer.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\win_str.obj: $(LIBLOC_ROOT)\src\win_str.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+
+$(OBJ_DIR)\win_mmap.obj: $(LIBLOC_ROOT)\src\win_mmap.c
+	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
 
 #
 # The default fall-back rule for other .obj-files.
