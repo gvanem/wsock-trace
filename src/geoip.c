@@ -1053,14 +1053,14 @@ static void make_c_list (struct country_list **list_p,
      return;
 
   memcpy (list, &c_list, size);
-  qsort (list, size / sizeof(c_list[0]), sizeof(c_list[0]), compare);
+  qsort (list, DIM(c_list), sizeof(c_list[0]), compare);
   if (g_cfg.trace_level >= 3)
   {
-    trace_printf ("\n%s:\n  #    Num  XX  Continent   long-name\n"
-                  "--------------------------------------------\n",
+    trace_printf ("\n%s:\n    #    Num  XX  Continent   long-name\n"
+                  "  ------------------------------------------------------------\n",
                   list_name);
     for (i = 0; i < DIM(c_list); i++, list++)
-        trace_printf ("%3d: %5d  %c%c  %-10s  %s\n",
+        trace_printf ("  %3d: %5d  %c%c  %-10s  %s\n",
                       i, list->country_number,
                       toupper(list->short_name[0]), toupper(list->short_name[1]),
                       geoip_get_continent_name(list->continent), list->long_name);
@@ -1074,7 +1074,7 @@ static void make_c_list (struct country_list **list_p,
 static void geoip_make_c_lists (void)
 {
   make_c_list (&c_list_sorted_on_short_name,     compare_on_short_name,     "c_list_sorted_on_short_name, XX");
-  make_c_list (&c_list_sorted_on_country_number, compare_on_country_number, "c_list_sorted_on_country_number");
+  make_c_list (&c_list_sorted_on_country_number, compare_on_country_number, "c_list_sorted_on_country_number, Num");
 }
 
 static void geoip_free_c_lists (void)
@@ -1160,6 +1160,8 @@ const char *geoip_get_long_name_by_A2 (const char *short_name)
  * Given an ISO-3166-2 country-number, return the long-country name for it.
  *
  * \param[in] number  the ISO-3166-2 country-number.
+ *
+ * \note This function is currently not used.
  */
 const char *geoip_get_long_name_by_id (int number)
 {
@@ -1167,9 +1169,8 @@ const char *geoip_get_long_name_by_id (int number)
   size_t i, num = DIM(c_list);
 
   /**
-   * Since some countries above ("Kosovo" and "Saint Barthélemy") have no
+   * Since some countries above ("Kosovo / XK" and "Saint Barthélemy / BL") have no
    * assigned number, we cannot return a sensible name.
-   * But this function is currently not used.
    */
   if (number == 0)
      return ("?");
