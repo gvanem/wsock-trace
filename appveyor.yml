@@ -55,7 +55,7 @@ before_build:
   #
   - cmd: curl -O -# https://location.ipfire.org/databases/1/location.db.xz
   - cmd: 7z x location.db.xz > NUL
-  - cmd: ren location.db IPFire-database.db > NUL
+  - cmd: copy /Y location.db IPFire-database.db > NUL
 
 install:
   #

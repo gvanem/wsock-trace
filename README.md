@@ -155,6 +155,7 @@ There is currently no `install.bat` file for Wsock-trace. So you should copy the
   DROP.txt
   EDROP.txt
   DROPv6.txt
+  IPFire-database.db
 ```
 
 These environment variables are on the form:
