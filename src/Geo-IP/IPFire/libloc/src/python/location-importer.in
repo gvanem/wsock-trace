@@ -152,6 +152,7 @@ class CLI(object):
 					last_seen_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP);
 				CREATE UNIQUE INDEX IF NOT EXISTS announcements_networks ON announcements(network);
 				CREATE INDEX IF NOT EXISTS announcements_family ON announcements(family(network));
+				CREATE INDEX IF NOT EXISTS announcements_search ON announcements USING GIST(network inet_ops);
 
 				-- autnums
 				CREATE TABLE IF NOT EXISTS autnums(number bigint, name text NOT NULL);
@@ -188,6 +189,8 @@ class CLI(object):
 				);
 				CREATE UNIQUE INDEX IF NOT EXISTS network_overrides_network
 					ON network_overrides(network);
+				CREATE INDEX IF NOT EXISTS network_overrides_search
+					ON network_overrides USING GIST(network inet_ops);
 			""")
 
 		return db
@@ -234,34 +237,24 @@ class CLI(object):
 
 		# Select all known networks
 		rows = self.db.query("""
-			-- Get a (sorted) list of all known networks
-			WITH known_networks AS (
-					SELECT network FROM announcements
-				UNION
-					SELECT network FROM networks
-				UNION
-					SELECT network FROM network_overrides
-				ORDER BY network
-			)
-
 			-- Return a list of those networks enriched with all
 			-- other information that we store in the database
 			SELECT
-				DISTINCT ON (known_networks.network)
-				known_networks.network AS network,
-				announcements.autnum AS autnum,
+				DISTINCT ON (network)
+				network,
+				autnum,
 
 				-- Country
 				COALESCE(
 					(
 						SELECT country FROM network_overrides overrides
-							WHERE announcements.network <<= overrides.network
+							WHERE networks.network <<= overrides.network
 							ORDER BY masklen(overrides.network) DESC
 							LIMIT 1
 					),
 					(
 						SELECT country FROM autnum_overrides overrides
-							WHERE announcements.autnum = overrides.number
+							WHERE networks.autnum = overrides.number
 					),
 					networks.country
 				) AS country,
@@ -270,50 +263,67 @@ class CLI(object):
 				COALESCE(
 					(
 						SELECT is_anonymous_proxy FROM network_overrides overrides
-							WHERE announcements.network <<= overrides.network
+							WHERE networks.network <<= overrides.network
 							ORDER BY masklen(overrides.network) DESC
 							LIMIT 1
 					),
 					(
 						SELECT is_anonymous_proxy FROM autnum_overrides overrides
-							WHERE announcements.autnum = overrides.number
+							WHERE networks.autnum = overrides.number
 					),
 					FALSE
 				) AS is_anonymous_proxy,
 				COALESCE(
 					(
 						SELECT is_satellite_provider FROM network_overrides overrides
-							WHERE announcements.network <<= overrides.network
+							WHERE networks.network <<= overrides.network
 							ORDER BY masklen(overrides.network) DESC
 							LIMIT 1
 					),
 					(
 						SELECT is_satellite_provider FROM autnum_overrides overrides
-							WHERE announcements.autnum = overrides.number
+							WHERE networks.autnum = overrides.number
 					),
 					FALSE
 				) AS is_satellite_provider,
 				COALESCE(
 					(
 						SELECT is_anycast FROM network_overrides overrides
-							WHERE announcements.network <<= overrides.network
+							WHERE networks.network <<= overrides.network
 							ORDER BY masklen(overrides.network) DESC
 							LIMIT 1
 					),
 					(
 						SELECT is_anycast FROM autnum_overrides overrides
-							WHERE announcements.autnum = overrides.number
+							WHERE networks.autnum = overrides.number
 					),
 					FALSE
-				) AS is_anycast,
+				) AS is_anycast
+			FROM (
+				SELECT
+					known_networks.network AS network,
+					announcements.autnum AS autnum,
+					networks.country AS country,
 
-				-- Must be part of returned values for ORDER BY clause
-				masklen(announcements.network) AS sort_a,
-				masklen(networks.network) AS sort_b
-			FROM known_networks
-				LEFT JOIN announcements ON known_networks.network <<= announcements.network
-				LEFT JOIN networks ON known_networks.network <<= networks.network
-			ORDER BY known_networks.network, sort_a DESC, sort_b DESC
+					-- Must be part of returned values for ORDER BY clause
+					masklen(announcements.network) AS sort_a,
+					masklen(networks.network) AS sort_b
+				FROM (
+						SELECT network FROM announcements
+					UNION ALL
+						SELECT network FROM networks
+					UNION ALL
+						SELECT network FROM network_overrides
+					) known_networks
+				LEFT JOIN
+					announcements ON known_networks.network <<= announcements.network
+				LEFT JOIN
+					networks ON known_networks.network <<= networks.network
+				ORDER BY
+					known_networks.network,
+					sort_a DESC,
+					sort_b DESC
+			) networks
 		""")
 
 		for row in rows:

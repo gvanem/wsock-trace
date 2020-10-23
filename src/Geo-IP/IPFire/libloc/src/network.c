@@ -180,9 +180,11 @@ LOC_EXPORT int loc_network_new(struct loc_ctx* ctx, struct loc_network** network
 LOC_EXPORT int loc_network_new_from_string(struct loc_ctx* ctx, struct loc_network** network,
 		const char* address_string) {
 	struct in6_addr first_address;
-	unsigned int prefix = 0;
 	char* prefix_string;
-	int r = 1;
+	unsigned int prefix = 128;
+	int r = -EINVAL;
+
+	DEBUG(ctx, "Attempting to parse network %s\n", address_string);
 
 	// Make a copy of the string to work on it
 	char* buffer = strdup(address_string);
@@ -191,29 +193,40 @@ LOC_EXPORT int loc_network_new_from_string(struct loc_ctx* ctx, struct loc_netwo
 	// Split address and prefix
 	address_string = strsep(&prefix_string, "/");
 
-	// Did we find a prefix?
+	DEBUG(ctx, "  Split into address = %s, prefix = %s\n", address_string, prefix_string);
+
+	// Parse the address
+	r = loc_parse_address(ctx, address_string, &first_address);
+	if (r) {
+		DEBUG(ctx, "The address could not be parsed\n");
+		goto FAIL;
+	}
+
+	// If a prefix was given, we will try to parse it
 	if (prefix_string) {
 		// Convert prefix to integer
 		prefix = strtol(prefix_string, NULL, 10);
 
-		if (prefix) {
-			// Parse the address
-			r = loc_parse_address(ctx, address_string, &first_address);
-
-			// Map the prefix to IPv6 if needed
-			if (IN6_IS_ADDR_V4MAPPED(&first_address))
-				prefix += 96;
+		if (!prefix) {
+			DEBUG(ctx, "The prefix was not parsable: %s\n", prefix_string);
+			goto FAIL;
 		}
+
+		// Map the prefix to IPv6 if needed
+		if (IN6_IS_ADDR_V4MAPPED(&first_address))
+			prefix += 96;
 	}
 
+FAIL:
 	// Free temporary buffer
 	free(buffer);
 
-	if (r == 0) {
-		r = loc_network_new(ctx, network, &first_address, prefix);
-	}
+	// Exit if the parsing was unsuccessful
+	if (r)
+		return r;
 
-	return r;
+	// Create a new network
+	return loc_network_new(ctx, network, &first_address, prefix);
 }
 
 LOC_EXPORT struct loc_network* loc_network_ref(struct loc_network* network) {
@@ -252,9 +265,7 @@ static int format_ipv4_address(const struct in6_addr* address, char* string, siz
 	struct in_addr ipv4_address;
 
 #ifdef _WIN32
-	struct ws2_in6_addr *_address = (struct ws2_in6_addr*) address;
-
-	ipv4_address.s_addr = _address->s6_addr32[3];
+	ipv4_address.s_addr = *(u_long*) &address->s6_words[6];
 #else
 	ipv4_address.s_addr = address->s6_addr32[3];
 #endif

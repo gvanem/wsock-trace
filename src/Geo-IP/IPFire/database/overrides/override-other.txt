@@ -28,6 +28,11 @@ descr:		IP Interactive UG (haftungsbeschraenkt)
 remarks:	ISP located in BG, but RIR data for announced prefixes contain garbage
 country:	BG
 
+aut-num:	AS37518
+descr:		Fiber Grid Inc.
+remarks:	tampers with RIR data, traces back to SE
+country:	SE
+
 aut-num:	AS40034
 descr:		Confluence Networks Inc.
 remarks:	fake offshore location (VG), traces back to Austin, TX, US
@@ -45,8 +50,8 @@ country:	EU
 
 aut-num:	AS42831
 descr:		UKSERVERS
-remarks:	ISP located in UK, but some RIR data for announced prefixes contain garbage
-country:	UK
+remarks:	ISP located in GB, but some RIR data for announced prefixes contain garbage
+country:	GB
 
 aut-num:	AS48090
 descr:		PPTECHNOLOGY LIMITED
@@ -130,7 +135,7 @@ country:	NL
 
 net:		5.252.32.0/22
 descr:		StormWall s.r.o.
-remarks:	claims to be located in DE, but traces back to somewhere in central Europe
+remarks:	claims to be located in DE, but traces back to somewhere else in central Europe
 country:   	EU
 
 net:		31.220.0.0/22
@@ -194,9 +199,9 @@ remarks:	fake offshore location (BZ), traces back to US
 country:   	US
 
 net:		185.244.29.0/24
-descr:		Gerber EDV / David Craig
-remarks:	bulletproof ISP, fake location (KP), traces back to SG
-country:   	SG
+descr:		NINAZU VPN Service / Gerber EDV / David Craig
+remarks:	bulletproof ISP, fake location (SC), traces back to GB
+country:   	GB
 
 net:		193.29.12.0/22
 descr:		Bunea TELECOM SRL

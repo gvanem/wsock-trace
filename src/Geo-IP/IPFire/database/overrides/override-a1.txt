@@ -137,6 +137,7 @@ aut-num:			AS209623
 descr:				David Craig
 remarks:			(Rogue) VPN provider
 is-anonymous-proxy:	yes
+country:			EU
 
 aut-num:			AS210083
 descr:				Privex Inc.
@@ -869,24 +870,14 @@ descr:				BGRVPN
 remarks:			VPN provider
 is-anonymous-proxy:	yes
 
-net:				173.244.36.0/24
-descr:				Private Internet Access
-remarks:			VPN provider
+net:				173.244.32.0/19
+descr:				LogicWeb Inc. / BGRVPN / Private Internet Access / VPNetworks / CookieProxy / etc. pp.
+remarks:			large IP chunk mostly used by VPN providers
 is-anonymous-proxy:	yes
 
-net:				173.244.42.0/24
-descr:				ExpressVPN
-remarks:			VPN provider
-is-anonymous-proxy:	yes
-
-net:				173.244.48.0/24
-descr:				Private Internet Access
-remarks:			VPN provider
-is-anonymous-proxy:	yes
-
-net:				173.244.55.0/24
-descr:				VPN Consumer Network
-remarks:			VPN provider
+net:				173.239.192.0/18
+descr:				LogicWeb Inc. / BGRVPN / Private Internet Access / VPNetworks / CookieProxy / etc. pp.
+remarks:			large IP chunk mostly used by VPN providers
 is-anonymous-proxy:	yes
 
 net:				173.245.202.0/23
@@ -985,7 +976,7 @@ remarks:			VPN provider
 is-anonymous-proxy:	yes
 
 net:				185.244.28.0/22
-descr:				Freedom of Speech VPN / nVPN / David Craig / ...
+descr:				Angelo Kreikamp trading as Forhosting / Freedom of Speech VPN / nVPN / David Craig / ...
 remarks:			(Rogue) VPN provider
 is-anonymous-proxy:	yes
 
@@ -1115,7 +1106,7 @@ remarks:			VPN and open proxy provider
 is-anonymous-proxy:	yes
 
 net:				194.5.96.0/22
-descr:				Privacy Online / Danilenko, Artyom / ...
+descr:				Angelo Kreikamp trading as Forhosting / Privacy Online / Danilenko, Artyom / ...
 remarks:			(Rogue) VPN provider
 is-anonymous-proxy:	yes
 

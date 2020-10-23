@@ -163,6 +163,28 @@ int main(int argc, char** argv) {
 	// Set ASN
 	loc_network_set_asn(network4, 1024);
 
+	// Try adding an invalid network
+	struct loc_network* network;
+	err = loc_writer_add_network(writer, &network, "xxxx:xxxx::/32");
+	if (err != -EINVAL) {
+		fprintf(stderr, "It was possible to add an invalid network (err = %d)\n", err);
+		exit(EXIT_FAILURE);
+	}
+
+	// Try adding a single address
+	err = loc_writer_add_network(writer, &network, "2001:db8::");
+	if (err) {
+		fprintf(stderr, "It was impossible to add an single IP address (err = %d)\n", err);
+		exit(EXIT_FAILURE);
+	}
+
+	// Try adding localhost
+	err = loc_writer_add_network(writer, &network, "::1/128");
+	if (err != -EINVAL) {
+		fprintf(stderr, "It was possible to add localhost (::1/128): %d\n", err);
+		exit(EXIT_FAILURE);
+	}
+
 #if IPV4_TEST
 	struct loc_network* network5;
 	err = loc_writer_add_network(writer, &network5, "1.2.3.4/16");
@@ -172,10 +194,10 @@ int main(int argc, char** argv) {
 	}
 
 	// Set country code
-	loc_network_set_country_code(network4, "ZZ");
+	loc_network_set_country_code(network5, "ZZ");
 
 	// Set ASN
-	loc_network_set_asn(network4, 1234);
+	loc_network_set_asn(network5, 1234);
 	loc_network_tree_dump(tree);
 	printf("The tree has %zu IPv4/6-mixed nodes with %zu networks\n",
 	       loc_network_tree_count_nodes(tree),
