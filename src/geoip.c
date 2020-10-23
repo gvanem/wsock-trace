@@ -1034,10 +1034,10 @@ static int compare2_on_short_name (const void *a, const void *b)
 
 static int compare2_on_country_number (const void *a, const void *b)
 {
-  int                        key    = (int*) a;
+  int                       *key    = (int*) a;
   const struct country_list *member = (const struct country_list*) b;
 
-  return (key - member->country_number);
+  return (*key - member->country_number);
 }
 
 static void make_c_list (struct country_list **list_p,
@@ -1176,7 +1176,7 @@ const char *geoip_get_long_name_by_id (int number)
 
   if (c_list_sorted_on_country_number)
   {
-    list = bsearch (number, c_list_sorted_on_country_number, DIM(c_list),
+    list = bsearch (&number, c_list_sorted_on_country_number, DIM(c_list),
                     sizeof(c_list[0]), compare2_on_country_number);
     if (list)
        return (list->long_name);
@@ -1902,32 +1902,21 @@ static void test_addr_common (const struct in_addr  *a4,
   {
     struct IANA_record rec;
 
-    if (a4 && iana_find_by_ip4_address (a4, &rec))
+    if (a4 && iana_find_by_ip4_address(a4, &rec))
     {
       printf ("  ASN: ");
       iana_print_rec (&rec);
       ASN_print (&rec, a4, NULL);
     }
-    else if (a6 && iana_find_by_ip6_address (a6, &rec))
+    else if (a6 && iana_find_by_ip6_address(a6, &rec))
     {
       printf ("  ASN: ");
       iana_find_by_ip6_address (a6, &rec);
       iana_print_rec (&rec);
       ASN_print (&rec, NULL, a6);
-
-    /** \todo
-      * Make the above `ASN_print()` print the information like IPFire's Python3-scipt does.
-      * E.g.:
-      *
-      * f:\gv\VC_project\ws_trace\src\Geo-IP\IPFire\libloc\src> py -3 location.py lookup ::ffff:45.150.206.231
-      *   Network                 : 45.150.206.0/23
-      *   Country                 : Russian Federation
-      *   Autonomous System       : AS35029 - WebLine LTD
-      *   Anonymous Proxy         : yes
-      *
-      * (for an IPv4 address it seems to require the IPv4-mapped syntax `::ffff:45.150.206.231`)
-      */
     }
+    if (ASN_libloc_print (a4, a6))
+       trace_putc ('\n');
   }
 
   /** Check the global IPv4 / IPv6 address for membership in a SpamHaus `DROP` / `EDROP` list
