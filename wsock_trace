@@ -206,7 +206,7 @@
   # Latest version should be here:
   #   https://location.ipfire.org/databases/1/location.db.xz
   #
-  asn_bin_file = %APPDATA%\IPfire-database.bin
+  asn_bin_file = %APPDATA%\IPfire-database.db
 
   # TO-DO:
   #  Use the similar of what 'dig -t TXT  _v1._db.location.ipfire.org' does
