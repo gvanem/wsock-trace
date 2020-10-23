@@ -54,8 +54,8 @@ before_build:
   # Download IPFire's Database too.
   #
   - cmd: curl -O -# https://location.ipfire.org/databases/1/location.db.xz
-  - cmd: 7z x location.xz > NUL
-  - cmd: ren location.db IPFire-database.db
+  - cmd: 7z x location.db.xz > NUL
+  - cmd: ren location.db IPFire-database.db > NUL
 
 install:
   #
