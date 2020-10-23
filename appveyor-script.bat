@@ -58,6 +58,8 @@ echo [iana]                                                    >> wsock_trace.ap
 echo   enable      = 1                                         >> wsock_trace.appveyor
 echo   ip4_file    = %CD%\IPv4-address-space.csv               >> wsock_trace.appveyor
 echo   ip6_file    = %CD%\IPv6-unicast-address-assignments.csv >> wsock_trace.appveyor
+echo   asn_csv_file= %CD%\GeoIPASNum.csv                       >> wsock_trace.appveyor
+echo   asn_bin_file= %CD%\IPFire-database.db                   >> wsock_trace.appveyor
 echo [idna]                                                    >> wsock_trace.appveyor
 echo   enable      = 1                                         >> wsock_trace.appveyor
 echo [lua]                                                     >> wsock_trace.appveyor

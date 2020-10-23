@@ -50,6 +50,13 @@ before_build:
   - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
   - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
 
+  #
+  # Download IPFire's Database too.
+  #
+  - cmd: curl -O -# https://location.ipfire.org/databases/1/location.db.xz
+  - cmd: 7z x location.xz > NUL
+  - cmd: ren location.db IPFire-database.db
+
 install:
   #
   # Add a few locations to our PATH.

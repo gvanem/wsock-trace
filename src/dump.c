@@ -2300,11 +2300,13 @@ void dump_IANA_addresses (int family, const char **addresses)
     {
       iana_find_by_ip4_address ((const struct in_addr*)addresses[i], &rec);
       iana_print_rec (&rec);
+      ASN_libloc_print ((const struct in_addr*)addresses[i], NULL);
     }
     else if (family == AF_INET6)
     {
       iana_find_by_ip6_address ((const struct in6_addr*)addresses[i], &rec);
       iana_print_rec (&rec);
+      ASN_libloc_print (NULL, (const struct in6_addr*)addresses[i]);
     }
     else
     {
@@ -2367,6 +2369,7 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
 
       iana_find_by_ip4_address (&sa4->sin_addr, &rec);
       iana_print_rec (&rec);
+      ASN_libloc_print (&sa4->sin_addr, NULL);
     }
     else if (ai->ai_family == AF_INET6)
     {
@@ -2374,6 +2377,7 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
 
       iana_find_by_ip6_address (&sa6->sin6_addr, &rec);
       iana_print_rec (&rec);
+      ASN_libloc_print (NULL, &sa6->sin6_addr);
     }
     else
     {

@@ -85,5 +85,6 @@ struct ASN_record {
 
 void ASN_dump (void);
 void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6);
+int  ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6);
 
 #endif
