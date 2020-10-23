@@ -88,7 +88,6 @@ static void loc_init(void) {
 	done = 1;
 	WSAStartup(MAKEWORD(2,2), &wsa);
 	OpenSSL_add_all_algorithms();
-//  OPENSSL_Applink();
 #endif
 }
 
@@ -172,11 +171,10 @@ LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct
 
 		// Convert to IPv6-mapped address
 #ifdef _WIN32
-		struct ws2_in6_addr *_address = (struct ws2_in6_addr*) address;
-		_address->s6_addr32[0] = 0;
-		_address->s6_addr32[1] = 0;
-		_address->s6_addr32[2] = 0xffff;
-		_address->s6_addr32[3] = ipv4_address.s_addr;
+		*(u_long*) &address->s6_words[0] = 0;
+		*(u_long*) &address->s6_words[2] = 0;
+		*(u_long*) &address->s6_words[4] = 0xffff;
+		*(u_long*) &address->s6_words[6] = ipv4_address.s_addr;
 #else
 		address->s6_addr32[0] = htonl(0x0000);
 		address->s6_addr32[1] = htonl(0x0000);
