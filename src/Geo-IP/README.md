@@ -22,8 +22,8 @@ It's task would be to show additional information for an IPv4/IPv6 address:
  * IANA information.
  * Position (with a GoogleMap link).
  * *Autonomous System Number* information.
- * Various attributes like: *Satelitte provider*, *Anonymous Proxy*, *Tor exit node* etc.
- * And perhaps support for various block-list. Like:
+ * Various attributes like: *Satelitte provider*, *Anonymous Proxy*, *Anycast*, *Tor exit node* etc.
+ * And perhaps support for various block-lists. Like:
     * **[Spamhaus DROP](https://www.spamhaus.org/drop/)** (already supported, but move it here).
     * **[Spamhaus ASN-DROP](https://www.spamhaus.org/drop/)**.
     * **[Spamhaus BGPf / BCL](https://www.spamhaus.org/bgpf/)**.
