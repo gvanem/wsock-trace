@@ -165,7 +165,22 @@ GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj   \
             $(OBJ_DIR)\getopt.obj    \
             $(OBJ_DIR)\smartlist.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe idna.exe firewall_test.exe
+#
+# .obj-files for 'iana.exe'.
+#
+IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
+           $(OBJ_DIR)\common.obj    \
+           $(OBJ_DIR)\csv.obj       \
+           $(OBJ_DIR)\dnsbl.obj     \
+           $(OBJ_DIR)\geoip.obj     \
+           $(OBJ_DIR)\idna.obj      \
+           $(OBJ_DIR)\inet_util.obj \
+           $(OBJ_DIR)\init_1.obj    \
+           $(OBJ_DIR)\in_addr.obj   \
+           $(OBJ_DIR)\getopt.obj    \
+           $(OBJ_DIR)\smartlist.obj
+
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and example.
 
 $(OBJ_DIR):
@@ -192,6 +207,10 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 
 geoip.exe: $(GEOIP_OBJ)
 	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib ole32.lib
+
+iana.exe: $(IANA_OBJ)
+	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib ole32.lib > link.tmp
+	type link.tmp >> iana.map
 
 idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
@@ -250,6 +269,9 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 
 $(OBJ_DIR)\firewall_1.obj: firewall.c
 	$(CC) $(CFLAGS) -DTEST_FIREWALL -Fo$*.obj -c firewall.c
+
+$(OBJ_DIR)\iana_1.obj: iana.c
+	$(CC) $(CFLAGS) -DTEST_IANA -Fo$*.obj -c iana.c
 
 $(OBJ_DIR)\idna_1.obj: idna.c
 	$(CC) $(CFLAGS) -DTEST_IDNA -Fo$*.obj -c idna.c
