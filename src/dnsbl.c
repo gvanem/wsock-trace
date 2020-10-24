@@ -11,6 +11,23 @@
  * Ref:
  *   http://www.spamhaus.org/drop/
  *
+ * Some other black-list providers and links:
+ * ```
+ *  b.barracudacentral.org
+ *  bl.blocklist.de
+ *  bl.spamcop.net
+ *  cbl.abuseat.org
+ *  dnsbl-1.uceprotect.net
+ *  dnsbl-2.uceprotect.net
+ *  dnsbl-3.uceprotect.net
+ *  dnsbl.abuse.ch
+ *  ix.dnsbl.manitu.net
+ *  pbl.spamhaus.org
+ *  sbl.spamhaus.org
+ *  xbl.spamhaus.org
+ *  zen.spamhaus.org
+ * ```
+ *
  * By Gisle Vanem <gvanem@yahoo.no> August 2017.
  */
 
