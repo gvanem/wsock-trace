@@ -1858,7 +1858,7 @@ static void test_addr_common (const struct in_addr  *a4,
       }
       else if (a6 && !stricmp(remark, "IPv4 compatible"))
       {
-        printf ("Recursing for a %s address.\n", remark);
+        trace_printf ("Recursing for a %s address.\n", remark);
         test_addr_common ((const struct in_addr*)&a6->s6_words[6], NULL, use_ip2loc);
         return;
       }
@@ -1877,17 +1877,17 @@ static void test_addr_common (const struct in_addr  *a4,
 
   width = 60;
 
-  printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
+  trace_printf ("%-*.*s %-25.25s %s\n", width, width, buf1, buf2, get_timestamp2());
 
   pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
 
   if (g_cfg.GEOIP.show_position)
   {
     if (pos)
-         printf ("  Pos: %.3f%c, %.3f%c\n",
-                 fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
-                 fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
-    else printf ("  Pos: <none>\n");
+         trace_printf ("  Pos: %.3f%c, %.3f%c\n",
+                       fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
+                       fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
+    else trace_printf ("  Pos: <none>\n");
   }
 
   if (g_cfg.GEOIP.show_map_url)
@@ -1895,8 +1895,8 @@ static void test_addr_common (const struct in_addr  *a4,
     const char *zoom = "10z";
 
     if (pos)
-         printf ("  URL: https://www.google.com/maps/@%.5f,%.5f,%s\n\n", pos->latitude, pos->longitude, zoom);
-    else printf ("  URL: <none>\n\n");
+         trace_printf ("  URL: https://www.google.com/maps/@%.5f,%.5f,%s\n\n", pos->latitude, pos->longitude, zoom);
+    else trace_printf ("  URL: <none>\n\n");
   }
 
   if (g_cfg.IANA.enable)
@@ -1905,19 +1905,16 @@ static void test_addr_common (const struct in_addr  *a4,
 
     if (a4 && iana_find_by_ip4_address(a4, &rec))
     {
-      printf ("  ASN: ");
-      iana_print_rec (&rec);
+      trace_printf ("  ASN: %s\n", iana_get_rec4(&rec, FALSE));
       ASN_print (&rec, a4, NULL);
     }
     else if (a6 && iana_find_by_ip6_address(a6, &rec))
     {
-      printf ("  ASN: ");
       iana_find_by_ip6_address (a6, &rec);
-      iana_print_rec (&rec);
+      trace_printf ("  ASN: %s\n", iana_get_rec6(&rec, FALSE));
       ASN_print (&rec, NULL, a6);
     }
-    if (ASN_libloc_print (a4, a6))
-       trace_putc ('\n');
+    ASN_libloc_print ("  ASN: ", a4, a6);
   }
 
   /** Check the global IPv4 / IPv6 address for membership in a SpamHaus `DROP` / `EDROP` list
@@ -1933,10 +1930,10 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       _wsock_trace_inet_ntop (AF_INET, a4, addr, sizeof(addr), NULL);
-      printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      trace_printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
-  else if (a6) // (INET_util_addr_is_global(NULL, a6))
+  else if (INET_util_addr_is_global(NULL, a6))
   {
     const char *sbl_ref = NULL;
     BOOL        rc = DNSBL_check_ipv6 (a6, &sbl_ref);
@@ -1947,7 +1944,7 @@ static void test_addr_common (const struct in_addr  *a4,
     if (rc)
     {
       _wsock_trace_inet_ntop (AF_INET6, a6, addr, sizeof(addr), NULL);
-      printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      trace_printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
     }
   }
 }
@@ -1968,6 +1965,7 @@ static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
 {
   struct addrinfo *ai = resolve_addr_or_name (ip4_addr, AF_INET);
 
+  trace_printf ("%s: ", ip4_addr);
   if (ai)
   {
     const struct sockaddr_in *sa = (struct sockaddr_in*) ai->ai_addr;
@@ -1976,13 +1974,14 @@ static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
     freeaddrinfo (ai);
   }
   else
-    printf ("'%s': Invalid address: %s.\n", ip4_addr, get_ws_error());
+    trace_printf ("Invalid address: %s.\n", get_ws_error());
 }
 
 static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
 {
   struct addrinfo *ai = resolve_addr_or_name (ip6_addr, AF_INET6);
 
+  trace_printf ("%s: ", ip6_addr);
   if (ai)
   {
     const struct sockaddr_in6 *sa = (struct sockaddr_in6*) ai->ai_addr;
@@ -1991,7 +1990,7 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
     freeaddrinfo (ai);
   }
   else
-    printf ("'%s': Invalid address: %s.\n", ip6_addr, get_ws_error());
+    trace_printf ("Invalid address: %s.\n", get_ws_error());
 }
 
 /**
@@ -2195,6 +2194,8 @@ int main (int argc, char **argv)
   WSADATA     wsa;
 
   wsock_trace_init();
+  iana_init();      /* since it's inside a 'if !defined(TEST_GEOIP)' block in init.c */
+
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
 
   while ((c = getopt (argc, argv, "h?cdfin:ru46")) != EOF)
