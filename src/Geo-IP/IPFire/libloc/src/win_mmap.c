@@ -1,6 +1,7 @@
 #include <loc/libloc.h>
 #include <loc/private.h>
 #include <sys/mman.h>
+#include <syslog.h>
 #include <io.h>
 #include <windows.h>
 
@@ -42,7 +43,7 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
 
   if (debug == -1)
   {
-     const char *env = getenv ("LIBLOC_DEBUG");
+     const char *env = getenv ("LOC_LOG");
      int   v;
 
      debug = 0;
@@ -50,7 +51,8 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
      if (env)
      {
        v = *env - '0';
-       debug = (v > 0 && v < 10);
+       if (v >= LOG_DEBUG+1)   /* >= 8 */
+          debug = 1;
      }
   }
 
@@ -160,7 +162,7 @@ int _munmap (void *map, size_t length, const char *fname, unsigned line)
 
 static void *mmap_remember (void *map, off_t offset)
 {
-  int i;
+  size_t i;
 
   if (map == MAP_FAILED)  /* never rememember this */
   {
@@ -183,16 +185,13 @@ static void *mmap_remember (void *map, off_t offset)
 
 static int mmap_forget (void *map, struct mmap_info *info)
 {
-  int i;
+  size_t i;
 
-  if (info)
-     memset (info, '\0', sizeof(*info));
   for (i = 0; i < DIM(mmap_storage); i++)
   {
     if (map == mmap_storage[i].rval)
     {
-      if (info)
-         *info = mmap_storage[i];
+      *info = mmap_storage[i];
       mmap_storage[i].map = NULL;   /* reuse this */
       return (0);
     }
