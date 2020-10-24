@@ -3,8 +3,8 @@
  */
 #include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
 #include <loc/libloc.h>
