@@ -35,7 +35,7 @@ LUAJIT_ROOT = ..\LuaJIT
 # Support for IPFire's 'libloc' library:
 #
 !if "$(USE_LIBLOC)" == "1"
-LIBLOC_ROOT = Geo-IP\IPFire\libloc
+LIBLOC_ROOT = .\Geo-IP\IPFire\libloc
 !endif
 
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
@@ -72,8 +72,8 @@ BIN_TARGET = $(VSINSTALLDIR)\bin
 
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
-LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console                    # -debugtype:cv -fixed:no
-LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
+LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console
+LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:uuid.lib -nodefaultlib:oldnames.lib
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
@@ -101,7 +101,7 @@ EX_LIBS   = libloc.lib dnsapi.lib
 WSOCK_DEP = libloc.lib
 !endif
 
-EX_LIBS = $(EX_LIBS) ole32.lib advapi32.lib
+EX_LIBS = $(EX_LIBS) ole32.lib # advapi32.lib
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
@@ -211,14 +211,15 @@ LIBLOC_OBJ = $(OBJ_DIR)\as.obj         \
              $(OBJ_DIR)\win_str.obj    \
              $(OBJ_DIR)\win_mmap.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
-	@echo Welcome to Wsock_trace $(MACHINE) library and example.
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) \
+     csv.exe geoip.exe test.exe iana.exe idna.exe firewall_test.exe
+	@echo Welcome to Wsock_trace $(MACHINE) library and test-programs.
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP)
-	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(EX_LIBS)
+	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(EX_LIBS) advapi32.lib
 	lib -nologo $(WSOCK_TRACE_LIB) $(NON_EXPORT_OBJ)
 	@del $(WSOCK_TRACE_LIB:.lib=.exp)
 
@@ -234,25 +235,35 @@ uninstall:
 
 test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
-	type link.tmp >> test.map
+	@type link.tmp >> test.map
+	@echo
+
+csv.exe: $(OBJ_DIR)\csv_1.obj $(OBJ_DIR)\getopt.obj
+	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
+	@type link.tmp >> csv.map
+	@echo
 
 geoip.exe: $(GEOIP_OBJ)
 	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib $(EX_LIBS)
+	@echo
 
 iana.exe: $(IANA_OBJ)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib $(EX_LIBS) > link.tmp
-	type link.tmp >> iana.map
+	@type link.tmp >> iana.map
+	@echo
 
 idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
-	type link.tmp >> idna.map
+	@type link.tmp >> idna.map
+	@echo
 
 #
 # This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
 #
 firewall_test.exe: $(FIREWALL_TEST_OBJ)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** $(EX_LIBS) ws2_32.lib winmm.lib > link.tmp
-	type link.tmp >> firewall_test.map
+	link.exe $(LDFLAGS) -verbose -out:$@ $** $(EX_LIBS) advapi32.lib ws2_32.lib winmm.lib > link.tmp
+	@type link.tmp >> firewall_test.map
+	@echo
 
 run_test: test.exe
 	test.exe -dd
@@ -279,7 +290,9 @@ clean:
 vclean realclean: clean
 	- del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.pdb
 	- del wsock_trace_x64.lib wsock_trace_x64.dll wsock_trace_x64.map wsock_trace_x64.pdb
+	- del csv.exe             csv.map             csv.pdb
 	- del geoip.exe           geoip.map           geoip.pdb
+	- del iana.exe            iana.map            iana.pdb
 	- del idna.exe            idna.map            idna.pdb  test.exe  test.pdb
 	- del firewall_test.exe   firewall_test.map   firewall_test.pdb
 	- rd $(OBJ_DIR)
@@ -307,65 +320,51 @@ where VAR can have of the following 'x' values:
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	rc -nologo -DDEBUG=$(USE_CRT_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res wsock_trace.rc
 
+$(OBJ_DIR)\csv_1.obj: csv.c
+	$(CC) -c $(CFLAGS) -DTEST_CSV -Fo$*.obj csv.c
+	@echo
+
 $(OBJ_DIR)\firewall_1.obj: firewall.c
-	$(CC) $(CFLAGS) -DTEST_FIREWALL -Fo$*.obj -c firewall.c
+	$(CC) -c $(CFLAGS) -DTEST_FIREWALL -Fo$*.obj firewall.c
+	@echo
 
 $(OBJ_DIR)\iana_1.obj: iana.c
-	$(CC) $(CFLAGS) -DTEST_IANA -Fo$*.obj -c iana.c
+	$(CC) -c $(CFLAGS) -DTEST_IANA -Fo$*.obj iana.c
+	@echo
 
 $(OBJ_DIR)\idna_1.obj: idna.c
-	$(CC) $(CFLAGS) -DTEST_IDNA -Fo$*.obj -c idna.c
+	$(CC) -c $(CFLAGS) -DTEST_IDNA -Fo$*.obj idna.c
+	@echo
 
 $(OBJ_DIR)\init_1.obj: init.c
-	$(CC) $(CFLAGS) -DTEST_GEOIP -Fo$*.obj -c init.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP -Fo$*.obj init.c
+	@echo
 
 $(OBJ_DIR)\init_2.obj: init.c
-	$(CC) $(CFLAGS) -DTEST_GEOIP -DTEST_FIREWALL -Fo$*.obj -c init.c
+	$(CC) -c $(CFLAGS) -DTEST_GEOIP -DTEST_FIREWALL -Fo$*.obj init.c
+	@echo
 
 $(OBJ_DIR)\geoip_1.obj: geoip.c
 	$(CC) -c $(CFLAGS) -DTEST_GEOIP -Fo$(OBJ_DIR)/geoip_1.obj geoip.c
+	@echo
 
 #
-# The rules for '$(LIBLOC_OBJ)' files.
+# The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
+# syntax (no sane '%'-pattern rules in Nmake).
 #
 LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4267 -DLIBLOC_PRIVATE -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_OBSOLETE_NO_WARNINGS \
                 -I$(LIBLOC_ROOT)/src/loc/windows -I$(LIBLOC_ROOT)/src/fake-OpenSSL
 
-$(OBJ_DIR)\as.obj: $(LIBLOC_ROOT)\src\as.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\country.obj: $(LIBLOC_ROOT)\src\country.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\database.obj: $(LIBLOC_ROOT)\src\database.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\libloc.obj: $(LIBLOC_ROOT)\src\libloc.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\network.obj: $(LIBLOC_ROOT)\src\network.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\resolv.obj: $(LIBLOC_ROOT)\src\resolv.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\stringpool.obj: $(LIBLOC_ROOT)\src\stringpool.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\writer.obj: $(LIBLOC_ROOT)\src\writer.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\win_str.obj: $(LIBLOC_ROOT)\src\win_str.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
-
-$(OBJ_DIR)\win_mmap.obj: $(LIBLOC_ROOT)\src\win_mmap.c
-	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
+{$(LIBLOC_ROOT)\src}.c{$(OBJ_DIR)}.obj:
+	$(CC) $(LIBLOC_CFLAGS) -Fo$*.obj -c $<
+	@echo
 
 #
 # The default fall-back rule for other .obj-files.
 #
 .c{$(OBJ_DIR)}.obj:
 	$(CC) $(CFLAGS) -Fo$*.obj -c $<
+	@echo
 
 #
 # Make a .def file for x64; remove the leading '_' and the
