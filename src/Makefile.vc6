@@ -21,7 +21,7 @@ USE_DEF_FILE = 1
 !endif
 
 !if "$(USE_LIBLOC)" == ""
-USE_LIBLOC = 0
+USE_LIBLOC = 1
 !endif
 
 #
@@ -71,8 +71,8 @@ BIN_TARGET = $(VSINSTALLDIR)\bin
 #  -MTd  - libc, threads,     debug
 
 CC      = cl.exe
-CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32 -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
-LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console                            # -debugtype:cv -fixed:no
+CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
+LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console                    # -debugtype:cv -fixed:no
 LDFLAGS = $(LDFLAGS) -machine:$(MACHINE)
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
@@ -96,7 +96,7 @@ WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 !if "$(USE_LIBLOC)" == "1"
-CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DLIBLOC_NO_OPENSSL -DUSE_LIBLOC
+CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DUSE_LIBLOC
 EX_LIBS   = libloc.lib dnsapi.lib
 WSOCK_DEP = libloc.lib
 !endif
@@ -267,7 +267,7 @@ compile_luajit_1:
 	   copy lua51.lib lua51_static.lib )
 
 libloc.lib: $(LIBLOC_OBJ)
-	lib -out:libloc.lib $(LIBLOC_OBJ)
+	lib -nologo -out:libloc.lib $(LIBLOC_OBJ)
 	@echo
 
 clean:
@@ -328,37 +328,38 @@ $(OBJ_DIR)\geoip_1.obj: geoip.c
 #
 # The rules for '$(LIBLOC_OBJ)' files.
 #
-LOC_CFLAGS = $(CFLAGS) -DLIBLOC_PRIVATE -I$(LIBLOC_ROOT)\src\loc\windows
+LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4267 -DLIBLOC_PRIVATE -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_OBSOLETE_NO_WARNINGS \
+                -I$(LIBLOC_ROOT)/src/loc/windows -I$(LIBLOC_ROOT)/src/fake-OpenSSL
 
 $(OBJ_DIR)\as.obj: $(LIBLOC_ROOT)\src\as.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\country.obj: $(LIBLOC_ROOT)\src\country.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\database.obj: $(LIBLOC_ROOT)\src\database.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\libloc.obj: $(LIBLOC_ROOT)\src\libloc.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\network.obj: $(LIBLOC_ROOT)\src\network.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\resolv.obj: $(LIBLOC_ROOT)\src\resolv.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\stringpool.obj: $(LIBLOC_ROOT)\src\stringpool.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\writer.obj: $(LIBLOC_ROOT)\src\writer.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\win_str.obj: $(LIBLOC_ROOT)\src\win_str.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 $(OBJ_DIR)\win_mmap.obj: $(LIBLOC_ROOT)\src\win_mmap.c
-	$(CC) -c $(LOC_CFLAGS) -Fo$*.obj $**
+	$(CC) -c $(LIBLOC_CFLAGS) -Fo$*.obj $**
 
 #
 # The default fall-back rule for other .obj-files.
