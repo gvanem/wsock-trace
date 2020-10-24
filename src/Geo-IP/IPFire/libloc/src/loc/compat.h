@@ -36,8 +36,11 @@
   #endif
 
 #elif defined(_WIN32)
+  #include <stdio.h>
   #include <stdint.h>
+  #include <string.h>
   #include <time.h>
+  #include <io.h>
   #include <intrin.h>
 
   #ifdef _MSC_VER
@@ -54,6 +57,15 @@
   #define htobe64(x)  _byteswap_uint64 (x)
 
   #if defined(LIBLOC_PRIVATE)
+    #ifdef _MSC_VER
+      #ifndef _CRTDBG_MAP_ALLOC  /* debug-mode '-MDd' */
+        #define strdup(str)    _strdup (str)
+      #endif
+      #define dup(fd)          _dup (fd)
+      #define fileno(stream)   _fileno (stream)
+      #define fdopen(fd, mode) _fdopen (fd, mode)
+    #endif
+
     extern char  *strsep     (char **stringp, const char *delim);
     extern char  *strcasestr (const char *haystack, const char *needle);
     extern char  *strptime   (const char *buf, const char *format, struct tm *tm);

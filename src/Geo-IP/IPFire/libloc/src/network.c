@@ -32,7 +32,7 @@
 
 #ifdef _WIN32
   static char err_buf[20];   // Add to the 'context'?
-  #define GET_NETERR() itoa(WSAGetLastError(), err_buf, 10)
+  #define GET_NETERR() _itoa (WSAGetLastError(), err_buf, 10)
 #else
   #define GET_NETERR() strerror(errno)
 #endif

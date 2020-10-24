@@ -94,7 +94,7 @@ else
            -D_CRT_NONSTDC_NO_WARNINGS \
            -D_CRT_OBSOLETE_NO_WARNINGS
 
-  LDFLAGS = -debug -map -verbose -nologo -incremental:no
+  LDFLAGS = -debug -map -verbose -nologo -incremental:no -nodefaultlib:uuid.lib -nodefaultlib:oldnames.lib
   RCFLAGS = -nologo
   O = obj
 
@@ -166,27 +166,23 @@ endif
 # External lib(s) to use for libloc.dll
 # (and possibly 'test-*.exe' if 'USE_STATIC_LIBLOC = 1')
 #
-EXT_LIBS =
-
 ifeq ($(CC),gcc)
-  ifeq ($(USE_OPENSSL),1)
-    EXT_LIBS = $(OPENSSL_ROOT)/lib32/libcrypto.dll.a
-  endif
-
-  EXT_LIBS += -lws2_32 -ldnsapi
-
+  select = $(1)
 else
+  select = $(2)
+
   ifeq ($(USE_WSOCK_TRACE),1)
     WS2_32 = wsock_trace.lib
   else
     WS2_32 = ws2_32.lib
   endif
+endif
 
-  ifeq ($(USE_OPENSSL),1)
-    EXT_LIBS = $(OPENSSL_ROOT)/lib32/libcrypto_imp.lib
-  endif
+DNS_LIB = $(call select, -ldnsapi, dnsapi.lib)
 
-  EXT_LIBS += $(WS2_32) dnsapi.lib
+ifeq ($(USE_OPENSSL),1)
+  OPENSSL_LIB = $(call select, $(OPENSSL_ROOT)/lib32/libcrypto.dll.a, \
+                               $(OPENSSL_ROOT)/lib32/libcrypto_imp.lib)
 endif
 
 LIBLOC_SRC = as.c         \
@@ -239,9 +235,9 @@ $(IMPORT_LIB): libloc.dll
 
 libloc.dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
 ifeq ($(CC),gcc)
-	$(call link_DLL, $@, $^ $(EXT_LIBS), $(IMPORT_LIB))
+	$(call link_DLL, $@, $^ $(OPENSSL_LIB) $(DNS_LIB), $(IMPORT_LIB))
 else
-	$(call link_DLL, $@, -def:$^ $(EXT_LIBS), $(IMPORT_LIB))
+	$(call link_DLL, $@, -def:$^ $(OPENSSL_LIB) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 endif
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
@@ -308,7 +304,7 @@ $(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
 
 ifeq ($(USE_STATIC_LIBLOC),1)
 test-%.exe: $(OBJ_DIR)/test-%.$(O) $(STATIC_LIB)
-	$(call link_EXE, $@, $^ $(EXT_LIBS))
+	$(call link_EXE, $@, $^ $(OPENSSL_LIB) $(WS2_32))
 
 else
 test-%.exe: $(OBJ_DIR)/test-%.$(O) $(IMPORT_LIB)

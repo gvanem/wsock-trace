@@ -59,7 +59,7 @@ char *strcasestr (const char *hay_stack, const char *needle)
   lneedle    = strlen (needle);
   for (i = 0; i < lhay_stack; i++)
   {
-    if (!strnicmp(hay_stack + i, needle, lneedle))
+    if (!_strnicmp(hay_stack + i, needle, lneedle))
        return (char*) (hay_stack + i);
   }
   return (NULL);
@@ -73,11 +73,11 @@ static int _setenv (const char *env, const char *val)
   for (e = _environ[i]; e; e = _environ[++i])
   {
     len = strchr (e, '=') - e;
-    if (!strnicmp(env, e, len))
+    if (!_strnicmp(env, e, len))
        break;
   }
   snprintf (value, sizeof(value), "%s=%s", env, val);
-  new_val = strdup (value);
+  new_val = _strdup (value);
   if (!new_val)
   {
      errno = ENOMEM;
@@ -103,9 +103,9 @@ time_t timegm (struct tm *tm)
   char  *tz = getenv ("TZ");
 
   if (tz)
-     tz = strdup (tz);
+     tz = _strdup (tz);
   _setenv ("TZ", "");
-  tzset();
+  _tzset();
 
   ret = mktime (tm);
   if (tz)
@@ -115,7 +115,7 @@ time_t timegm (struct tm *tm)
   }
   else
     _setenv ("TZ", "");
-  tzset();
+  _tzset();
   return (ret);
 }
 
@@ -283,12 +283,12 @@ literal:
              {
                /* Full name. */
                len = strlen (day[i]);
-               if (!strnicmp(day[i], bp, len))
+               if (!_strnicmp(day[i], bp, len))
                   break;
 
                /* Abbreviated name. */
                len = strlen (abday[i]);
-               if (!strnicmp(abday[i], bp, len))
+               if (!_strnicmp(abday[i], bp, len))
                   break;
              }
              /* Nothing matched. */
@@ -307,12 +307,12 @@ literal:
              {
                /* Full name. */
                len = strlen (mon[i]);
-               if (!strnicmp(mon[i], bp, len))
+               if (!_strnicmp(mon[i], bp, len))
                   break;
 
                /* Abbreviated name. */
                len = strlen (abmon[i]);
-               if (!strnicmp(abmon[i], bp, len))
+               if (!_strnicmp(abmon[i], bp, len))
                   break;
              }
              /* Nothing matched. */
@@ -387,14 +387,14 @@ literal:
 
         case 'p':   /* The locale's equivalent of AM/PM. */
              LEGAL_ALT (0);
-             if (!stricmp(am_pm[0], bp)) /* AM? */
+             if (!_stricmp(am_pm[0], bp)) /* AM? */
              {
                if (tm->tm_hour > 11)
                   return (0);
                bp += strlen(am_pm[0]);
                break;
              }
-             if (!stricmp(am_pm[1], bp)) /* PM? */
+             if (!_stricmp(am_pm[1], bp)) /* PM? */
              {
                if (tm->tm_hour > 11)
                    return (0);
