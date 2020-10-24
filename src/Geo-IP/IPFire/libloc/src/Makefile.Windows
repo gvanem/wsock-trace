@@ -37,7 +37,7 @@ USE_WSOCK_TRACE ?= 0
 #   any macro in 'fake-OpenSSL/openssl/fake-it.h' will cause a
 #   signature operation to fail.
 #
-USE_OPENSSL  ?= 0
+USE_OPENSSL  ?= 1
 OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
 
 #
@@ -152,8 +152,11 @@ ifeq ($(CC),gcc)
             -Wno-format-extra-args
 
 else ifeq ($(CC),clang-cl)
-  CFLAGS += -ferror-limit=5 \
-            -Wno-visibility \
+  CFLAGS += -W4                             \
+            -ferror-limit=5                 \
+            -Wno-unused-parameter           \
+            -Wno-visibility                 \
+            -Wno-missing-field-initializers \
             -Wno-incompatible-pointer-types
 else
   CFLAGS += -W3 -wd4146 -wd4133 -wd4244 -wd4267
@@ -211,11 +214,11 @@ PY_SRC = $(addprefix python/, \
 PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
            $(notdir $(PY_SRC:.c=.$(O))))
 
-all: $(OBJ_DIR) $(TARGETS) epilogue
+all: $(OBJ_DIR) $(TARGETS) py3_module epilogue
 
 epilogue:
 	$(call yellow_msg, \nWelcome to libloc library and test programs.)
-	$(call yellow_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) [py3_module | runtests] $(BRIGHT_YELLOW)too.)
+	$(call yellow_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests $(BRIGHT_YELLOW)too.)
 
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
