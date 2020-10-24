@@ -825,7 +825,7 @@ static int __loc_database_lookup(struct loc_database* db, const struct in6_addr*
 			return r;
 	}
 
-	return 1;
+	return -ENODATA;
 }
 
 LOC_EXPORT int loc_database_lookup(struct loc_database* db,
