@@ -41,6 +41,26 @@
 
   #define USE_LOC_NETWORK_STR 1
 
+  struct libloc_data {
+         struct loc_ctx      *ctx;
+         struct loc_database *db;
+         FILE                *file;
+         size_t               num_AS;
+       };
+  struct libloc_data libloc;
+
+  struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */
+         struct loc_ctx *ctx;
+         int             refcount;
+         int             family;
+         struct in6_addr first_address;
+         struct in6_addr last_address;
+         unsigned int    prefix;
+         char            country_code[3];
+         uint32_t        asn;
+         int             flags;
+       };
+
   static void ASN_bin_close (void);
 #endif
 
@@ -53,9 +73,10 @@ static smartlist_t *iana_entries_ip4;
 static smartlist_t *iana_entries_ip6;
 
 static DWORD g_num_ipv4, g_num_ipv6;
+static char  print_buf [500];
 
 static void iana_sort_lists (void);
-static void iana_load_and_parse (int family, const char *file);
+static void iana_load_and_parse (int family, const char *file, const char *cfg_setting);
 static int  iana_add_entry (const struct IANA_record *rec);
 static int  iana_CSV_add4 (struct CSV_context *ctx, const char *value);
 static int  iana_CSV_add6 (struct CSV_context *ctx, const char *value);
@@ -69,9 +90,9 @@ static int  iana_CSV_add6 (struct CSV_context *ctx, const char *value);
  */
 static smartlist_t *ASN_entries;
 
-static int  ASN_load_bin_file (const char *file);
-static void ASN_load_CSV_file (const char *file);
-static int  ASN_CSV_add (struct CSV_context *ctx, const char *value);
+static size_t ASN_load_bin_file (const char *file);
+static void   ASN_load_CSV_file (const char *file);
+static int    ASN_CSV_add (struct CSV_context *ctx, const char *value);
 
 /**
  * The main init function for this module.
@@ -84,8 +105,8 @@ void iana_init (void)
 
   /* Load the IANA IPv4/6 assignment files.
    */
-  iana_load_and_parse (AF_INET, g_cfg.IANA.ip4_file);
-  iana_load_and_parse (AF_INET6, g_cfg.IANA.ip6_file);
+  iana_load_and_parse (AF_INET, g_cfg.IANA.ip4_file, "g_cfg.IANA.ip4_file");
+  iana_load_and_parse (AF_INET6, g_cfg.IANA.ip6_file, "g_cfg.IANA.ip6_file");
 
   if (g_cfg.IANA.asn_bin_file)
      ASN_load_bin_file (g_cfg.IANA.asn_bin_file);
@@ -106,12 +127,10 @@ void iana_init (void)
   }
 }
 
-static char print_buf [500];
-
 /**
  * Printers common to both `iana_print_rec()` and `iana_dump()`.
  */
-static const char *iana_get_rec4 (const IANA_record *rec, BOOL aligned)
+const char *iana_get_rec4 (const IANA_record *rec, BOOL aligned)
 {
   static const char *fmt[2] = { "%03lu/%d, %s, %s, %s, %s, %s",
                                 "%03lu/%-2d   %-20.20s %-8.8s %-20.20s %-22.22s  %s"
@@ -129,7 +148,7 @@ static const char *iana_get_rec4 (const IANA_record *rec, BOOL aligned)
   return (print_buf);
 }
 
-static const char *iana_get_rec6 (const IANA_record *rec, BOOL aligned)
+const char *iana_get_rec6 (const IANA_record *rec, BOOL aligned)
 {
   char ip6_buf1 [MAX_IP6_SZ+1];
   char ip6_buf2 [MAX_IP6_SZ+10];
@@ -198,25 +217,25 @@ void iana_dump (void)
   for (i = 0; i < max4; i++)
   {
     if (i == 0)
-       printf ("Dumping %d IANA IPv4 records:\n"
-               "   #  Net/mask misc                 date     whois                url"
-               "                     status\n", max4);
+       trace_printf ("Dumping %d IANA IPv4 records:\n"
+                     "   #  Net/mask misc                 date     whois                url"
+                     "                     status\n", max4);
 
     rec = smartlist_get (iana_entries_ip4, i);
-    printf (" %3d: %s\n", i, iana_get_rec4(rec, TRUE));
+    trace_printf (" %3d: %s\n", i, iana_get_rec4(rec, TRUE));
   }
 
   max6 = iana_entries_ip6 ? smartlist_len (iana_entries_ip6) : 0;
   for (i = 0; i < max6; i++)
   {
     if (i == 0)
-       printf ("%sDumping %d IANA IPv6 records:\n"
-               "   #  Net/mask         misc             date         whois"
-               "                url                   status\n",
-               max4 > 0 ? "\n" : "", max6);
+       trace_printf ("%sDumping %d IANA IPv6 records:\n"
+                     "   #  Net/mask         misc             date         whois"
+                     "                url                   status\n",
+                     max4 > 0 ? "\n" : "", max6);
 
     rec = smartlist_get (iana_entries_ip6, i);
-    printf (" %3d: %s\n", i, iana_get_rec6(rec, TRUE));
+    trace_printf (" %3d: %s\n", i, iana_get_rec6(rec, TRUE));
   }
 }
 
@@ -262,10 +281,11 @@ void iana_report (void)
  *  "IANA IPv4 Address Space Registry" or a
  *  "IPv6 Global Unicast Address Assignments" file.
  *
- * \param[in] family  the address family; AF_INET or AF_INET6.
- * \param[in] file    the CSV file to read and parse.
+ * \param[in] family       the address family; AF_INET or AF_INET6.
+ * \param[in] file         the CSV file to read and parse.
+ * \param[in] cfg_setting  which `g_cfg` setting is the `file` from?
  */
-static void iana_load_and_parse (int family, const char *file)
+static void iana_load_and_parse (int family, const char *file, const char *cfg_setting)
 {
   struct CSV_context ctx;
 
@@ -288,7 +308,7 @@ static void iana_load_and_parse (int family, const char *file)
 
   if (!file || !file_exists(file))
   {
-    TRACE (1, "file \"%s\" does not exist.\n", file);
+    TRACE (1, "file \"%s\" does not exist (cfg: '%s').\n", file, cfg_setting);
     return;
   }
 
@@ -785,46 +805,25 @@ static int compare_on_ip4 (const void *key, const void **member)
 }
 
 #ifdef USE_LIBLOC
-  static struct {
-    int                  error;
-    size_t               num_AS;
-    FILE                *file;
-    struct loc_ctx      *ctx;
-    struct loc_database *db;
-    const char           *vendor;
-  } libloc_data;
+static void ASN_bin_close (void)
+{
+  if (libloc.db)
+     loc_database_unref (libloc.db);
 
-  static void ASN_bin_close (void)
-  {
-    if (libloc_data.db)
-       loc_database_unref (libloc_data.db);
+  if (libloc.ctx)
+     loc_unref (libloc.ctx);
 
-    if (libloc_data.ctx)
-       loc_unref (libloc_data.ctx);
+  if (libloc.file)
+     fclose (libloc.file);
 
-    if (libloc_data.file)
-       fclose (libloc_data.file);
-
-    memset (&libloc_data, '\0', sizeof(libloc_data));
-  }
-
-  #define DO_NOTHING(f)  void *f(void) { return NULL; }
-  DO_NOTHING (OPENSSL_init_crypto)
-  DO_NOTHING (PEM_read_PUBKEY)
-  DO_NOTHING (EVP_MD_CTX_new)
-  DO_NOTHING (EVP_DigestVerifyInit)
-  DO_NOTHING (EVP_DigestVerifyUpdate)
-  DO_NOTHING (ERR_get_error)
-  DO_NOTHING (ERR_error_string)
-  DO_NOTHING (EVP_MD_CTX_free)
-  DO_NOTHING (EVP_PKEY_free)
-  DO_NOTHING (EVP_DigestVerifyFinal)
+  memset (&libloc, '\0', sizeof(libloc));
+}
 
 int check_libloc_database (void)
 {
   time_t time;
 
-  if (loc_discover_latest_version(libloc_data.ctx, LOC_DATABASE_VERSION_LATEST, &time) != 0)
+  if (loc_discover_latest_version(libloc.ctx, LOC_DATABASE_VERSION_LATEST, &time) != 0)
   {
     TRACE (1, "Could not check IPFire's database version.\n");
     return (0);
@@ -832,14 +831,14 @@ int check_libloc_database (void)
   return (1);
 }
 
-static int ASN_load_bin_file (const char *file)
+static size_t ASN_load_bin_file (const char *file)
 {
   const char *descr, *licence, *vendor;
   size_t      len, num_AS;
   time_t      created;
-  int         save;
+  int         err, save;
 
-  memset (&libloc_data, '\0', sizeof(libloc_data)); // should be un-needed
+  memset (&libloc, '\0', sizeof(libloc)); // should be un-needed
 
 #if 0
   check_libloc_database();
@@ -852,8 +851,8 @@ static int ASN_load_bin_file (const char *file)
   }
 
   TRACE (1, "Trying to open IPFire's database: \"%s\" .\n", file);
-  libloc_data.file = fopen (file, "rb");
-  if (!libloc_data.file)
+  libloc.file = fopen (file, "rb");
+  if (!libloc.file)
   {
     TRACE (1, "Could not open IPFire's binary database: %s\n", strerror(errno));
     return (0);
@@ -863,31 +862,31 @@ static int ASN_load_bin_file (const char *file)
    */
   save = g_cfg.trace_level;
   g_cfg.trace_level = 0;
-  libloc_data.error = loc_new (&libloc_data.ctx);
+  err = loc_new (&libloc.ctx);
   g_cfg.trace_level = save;
 
-  if (libloc_data.error < 0)
+  if (err < 0)
   {
-    TRACE (1, "Cannot create libloc context; %s.\n", strerror(-libloc_data.error));
+    TRACE (1, "Cannot create libloc context; %s.\n", strerror(-err));
     ASN_bin_close();
     return (0);
   }
 
-  loc_set_log_priority (libloc_data.ctx, g_cfg.trace_level >= 2 ? LOG_INFO : 0);
+  loc_set_log_priority (libloc.ctx, g_cfg.trace_level >= 2 ? LOG_DEBUG : 0);
 
-  libloc_data.error = loc_database_new (libloc_data.ctx, &libloc_data.db, libloc_data.file);
-  if (libloc_data.error)
+  err = loc_database_new (libloc.ctx, &libloc.db, libloc.file);
+  if (err)
   {
-    TRACE (1, "Could not open database: %s\n", strerror(-libloc_data.error));
+    TRACE (1, "Could not open database: %s\n", strerror(-err));
     ASN_bin_close();
     return (0);
   }
 
-  descr   = loc_database_get_description (libloc_data.db);
-  licence = loc_database_get_license (libloc_data.db);
-  vendor  = loc_database_get_vendor (libloc_data.db);
-  num_AS  = loc_database_count_as (libloc_data.db);
-  created = loc_database_created_at (libloc_data.db);
+  descr   = loc_database_get_description (libloc.db);
+  licence = loc_database_get_license (libloc.db);
+  vendor  = loc_database_get_vendor (libloc.db);
+  num_AS  = loc_database_count_as (libloc.db);
+  created = loc_database_created_at (libloc.db);
 
   if (descr)
   {
@@ -908,7 +907,7 @@ static int ASN_load_bin_file (const char *file)
             "  Created:     %.24s\n"
             "  num_AS:      %lu\n\n",
          len, descr, licence, vendor, ctime(&created), num_AS);
-  libloc_data.num_AS = num_AS;
+  libloc.num_AS = num_AS;
   return (num_AS);
 }
 
@@ -945,33 +944,24 @@ static const IN6_ADDR _in6addr_v4mappedprefix = {{
  */
 #define ASN_MAX_NAME 250
 
-struct _loc_network {      /* Scraped from network.c */
-       struct loc_ctx *ctx;
-       int             refcount;
-       int             family;
-       struct in6_addr first_address;
-       struct in6_addr last_address;
-       unsigned int    prefix;
-       char            country_code[3];
-       uint32_t        asn;
-       int             flags;
-     };
-
-int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6) //, BOOL from_dump_c)
+int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6) //, BOOL from_dump_c)
 {
   struct loc_network *net;
-  struct loc_as      *as = NULL;
   struct in6_addr     addr;
   char  *net_name;
   char   addr_str [MAX_IP6_SZ+1];
-  char   AS_name [ASN_MAX_NAME] = "<unknown>";
   int    r, save;
   DWORD  AS_num;
   BOOL   is_anycast, is_anon_proxy, sat_provider;
 
-  if (!libloc_data.db || libloc_data.num_AS == 0)
+  if (!libloc.db)
   {
     TRACE (2, "LIBLOC is not initialised.\n");
+    return (0);
+  }
+  if (libloc.num_AS == 0)
+  {
+    TRACE (2, "LIBLOC has no AS-info!\n");
     return (0);
   }
   if (!INET_util_addr_is_global(ip4, ip6))
@@ -1001,11 +991,14 @@ int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6) //,
   save = g_cfg.trace_level;
   g_cfg.trace_level = 0;
 
-  r = loc_database_lookup (libloc_data.db, &addr, &net);
+  trace_puts (intro);
+
+  r = loc_database_lookup (libloc.db, &addr, &net);
   if (r || !net)
   {
     g_cfg.trace_level = save;
-    TRACE (1, "Invalid address: %s, err: %d/%s.\n", addr_str, -r, strerror(-r));
+    trace_puts ("<no data>\n");
+    TRACE (2, "No data for address: %s, err: %d/%s.\n", addr_str, -r, strerror(-r));
     return (0);
   }
 
@@ -1039,8 +1032,11 @@ int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6) //,
   is_anon_proxy = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANONYMOUS_PROXY) != 0);
   sat_provider  = (loc_network_has_flag (net, LOC_NETWORK_FLAG_SATELLITE_PROVIDER) != 0);
 
-  if (AS_num && loc_database_get_as(libloc_data.db, &as, AS_num) == 0)
+  if (AS_num)
   {
+    struct loc_as *as = NULL;
+    const char    *AS_name = "<unknown>";
+
 #if 0 // E.g. a Teredo address like 2001::1:203:405 returns AS_num = 6939
     const char *remark = NULL;
 
@@ -1048,12 +1044,17 @@ int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6) //,
        // ...
 #endif
 
-    _strlcpy (AS_name, loc_as_get_name(as) ? loc_as_get_name(as) : "<Unknown>", sizeof(AS_name));
-    loc_as_unref (as);
-  }
+    if (loc_database_get_as(libloc.db, &as, AS_num) != 0 ||
+        (AS_name = loc_as_get_name(as)) == NULL)
+       AS_name = "<Unknown>";
 
-  trace_printf ("    ASN:    %lu, name: %s, net: %s (%d,%d,%d)",
-                AS_num, AS_name, net_name, is_anycast, is_anon_proxy, sat_provider);
+    trace_printf ("%lu, name: %s, net: %s (%d,%d,%d)\n",
+                  AS_num, AS_name, net_name, is_anycast, is_anon_proxy, sat_provider);
+    if (as)
+       loc_as_unref (as);
+  }
+  else
+    trace_puts ("<no info>\n");
 
 #if USE_LOC_NETWORK_STR
   free (net_name);
@@ -1064,15 +1065,16 @@ int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6) //,
 }
 
 #else
-static int ASN_load_bin_file (const char *file)
+static size_t ASN_load_bin_file (const char *file)
 {
   TRACE (0, "Cannot load a binary '%s' file without 'USE_LIBLOC' defined.\n", file);
   ARGSUSED (file);
   return (0);
 }
 
-int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6)
+int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6)
 {
+  ARGSUSED (intro);
   ARGSUSED (ip4);
   ARGSUSED (ip6);
   return (0);
@@ -1087,7 +1089,7 @@ int ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6)
  *  Handle an IPv6 address too. <br>
  *  Dump the delegated RIR information for this record.
  */
-void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6)
+void ASN_print (const char *intro, const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6)
 {
   const struct ASN_record *rec;
 
@@ -1103,10 +1105,10 @@ void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct
   {
     int i;
 
-    printf ("\n  ASN (CSV): ");
+    trace_puts (intro);
     for (i = 0; rec->asn[i]; i++)
-        printf ("%lu%s", rec->asn[i], (rec->asn[i+1] && i < DIM(rec->asn)) ? ", " : " ");
-    printf ("(status: %s)\n", iana->status);
+        trace_printf ("%lu%s", rec->asn[i], (rec->asn[i+1] && i < DIM(rec->asn)) ? ", " : " ");
+    trace_printf ("(status: %s)\n", iana->status);
   }
 }
 
@@ -1127,18 +1129,18 @@ void ASN_dump (void)
   for (i = 0; i < num; i++)
   {
     const struct ASN_record *rec = smartlist_get (ASN_entries, i);
-    char   low_str [MAX_IP4_SZ];
-    char   high_str[MAX_IP4_SZ];
+    char  low_str [MAX_IP4_SZ];
+    char  high_str[MAX_IP4_SZ];
 
     if (_wsock_trace_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
         _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
     {
-      printf ("  %3d:  %-15.15s - %-15.15s ASN: ", i, low_str, high_str);
+      trace_printf ("  %3d:  %-15.15s - %-15.15s ASN: ", i, low_str, high_str);
       for (j = 0; rec->asn[j]; j++)
-          printf ("%lu%s", rec->asn[j], (rec->asn[j+1] && j < DIM(rec->asn)) ? ", " : "\n");
+          trace_printf ("%lu%s", rec->asn[j], (rec->asn[j+1] && j < DIM(rec->asn)) ? ", " : "\n");
     }
     else
-      printf ("  %3d: <bogus>\n", i);
+      trace_printf ("  %3d: <bogus>\n", i);
   }
 }
 
@@ -1150,7 +1152,6 @@ void ASN_dump (void)
  */
 const char *program_name = "iana.exe";
 
-#undef  DO_NOTHING
 #define DO_NOTHING(f)  void f(void) {}
 
 DO_NOTHING (ip2loc_init)
@@ -1164,13 +1165,19 @@ static void usage (void)
 {
   puts ("Usage: iana.exe [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] <ipv4-address-space.csv>\n"
         "  or   iana.exe [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
-        "  option '-b' assumes the ASN-file is a binary IPFire database.\n"
-        "  option '-m' stops after 'max' records.\n"
+        "\n"
+        "  options:\n"
+        "    -a:    the ASN-file is a CSV database.\n"
+        "    -b:    the ASN-file is a binary IPFire database.\n"
+        "    -m N:  stops after 'N' records.\n"
+        "\n"
         "  both '-a' and '-b' options can be used to show both ASN-types.\n"
-        "  E.g.: for \"37.142.14.15\"\n"
+        "  E.g.: running 'iana.exe -b ..\\IPFire-database.db ..\\ipv4-address-space.csv':\n"
+        "  ...\n"
+        "  test_ip4_address (\"37.142.14.15\"):\n"
+        "    ASN: 037/8, RIPE NCC, 2010-11, whois.ripe.net, https://rdap.db.ripe.net/, ALLOCATED\n"
         "    ASN: 12849, 21450 (status: ALLOCATED)\n"
-        "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)\n"
-        );
+        "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)");
   exit (0);
 }
 
@@ -1272,12 +1279,10 @@ int main (int argc, char **argv)
       printf ("\ntest_ip4_address (\"%s\"):\n", ip4_buf);
       if (iana_find_by_ip4_address(&test_addr[i].ip4, &rec))
       {
-        trace_printf ("  %s\n", iana_get_rec4(&rec, FALSE));
-        ASN_print (&rec, &test_addr[i].ip4, NULL);
+        trace_printf (" ASN:  %s\n", iana_get_rec4(&rec, FALSE));
+        ASN_print ("  ASN:  ", &rec, &test_addr[i].ip4, NULL);
       }
-      if (ASN_libloc_print(&test_addr[i].ip4, NULL))
-           trace_putc ('\n');
-      else trace_puts ("    ASN: <no info>\n");
+      ASN_libloc_print ("  ASN:  ", &test_addr[i].ip4, NULL);
     }
     else
     {
@@ -1285,12 +1290,10 @@ int main (int argc, char **argv)
       printf ("\ntest_ip6_address (\"%s\"):\n", ip6_buf);
       if (iana_find_by_ip6_address(&test_addr[i].ip6, &rec))
       {
-        trace_printf ("  %s\n", iana_get_rec6(&rec, FALSE));
-        ASN_print (&rec, NULL, &test_addr[i].ip6);
+        trace_printf ("  ASN: %s\n", iana_get_rec6(&rec, FALSE));
+        ASN_print ("  ASN:  ", &rec, NULL, &test_addr[i].ip6);
       }
-      if (ASN_libloc_print(NULL, &test_addr[i].ip6))
-           trace_putc ('\n');
-      else trace_puts ("    ASN: <no info>\n");
+      ASN_libloc_print ("  ASN: ", NULL, &test_addr[i].ip6);
     }
   }
 

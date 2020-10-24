@@ -53,13 +53,16 @@ typedef struct IANA_record {
         void *rir_list;
       } IANA_record;
 
-void iana_init (void);
-void iana_exit (void);
-void iana_dump (void);
-void iana_report (void);
-int  iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *rec);
-int  iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *rec);
-void iana_print_rec (const IANA_record *rec);
+extern void iana_init (void);
+extern void iana_exit (void);
+extern void iana_dump (void);
+extern void iana_report (void);
+extern int  iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *rec);
+extern int  iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *rec);
+extern void iana_print_rec (const IANA_record *rec);
+
+extern const char *iana_get_rec4 (const IANA_record *rec, BOOL aligned);
+extern const char *iana_get_rec6 (const IANA_record *rec, BOOL aligned);
 
 /**
  * For handling *Autonomous System Number* (ASN) and IPv4 net blocks.
@@ -83,8 +86,8 @@ struct ASN_record {
        };
      };
 
-void ASN_dump (void);
-void ASN_print (const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6);
-int  ASN_libloc_print (const struct in_addr *ip4, const struct in6_addr *ip6);
+extern void ASN_dump (void);
+extern void ASN_print (const char *intro, const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6);
+extern int  ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6);
 
 #endif

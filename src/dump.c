@@ -2280,17 +2280,19 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 }
 
 /*
- * Dump the IANA information for the given addresses.
+ * Dump the IANA + ASN information for the given addresses.
  */
 void dump_IANA_addresses (int family, const char **addresses)
 {
-  int i;
+  char ASN_intro [100];
+  int  i;
 
   if (g_cfg.trace_level <= 0)
      return;
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4IANA:   ");
+  snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
 
   for (i = 0; addresses && addresses[i]; i++)
   {
@@ -2300,13 +2302,13 @@ void dump_IANA_addresses (int family, const char **addresses)
     {
       iana_find_by_ip4_address ((const struct in_addr*)addresses[i], &rec);
       iana_print_rec (&rec);
-      ASN_libloc_print ((const struct in_addr*)addresses[i], NULL);
+      ASN_libloc_print (ASN_intro, (const struct in_addr*)addresses[i], NULL);
     }
     else if (family == AF_INET6)
     {
       iana_find_by_ip6_address ((const struct in6_addr*)addresses[i], &rec);
       iana_print_rec (&rec);
-      ASN_libloc_print (NULL, (const struct in6_addr*)addresses[i]);
+      ASN_libloc_print (ASN_intro, NULL, (const struct in6_addr*)addresses[i]);
     }
     else
     {
@@ -2349,15 +2351,20 @@ void dump_IANA_sockaddr (const struct sockaddr *sa)
   }
 }
 
+/*
+ * Dump the IANA + ASN information for the given addresses.
+ */
 void dump_IANA_addrinfo  (const struct addrinfo *ai)
 {
-  int num;
+  char ASN_intro [100];
+  int  num, ASN_len;
 
   if (g_cfg.trace_level <= 0)
      return;
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4IANA:   ");
+  snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
 
   for (num = 0; ai; ai = ai->ai_next, num++)
   {
@@ -2369,7 +2376,7 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
 
       iana_find_by_ip4_address (&sa4->sin_addr, &rec);
       iana_print_rec (&rec);
-      ASN_libloc_print (&sa4->sin_addr, NULL);
+      ASN_libloc_print (ASN_intro, &sa4->sin_addr, NULL);
     }
     else if (ai->ai_family == AF_INET6)
     {
@@ -2377,7 +2384,7 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
 
       iana_find_by_ip6_address (&sa6->sin6_addr, &rec);
       iana_print_rec (&rec);
-      ASN_libloc_print (NULL, &sa6->sin6_addr);
+      ASN_libloc_print (ASN_intro, NULL, &sa6->sin6_addr);
     }
     else
     {
