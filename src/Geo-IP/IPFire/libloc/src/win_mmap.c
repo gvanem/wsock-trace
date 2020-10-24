@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 #include <syslog.h>
 #include <io.h>
+#include <stdlib.h>
 #include <windows.h>
 
 #define DWORD_HI(x)  ((uint64_t)(x) >> 32)
