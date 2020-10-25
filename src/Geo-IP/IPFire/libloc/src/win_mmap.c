@@ -23,7 +23,7 @@ struct mmap_info {
      };
 static struct mmap_info mmap_storage[10];
 
-static void *mmap_remember (void *map, off_t offset);
+static void *mmap_remember (void *map, uint64_t offset);
 static int   mmap_forget (void *map, struct mmap_info *info);
 
 #ifdef EXTRA_DEBUG_PARANOIA
@@ -41,6 +41,12 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
   intptr_t  h = _get_osfhandle (fd);
   DWORD     access = 0;
   uint64_t  pstart, psize, poffset;
+
+  (void) address;  // unused
+#ifndef EXTRA_DEBUG_PARANOIA
+  (void) fname;  // unused
+  (void) line;   // unused
+#endif
 
   if (debug == -1)
   {
@@ -161,7 +167,7 @@ int _munmap (void *map, size_t length, const char *fname, unsigned line)
   return (0);
 }
 
-static void *mmap_remember (void *map, off_t offset)
+static void *mmap_remember (void *map, uint64_t offset)
 {
   size_t i;
 

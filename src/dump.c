@@ -2357,7 +2357,7 @@ void dump_IANA_sockaddr (const struct sockaddr *sa)
 void dump_IANA_addrinfo  (const struct addrinfo *ai)
 {
   char ASN_intro [100];
-  int  num, ASN_len;
+  int  num;
 
   if (g_cfg.trace_level <= 0)
      return;
