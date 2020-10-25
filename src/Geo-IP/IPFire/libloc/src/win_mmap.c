@@ -18,12 +18,13 @@ static SYSTEM_INFO si;
  * until we call `munmap()` on the pointer.
  */
 struct mmap_info {
+       HANDLE hnd;   /* the handle from CreateFileMapping() */
        void  *map;   /* the value from MapViewOfFile() */
        void  *rval;  /* the value we returned to caller of mmap() */
      };
 static struct mmap_info mmap_storage[10];
 
-static void *mmap_remember (void *map, uint64_t offset);
+static void *mmap_remember (void *map, uint64_t offset, HANDLE handle);
 static int   mmap_forget (void *map, struct mmap_info *info);
 
 #ifdef EXTRA_DEBUG_PARANOIA
@@ -44,8 +45,8 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
 
   (void) address;  // unused
 #ifndef EXTRA_DEBUG_PARANOIA
-  (void) fname;  // unused
-  (void) line;   // unused
+  (void) fname;    // unused
+  (void) line;     // unused
 #endif
 
   if (debug == -1)
@@ -100,10 +101,13 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
     }
   }
 
+#if 0
   if (handle && handle != INVALID_HANDLE_VALUE)
      CloseHandle (handle);
+#endif
 
-  rval = mmap_remember (map, poffset);
+  rval = mmap_remember (map, poffset, handle);
+  SetLastError (0);
 
 #ifdef EXTRA_DEBUG_PARANOIA
   if (!debug)
@@ -151,23 +155,32 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
 int _munmap (void *map, size_t length, const char *fname, unsigned line)
 {
   struct mmap_info info;
+  int    rc = 0;
+  char   result [200] = "okay";
 
   if (mmap_forget(map, &info))
   {
-    fprintf (stderr, "%s(%u):\n   munmap (0x%p, %zu), EINVAL.\n", fname, line, map, length);
-    return (-1);
+    strcpy (result, "EINVAL.");
+    rc = -1;
   }
-
-  if (!UnmapViewOfFile(info.map) && debug)
+  else if (!UnmapViewOfFile(info.map) && debug)
   {
-    fprintf (stderr, "%s(%u):\n   munmap (0x%p, %zu) failed: %lu\n", fname, line, map, length, GetLastError());
+    snprintf (result, sizeof(result), "failed: %lu -> EFAULT", GetLastError());
     errno = EFAULT;
-    return (-1);
+    SetLastError (0);
+    rc = -1;
   }
-  return (0);
+#ifdef EXTRA_DEBUG_PARANOIA
+  if (debug)
+     fprintf (stderr, "%s(%u):\n   munmap (0x%p, %zu), %s.\n", fname, line, map, length, result);
+#else
+  (void) &result;
+#endif
+
+  return (rc);
 }
 
-static void *mmap_remember (void *map, uint64_t offset)
+static void *mmap_remember (void *map, uint64_t offset, HANDLE handle)
 {
   size_t i;
 
@@ -181,8 +194,9 @@ static void *mmap_remember (void *map, uint64_t offset)
   {
     if (!mmap_storage[i].map)
     {
-      mmap_storage[i].map = map;
+      mmap_storage[i].map  = map;
       mmap_storage[i].rval = (char*)map + offset;
+      mmap_storage[i].hnd  = handle;
       return (mmap_storage[i].rval);
     }
   }
@@ -198,8 +212,14 @@ static int mmap_forget (void *map, struct mmap_info *info)
   {
     if (map == mmap_storage[i].rval)
     {
+      HANDLE hnd = mmap_storage[i].hnd;
+
       *info = mmap_storage[i];
       mmap_storage[i].map = NULL;   /* reuse this */
+      mmap_storage[i].hnd = INVALID_HANDLE_VALUE;
+
+      if (hnd && hnd != INVALID_HANDLE_VALUE)
+         CloseHandle (hnd);
       return (0);
     }
   }
