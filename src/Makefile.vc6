@@ -73,7 +73,7 @@ BIN_TARGET = $(VSINSTALLDIR)\bin
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
 LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console
-LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:uuid.lib -nodefaultlib:oldnames.lib
+LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:uuid.lib,oldnames.lib
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
@@ -352,7 +352,7 @@ $(OBJ_DIR)\geoip_1.obj: geoip.c
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4267 -DLIBLOC_PRIVATE -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_OBSOLETE_NO_WARNINGS \
+LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4267 -DLIBLOC_PRIVATE \
                 -I$(LIBLOC_ROOT)/src/loc/windows -I$(LIBLOC_ROOT)/src/fake-OpenSSL
 
 {$(LIBLOC_ROOT)\src}.c{$(OBJ_DIR)}.obj:
