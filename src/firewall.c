@@ -61,6 +61,7 @@
 #include "cpu.h"
 #include "geoip.h"
 #include "dnsbl.h"
+#include "iana.h"
 #include "inet_util.h"
 #include "wsock_trace.h"
 
@@ -3704,7 +3705,7 @@ static BOOL fw_check_ignore (_FWPM_NET_EVENT_TYPE type)
 {
   if (g_cfg.FIREWALL.show_all ||
       type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP || type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
-     return (FALSE);
+    return (FALSE);
   fw_num_ignored++;
   return (TRUE);
 }
@@ -4010,7 +4011,7 @@ static BOOL print_filter_rule0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_ev
   return (FALSE);
 }
 
-static void print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
+static BOOL print_country_location (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
   const char *country, *location;
   BOOL  have_location;
@@ -4019,7 +4020,7 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
   country       = ia4 ? geoip_get_country_by_ipv4(ia4) : geoip_get_country_by_ipv6(ia6);
 
   if (!country || country[0] == '-')
-     return;
+     return (FALSE);
 
   /* Get the long country name; "US" -> "United States"
    */
@@ -4037,23 +4038,37 @@ static void print_country_location (const struct in_addr *ia4, const struct in6_
      */
     fw_buf_add ("%-*geo-IP:  %s\n", INDENT_SZ, "", country);
   }
+  return (TRUE);
+}
+
+/**
+ * Try to get some ASN information from the address.
+ * Using 'libloc'.
+ */
+static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6)
+{
+  /** \todo
+   * Create a `ASN_libloc_print()` function that can
+   * print to `fw_buf_add()` and return 1 if some ASN info was found.
+   */
+  return ASN_libloc_print ("  ASN:     ", ia4, ia6);
 }
 
 /**
  * Check if the global IPv4 / IPv6 address is a member of a SpamHaus `DROP` / `EDROP` list.
  */
-static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *ia6)
+static BOOL print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
   const char *sbl_ref = NULL;
   int         i, max;
   BOOL        rc, found = FALSE;
 
   if (!g_cfg.DNSBL.enable || !INET_util_addr_is_global(ia4, ia6))
-     return;
+     return (FALSE);
 
   rc = ia4 ? DNSBL_check_ipv4 (ia4, &sbl_ref) : DNSBL_check_ipv6 (ia6, &sbl_ref);
   if (!rc || !sbl_ref)
-     return;
+     return (FALSE);
 
   max = smartlist_len (SBL_entries);
   for (i = 0; i < max && !found; i++)
@@ -4067,6 +4082,7 @@ static void print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
 
   num_SBL_hits++;   /* Increment total "SpamHaus Block List" hits */
   fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
+  return (TRUE);
 }
 
 #define PORT_STR_SIZE  80
@@ -4161,13 +4177,13 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   else
     strcpy (remote_addr, "-");
 
-  if (*local_addr != '-' && exclude_list_get(local_addr,EXCL_ADDRESS))
+  if (*local_addr != '-' && exclude_list_get(local_addr, EXCL_ADDRESS))
   {
     TRACE (2, "Ignoring event for local_addr: %s.\n", local_addr);
     return (FALSE);
   }
 
-  if (*remote_addr != '-' && exclude_list_get(remote_addr,EXCL_ADDRESS))
+  if (*remote_addr != '-' && exclude_list_get(remote_addr, EXCL_ADDRESS))
   {
     TRACE (2, "Ignoring event for remote_addr: %s.\n", remote_addr);
     return (FALSE);
@@ -4184,9 +4200,9 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     print_country_location (&ia4_rem, NULL);
+    print_ASN_info (&ia4_rem, NULL);
     print_DNSBL_info (&ia4_rem, NULL);
   }
-
   return (TRUE);
 }
 
@@ -4227,13 +4243,13 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   else
     strcpy (remote_addr, "-");
 
-  if (*local_addr != '-' && exclude_list_get(local_addr,EXCL_ADDRESS))
+  if (*local_addr != '-' && exclude_list_get(local_addr, EXCL_ADDRESS))
   {
     TRACE (2, "Ignoring event for local_addr: %s.\n", local_addr);
     return (FALSE);
   }
 
-  if (*remote_addr != '-' && exclude_list_get(remote_addr,EXCL_ADDRESS))
+  if (*remote_addr != '-' && exclude_list_get(remote_addr, EXCL_ADDRESS))
   {
     TRACE (2, "Ignoring event for remote_addr: %s.\n", remote_addr);
     return (FALSE);
@@ -4258,8 +4274,9 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     print_country_location (NULL, &ia6_rem);
+    print_ASN_info (NULL, &ia6_rem);
     print_DNSBL_info (NULL, &ia6_rem);
- }
+  }
   return (TRUE);
 }
 
@@ -4508,7 +4525,7 @@ static void CALLBACK
    * of `exclude_list_get (address_str, EXCL_ADDRESS)` before deciding to print anything.
    * The same goes for `exclude_list_get (appId, EXCL_PROGRAM)`.
    *
-   * If both `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.
+   * If all `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.
    */
   event_name = list_lookup_name (event_type, events, DIM(events));
 
@@ -4956,7 +4973,8 @@ quit:
   return (rc);
 }
 
-/* Array of file "%WinDir%\media\Windows Pop-up Blocked.wav"
+/*
+ * Array of file "%WinDir%\media\Windows Pop-up Blocked.wav"
  */
 static const BYTE warning_sound[] = {
   0x52,0x49,0x46,0x46,0x24,0x4E,0x01,0x00,0x57,0x41,0x56,0x45,
