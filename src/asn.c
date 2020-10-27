@@ -245,7 +245,7 @@ static int ASN_check_database (const char *local_db)
   if (!url)
      url = default_url;
 
-  TRACE (2, "IPFire's latest database time-stamp: %.24s (UTC)\n"
+  TRACE (1, "IPFire's latest database time-stamp: %.24s (UTC)\n"
             "            It should be at: %s\n"
             "            You local database is %sup-to-date.\n",
             ctime(&time_remote_db), url, older ? "not " : "");
@@ -294,7 +294,7 @@ static size_t ASN_load_bin_file (const char *file)
   if (g_cfg.trace_level == 0)
      _setenv ("LOC_LOG", "", 1);  /* Clear the 'libloc' internal trace-level */
 
-  if (g_cfg.trace_level >= 2)
+  if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_NUMBER"))
      ASN_check_database (file);
 
   err = loc_database_new (libloc.ctx, &libloc.db, libloc.file);
