@@ -303,7 +303,7 @@
 #define _Printf_format_string_
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
   #define ATTR_PRINTF(_1,_2)   __attribute__((format(printf,_1,_2)))
 #else
   #define ATTR_PRINTF(_1,_2)   /* nothing */
