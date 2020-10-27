@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <loc/libloc.h>
+#include <loc/private.h>
 
 /**
  * Get next token from string `*stringp`, where tokens are possibly empty
@@ -345,7 +346,7 @@ literal:
 
         case 'k':   /* The hour (24-hour clock representation). */
              LEGAL_ALT (0);
-             /* FALLTHROUGH */
+             __attribute__((fallthrough));
 
         case 'H':
              LEGAL_ALT (ALT_O);
@@ -355,7 +356,7 @@ literal:
 
         case 'l':   /* The hour (12-hour clock representation). */
              LEGAL_ALT (0);
-             /* FALLTHROUGH */
+             __attribute__((fallthrough));
 
         case 'I':
              LEGAL_ALT (ALT_O);
