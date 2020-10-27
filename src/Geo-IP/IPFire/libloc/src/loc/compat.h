@@ -57,10 +57,15 @@
   #define htobe64(x)  _byteswap_uint64 (x)
 
   #if defined(LIBLOC_PRIVATE)
-    #ifdef _MSC_VER
-      #ifndef _CRTDBG_MAP_ALLOC  /* debug-mode '-MDd' */
-        #define strdup(str)    _strdup (str)
+
+    #if defined(_MSC_VER)
+      /*
+       * In debug-mode, 'strdup()' is already defined to 'strdup_dbg()'
+       */
+      #if !defined(_DEBUG)
+      #define strdup(str)    _strdup (str)
       #endif
+
       #define dup(fd)          _dup (fd)
       #define fileno(stream)   _fileno (stream)
       #define fdopen(fd, mode) _fdopen (fd, mode)
