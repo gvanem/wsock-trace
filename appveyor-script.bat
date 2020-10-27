@@ -54,12 +54,14 @@ echo   max_days               = 10                             >> wsock_trace.ap
 echo   ip4_file               = %CD%\GeoIP.csv                 >> wsock_trace.appveyor
 echo   ip6_file               = %CD%\GeoIP6.csv                >> wsock_trace.appveyor
 echo   ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN          >> wsock_trace.appveyor
+echo [asn]                                                     >> wsock_trace.appveyor
+echo   enable      = 1                                         >> wsock_trace.appveyor
+echo   asn_csv_file= %CD%\GeoIPASNum.csv                       >> wsock_trace.appveyor
+echo   asn_bin_file= %CD%\IPFire-database.db                   >> wsock_trace.appveyor
 echo [iana]                                                    >> wsock_trace.appveyor
 echo   enable      = 1                                         >> wsock_trace.appveyor
 echo   ip4_file    = %CD%\IPv4-address-space.csv               >> wsock_trace.appveyor
 echo   ip6_file    = %CD%\IPv6-unicast-address-assignments.csv >> wsock_trace.appveyor
-echo   asn_csv_file= %CD%\GeoIPASNum.csv                       >> wsock_trace.appveyor
-echo   asn_bin_file= %CD%\IPFire-database.db                   >> wsock_trace.appveyor
 echo [idna]                                                    >> wsock_trace.appveyor
 echo   enable      = 1                                         >> wsock_trace.appveyor
 echo [lua]                                                     >> wsock_trace.appveyor
