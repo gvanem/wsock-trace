@@ -61,6 +61,7 @@
 #include "cpu.h"
 #include "geoip.h"
 #include "dnsbl.h"
+#include "asn.h"
 #include "iana.h"
 #include "inet_util.h"
 #include "wsock_trace.h"

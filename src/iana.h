@@ -59,35 +59,6 @@ extern void iana_dump (void);
 extern void iana_report (void);
 extern int  iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *rec);
 extern int  iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *rec);
-extern void iana_print_rec (const IANA_record *rec);
-
-extern const char *iana_get_rec4 (const IANA_record *rec, BOOL aligned);
-extern const char *iana_get_rec6 (const IANA_record *rec, BOOL aligned);
-
-/**
- * For handling *Autonomous System Number* (ASN) and IPv4 net blocks.
- */
-struct ASN_addr4 {
-       struct in_addr low;    /**< The lowest address for this node */
-       struct in_addr high;   /**< The highest address for this noder */
-     };
-
-struct ASN_addr6 {
-       struct in6_addr low;   /**< The lowest address for this node */
-       struct in6_addr high;  /**< The highest address for this node */
-     };
-
-struct ASN_record {
-       int   family;             /**< The address-family of this node. Only `AF_INET` supported at the moment */
-       DWORD asn[5];             /**< The ASN-number(s) of this node */
-       union {
-         struct ASN_addr4 ipv4;  /**< The IPv4 address of this node */
-         struct ASN_addr6 ipv6;  /**< The IPv6 address of this node */
-       };
-     };
-
-extern void ASN_dump (void);
-extern void ASN_print (const char *intro, const IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6);
-extern int  ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6);
+extern void iana_print_rec (const char *intro, const IANA_record *rec);
 
 #endif

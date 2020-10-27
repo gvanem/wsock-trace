@@ -122,6 +122,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
                   $(OBJ_DIR)\hosts.obj           \
                   $(OBJ_DIR)\firewall.obj        \
                   $(OBJ_DIR)\geoip.obj           \
+                  $(OBJ_DIR)\asn.obj             \
                   $(OBJ_DIR)\iana.obj            \
                   $(OBJ_DIR)\idna.obj            \
                   $(OBJ_DIR)\ip2loc.obj          \
@@ -151,6 +152,7 @@ FIREWALL_TEST_OBJ = $(OBJ_DIR)\common.obj     \
                     $(OBJ_DIR)\firewall_1.obj \
                     $(OBJ_DIR)\geoip.obj      \
                     $(OBJ_DIR)\getopt.obj     \
+                    $(OBJ_DIR)\asn.obj        \
                     $(OBJ_DIR)\iana.obj       \
                     $(OBJ_DIR)\idna.obj       \
                     $(OBJ_DIR)\in_addr.obj    \
@@ -173,6 +175,7 @@ GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj   \
             $(OBJ_DIR)\common.obj    \
             $(OBJ_DIR)\csv.obj       \
             $(OBJ_DIR)\dnsbl.obj     \
+            $(OBJ_DIR)\asn.obj       \
             $(OBJ_DIR)\iana.obj      \
             $(OBJ_DIR)\idna.obj      \
             $(OBJ_DIR)\inet_util.obj \
@@ -186,6 +189,7 @@ GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj   \
 # .obj-files for 'iana.exe'.
 #
 IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
+           $(OBJ_DIR)\asn.obj       \
            $(OBJ_DIR)\common.obj    \
            $(OBJ_DIR)\csv.obj       \
            $(OBJ_DIR)\dnsbl.obj     \

@@ -16,6 +16,7 @@
 #include "in_addr.h"
 #include "init.h"
 #include "geoip.h"
+#include "asn.h"
 #include "iana.h"
 #include "idna.h"
 #include "hosts.h"
@@ -1991,12 +1992,12 @@ static const char *dump_addr_list (int type, const char **addresses)
 {
   static char result[200];
   char  *out = result;
-  int    i, len, left = (int)sizeof(result)-1;
+  int    num, len, left = (int)sizeof(result)-1;
 
-  for (i = 0; addresses && addresses[i] && left > 0; i++)
+  for (num = 0; addresses && addresses[num] && left > 0; num++)
   {
     char  buf [MAX_IP6_SZ+1];
-    char *addr = _wsock_trace_inet_ntop (type, addresses[i], buf, sizeof(buf), NULL);
+    char *addr = _wsock_trace_inet_ntop (type, addresses[num], buf, sizeof(buf), NULL);
 
     if (!addr)
        addr = "<??>";
@@ -2009,7 +2010,7 @@ static const char *dump_addr_list (int type, const char **addresses)
       break;
     }
   }
-  if (i == 0)
+  if (num == 0)
      return ("<none>");
   *(out-2) = '\0';
   return (result);
@@ -2046,14 +2047,14 @@ static const char *dump_aliases (char **aliases)
   return (result);
 }
 
-/*
- * The dumping of country-codes and location is not thread safe.
+/**
+ * The dumping of country-codes and location is not thread safe.\n
  * But all of this happens inside a critical region. So that should
  * hopefully be okay.
  */
-static const char *cc_last   = NULL;  /* CountryCode of previous address */
-static const char *loc_last  = NULL;  /* Location of previous address */
-static position    pos_last;          /* Position of previous address */
+static const char *cc_last   = NULL;    /**< CountryCode of previous address */
+static const char *loc_last  = NULL;    /**< Location of previous address */
+static position    pos_last;            /**< Position of previous address */
 static BOOL        cc_equal  = FALSE;
 static BOOL        loc_equal = FALSE;
 static BOOL        pos_equal = FALSE;
@@ -2067,13 +2068,16 @@ static int trace_printf_cc (const char            *country_code,
 
   if (country_code && isalpha((int)*country_code))
   {
-    /* Print Country-code (and location) only once for a host with multiple addresses.
-     * Like with 'www.google.no':
+    /**
+     * Print Country-code (and location) only once for a host with multiple addresses.
+     * Like with `www.google.no`:
+     * ```
      *   193.212.4.117, 193.212.4.120, 193.212.4.123, 193.212.4.119,
      *   193.212.4.122, 193.212.4.121, 193.212.4.116, 193.212.4.118
+     * ```
      *
-     * PS. there should be no way to have 'location != NULL' and a
-     *     'country_code == NULL'.
+     * \note There should be no way to have `location != NULL` and a
+     *       `country_code == NULL`.
      */
     cc_equal = (cc_last && !strcmp(country_code, cc_last));
     if (!cc_equal)
@@ -2127,7 +2131,18 @@ static int trace_printf_cc (const char            *country_code,
        trace_puts ("Not global");
   else trace_puts ("None");
 
-  return (!cc_equal && !loc_equal);
+  return (!cc_equal && !loc_equal && !pos_equal);
+}
+
+/**
+ * Reset the `x_last` variables to get ready to trace another Winsock-function
+ * with address(es).
+ */
+static void cc_info_reset (void)
+{
+  cc_last  = loc_last  = NULL;
+  cc_equal = loc_equal = pos_equal = FALSE;
+  memset (&pos_last, '\0', sizeof(pos_last));
 }
 
 static void check_and_dump_idna (const char *name)
@@ -2150,7 +2165,7 @@ static void check_and_dump_idna (const char *name)
 
 void dump_countries (int type, const char **addresses)
 {
-  int i;
+  int num;
 
   if (g_cfg.trace_level <= 0)
      return;
@@ -2159,37 +2174,38 @@ void dump_countries (int type, const char **addresses)
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
-  cc_last  = loc_last  = NULL;
-  cc_equal = loc_equal = FALSE;
+  cc_info_reset();
 
-  for (i = 0; addresses && addresses[i]; i++)
+  for (num = 0; addresses && addresses[num]; num++)
   {
-    const struct in_addr  *a4  = NULL;
-    const struct in6_addr *a6  = NULL;
+    const struct in_addr  *ia4 = NULL;
+    const struct in6_addr *ia6 = NULL;
     const char            *cc  = NULL;
     const char            *loc = NULL;
 
     if (type == AF_INET)
     {
-      a4  = (const struct in_addr*) addresses[i];
-      cc  = geoip_get_country_by_ipv4 (a4);
-      loc = geoip_get_location_by_ipv4 (a4);
+      ia4 = (const struct in_addr*) addresses[num];
+      cc  = geoip_get_country_by_ipv4 (ia4);
+      loc = geoip_get_location_by_ipv4 (ia4);
     }
     else if (type == AF_INET6)
     {
-      a6  = (const struct in6_addr*) addresses[i];
-      cc  = geoip_get_country_by_ipv6 (a6);
-      loc = geoip_get_location_by_ipv6 (a6);
+      ia6 = (const struct in6_addr*) addresses[num];
+      cc  = geoip_get_country_by_ipv6 (ia6);
+      loc = geoip_get_location_by_ipv6 (ia6);
     }
     else
     {
       trace_printf ("Unknown family: %d", type);
       break;
     }
-    if (trace_printf_cc(cc, loc, a4, a6) && addresses[i+1])
-       trace_puts (", ");
+    if (trace_printf_cc(cc, loc, ia4, ia6) && addresses[num+1])
+       trace_puts (", ");  /** \todo if `ai->ai_next` has a `loc_equal` or `pos_equal` to this `ai`, drop the comma */
   }
-  if (i == 0)
+  cc_info_reset();
+
+  if (num == 0)
      trace_puts ("None!?");
   trace_puts ("~0\n");
 
@@ -2240,8 +2256,7 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 
   trace_indent (g_cfg.trace_indent+2);
   trace_printf ("~4geo-IP: ");
-  cc_last  = loc_last  = NULL;
-  cc_equal = loc_equal = FALSE;
+  cc_info_reset();
 
   for (num = 0; ai; ai = ai->ai_next, num++)
   {
@@ -2249,29 +2264,33 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
     const struct sockaddr_in6 *sa6 = NULL;
     const char                *cc  = NULL;
     const char                *loc = NULL;
+    const struct in_addr      *ia4 = NULL;
+    const struct in6_addr     *ia6 = NULL;
 
     if (ai->ai_family == AF_INET)
     {
       sa4 = (const struct sockaddr_in*) ai->ai_addr;
-      cc  = geoip_get_country_by_ipv4 (&sa4->sin_addr);
-      loc = geoip_get_location_by_ipv4 (&sa4->sin_addr);
+      ia4 = &sa4->sin_addr;
+      cc  = geoip_get_country_by_ipv4 (ia4);
+      loc = geoip_get_location_by_ipv4 (ia4);
     }
     else if (ai->ai_family == AF_INET6)
     {
       sa6 = (const struct sockaddr_in6*) ai->ai_addr;
-      cc  = geoip_get_country_by_ipv6 (&sa6->sin6_addr);
-      loc = geoip_get_location_by_ipv6 (&sa6->sin6_addr);
+      ia6 = &sa6->sin6_addr;
+      cc  = geoip_get_country_by_ipv6 (ia6);
+      loc = geoip_get_location_by_ipv6 (ia6);
     }
     else
     {
       trace_printf ("Unknown family: %d", ai->ai_family);
       break;
     }
-    if (trace_printf_cc(cc, loc,
-                        sa4 ? &sa4->sin_addr  : NULL,
-                        sa6 ? &sa6->sin6_addr : NULL) && ai->ai_next)
-      trace_puts (", ");
+    if (trace_printf_cc(cc, loc, ia4, ia6) && ai->ai_next)
+       trace_puts (", ");  /** \todo if `ai->ai_next` has a `loc_equal` or `pos_equal` to this `ai`, drop the comma */
   }
+  cc_info_reset();
+
   if (num == 0)
      trace_puts ("None!?");
   trace_puts ("~0\n");
@@ -2280,50 +2299,75 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 }
 
 /*
- * Dump the IANA + ASN information for the given addresses.
+ * Common dumper of IANA information for a single address.
+ */
+static int
+dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
+{
+  struct IANA_record rec;
+  char   IANA_intro [100];
+
+  if (a_single_addr)
+       snprintf (IANA_intro, sizeof(IANA_intro), "%*sIANA:   ", g_cfg.trace_indent+2, "");
+  else snprintf (IANA_intro, sizeof(IANA_intro), "%*sIANA(%d): ", g_cfg.trace_indent+2, "", num);
+
+  if (ia4)
+  {
+    iana_find_by_ip4_address (ia4, &rec);
+    iana_print_rec (IANA_intro, &rec);
+  }
+  else
+  {
+    iana_find_by_ip6_address (ia6, &rec);
+    iana_print_rec (IANA_intro, &rec);
+  }
+  return (1);
+}
+
+/*
+ * Common dumper of ASN information for a single address.
+ */
+static int
+dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
+{
+  char ASN_intro [100];
+
+  if (a_single_addr)
+       snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
+  else snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN(%d):  ", g_cfg.trace_indent+2, "", num);
+
+  if (ia4)
+       ASN_libloc_print (ASN_intro, ia4, NULL);
+  else ASN_libloc_print (ASN_intro, NULL, ia6);
+  return (1);
+}
+
+/*
+ * Dump the IANA information for the given addresses.
  */
 void dump_IANA_addresses (int family, const char **addresses)
 {
-  char ASN_intro [100];
-  int  i;
+  int num, a_single_addr;
 
   if (g_cfg.trace_level <= 0)
      return;
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4IANA:   ");
-  snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
+  trace_puts ("~4");
+  a_single_addr = (addresses && addresses[1] == NULL);
 
-  for (i = 0; addresses && addresses[i]; i++)
+  for (num = 0; addresses && addresses[num]; num++)
   {
-    struct IANA_record rec;
+    const struct in_addr  *ia4 = (const struct in_addr*) addresses[num];
+    const struct in6_addr *ia6 = (const struct in6_addr*) addresses[num];
 
     if (family == AF_INET)
-    {
-      iana_find_by_ip4_address ((const struct in_addr*)addresses[i], &rec);
-      iana_print_rec (&rec);
-      ASN_libloc_print (ASN_intro, (const struct in_addr*)addresses[i], NULL);
-    }
+       dump_IANA_info (ia4, NULL, a_single_addr, num);
     else if (family == AF_INET6)
-    {
-      iana_find_by_ip6_address ((const struct in6_addr*)addresses[i], &rec);
-      iana_print_rec (&rec);
-      ASN_libloc_print (ASN_intro, NULL, (const struct in6_addr*)addresses[i]);
-    }
-    else
-    {
-      trace_printf ("Unknown family: %d", family);
-      break;
-    }
-    if (addresses[i+1])  /* add a newline if there is another address after this */
-    {
-      trace_putc ('\n');
-      trace_indent (g_cfg.trace_indent + 2 + strlen("IANA:   "));
-    }
+       dump_IANA_info (NULL, ia6, a_single_addr, num);
   }
-  if (i == 0)
+  if (num == 0)
      trace_puts ("None!?");
-  trace_puts ("~0\n");
+  trace_puts ("~0");
 }
 
 void dump_IANA_sockaddr (const struct sockaddr *sa)
@@ -2352,54 +2396,118 @@ void dump_IANA_sockaddr (const struct sockaddr *sa)
 }
 
 /*
- * Dump the IANA + ASN information for the given addresses.
+ * Dump the IANA information for the given addresses.
  */
 void dump_IANA_addrinfo  (const struct addrinfo *ai)
 {
-  char ASN_intro [100];
-  int  num;
+  int num, a_single_addr;
 
   if (g_cfg.trace_level <= 0)
      return;
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4IANA:   ");
-  snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
+  trace_puts ("~4");
+  a_single_addr = (ai && !ai->ai_next);
 
   for (num = 0; ai; ai = ai->ai_next, num++)
   {
-    struct IANA_record rec;
+    const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) ai->ai_addr;
+    const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) ai->ai_addr;
 
     if (ai->ai_family == AF_INET)
-    {
-      const struct sockaddr_in *sa4 = (const struct sockaddr_in*) ai->ai_addr;
-
-      iana_find_by_ip4_address (&sa4->sin_addr, &rec);
-      iana_print_rec (&rec);
-      ASN_libloc_print (ASN_intro, &sa4->sin_addr, NULL);
-    }
+       dump_IANA_info (&sa4->sin_addr, NULL, a_single_addr, num);
     else if (ai->ai_family == AF_INET6)
-    {
-      const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) ai->ai_addr;
+       dump_IANA_info (NULL, &sa6->sin6_addr, a_single_addr, num);
 
-      iana_find_by_ip6_address (&sa6->sin6_addr, &rec);
-      iana_print_rec (&rec);
-      ASN_libloc_print (ASN_intro, NULL, &sa6->sin6_addr);
-    }
-    else
-    {
-      trace_printf ("Unknown family: %d", ai->ai_family);
-      break;
-    }
+#if 0
     if (ai->ai_next)  /* add a newline if there is another address after this */
     {
       trace_putc ('\n');
       trace_indent (g_cfg.trace_indent + 2 + strlen("IANA:   "));
     }
+#endif
   }
   if (num == 0)
      trace_puts ("None!?");
-  trace_puts ("~0\n");
+  trace_puts ("~0");
+}
+
+/*
+ * Dump the IANA information for the given addresses.
+ */
+void dump_ASN_addresses (int family, const char **addresses)
+{
+  int num, a_single_addr;
+
+  if (g_cfg.trace_level <= 0)
+     return;
+
+  trace_puts ("~4");
+  a_single_addr = (addresses && addresses[1] == NULL);
+
+  for (num = 0; addresses && addresses[num]; num++)
+  {
+    const struct in_addr  *ia4 = (const struct in_addr*) addresses[num];
+    const struct in6_addr *ia6 = (const struct in6_addr*) addresses[num];
+
+    if (family == AF_INET)
+       dump_ASN_info (ia4, NULL, a_single_addr, num);
+    else if (family == AF_INET6)
+       dump_ASN_info (NULL, ia6, a_single_addr, num);
+  }
+  if (num == 0)
+     trace_puts ("None!?");
+  trace_puts ("~0");
+}
+
+void dump_ASN_sockaddr (const struct sockaddr *sa)
+{
+  const char                *addr[2];
+  const struct sockaddr_in  *sa4;
+  const struct sockaddr_in6 *sa6;
+
+  if (!sa || g_cfg.trace_level <= 0)
+     return;
+
+  if (sa->sa_family == AF_INET)
+  {
+    sa4 = (const struct sockaddr_in*) sa;
+    addr[0] = (const char*) &sa4->sin_addr;
+    addr[1] = NULL;
+    dump_ASN_addresses (AF_INET, addr);
+  }
+  else if (sa->sa_family == AF_INET6)
+  {
+    sa6 = (const struct sockaddr_in6*) sa;
+    addr[0] = (const char*) &sa6->sin6_addr;
+    addr[1] = NULL;
+    dump_ASN_addresses (AF_INET6, addr);
+  }
+}
+
+void dump_ASN_addrinfo  (const struct addrinfo *ai)
+{
+  int num, a_single_addr;
+
+  if (g_cfg.trace_level <= 0)
+     return;
+
+  trace_puts ("~4");
+  a_single_addr = (ai && !ai->ai_next);
+
+  for (num = 0; ai; ai = ai->ai_next, num++)
+  {
+    const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) ai->ai_addr;
+    const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) ai->ai_addr;
+
+    if (ai->ai_family == AF_INET)
+       dump_ASN_info (&sa4->sin_addr, NULL, a_single_addr, num);
+    else if (ai->ai_family == AF_INET6)
+       dump_ASN_info (NULL, &sa6->sin6_addr, a_single_addr, num);
+
+  }
+  if (num == 0)
+     trace_puts ("None!?");
+  trace_puts ("~0");
 }
 
 void dump_nameinfo (const char *host, const char *serv, DWORD flags)
@@ -2495,18 +2603,18 @@ void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out
 
 void dump_DNSBL (int type, const char **addresses)
 {
-  int i;
+  int num;
 
-  for (i = 0; addresses && addresses[i]; i++)
+  for (num = 0; addresses && addresses[num]; num++)
   {
-    const struct in_addr  *a4 = (const struct in_addr*) addresses[i];
-    const struct in6_addr *a6 = (const struct in6_addr*) addresses[i];
+    const struct in_addr  *ia4 = (const struct in_addr*) addresses[num];
+    const struct in6_addr *ia6 = (const struct in6_addr*) addresses[num];
     const char            *sbl_ref = NULL;
 
     if (type == AF_INET)
-         DNSBL_check_ipv4 (a4, &sbl_ref);
+         DNSBL_check_ipv4 (ia4, &sbl_ref);
     else if (type == AF_INET6)
-         DNSBL_check_ipv6 (a6, &sbl_ref);
+         DNSBL_check_ipv6 (ia6, &sbl_ref);
     if (sbl_ref)
        trace_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }

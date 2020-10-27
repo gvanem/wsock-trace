@@ -1117,6 +1117,13 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
    }
 #endif
 
+#if 0
+    /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
+     */
+    if (g_cfg.cache_file)
+       cache_store_connect (addr);
+#endif
+
   LEAVE_CRIT();
   return (rc);
 }
@@ -1150,6 +1157,13 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
 
     WSTRACE ("WSAConnectByNameA (%s, %s, %s, %s, ...) --> %s",
              socket_number(s), node_name, service_name, tv_buf, get_error(rc, 0));
+
+#if 0
+    /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
+     */
+    if (g_cfg.cache_file)
+       cache_store_connect (addr);
+#endif
   }
   LEAVE_CRIT();
   return (rc);
@@ -1184,6 +1198,13 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
 
     WSTRACE ("WSAConnectByNameW (%s, %" WCHAR_FMT ", %" WCHAR_FMT ", %s, ...) --> %s",
              socket_number(s), node_name, service_name, tv_buf, get_error(rc, 0));
+
+#if 0
+    /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
+     */
+    if (g_cfg.cache_file)
+       cache_store_connect (addr);
+#endif
   }
   LEAVE_CRIT();
   return (rc);
@@ -1217,6 +1238,13 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
 
     WSTRACE ("WSAConnectByList (%s, %s, ...) --> %s",
              socket_number(s), tv_buf, get_error(rc, 0));
+
+#if 0
+    /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
+     */
+    if (g_cfg.cache_file)
+       cache_store_connect (addr);
+#endif
   }
   LEAVE_CRIT();
   return (rc);
@@ -1352,6 +1380,9 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (addr);
 
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (addr);
+
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (addr);
   }
@@ -1405,6 +1436,9 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (addr);
 
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (addr);
+
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (addr);
   }
@@ -1440,6 +1474,9 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
 
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (addr);
+
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (addr);
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (addr);
@@ -1491,8 +1528,18 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (addr);
 
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (addr);
+
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (addr);
+
+#if 0
+    /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
+     */
+    if (g_cfg.cache_file)
+       cache_store_connect (addr);
+#endif
   }
   LEAVE_CRIT();
   return (rc);
@@ -1755,6 +1802,9 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (from);
+
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (from);
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (from);
@@ -2154,6 +2204,9 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (to);
+
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (to);
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (to);
@@ -2628,6 +2681,9 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
     if (g_cfg.IANA.enable)
        dump_IANA_addresses (rc->h_addrtype, (const char**)rc->h_addr_list);
 
+    if (g_cfg.ASN.enable)
+       dump_ASN_addresses (rc->h_addrtype, (const char**)rc->h_addr_list);
+
     if (g_cfg.DNSBL.enable)
        dump_DNSBL (rc->h_addrtype, (const char**)rc->h_addr_list);
   }
@@ -2657,47 +2713,38 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
 
   if (!exclude_this)
   {
+    const char *a[2];
+
     if (rc && g_cfg.dump_hostent)
        dump_hostent (rc->h_name, rc);
+
+    a[0] = addr;
+    a[1] = NULL;
 
     if (g_cfg.GEOIP.enable)
     {
       if (rc)
-         dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
-      else
-      {
-        const char *a[2];
-
-        a[0] = addr;
-        a[1] = NULL;
-        dump_countries (type, a);
-      }
+           dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
+      else dump_countries (type, a);
     }
     if (g_cfg.IANA.enable)
     {
       if (rc)
-         dump_IANA_addresses (rc->h_addrtype, (const char**)rc->h_addr_list);
-      else
-      {
-        const char *a[2];
-
-        a[0] = addr;
-        a[1] = NULL;
-        dump_IANA_addresses (type, a);
-      }
+           dump_IANA_addresses (rc->h_addrtype, (const char**)rc->h_addr_list);
+      else dump_IANA_addresses (type, a);
     }
+    if (g_cfg.ASN.enable)
+    {
+      if (rc)
+           dump_ASN_addresses (rc->h_addrtype, (const char**)rc->h_addr_list);
+      else dump_ASN_addresses (type, a);
+    }
+
     if (g_cfg.DNSBL.enable)
     {
       if (rc)
-         dump_DNSBL (rc->h_addrtype, (const char**)rc->h_addr_list);
-      else
-      {
-        const char *a[2];
-
-        a[0] = addr;
-        a[1] = NULL;
-        dump_DNSBL (type, a);
-      }
+           dump_DNSBL (rc->h_addrtype, (const char**)rc->h_addr_list);
+      else dump_DNSBL (type, a);
     }
   }
 
@@ -2808,6 +2855,9 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (name);
 
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (name);
+
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (name);
   }
@@ -2835,6 +2885,9 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
 
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (name);
+
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (name);
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (name);
@@ -2905,6 +2958,9 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
     if (g_cfg.IANA.enable)
        dump_IANA_sockaddr (sa);
 
+    if (g_cfg.ASN.enable)
+       dump_ASN_sockaddr (sa);
+
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (sa);
   }
@@ -2956,6 +3012,9 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
     if (g_cfg.IANA.enable)
        dump_IANA_addrinfo (*res);
+
+    if (g_cfg.ASN.enable)
+       dump_ASN_addrinfo (*res);
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_addrinfo (*res);

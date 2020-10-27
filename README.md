@@ -48,6 +48,9 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   The above `Mountain View/California` is Google's well-known location. Many thanks to IP2Location
   [**[3]**](#footnotes) for their data-bases.
 
+* *ASN* information (Autonomous System Number) from **[IPFire](https://location.ipfire.org)**.
+  Many thanks to IPFire [**[4]**](#footnotes) for their data-bases.
+
 * *Domain Name System-based Blackhole List*
   (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of
   DROP-files from the **[Spamhaus](http://www.spamhaus.org/drop/)** project,
@@ -404,6 +407,9 @@ G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2020.
 
    * [3] This product includes IP2Location LITE data available from
          [**http://lite.ip2location.com**](http://lite.ip2location.com).
+
+   * [4] This product includes IPFire location and ASN data available from
+         [**https://location.ipfire.org/databases/1/**](https://location.ipfire.org/databases/1/).
 
 *PS*. This file is written with the aid of the **[Atom](https://atom.io/)**
       editor and it's **[Markdown-Preview](https://atom.io/packages/markdown-preview)**.

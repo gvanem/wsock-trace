@@ -78,13 +78,14 @@ EX_LIBS += -lole32 -ladvapi32
 
 SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
           common.c cpu.c csv.c dnsbl.c dump.c geoip.c overlap.c iana.c in_addr.c \
-          ip2loc.c smartlist.c stkwalk.c bfd_gcc.c firewall.c
+          ip2loc.c smartlist.c stkwalk.c bfd_gcc.c firewall.c asn.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
 GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
               geoip_1.o              \
+              asn.o                  \
               common.o               \
               csv.o                  \
               dnsbl.o                \
@@ -135,7 +136,7 @@ csv.exe: csv.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_CSV $^ > csv.map
 	@echo
 
-iana.exe: common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
+iana.exe: asn.c common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -lole32 -ladvapi32 > iana.map
 	@echo
 
@@ -143,7 +144,7 @@ idna.exe: idna.c common.c smartlist.c libwsock_trace.a
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
-firewall_test.exe: common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
+firewall_test.exe: asn.c common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
 	@echo
 

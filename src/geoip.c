@@ -68,6 +68,7 @@
 #include "in_addr.h"
 #include "inet_util.h"
 #include "iana.h"
+#include "asn.h"
 #include "csv.h"
 #include "geoip.h"
 
@@ -1788,7 +1789,7 @@ static const char *get_location (void)
 /**
  * Common code for testing an IPv4 or IPv6 address.
  */
-static void test_addr_common (size_t indent,
+static void test_addr_common (const char            *addr_str,
                               const struct in_addr  *a4,
                               const struct in6_addr *a6,
                               BOOL use_ip2loc)
@@ -1799,9 +1800,9 @@ static void test_addr_common (size_t indent,
   const char *cc;
   const BYTE *nibble;
   const position *pos;
-  int   save, flag, width = 0;
-  char  buf1 [150];
-  char  buf2 [150];
+  int   save, flag, ip_width;
+  char  buf1 [200];
+  char  buf2 [200];
 
   /** Start the timing now. Print the delta-time at the end.
    */
@@ -1817,9 +1818,10 @@ static void test_addr_common (size_t indent,
 
   flag = (a4 ? GEOIP_STAT_IPV4 : GEOIP_STAT_IPV6);
 
+  ip_width = a4 ? 14 : 40;
+
   g_cfg.trace_report = save;
 
-  width = use_ip2loc ? 40 : 29;
   location = "";
 
   if (cc && *cc != '-')
@@ -1832,8 +1834,8 @@ static void test_addr_common (size_t indent,
      *  Truncate to 20 thus becoming `United States Minor`.
      */
     snprintf (buf1, sizeof(buf1),
-              "%-2s, %-20.20s   %-*.70s",
-              cc, geoip_get_long_name_by_A2(cc), 70-indent, location);
+              "%-2s, %-20.20s %-30.30s",
+              cc, geoip_get_long_name_by_A2(cc), location);
     snprintf (buf2, sizeof(buf2), "unique: %d", geoip_stats_is_unique(cc,flag));
   }
   else
@@ -1860,7 +1862,7 @@ static void test_addr_common (size_t indent,
       else if (a6 && !stricmp(remark, "IPv4 compatible"))
       {
         trace_printf ("Recursing for a %s address.\n", remark);
-        test_addr_common (indent, (const struct in_addr*)&a6->s6_words[6], NULL, use_ip2loc);
+        test_addr_common (addr_str, (const struct in_addr*)&a6->s6_words[6], NULL, use_ip2loc);
         return;
       }
       else
@@ -1876,19 +1878,17 @@ static void test_addr_common (size_t indent,
     else strcpy (buf2, "??");
   }
 
-  width = 60;
-
-  trace_printf ("%-*.*s %s\n", width+indent, width+indent, buf1, buf2);
+  trace_printf ("%-*.*s: %s %s\n", ip_width, ip_width, addr_str, buf1, buf2);
 
   pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
 
   if (g_cfg.GEOIP.show_position)
   {
     if (pos)
-         trace_printf ("  Pos: %.3f%c, %.3f%c\n",
+         trace_printf ("  Pos:  %.3f%c, %.3f%c\n",
                        fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
                        fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
-    else trace_printf ("  Pos: <none>\n");
+    else trace_printf ("  Pos:  <none>\n");
   }
 
   if (g_cfg.GEOIP.show_map_url)
@@ -1896,26 +1896,26 @@ static void test_addr_common (size_t indent,
     const char *zoom = "10z";
 
     if (pos)
-         trace_printf ("  URL: https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
-    else trace_printf ("  URL: <none>\n");
+         trace_printf ("  URL:  https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
+    else trace_printf ("  URL:  <none>\n");
   }
 
-  if (g_cfg.IANA.enable)
+  if (g_cfg.IANA.enable || g_cfg.ASN.enable )
   {
     struct IANA_record rec;
 
     if (a4 && iana_find_by_ip4_address(a4, &rec))
     {
-      trace_printf ("  ASN: %s\n", iana_get_rec4(&rec, FALSE));
-      ASN_print ("  ASN: ", &rec, a4, NULL);
+      iana_print_rec ("  IANA: ", &rec);
+      ASN_print ("  ASN:   ", &rec, a4, NULL);
     }
     else if (a6 && iana_find_by_ip6_address(a6, &rec))
     {
       iana_find_by_ip6_address (a6, &rec);
-      trace_printf ("  ASN: %s\n", iana_get_rec6(&rec, FALSE));
-      ASN_print ("  ASN: ", &rec, NULL, a6);
+      iana_print_rec ("  IANA: ", &rec);
+      ASN_print ("  ASN:   ", &rec, NULL, a6);
     }
-    ASN_libloc_print ("  ASN: ", a4, a6);
+    ASN_libloc_print ("  ASN:  ", a4, a6);
   }
 
   /** Check the global IPv4 / IPv6 address for membership in a SpamHaus `DROP` / `EDROP` list
@@ -1931,7 +1931,7 @@ static void test_addr_common (size_t indent,
     if (rc)
     {
       _wsock_trace_inet_ntop (AF_INET, a4, addr, sizeof(addr), NULL);
-      trace_printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      trace_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
   else if (INET_util_addr_is_global(NULL, a6))
@@ -1945,7 +1945,7 @@ static void test_addr_common (size_t indent,
     if (rc)
     {
       _wsock_trace_inet_ntop (AF_INET6, a6, addr, sizeof(addr), NULL);
-      trace_printf ("    %s is listed as SpamHaus SBL%s\n", addr, sbl_ref);
+      trace_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
   trace_printf ("  %s\n", str_ltrim((char*)get_timestamp2()));
@@ -1966,13 +1966,12 @@ static struct addrinfo *resolve_addr_or_name (const char *addr_or_host, int af)
 static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
 {
   struct addrinfo *ai = resolve_addr_or_name (ip4_addr, AF_INET);
-  size_t indent = trace_printf ("%s: ", ip4_addr);
 
   if (ai)
   {
     const struct sockaddr_in *sa = (struct sockaddr_in*) ai->ai_addr;
 
-    test_addr_common (indent, &sa->sin_addr, NULL, use_ip2loc);
+    test_addr_common (ip4_addr, &sa->sin_addr, NULL, use_ip2loc);
     freeaddrinfo (ai);
   }
   else
@@ -1982,13 +1981,12 @@ static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
 static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
 {
   struct addrinfo *ai = resolve_addr_or_name (ip6_addr, AF_INET6);
-  size_t indent = trace_printf ("%s: ", ip6_addr);
 
   if (ai)
   {
     const struct sockaddr_in6 *sa = (struct sockaddr_in6*) ai->ai_addr;
 
-    test_addr_common (indent, NULL, &sa->sin6_addr, use_ip2loc);
+    test_addr_common (ip6_addr, NULL, &sa->sin6_addr, use_ip2loc);
     freeaddrinfo (ai);
   }
   else
@@ -2200,7 +2198,11 @@ int main (int argc, char **argv)
   WSADATA     wsa;
 
   wsock_trace_init();
-  iana_init();      /* since it's inside a 'if !defined(TEST_GEOIP)' block in init.c */
+
+  /* Since these are inside a 'if !defined(TEST_GEOIP)' block in init.c
+   */
+  iana_init();
+  ASN_init();
 
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
 

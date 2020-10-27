@@ -4,6 +4,7 @@
  * \addtogroup BFD       BFD Library
  * \addtogroup DNSBL     Domain Name System Black Lists
  * \addtogroup IANA      IANA Registry
+ * \addtogroup ASN       Autonomous System Number
  * \addtogroup Geoip     IP-address to location support
  * \addtogroup inet_util IP-address utilities
  * \addtogroup Lua       Lua script support

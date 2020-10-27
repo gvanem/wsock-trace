@@ -24,15 +24,19 @@ extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, c
 extern void dump_events           (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events);
 extern void dump_extension_funcs  (const GUID *guid, const void *out_buf);
 
-extern void dump_countries          (int type, const char **addresses);
+extern void dump_countries          (int family, const char **addresses);
 extern void dump_countries_sockaddr (const struct sockaddr *sa);
 extern void dump_countries_addrinfo (const struct addrinfo *ai);
 
-extern void dump_IANA_addresses (int type, const char **addresses);
+extern void dump_IANA_addresses (int family, const char **addresses);
 extern void dump_IANA_sockaddr  (const struct sockaddr *sa);
 extern void dump_IANA_addrinfo  (const struct addrinfo *ai);
 
-extern void dump_DNSBL          (int type, const char **addresses);
+extern void dump_ASN_addresses  (int family, const char **addresses);
+extern void dump_ASN_sockaddr   (const struct sockaddr *sa);
+extern void dump_ASN_addrinfo   (const struct addrinfo *ai);
+
+extern void dump_DNSBL          (int family, const char **addresses);
 extern void dump_DNSBL_sockaddr (const struct sockaddr *sa);
 extern void dump_DNSBL_addrinfo (const struct addrinfo *ai);
 

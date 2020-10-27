@@ -544,6 +544,8 @@ DO_NOTHING (ip2loc_num_ipv6_entries)
 DO_NOTHING (hosts_file_exit)
 DO_NOTHING (DNSBL_exit)
 DO_NOTHING (DNSBL_test)
+DO_NOTHING (ASN_init)
+DO_NOTHING (ASN_exit)
 DO_NOTHING (iana_init)
 DO_NOTHING (iana_exit)
 
