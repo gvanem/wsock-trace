@@ -817,6 +817,6 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
 DWORD ip2loc_index_errors (void)
 {
   if (ip2loc_handle)
-     return (ip2loc_handle->sh_mem_index_errors);
+     return (DWORD) ip2loc_handle->sh_mem_index_errors;
   return (0);
 }
