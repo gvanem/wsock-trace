@@ -97,11 +97,11 @@ WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 
 !if "$(USE_LIBLOC)" == "1"
 CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DUSE_LIBLOC
-EX_LIBS   = $(EX_LIBS) libloc.lib dnsapi.lib
+EX_LIBS   = $(EX_LIBS)   libloc.lib dnsapi.lib
 WSOCK_DEP = $(WSOCK_DEP) libloc.lib
 !endif
 
-EX_LIBS = $(EX_LIBS) ole32.lib # advapi32.lib
+EX_LIBS = $(EX_LIBS) ole32.lib
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
@@ -356,8 +356,10 @@ $(OBJ_DIR)\geoip_1.obj: geoip.c
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4267 -DLIBLOC_PRIVATE \
-                -I$(LIBLOC_ROOT)/src/loc/windows -I$(LIBLOC_ROOT)/src/fake-OpenSSL
+LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4244 -wd4267 \
+                -DLIBLOC_PRIVATE -DEXTRA_DEBUG_PARANOIA   \
+                -I$(LIBLOC_ROOT)/src/loc/windows          \
+                -I$(LIBLOC_ROOT)/src/fake-OpenSSL
 
 {$(LIBLOC_ROOT)\src}.c{$(OBJ_DIR)}.obj:
 	$(CC) $(LIBLOC_CFLAGS) -Fo$*.obj -c $<

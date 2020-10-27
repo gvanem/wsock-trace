@@ -247,7 +247,7 @@ static int ASN_check_database (const char *local_db)
 
   TRACE (1, "IPFire's latest database time-stamp: %.24s (UTC)\n"
             "            It should be at: %s\n"
-            "            You local database is %sup-to-date.\n",
+            "            Your local database is %sup-to-date.\n",
             ctime(&time_remote_db), url, older ? "not " : "");
   return (1);
 }
@@ -504,6 +504,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
    /**
     * \todo Search the cached ASN-list first (sorted on net?)
     */
+   g_num_compares = 0;
    const struct ASN_record *asn = smartlist_bsearch (ASN_entries, &rec, ASN_compare_on_net);
    if (asn)
       rc = libloc_handle_net (NULL, asn, ip4, ip6);
@@ -526,8 +527,9 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 
 #if 0
   /**
-   * \todo Add this to the ASN-list (sorted on net?)
-   * Add negative lookups where no `net` or `AS_num` were found also.
+   * \todo
+   * Add this to the ASN-list (sorted on net?)
+   * Add negative lookups also; no `net` or `AS_num` found.
    */
   smartlist_insert (ASN_entries, at_sorted_pos, copy);
 #endif
@@ -567,6 +569,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 void ASN_print (const char *intro, const struct IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6)
 {
   const struct ASN_record *rec;
+  int   i;
 
   trace_puts (intro);
 
@@ -584,12 +587,11 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
   g_num_compares = 0;
   rec = smartlist_bsearch (ASN_entries, ip4, ASN_compare_on_ip4);
   TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
-  g_num_compares = 0;
 
-  if (rec)
+  if (!rec)
+     trace_puts ("<no data>\n");
+  else
   {
-    int i;
-
     for (i = 0; rec->asn[i]; i++)
         trace_printf ("%lu%s", rec->asn[i], (rec->asn[i+1] && i < DIM(rec->asn)) ? ", " : " ");
     trace_printf ("(status: %s)\n", iana->status);
