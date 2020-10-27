@@ -94,10 +94,11 @@ build_script:
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
 
-  - cmd: if %BUILDER%. == msvc.   nmake -nologo -f Makefile.vc6
-  - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU%
-  - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU%
-  - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
+  - cmd: if %BUILDER%. == msvc-x86. nmake -nologo -f Makefile.vc6 USE_LIBLOC=1
+  - cmd: if %BUILDER%. == msvc-x64. nmake -nologo -f Makefile.vc6 USE_LIBLOC=0
+  - cmd: if %BUILDER%. == mingw.    make          -f Makefile.MinGW  CPU=%CPU%
+  - cmd: if %BUILDER%. == cygwin.   make          -f Makefile.CygWin CPU=%CPU%
+  - cmd: if %BUILDER%. == watcom.   wmake -h      -f Makefile.Watcom CPU=%CPU%
   - cmd: set USE_LUA=0
 
 test_script:
