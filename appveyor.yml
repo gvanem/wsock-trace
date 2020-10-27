@@ -88,8 +88,8 @@ build_script:
             curl -O -# http://www.watt-32.net/CI/watcom20.zip &
             7z x -o%WATCOM% watcom20.zip > NUL)
 
-  - cmd: set USE_LUA=0
   - cmd: cd src
+  - cmd: set USE_LUA=1
   - cmd: set USE_IP2LOCATION=1
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning

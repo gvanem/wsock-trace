@@ -1907,13 +1907,13 @@ static void test_addr_common (const char            *addr_str,
     if (a4 && iana_find_by_ip4_address(a4, &rec))
     {
       iana_print_rec ("  IANA: ", &rec);
-      ASN_print ("  ASN:   ", &rec, a4, NULL);
+      ASN_print ("  ASN:  ", &rec, a4, NULL);
     }
     else if (a6 && iana_find_by_ip6_address(a6, &rec))
     {
       iana_find_by_ip6_address (a6, &rec);
       iana_print_rec ("  IANA: ", &rec);
-      ASN_print ("  ASN:   ", &rec, NULL, a6);
+      ASN_print ("  ASN:  ", &rec, NULL, a6);
     }
     ASN_libloc_print ("  ASN:  ", a4, a6);
   }
