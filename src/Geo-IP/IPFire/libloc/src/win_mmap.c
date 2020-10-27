@@ -115,7 +115,7 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
 
   fprintf (stderr,
            "%s(%u):\n"
-           "   pstart: %lld, poffset: %lld, psize: %lld, length: %u, fd: %d, offset: %ld,\n"
+           "   pstart: %lld, poffset: %lld, psize: %lld, length: %zu, fd: %d, offset: %ld,\n"
            "   err1: %lu, err2: %lu  -> map: 0x%p, 0x%p\n",
            fname, line, pstart, poffset, psize, length, fd, offset, err1, err2, map, rval);
 
