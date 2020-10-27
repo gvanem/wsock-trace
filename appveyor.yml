@@ -91,14 +91,15 @@ build_script:
   - cmd: cd src
   - cmd: set USE_LUA=1
   - cmd: set USE_IP2LOCATION=1
+  - cmd: set USE_LIBLOC=1
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
+  - cmd: if %CPU%. == x64. set USE_LIBLOC=0
 
-  - cmd: if %BUILDER%. == msvc-x86. nmake -nologo -f Makefile.vc6 USE_LIBLOC=1
-  - cmd: if %BUILDER%. == msvc-x64. nmake -nologo -f Makefile.vc6 USE_LIBLOC=0
-  - cmd: if %BUILDER%. == mingw.    make          -f Makefile.MinGW  CPU=%CPU%
-  - cmd: if %BUILDER%. == cygwin.   make          -f Makefile.CygWin CPU=%CPU%
-  - cmd: if %BUILDER%. == watcom.   wmake -h      -f Makefile.Watcom CPU=%CPU%
+  - cmd: if %BUILDER%. == msvc.   nmake -nologo -f Makefile.vc6 USE_LIBLOC=%USE_LIBLOC%
+  - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU%
+  - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU%
+  - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
   - cmd: set USE_LUA=0
 
 test_script:
