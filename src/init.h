@@ -67,8 +67,13 @@ struct IANA_cfg {
        BOOL    enable;
        char   *ip4_file;
        char   *ip6_file;
+     };
+
+struct ASN_cfg {
+       BOOL    enable;
        char   *asn_csv_file;
        char   *asn_bin_file;
+       char   *asn_bin_url;
      };
 
 struct GEOIP_cfg {
@@ -182,6 +187,7 @@ struct config_table {
        struct PCAP_cfg     PCAP;
        struct DNSBL_cfg    DNSBL;
        struct IANA_cfg     IANA;
+       struct ASN_cfg      ASN;
        struct GEOIP_cfg    GEOIP;
        struct FIREWALL_cfg FIREWALL;
        struct statistics   counts;

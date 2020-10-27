@@ -28,6 +28,7 @@
 #include "hosts.h"
 #include "firewall.h"
 #include "cpu.h"
+#include "asn.h"
 #include "iana.h"
 #include "dnsbl.h"
 #include "in_addr.h"
@@ -931,11 +932,26 @@ static void parse_iana_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "ip6_file"))
        g_cfg.IANA.ip6_file = strdup (val);
 
+  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+              fname, line, key, val);
+}
+
+/*
+ * Handler for '[ASN]' section.
+ */
+static void parse_asn_settings (const char *key, const char *val, unsigned line)
+{
+  if (!stricmp(key, "enable"))
+       g_cfg.ASN.enable = atoi (val);
+
   else if (!stricmp(key, "asn_csv_file"))
-       g_cfg.IANA.asn_csv_file = strdup (val);
+       g_cfg.ASN.asn_csv_file = strdup (val);
 
   else if (!stricmp(key, "asn_bin_file"))
-       g_cfg.IANA.asn_bin_file = strdup (val);
+       g_cfg.ASN.asn_bin_file = strdup (val);
+
+  else if (!stricmp(key, "asn_bin_url"))
+       g_cfg.ASN.asn_bin_url = strdup (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -946,6 +962,7 @@ enum cfg_sections {
      CFG_CORE,
      CFG_LUA,
      CFG_GEOIP,
+     CFG_ASN,
      CFG_IANA,
      CFG_IDNA,
      CFG_DNSBL,
@@ -963,6 +980,8 @@ static enum cfg_sections lookup_section (const char *section)
      return (CFG_LUA);
   if (section && !stricmp(section, "geoip"))
      return (CFG_GEOIP);
+  if (section && !stricmp(section, "asn"))
+     return (CFG_ASN);
   if (section && !stricmp(section, "iana"))
      return (CFG_IANA);
   if (section && !stricmp(section, "idna"))
@@ -1029,6 +1048,10 @@ static int parse_config_file (FILE *file)
       case CFG_FIREWALL:
            parse_firewall_settings (key, val, line);
            strcpy (last_section, "firewall");
+           break;
+      case CFG_ASN:
+           parse_asn_settings (key, val, line);
+           strcpy (last_section, "asn");
            break;
       case CFG_IANA:
            parse_iana_settings (key, val, line);
@@ -1159,6 +1182,9 @@ static void trace_report (void)
   if (g_cfg.IANA.enable)
      iana_report();
 
+  if (g_cfg.ASN.enable)
+     ASN_report();
+
   if (g_cfg.FIREWALL.enable)
      fw_report();
 }
@@ -1240,6 +1266,7 @@ void wsock_trace_exit (void)
   DNSBL_exit();
   geoip_exit();
   iana_exit();
+  ASN_exit();
   IDNA_exit();
 
   if (ws_sema)
@@ -1519,6 +1546,7 @@ void wsock_trace_init (void)
   StackWalkInit();
   overlap_init();
   iana_init();
+  ASN_init();
 
 #if defined(USE_LWIP)
   ws_lwip_init();

@@ -189,35 +189,48 @@
   ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DB11.IPV6.BIN
 
 #
-# IANA and ASN (Autonomous System Number) settings.
+# ASN (Autonomous System Number) settings.
+#
+[asn]
+  enable = 1    # Show ASN info for addresses in traced functions
+
+  #
+  # The Blockfinder generated ASN .csv file.
+  # Old and not very up-to-date. Use the below 'asn_bin_file' instead.
+  #
+  asn_csv_file = %APPDATA%\GeoIPASNum.csv
+
+  #
+  # TODO:
+  # asn_csv_url =
+
+  #
+  # The IPFire binary database required for showing AS number and AS names:
+  #
+  asn_bin_file = %APPDATA%\IPFire-database.db
+
+  #
+  # The URL of the latest version of the above .db-file.
+  # This URL is only used to check for the latest version (in ASN_check_database()).
+  #
+  # It can not easily be downloaded and updated automatically since that requires
+  # the 'xz' program to be available (or an equivalent using the 'lzma' library).
+  # Instead download it manually.
+  # Like:
+  #
+  #   c:\temp> wget https://location.ipfire.org/databases/1/location.db.xz
+  #   c:\temp> xz -d location.db.xz
+  #   c:\temp> move /Y location.db %APPDATA%\IPFire-database.db
+  #
+  asn_bin_url = https://location.ipfire.org/databases/1/location.db.xz
+
+#
+# IANA (Internet Assigned Numbers Authority) settings.
 #
 [iana]
   enable   = 0                                               # Show IANA info for addresses in traced functions
   ip4_file = %APPDATA%\IPv4-address-space.csv                # The IANA 'IPv4 Address Space Registry' .csv file
   ip6_file = %APPDATA%\IPv6-unicast-address-assignments.csv  # The IANA 'IPv6 Global Unicast Address Assignments' .csv file
-
-  #
-  # The Blockfinder generated ASN .csv file.
-  # Old and not very up-to-date. Use the 'asn_bin_file' instead.
-  #
-  asn_csv_file = %APPDATA%\GeoIPASNum.csv
-
-  #
-  # The IPFire binary database required for showing AS number and AS names
-  # Latest version should be here:
-  #   https://location.ipfire.org/databases/1/location.db.xz
-  #
-  asn_bin_file = %APPDATA%\IPfire-database.db
-
-  # TO-DO:
-  #  Use the similar of what 'dig -t TXT  _v1._db.location.ipfire.org' does
-  #  to check the latest version:
-  #   ;; ANSWER SECTION:
-  #   _v1._db.location.ipfire.org. 300 IN     TXT     "Fri, 16 Oct 2020 07:54:08 GMT"
-  #
-  # (or call 'loc_discover_latest_version()'.
-  #
-  # asn_bin_url = https://location.ipfire.org/databases/1/database.db.xz
 
   #
   # Note: there are no 'ip4_url' and 'ip6_url' for the above files
