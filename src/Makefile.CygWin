@@ -4,7 +4,7 @@
 #
 # G. Vanem <gvanem@yahoo.no> 2011 - 2020.
 #
-USE_CRT_DEBUG ?= 1
+USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
 
 #
