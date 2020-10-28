@@ -184,7 +184,7 @@ static void loc_stringpool_free(struct loc_stringpool* pool) {
 			break;
 
 		case STRINGPOOL_MMAP:
-			if (pool->data) {
+			if (pool->data && pool->data != MAP_FAILED) {
 				r = munmap(pool->data, pool->length);
 				if (r)
 					ERROR(pool->ctx, "Could not unmap data at %p: %s\n",
