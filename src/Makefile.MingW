@@ -127,19 +127,22 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
               smartlist.o)
 
 #
-# .o-files for '$(LIBLOC_LIB).
+# .c and .o-files for '$(LIBLOC_LIB).
 #
+LIBLOC_SRC = $(addprefix $(LIBLOC_ROOT)/src/, \
+               as.c                           \
+               country.c                      \
+               database.c                     \
+               libloc.c                       \
+               network.c                      \
+               resolv.c                       \
+               stringpool.c                   \
+               writer.c                       \
+               win_str.c                      \
+               win_mmap.c)
+
 LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
-               as.o                   \
-               country.o              \
-               database.o             \
-               libloc.o               \
-               network.o              \
-               resolv.o               \
-               stringpool.o           \
-               writer.o               \
-               win_str.o              \
-               win_mmap.o)
+               $(notdir $(LIBLOC_SRC:.c=.o)) )
 
 LIBLOC_CFLAGS = -I.                               \
                 -I$(LIBLOC_ROOT)/src/fake-OpenSSL \
@@ -253,9 +256,10 @@ yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
 
-DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
+DEP_REPLACE = 's@\(.*\)\.o: @\n$$(OBJ_DIR)\/\1.o: @'
 
 depend:
-	$(CC) -MM $(CFLAGS) $(SOURCES) non-export.c test.c | $(DEP_REPLACE) > .depend.MinGW
+	$(CC) -MM $(CFLAGS) $(SOURCES) non-export.c test.c | sed -e $(DEP_REPLACE) > .depend.MinGW
+	$(CC) -MM $(CFLAGS) $(LIBLOC_CFLAGS) $(LIBLOC_SRC) | sed -e $(DEP_REPLACE) -e 's@$(LIBLOC_ROOT)@$$(LIBLOC_ROOT)@' >> .depend.MinGW
 
 -include .depend.MinGW
