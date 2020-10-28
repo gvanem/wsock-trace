@@ -35,7 +35,7 @@
   #  define s6_addr32 __u6_addr.__u6_addr32
   #endif
 
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__CYGWIN__)
   #include <stdio.h>
   #include <stdint.h>
   #include <string.h>
@@ -43,41 +43,36 @@
   #include <io.h>
   #include <intrin.h>
 
-  #ifdef _MSC_VER
+  #if defined(__CYGWIN__)
+    #include <endian.h>
+
+  #elif defined(_MSC_VER)
     #pragma intrinsic (_byteswap_ushort)  /* make these inlined */
     #pragma intrinsic (_byteswap_ulong)
     #pragma intrinsic (_byteswap_uint64)
   #endif
 
-  #define be16toh(x)  _byteswap_ushort (x)
-  #define htobe16(x)  _byteswap_ushort (x)
-  #define be32toh(x)  _byteswap_ulong (x)
-  #define htobe32(x)  _byteswap_ulong (x)
-  #define be64toh(x)  _byteswap_uint64 (x)
-  #define htobe64(x)  _byteswap_uint64 (x)
+  #if !defined(__CYGWIN__)
+    #define be16toh(x)  _byteswap_ushort (x)
+    #define htobe16(x)  _byteswap_ushort (x)
+    #define be32toh(x)  _byteswap_ulong (x)
+    #define htobe32(x)  _byteswap_ulong (x)
+    #define be64toh(x)  _byteswap_uint64 (x)
+    #define htobe64(x)  _byteswap_uint64 (x)
+  #endif
 
   #if defined(LIBLOC_PRIVATE)
+    extern char *strcasestr (const char *haystack, const char *needle);
+    extern char *strptime (const char *buf, const char *format, struct tm *tm);
 
-    #if defined(_MSC_VER)
-      /*
-       * In debug-mode, 'strdup()' is already defined to 'strdup_dbg()'
-       */
-      #if !defined(_DEBUG)
-      #define strdup(str)    _strdup (str)
-      #endif
-
-      #define dup(fd)          _dup (fd)
-      #define fileno(stream)   _fileno (stream)
-      #define fdopen(fd, mode) _fdopen (fd, mode)
+    #if !defined(__CYGWIN__)
+      extern char  *strsep  (char **stringp, const char *delim);
+      extern time_t timegm (struct tm *tm);
     #endif
 
-    extern char  *strsep     (char **stringp, const char *delim);
-    extern char  *strcasestr (const char *haystack, const char *needle);
-    extern char  *strptime   (const char *buf, const char *format, struct tm *tm);
-    extern time_t timegm     (struct tm *tm);
-
     #if !defined(Py_PYTHON_H) && !defined(ssize_t) && !defined(_SSIZE_T_DEFINED)
-      #define ssize_t SSIZE_T   /* From <basetsd.h> */
+      #define ssize_t SSIZE_T     /* From <basetsd.h> */
+      #define _SSIZE_T_DEFINED 1
     #endif
   #endif
 #endif

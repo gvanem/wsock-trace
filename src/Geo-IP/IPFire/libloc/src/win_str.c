@@ -1,5 +1,6 @@
 /*
  * `strsep()`, `strcasestr()`, `timegm()` and `strptime()` for Windows.
+ * (But not for Cygwin which have all these functions elsewhere).
  */
 #include <string.h>
 #include <ctype.h>
@@ -10,6 +11,7 @@
 #include <loc/libloc.h>
 #include <loc/private.h>
 
+#if !defined(__CYGWIN__) /* rest of file */
 /**
  * Get next token from string `*stringp`, where tokens are possibly empty
  * strings separated by characters from `delim`.
@@ -490,3 +492,4 @@ static int conv_num (const char **buf, int *dest, int llim, int ulim)
   *dest = result;
   return (1);
 }
+#endif  /* __CYGWIN__ */
