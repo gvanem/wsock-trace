@@ -72,6 +72,7 @@ echo   enable       = 1                                         >> wsock_trace.a
 echo [lua]                                                      >> wsock_trace.appveyor
 echo   enable       = %%USE_LUA%%                               >> wsock_trace.appveyor
 echo   trace_level  = 1                                         >> wsock_trace.appveyor
+echo   profile      = 1                                         >> wsock_trace.appveyor
 echo   lua_init     = %CD%\src\wsock_trace_init.lua             >> wsock_trace.appveyor
 echo   lua_exit     = %CD%\src\wsock_trace_exit.lua             >> wsock_trace.appveyor
 
