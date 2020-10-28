@@ -1,8 +1,9 @@
 /**
- * \file non-export.c
+ * \file    non-export.c
+ * \ingroup Misc
  *
  * \brief
- *  The resulting `wsock_trace.lib` (or `libwsock_trace.a` etc.) is an import-lib for
+ * The resulting `wsock_trace.lib` (or `libwsock_trace_mw.a` etc.) is an import-lib for
  * `wsock_trace.dll` (or `wsock_trace_mw.dll` / `wsock_trace_cyg.dll` etc.).
  *
  * Since the SDK header `<ws2ipdef.h>` declares the below data with no export
@@ -89,20 +90,23 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
       0x3F,0xFE,0x83,0x1F,0,0,0,0,0,0,0,0,0,0,0,0
     }};
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__WATCOMC__) /* Rest of file */
-/*
- * These are 'static __inline' function in MinGW.org's <ws2tcpip.h>.
+#if defined(__MINGW32__) || defined(__CYGWIN__) || \
+    defined(__WATCOMC__) || defined(__DOXYGEN__)   /* Rest of file */
+
+/**
+ * These are `static __inline` function in MinGW.org's `<ws2tcpip.h>`.
  * But in other MinGW distribution they are not.
  *
- * Under CygWin these functions seems to be in several places:
- * libc.a, libcygwin.a and libg.a.
+ * Under CygWin these functions seems to be in several places: \n
+ * `libc.a`, `libcygwin.a` and `libg.a`.
  *
- * In any case, they are part of 'libws2_32.a' even though 'gai_strerror[A|W]'
- * is not part of the system 'ws2_32.dll'. So for 'libwsock_trace.a' to be a
- * replacement for 'libws2_32.a', we must also add these functions to it.
+ * In any case, they are part of `libws2_32.a` even though `gai_strerror[A|W]`
+ * is not part of the system `ws2_32.dll`. So for `libwsock_trace_mw.a` (and
+ * `libwsock_trace_cyg.a`) to be a replacement for `libws2_32.a`, we must also
+ * add these functions to it.
  *
  * But tracing these calls would be difficult since the needed functions
- * for that is in wsock_trace.c.
+ * for that is in `wsock_trace.c`.
  */
 #define FORMAT_FLAGS (FORMAT_MESSAGE_FROM_SYSTEM    | \
                       FORMAT_MESSAGE_IGNORE_INSERTS | \
@@ -131,10 +135,13 @@ wchar_t *gai_strerrorW (int err)
   return str_ripw (err_buf);
 }
 
-/*
+/**
  * These are also in common.c. But since this module is not part of
- * the wsock_trace_mw.dll (only added to libwsock_trace.a), these
+ * the `wsock_trace_mw.dll` and `wsock_trace_cyg.dll`, these
  * function must also be here.
+ *
+ * (they are only added as non-exports to `libwsock_trace_mw.a` and
+ *  `libwsock_trace_cyg.a`).
  */
 char *str_rip (char *s)
 {
@@ -153,5 +160,5 @@ wchar_t *str_ripw (wchar_t *s)
   if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
   return (s);
 }
-#endif  /* __MINGW32__ || __CYGWIN__ || __WATCOMC__ */
+#endif  /* __MINGW32__ || __CYGWIN__ || __WATCOMC__ || __DOXYGEN__ */
 

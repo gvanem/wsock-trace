@@ -920,6 +920,14 @@ int INET_util_touch_file (const char *file)
  * insanity.
  */
 #if defined(__GNUC__) && defined(__NO_INLINE__)   /* -O0 */
+  int IN6_IS_ADDR_UNSPECIFIED (const struct in6_addr *a)
+  {
+    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
+            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
+            (a->s6_words[4] == 0) && (a->s6_words[5] == 0) &&
+            (a->s6_words[6] == 0) && (a->s6_words[7] == 0));
+  }
+
   int IN6_IS_ADDR_LOOPBACK (const struct in6_addr *a)
   {
     return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
@@ -1452,7 +1460,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
    * Print an IPv6-address chunk like this:
    * `2001:0800::` (not like `2001:800::` which is default).
    */
-  IPv6_leading_zeroes = TRUE;
+  IPv6_leading_zeroes = 1;
 
   trace_printf (head_fmt,       "bit",
                 cidr_width,     "CIDR",
@@ -1548,7 +1556,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
                   ip_width, mask_str,
                   total_str);
   }
-  IPv6_leading_zeroes = FALSE;
+  IPv6_leading_zeroes = 0;
 }
 
 /**

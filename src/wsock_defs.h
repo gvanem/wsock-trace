@@ -174,10 +174,13 @@
 #endif  /* IN_WSOCK_TRACE_C */
 
 
-/*
- * To fix the warnings for the use of "%lu" with a DWORD-arg.
- * Or warnings with "%ld" and an 'int' argument.
- * Especially noisy for 'x64' builds since CygWin is a LP64-platform:
+/**
+ * \def DWORD_CAST
+ *
+ * To fix the warnings for the use of `%lu` with a DWORD-arg.\n
+ * Or warnings with `%ld` and an `int` argument.
+ *
+ * Especially noisy for `x64` builds since CygWin is a LP64-platform: \n
  *   https://en.wikipedia.org/wiki/64-bit_computing
  */
 #if defined(__CYGWIN__)

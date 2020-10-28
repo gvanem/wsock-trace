@@ -69,12 +69,7 @@
   #define INET_NTOP_RET  const char *
 #endif
 
-#if !defined(NTDDI_VERSION) || (NTDDI_VERSION < NTDDI_VISTA) || defined(__MINGW32__) || defined(__CYGWIN__)
-//  EXPORT INET_NTOP_RET WSAAPI inet_ntop (INT family, INET_NTOP_ADDR addr, PSTR string_buf, size_t string_buf_size);
-//  EXPORT INT           WSAAPI inet_pton (INT family, PCSTR addr_string, void *addr_buf);
-#endif
-
-extern BOOL IPv6_leading_zeroes;
+extern int IPv6_leading_zeroes;
 
 /**
  * `inet_ntop()` and `inet_pton()` for internal use or to be used before

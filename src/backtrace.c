@@ -21,16 +21,15 @@
 #define USE_STRDUP2 1
 
 /*
-   From 'man backtrace':
-
-  SYNOPSIS
-       #include <execinfo.h>
-
-       int backtrace (void **buffer, int size);
-
-       char **backtrace_symbols (void *const *buffer, int size);
-
-  */
+ * From 'man backtrace':
+ *
+ * SYNOPSIS
+ *  #include <execinfo.h>
+ *
+ *  int backtrace (void **buffer, int size);
+ *
+ *  char **backtrace_symbols (void *const *buffer, int size);
+ */
 
 /*
  * In ntdll.dll
@@ -63,12 +62,11 @@ static char *search_symbols_list (ULONG_PTR addr);
   #pragma optimize("y", off)   /* Disable "elimination of frame pointer generation"; 'cl -Oy-' */
 #endif
 
-/*
- * Look at 'class CStackDumper' in
- *   f:\gv\vc_2015_Community\VC\atlmfc\include\atlutil.h
+/**
+ * Look at 'class CStackDumper' in VC's `atlmfc\include\atlutil.h`
  *
- * Especially how a new thread is used to dump a stack of a thread:
- *   HRESULT DumpStack() throw()
+ * Especially how a new thread is used to dump a stack of a thread: \n
+ *   `HRESULT DumpStack() throw()`
  */
 static char *get_caller (int frame_num, int *err)
 {
@@ -146,8 +144,8 @@ static BOOL long_CPP_syms (void)
 #endif
 }
 
-/*
- * Print symbols in our module; symbols with 'se->module' matching 'g_module'.
+/**
+ * Print symbols in our module; symbols with `se->module` matching `g_module`.\n
  * Or print all.
  */
 static void print_symbols (const smartlist_t *sl, BOOL print_all)
@@ -224,7 +222,7 @@ static char *strdup2 (const char *s1, const char *s2)
   return (start);
 }
 
-/*
+/**
  * smartlist_bsearch() helper: return -1, 1, or 0 based on comparison of
  * a 'struct SymbolEntry'.
  */
@@ -240,13 +238,13 @@ static int compare_addr (const void *key, const void **member)
   return (0);
 }
 
-/*
- * Search 'symbols_list' for a symbol with a near match to 'addr'.
- * Return it's 'func_name' with displacement.
+/**
+ * Search `symbols_list` for a symbol with a near match to `addr`.\n
+ * Return it's `func_name` with displacement.
  */
 static char *search_symbols_list (ULONG_PTR addr)
 {
-  static char buf[200];
+  static char buf[400];
   const struct SymbolEntry *se = NULL;
   char *ret = "";
   char  mod[40] = { '\0' };
@@ -320,22 +318,22 @@ struct thread_arg {
 #if defined(__clang__)
   #define OPT_OFF()  __attribute__((optnone))
 #elif defined(__GNUC__)
-   #define OPT_OFF() __attribute__((optimize("0")))
+  #define OPT_OFF() __attribute__((optimize("0")))
 #else
   #define OPT_OFF()
 #endif
 
-#define FOO_FUNC(_this, _next)                                  \
-        OPT_OFF()                                               \
-        DWORD WINAPI foo_##_this (void *arg)                    \
-        {                                                       \
-          struct thread_arg ta = *(struct thread_arg*) arg;     \
-                                                                \
-          trace_printf ("%s() called from line %u.\n",          \
-                        __FUNCTION__, ta.line);                 \
-          ta.line = __LINE__; /* since this macro is 1 line! */ \
-          foo_##_next (&ta);                                    \
-          return (0);                                           \
+#define FOO_FUNC(_this, _next)                                    \
+        OPT_OFF()                                                 \
+        DWORD WINAPI foo_##_this (void *a)                        \
+        {                                                         \
+          struct thread_arg args = *(struct thread_arg*) a;       \
+                                                                  \
+          trace_printf ("%s() called from line %u.\n",            \
+                        __FUNCTION__, args.line);                 \
+          args.line = __LINE__; /* since this macro is 1 line! */ \
+          foo_##_next (&args);                                    \
+          return (0);                                             \
         }
 
 DWORD WINAPI foo_last (void *arg)

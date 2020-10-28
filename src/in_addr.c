@@ -51,7 +51,7 @@
  *  2001:800::
  * ```
  */
-BOOL IPv6_leading_zeroes = FALSE;
+int IPv6_leading_zeroes = FALSE;
 
 static const char hex_chars[] = "0123456789abcdef";
 

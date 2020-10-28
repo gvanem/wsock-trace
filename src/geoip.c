@@ -1061,8 +1061,8 @@ static void make_c_list (struct country_list **list_p,
                   "  ------------------------------------------------------------\n",
                   list_name);
     for (i = 0; i < DIM(c_list); i++, list++)
-        trace_printf ("  %3d: %5d  %c%c  %-10s  %s\n",
-                      i, list->country_number,
+        trace_printf ("  %3u: %5d  %c%c  %-10s  %s\n",
+                      (UINT)i, list->country_number,
                       toupper(list->short_name[0]), toupper(list->short_name[1]),
                       geoip_get_continent_name(list->continent), list->long_name);
   }
@@ -1834,7 +1834,7 @@ static void test_addr_common (const char            *addr_str,
      *  Truncate to 20 thus becoming `United States Minor`.
      */
     snprintf (buf1, sizeof(buf1),
-              "%-2s, %-20.20s %-30.30s",
+              "%-2s, %-20.20s %-40.40s",
               cc, geoip_get_long_name_by_A2(cc), location);
     snprintf (buf2, sizeof(buf2), "unique: %d", geoip_stats_is_unique(cc,flag));
   }
@@ -1900,7 +1900,7 @@ static void test_addr_common (const char            *addr_str,
     else trace_printf ("  URL:  <none>\n");
   }
 
-  if (g_cfg.IANA.enable || g_cfg.ASN.enable )
+  if (g_cfg.IANA.enable || g_cfg.ASN.enable)
   {
     struct IANA_record rec;
 
@@ -2205,6 +2205,7 @@ int main (int argc, char **argv)
   ASN_init();
 
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
+  g_cfg.trace_time_format = TS_RELATIVE;
 
   while ((c = getopt (argc, argv, "h?cdfin:ru46")) != EOF)
     switch (c)
