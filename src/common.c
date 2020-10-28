@@ -49,6 +49,9 @@ HINSTANCE ws_trace_base;        /* Our base-address */
 
 int trace_binmode = 0;
 
+void (__stdcall *g_WSASetLastError)(int err) = NULL;
+int  (__stdcall *g_WSAGetLastError)(void) = NULL;
+
 /*
  * A cache of file-names with true casing as returned from
  * 'GetLongPathName()'. Use a 32-bit CRC value to lookup an
@@ -1613,7 +1616,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
   return (rc);
 }
 
-int _setenv (const char *env, const char *val, int overwrite)
+int _ws_setenv (const char *env, const char *val, int overwrite)
 {
 #if defined(__CYGWIN__) || defined(__WATCOMC__)
   int rc = setenv (env,  val, overwrite);
@@ -1800,10 +1803,12 @@ const char *get_dll_full_name (void)
  *   "wsock_trace_cyg.dll"      for 32-bit CygWin
  *   "wsock_trace_cyg_x64.dll"  for 64-bit CygWin
  *   "wsock_trace_ow.dll"       for 32-bit OpenWatcom
+
+ * And an extra `"_d"` (before `".dll"`) for a CRT-DEBUG version.
  */
 const char *get_dll_short_name (void)
 {
-  return (RC_BASENAME RC_SUFFIX ".dll");
+  return (RC_BASENAME RC_CPU_SUFFIX RC_DBG_SUFFIX ".dll");
 }
 
 const char *get_dll_build_date (void)

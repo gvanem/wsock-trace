@@ -60,7 +60,6 @@
  */
 int volatile cleaned_up = 0;
 int volatile startup_count = 0;
-void (__stdcall *g_WSASetLastError)(int err) = NULL; /* Not used yet */
 
 static BOOL    exclude_this = FALSE;
 static fd_set *last_rd_fd = NULL;
@@ -529,6 +528,7 @@ void load_ws2_funcs (void)
   load_dynamic_table (dyn_funcs, DIM(dyn_funcs));
 
   g_WSASetLastError = p_WSASetLastError;
+  g_WSAGetLastError = p_WSAGetLastError;
 
   if (p_RtlCaptureStackBackTrace == NULL)
       g_cfg.trace_caller = 0;
@@ -3430,9 +3430,9 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          g_cfg.counts.dll_attach++;
          reason_str = "DLL_THREAD_ATTACH";
 
-         /* \todo:
-          *   Add this 'tid' as a new thread to a 'smartlist_t' and call 'print_thread_times()'
-          *   for it when 'DLL_PROCESS_DETACH' is received.
+         /** \todo
+          *  Add this `tid` as a new thread to a `smartlist_t` and call `print_thread_times()`
+          *  for it when `DLL_PROCESS_DETACH` is received.
           */
 #if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);
@@ -3449,10 +3449,10 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
            print_thread_times (hnd);
          }
-         /* \todo:
-          *   Instead of calling 'print_thread_times()' here, add this 'tid' as
-          *   dying thread and call 'print_thread_times()' for all threads (alive or dead) when
-          *   'DLL_PROCESS_DETACH' is received.
+         /** \todo
+          *  Instead of calling `print_thread_times()` here, add this `tid` as
+          *  dying thread and call `print_thread_times()` for all threads (alive or dead) when
+          *  `DLL_PROCESS_DETACH` is received.
           */
 #if defined(USE_LUA)
          rc = wslua_DllMain (instDLL, reason);

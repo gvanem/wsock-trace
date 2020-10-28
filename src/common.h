@@ -112,6 +112,7 @@
   typedef int  (__stdcall *LPCONDITIONPROC) (WSABUF*, WSABUF*, QOS*, QOS*, WSABUF*, WSABUF*, GROUP *, DWORD_PTR);
 
 #elif !defined(__WATCOMC__)
+  #undef  WINSOCK_API_LINKAGE
   #define WINSOCK_API_LINKAGE  EXPORT
 #endif
 
@@ -237,6 +238,9 @@ extern char        curr_prog [MAX_PATH];
 extern char        prog_dir  [MAX_PATH];
 extern HINSTANCE   ws_trace_base;        /* Our base-address */
 
+extern void (__stdcall *g_WSASetLastError)(int err);
+extern int  (__stdcall *g_WSAGetLastError)(void);
+
 extern char       *ws_strerror (DWORD err, char *buf, size_t len);
 extern char       *win_strerror (DWORD err);
 extern char       *basename (const char *fname);
@@ -277,7 +281,7 @@ extern char * _strrepeat (int ch, size_t num);
 extern char * _strreverse (char *str);
 extern char * _utoa10w (int value, int width, char *buf);
 extern char * getenv_expand (const char *variable, char *buf, size_t size);
-extern int    _setenv (const char *env, const char *val, int overwrite);
+extern int    _ws_setenv (const char *env, const char *val, int overwrite);
 extern FILE * fopen_excl (const char *file, const char *mode);
 extern int    file_exists (const char *fname);
 
