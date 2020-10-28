@@ -62,7 +62,7 @@ static int log_priority(const char* priority) {
 
 	int prio = strtol(priority, &endptr, 10);
 
-	if (endptr[0] == '\0' || isspace(endptr[0]))
+	if (endptr[0] == '\0' || isspace((int)endptr[0]))
 		return prio;
 
 	if (strncmp(priority, "err", 3) == 0)

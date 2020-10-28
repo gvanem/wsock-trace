@@ -469,6 +469,10 @@ static const char *get_file_flags (flagword flags)
   return flags_decode (flags, file_flgs, DIM(file_flgs));
 }
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 static const char *get_sym_flags (flagword flags)
 {
   return flags_decode (flags & ~BSF_NOT_AT_END, sym_flgs, DIM(sym_flgs));
@@ -562,7 +566,6 @@ static int find_address_in_section (struct BFD_table   *BFD,
 
 int BFD_get_function_name (bfd_vma address, char *ret_buf, size_t buf_size)
 {
-  static char buf[300];
   struct BFD_table *BFD = BFD_table;
   int    i;
 

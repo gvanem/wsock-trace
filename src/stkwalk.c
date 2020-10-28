@@ -1621,6 +1621,11 @@ BOOL StackWalkInit (void)
 
 static char ret_buf [MAX_NAMELEN+100];
 
+#if defined(__GNUC__)
+  #pragma GCC diagnostic ignored  "-Wunused-variable"
+  #pragma GCC diagnostic ignored  "-Wunused-but-set-variable"
+#endif
+
 static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
                                      STACKFRAME64 *stk, CONTEXT *ctx)
 {

@@ -14,12 +14,34 @@
 #include "iana.h"
 #include "asn.h"
 
-#ifdef USE_LIBLOC
+#ifdef USE_LIBLOC  /* todo: '#if !defined(__WATCOMC__)' */
+  #if defined(__CYGWIN__) && !defined(_WIN32)
+  #define _WIN32
+  #endif
+
   #include <loc/libloc.h>
   #include <loc/database.h>
   #include <loc/network.h>
   #include <loc/resolv.h>
-  #include <loc/windows/syslog.h>
+
+  #if defined(__CYGWIN__)
+    #include <syslog.h>     /* LOG_DEBUG */
+  #else
+    #include <loc/windows/syslog.h>
+  #endif
+
+  /*
+   * Ignore some MinGW/gcc warnings below.
+   */
+  #if defined(__MINGW32__)
+    #pragma GCC diagnostic ignored  "-Wformat"             /* does not understand '%zu'! */
+    #pragma GCC diagnostic ignored  "-Wformat-extra-args"  /* ditto */
+  #endif
+
+  #if defined(__GNUC__)
+    #pragma GCC diagnostic ignored  "-Wstrict-aliasing"
+    #pragma GCC diagnostic ignored  "-Wmissing-braces"
+  #endif
 
   struct libloc_data {
          struct loc_ctx      *ctx;
@@ -54,8 +76,7 @@
 /**
  * Module global variables.
  */
-static DWORD g_num_asn, g_num_as_names;
-static DWORD g_num_compares;
+static u_long g_num_asn, g_num_as_names, g_num_compares;
 
 /**
  * A smartlist of `struct ASN_record`.
@@ -119,10 +140,6 @@ static size_t ASN_load_CSV_file (const char *file)
   ctx.file_name  = file;
   ctx.num_fields = 5;
   ctx.callback   = ASN_CSV_add;
-
-  #ifdef TEST_IANA
-  ctx.rec_max = rec_max;
-  #endif
 
   return CSV_open_and_parse_file (&ctx);
 }
@@ -199,7 +216,7 @@ static int ASN_compare_on_ip4 (const void *key, const void **member)
   return INET_util_range4cmp (&ipv4, &rec->ipv4.low, rec->prefix);
 }
 
-#ifdef USE_LIBLOC
+#ifdef USE_LIBLOC   /* todo: '#if !defined(__WATCOMC__)' */
 /**
  * Close the use of `libloc`.
  */
@@ -228,6 +245,7 @@ static int ASN_check_database (const char *local_db)
   time_t time_local_db = 0;
   time_t time_remote_db = 0;
   BOOL   older = FALSE;
+  char   hours_behind [50] = "";
 
   if (loc_discover_latest_version(libloc.ctx, LOC_DATABASE_VERSION_LATEST, &time_remote_db) != 0)
   {
@@ -240,6 +258,9 @@ static int ASN_check_database (const char *local_db)
   {
     time_local_db = st.st_mtime;
     older = (time_local_db < time_remote_db);
+    if (older)
+       snprintf (hours_behind, sizeof(hours_behind), " (%ld hours behind) ",
+                 (long)((time_remote_db - time_local_db) / 3600));
   }
 
   if (!url)
@@ -247,8 +268,8 @@ static int ASN_check_database (const char *local_db)
 
   TRACE (1, "IPFire's latest database time-stamp: %.24s (UTC)\n"
             "            It should be at: %s\n"
-            "            Your local database is %sup-to-date.\n",
-            ctime(&time_remote_db), url, older ? "not " : "");
+            "            Your local database is %sup-to-date.%s\n",
+            ctime(&time_remote_db), url, older ? "not " : "", hours_behind);
   return (1);
 }
 
@@ -267,7 +288,7 @@ static size_t ASN_load_bin_file (const char *file)
     return (0);
   }
 
-  TRACE (2, "Trying to open IPFire's database: \"%s\" .\n", file);
+  TRACE (2, "Trying to open IPFire's database: \"%s\".\n", file);
   libloc.file = fopen (file, "rb");
   if (!libloc.file)
   {
@@ -292,7 +313,7 @@ static size_t ASN_load_bin_file (const char *file)
   loc_set_log_priority (libloc.ctx, g_cfg.trace_level >= 2 ? LOG_DEBUG : 0);
 
   if (g_cfg.trace_level == 0)
-     _setenv ("LOC_LOG", "", 1);  /* Clear the 'libloc' internal trace-level */
+     _ws_setenv ("LOC_LOG", "", 1);  /* Clear the 'libloc' internal trace-level */
 
   if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_NUMBER"))
      ASN_check_database (file);
@@ -328,7 +349,7 @@ static size_t ASN_load_bin_file (const char *file)
             "  Vendor:      %s\n"
             "  Created:     %.24s\n"
             "  num_AS:      %zu\n\n",
-         len, descr, licence, vendor, ctime(&created), num_AS);
+         (int)len, descr, licence, vendor, ctime(&created), num_AS);
   libloc.num_AS = num_AS;
   return (num_AS);
 }
@@ -346,19 +367,22 @@ static size_t ASN_load_bin_file (const char *file)
 /**
  * Internal functoion called from `ASN_libloc_print()`.
  */
-static BOOL libloc_handle_net (struct loc_network    *net,
-                               const struct in_addr  *ip4,
-                               const struct in6_addr *ip6)
+static int libloc_handle_net (struct loc_network    *net,
+                              const struct in_addr  *ip4,
+                              const struct in6_addr *ip6)
 {
-  struct loc_as *as = NULL;
-  const  struct _loc_network *_net = (struct _loc_network*) net;
-  char   _prefix_str [10];
-  char   _net_name [MAX_IP6_SZ+1+4];
-  int    _prefix = _net->prefix;
-  const  char *net_name;
-  int    rc = 0;
-  DWORD  AS_num;
-  BOOL   is_anycast, is_anon_proxy, sat_provider; // , is_tor_exit = 0;
+  struct loc_as       *as = NULL;
+  struct _loc_network *_net = (struct _loc_network*) net;
+  char                 _prefix_str [10];
+  char                 _net_name [MAX_IP6_SZ+1+4];
+  int                  _prefix = _net->prefix;
+  const char          *net_name;
+  const char          *remark;
+  const char          *AS_name;
+  char                 attributes [100] = "";
+  int                  rc = 0;
+  uint32_t             AS_num;
+  BOOL                 is_anycast, is_anon_proxy, sat_provider; //, is_tor_exit /* some day */ ;
 
   if (ip4)
      _prefix -= 96;
@@ -378,51 +402,48 @@ static BOOL libloc_handle_net (struct loc_network    *net,
   sat_provider  = (loc_network_has_flag (net, LOC_NETWORK_FLAG_SATELLITE_PROVIDER) != 0);
 //is_tor_exit   = (loc_network_has_flag (net, LOC_NETWORK_FLAG_TOR_EXIT) != 0);
 
-  if (AS_num)
+  /* Since a Teredo address is valid here, maybe other blocks have an AS_num too?
+   */
+  INET_util_addr_is_special (ip4, ip6, &remark);
+
+  if (AS_num > 0)
   {
-    const char *remark = NULL;
-    const char *AS_name;
-    char        attributes [100] = "";
-
-    /* Since a Teredo address is valid here, maybe other blocks have an AS_num too?
-     */
-    INET_util_addr_is_special (ip4, ip6, &remark);
-
     g_num_asn++;   /**< \todo This should be a count of unique ASN */
-
     rc = loc_database_get_as (libloc.db, &as, AS_num);
-    if (rc == 0)
-    {
-      AS_name = as ? loc_as_get_name (as) : NULL;
-      if (!AS_name)
-           AS_name = "<Unknown>";
-      else g_num_as_names++;   /**< \todo This should be a count of unique AS-names */
-    }
-    else
-    {
-      TRACE (2, "No data for AS%lu, err: %d/%s.\n", AS_num, -rc, strerror(-rc));
-      AS_name = "<unknown>";
-    }
-
-    if (remark)
-    {
-      strcat (attributes, ", ");
-      strcat (attributes, remark);
-    }
-
-    if (is_anycast)
-       strcat (attributes, ", Anycast");
-    if (is_anon_proxy)
-       strcat (attributes, ", Anonymous Proxy");
-    if (sat_provider)
-       strcat (attributes, ", Satellite Provider");
-
-    trace_printf ("%lu, name: %.*s, net: %s%s\n", AS_num, ASN_MAX_NAME-30, AS_name, net_name, attributes);
-
-    if (as)
-       loc_as_unref (as);
-    rc = 1;
   }
+
+  if (rc == 0 && as)
+  {
+    AS_name = as ? loc_as_get_name (as) : NULL;
+    if (!AS_name)
+         AS_name = "<Unknown>";
+    else g_num_as_names++;   /**< \todo This should be a count of unique AS-names */
+  }
+  else
+  {
+    TRACE (2, "No data for AS%u, err: %d/%s.\n", AS_num, -rc, strerror(-rc));
+    AS_name = "<unknown>";
+  }
+
+  if (remark)
+  {
+    strcat (attributes, ", ");
+    strcat (attributes, remark);
+  }
+
+  if (is_anycast)
+     strcat (attributes, ", Anycast");
+  if (is_anon_proxy)
+     strcat (attributes, ", Anonymous Proxy");
+  if (sat_provider)
+     strcat (attributes, ", Satellite Provider");
+
+  trace_printf ("%u, name: %.*s, net: %s%s\n", AS_num, ASN_MAX_NAME-30, AS_name, net_name, attributes);
+
+  if (as)
+     loc_as_unref (as);
+  rc = 1;
+
   return (rc);
 }
 
@@ -516,7 +537,6 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   {
     rc = libloc_handle_net (net, ip4, ip6);
     loc_network_unref (net);
-
   }
   else
   {
@@ -556,7 +576,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   ARGSUSED (ip6);
   return (0);
 }
-#endif
+#endif /* 'USE_LIBLOC'. todo: '#if !defined(__WATCOMC__)' */
 
 /**
  * Find and print the ASN information for an IPv4 address.
@@ -571,13 +591,10 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
   const struct ASN_record *rec;
   int   i;
 
-  trace_puts (intro);
-
   if (ip6 || !ASN_entries)
-  {
-    trace_puts ("<no info>\n");
-    return;
-  }
+     return;
+
+  trace_puts (intro);
   if (!stricmp(iana->status, "RESERVED"))
   {
     trace_puts ("<reserved>\n");
@@ -586,7 +603,7 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
 
   g_num_compares = 0;
   rec = smartlist_bsearch (ASN_entries, ip4, ASN_compare_on_ip4);
-  TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+  TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
 
   if (!rec)
      trace_puts ("<no data>\n");
@@ -659,7 +676,6 @@ void ASN_exit (void)
 void ASN_report (void)
 {
   trace_printf ("\n  ASN statistics:\n"
-                "    Got %lu ASN-numbers, %lu AS-names.\n",
-                DWORD_CAST(g_num_asn), DWORD_CAST(g_num_as_names));
+                "    Got %lu ASN-numbers, %lu AS-names.\n", g_num_asn, g_num_as_names);
 }
 

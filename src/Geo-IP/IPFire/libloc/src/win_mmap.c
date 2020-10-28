@@ -3,12 +3,14 @@
 #include <sys/mman.h>
 #include <syslog.h>
 #include <io.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <windows.h>
 
+#undef  DIM
+#define DIM(arr)     (sizeof(arr) / sizeof(arr[0]))
 #define DWORD_HI(x)  ((uint64_t)(x) >> 32)
 #define DWORD_LO(x)  ((x) & 0xffffffff)
-#define DIM(arr)     (sizeof(arr) / sizeof(arr[0]))
 
 static int debug = -1;
 static SYSTEM_INFO si;
@@ -101,13 +103,8 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
     }
   }
 
-#if 0
-  if (handle && handle != INVALID_HANDLE_VALUE)
-     CloseHandle (handle);
-#endif
-
+  SetLastError (0); /* clear any possible error from above */
   rval = mmap_remember (map, poffset, handle);
-  SetLastError (0);
 
 #ifdef EXTRA_DEBUG_PARANOIA
   if (!debug)
@@ -117,7 +114,7 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
            "%s(%u):\n"
            "   pstart: %lld, poffset: %lld, psize: %lld, length: %zu, fd: %d, offset: %ld,\n"
            "   err1: %lu, err2: %lu  -> map: 0x%p, 0x%p\n",
-           fname, line, pstart, poffset, psize, length, fd, offset, err1, err2, map, rval);
+           fname, line, pstart, poffset, psize, length, fd, (long int)offset, err1, err2, map, rval);
 
   /* Now for the paranoia:
    *
