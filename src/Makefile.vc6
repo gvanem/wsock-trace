@@ -35,7 +35,7 @@ LUAJIT_ROOT = ..\LuaJIT
 #
 # Support for IPFire's 'libloc' library:
 #
-LIBLOC_ROOT = .\Geo-IP\IPFire\libloc
+LIBLOC_ROOT = .\Geo-IP\IPFire\src
 
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
 # Developer Command Prompt or set '%CPU%=x64' to build a 64-bit version.
@@ -94,7 +94,7 @@ EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
-CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src
+CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)
 EX_LIBS   = $(EX_LIBS)   libloc$(X_SUFFIX)$(_D).lib dnsapi.lib ole32.lib
 WSOCK_DEP = $(WSOCK_DEP) libloc$(X_SUFFIX)$(_D).lib
 
@@ -346,11 +346,11 @@ $(OBJ_DIR)\geoip_1.obj: geoip.c
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/src/loc/windows  \
-                -I$(LIBLOC_ROOT)/src/fake-OpenSSL \
-                -FI$(LIBLOC_ROOT)/src/fake-OpenSSL/openssl/applink.c
+LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/loc/windows  \
+                -I$(LIBLOC_ROOT)/fake-OpenSSL \
+                -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
-{$(LIBLOC_ROOT)\src}.c{$(OBJ_DIR)}.obj:
+{$(LIBLOC_ROOT)}.c{$(OBJ_DIR)}.obj:
 	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo$*.obj $<
 	@echo
 
@@ -381,19 +381,19 @@ wsock_trace_d.def: wsock_trace.def Makefile.VC6
 
 common.h: wsock_defs.h
 
-$(OBJ_DIR)/asn.obj: asn.c common.h in_addr.h common.h   \
-                    csv.h smartlist.h inet_util.h       \
-                    in_addr.h init.h iana.h asn.h       \
-                    $(LIBLOC_ROOT)/src/loc/libloc.h     \
-                    $(LIBLOC_ROOT)/src/loc/compat.h     \
-                    $(LIBLOC_ROOT)/src/loc/database.h   \
-                    $(LIBLOC_ROOT)/src/loc/network.h    \
-                    $(LIBLOC_ROOT)/src/loc/format.h     \
-                    $(LIBLOC_ROOT)/src/loc/as.h         \
-                    $(LIBLOC_ROOT)/src/loc/stringpool.h \
-                    $(LIBLOC_ROOT)/src/loc/country.h    \
-                    $(LIBLOC_ROOT)/src/loc/resolv.h     \
-                    $(LIBLOC_ROOT)/src/loc/windows/syslog.h
+$(OBJ_DIR)/asn.obj: asn.c common.h in_addr.h common.h \
+                    csv.h smartlist.h inet_util.h     \
+                    in_addr.h init.h iana.h asn.h     \
+                    $(LIBLOC_ROOT)/loc/libloc.h       \
+                    $(LIBLOC_ROOT)/loc/compat.h       \
+                    $(LIBLOC_ROOT)/loc/database.h     \
+                    $(LIBLOC_ROOT)/loc/network.h      \
+                    $(LIBLOC_ROOT)/loc/format.h       \
+                    $(LIBLOC_ROOT)/loc/as.h           \
+                    $(LIBLOC_ROOT)/loc/stringpool.h   \
+                    $(LIBLOC_ROOT)/loc/country.h      \
+                    $(LIBLOC_ROOT)/loc/resolv.h       \
+                    $(LIBLOC_ROOT)/loc/windows/syslog.h
 
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
 $(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h

@@ -79,9 +79,9 @@ ifeq ($(USE_BFD),1)
   endif
 endif
 
-LIBLOC_ROOT = ./Geo-IP/IPFire/libloc
+LIBLOC_ROOT = ./Geo-IP/IPFire/src
 LIBLOC_LIB  = libloc_mw.a
-CFLAGS     += -I$(LIBLOC_ROOT)/src
+CFLAGS     += -I$(LIBLOC_ROOT)
 EX_LIBS    += -lole32 -ladvapi32 -ldnsapi
 
 WSOCK_DLL = wsock_trace_mw$(X_SUFFIX)$(_D).dll
@@ -129,25 +129,25 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
 #
 # .c and .o-files for '$(LIBLOC_LIB).
 #
-LIBLOC_SRC = $(addprefix $(LIBLOC_ROOT)/src/, \
-               as.c                           \
-               country.c                      \
-               database.c                     \
-               libloc.c                       \
-               network.c                      \
-               resolv.c                       \
-               stringpool.c                   \
-               writer.c                       \
-               win_str.c                      \
+LIBLOC_SRC = $(addprefix $(LIBLOC_ROOT)/, \
+               as.c                       \
+               country.c                  \
+               database.c                 \
+               libloc.c                   \
+               network.c                  \
+               resolv.c                   \
+               stringpool.c               \
+               writer.c                   \
+               win_str.c                  \
                win_mmap.c)
 
 LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
                $(notdir $(LIBLOC_SRC:.c=.o)) )
 
-LIBLOC_CFLAGS = -I.                               \
-                -I$(LIBLOC_ROOT)/src/fake-OpenSSL \
-                -I$(LIBLOC_ROOT)/src/loc/windows  \
-                --include $(LIBLOC_ROOT)/src/fake-OpenSSL/openssl/applink.c
+LIBLOC_CFLAGS = -I.                           \
+                -I$(LIBLOC_ROOT)/fake-OpenSSL \
+                -I$(LIBLOC_ROOT)/loc/windows  \
+                --include $(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
 all: message $(OBJ_DIR) $(WSOCK_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
 	$(call green_msg, Welcome to Wsock_trace library and examples.)
@@ -235,7 +235,7 @@ $(OBJ_DIR)/init_1.o: init.c
 	$(CC) -c -o $@ $(CFLAGS) -DTEST_GEOIP $<
 	@echo
 
-$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/src/%.c
+$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c
 	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -o $@ $<
 	@echo
 
