@@ -49,11 +49,13 @@
 #endif
 
 #if defined(DEBUG) && (DEBUG > 0)
-  #define RC_DBG_REL "debug"
-  #define FILE_FLG   1
+  #define RC_DBG_REL     "debug"
+  #define RC_DBG_SUFFIX  "_d"
+  #define FILE_FLG       1
 #else
-  #define RC_DBG_REL  "release"
-  #define FILE_FLG    0
+  #define RC_DBG_REL     "release"
+  #define RC_DBG_SUFFIX  ""
+  #define FILE_FLG       0
 #endif
 
 #if (IS_WIN64 == 1) && !defined(BITNESS) && !defined(RC_INVOKED)
@@ -61,14 +63,14 @@
 #endif
 
 #if defined(BITNESS) && (BITNESS == 64)
-  #define RC_BITNESS "64-bit"
-  #define RC_SUFFIX  "_x64"
+  #define RC_BITNESS     "64-bit"
+  #define RC_CPU_SUFFIX  "_x64"
 #else
-  #define RC_BITNESS "32-bit"
-  #define RC_SUFFIX  ""
+  #define RC_BITNESS     "32-bit"
+  #define RC_CPU_SUFFIX  ""
 #endif
 
-#define RC_DLL_NAME RC_BASENAME RC_SUFFIX
+#define RC_DLL_NAME RC_BASENAME RC_CPU_SUFFIX RC_DBG_SUFFIX
 
 /**
  * Since this file is also included from `common.c` and `wsock_trace_lua.c`,

@@ -4,7 +4,7 @@
 #
 # G. Vanem <gvanem@yahoo.no> 2011 - 2020.
 #
-USE_CRT_DEBUG ?= 0
+USE_CRT_DEBUG ?= 1
 USE_BFD       ?= 0
 
 #
@@ -29,21 +29,23 @@ OBJ_DIR = Cygwin_obj
 #
 CHECK_MACHINE = $(shell gcc -dumpmachine)
 
-ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
-  WSOCK_TRACE_A   = libwsock_trace_cyg.a
-  WSOCK_TRACE_DLL = wsock_trace_cyg.dll
-  CYG_VER         = 32-bit
-else
-  WSOCK_TRACE_A   = libwsock_trace_cyg_x64.a
-  WSOCK_TRACE_DLL = wsock_trace_cyg_x64.dll
-  CYG_VER         = 64-bit
-endif
-
 ifeq ($(USE_CRT_DEBUG),1)
   CFLAGS += -O0 -ggdb
+  _D = _d
 else
   CFLAGS  += -O3 -fomit-frame-pointer
   LDFLAGS += -s
+  _D =
+endif
+
+ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
+  WSOCK_LIB = libwsock_trace_cyg$(_D).a
+  WSOCK_DLL = wsock_trace_cyg$(_D).dll
+  CYG_VER   = 32-bit
+else
+  WSOCK_LIB = libwsock_trace_cyg_x64$(_D).a
+  WSOCK_DLL = wsock_trace_cyg_x64$(_D).dll
+  CYG_VER   = 64-bit
 endif
 
 ifeq ($(USE_BFD),1)
@@ -52,14 +54,38 @@ ifeq ($(USE_BFD),1)
 endif
 
 ifeq ($(USE_LUA),1)
-  CFLAGS += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+  CFLAGS    += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit.a
+else
+  LUAJIT_LIB =
 endif
 
-EX_LIBS += -lole32 -ladvapi32
+LIBLOC_ROOT = ./Geo-IP/IPFire/libloc
+LIBLOC_LIB  = libloc_cyg$(_D).a
+CFLAGS     += -DUSE_LIBLOC -I$(LIBLOC_ROOT)/src
+EX_LIBS    += -ldnsapi -lole32 -ladvapi32
 
-SOURCES = wsock_trace.c wsock_trace_lua.c hosts.c idna.c inet_util.c init.c \
-          common.c cpu.c csv.c dnsbl.c dump.c firewall.c geoip.c asn.c \
-          iana.c in_addr.c ip2loc.c overlap.c smartlist.c stkwalk.c bfd_gcc.c
+SOURCES = asn.c         \
+          bfd_gcc.c     \
+          common.c      \
+          cpu.c         \
+          csv.c         \
+          dnsbl.c       \
+          dump.c        \
+          firewall.c    \
+          geoip.c       \
+          hosts.c       \
+          iana.c        \
+          idna.c        \
+          in_addr.c     \
+          inet_util.c   \
+          init.c        \
+          ip2loc.c      \
+          overlap.c     \
+          smartlist.c   \
+          stkwalk.c     \
+          wsock_trace.c \
+          wsock_trace_lua.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
@@ -78,7 +104,29 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
               ip2loc.o               \
               smartlist.o)
 
-all: message $(OBJ_DIR) $(WSOCK_TRACE_A) geoip.exe test.exe idna.exe firewall_test.exe
+#
+# .o-files for '$(LIBLOC_LIB).
+#
+# Must use 'win_mmap.c' even for Cygwin since using the normal 'mmap()'
+# doesn't work in 'libloc'. Do not ask me why.
+#
+LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
+               as.o                   \
+               country.o              \
+               database.o             \
+               libloc.o               \
+               network.o              \
+               resolv.o               \
+               stringpool.o           \
+               writer.o               \
+               win_mmap.o)
+
+LIBLOC_CFLAGS = -I.                               \
+                -I$(LIBLOC_ROOT)/src/fake-OpenSSL \
+                -I$(LIBLOC_ROOT)/src/loc/windows  \
+                --include $(LIBLOC_ROOT)/src/fake-OpenSSL/openssl/applink.c
+
+all: message $(OBJ_DIR) $(WSOCK_LIB) geoip.exe test.exe idna.exe firewall_test.exe
 	$(call green_msg, Welcome to Wsock_trace library and example.)
 
 comma := ,
@@ -90,40 +138,40 @@ message:
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
 
-$(WSOCK_TRACE_A): $(WSOCK_TRACE_DLL)
+$(WSOCK_LIB): $(WSOCK_DLL)
 
-ifeq ($(USE_LUA),1)
-$(WSOCK_TRACE_DLL): $(OBJECTS) $(NON_EXPORT_OBJ) $(LUAJIT_ROOT)/src/libluajit.a
+$(WSOCK_DLL): $(OBJECTS) $(NON_EXPORT_OBJ) $(LUAJIT_LIB) $(LIBLOC_LIB)
 	$(call green_msg, Linking $@.)
-	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_TRACE_A) -o $@ $(OBJECTS) $(LUAJIT_ROOT)/src/libluajit.a $(EX_LIBS) > $(WSOCK_TRACE_DLL:.dll=.map)
-	ar rs $(WSOCK_TRACE_A) $(NON_EXPORT_OBJ)
+	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_LIB) -o $@ $(OBJECTS) $(LUAJIT_LIB) $(LIBLOC_LIB) $(EX_LIBS) > $(WSOCK_DLL:.dll=.map)
+	ar rs $(WSOCK_LIB) $(NON_EXPORT_OBJ)
 	@echo
-else
-$(WSOCK_TRACE_DLL): $(OBJECTS) $(NON_EXPORT_OBJ)
-	$(call green_msg, Linking $@.)
-	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_TRACE_A) -o $@ $(OBJECTS) $(EX_LIBS) > $(WSOCK_TRACE_DLL:.dll=.map)
-	ar rs $(WSOCK_TRACE_A) $(NON_EXPORT_OBJ)
-	@echo
-endif
 
-install: $(WSOCK_TRACE_A) $(WSOCK_TRACE_DLL)
-	cp --update $(WSOCK_TRACE_A)   $(LIB_TARGET)
-	cp --update $(WSOCK_TRACE_DLL) $(BIN_TARGET)
+install: $(WSOCK_LIB) $(WSOCK_DLL)
+	cp --update $(WSOCK_LIB)  $(LIB_TARGET)
+	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
-test.exe: $(OBJ_DIR)/test.o $(WSOCK_TRACE_A)
+test.exe: $(OBJ_DIR)/test.o $(WSOCK_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
 	@echo
 
-idna.exe: idna.c common.c smartlist.c $(WSOCK_TRACE_A)
+csv.exe: csv.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_CSV $^ > csv.map
+	@echo
+
+iana.exe: asn.c common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c $(LIBLOC_LIB)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -ldnsapi -lole32 -ladvapi32 > iana.map
+	@echo
+
+idna.exe: idna.c common.c smartlist.c $(WSOCK_LIB)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
-firewall_test.exe: asn.c common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -lole32 -ladvapi32 -lwinmm > firewall_test.map
+firewall_test.exe: asn.c common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c $(LIBLOC_LIB)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -ldnsapi -lole32 -ladvapi32 -lwinmm > firewall_test.map
 	@echo
 
-geoip.exe: $(GEOIP_OBJ)
-	$(CC) -o $@ $(LDFLAGS) $^ -lws2_32 -lole32 > geoip.map
+geoip.exe: $(GEOIP_OBJ) $(LIBLOC_LIB)
+	$(CC) -o $@ $(LDFLAGS) $^ -lws2_32 -ldnsapi -lole32 > geoip.map
 	@echo
 
 $(OBJ_DIR)/init_1.o: init.c
@@ -132,6 +180,10 @@ $(OBJ_DIR)/init_1.o: init.c
 
 $(OBJ_DIR)/geoip_1.o: geoip.c
 	$(CC) -c $(CFLAGS) -o $@ -DTEST_GEOIP $<
+	@echo
+
+$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/src/%.c
+	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -o $@ $<
 	@echo
 
 $(OBJ_DIR)/%.o: %.c
@@ -151,27 +203,36 @@ cyg-ver.exe: cyg-ver.c
 print_cyg-ver: cyg-ver.exe
 	$(call green_msg, $(shell ./cyg-ver.exe))
 
-#
-# Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
-#
-$(LUAJIT_ROOT)/src/libluajit.a:
+$(LIBLOC_LIB): $(LIBLOC_OBJ)
+	$(call green_msg, Creating $@)
+	ar rs $@ $^
+	@echo
+
+ifeq ($(USE_LUA),1)
+  #
+  # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
+  #
+$(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
 	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a $(LUAJIT_EXTRAS)
 	@echo
 
-clean:
-	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
-ifeq ($(USE_LUA),1)
+clean_lua:
 	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
-	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o
-	 - rm -f $(LUAJIT_ROOT)/src/libluajit*.a
+	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB)
+else
+
+clean_lua: ;
 endif
 
+clean: clean_lua
+	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
+
 vclean realclean: clean
-	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map \
-	      idna.exe idna.map geoip.exe geoip.map test.exe test.map \
-	      firewall_test.exe firewall_test.map cyg-ver.exe cyg-ver.map \
-	      .depend.CygWin
+	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map   \
+	      csv.exe csv.map iana.exe iana.map idna.exe idna.map           \
+	      geoip.exe geoip.map test.exe test.map cyg-ver.exe cyg-ver.map \
+	      firewall_test.exe firewall_test.map .depend.CygWin $(LIBLOC_LIB)
 	- rmdir $(OBJ_DIR)
 
 machine_test:
@@ -197,9 +258,9 @@ yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 $(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
 	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
 
-REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
+DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
 depend:
-	$(CC) -M $(CFLAGS) $(SOURCES) non-export.c test.c | $(REPLACE) > .depend.CygWin
+	$(CC) -M $(CFLAGS) $(SOURCES) non-export.c test.c | $(DEP_REPLACE) > .depend.CygWin
 
 -include .depend.CygWin

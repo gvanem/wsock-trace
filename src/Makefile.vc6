@@ -20,23 +20,21 @@ USE_CRT_DEBUG = 0
 USE_DEF_FILE = 1
 !endif
 
-!if "$(USE_LIBLOC)" == ""
-USE_LIBLOC = 1
-!endif
-
 #
 # Support for Lua-scripting:
+# But we cannot mix objects compiled with both '-MDd' and '-MD'.
 #
 !if "$(USE_LUA)" == "1"
 LUAJIT_ROOT = ..\LuaJIT
+!if "$(USE_CRT_DEBUG)" == "1"
+!error "Cannot have 'USE_LUA=1' with 'USE_CRT_DEBUG=1'."
+!endif
 !endif
 
 #
 # Support for IPFire's 'libloc' library:
 #
-!if "$(USE_LIBLOC)" == "1"
 LIBLOC_ROOT = .\Geo-IP\IPFire\libloc
-!endif
 
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
 # Developer Command Prompt or set '%CPU%=x64' to build a 64-bit version.
@@ -63,29 +61,29 @@ BIN_TARGET = $(VSINSTALLDIR)\bin
 
 #
 # Configurations:
-#  -MD   - msvcrt1*.dll,  threads, release (normal)
-#  -MDd  - msvcrt1*d.dll, threads, debug
-#  -ML   - libc, no threads,  release (not available on VC-2008+)
-#  -MLd  - libc, no threads,  debug   (not available on VC-2008+)
-#  -MT   - libc, threads,     release
-#  -MTd  - libc, threads,     debug
-
+#  -MD   - vcruntime140.dll,  threads, release (normal)
+#  -MDd  - vcruntime140d.dll, threads, debug
+#  -MT   - libc, threads, release
+#  -MTd  - libc, threads, debug
+#
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
 LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console
-LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:uuid.lib,oldnames.lib
+LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:uuid.lib
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
 !if "$(USE_CRT_DEBUG)" == "1"
 CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
+_D = _d
 !else
 CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
+_D =
 !endif
 
 !if "$(USE_DEF_FILE)" == "1"
 CFLAGS      = $(CFLAGS) -DUSE_DEF_FILE
-WSOCK_DEF   = wsock_trace$(X_SUFFIX).def
+WSOCK_DEF   = wsock_trace$(X_SUFFIX)$(_D).def
 LDFLAGS_DEF = -def:$(WSOCK_DEF)
 !endif
 
@@ -95,13 +93,9 @@ EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
-!if "$(USE_LIBLOC)" == "1"
 CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DUSE_LIBLOC
-EX_LIBS   = $(EX_LIBS)   libloc.lib dnsapi.lib
-WSOCK_DEP = $(WSOCK_DEP) libloc.lib
-!endif
-
-EX_LIBS = $(EX_LIBS) ole32.lib
+EX_LIBS   = $(EX_LIBS)   libloc$(_D).lib dnsapi.lib ole32.lib
+WSOCK_DEP = $(WSOCK_DEP) libloc$(_D).lib
 
 #
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
@@ -109,8 +103,8 @@ EX_LIBS = $(EX_LIBS) ole32.lib
 # declaration ('in6addr_any' etc.), the non-export.obj is simply added to this
 # imp-lib.
 #
-WSOCK_TRACE_LIB = wsock_trace$(X_SUFFIX).lib
-WSOCK_TRACE_DLL = wsock_trace$(X_SUFFIX).dll
+WSOCK_TRACE_LIB = wsock_trace$(X_SUFFIX)$(_D).lib
+WSOCK_TRACE_DLL = wsock_trace$(X_SUFFIX)$(_D).dll
 
 CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
 
@@ -202,7 +196,7 @@ IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
            $(OBJ_DIR)\smartlist.obj
 
 #
-# .obj-files for 'libloc.lib'.
+# .obj-files for 'libloc$(_D).lib'.
 #
 LIBLOC_OBJ = $(OBJ_DIR)\as.obj         \
              $(OBJ_DIR)\country.obj    \
@@ -247,6 +241,19 @@ csv.exe: $(OBJ_DIR)\csv_1.obj $(OBJ_DIR)\getopt.obj
 	@type link.tmp >> csv.map
 	@echo
 
+idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
+	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
+	@type link.tmp >> idna.map
+	@echo
+
+#
+# These does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
+#
+firewall_test.exe: $(FIREWALL_TEST_OBJ)
+	link.exe $(LDFLAGS) -verbose -out:$@ $** $(EX_LIBS) advapi32.lib ws2_32.lib winmm.lib > link.tmp
+	@type link.tmp >> firewall_test.map
+	@echo
+
 geoip.exe: $(GEOIP_OBJ)
 	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib $(EX_LIBS)
 	@echo
@@ -254,19 +261,6 @@ geoip.exe: $(GEOIP_OBJ)
 iana.exe: $(IANA_OBJ)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib $(EX_LIBS) > link.tmp
 	@type link.tmp >> iana.map
-	@echo
-
-idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
-	@type link.tmp >> idna.map
-	@echo
-
-#
-# This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
-#
-firewall_test.exe: $(FIREWALL_TEST_OBJ)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** $(EX_LIBS) advapi32.lib ws2_32.lib winmm.lib > link.tmp
-	@type link.tmp >> firewall_test.map
 	@echo
 
 run_test: test.exe
@@ -281,15 +275,13 @@ compile_luajit_1:
 	   msvcbuild.bat debug static &    \
 	   copy lua51.lib lua51_static.lib )
 
-libloc.lib: $(LIBLOC_OBJ)
-	lib -nologo -out:libloc.lib $(LIBLOC_OBJ)
+libloc$(_D).lib: $(LIBLOC_OBJ)
+	lib -nologo -out:libloc$(_D).lib $(LIBLOC_OBJ)
 	@echo
 
 clean:
 	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res test.map test.lib wsock_trace.appveyor
-!if "$(USE_LIBLOC)" == "1"
-	- del libloc.lib
-!endif
+	- del libloc.lib libloc_d.lib
 
 vclean realclean: clean
 	- del wsock_trace.lib     wsock_trace.dll     wsock_trace.map     wsock_trace.pdb
@@ -312,7 +304,6 @@ Run one of the following targets:
 where VAR can have of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
-  USE_LIBLOC       (default: $(USE_LIBLOC))
   USE_LUA          (default: $(USE_LUA))
   LUAJIT_ROOT      (default: $(LUAJIT_ROOT))
   LIBLOC_ROOT      (default: $(LIBLOC_ROOT))
@@ -356,31 +347,38 @@ $(OBJ_DIR)\geoip_1.obj: geoip.c
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = $(CFLAGS) -wd4101 -wd4146 -wd4244 -wd4267 \
-                -DLIBLOC_PRIVATE -DEXTRA_DEBUG_PARANOIA   \
-                -I$(LIBLOC_ROOT)/src/loc/windows          \
-                -I$(LIBLOC_ROOT)/src/fake-OpenSSL
+LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/src/loc/windows  \
+                -I$(LIBLOC_ROOT)/src/fake-OpenSSL \
+                -FI$(LIBLOC_ROOT)/src/fake-OpenSSL/openssl/applink.c
 
 {$(LIBLOC_ROOT)\src}.c{$(OBJ_DIR)}.obj:
-	$(CC) $(LIBLOC_CFLAGS) -Fo$*.obj -c $<
+	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo$*.obj $<
 	@echo
 
 #
 # The default fall-back rule for other .obj-files.
 #
 .c{$(OBJ_DIR)}.obj:
-	$(CC) $(CFLAGS) -Fo$*.obj -c $<
+	$(CC) -c $(CFLAGS) -Fo$*.obj $<
 	@echo
 
 #
-# Make a .def file for x64; remove the leading '_' and the
+# Make a .def file for x64 (release or debug); remove the leading '_' and the
 # '@x' suffixes.
 #
-wsock_trace_x64.def: wsock_trace.def Makefile.VC6
-	echo ; This file has been generated by Makefile.vc6. DO NOT EDIT! > wsock_trace_x64.def
-	echo ;                                                           >> wsock_trace_x64.def
-	sed -e "s/LIBRARY wsock_trace.dll/LIBRARY wsock_trace_x64.dll/"  \
-	    -e "s/^ _\(.*\)@.*/ \1/g" < wsock_trace.def                  >> wsock_trace_x64.def
+wsock_trace_x64$(_D).def: wsock_trace.def Makefile.VC6
+	echo ; This file has been generated by Makefile.vc6. DO NOT EDIT!      > wsock_trace_x64$(_D).def
+	echo ;                                                                >> wsock_trace_x64$(_D).def
+	sed -e "s/LIBRARY wsock_trace.dll/LIBRARY wsock_trace_x64$(_D).dll/"  \
+	    -e "s/^ _\(.*\)@.*/ \1/g" < wsock_trace.def                       >> wsock_trace_x64$(_D).def
+
+#
+# Make a .def file for x86 debug; replace 'wsock_trace.dll' with 'wsock_trace_d.dll'.
+#
+wsock_trace_d.def: wsock_trace.def Makefile.VC6
+	echo ; This file has been generated by Makefile.vc6. DO NOT EDIT!                > wsock_trace_d.def
+	echo ;                                                                          >> wsock_trace_d.def
+	sed -e "s/LIBRARY wsock_trace.dll/LIBRARY wsock_trace_d.dll/" < wsock_trace.def >> wsock_trace_d.def
 
 common.h:                   wsock_defs.h
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
