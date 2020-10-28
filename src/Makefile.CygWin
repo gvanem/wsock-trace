@@ -62,7 +62,7 @@ endif
 
 LIBLOC_ROOT = ./Geo-IP/IPFire/libloc
 LIBLOC_LIB  = libloc_cyg$(_D).a
-CFLAGS     += -DUSE_LIBLOC -I$(LIBLOC_ROOT)/src
+CFLAGS     += -I$(LIBLOC_ROOT)/src
 EX_LIBS    += -ldnsapi -lole32 -ladvapi32
 
 SOURCES = asn.c         \

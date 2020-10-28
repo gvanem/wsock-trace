@@ -14,7 +14,11 @@
 #include "iana.h"
 #include "asn.h"
 
-#ifdef USE_LIBLOC  /* todo: '#if !defined(__WATCOMC__)' */
+#if !defined(__WATCOMC__)
+#define USE_LIBLOC
+#endif
+
+#ifdef USE_LIBLOC
   #if defined(__CYGWIN__) && !defined(_WIN32)
   #define _WIN32
   #endif
@@ -216,7 +220,7 @@ static int ASN_compare_on_ip4 (const void *key, const void **member)
   return INET_util_range4cmp (&ipv4, &rec->ipv4.low, rec->prefix);
 }
 
-#ifdef USE_LIBLOC   /* todo: '#if !defined(__WATCOMC__)' */
+#ifdef USE_LIBLOC
 /**
  * Close the use of `libloc`.
  */
@@ -564,7 +568,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 #else
 static size_t ASN_load_bin_file (const char *file)
 {
-  TRACE (0, "Cannot load a binary '%s' file without 'USE_LIBLOC' defined.\n", file);
+  TRACE (1, "Cannot load a binary '%s' file without 'USE_LIBLOC' defined.\n", file);
   ARGSUSED (file);
   return (0);
 }
@@ -576,7 +580,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   ARGSUSED (ip6);
   return (0);
 }
-#endif /* 'USE_LIBLOC'. todo: '#if !defined(__WATCOMC__)' */
+#endif
 
 /**
  * Find and print the ASN information for an IPv4 address.

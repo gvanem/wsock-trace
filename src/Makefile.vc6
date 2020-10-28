@@ -93,7 +93,7 @@ EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
-CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src -DUSE_LIBLOC
+CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)/src
 EX_LIBS   = $(EX_LIBS)   libloc$(_D).lib dnsapi.lib ole32.lib
 WSOCK_DEP = $(WSOCK_DEP) libloc$(_D).lib
 
