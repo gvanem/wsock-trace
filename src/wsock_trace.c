@@ -45,6 +45,7 @@
 #include "bfd_gcc.h"
 #include "in_addr.h"
 #include "init.h"
+#include "idna.h"
 #include "cpu.h"
 #include "stkwalk.h"
 #include "overlap.h"
@@ -2980,8 +2981,12 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
   rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
 
-#if 0
-  if (rc != 0 && g_cfg.idna_enable && g_cfg.idna_helper && !IDNA_is_ASCII(host_name))
+  /**
+   * If no address was found for the `host_name`, then convert it to ACE-form and call
+   * `*p_getaddrinfo()` again with the converted host-name from `IDNA_convert_to_ACE()`.
+   */
+#if 1
+  if (rc != 0 && g_cfg.IDNA.enable && g_cfg.IDNA.fix_getaddrinfo && !IDNA_is_ASCII(host_name))
   {
     char   buf [MAX_HOST_LEN] = "?";
     size_t size;
