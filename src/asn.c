@@ -293,7 +293,7 @@ static size_t ASN_load_bin_file (const char *file)
   }
 
   TRACE (2, "Trying to open IPFire's database: \"%s\".\n", file);
-  libloc.file = fopen (file, "rb");
+  libloc.file = fopen_excl (file, "rb");
   if (!libloc.file)
   {
     TRACE (1, "Could not open IPFire's binary database: %s\n", strerror(errno));
@@ -329,6 +329,11 @@ static size_t ASN_load_bin_file (const char *file)
     ASN_bin_close();
     return (0);
   }
+
+  /* No need to keep the file open
+   */
+  fclose (libloc.file);
+  libloc.file = NULL;
 
   descr   = loc_database_get_description (libloc.db);
   licence = loc_database_get_license (libloc.db);
