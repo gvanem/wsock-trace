@@ -48,8 +48,10 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   The above `Mountain View/California` is Google's well-known location. Many thanks to IP2Location
   [**[3]**](#footnotes) for their data-bases.
 
-* *ASN* information (Autonomous System Number) from **[IPFire](https://location.ipfire.org)**.
-  Many thanks to IPFire [**[4]**](#footnotes) for their data-bases.
+* *ASN* information (Autonomous System Number) from **[IPFire](https://location.ipfire.org)**. <br>
+  The screen-shot above shows Google has ASN 15169 (for their DNS server-address `8.8.8.8`). <br>
+  More details for that ASN at **[DNSlytics](https://dnslytics.com/bgp/as15169)**. <br>
+  Many thanks to the IPFire developers [**[4]**](#footnotes) for their data-bases.
 
 * *Domain Name System-based Blackhole List*
   (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of
@@ -62,7 +64,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L66)
   config-file.
 
-* *Firewall* activity; report activity causing events from the *Window Filtering Platform* (the *Internet Connection Firewall*; ICF). See below.
+* *Firewall* activity; report activity causing events from the *Window Filtering Platform* (the *Internet Connection Firewall*; ICF).
+  See [below](https://github.com/gvanem/wsock-trace#firewall-monitor).
 
 * **[LuaJIT](https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
@@ -311,7 +314,7 @@ Together with `[DNSBL], enable = 1` it shows remote addresses in **[SpamHaus](ht
 In this case the **[address](https://blackhat.directory/ip/176.119.4.53)** `176.119.4.56`
 in *Ukraine / Donetsk* is *very* active giving a Firewall event approximately every 5 minutes.
 
-A good test of the `firewall.c` features is to open your WiFi FireWall and start a remote
+A good test of the `firewall.c` features is to open up your router (create a DMZ) and start a remote
 **[port-scan](http://www.whatsmyip.org/port-scanner/server/)** while `firewall_test.exe`
 is running. You'll see a lot of **DROP**-events like:
 ```
