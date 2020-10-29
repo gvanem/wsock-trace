@@ -67,7 +67,7 @@ static smartlist_t *cp_list;
 #endif
 
 /**
- * \struct code_page_info
+ * \typedef code_page_info
  * Structure used in `get_cp_info()` and `EnumSystemCodePages()`.
  */
 typedef struct code_page_info {
