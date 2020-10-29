@@ -67,8 +67,8 @@ static int Writer_init(WriterObject* self, PyObject* args, PyObject* kwargs) {
 			return -1;
 
 		// Re-open file descriptor
-		f2 = fdopen(fd, "rb");
-		if (!f2) {
+		f1 = fdopen(fd, "rb");
+		if (!f1) {
 			PyErr_SetFromErrno(PyExc_IOError);
 			return -1;
 		}
