@@ -2150,7 +2150,7 @@ static void check_and_dump_idna (const char *name)
   char   buf [MAX_HOST_LEN] = "?";
   size_t size;
 
-  if (!g_cfg.idna_enable || !name || !strstr(name,"xn--"))
+  if (!g_cfg.IDNA.enable || !name || !strstr(name,"xn--"))
      return;
 
   trace_indent (g_cfg.trace_indent+2);

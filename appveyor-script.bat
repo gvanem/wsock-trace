@@ -67,7 +67,10 @@ echo   ip4_file     = %CD%\IPv4-address-space.csv               >> wsock_trace.a
 echo   ip6_file     = %CD%\IPv6-unicast-address-assignments.csv >> wsock_trace.appveyor
 
 echo [idna]                                                     >> wsock_trace.appveyor
-echo   enable       = 1                                         >> wsock_trace.appveyor
+echo   enable          = 1                                      >> wsock_trace.appveyor
+echo   use_winidn      = 0                                      >> wsock_trace.appveyor
+echo   codepage        = 0                                      >> wsock_trace.appveyor
+echo   fix_getaddrinfo = 0                                      >> wsock_trace.appveyor
 
 echo [lua]                                                      >> wsock_trace.appveyor
 echo   enable       = %%USE_LUA%%                               >> wsock_trace.appveyor

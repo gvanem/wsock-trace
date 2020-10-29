@@ -76,6 +76,13 @@ struct ASN_cfg {
        char   *asn_bin_url;
      };
 
+struct IDNA_cfg {
+       BOOL    enable;
+       BOOL    use_winidn;
+       BOOL    fix_getaddrinfo;
+       UINT    codepage;
+     };
+
 struct GEOIP_cfg {
        BOOL    enable;
        BOOL    show_position;
@@ -165,10 +172,6 @@ struct config_table {
        WORD    color_data;
 
        BOOL    use_winhttp;
-       BOOL    idna_enable;
-       BOOL    idna_winidn;
-       UINT    idna_cp;
-
        BOOL    msvc_only;
        BOOL    mingw_only;
        BOOL    cygwin_only;
@@ -187,6 +190,7 @@ struct config_table {
        struct PCAP_cfg     PCAP;
        struct DNSBL_cfg    DNSBL;
        struct IANA_cfg     IANA;
+       struct IDNA_cfg     IDNA;
        struct ASN_cfg      ASN;
        struct GEOIP_cfg    GEOIP;
        struct FIREWALL_cfg FIREWALL;

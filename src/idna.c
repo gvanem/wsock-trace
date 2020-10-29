@@ -41,20 +41,20 @@ static UINT         cur_cp = CP_ACP;
 static smartlist_t *cp_list;
 
 #if (USE_WINIDN)
-  typedef int (WINAPI *func_IdnToAscii) (DWORD          flags,
-                                         const wchar_t *unicode_chars,
-                                         int            unicode_len,
-                                         wchar_t       *ASCII_chars,
-                                         int            ASCII_len);
+  #define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                  static func_##f  p_##f = NULL
 
-  typedef int (WINAPI *func_IdnToUnicode) (DWORD          flags,
-                                           const wchar_t *ASCII_chars,
-                                           int            ASCII_len,
-                                           wchar_t       *unicode_chars,
-                                           int            unicode_len);
+  DEF_FUNC (int, IdnToAscii, (DWORD          flags,
+                              const wchar_t *unicode_chars,
+                              int            unicode_len,
+                              wchar_t       *ASCII_chars,
+                              int            ASCII_len));
 
-  static func_IdnToAscii   p_IdnToAscii = NULL;
-  static func_IdnToUnicode p_IdnToUnicode = NULL;
+  DEF_FUNC (int, IdnToUnicode, (DWORD          flags,
+                                const wchar_t *ASCII_chars,
+                                int            ASCII_len,
+                                wchar_t       *unicode_chars,
+                                int            unicode_len));
 
   #define ADD_VALUE(dll, func)  { 1, NULL, dll, #func, (void**)&p_##func }
 
@@ -66,8 +66,9 @@ static smartlist_t *cp_list;
               };
 #endif
 
-/*
- * Structure used in 'get_cp_info()' and 'EnumSystemCodePages()'.
+/**
+ * \struct code_page_info
+ * Structure used in `get_cp_info()` and `EnumSystemCodePages()`.
  */
 typedef struct code_page_info {
         UINT  number;
@@ -75,44 +76,48 @@ typedef struct code_page_info {
         BOOL  valid;
       } code_page_info;
 
-/*
- * punycode from RFC 3492
+/**
+ * \enum punycode_status
+ * Punycode from RFC 3492. Implemented by Adam M. Costello:
  * http://www.nicemice.net/idn/
- * Adam M. Costello
- * http://www.nicemice.net/amc/
  */
 typedef enum punycode_status {
         punycode_success,
-        punycode_bad_input,      /* Input is invalid.                       */
-        punycode_big_output,     /* Output would exceed the space provided. */
-        punycode_overflow        /* Input needs wider integers to process.  */
+        punycode_bad_input,      /**< Input is invalid.                       */
+        punycode_big_output,     /**< Output would exceed the space provided. */
+        punycode_overflow        /**< Input needs wider integers to process.  */
       } punycode_status;
 
-/*
- * punycode_encode() converts Unicode to Punycode.  The input
+/**
+ * `punycode_encode()` converts Unicode to Punycode.  The input
  * is represented as an array of Unicode code points (not code
  * units; surrogate pairs are not allowed), and the output
- * will be represented as an array of ASCII code points.  The
- * output string is *not* null-terminated; it will contain
+ * will be represented as an array of ASCII code points.
+ *
+ * The output string is *not* null-terminated; it will contain
  * zeros if and only if the input contains zeros.  (Of course
  * the caller can leave room for a terminator and add one if
- * needed.)  The input_length is the number of code points in
- * the input.  The output_length is an in/out argument: the
- * caller passes in the maximum number of code points that it
- * can receive, and on successful return it will contain the
- * number of code points actually output.  The case_flags array
- * holds input_length boolean values, where nonzero suggests that
- * the corresponding Unicode character be forced to uppercase
- * after being decoded (if possible), and zero suggests that
- * it be forced to lowercase (if possible).  ASCII code points
- * are encoded literally, except that ASCII letters are forced
- * to uppercase or lowercase according to the corresponding
- * uppercase flags.  If case_flags is a null pointer then ASCII
- * letters are left as they are, and other code points are
- * treated as if their uppercase flags were zero.  The return
- * value can be any of the punycode_status values defined above
- * except punycode_bad_input; if not punycode_success, then
- * output_size and output might contain garbage.
+ * needed.)  The `input_length` is the number of code points in
+ * the input.
+ *
+ * The `output_length` is an in/out argument: the caller passes in
+ * the maximum number of code points that it can receive, and on
+ * successful return it will contain the number of code points
+ * actually output.
+ *
+ * The `case_flags` array holds input_length boolean values, where nonzero
+ * suggests that the corresponding Unicode character be forced to uppercase
+ * after being decoded (if possible), and zero suggests that it be forced to
+ * lowercase (if possible).
+ *
+ * ASCII code points are encoded literally, except that ASCII letters are forced
+ * to uppercase or lowercase according to the corresponding uppercase flags. \n
+ * If `case_flags` is a NULL pointer then ASCII letters are left as they are, and
+ * other code points are treated as if their uppercase flags were zero.
+ *
+ * The return value can be any of the `punycode_status` values defined above
+ * except `punycode_bad_input`; if not punycode_success, then `output_size` and
+ * `output` might contain garbage.
  */
 static enum punycode_status punycode_encode (size_t       input_length,
                                              const DWORD *input,
@@ -120,27 +125,31 @@ static enum punycode_status punycode_encode (size_t       input_length,
                                              size_t      *output_length,
                                              char        *output);
 
-/*
- * punycode_decode() converts Punycode to Unicode.  The input is
+/**
+ * `punycode_decode()` converts Punycode to Unicode.  The input is
  * represented as an array of ASCII code points, and the output
- * will be represented as an array of Unicode code points.  The
- * input_length is the number of code points in the input.  The
- * output_length is an in/out argument: the caller passes in
+ * will be represented as an array of Unicode code points.
+ *
+ * The `input_length` is the number of code points in the input.\n
+ * The `output_length` is an in/out argument: the caller passes in
  * the maximum number of code points that it can receive, and
  * on successful return it will contain the actual number of
- * code points output.  The case_flags array needs room for at
- * least output_length values, or it can be a null pointer if the
- * case information is not needed.  A nonzero flag suggests that
- * the corresponding Unicode character be forced to uppercase
- * by the caller (if possible), while zero suggests that it be
- * forced to lowercase (if possible).  ASCII code points are
- * output already in the proper case, but their flags will be set
- * appropriately so that applying the flags would be harmless.
- * The return value can be any of the punycode_status values
- * defined above; if not punycode_success, then output_length,
- * output, and case_flags might contain garbage.  On success, the
- * decoder will never need to write an output_length greater than
- * input_length, because of how the encoding is defined.
+ * code points output.
+ *
+ * The `case_flags` array needs room for at least `output_length` values,
+ * or it can be a NULL pointer if the case information is not needed.\n
+ * A nonzero flag suggests that the corresponding Unicode character be forced
+ * to uppercase by the caller (if possible), while zero suggests that it be
+ * forced to lowercase (if possible).
+ *
+ * ASCII code points are output already in the proper case, but their flags
+ * will be set appropriately so that applying the flags would be harmless.
+ *
+ * The return value can be any of the punycode_status values defined above;
+ * if not punycode_success, then `output_length`, `output`, and `case_flags`
+ * might contain garbage.  On success, the decoder will never need to write
+ * an `output_length` greater than `input_length`, because of how the encoding
+ * is defined.
  */
 static enum punycode_status punycode_decode (size_t      input_length,
                                              const char *input,
@@ -148,7 +157,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
                                              DWORD      *output,
                                              BYTE       *case_flags);
 
-/*
+/**
  * The following string is used to convert printable
  * Punycode characters to ASCII:
  */
@@ -161,7 +170,7 @@ static const char print_ascii[] = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
                                   "`abcdefghijklmno"
                                   "pqrstuvwxyz{|}~\n";
 
-/*
+/**
  * Get ANSI/system codepage.
  */
 UINT IDNA_GetCodePage (void)
@@ -177,8 +186,8 @@ UINT IDNA_GetCodePage (void)
   return (CP);
 }
 
-/*
- * Callback for EnumSystemCodePages()
+/**
+ * Callback for `EnumSystemCodePages()`.
  */
 static BOOL CALLBACK get_cp_info (LPTSTR cp_str)
 {
@@ -196,8 +205,12 @@ static BOOL CALLBACK get_cp_info (LPTSTR cp_str)
   return (TRUE);
 }
 
-/*
- * smartlist_sort() helper: return -1, 1, or 0.
+/**
+ * `smartlist_sort()` helper.
+ *
+ * \retval < 0  if `a->number` is lower than `b->number`.
+ * \retval > 0  if `a->number` is higer than `b->number`.
+ * \retval 0    if `a->number` equals `b->number`.
  */
 static int cp_compare (const void **_a, const void **_b)
 {
@@ -207,8 +220,8 @@ static int cp_compare (const void **_a, const void **_b)
   return ((int)a->number - (int)b->number);
 }
 
-/*
- * Check if given codepage is available
+/**
+ * Check if given codepage is available.
  */
 BOOL IDNA_CheckCodePage (UINT cp)
 {
@@ -247,6 +260,9 @@ BOOL IDNA_CheckCodePage (UINT cp)
   return (cp_found);
 }
 
+/**
+ * Unload the import WinIDN function.
+ */
 void IDNA_exit (void)
 {
 #if (USE_WINIDN)
@@ -255,7 +271,7 @@ void IDNA_exit (void)
 #endif
 }
 
-/*
+/**
  * Get active codpage and optionally initialise WinIDN.
  */
 BOOL IDNA_init (WORD cp, BOOL use_winidn)
@@ -290,7 +306,7 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
   return (TRUE);
 }
 
-/*
+/**
  * Return FALSE if 'name' is not a plain US-ASCII name.
  * Thus need to call 'IDNA_convert_to_ACE()'.
  */
@@ -306,6 +322,9 @@ BOOL IDNA_is_ASCII (const char *name)
   return (TRUE);
 }
 
+/**
+ * Returns a text for error-code `err`.
+ */
 const char *IDNA_strerror (int err)
 {
   static char buf[200];
@@ -335,7 +354,7 @@ const char *IDNA_strerror (int err)
   return (buf);
 }
 
-/*
+/**
  * Convert a single ASCII codepoint from active codepage to Unicode.
  */
 static BOOL conv_to_unicode (char ch, wchar_t *wc)
@@ -352,9 +371,9 @@ static BOOL conv_to_unicode (char ch, wchar_t *wc)
   return (TRUE);
 }
 
-/*
- * Convert a single Unicode codepoint to ASCII in active codepage.
- * Allow 4 byte GB18030 Simplified Chinese to be converted.
+/**
+ * Convert a single Unicode codepoint to ASCII in active codepage.\n
+ * Allow 4 byte `GB18030` Simplified Chinese to be converted.
  */
 static BOOL conv_to_ascii (wchar_t wc, char *ch, int *len)
 {
@@ -371,7 +390,7 @@ static BOOL conv_to_ascii (wchar_t wc, char *ch, int *len)
   return (TRUE);
 }
 
-/*
+/**
  * Split a domain-name into labels (no trailing dots)
  */
 static char **split_labels (const char *name)
@@ -399,7 +418,7 @@ static char **split_labels (const char *name)
   return (res);
 }
 
-/*
+/**
  * Convert a single label to ACE form
  */
 static char *convert_to_ACE (const char *name)
@@ -459,10 +478,10 @@ static char *convert_to_ACE (const char *name)
   return (NULL);
 }
 
-/*
- * Convert a single ACE encoded label to native encoding
- * u+XXXX is used to signify a lowercase character.
- * U+XXXX is used to signify a uppercase character.
+/**
+ * Convert a single ACE encoded label to native encoding.\n
+ * `u+XXXX` is used to signify a lowercase character. \n
+ * `U+XXXX` is used to signify a uppercase character. \n
  * Normally only lowercase should be expected here.
  */
 static char *convert_from_ACE (const char *name)
@@ -500,8 +519,8 @@ static char *convert_from_ACE (const char *name)
   return (status == punycode_success ? out_buf : NULL);
 }
 
-#if (USE_WINIDN && 0)
-/*
+#if (USE_WINIDN && 0)  /* not used */
+/**
  * Taken from libcurl's idn_win32.c and rewritten.
  */
 static BOOL win32_idn_to_ascii (const char *in, char **out)
@@ -548,19 +567,21 @@ static BOOL win32_ascii_to_idn (const char *in, char **out)
 }
 #endif  /* (USE_WINIDN && 0) */
 
-/*
+/**
+ * `IDNA_convert_to_ACE()`.
+ *
  * E.g. convert "www.tromsø.no" to ACE:
  *
- * 1) Convert each label separately. "www", "tromsø" and "no"
- * 2) "tromsø" -> u+0074 u+0072 u+006F u+006D u+0073 u+00F8
- * 3) Pass this through `punycode_encode()' which gives "troms-zua".
- * 4) Repeat for all labels with non-ASCII letters.
- * 5) Prepending "xn--" for each converted label gives "www.xn--troms-zua.no".
+ * \li Convert each label separately. `www`, `tromsø` and `no`.
+ * \li `tromsø` -> `u+0074`, `u+0072, `u+006F`, `u+006D`, `u+0073` and `u+00F8`.
+ * \li Pass this through `punycode_encode()' which gives `troms-zua`.
+ * \li Repeat for all labels with non-ASCII letters.
+ * \li Prepending `xn--` for each converted label gives `www.xn--troms-zua.no`.
  *
- * E.g. 2:
- *   "www.blåbærsyltetøy.no" -> "www.xn--blbrsyltety-y8aO3x.no"
+ * E.g. 2: \n
+ *   `www.blåbærsyltetøy.no` -> `www.xn--blbrsyltety-y8aO3x.no`  (which exist, but it's a parked domain).
  *
- * Ref. http://www.imc.org/idna/do-idna.cgi
+ * \ref http://www.imc.org/idna/do-idna.cgi
  *      http://www.norid.no/domenenavnbaser/ace/ace_technical.en.html
  */
 BOOL IDNA_convert_to_ACE (
@@ -634,11 +655,13 @@ quit:
   return (rc);
 }
 
-/*
- * 1) Pass through labels w/o "xn--" prefix unaltered.
- * 2) Strip "xn--" prefix and pass to punycode_decode()
- * 3) Repeat for all labels with "xn--" prefix.
- * 4) Collect Unicode strings and convert to original codepage.
+/**
+ * `IDNA_convert_from_ACE()`:
+ *
+ * \li Pass through labels w/o `xn--` prefix unaltered.
+ * \li Strip `xn--` prefix and pass to `punycode_decode()`.
+ * \li Repeat for all labels with `xn--` prefix.
+ * \li Collect Unicode strings and convert to original codepage.
  */
 BOOL IDNA_convert_from_ACE (
           char   *name,    /* IN/OUT: ACE/native ASCII name */
@@ -690,18 +713,22 @@ enum {
   delimiter = 0x2D
 };
 
-/* basic(cp) tests whether cp is a basic code point:
+/**
+ * \def basic(cp)
+ * tests whether `cp` is a basic code point.
  */
 #define basic(cp) ((DWORD)(cp) < 0x80)
 
-/* delim(cp) tests whether cp is a delimiter:
+/**
+ * \def delim(cp)
+ * tests whether cp is a delimiter.
  */
 #define delim(cp) ((cp) == delimiter)
 
-/*
- * decode_digit(cp) returns the numeric value of a basic code
- * point (for use in representing integers) in the range 0 to
- * base-1, or base if cp is does not represent a value.
+/**
+ * `decode_digit(cp)` returns the numeric value of a basic code
+ * point (for use in representing integers) in the range `0` to `base-1`, \n
+ * or `base` if `cp` is does not represent a value.
  */
 static DWORD decode_digit (DWORD cp)
 {
@@ -711,12 +738,15 @@ static DWORD decode_digit (DWORD cp)
           cp - 97 : base);
 }
 
-/*
- * encode_digit(d,flag) returns the basic code point whose value
- * (when used for representing integers) is d, which needs to be in
- * the range 0 to base-1.  The lowercase form is used unless flag is
- * nonzero, in which case the uppercase form is used.  The behavior
- * is undefined if flag is nonzero and digit d has no uppercase form.
+/**
+ * `encode_digit(d, flag)` returns the basic code point whose value
+ * (when used for representing integers) is `d`, which needs to be in
+ * the range `0` to `base-1`.
+ *
+ * The lowercase form is used unless flag is nonzero, in which case the
+ * uppercase form is used.\n
+ * The behavior is undefined if flag is nonzero and digit `d` has no
+ * uppercase form.
  */
 static char encode_digit (DWORD d, int flag)
 {
@@ -725,18 +755,21 @@ static char encode_digit (DWORD d, int flag)
   /* 26..35 map to ASCII 0..9         */
 }
 
-/* flagged(bcp) tests whether a basic code point is flagged
- * (uppercase).  The behavior is undefined if bcp is not a
- * basic code point.
+/**
+ * \def flagged(bcp)
+ *
+ * tests whether a basic code point is flagged (uppercase). \n
+ * The behavior is undefined if `bcp` is not a basic code point.
  */
 #define flagged(bcp) ((DWORD)(bcp) - 65 < 26)
 
-/*
- * encode_basic(bcp,flag) forces a basic code point to lowercase
+/**
+ * `encode_basic(bcp, flag)` forces a basic code point to lowercase
  * if flag is zero, uppercase if flag is nonzero, and returns
- * the resulting code point.  The code point is unchanged if it
- * is caseless.  The behavior is undefined if bcp is not a basic
- * code point.
+ * the resulting code point.
+ *
+ * The code point is unchanged if it is caseless.\n
+ * The behavior is undefined if `bcp` is not a basic code point.
  */
 static char encode_basic (DWORD bcp, int flag)
 {
@@ -762,8 +795,8 @@ static DWORD adapt (DWORD delta, DWORD numpoints, int firsttime)
   return k + (base - tmin + 1) * delta / (delta + skew);
 }
 
-/*
- * Main encode function
+/**
+ * Main encode function.
  */
 static enum punycode_status punycode_encode (size_t       input_length,
                                              const DWORD *input,
@@ -874,8 +907,8 @@ static enum punycode_status punycode_encode (size_t       input_length,
   return (punycode_success);
 }
 
-/*
- * Main decode function
+/**
+ * Main decode function.
  */
 static enum punycode_status punycode_decode (size_t      input_length,
                                              const char *input,
@@ -1096,7 +1129,7 @@ static int do_test (WORD cp, const char *host)
 {
   struct in_addr addr;
 
-  if (!IDNA_init(cp,g_cfg.idna_winidn))
+  if (!IDNA_init(cp, g_cfg.IDNA.use_winidn))
   {
     printf ("%s\n", IDNA_strerror(_idna_errno));
     return (-1);
@@ -1148,7 +1181,7 @@ int main (int argc, char **argv)
             g_cfg.trace_level++;
             break;
        case 'w':
-            g_cfg.idna_winidn = 1;
+            g_cfg.IDNA.use_winidn = 1;
             break;
        case '?':
        case 'h':
@@ -1163,9 +1196,7 @@ int main (int argc, char **argv)
      usage (my_name);
 
   rc = do_test (cp, argv[0]);
-
   common_exit();
-
   return (rc);
 }
 #endif  /* TEST_IDNA */

@@ -241,9 +241,10 @@
 # IDNA settings. Internationalizing Domain Names in Applications.
 #
 [idna]
-  enable = 1
-  winidn = 0
-  codepage = 0
+  enable     = 1
+  use_winidn = 0
+  codepage   = 0
+  fix_getaddrinfo = 0
 
 #
 # DNSBL (Domain Name System Blacklists) settings
