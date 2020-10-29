@@ -106,6 +106,11 @@ If the `all` command succeeded, you can do the respective *make* `install` comma
 | MSVC | nmake -f makefile.vc6 | `copy wsock_trace.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
 | OpenWatcom | wmake -f Makefile.Watcom | `copy wsock_trace_ow.dll` to `%WATCOM\binnt` and<br> `copy wsock_trace_ow.lib` to `%WATCOM\lib386\nt`|
 
+*Notes:*
+  * For a `WIN64` build, the above files will have an extra `_x64` suffix.
+  * And for a `USE_CRT_DEBUG = 1` build, the above files will have an extra `_d` suffix.
+  * So for a MinGW, `WIN64` debug-build, the files are named `wsock_trace_mw_x64_d.dll` and
+    `libwsock_trace_mw_x64_d.a`.
 
 ### Usage
 
@@ -113,8 +118,8 @@ Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_3
 
 | Builder    | Library |
 | :--------- | :------ |
-| CygWin     | `libwsock_trace.a` |
-| MinGW      | `libwsock_trace.a` |
+| CygWin     | `libwsock_trace_cyg.a` |
+| MinGW      | `libwsock_trace_mw.a` |
 | MSVC       | `wsock_trace.lib` |
 | OpenWatcom | `wsock_trace_ow.lib` |
 
