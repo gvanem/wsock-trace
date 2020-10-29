@@ -23,8 +23,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *Runtime caller information*: Using Microsoft's *dbghelp* (or *psapi*) APIs
   together with the programs *PDB*-file, the filename, line-number of the calling
   function-name is shown. In the above example, [`WSAStartup()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms742213(v=vs.85).aspx)
-  is called from `ahost.c`, line 67. Which should be 59 bytes into the `main()` function.
-  This should be **[here](https://github.com/c-ares/c-ares/blob/master/ahost.c#L67)**.
+  is called from `ahost.c`, line 68. Which should be 53 bytes into the `main()` function.
+  This should be **[here](https://github.com/c-ares/c-ares/blob/master/src/tools/ahost.c#L68)**.
 
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
   from [`QueryPerformanceCounter()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms644904(v=vs.85).aspx).<br>
@@ -40,8 +40,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
   Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
-  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L163)
-  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L164)
+  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L164)
+  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L165)
   are always enabled).
 
 * *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
@@ -50,7 +50,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 * *ASN* information (Autonomous System Number) from **[IPFire](https://location.ipfire.org)**. <br>
   The screen-shot above shows Google has ASN 15169 (for their DNS server-address `8.8.8.8`). <br>
-  More details for that ASN at **[DNSlytics](https://dnslytics.com/bgp/as15169)**. <br>
+  More details for that ASN at **[DNSlytics](https://dnslytics.com/bgp/as15169)**.
   Many thanks to the IPFire developers [**[4]**](#footnotes) for their data-bases.
 
 * *Domain Name System-based Blackhole List*
@@ -69,9 +69,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 * **[LuaJIT](https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
-  behaviour of Wsock-trace at runtime without rebuilding it. <br>
-  Only the absolute minimum of the needed files are in
-  **[./LuaJIT](https://github.com/gvanem/wsock-trace/tree/master/LuaJIT)**. <br>
+  behaviour of Wsock-trace at runtime without rebuilding it. Only the absolute minimum
+  of the needed files are in **[./LuaJIT](https://github.com/gvanem/wsock-trace/tree/master/LuaJIT)**.
   Goto **[here](https://github.com/LuaJIT/LuaJIT.git)** for the complete LuaJIT.
 
 
@@ -261,7 +260,7 @@ Notes:
 
 
 And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
-**[adig.c](https://github.com/c-ares/c-ares/blob/master/adig.c)**:
+**[adig.c](https://github.com/c-ares/c-ares/blob/master/src/tools/adig.c)**:
 ```c
     c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
