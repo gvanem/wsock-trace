@@ -807,13 +807,16 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
 static void parse_idna_settings (const char *key, const char *val, unsigned line)
 {
   if (!stricmp(key, "enable"))
-       g_cfg.idna_enable = atoi (val);
+       g_cfg.IDNA.enable = atoi (val);
 
-  else if (!stricmp(key, "winidn"))
-       g_cfg.idna_winidn = atoi (val);
+  else if (!stricmp(key, "use_winidn"))
+       g_cfg.IDNA.use_winidn = atoi (val);
+
+  else if (!stricmp(key, "fix_getaddrinfo"))
+       g_cfg.IDNA.fix_getaddrinfo = atoi (val);
 
   else if (!stricmp(key, "codepage"))
-       g_cfg.idna_cp = atoi (val);
+       g_cfg.IDNA.codepage = atoi (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -1026,7 +1029,7 @@ static int parse_config_file (FILE *file)
            parse_core_settings (key, val, line);
            strcpy (last_section, "core");
            if (!done)
-              TRACE (1, "Parsing config-file \"%s\" for \"%s\".\n", fname, get_builder());
+              TRACE (1, "Parsing config-file \"%s\" for \"%s\".\n", fname, get_builder(TRUE));
            done = TRUE;
            break;
       case CFG_LUA:
@@ -1195,6 +1198,8 @@ static void trace_report (void)
  */
 void wsock_trace_exit (void)
 {
+  int i;
+
   set_color (NULL);
 
   if (fatal_error)
@@ -1235,17 +1240,15 @@ void wsock_trace_exit (void)
 
   common_exit();
 
-  if (g_cfg.trace_stream)
+  if (g_cfg.trace_stream && !g_cfg.trace_file_device)
      fclose (g_cfg.trace_stream);
 
-  {
-    int i;
-    for (i = 0; i < DIM(g_cfg.hosts_file); i++)
-        FREE (g_cfg.hosts_file[i]);
-  }
+  for (i = 0; i < DIM(g_cfg.hosts_file); i++)
+      FREE (g_cfg.hosts_file[i]);
 
   g_cfg.trace_file_okay = FALSE;
   g_cfg.trace_stream = NULL;
+
   FREE (g_cfg.trace_file);
   FREE (g_cfg.PCAP.dump_fname);
   FREE (g_cfg.LUA.init_script);
@@ -1414,9 +1417,9 @@ void wsock_trace_init (void)
     write_pcap_header();
   }
 
-  if (g_cfg.idna_enable && !IDNA_init(g_cfg.idna_cp, g_cfg.idna_winidn))
+  if (g_cfg.IDNA.enable && !IDNA_init(g_cfg.IDNA.codepage, g_cfg.IDNA.use_winidn))
   {
-    g_cfg.idna_enable = FALSE;
+    g_cfg.IDNA.enable = FALSE;
     IDNA_exit();
   }
 
@@ -1426,7 +1429,7 @@ void wsock_trace_init (void)
       (g_cfg.trace_use_ods || (!g_cfg.trace_file_device && g_cfg.trace_file_okay)))
     trace_printf ("\n------- Trace started at %s --------"
                   "------ %s, %s. Build-date: %s.\n",
-                  now, get_builder(), get_dll_short_name(), get_dll_build_date());
+                  now, get_builder(TRUE), get_dll_short_name(), get_dll_build_date());
 
   memset (&console_info, 0, sizeof(console_info));
 
@@ -2058,7 +2061,30 @@ static void reset_invalid_handler (void)
 #endif
 }
 
-#if defined(_MSC_VER) && defined(_DEBUG)
+#if defined(_MSC_VER) && defined(USE_VLD)
+  /*
+   * Using "Visual Leak Detector" in _RELEASE mode is possible via the
+   * '-DVLD_FORCE_ENABLE' flag. But not advisable according to:
+   *   https://github.com/KindDragon/vld/wiki
+   *
+   * VLD is useful for '_MSC_VER' only.
+   */
+  #include <vld.h>
+
+  void crtdbg_init (void)
+  {
+    VLD_UINT opts;
+
+    VLDSetReportOptions (VLD_OPT_REPORT_TO_STDOUT, NULL); /* Force all reports to "stdout" in "ASCII" */
+    opts = VLDGetOptions();
+    VLDSetOptions (opts, 100, 4);   /* Dump max 100 bytes data. And walk max 4 stack frames */
+  }
+
+  void crtdbg_exit (void)
+  {
+  }
+
+#elif defined(_MSC_VER) && defined(_DEBUG)
   static _CrtMemState last_state;
 
   void crtdbg_init (void)

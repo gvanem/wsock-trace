@@ -2041,7 +2041,7 @@ static int show_help (const char *my_name, int err_code)
           my_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"geoip.exe -4 < file-with-addr\".\n"
-          "   Built by %s\n", get_builder());
+          "   Built by %s\n", get_builder(FALSE));
   wsock_trace_exit();
   return (err_code);
 }
@@ -2193,10 +2193,10 @@ int main (int argc, char **argv)
   int         do_update = 0, do_dump = 0, do_rand = 0;
   int         use_ip2loc = 1;
   int         loops = 10;
-  int         rc = 0;
   const char *my_name = argv[0];
   WSADATA     wsa;
 
+  crtdbg_init();
   wsock_trace_init();
 
   /* Since these are inside a 'if !defined(TEST_GEOIP)' block in init.c
@@ -2265,7 +2265,7 @@ int main (int argc, char **argv)
   else
   {
     if (!check_requirements())
-       return (0);
+       return (1);
   }
 
   argc -= optind;
@@ -2301,7 +2301,12 @@ int main (int argc, char **argv)
   }
 
   wsock_trace_exit();
-  return (rc);
+
+  /* Since this is inside a 'if !defined(TEST_GEOIP)' block in init.c
+   */
+  exclude_list_free();
+  crtdbg_exit();
+  return (0);
 }
 #endif  /* TEST_GEOIP */
 
