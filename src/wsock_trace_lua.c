@@ -307,7 +307,7 @@ static int wslua_get_dll_full_name (lua_State *l)
 
 static int wslua_get_builder (lua_State *l)
 {
-  lua_pushstring (l, get_builder());
+  lua_pushstring (l, get_builder(FALSE));
   return (1);
 }
 

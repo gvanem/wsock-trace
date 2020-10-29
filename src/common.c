@@ -1819,15 +1819,28 @@ const char *get_dll_build_date (void)
 /*
  * Returns e.g. "Visual-C, 32-bit"
  */
-const char *get_builder (void)
+const char *get_builder (BOOL show_dbg_rel)
 {
 #if defined(_M_X64) || defined(__x86_64__)
   /*
    * Do this since a '-DBITNESS=64' could be missing from makefiles
    */
-  return (RC_BUILDER " (x64)");
+  const char *platform = "x64";
 #else
-  return (RC_BUILDER " (" RC_BITNESS ")");
+  const char *platform = RC_BITNESS; /* from 'wsock_trace.rc' included above */
 #endif
+
+#if defined(_DEBUG) || defined(__NO_INLINE__)
+  const char *dbg_rel = "debug";
+#else
+  const char *dbg_rel = "release";
+#endif
+
+  static char buf[100];
+
+  if (show_dbg_rel)
+       snprintf (buf, sizeof(buf), "%s (%s, %s)", RC_BUILDER, platform, dbg_rel);
+  else snprintf (buf, sizeof(buf), "%s (%s)", RC_BUILDER, platform);
+  return (buf);
 }
 
