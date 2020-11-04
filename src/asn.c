@@ -257,10 +257,9 @@ static int ASN_check_database (const char *local_db)
     return (0);
   }
 
-  time_remote_db -= _timezone;
   if (stat(local_db, &st) == 0)
   {
-    time_local_db = st.st_mtime;
+    time_local_db = st.st_mtime - _timezone;
     older = (time_local_db < time_remote_db);
     if (older)
        snprintf (hours_behind, sizeof(hours_behind), " (%ld hours behind) ",
@@ -274,6 +273,9 @@ static int ASN_check_database (const char *local_db)
             "            It should be at: %s\n"
             "            Your local database is %sup-to-date.%s\n",
             ctime(&time_remote_db), url, older ? "not " : "", hours_behind);
+
+  time_local_db += _timezone;
+  TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), _tzname[0]);
   return (1);
 }
 
@@ -300,7 +302,8 @@ static size_t ASN_load_bin_file (const char *file)
     return (0);
   }
 
-  /* Do not trace 'WSAStartup()' inside libloc's 'loc_new()'.
+  /* Do not trace 'WSAStartup()' inside libloc's 'loc_new()' in case
+   * "Geo-IP/IPFile/src/fake-OpenSSL/openssl/applink.c" was not included somehow.
    */
   save = g_cfg.trace_level;
   g_cfg.trace_level = 0;
