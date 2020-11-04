@@ -398,10 +398,7 @@ class CLI(object):
 
 	def handle_update(self, db, ns):
 		if ns.cron and db:
-			now = datetime.datetime.utcnow()
-
-			# Parse the database timestamp
-			t = datetime.datetime.utcfromtimestamp(db.created_at)
+			now = time.time()
 
 			if ns.cron == "daily":
 				delta = datetime.timedelta(days=1)
@@ -410,22 +407,20 @@ class CLI(object):
 			elif ns.cron == "monthly":
 				delta = datetime.timedelta(days=30)
 
+			delta = delta.total_seconds()
+
 			# Check if the database has recently been updated
-			if t >= (now - delta):
+			if db.created_at >= (now - delta):
 				log.info(
-					_("The database has been updated recently (%s)") % \
-						format_timedelta(now - t),
+					_("The database has been updated recently"),
 				)
 				return 3
 
 		# Fetch the timestamp we need from DNS
 		t = location.discover_latest_version()
 
-		# Parse timestamp into datetime format
-		timestamp = datetime.datetime.utcfromtimestamp(t) if t else None
-
 		# Check the version of the local database
-		if db and timestamp and db.created_at >= timestamp.timestamp():
+		if db and t and db.created_at >= t:
 			log.info("Already on the latest version")
 			return
 
@@ -494,26 +489,35 @@ class CLI(object):
 		writer = self.__get_output_formatter(ns)
 
 		for asn in ns.asn:
-			f = writer(sys.stdout, prefix="AS%s" % asn)
+			if 1:
+			  print ("AS%s:" % asn)
+			  for n in db.search_networks(asn=asn, family=ns.family):
+			    print ("  %s" % n)
+			else:
+			  f = writer(sys.stdout, prefix="AS%s" % asn)
 
-			# Print all matching networks
-			for n in db.search_networks(asn=asn, family=ns.family):
-				f.write(n)
+			  # Print all matching networks
+			  for n in db.search_networks(asn=asn, family=ns.family):
+			     f.write(n)
 
-			f.finish()
+			  f.finish()
 
 	def handle_list_networks_by_cc(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
 		for country_code in ns.country_code:
-			# Open standard output
-			f = writer(sys.stdout, prefix=country_code)
+			if 1:
+				for n in db.search_networks(country_code=country_code.upper(), family=ns.family):
+					print ("  %s" % n)
+			else:
+				# Open standard output
+				f = writer(sys.stdout, prefix=country_code)
 
-			# Print all matching networks
-			for n in db.search_networks(country_code=country_code, family=ns.family):
-				f.write(n)
+				# Print all matching networks
+				for n in db.search_networks(country_code=country_code, family=ns.family):
+					f.write(n)
 
-			f.finish()
+				f.finish()
 
 	def handle_list_networks_by_flags(self, db, ns):
 		flags = 0
@@ -530,13 +534,18 @@ class CLI(object):
 		if not flags:
 			raise ValueError(_("You must at least pass one flag"))
 
-		writer = self.__get_output_formatter(ns)
-		f = writer(sys.stdout, prefix="custom")
+		if 1:
+			for n in db.search_networks(flags=flags, family=ns.family):
+				print (n)
 
-		for n in db.search_networks(flags=flags, family=ns.family):
-			f.write(n)
+		else:
+			writer = self.__get_output_formatter(ns)
+			f = writer(sys.stdout, prefix="custom")
 
-		f.finish()
+			for n in db.search_networks(flags=flags, family=ns.family):
+				f.write(n)
+
+			f.finish()
 
 	def handle_export(self, db, ns):
 		countries, asns = [], []
