@@ -100,9 +100,36 @@ static int _setenv (const char *env, const char *val)
   return (0);
 }
 
+/*
+ * Number of seconds from start of the Windows epoch
+ * (Jan. 1, 1601) and the Unix epoch (Jan. 1, 1970).
+ */
+#define DELTA_EPOCH_SEC  11644473600
+
 time_t timegm (struct tm *tm)
 {
   time_t ret;
+#if 1
+  SYSTEMTIME     st;
+  FILETIME       ft;
+  ULARGE_INTEGER uli;
+
+  memset (&st, '\0', sizeof(st));
+  st.wYear   = tm->tm_year + 1900;
+  st.wMonth  = tm->tm_mon + 1;
+  st.wDay    = tm->tm_mday;
+  st.wHour   = tm->tm_hour;
+  st.wMinute = tm->tm_min;
+  st.wSecond = tm->tm_sec;
+
+  SystemTimeToFileTime (&st, &ft);
+  uli.LowPart  = ft.dwLowDateTime;
+  uli.HighPart = ft.dwHighDateTime;
+
+  ret = (time_t) (uli.QuadPart/10000000);
+  ret -= DELTA_EPOCH_SEC;   /* from Win epoch to Unix epoch */
+  ret += _timezone;         /* Is this correct? (since strptime() ignores time-zone) */
+#else
   char  *tz = getenv ("TZ");
 
   if (tz)
@@ -119,6 +146,7 @@ time_t timegm (struct tm *tm)
   else
     _setenv ("TZ", "");
   _tzset();
+#endif
   return (ret);
 }
 
