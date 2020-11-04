@@ -120,7 +120,13 @@ int loc_as_new_from_database_v1(struct loc_ctx* ctx, struct loc_stringpool* pool
 		return r;
 
 	const char* name = loc_stringpool_get(pool, be32toh(dbobj->name));
-	return loc_as_set_name(*as, name);
+	r = loc_as_set_name(*as, name);
+	if (r) {
+		loc_as_unref(*as);
+		return r;
+	}
+
+	return 0;
 }
 
 int loc_as_to_database_v1(struct loc_as* as, struct loc_stringpool* pool,
