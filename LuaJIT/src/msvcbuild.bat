@@ -12,6 +12,7 @@
 
 @if not defined INCLUDE goto :FAIL
 
+@echo off
 @setlocal
 @rem Add more debug flags here, e.g. DEBUGCFLAGS=/DLUA_USE_APICHECK
 @set DEBUGCFLAGS=
