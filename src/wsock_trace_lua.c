@@ -37,13 +37,14 @@
 
 #define LUA_TRACE(level, fmt, ...)                  \
         do {                                        \
-          if (g_cfg.LUA.trace_level >= level)       \
+          if (g_cfg.LUA.trace_level >= level) {     \
              ENTER_CRIT();                          \
              trace_printf ("~8%s(%u): ~9" fmt "~0", \
                            __FILE__, __LINE__,      \
                            ## __VA_ARGS__);         \
              LEAVE_CRIT();                          \
              trace_flush();                         \
+          }                                         \
         } while (0)
 
 #define LUA_WARNING(fmt, ...)                 \
