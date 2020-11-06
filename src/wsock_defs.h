@@ -43,6 +43,7 @@
 #endif
 
 #if defined(_MSC_VER) && defined(_DEBUG)  /* use CrtDebug in MSVC debug-mode */
+  #undef  _CRTDBG_MAP_ALLOC
   #define _CRTDBG_MAP_ALLOC
   #undef _malloca                         /* Avoid MSVC-9 <malloc.h>/<crtdbg.h> name-clash */
   #include <crtdbg.h>
