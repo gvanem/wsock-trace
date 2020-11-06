@@ -25,12 +25,11 @@
 #include "common.h"
 #include "in_addr.h"
 
+#undef  LIBLOC_PRIVATE
 #define LIBLOC_PRIVATE
-#define EXTRA_DEBUG_PARANOIA
 
 #if defined(__CYGWIN__)
-//#define HAVE_ENDIAN_H 1
-  #define _WIN32        1
+  #define _WIN32  1
 #endif
 
 /**

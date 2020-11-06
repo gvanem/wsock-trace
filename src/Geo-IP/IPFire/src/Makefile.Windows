@@ -140,8 +140,7 @@ endif
 #
 # Until 'win_mmap.c' is working 100%
 #
-CFLAGS += -DEXTRA_DEBUG_PARANOIA
-
+# CFLAGS += -DEXTRA_DEBUG_PARANOIA
 
 #
 # Warning control.
