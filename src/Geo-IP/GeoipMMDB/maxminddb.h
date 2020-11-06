@@ -28,7 +28,7 @@ extern "C" {
 #include <winsock2.h>
 #include <ws2tcpip.h>
 /* libmaxminddb package version from configure */
-#define PACKAGE_VERSION "1.4.2"
+#define PACKAGE_VERSION "1.4.3"
 
 typedef ADDRESS_FAMILY sa_family_t;
 
@@ -43,6 +43,16 @@ typedef ADDRESS_FAMILY sa_family_t;
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#endif
+
+#ifndef MMDB_UINT128_USING_MODE
+/* Define as 1 if we we use unsigned int __atribute__ ((__mode__(TI))) for uint128 values */
+#define MMDB_UINT128_USING_MODE 0
+#endif
+
+#ifndef MMDB_UINT128_IS_BYTE_ARRAY
+/* Define as 1 if we don't have an unsigned __int128 type */
+#define MMDB_UINT128_IS_BYTE_ARRAY 1
 #endif
 
 #define MMDB_DATA_TYPE_EXTENDED (0)
@@ -190,7 +200,7 @@ typedef struct MMDB_ipv4_start_node_s {
  * library is upgraded */
 typedef struct MMDB_s {
     uint32_t flags;
-    const wchar_t* filename;
+    const char *filename;
     ssize_t file_size;
     const uint8_t *file_content;
     const uint8_t *data_section;
@@ -213,11 +223,8 @@ typedef struct MMDB_search_node_s {
     MMDB_entry_s right_record_entry;
 } MMDB_search_node_s;
 
-extern int MMDB_open(
-    const wchar_t* const filename,
-    uint32_t flags,
-    MMDB_s *const mmdb);
-
+extern int MMDB_open(const char *const filename, uint32_t flags,
+                     MMDB_s *const mmdb);
 extern MMDB_lookup_result_s MMDB_lookup_string(const MMDB_s *const mmdb,
                                                const char *const ipstr,
                                                int *const gai_error,

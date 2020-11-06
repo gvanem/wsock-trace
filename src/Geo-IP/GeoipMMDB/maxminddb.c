@@ -36,7 +36,7 @@
     do {                                                        \
         char *binary = byte_to_binary(byte);                    \
         if (NULL == binary) {                                   \
-            fprintf(stderr, "Malloc failed in DEBUG_BINARY\n"); \
+            fprintf(stderr, "Calloc failed in DEBUG_BINARY\n"); \
             abort();                                            \
         }                                                       \
         fprintf(stderr, fmt "\n", binary);                      \
@@ -54,7 +54,7 @@
 #ifdef MMDB_DEBUG
 char *byte_to_binary(uint8_t byte)
 {
-    char *bits = malloc(sizeof(char) * 9);
+    char *bits = calloc(9, sizeof(char));
     if (NULL == bits) {
         return bits;
     }
@@ -220,7 +220,7 @@ LOCAL char *bytes_to_hex(uint8_t *bytes, uint32_t size);
 
 #define FREE_AND_SET_NULL(p) { free((void *)(p)); (p) = NULL; }
 
-int MMDB_open(const wchar_t* const filename, uint32_t flags, MMDB_s *const mmdb)
+int MMDB_open(const char *const filename, uint32_t flags, MMDB_s *const mmdb)
 {
     int status = MMDB_SUCCESS;
 
@@ -231,10 +231,8 @@ int MMDB_open(const wchar_t* const filename, uint32_t flags, MMDB_s *const mmdb)
     mmdb->metadata.languages.names = NULL;
     mmdb->metadata.description.count = 0;
 
-    mmdb->filename = _wcsdup(filename); // dmex: modified for wchar_t ...  mmdb_strdup(filename);
-
-    if (NULL == mmdb->filename)
-    {
+    mmdb->filename = mmdb_strdup(filename);
+    if (NULL == mmdb->filename) {
         status = MMDB_OUT_OF_MEMORY_ERROR;
         goto cleanup;
     }
@@ -248,9 +246,9 @@ int MMDB_open(const wchar_t* const filename, uint32_t flags, MMDB_s *const mmdb)
         goto cleanup;
     }
 
-#ifdef _WIN32
-    //WSADATA wsa; // dmex: disabled since hostname lookup is not used.
-    //WSAStartup(MAKEWORD(2, 2), &wsa);
+#if defined(_WIN32) && 0
+    WSADATA wsa;
+    WSAStartup(MAKEWORD(2, 2), &wsa);
 #endif
 
     uint32_t metadata_size = 0;
@@ -323,7 +321,7 @@ int MMDB_open(const wchar_t* const filename, uint32_t flags, MMDB_s *const mmdb)
 LOCAL LPWSTR utf8_to_utf16(const char *utf8_str)
 {
     int wide_chars = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, NULL, 0);
-    wchar_t *utf16_str = (wchar_t *)malloc(wide_chars * sizeof(wchar_t));
+    wchar_t *utf16_str = (wchar_t *)calloc(wide_chars, sizeof(wchar_t));
 
     if (MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, utf16_str,
                             wide_chars) < 1) {
@@ -340,13 +338,13 @@ LOCAL int map_file(MMDB_s *const mmdb)
     int status = MMDB_SUCCESS;
     HANDLE mmh = NULL;
     HANDLE fd = INVALID_HANDLE_VALUE;
-    //LPWSTR utf16_filename = utf8_to_utf16(mmdb->filename);
-    //if (!utf16_filename) {
-    //    status = MMDB_FILE_OPEN_ERROR;
-    //    goto cleanup;
-    //}
-    fd = CreateFile(mmdb->filename, GENERIC_READ, FILE_SHARE_READ, NULL,
-                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    LPWSTR utf16_filename = utf8_to_utf16(mmdb->filename);
+    if (!utf16_filename) {
+        status = MMDB_FILE_OPEN_ERROR;
+        goto cleanup;
+    }
+    fd = CreateFileW(utf16_filename, GENERIC_READ, FILE_SHARE_READ, NULL,
+                     OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (fd == INVALID_HANDLE_VALUE) {
         status = MMDB_FILE_OPEN_ERROR;
         goto cleanup;
@@ -382,7 +380,7 @@ LOCAL int map_file(MMDB_s *const mmdb)
         CloseHandle(mmh);
     }
     errno = saved_errno;
-    //free(utf16_filename);
+    free(utf16_filename);
 
     return status;
 }
@@ -706,7 +704,7 @@ LOCAL int populate_languages_metadata(MMDB_s *mmdb, MMDB_s *metadata_db,
                               MMDB_INVALID_METADATA_ERROR);
 
     mmdb->metadata.languages.count = 0;
-    mmdb->metadata.languages.names = malloc(array_size * sizeof(char *));
+    mmdb->metadata.languages.names = calloc(array_size, sizeof(char *));
     if (NULL == mmdb->metadata.languages.names) {
         return MMDB_OUT_OF_MEMORY_ERROR;
     }
@@ -724,7 +722,7 @@ LOCAL int populate_languages_metadata(MMDB_s *mmdb, MMDB_s *metadata_db,
         if (NULL == mmdb->metadata.languages.names[i]) {
             return MMDB_OUT_OF_MEMORY_ERROR;
         }
-        // We assign this as we go so that if we fail a malloc and need to
+        // We assign this as we go so that if we fail a calloc and need to
         // free it, the count is right.
         mmdb->metadata.languages.count = i + 1;
     }
@@ -776,7 +774,7 @@ LOCAL int populate_description_metadata(MMDB_s *mmdb, MMDB_s *metadata_db,
                               MMDB_INVALID_METADATA_ERROR);
 
     mmdb->metadata.description.descriptions =
-        malloc(map_size * sizeof(MMDB_description_s *));
+        calloc(map_size, sizeof(MMDB_description_s *));
     if (NULL == mmdb->metadata.description.descriptions) {
         status = MMDB_OUT_OF_MEMORY_ERROR;
         goto cleanup;
@@ -784,7 +782,7 @@ LOCAL int populate_description_metadata(MMDB_s *mmdb, MMDB_s *metadata_db,
 
     for (uint32_t i = 0; i < map_size; i++) {
         mmdb->metadata.description.descriptions[i] =
-            malloc(sizeof(MMDB_description_s));
+            calloc(1, sizeof(MMDB_description_s));
         if (NULL == mmdb->metadata.description.descriptions[i]) {
             status = MMDB_OUT_OF_MEMORY_ERROR;
             goto cleanup;
@@ -1136,7 +1134,7 @@ int MMDB_vget_value(MMDB_entry_s *const start,
     MAYBE_CHECK_SIZE_OVERFLOW(length, SIZE_MAX / sizeof(const char *) - 1,
                               MMDB_INVALID_METADATA_ERROR);
 
-    const char **path = malloc((length + 1) * sizeof(const char *));
+    const char **path = calloc(length + 1, sizeof(const char *));
     if (NULL == path) {
         return MMDB_OUT_OF_MEMORY_ERROR;
     }
@@ -1852,9 +1850,10 @@ LOCAL void free_mmdb_struct(MMDB_s *const mmdb)
     if (NULL != mmdb->file_content) {
 #ifdef _WIN32
         UnmapViewOfFile(mmdb->file_content);
+
         /* Winsock is only initialized if open was successful so we only have
          * to cleanup then. */
-        //WSACleanup();
+     // WSACleanup();
 #else
         munmap((void *)mmdb->file_content, mmdb->file_size);
 #endif
@@ -2012,6 +2011,7 @@ LOCAL MMDB_entry_data_list_s *dump_entry_data_list(
             char *hex_string =
                 bytes_to_hex((uint8_t *)entry_data_list->entry_data.bytes,
                              entry_data_list->entry_data.data_size);
+
             if (NULL == hex_string) {
                 *status = MMDB_OUT_OF_MEMORY_ERROR;
                 return NULL;
@@ -2100,14 +2100,12 @@ LOCAL void print_indentation(FILE *stream, int i)
     fputs(buffer, stream);
 }
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
 LOCAL char *bytes_to_hex(uint8_t *bytes, uint32_t size)
 {
     char *hex_string;
     MAYBE_CHECK_SIZE_OVERFLOW(size, SIZE_MAX / 2 - 1, NULL);
 
-    hex_string = malloc((size * 2) + 1);
+    hex_string = calloc((size * 2) + 1, sizeof(char));
     if (NULL == hex_string) {
         return NULL;
     }
@@ -2116,9 +2114,10 @@ LOCAL char *bytes_to_hex(uint8_t *bytes, uint32_t size)
         sprintf(hex_string + (2 * i), "%02X", bytes[i]);
     }
 
+
+
     return hex_string;
 }
-#pragma warning(pop)
 
 const char *MMDB_strerror(int error_code)
 {

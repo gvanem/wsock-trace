@@ -1,6 +1,9 @@
 ## To-do
 
-A MaxMind library implementation from
-**[ProcessHacker](https://github.com/processhacker/processhacker/tree/master/plugins/NetworkTools/maxminddb)**.
+A minimal MaxMind MMDB library implementation from
+**[MaxMind](https://github.com/maxmind/libmaxminddb/)**.
+
+This code should also be able to handle the `.mmdb` files in **[DB-IP](../DB-IP)**.
+
 
 
