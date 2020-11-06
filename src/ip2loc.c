@@ -11,8 +11,12 @@
  * Together with the `geoip*.c` files, this module will return location
  * information (country, city and region) for an IPv4/IPv6-address.
  *
- * Unlike `geoip.c`, this module uses an external binary file specified
- * in the `[geoip]` section and keyword ` ip2location_bin_file` of `wsock_trace`.
+ * This module uses a binary file specified in the `[geoip]` section and
+ * the keyword `ip2location_bin_file` of `wsock_trace`.
+ *
+ * \note There is no separate keyword for IPv4 and IPv6 addresses as this
+ *       binary file should contain both address-families
+ *       (and additional information).
  */
 
 #include <stdint.h>
@@ -46,9 +50,7 @@
  * Previously ip2loc.c used the IP2Location-C-Library as a `git submodule`.
  * But now, I've simply pasted in the code from:
  *   IP2Location.c
- *   IP2Loc_DBInterface.c
  *   IP2Location.h
- *   IP2Loc_DBInterface.h
  *
  * below, patched heavily and removed stuff not needed.
  *
