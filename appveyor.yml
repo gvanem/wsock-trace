@@ -45,10 +45,12 @@ cache:
 
 before_build:
   #
-  # Download IP2Location Database (with IPv4+IP6 addresses) and decompress using '7z'.
+  # Download IP2Location Databases (with IPv4+IP6 addresses) and decompress using '7z'.
   #
   - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  - cmd: curl -O -# http://www.watt-32.net/CI/IP4-ASN.CSV.xz
   - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
+  - cmd: 7z x IP4-ASN.CSV.xz      > NUL
 
   #
   # Download IPFire's Database too.

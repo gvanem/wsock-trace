@@ -116,9 +116,14 @@ void ASN_init (void)
 }
 
 /**
- * Open and parse `GeoIPASNum.csv` file. \n
- * This must be generated using "Blockfinder" and
- * `python2 blockfinder --export`.
+ * Open and parse `IP2LOCATION-*-ASN.csv` file. \n
+ * This is on the format used by IP2Location. Like:
+ *  "16778240","16778495","1.0.4.0/24","56203","Big Red Group"
+ *   ^          ^          ^            ^       ^
+ *   |          |          |            |       |___ AS-name
+ *   |          |          |__ Net      |__ AS-number
+ *   |          |__ end IP
+ *   |_____________ start IP
  *
  * \param[in] file  the CSV file to read and parse.
  *
@@ -149,29 +154,6 @@ static size_t ASN_load_CSV_file (const char *file)
 }
 
 /**
- * Split a string like `{12849,21450}` and add each to
- * ASN_record::asn[]`.
- */
-static void ASN_add_asn_numbers (struct ASN_record *rec, const char *value)
-{
-  if (*value == '{')
-  {
-    char val[50], *v, *end;
-    int  i = 0;
-
-    _strlcpy (val, value+1, sizeof(val));
-    for (v = _strtok_r(val, ",", &end); v; v = _strtok_r(NULL, ",", &end))
-    {
-      rec->asn[i++] = (DWORD) _atoi64 (v);
-      if (i == DIM(rec->asn))    /* Room for "only" 8 ASN */
-         break;
-    }
-  }
-  else
-    rec->asn[0] = (DWORD) _atoi64 (value);
-}
-
-/**
  * Currently handles only IPv4 addresses.
  */
 static int ASN_CSV_add (struct CSV_context *ctx, const char *value)
@@ -182,22 +164,25 @@ static int ASN_CSV_add (struct CSV_context *ctx, const char *value)
   switch (ctx->field_num)
   {
     case 0:
-    case 1:      /* Ignore the low/high `a.b.c.d` fields */
-         break;
-    case 2:
          rec.ipv4.low.s_addr = swap32 ((DWORD)_atoi64(value));
          break;
-    case 3:
+    case 1:
          rec.ipv4.high.s_addr = swap32 ((DWORD)_atoi64(value));
          break;
+    case 2:      /* Ignore the `a.b.c.d/prefix` field */
+         break;
+    case 3:
+         rec.as_number = (DWORD) _atoi64 (value);
+         break;
     case 4:
-         ASN_add_asn_numbers (&rec, value);
-         rec.family = AF_INET;
          copy = malloc (sizeof(*copy));
          if (copy)
          {
-           memcpy (copy, &rec, sizeof(*copy));
-           copy->prefix = INET_util_network_len32 (copy->ipv4.high.s_addr, copy->ipv4.low.s_addr);
+           memcpy (&copy->ipv4, &rec.ipv4, sizeof(copy->ipv4));
+           copy->as_number = rec.as_number;
+           copy->prefix = 32 - INET_util_network_len32 (copy->ipv4.high.s_addr, copy->ipv4.low.s_addr);
+           copy->family = AF_INET;
+           _strlcpy (copy->as_name, value, sizeof(copy->as_name));
            smartlist_add (ASN_entries, copy);
          }
          memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
@@ -534,14 +519,19 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   trace_puts (intro);
 
 #if 0
-   /**
-    * \todo Search the cached ASN-list first (sorted on net?)
-    */
-   g_num_compares = 0;
-   const struct ASN_record *asn = smartlist_bsearch (ASN_entries, &rec, ASN_compare_on_net);
-   if (asn)
-      rc = libloc_handle_net (NULL, asn, ip4, ip6);
-   else
+  /**
+   * \todo Search the cached ASN-list first (sorted on net?)
+   */
+  if (ASN_entries)
+  {
+    const struct ASN_record *asn;
+
+    g_num_compares = 0;
+    asn = smartlist_bsearch (ASN_entries, &rec, ASN_compare_on_net);
+    if (asn)
+       rc = libloc_handle_net (NULL, asn, ip4, ip6);
+  }
+  else
 #endif
 
   rc = loc_database_lookup (libloc.db, &addr, &net);
@@ -601,7 +591,6 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 void ASN_print (const char *intro, const struct IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6)
 {
   const struct ASN_record *rec;
-  int   i;
 
   if (ip6 || !ASN_entries)
      return;
@@ -618,13 +607,8 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
   TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
 
   if (!rec)
-     trace_puts ("<no data>\n");
-  else
-  {
-    for (i = 0; rec->asn[i]; i++)
-        trace_printf ("%lu%s", rec->asn[i], (rec->asn[i+1] && i < DIM(rec->asn)) ? ", " : " ");
-    trace_printf ("(status: %s)\n", iana->status);
-  }
+       trace_puts ("<no data>\n");
+  else trace_printf ("%lu, %s (status: %s)\n", rec->as_number, rec->as_name, iana->status);
 }
 
 /*
@@ -632,7 +616,7 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
  */
 void ASN_dump (void)
 {
-  int i, j, num;
+  int i, num;
 
   if (!ASN_entries)
      return;
@@ -640,8 +624,8 @@ void ASN_dump (void)
   num = smartlist_len (ASN_entries);
   TRACE (2,
         "\nParsed %s records from \"%s\":\n"
-        "  Num.  Low              High             Pfx  ASN\n"
-        "----------------------------------------------------\n",
+        "  Num.  Low              High             Pfx     ASN  Name\n"
+        "-------------------------------------------------------------------\n",
          dword_str(num), g_cfg.ASN.asn_csv_file);
 
   for (i = 0; i < num; i++)
@@ -654,8 +638,7 @@ void ASN_dump (void)
         _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
     {
       trace_printf ("  %3d:  %-14.14s - %-14.14s    %2d  ", i, low_str, high_str, rec->prefix);
-      for (j = 0; j < DIM(rec->asn) && rec->asn[j]; j++)
-          trace_printf ("%lu%s", rec->asn[j], (rec->asn[j+1] && j < DIM(rec->asn)) ? ", " : "\n");
+      trace_printf ("%6lu  %s\n", rec->as_number, rec->as_name);
     }
     else
       trace_printf ("  %3d: <bogus>\n", i);

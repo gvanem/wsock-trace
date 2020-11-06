@@ -23,7 +23,8 @@ struct ASN_addr6 {
 struct ASN_record {
        int    family;           /**< The address-family of this node. Only `AF_INET` supported at the moment */
        int    prefix;           /**< The network prefix for this block */
-       u_long asn[8];           /**< The ASN-number(s) of this node */
+       u_long as_number;        /**< The AS-number of this node */
+       char   as_name[100];     /**< The AS-name of this node */
        union {
          struct ASN_addr4 ipv4; /**< The IPv4 address of this node */
          struct ASN_addr6 ipv6; /**< The IPv6 address of this node */

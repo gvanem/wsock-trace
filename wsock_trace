@@ -195,10 +195,9 @@
   enable = 1    # Show ASN info for addresses in traced functions
 
   #
-  # The Blockfinder generated ASN .csv file.
-  # Old and not very up-to-date. Use the below 'asn_bin_file' instead.
+  # The IP2Location ASN .csv file.
   #
-  asn_csv_file = %APPDATA%\GeoIPASNum.csv
+  # asn_csv_file = %APPDATA%\IP2LOCATION-LITE-ASN.CSV
 
   #
   # TODO:

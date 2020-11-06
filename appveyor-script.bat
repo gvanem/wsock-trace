@@ -58,7 +58,7 @@ echo   ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN           >> wsock_trace.a
 
 echo [asn]                                                      >> wsock_trace.appveyor
 echo   enable       = 1                                         >> wsock_trace.appveyor
-echo   asn_csv_file = %CD%\GeoIPASNum.csv                       >> wsock_trace.appveyor
+echo   asn_csv_file = %CD%\IP4-ASN.CSV                          >> wsock_trace.appveyor
 echo   asn_bin_file = %CD%\IPFire-database.db                   >> wsock_trace.appveyor
 
 echo [iana]                                                     >> wsock_trace.appveyor
