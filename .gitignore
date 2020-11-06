@@ -84,6 +84,8 @@ link.args
 cc.args
 vmdef.lua
 
+src/Geo-IP/DB-IP/dbip-city-lite-2020-03.mmdb
+
 src/Geo-IP/IPFire/Git-latest/
 src/Geo-IP/IPFire/get-latest.btm
 src/Geo-IP/IPFire/COPYING
