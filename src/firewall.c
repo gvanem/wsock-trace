@@ -4048,11 +4048,14 @@ static BOOL print_country_location (const struct in_addr *ia4, const struct in6_
  */
 static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6)
 {
+  char intro [50];
+
   /** \todo
    * Create a `ASN_libloc_print()` function that can
    * print to `fw_buf_add()` and return 1 if some ASN info was found.
    */
-  return ASN_libloc_print ("  ASN:     ", ia4, ia6);
+  snprintf (intro, sizeof(intro), "%-*sASN:  ", INDENT_SZ, "");
+  return ASN_libloc_print (intro, ia4, ia6);
 }
 
 /**
