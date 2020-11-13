@@ -560,7 +560,7 @@ class CLI(object):
 					autnum["asn"] = m.group(2)
 
 			elif key == "org":
-				autnum[key] = val
+				autnum[key] = val.upper()
 
 		# Skip empty objects
 		if not autnum:
@@ -646,7 +646,9 @@ class CLI(object):
 			# Split line
 			key, val = split_line(line)
 
-			if key in ("organisation", "org-name"):
+			if key == "organisation":
+				org[key] = val.upper()
+			elif key == "org-name":
 				org[key] = val
 
 		# Skip empty objects

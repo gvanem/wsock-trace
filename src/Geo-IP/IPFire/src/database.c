@@ -107,6 +107,9 @@ struct loc_database_enumerator {
 	enum loc_network_flags flags;
 	int family;
 
+	// Flatten output?
+	int flatten;
+
 	// Index of the AS we are looking at
 	unsigned int as_index;
 
@@ -118,6 +121,9 @@ struct loc_database_enumerator {
 	struct loc_node_stack network_stack[MAX_STACK_DEPTH];
 	int network_stack_depth;
 	unsigned int* networks_visited;
+
+	// For subnet search
+	struct loc_network_list* stack;
 };
 
 static int loc_database_read_magic(struct loc_database* db) {
@@ -935,35 +941,6 @@ LOC_EXPORT int loc_database_get_country(struct loc_database* db,
 
 // Enumerator
 
-LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enumerator,
-		struct loc_database* db, enum loc_database_enumerator_mode mode) {
-	struct loc_database_enumerator* e = calloc(1, sizeof(*e));
-	if (!e)
-		return -ENOMEM;
-
-	// Reference context
-	e->ctx = loc_ref(db->ctx);
-	e->db = loc_database_ref(db);
-	e->mode = mode;
-	e->refcount = 1;
-
-	// Initialise graph search
-	//e->network_stack[++e->network_stack_depth] = 0;
-	e->network_stack_depth = 1;
-	e->networks_visited = calloc(db->network_nodes_count, sizeof(*e->networks_visited));
-
-	DEBUG(e->ctx, "Database enumerator object allocated at %p\n", e);
-
-	*enumerator = e;
-	return 0;
-}
-
-LOC_EXPORT struct loc_database_enumerator* loc_database_enumerator_ref(struct loc_database_enumerator* enumerator) {
-	enumerator->refcount++;
-
-	return enumerator;
-}
-
 static void loc_database_enumerator_free(struct loc_database_enumerator* enumerator) {
 	DEBUG(enumerator->ctx, "Releasing database enumerator %p\n", enumerator);
 
@@ -977,7 +954,49 @@ static void loc_database_enumerator_free(struct loc_database_enumerator* enumera
 	// Free network search
 	free(enumerator->networks_visited);
 
+	// Free subnet stack
+	if (enumerator->stack)
+		loc_network_list_unref(enumerator->stack);
+
 	free(enumerator);
+}
+
+LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enumerator,
+		struct loc_database* db, enum loc_database_enumerator_mode mode, int flags) {
+	struct loc_database_enumerator* e = calloc(1, sizeof(*e));
+	if (!e)
+		return -ENOMEM;
+
+	// Reference context
+	e->ctx = loc_ref(db->ctx);
+	e->db = loc_database_ref(db);
+	e->mode = mode;
+	e->refcount = 1;
+
+	// Flatten output?
+	e->flatten = (flags & LOC_DB_ENUMERATOR_FLAGS_FLATTEN);
+
+	// Initialise graph search
+	e->network_stack_depth = 1;
+	e->networks_visited = calloc(db->network_nodes_count, sizeof(*e->networks_visited));
+
+	// Allocate stack
+	int r = loc_network_list_new(e->ctx, &e->stack);
+	if (r) {
+		loc_database_enumerator_free(e);
+		return r;
+	}
+
+	DEBUG(e->ctx, "Database enumerator object allocated at %p\n", e);
+
+	*enumerator = e;
+	return 0;
+}
+
+LOC_EXPORT struct loc_database_enumerator* loc_database_enumerator_ref(struct loc_database_enumerator* enumerator) {
+	enumerator->refcount++;
+
+	return enumerator;
 }
 
 LOC_EXPORT struct loc_database_enumerator* loc_database_enumerator_unref(struct loc_database_enumerator* enumerator) {
@@ -1113,16 +1132,12 @@ static int loc_database_enumerator_stack_push_node(
 	return 0;
 }
 
-LOC_EXPORT int loc_database_enumerator_next_network(
-		struct loc_database_enumerator* enumerator, struct loc_network** network) {
-	// Reset network
-	*network = NULL;
-
-	// Do not do anything if not in network mode
-	if (enumerator->mode != LOC_DB_ENUMERATE_NETWORKS)
+static int __loc_database_enumerator_next_network(
+		struct loc_database_enumerator* enumerator, struct loc_network** network, int filter) {
+	// Return top element from the stack
+	*network = loc_network_list_pop(enumerator->stack);
+	if (*network)
 		return 0;
-
-	int r;
 
 	DEBUG(enumerator->ctx, "Called with a stack of %u nodes\n",
 		enumerator->network_stack_depth);
@@ -1152,7 +1167,7 @@ LOC_EXPORT int loc_database_enumerator_next_network(
 			enumerator->db->network_nodes_v1 + node->offset;
 
 		// Add edges to stack
-		r = loc_database_enumerator_stack_push_node(enumerator,
+		int r = loc_database_enumerator_stack_push_node(enumerator,
 			be32toh(n->one), 1, node->depth + 1);
 
 		if (r)
@@ -1177,6 +1192,10 @@ LOC_EXPORT int loc_database_enumerator_next_network(
 			// Break on any errors
 			if (r)
 				return r;
+
+			// Return all networks when the filter is disabled
+			if (!filter)
+				return 0;
 
 			// Check if we are interested in this network
 
@@ -1220,12 +1239,111 @@ LOC_EXPORT int loc_database_enumerator_next_network(
 	}
 
 	// Reached the end of the search
-
-	// Mark all nodes as non-visited
-	for (unsigned int i = 0; i < enumerator->db->network_nodes_count; i++)
-		enumerator->networks_visited[i] = 0;
-
 	return 0;
+}
+
+static int __loc_database_enumerator_next_network_flattened(
+		struct loc_database_enumerator* enumerator, struct loc_network** network) {
+	// Fetch the next network
+	int r = __loc_database_enumerator_next_network(enumerator, network, 1);
+	if (r)
+		return r;
+
+	// End if we could not read another network
+	if (!*network)
+		return 0;
+
+	struct loc_network* subnet = NULL;
+	struct loc_network_list* subnets;
+
+	// Create a list with all subnets
+	r = loc_network_list_new(enumerator->ctx, &subnets);
+	if (r)
+		return r;
+
+	// Search all subnets from the database
+	while (1) {
+		// Fetch the next network in line
+		r = __loc_database_enumerator_next_network(enumerator, &subnet, 0);
+		if (r)
+			goto END;
+
+		// End if we did not receive another subnet
+		if (!subnet)
+			break;
+
+		// Collect all subnets in a list
+		if (loc_network_is_subnet(*network, subnet)) {
+			r = loc_network_list_push(subnets, subnet);
+			if (r)
+				goto END;
+
+			loc_network_unref(subnet);
+			continue;
+		}
+
+		// If this is not a subnet, we push it back onto the stack and break
+		r = loc_network_list_push(enumerator->stack, subnet);
+		if (r)
+			goto END;
+
+		loc_network_unref(subnet);
+		break;
+	}
+
+	DEBUG(enumerator->ctx, "Found %zu subnet(s)\n", loc_network_list_size(subnets));
+
+	// We can abort here if the network has no subnets
+	if (loc_network_list_empty(subnets)) {
+		loc_network_list_unref(subnets);
+
+		return 0;
+	}
+
+	// If the network has any subnets, we will break it into smaller parts
+	// without the subnets.
+	struct loc_network_list* excluded = loc_network_exclude_list(*network, subnets);
+	if (!excluded || loc_network_list_empty(excluded)) {
+		r = 1;
+		goto END;
+	}
+
+	// Sort the result
+	loc_network_list_sort(excluded);
+
+	// Reverse the list
+	loc_network_list_reverse(excluded);
+
+	// Replace network with the first one
+	loc_network_unref(*network);
+
+	*network = loc_network_list_pop(excluded);
+
+	// Push the rest onto the stack
+	loc_network_list_merge(enumerator->stack, excluded);
+
+	loc_network_list_unref(excluded);
+
+END:
+	if (subnet)
+		loc_network_unref(subnet);
+
+	loc_network_list_unref(subnets);
+
+	return r;
+}
+
+LOC_EXPORT int loc_database_enumerator_next_network(
+		struct loc_database_enumerator* enumerator, struct loc_network** network) {
+	// Do not do anything if not in network mode
+	if (enumerator->mode != LOC_DB_ENUMERATE_NETWORKS)
+	return 0;
+
+	// Flatten output?
+	if (enumerator->flatten)
+		return __loc_database_enumerator_next_network_flattened(enumerator, network);
+
+	return __loc_database_enumerator_next_network(enumerator, network, 1);
 }
 
 LOC_EXPORT int loc_database_enumerator_next_country(

@@ -160,7 +160,7 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
 LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
                                             unsigned int version, time_t* t)
 {
-  DNS_RECORD *rr, *dr = NULL;
+  DNS_RECORD *resource_rec, *data_rec = NULL;
   DNS_STATUS  rc;
   BOOL   found = FALSE;
   DWORD  opt = DNS_QUERY_NO_NETBT |     /* no NetBT names */
@@ -178,28 +178,28 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
    */
   snprintf (domain, sizeof(domain), LOC_DATABASE_DOMAIN, version);
 
-  rc = DnsQuery_A (domain, DNS_TYPE_TEXT, opt, NULL, &dr, NULL);
+  rc = DnsQuery_A (domain, DNS_TYPE_TEXT, opt, NULL, &data_rec, NULL);
 
-  DEBUG(ctx, "Querying %s, DnsQuery_A: dr %p: %ld\n", domain, dr, rc);
+  DEBUG(ctx, "Querying %s, DnsQuery_A: data_rec %p: %ld\n", domain, data_rec, rc);
 
-  if (rc != ERROR_SUCCESS || !dr)
+  if (rc != ERROR_SUCCESS || !data_rec)
      return (-1);
 
-  for (rr = dr; rr && !found; rr = rr->pNext)
+  for (resource_rec = data_rec; resource_rec && !found; resource_rec = resource_rec->pNext)
   {
     const DNS_TXT_DATAA *txt;
 
-    if (rr->wType != DNS_TYPE_TEXT)
+    if (resource_rec->wType != DNS_TYPE_TEXT)
        continue;
 
-    txt = &dr->Data.TXT;
+    txt = &data_rec->Data.TXT;
     if (txt->dwStringCount >= 1)
     {
       strncpy (answer, txt->pStringArray[0], sizeof(answer)-1);
       found = TRUE;
     }
   }
-  DnsFree (dr, DnsFreeRecordList);
+  DnsFree (resource_rec, DnsFreeRecordList);
 
   if (!found)
   {

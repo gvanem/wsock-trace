@@ -123,6 +123,18 @@ int main(int argc, char** argv) {
 	printf("The tree has %zu IPv6-only nodes with %zu networks\n", nodes,
 	       loc_network_tree_count_networks(tree));
 
+	// Check equals function
+	err = loc_network_eq(network1, network1);
+	if (!err) {
+		fprintf(stderr, "Network is not equal with itself\n");
+		exit(EXIT_FAILURE);
+	}
+
+	err = loc_network_eq(network1, network2);
+	if (err) {
+		fprintf(stderr, "Networks equal unexpectedly\n");
+		exit(EXIT_FAILURE);
+	}
 	// Check subnet function
 	err = loc_network_is_subnet_of(network1, network2);
 	if (err != 0) {
@@ -135,6 +147,54 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Subnet check 2 failed: %d\n", err);
 		exit(EXIT_FAILURE);
 	}
+
+	// Make list of subnets
+	struct loc_network_list* subnets = loc_network_subnets(network1);
+	if (!subnets) {
+		fprintf(stderr, "Could not find subnets of network\n");
+		exit(EXIT_FAILURE);
+	}
+
+	loc_network_list_dump(subnets);
+
+	while (!loc_network_list_empty(subnets)) {
+		struct loc_network* subnet = loc_network_list_pop(subnets);
+		if (!subnet) {
+			fprintf(stderr, "Received an empty subnet\n");
+			exit(EXIT_FAILURE);
+		}
+
+		char* s = loc_network_str(subnet);
+		printf("Received subnet %s\n", s);
+		free(s);
+
+		if (!loc_network_is_subnet_of(subnet, network1)) {
+			fprintf(stderr, "Not a subnet\n");
+			exit(EXIT_FAILURE);
+		}
+
+		loc_network_unref(subnet);
+	}
+
+	loc_network_list_unref(subnets);
+
+	struct loc_network_list* excluded = loc_network_exclude(network1, network2);
+	if (!excluded) {
+		fprintf(stderr, "Could not create excluded list\n");
+		exit(EXIT_FAILURE);
+	}
+
+	loc_network_list_dump(excluded);
+
+	// Reverse it
+	loc_network_list_reverse(excluded);
+	loc_network_list_dump(excluded);
+
+	// Sort them and dump them again
+	loc_network_list_sort(excluded);
+	loc_network_list_dump(excluded);
+
+	loc_network_list_unref(excluded);
 
 	// Create a database
 	struct loc_writer* writer;

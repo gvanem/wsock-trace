@@ -207,10 +207,10 @@ static PyObject* new_database_enumerator(PyTypeObject* type, struct loc_database
 	return (PyObject*)self;
 }
 
-static PyObject* Database_iterate_all(DatabaseObject* self, enum loc_database_enumerator_mode what) {
+static PyObject* Database_iterate_all(DatabaseObject* self, enum loc_database_enumerator_mode what, int flags) {
 	struct loc_database_enumerator* enumerator;
 
-	int r = loc_database_enumerator_new(&enumerator, self->db, what);
+	int r = loc_database_enumerator_new(&enumerator, self->db, what, flags);
 	if (r) {
 		PyErr_SetFromErrno(PyExc_SystemError);
 		return NULL;
@@ -223,7 +223,7 @@ static PyObject* Database_iterate_all(DatabaseObject* self, enum loc_database_en
 }
 
 static PyObject* Database_ases(DatabaseObject* self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_ASES);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_ASES, 0);
 }
 
 static PyObject* Database_search_as(DatabaseObject* self, PyObject* args) {
@@ -234,7 +234,7 @@ static PyObject* Database_search_as(DatabaseObject* self, PyObject* args) {
 
 	struct loc_database_enumerator* enumerator;
 
-	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_ASES);
+	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_ASES, 0);
 	if (r) {
 		PyErr_SetFromErrno(PyExc_SystemError);
 		return NULL;
@@ -250,7 +250,11 @@ static PyObject* Database_search_as(DatabaseObject* self, PyObject* args) {
 }
 
 static PyObject* Database_networks(DatabaseObject* self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS, 0);
+}
+
+static PyObject* Database_networks_flattened(DatabaseObject *self) {
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS, LOC_DB_ENUMERATOR_FLAGS_FLATTEN);
 }
 
 static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
@@ -264,7 +268,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		return NULL;
 
 	struct loc_database_enumerator* enumerator;
-	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_NETWORKS);
+	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_NETWORKS, 0);
 	if (r) {
 		PyErr_SetFromErrno(PyExc_SystemError);
 		return NULL;
@@ -317,7 +321,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 }
 
 static PyObject* Database_countries(DatabaseObject* self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_COUNTRIES);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_COUNTRIES, 0);
 }
 
 static struct PyMethodDef Database_methods[] = {
@@ -399,6 +403,13 @@ static struct PyGetSetDef Database_getsetters[] = {
 	{
 		"networks",
 		(getter)Database_networks,
+		NULL,
+		NULL,
+		NULL,
+	},
+	{
+		"networks_flattened",
+		(getter)Database_networks_flattened,
 		NULL,
 		NULL,
 		NULL,

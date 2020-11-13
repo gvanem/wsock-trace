@@ -38,6 +38,14 @@ const char* DESCRIPTION =
 	"Maecenas ut venenatis nunc.";
 const char* LICENSE = "CC";
 
+const char* networks[] = {
+	"2001:db8::/32",
+	"2001:db8:1000::/48",
+	"2001:db8:2000::/48",
+	"2001:db8:2020::/48",
+	NULL,
+};
+
 static int attempt_to_open(struct loc_ctx* ctx, char* path) {
 	FILE* f = fopen(path, "rb");
 	if (!f)
@@ -139,6 +147,24 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	struct loc_network* network = NULL;
+
+	// Add some networks
+	const char** n = networks;
+	while (*n) {
+		err = loc_writer_add_network(writer, &network, *n);
+		if (err) {
+			fprintf(stderr, "Could not add network %s\n", *n);
+			exit(EXIT_FAILURE);
+		}
+
+		// Set a country
+		loc_network_set_country_code(network, "XX");
+
+		// Next one
+		n++;
+	}
+
 	FILE* f = tmpfile();
 	if (!f) {
 		fprintf(stderr, "Could not open file for writing: %s\n", strerror(errno));
@@ -169,6 +195,33 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Vendor doesn't match: %s != %s\n", vendor, VENDOR);
 		exit(EXIT_FAILURE);
 	}
+
+	// Enumerator
+	struct loc_database_enumerator* enumerator;
+	err = loc_database_enumerator_new(&enumerator, db, LOC_DB_ENUMERATE_NETWORKS, 0);
+	if (err) {
+		fprintf(stderr, "Could not initialise the enumerator: %d\n", err);
+		exit(EXIT_FAILURE);
+	}
+
+	// Walk through all networks
+	while (1) {
+		err = loc_database_enumerator_next_network(enumerator, &network);
+		if (err) {
+			fprintf(stderr, "Error fetching the next network: %d\n", err);
+			exit(EXIT_FAILURE);
+		}
+
+		if (!network)
+			break;
+
+		char* s = loc_network_str(network);
+		printf("Got network: %s\n", s);
+		free(s);
+	}
+
+	// Free the enumerator
+	loc_database_enumerator_unref(enumerator);
 
 	// Close the database
 	loc_database_unref(db);

@@ -52,7 +52,32 @@ int loc_network_has_flag(struct loc_network* network, uint32_t flag);
 int loc_network_set_flag(struct loc_network* network, uint32_t flag);
 int loc_network_match_flag(struct loc_network* network, uint32_t flag);
 
+int loc_network_eq(struct loc_network* self, struct loc_network* other);
+int loc_network_overlaps(struct loc_network* self, struct loc_network* other);
+int loc_network_is_subnet(struct loc_network* self, struct loc_network* other);
 int loc_network_is_subnet_of(struct loc_network* self, struct loc_network* other);
+struct loc_network_list* loc_network_subnets(struct loc_network* network);
+struct loc_network_list* loc_network_exclude(
+		struct loc_network* self, struct loc_network* other);
+struct loc_network_list* loc_network_exclude_list(
+		struct loc_network* network, struct loc_network_list* list);
+
+// List
+struct loc_network_list;
+int loc_network_list_new(struct loc_ctx* ctx, struct loc_network_list** list);
+struct loc_network_list* loc_network_list_ref(struct loc_network_list* list);
+struct loc_network_list* loc_network_list_unref(struct loc_network_list* list);
+size_t loc_network_list_size(struct loc_network_list* list);
+int loc_network_list_empty(struct loc_network_list* list);
+void loc_network_list_clear(struct loc_network_list* list);
+void loc_network_list_dump(struct loc_network_list* list);
+struct loc_network* loc_network_list_get(struct loc_network_list* list, size_t index);
+int loc_network_list_push(struct loc_network_list* list, struct loc_network* network);
+struct loc_network* loc_network_list_pop(struct loc_network_list* list);
+int loc_network_list_contains(struct loc_network_list* list, struct loc_network* network);
+void loc_network_list_sort(struct loc_network_list* list);
+void loc_network_list_reverse(struct loc_network_list* list);
+int loc_network_list_merge(struct loc_network_list* self, struct loc_network_list* other);
 
 #ifdef LIBLOC_PRIVATE
 

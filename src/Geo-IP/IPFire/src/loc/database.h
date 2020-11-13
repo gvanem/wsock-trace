@@ -54,9 +54,13 @@ enum loc_database_enumerator_mode {
 	LOC_DB_ENUMERATE_COUNTRIES = 3,
 };
 
+enum loc_database_enumerator_flags {
+	LOC_DB_ENUMERATOR_FLAGS_FLATTEN = (1 << 0),
+};
+
 struct loc_database_enumerator;
 int loc_database_enumerator_new(struct loc_database_enumerator** enumerator,
-	struct loc_database* db, enum loc_database_enumerator_mode mode);
+	struct loc_database* db, enum loc_database_enumerator_mode mode, int flags);
 struct loc_database_enumerator* loc_database_enumerator_ref(struct loc_database_enumerator* enumerator);
 struct loc_database_enumerator* loc_database_enumerator_unref(struct loc_database_enumerator* enumerator);
 

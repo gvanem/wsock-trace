@@ -24,6 +24,24 @@
 #include "locationmodule.h"
 #include "network.h"
 
+static PyObject* PyList_FromNetworkList(struct loc_network_list* networks) {
+	PyObject* list = PyList_New(0);
+	if (!networks)
+		return list;
+
+	while (!loc_network_list_empty(networks)) {
+		struct loc_network* network = loc_network_list_pop(networks);
+
+		PyObject* n = new_network(&NetworkType, network);
+		PyList_Append(list, n);
+
+		loc_network_unref(network);
+		Py_DECREF(n);
+	}
+
+	return list;
+}
+
 PyObject* new_network(PyTypeObject* type, struct loc_network* network) {
 	NetworkObject* self = (NetworkObject*)type->tp_alloc(type, 0);
 	if (self) {
@@ -154,6 +172,21 @@ static PyObject* Network_set_flag(NetworkObject* self, PyObject* args) {
 	Py_RETURN_NONE;
 }
 
+static PyObject* Network_exclude(NetworkObject* self, PyObject* args) {
+	NetworkObject* other = NULL;
+
+	if (!PyArg_ParseTuple(args, "O!", &NetworkType, &other))
+		return NULL;
+
+	struct loc_network_list* list = loc_network_exclude(self->network, other->network);
+
+	// Convert to Python objects
+	PyObject* obj = PyList_FromNetworkList(list);
+	loc_network_list_unref(list);
+
+	return obj;
+}
+
 static PyObject* Network_is_subnet_of(NetworkObject* self, PyObject* args) {
 	NetworkObject* other = NULL;
 
@@ -191,6 +224,12 @@ static PyObject* Network_get_last_address(NetworkObject* self) {
 }
 
 static struct PyMethodDef Network_methods[] = {
+	{
+		"exclude",
+		(PyCFunction)Network_exclude,
+		METH_VARARGS,
+		NULL,
+	},
 	{
 		"has_flag",
 		(PyCFunction)Network_has_flag,
