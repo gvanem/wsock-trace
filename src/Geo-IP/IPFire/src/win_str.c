@@ -68,38 +68,6 @@ char *strcasestr (const char *hay_stack, const char *needle)
   return (NULL);
 }
 
-static int _setenv (const char *env, const char *val)
-{
-  size_t len, i = 0;
-  char *e, *new_val, value [1000] = { "?" };
-
-  for (e = _environ[i]; e; e = _environ[++i])
-  {
-    len = strchr (e, '=') - e;
-    if (!_strnicmp(env, e, len))
-       break;
-  }
-  snprintf (value, sizeof(value), "%s=%s", env, val);
-  new_val = _strdup (value);
-  if (!new_val)
-  {
-     errno = ENOMEM;
-     return (-1);
-  }
-  if (!e)  /* append */
-  {
-    _environ[i++] = new_val;
-    _environ[i] = NULL;
-  }
-  else     /* replace */
-  {
-    free (_environ[i]);
-    _environ[i] = new_val;
-  }
-  SetEnvironmentVariable (env, new_val);
-  return (0);
-}
-
 /*
  * Number of seconds from start of the Windows epoch
  * (Jan. 1, 1601) and the Unix epoch (Jan. 1, 1970).
@@ -109,7 +77,6 @@ static int _setenv (const char *env, const char *val)
 time_t timegm (struct tm *tm)
 {
   time_t ret;
-#if 1
   SYSTEMTIME     st;
   FILETIME       ft;
   ULARGE_INTEGER uli;
@@ -129,24 +96,6 @@ time_t timegm (struct tm *tm)
   ret = (time_t) (uli.QuadPart/10000000);
   ret -= DELTA_EPOCH_SEC;   /* from Win epoch to Unix epoch */
   ret += _timezone;         /* Is this correct? (since strptime() ignores time-zone) */
-#else
-  char  *tz = getenv ("TZ");
-
-  if (tz)
-     tz = _strdup (tz);
-  _setenv ("TZ", "");
-  _tzset();
-
-  ret = mktime (tm);
-  if (tz)
-  {
-    _setenv ("TZ", tz);
-    free (tz);
-  }
-  else
-    _setenv ("TZ", "");
-  _tzset();
-#endif
   return (ret);
 }
 
