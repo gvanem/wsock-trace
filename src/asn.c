@@ -2,6 +2,10 @@
  * \ingroup ASN
  *
  * \brief
+ *  Provides lookup of AS numbers (Autonomous System Number)
+ *  and their name (if any). Currently it uses these methods to lookup:
+ *  \li 'libloc' library from IPFire.
+ *  \li 'IP2Location*ASN.csv' files from IP2Location.
  *
  * asn.c - Part of Wsock-Trace.
  */
@@ -15,24 +19,19 @@
 #include "asn.h"
 
 #if !defined(__WATCOMC__)
-#define USE_LIBLOC
+#define USE_LIBLOC 1
 #endif
 
 #ifdef USE_LIBLOC
   #if defined(__CYGWIN__) && !defined(_WIN32)
-  #define _WIN32
+  #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/loc/libloc.h' only */
   #endif
 
   #include <loc/libloc.h>
   #include <loc/database.h>
   #include <loc/network.h>
   #include <loc/resolv.h>
-
-  #if defined(__CYGWIN__)
-    #include <syslog.h>     /* LOG_DEBUG */
-  #else
-    #include <loc/windows/syslog.h>
-  #endif
+  #include <loc/windows/syslog.h> /* LOG_DEBUG */
 
   /*
    * Ignore some MinGW/gcc warnings below.
@@ -415,11 +414,13 @@ static int libloc_handle_net (struct loc_network    *net,
     if (!AS_name)
          AS_name = "<Unknown>";
     else g_num_as_names++;   /**< \todo This should be a count of unique AS-names */
+    rc = 1;
   }
   else
   {
     TRACE (2, "No data for AS%u, err: %d/%s.\n", AS_num, -rc, strerror(-rc));
     AS_name = "<unknown>";
+    rc = 0;
   }
 
   if (remark)
@@ -439,7 +440,6 @@ static int libloc_handle_net (struct loc_network    *net,
 
   if (as)
      loc_as_unref (as);
-  rc = 1;
 
   return (rc);
 }
@@ -566,7 +566,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 #else
 static size_t ASN_load_bin_file (const char *file)
 {
-  TRACE (1, "Cannot load a binary '%s' file without 'USE_LIBLOC' defined.\n", file);
+  TRACE (1, "Sorry, OpenWatcom is not supported; cannot load database '%s' file.\n", file);
   ARGSUSED (file);
   return (0);
 }
@@ -608,7 +608,9 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
 
   if (!rec)
        trace_puts ("<no data>\n");
-  else trace_printf ("%lu, %s (status: %s)\n", rec->as_number, rec->as_name, iana->status);
+  else trace_printf ("%lu, %s (status: %s)\n",
+                     rec->as_number, rec->as_name[0] ? rec->as_name : "<unknown>" ,
+                     iana->status);
 }
 
 /*
