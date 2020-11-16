@@ -99,12 +99,11 @@ build_script:
 
 test_script:
   - cmd: set POSIXLY_CORRECT=1
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & test.exe & set USE_LUA=0
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & test.exe -d & set USE_LUA=0
 # - cmd: set WSOCK_TRACE_LEVEL=0 & chcp 865      & idna.exe           www.seoghør.no
 # - cmd: set WSOCK_TRACE_LEVEL=0 &                 idna.exe -c1252 -w www.seoghør.no
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
-  - cmd: if %BUILDER%. == msvc. test.exe -d
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
