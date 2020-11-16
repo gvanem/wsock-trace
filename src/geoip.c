@@ -801,7 +801,7 @@ static const struct country_list c_list[] = {
        { 191, "hr", C_EU, "Croatia"                              },
        { 192, "cu", C_NA, "Cuba"                                 },
        { 531, "cw", C_SA, "Curaçao"                              },
-       { 196, "cy", C_AS, "Cyprus"                               },
+       { 196, "cy", C_EU, "Cyprus"                               },
        { 203, "cz", C_EU, "Czech Republic"                       },
        { 208, "dk", C_EU, "Denmark"                              },
        { 262, "dj", C_AF, "Djibouti"                             },
