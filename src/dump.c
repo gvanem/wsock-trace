@@ -1658,7 +1658,7 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
     const char *comment;
 
     trace_indent (g_cfg.trace_indent+2);
-    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s,\n",
+    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
                   ai_flags_decode(ai->ai_flags),
                   socket_family(ai->ai_family),
                   socket_type(ai->ai_socktype),
@@ -2298,6 +2298,12 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
   WSAERROR_POP();
 }
 
+/**
+ * \todo use these to avoid printing several equal IANA records
+ */
+static const char *iana_last  = NULL;
+static BOOL        iana_equal = FALSE;
+
 /*
  * Common dumper of IANA information for a single address.
  */
@@ -2322,6 +2328,16 @@ dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_si
     iana_print_rec (IANA_intro, &rec);
   }
   return (1);
+}
+
+/**
+ * Reset the `x_last` variables to get ready to trace another Winsock-function
+ * with address(es) asn IANA information.
+ */
+static void iana_info_reset (void)
+{
+  iana_last  = NULL;
+  iana_equal = FALSE;
 }
 
 /*
@@ -2368,6 +2384,7 @@ void dump_IANA_addresses (int family, const char **addresses)
   if (num == 0)
      trace_puts ("None!?");
   trace_puts ("~0");
+  iana_info_reset();
 }
 
 void dump_IANA_sockaddr (const struct sockaddr *sa)
@@ -2429,6 +2446,7 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
   if (num == 0)
      trace_puts ("None!?");
   trace_puts ("~0");
+  iana_info_reset();
 }
 
 /*
