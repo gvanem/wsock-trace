@@ -184,15 +184,18 @@ ifeq ($(USE_OPENSSL),1)
                                $(OPENSSL_ROOT)/lib32/libcrypto_imp.lib)
 endif
 
-LIBLOC_SRC = as.c         \
-             country.c    \
-             database.c   \
-             libloc.c     \
-             network.c    \
-             resolv.c     \
-             stringpool.c \
-             writer.c     \
-             win_str.c    \
+LIBLOC_SRC = as.c           \
+             as-list.c      \
+             country.c      \
+             country-list.c \
+             database.c     \
+             libloc.c       \
+             network.c      \
+             network-list.c \
+             resolv.c       \
+             stringpool.c   \
+             writer.c       \
+             win_str.c      \
              win_mmap.c
 
 LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \

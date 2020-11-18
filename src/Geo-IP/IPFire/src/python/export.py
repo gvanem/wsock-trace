@@ -29,7 +29,7 @@ import _location
 log = logging.getLogger("location.export")
 log.propagate = 1
 
-flags = {
+FLAGS = {
 	_location.NETWORK_FLAG_ANONYMOUS_PROXY    : "A1",
 	_location.NETWORK_FLAG_SATELLITE_PROVIDER : "A2",
 	_location.NETWORK_FLAG_ANYCAST            : "A3",
@@ -39,8 +39,8 @@ class OutputWriter(object):
 	suffix = "networks"
 	mode = "w"
 
-	def __init__(self, db, f, prefix=None, flatten=True):
-		self.db, self.f, self.prefix, self.flatten = db, f, prefix, flatten
+	def __init__(self, f, prefix=None, flatten=True):
+		self.f, self.prefix, self.flatten = f, prefix, flatten
 
 		# The previously written network
 		self._last_network = None
@@ -49,13 +49,13 @@ class OutputWriter(object):
 		self._write_header()
 
 	@classmethod
-	def open(cls, db, filename, **kwargs):
+	def open(cls, filename, **kwargs):
 		"""
 			Convenience function to open a file
 		"""
 		f = open(filename, cls.mode)
 
-		return cls(db, f, **kwargs)
+		return cls(f, **kwargs)
 
 	def __repr__(self):
 		return "<%s f=%s>" % (self.__class__.__name__, self.f)
@@ -87,58 +87,12 @@ class OutputWriter(object):
 	def _write_network(self, network):
 		self.f.write("%s\n" % network)
 
-	def write(self, network, subnets):
+	def write(self, network):
 		if self.flatten and self._flatten(network):
 			log.debug("Skipping writing network %s (last one was %s)" % (network, self._last_network))
 			return
 
-		# Convert network into a Python object
-		_network = ipaddress.ip_network("%s" % network)
-
-		# Write the network when it has no subnets
-		if not subnets:
-			log.debug("Writing %s to %s" % (_network, self.f))
-			return self._write_network(_network)
-
-		# Convert subnets into Python objects
-		_subnets = [ipaddress.ip_network("%s" % subnet) for subnet in subnets]
-
-		# Split the network into smaller bits so that
-		# we can accomodate for any gaps in it later
-		to_check = set()
-		for _subnet in _subnets:
-			to_check.update(
-				_network.address_exclude(_subnet)
-			)
-
-		# Clear the list of all subnets
-		subnets = []
-
-		# Check if all subnets to not overlap with anything else
-		while to_check:
-			subnet_to_check = to_check.pop()
-
-			for _subnet in _subnets:
-				# Drop this subnet if it equals one of the subnets
-				# or if it is subnet of one of them
-				if subnet_to_check == _subnet or subnet_to_check.subnet_of(_subnet):
-					break
-
-				# Break it down if it overlaps
-				if subnet_to_check.overlaps(_subnet):
-					to_check.update(
-						subnet_to_check.address_exclude(_subnet)
-					)
-					break
-
-			# Add the subnet again as it passed the check
-			else:
-				subnets.append(subnet_to_check)
-
-		# Write all networks as compact as possible
-		for network in ipaddress.collapse_addresses(subnets):
-			log.debug("Writing %s to %s" % (network, self.f))
-			self._write_network(network)
+		return self._write_network(network)
 
 	def finish(self):
 		"""
@@ -188,11 +142,9 @@ class XTGeoIPOutputWriter(OutputWriter):
 	mode = "wb"
 
 	def _write_network(self, network):
-		for address in (network.network_address, network.broadcast_address):
+		for address in (network.first_address, network.last_address):
 			# Convert this into a string of bits
-			bytes = socket.inet_pton(
-				socket.AF_INET6 if network.version == 6 else socket.AF_INET, "%s" % address,
-			)
+			bytes = socket.inet_pton(network.family, address)
 
 			self.f.write(bytes)
 
@@ -220,7 +172,7 @@ class Exporter(object):
 					directory, prefix=country_code, suffix=self.writer.suffix, family=family,
 				)
 
-				writers[country_code] = self.writer.open(self.db, filename, prefix="CC_%s" % country_code)
+				writers[country_code] = self.writer.open(filename, prefix="CC_%s" % country_code)
 
 			# Create writers for ASNs
 			for asn in asns:
@@ -228,65 +180,41 @@ class Exporter(object):
 					directory, "AS%s" % asn, suffix=self.writer.suffix, family=family,
 				)
 
-				writers[asn] = self.writer.open(self.db, filename, prefix="AS%s" % asn)
+				writers[asn] = self.writer.open(filename, prefix="AS%s" % asn)
+
+			# Filter countries from special country codes
+			country_codes = [
+				country_code for country_code in countries if not country_code in FLAGS.values()
+			]
 
 			# Get all networks that match the family
-			networks = self.db.search_networks(family=family)
-
-			# Create a stack with all networks in order where we can put items back
-			# again and retrieve them in the next iteration.
-			networks = BufferedStack(networks)
+			networks = self.db.search_networks(family=family,
+				country_codes=country_codes, asns=asns, flatten=True)
 
 			# Walk through all networks
 			for network in networks:
-				# Collect all networks which are a subnet of network
-				subnets = []
-				for subnet in networks:
-					# If the next subnet was not a subnet, we have to push
-					# it back on the stack and break this loop
-					if not subnet.is_subnet_of(network):
-						networks.push(subnet)
-						break
-
-					subnets.append(subnet)
-
 				# Write matching countries
-				if network.country_code and network.country_code in writers:
-					# Mismatching subnets
-					gaps = [
-						subnet for subnet in subnets if not network.country_code == subnet.country_code
-					]
-
-					writers[network.country_code].write(network, gaps)
+				try:
+					writers[network.country_code].write(network)
+				except KeyError:
+					pass
 
 				# Write matching ASNs
-				if network.asn and network.asn in writers:
-					# Mismatching subnets
-					gaps = [
-						subnet for subnet in subnets if not network.asn == subnet.asn
-					]
-
-					writers[network.asn].write(network, gaps)
+				try:
+					writers[network.asn].write(network)
+				except KeyError:
+					pass
 
 				# Handle flags
-				for flag in flags:
+				for flag in FLAGS:
 					if network.has_flag(flag):
 						# Fetch the "fake" country code
-						country = flags[flag]
+						country = FLAGS[flag]
 
-						if not country in writers:
-							continue
-
-						gaps = [
-							subnet for subnet in subnets
-								if not subnet.has_flag(flag)
-						]
-
-						writers[country].write(network, gaps)
-
-				# Push all subnets back onto the stack
-				for subnet in reversed(subnets):
-					networks.push(subnet)
+						try:
+							writers[country].write(network)
+						except KeyError:
+							pass
 
 			# Write everything to the filesystem
 			for writer in writers.values():
@@ -298,33 +226,3 @@ class Exporter(object):
 		)
 
 		return os.path.join(directory, filename)
-
-
-class BufferedStack(object):
-	"""
-		This class takes an iterator and when being iterated
-		over it returns objects from that iterator for as long
-		as there are any.
-
-		It additionally has a function to put an item back on
-		the back so that it will be returned again at the next
-		iteration.
-	"""
-	def __init__(self, iterator):
-		self.iterator = iterator
-		self.stack = []
-
-	def __iter__(self):
-		return self
-
-	def __next__(self):
-		if self.stack:
-			return self.stack.pop(0)
-
-		return next(self.iterator)
-
-	def push(self, elem):
-		"""
-			Takes an element and puts it on the stack
-		"""
-		self.stack.insert(0, elem)

@@ -253,6 +253,7 @@ class CLI(object):
 				network = db.lookup(address)
 			except ValueError:
 				print(_("Invalid IP address: %s") % address, file=sys.stderr)
+				return 2
 
 			args = {
 				"address" : address,

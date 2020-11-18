@@ -30,6 +30,7 @@
 
 int main(int argc, char** argv) {
 	int err;
+	char* string = "";
 
 	struct loc_ctx* ctx;
 	err = loc_new(&ctx);
@@ -39,12 +40,14 @@ int main(int argc, char** argv) {
 	// Enable debug logging
 	loc_set_log_priority(ctx, LOG_DEBUG);
 
+#if 0
 	struct loc_network_tree* tree;
 	err = loc_network_tree_new(ctx, &tree);
 	if (err) {
 		fprintf(stderr, "Could not create the network tree\n");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	// Create a network
 	struct loc_network* network1;
@@ -60,6 +63,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
+#if 0
 	// Adding network to the tree
 	err = loc_network_tree_add_network(tree, network1);
 	if (err) {
@@ -68,11 +72,12 @@ int main(int argc, char** argv) {
 	}
 
 	// Check if the first and last addresses are correct
-	char* string = loc_network_format_first_address(network1);
+	string = loc_network_format_first_address(network1);
 	if (!string) {
 		fprintf(stderr, "Did get NULL instead of a string for the first address\n");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	if (strcmp(string, "2001:db8::") != 0) {
 		fprintf(stderr, "Got an incorrect first address: %s\n", string);
@@ -105,6 +110,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
+#if 0
 	// Adding network to the tree
 	err = loc_network_tree_add_network(tree, network2);
 	if (err) {
@@ -122,6 +128,7 @@ int main(int argc, char** argv) {
 	size_t nodes = loc_network_tree_count_nodes(tree);
 	printf("The tree has %zu IPv6-only nodes with %zu networks\n", nodes,
 	       loc_network_tree_count_networks(tree));
+#endif
 
 	// Check equals function
 	err = loc_network_eq(network1, network1);
@@ -135,6 +142,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Networks equal unexpectedly\n");
 		exit(EXIT_FAILURE);
 	}
+
 	// Check subnet function
 	err = loc_network_is_subnet_of(network1, network2);
 	if (err != 0) {
@@ -284,7 +292,10 @@ int main(int argc, char** argv) {
 	loc_network_unref(network3);
 	loc_network_unref(network4);
 	loc_network_unref(network5);
+
+#if 0
 	loc_network_tree_unref(tree);
+#endif
 
 	// And open it again from disk
 	struct loc_database* db;

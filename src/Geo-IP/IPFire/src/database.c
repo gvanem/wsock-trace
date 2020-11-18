@@ -41,8 +41,10 @@
 
 #include <loc/libloc.h>
 #include <loc/as.h>
+#include <loc/as-list.h>
 #include <loc/compat.h>
 #include <loc/country.h>
+#include <loc/country-list.h>
 #include <loc/database.h>
 #include <loc/format.h>
 #include <loc/network.h>
@@ -102,8 +104,8 @@ struct loc_database_enumerator {
 
 	// Search string
 	char* string;
-	char country_code[3];
-	uint32_t asn;
+	struct loc_country_list* countries;
+	struct loc_as_list* asns;
 	enum loc_network_flags flags;
 	int family;
 
@@ -951,6 +953,12 @@ static void loc_database_enumerator_free(struct loc_database_enumerator* enumera
 	if (enumerator->string)
 		free(enumerator->string);
 
+	if (enumerator->countries)
+		loc_country_list_unref(enumerator->countries);
+
+	if (enumerator->asns)
+		loc_as_list_unref(enumerator->asns);
+
 	// Free network search
 	free(enumerator->networks_visited);
 
@@ -1020,40 +1028,38 @@ LOC_EXPORT int loc_database_enumerator_set_string(struct loc_database_enumerator
 	return 0;
 }
 
-LOC_EXPORT int loc_database_enumerator_set_country_code(struct loc_database_enumerator* enumerator, const char* country_code) {
-	// Set empty country code
-	if (!country_code || !*country_code) {
-		*enumerator->country_code = '\0';
-		return 0;
-	}
+LOC_EXPORT struct loc_country_list* loc_database_enumerator_get_countries(
+		struct loc_database_enumerator* enumerator) {
+	if (!enumerator->countries)
+		return NULL;
 
-	// Treat A1, A2, A3 as special country codes,
-	// but perform search for flags instead
-	if (strcmp(country_code, "A1") == 0) {
-		return loc_database_enumerator_set_flag(enumerator,
-			LOC_NETWORK_FLAG_ANONYMOUS_PROXY);
-	} else if (strcmp(country_code, "A2") == 0) {
-		return loc_database_enumerator_set_flag(enumerator,
-			LOC_NETWORK_FLAG_SATELLITE_PROVIDER);
-	} else if (strcmp(country_code, "A3") == 0) {
-		return loc_database_enumerator_set_flag(enumerator,
-			LOC_NETWORK_FLAG_ANYCAST);
-	}
+	return loc_country_list_ref(enumerator->countries);
+}
 
-	// Country codes must be two characters
-	if (!loc_country_code_is_valid(country_code))
-		return -EINVAL;
+LOC_EXPORT int loc_database_enumerator_set_countries(
+		struct loc_database_enumerator* enumerator, struct loc_country_list* countries) {
+	if (enumerator->countries)
+		loc_country_list_unref(enumerator->countries);
 
-	for (unsigned int i = 0; i < 3; i++) {
-		enumerator->country_code[i] = country_code[i];
-	}
+	enumerator->countries = loc_country_list_ref(countries);
 
 	return 0;
 }
 
-LOC_EXPORT int loc_database_enumerator_set_asn(
-		struct loc_database_enumerator* enumerator, unsigned int asn) {
-	enumerator->asn = asn;
+LOC_EXPORT struct loc_as_list* loc_database_enumerator_get_asns(
+		struct loc_database_enumerator* enumerator) {
+	if (!enumerator->asns)
+		return NULL;
+
+	return loc_as_list_ref(enumerator->asns);
+}
+
+LOC_EXPORT int loc_database_enumerator_set_asns(
+		struct loc_database_enumerator* enumerator, struct loc_as_list* asns) {
+	if (enumerator->asns)
+		loc_as_list_unref(enumerator->asns);
+
+	enumerator->asns = loc_as_list_ref(asns);
 
 	return 0;
 }
@@ -1132,12 +1138,64 @@ static int loc_database_enumerator_stack_push_node(
 	return 0;
 }
 
+static int loc_database_enumerator_filter_network(
+		struct loc_database_enumerator* enumerator, struct loc_network* network) {
+	// Skip if the family does not match
+	if (enumerator->family && loc_network_address_family(network) != enumerator->family) {
+		DEBUG(enumerator->ctx, "Filtered network %p because of family not matching\n", network);
+		return 1;
+	}
+
+	// Skip if the country code does not match
+	if (enumerator->countries && !loc_country_list_empty(enumerator->countries)) {
+		const char* country_code = loc_network_get_country_code(network);
+
+		if (!loc_country_list_contains_code(enumerator->countries, country_code)) {
+			DEBUG(enumerator->ctx, "Filtered network %p because of country code not matching\n", network);
+			return 1;
+		}
+	}
+
+	// Skip if the ASN does not match
+	if (enumerator->asns && !loc_as_list_empty(enumerator->asns)) {
+		uint32_t asn = loc_network_get_asn(network);
+
+		if (!loc_as_list_contains_number(enumerator->asns, asn)) {
+			DEBUG(enumerator->ctx, "Filtered network %p because of ASN not matching\n", network);
+			return 1;
+		}
+	}
+
+	// Skip if flags do not match
+	if (enumerator->flags && !loc_network_match_flag(network, enumerator->flags)) {
+		DEBUG(enumerator->ctx, "Filtered network %p because of flags not matching\n", network);
+		return 1;
+	}
+
+	// Do not filter
+	return 0;
+}
+
 static int __loc_database_enumerator_next_network(
 		struct loc_database_enumerator* enumerator, struct loc_network** network, int filter) {
 	// Return top element from the stack
-	*network = loc_network_list_pop(enumerator->stack);
-	if (*network)
+	while (1) {
+		*network = loc_network_list_pop(enumerator->stack);
+
+		// Stack is empty
+		if (!*network)
+			break;
+
+		// Throw away any networks by filter
+		if (filter && loc_database_enumerator_filter_network(enumerator, *network)) {
+			loc_network_unref(*network);
+			*network = NULL;
+			continue;
+		}
+
+		// Return result
 		return 0;
+	}
 
 	DEBUG(enumerator->ctx, "Called with a stack of %u nodes\n",
 		enumerator->network_stack_depth);
@@ -1198,36 +1256,7 @@ static int __loc_database_enumerator_next_network(
 				return 0;
 
 			// Check if we are interested in this network
-
-			// Skip if the family does not match
-			if (enumerator->family && loc_network_address_family(*network) != enumerator->family) {
-				loc_network_unref(*network);
-				*network = NULL;
-
-				continue;
-			}
-
-			// Skip if the country code does not match
-			if (*enumerator->country_code &&
-					!loc_network_match_country_code(*network, enumerator->country_code)) {
-				loc_network_unref(*network);
-				*network = NULL;
-
-				continue;
-			}
-
-			// Skip if the ASN does not match
-			if (enumerator->asn &&
-					!loc_network_match_asn(*network, enumerator->asn)) {
-				loc_network_unref(*network);
-				*network = NULL;
-
-				continue;
-			}
-
-			// Skip if flags do not match
-			if (enumerator->flags &&
-					!loc_network_match_flag(*network, enumerator->flags)) {
+			if (loc_database_enumerator_filter_network(enumerator, *network)) {
 				loc_network_unref(*network);
 				*network = NULL;
 
@@ -1308,18 +1337,13 @@ static int __loc_database_enumerator_next_network_flattened(
 		goto END;
 	}
 
-	// Sort the result
-	loc_network_list_sort(excluded);
-
-	// Reverse the list
-	loc_network_list_reverse(excluded);
-
 	// Replace network with the first one
 	loc_network_unref(*network);
 
-	*network = loc_network_list_pop(excluded);
+	*network = loc_network_list_pop_first(excluded);
 
 	// Push the rest onto the stack
+	loc_network_list_reverse(excluded);
 	loc_network_list_merge(enumerator->stack, excluded);
 
 	loc_network_list_unref(excluded);

@@ -20,6 +20,7 @@
 
 #include <loc/libloc.h>
 #include <loc/network.h>
+#include <loc/network-list.h>
 
 #include "locationmodule.h"
 #include "network.h"

@@ -17,6 +17,8 @@
 #include <Python.h>
 
 #include <loc/libloc.h>
+#include <loc/as.h>
+#include <loc/as-list.h>
 #include <loc/database.h>
 
 #include "locationmodule.h"
@@ -258,40 +260,134 @@ static PyObject* Database_networks_flattened(DatabaseObject *self) {
 }
 
 static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
-	char* kwlist[] = { "country_code", "asn", "flags", "family", NULL };
-	const char* country_code = NULL;
-	unsigned int asn = 0;
+	char* kwlist[] = { "country_codes", "asns", "flags", "family", "flatten", NULL };
+	PyObject* country_codes = NULL;
+	PyObject* asn_list = NULL;
 	int flags = 0;
 	int family = 0;
+	int flatten = 0;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|siii", kwlist, &country_code, &asn, &flags, &family))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!iip", kwlist,
+			&PyList_Type, &country_codes, &PyList_Type, &asn_list, &flags, &family, &flatten))
 		return NULL;
 
 	struct loc_database_enumerator* enumerator;
-	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_NETWORKS, 0);
+	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_NETWORKS,
+		(flatten) ? LOC_DB_ENUMERATOR_FLAGS_FLATTEN : 0);
 	if (r) {
 		PyErr_SetFromErrno(PyExc_SystemError);
 		return NULL;
 	}
 
 	// Set country code we are searching for
-	if (country_code) {
-		r = loc_database_enumerator_set_country_code(enumerator, country_code);
-
+	if (country_codes) {
+		struct loc_country_list* countries;
+		r = loc_country_list_new(loc_ctx, &countries);
 		if (r) {
-			PyErr_SetFromErrno(PyExc_SystemError);
+			PyErr_SetString(PyExc_SystemError, "Could not create country list");
 			return NULL;
 		}
+
+		for (unsigned int i = 0; i < PyList_Size(country_codes); i++) {
+			PyObject* item = PyList_GetItem(country_codes, i);
+
+			if (!PyUnicode_Check(item)) {
+				PyErr_SetString(PyExc_TypeError, "Country codes must be strings");
+				loc_country_list_unref(countries);
+				return NULL;
+			}
+
+			const char* country_code = PyUnicode_AsUTF8(item);
+
+			struct loc_country* country;
+			r = loc_country_new(loc_ctx, &country, country_code);
+			if (r) {
+				if (r == -EINVAL) {
+					PyErr_Format(PyExc_ValueError, "Invalid country code: %s", country_code);
+				} else {
+					PyErr_SetString(PyExc_SystemError, "Could not create country");
+				}
+
+				loc_country_list_unref(countries);
+				return NULL;
+			}
+
+			// Append it to the list
+			r = loc_country_list_append(countries, country);
+			if (r) {
+				PyErr_SetString(PyExc_SystemError, "Could not append country to the list");
+
+				loc_country_list_unref(countries);
+				loc_country_unref(country);
+				return NULL;
+			}
+
+			loc_country_unref(country);
+		}
+
+		r = loc_database_enumerator_set_countries(enumerator, countries);
+		if (r) {
+			PyErr_SetFromErrno(PyExc_SystemError);
+
+			loc_as_list_unref(countries);
+			return NULL;
+		}
+
+		loc_country_list_unref(countries);
 	}
 
 	// Set the ASN we are searching for
-	if (asn) {
-		r = loc_database_enumerator_set_asn(enumerator, asn);
-
+	if (asn_list) {
+		struct loc_as_list* asns;
+		r = loc_as_list_new(loc_ctx, &asns);
 		if (r) {
-			PyErr_SetFromErrno(PyExc_SystemError);
+			PyErr_SetString(PyExc_SystemError, "Could not create AS list");
 			return NULL;
 		}
+
+		for (unsigned int i = 0; i < PyList_Size(asn_list); i++) {
+			PyObject* item = PyList_GetItem(asn_list, i);
+
+			if (!PyLong_Check(item)) {
+				PyErr_SetString(PyExc_TypeError, "ASNs must be numbers");
+
+				loc_as_list_unref(asns);
+				return NULL;
+			}
+
+			unsigned long number = PyLong_AsLong(item);
+
+			struct loc_as* as;
+			r = loc_as_new(loc_ctx, &as, number);
+			if (r) {
+				PyErr_SetString(PyExc_SystemError, "Could not create AS");
+
+				loc_as_list_unref(asns);
+				loc_as_unref(as);
+				return NULL;
+			}
+
+			r = loc_as_list_append(asns, as);
+			if (r) {
+				PyErr_SetString(PyExc_SystemError, "Could not append AS to the list");
+
+				loc_as_list_unref(asns);
+				loc_as_unref(as);
+				return NULL;
+			}
+
+			loc_as_unref(as);
+		}
+
+		r = loc_database_enumerator_set_asns(enumerator, asns);
+		if (r) {
+			PyErr_SetFromErrno(PyExc_SystemError);
+
+			loc_as_list_unref(asns);
+			return NULL;
+		}
+
+		loc_as_list_unref(asns);
 	}
 
 	// Set the flags we are searching for

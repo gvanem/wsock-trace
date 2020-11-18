@@ -199,15 +199,18 @@ IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
 #
 # .obj-files for 'libloc$(X_SUFFIX)$(_D).lib'.
 #
-LIBLOC_OBJ = $(OBJ_DIR)\as.obj         \
-             $(OBJ_DIR)\country.obj    \
-             $(OBJ_DIR)\database.obj   \
-             $(OBJ_DIR)\libloc.obj     \
-             $(OBJ_DIR)\network.obj    \
-             $(OBJ_DIR)\resolv.obj     \
-             $(OBJ_DIR)\stringpool.obj \
-             $(OBJ_DIR)\writer.obj     \
-             $(OBJ_DIR)\win_str.obj    \
+LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
+             $(OBJ_DIR)\as-list.obj      \
+             $(OBJ_DIR)\country.obj      \
+             $(OBJ_DIR)\country-list.obj \
+             $(OBJ_DIR)\database.obj     \
+             $(OBJ_DIR)\libloc.obj       \
+             $(OBJ_DIR)\network.obj      \
+             $(OBJ_DIR)\network-list.obj \
+             $(OBJ_DIR)\resolv.obj       \
+             $(OBJ_DIR)\stringpool.obj   \
+             $(OBJ_DIR)\writer.obj       \
+             $(OBJ_DIR)\win_str.obj      \
              $(OBJ_DIR)\win_mmap.obj
 
 all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) \

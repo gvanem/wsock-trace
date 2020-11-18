@@ -131,10 +131,13 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
 #
 LIBLOC_SRC = $(addprefix $(LIBLOC_ROOT)/, \
                as.c                       \
+               as-list.c                  \
                country.c                  \
+               country-list.c             \
                database.c                 \
                libloc.c                   \
                network.c                  \
+               network-list.c             \
                resolv.c                   \
                stringpool.c               \
                writer.c                   \

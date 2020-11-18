@@ -112,10 +112,13 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
 #
 LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
                as.o                   \
+               as-list.o              \
                country.o              \
+               country-list.o         \
                database.o             \
                libloc.o               \
                network.o              \
+               network-list.o         \
                resolv.o               \
                stringpool.o           \
                writer.o               \

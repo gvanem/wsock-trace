@@ -43,6 +43,7 @@
   #include <io.h>
   #include <intrin.h>
 
+
   #if defined(__CYGWIN__)
     #include <endian.h>
 
@@ -59,6 +60,8 @@
     #define htobe32(x)  _byteswap_ulong (x)
     #define be64toh(x)  _byteswap_uint64 (x)
     #define htobe64(x)  _byteswap_uint64 (x)
+
+    #define reallocarray(ptr, nmemb, size)  realloc (ptr, (nmemb) * (size))
   #endif
 
   #if defined(LIBLOC_PRIVATE)
