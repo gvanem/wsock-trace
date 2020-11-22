@@ -30,7 +30,6 @@
 
 int main(int argc, char** argv) {
 	int err;
-	char* string = "";
 
 	struct loc_ctx* ctx;
 	err = loc_new(&ctx);
@@ -70,14 +69,14 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Could not add network to the tree\n");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	// Check if the first and last addresses are correct
-	string = loc_network_format_first_address(network1);
+	char* string = loc_network_format_first_address(network1);
 	if (!string) {
 		fprintf(stderr, "Did get NULL instead of a string for the first address\n");
 		exit(EXIT_FAILURE);
 	}
-#endif
 
 	if (strcmp(string, "2001:db8::") != 0) {
 		fprintf(stderr, "Got an incorrect first address: %s\n", string);

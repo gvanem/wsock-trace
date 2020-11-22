@@ -329,7 +329,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		if (r) {
 			PyErr_SetFromErrno(PyExc_SystemError);
 
-			loc_as_list_unref(countries);
+			loc_country_list_unref(countries);
 			return NULL;
 		}
 

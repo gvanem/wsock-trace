@@ -37,7 +37,9 @@ struct loc_network* loc_network_unref(struct loc_network* network);
 char* loc_network_str(struct loc_network* network);
 int loc_network_address_family(struct loc_network* network);
 
+const struct in6_addr* loc_network_get_first_address(struct loc_network* network);
 char* loc_network_format_first_address(struct loc_network* network);
+const struct in6_addr* loc_network_get_last_address(struct loc_network* network);
 char* loc_network_format_last_address(struct loc_network* network);
 int loc_network_match_address(struct loc_network* network, const struct in6_addr* address);
 

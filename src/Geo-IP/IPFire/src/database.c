@@ -622,7 +622,7 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 	}
 
 	clock_t end = clock();
-	DEBUG(db->ctx, "Signature checked in %.4fms\n",
+	INFO(db->ctx, "Signature checked in %.4fms\n",
 		(double)(end - start) / CLOCKS_PER_SEC * 1000);
 
 CLEANUP:
@@ -682,8 +682,10 @@ LOC_EXPORT int loc_database_get_as(struct loc_database* db, struct loc_as** as, 
 	off_t lo = 0;
 	off_t hi = db->as_count - 1;
 
+#ifdef ENABLE_DEBUG
 	// Save start time
 	clock_t start = clock();
+#endif
 
 	while (lo <= hi) {
 		off_t i = (lo + hi) / 2;
@@ -696,11 +698,13 @@ LOC_EXPORT int loc_database_get_as(struct loc_database* db, struct loc_as** as, 
 		// Check if this is a match
 		uint32_t as_number = loc_as_get_number(*as);
 		if (as_number == number) {
+#ifdef ENABLE_DEBUG
 			clock_t end = clock();
 
 			// Log how fast this has been
 			DEBUG(db->ctx, "Found AS%u in %.4fms\n", as_number,
 				(double)(end - start) / CLOCKS_PER_SEC * 1000);
+#endif
 
 			return 0;
 		}
@@ -744,11 +748,13 @@ static int loc_database_fetch_network(struct loc_database* db, struct loc_networ
 			return -1;
 	}
 
+#ifdef ENABLE_DEBUG
 	if (r == 0) {
 		char* string = loc_network_str(*network);
 		DEBUG(db->ctx, "Got network %s\n", string);
 		free(string);
 	}
+#endif
 
 	return r;
 }
@@ -843,17 +849,21 @@ LOC_EXPORT int loc_database_lookup(struct loc_database* db,
 
 	*network = NULL;
 
+#ifdef ENABLE_DEBUG
 	// Save start time
 	clock_t start = clock();
+#endif
 
 	int r = __loc_database_lookup(db, address, network, &network_address,
 		db->network_nodes_v1, 0);
 
+#ifdef ENABLE_DEBUG
 	clock_t end = clock();
 
 	// Log how fast this has been
 	DEBUG(db->ctx, "Executed network search in %.4fms\n",
 		(double)(end - start) / CLOCKS_PER_SEC * 1000);
+#endif
 
 	return r;
 }
@@ -900,8 +910,10 @@ LOC_EXPORT int loc_database_get_country(struct loc_database* db,
 	off_t lo = 0;
 	off_t hi = db->countries_count - 1;
 
+#ifdef ENABLE_DEBUG
 	// Save start time
 	clock_t start = clock();
+#endif
 
 	while (lo <= hi) {
 		off_t i = (lo + hi) / 2;
@@ -916,11 +928,13 @@ LOC_EXPORT int loc_database_get_country(struct loc_database* db,
 		int result = strcmp(code, cc);
 
 		if (result == 0) {
+#ifdef ENABLE_DEBUG
 			clock_t end = clock();
 
 			// Log how fast this has been
 			DEBUG(db->ctx, "Found country %s in %.4fms\n", cc,
 				(double)(end - start) / CLOCKS_PER_SEC * 1000);
+#endif
 
 			return 0;
 		}

@@ -215,6 +215,30 @@ static PyObject* Network_get_first_address(NetworkObject* self) {
 	return obj;
 }
 
+static PyObject* PyBytes_FromAddress(const struct in6_addr* address6) {
+	struct in_addr address4;
+
+	// Convert IPv4 addresses to struct in_addr
+	if (IN6_IS_ADDR_V4MAPPED(address6)) {
+#ifdef _WIN32
+		address4.s_addr = *(u_long*) &address6->s6_words[6];
+#else
+		address4.s_addr = address6->s6_addr32[3];
+#endif
+
+		return PyBytes_FromStringAndSize((const char*)&address4, sizeof(address4));
+	}
+
+	// Return IPv6 addresses as they are
+	return PyBytes_FromStringAndSize((const char*)address6, sizeof(*address6));
+}
+
+static PyObject* Network_get__first_address(NetworkObject* self) {
+	const struct in6_addr* address = loc_network_get_first_address(self->network);
+
+	return PyBytes_FromAddress(address);
+}
+
 static PyObject* Network_get_last_address(NetworkObject* self) {
 	char* address = loc_network_format_last_address(self->network);
 
@@ -222,6 +246,12 @@ static PyObject* Network_get_last_address(NetworkObject* self) {
 	free(address);
 
 	return obj;
+}
+
+static PyObject* Network_get__last_address(NetworkObject* self) {
+	const struct in6_addr* address = loc_network_get_last_address(self->network);
+
+	return PyBytes_FromAddress(address);
 }
 
 static struct PyMethodDef Network_methods[] = {
@@ -282,8 +312,22 @@ static struct PyGetSetDef Network_getsetters[] = {
 		NULL,
 	},
 	{
+		"_first_address",
+		(getter)Network_get__first_address,
+		NULL,
+		NULL,
+		NULL,
+	},
+	{
 		"last_address",
 		(getter)Network_get_last_address,
+		NULL,
+		NULL,
+		NULL,
+	},
+	{
+		"_last_address",
+		(getter)Network_get__last_address,
 		NULL,
 		NULL,
 		NULL,

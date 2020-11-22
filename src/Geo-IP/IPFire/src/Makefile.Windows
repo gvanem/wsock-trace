@@ -59,12 +59,13 @@ define Usage
   Specify CC=clang-cl for clang-cl
 endef
 
-TEST_PROGS = test-as.exe        \
-             test-country.exe   \
-             test-database.exe  \
-             test-libloc.exe    \
-             test-network.exe   \
-             test-signature.exe \
+TEST_PROGS = test-as.exe           \
+             test-country.exe      \
+             test-database.exe     \
+             test-libloc.exe       \
+             test-network.exe      \
+             test-network-list.exe \
+             test-signature.exe    \
              test-stringpool.exe
 
 
@@ -221,12 +222,13 @@ epilogue:
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
 
-.SECONDARY: $(OBJ_DIR)/test-as.$(O)         \
-            $(OBJ_DIR)/test-country.$(O)    \
-            $(OBJ_DIR)/test-database.$(O)   \
-            $(OBJ_DIR)/test-libloc.$(O)     \
-            $(OBJ_DIR)/test-network.$(O)    \
-            $(OBJ_DIR)/test-stringpool.$(O) \
+.SECONDARY: $(OBJ_DIR)/test-as.$(O)           \
+            $(OBJ_DIR)/test-country.$(O)      \
+            $(OBJ_DIR)/test-database.$(O)     \
+            $(OBJ_DIR)/test-libloc.$(O)       \
+            $(OBJ_DIR)/test-network.$(O)      \
+            $(OBJ_DIR)/test-network-list.$(O) \
+            $(OBJ_DIR)/test-stringpool.$(O)   \
             $(OBJ_DIR)/test-signature.$(O)
 
 $(STATIC_LIB): $(OBJ_DIR) $(LIBLOC_OBJ)
@@ -305,11 +307,11 @@ $(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
 	$(call make_res, $@, $<)
 
 ifeq ($(USE_STATIC_LIBLOC),1)
-test-%.exe: $(OBJ_DIR)/test-%.$(O) $(STATIC_LIB)
+  test-%.exe: $(OBJ_DIR)/test-%.$(O) $(STATIC_LIB)
 	$(call link_EXE, $@, $^ $(OPENSSL_LIB) $(WS2_32))
 
 else
-test-%.exe: $(OBJ_DIR)/test-%.$(O) $(IMPORT_LIB)
+  test-%.exe: $(OBJ_DIR)/test-%.$(O) $(IMPORT_LIB)
 	$(call link_EXE, $@, $^)
 endif
 

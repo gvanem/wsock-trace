@@ -433,7 +433,7 @@ class CLI(object):
 
 		# Try downloading a new database
 		try:
-			t = d.download(public_key=ns.public_key, timestamp=timestamp, tmpdir=tmpdir)
+			t = d.download(public_key=ns.public_key, timestamp=t, tmpdir=tmpdir)
 
 		# If no file could be downloaded, log a message
 		except FileNotFoundError as e:

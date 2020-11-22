@@ -119,8 +119,8 @@ class Downloader(object):
 
 		headers = {}
 		if timestamp:
-			headers["If-Modified-Since"] = timestamp.strftime(
-				"%a, %d %b %Y %H:%M:%S GMT",
+			headers["If-Modified-Since"] = time.strftime(
+				"%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp),
 			)
 
 		t = tempfile.NamedTemporaryFile(dir=tmpdir, delete=False)
@@ -195,7 +195,7 @@ class Downloader(object):
 		db = Database(f.name)
 
 		# Database is not recent
-		if timestamp and db.created_at < timestamp.timestamp():
+		if timestamp and db.created_at < timestamp:
 			return False
 
 		log.info("Downloaded new database from %s" % (time.strftime(

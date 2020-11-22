@@ -368,8 +368,16 @@ static char* loc_network_format_address(struct loc_network* network, const struc
 	return string;
 }
 
+LOC_EXPORT const struct in6_addr* loc_network_get_first_address(struct loc_network* network) {
+	return &network->first_address;
+}
+
 LOC_EXPORT char* loc_network_format_first_address(struct loc_network* network) {
 	return loc_network_format_address(network, &network->first_address);
+}
+
+LOC_EXPORT const struct in6_addr* loc_network_get_last_address(struct loc_network* network) {
+	return &network->last_address;
 }
 
 LOC_EXPORT char* loc_network_format_last_address(struct loc_network* network) {
