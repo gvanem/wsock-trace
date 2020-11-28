@@ -489,12 +489,12 @@ class CLI(object):
 	def handle_list_networks_by_as(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
-		for asn in ns.asn:
-			if 1:
-			  print ("AS%s:" % asn)
-			  for n in db.search_networks(asn=asn, family=ns.family):
-			    print ("  %s" % n)
-			else:
+		if 1:
+		  print ("networks by AS%s" % ns.asn[0])
+		  for n in db.search_networks(asns=ns.asn, family=ns.family):
+		    print ("  %s" % n)
+		else:
+			for asn in ns.asn:
 			  f = writer(sys.stdout, prefix="AS%s" % asn)
 
 			  # Print all matching networks
@@ -506,11 +506,13 @@ class CLI(object):
 	def handle_list_networks_by_cc(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
-		for country_code in ns.country_code:
-			if 1:
-				for n in db.search_networks(country_code=country_code.upper(), family=ns.family):
-					print ("  %s" % n)
-			else:
+		if 1:
+			cc = ns.country_code[0].upper()
+			print ("networks in country %s" % cc)
+			for n in db.search_networks(country_codes = [cc], family=ns.family, flatten=1):
+				print ("  %s" % n)
+		else:
+			for country_code in ns.country_code:
 				# Open standard output
 				f = writer(sys.stdout, prefix=country_code)
 

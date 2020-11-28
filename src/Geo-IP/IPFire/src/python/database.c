@@ -288,7 +288,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 			return NULL;
 		}
 
-		for (unsigned int i = 0; i < PyList_Size(country_codes); i++) {
+		for (int i = 0; i < PyList_Size(country_codes); i++) {
 			PyObject* item = PyList_GetItem(country_codes, i);
 
 			if (!PyUnicode_Check(item)) {
@@ -345,7 +345,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 			return NULL;
 		}
 
-		for (unsigned int i = 0; i < PyList_Size(asn_list); i++) {
+		for (int i = 0; i < PyList_Size(asn_list); i++) {
 			PyObject* item = PyList_GetItem(asn_list, i);
 
 			if (!PyLong_Check(item)) {

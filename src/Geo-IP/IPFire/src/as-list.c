@@ -103,6 +103,7 @@ LOC_EXPORT void loc_as_list_clear(struct loc_as_list* list) {
 		loc_as_unref(list->elements[i]);
 
 	free(list->elements);
+	list->elements = NULL;
 	list->elements_size = 0;
 
 	list->size = 0;

@@ -779,8 +779,7 @@ static int __loc_database_lookup_handle_leaf(struct loc_database* db, const stru
 	}
 
 	// Check if the given IP address is inside the network
-	r = loc_network_match_address(*network, address);
-	if (r) {
+	if (!loc_network_match_address(*network, address)) {
 		DEBUG(db->ctx, "Searched address is not part of the network\n");
 
 		loc_network_unref(*network);
@@ -839,7 +838,7 @@ static int __loc_database_lookup(struct loc_database* db, const struct in6_addr*
 			return r;
 	}
 
-	return -ENODATA;
+	return 1;
 }
 
 LOC_EXPORT int loc_database_lookup(struct loc_database* db,
@@ -1194,7 +1193,7 @@ static int __loc_database_enumerator_next_network(
 		struct loc_database_enumerator* enumerator, struct loc_network** network, int filter) {
 	// Return top element from the stack
 	while (1) {
-		*network = loc_network_list_pop(enumerator->stack);
+		*network = loc_network_list_pop_first(enumerator->stack);
 
 		// Stack is empty
 		if (!*network)
@@ -1308,8 +1307,12 @@ static int __loc_database_enumerator_next_network_flattened(
 	while (1) {
 		// Fetch the next network in line
 		r = __loc_database_enumerator_next_network(enumerator, &subnet, 0);
-		if (r)
-			goto END;
+		if (r) {
+			loc_network_unref(subnet);
+			loc_network_list_unref(subnets);
+
+			return r;
+		}
 
 		// End if we did not receive another subnet
 		if (!subnet)
@@ -1318,8 +1321,12 @@ static int __loc_database_enumerator_next_network_flattened(
 		// Collect all subnets in a list
 		if (loc_network_is_subnet(*network, subnet)) {
 			r = loc_network_list_push(subnets, subnet);
-			if (r)
-				goto END;
+			if (r) {
+				loc_network_unref(subnet);
+				loc_network_list_unref(subnets);
+
+				return r;
+			}
 
 			loc_network_unref(subnet);
 			continue;
@@ -1327,8 +1334,12 @@ static int __loc_database_enumerator_next_network_flattened(
 
 		// If this is not a subnet, we push it back onto the stack and break
 		r = loc_network_list_push(enumerator->stack, subnet);
-		if (r)
-			goto END;
+		if (r) {
+			loc_network_unref(subnet);
+			loc_network_list_unref(subnets);
+
+			return r;
+		}
 
 		loc_network_unref(subnet);
 		break;
@@ -1346,29 +1357,37 @@ static int __loc_database_enumerator_next_network_flattened(
 	// If the network has any subnets, we will break it into smaller parts
 	// without the subnets.
 	struct loc_network_list* excluded = loc_network_exclude_list(*network, subnets);
-	if (!excluded || loc_network_list_empty(excluded)) {
-		r = 1;
-		goto END;
+	if (!excluded) {
+		loc_network_list_unref(subnets);
+		return -1;
 	}
 
-	// Replace network with the first one
-	loc_network_unref(*network);
+	// Merge subnets onto the stack
+	r = loc_network_list_merge(enumerator->stack, subnets);
+	if (r) {
+		loc_network_list_unref(subnets);
+		loc_network_list_unref(excluded);
 
-	*network = loc_network_list_pop_first(excluded);
+		return r;
+	}
 
-	// Push the rest onto the stack
-	loc_network_list_reverse(excluded);
-	loc_network_list_merge(enumerator->stack, excluded);
+	// Push excluded list onto the stack
+	r = loc_network_list_merge(enumerator->stack, excluded);
+	if (r) {
+		loc_network_list_unref(subnets);
+		loc_network_list_unref(excluded);
 
-	loc_network_list_unref(excluded);
-
-END:
-	if (subnet)
-		loc_network_unref(subnet);
+		return r;
+	}
 
 	loc_network_list_unref(subnets);
+	loc_network_list_unref(excluded);
 
-	return r;
+	// Replace network with the first one from the stack
+	loc_network_unref(*network);
+	*network = loc_network_list_pop_first(enumerator->stack);
+
+	return 0;
 }
 
 LOC_EXPORT int loc_database_enumerator_next_network(

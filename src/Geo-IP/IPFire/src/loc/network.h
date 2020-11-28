@@ -36,6 +36,7 @@ struct loc_network* loc_network_ref(struct loc_network* network);
 struct loc_network* loc_network_unref(struct loc_network* network);
 char* loc_network_str(struct loc_network* network);
 int loc_network_address_family(struct loc_network* network);
+unsigned int loc_network_prefix(struct loc_network* network);
 
 const struct in6_addr* loc_network_get_first_address(struct loc_network* network);
 char* loc_network_format_first_address(struct loc_network* network);
@@ -55,12 +56,10 @@ int loc_network_has_flag(struct loc_network* network, uint32_t flag);
 int loc_network_set_flag(struct loc_network* network, uint32_t flag);
 int loc_network_match_flag(struct loc_network* network, uint32_t flag);
 
-int loc_network_eq(struct loc_network* self, struct loc_network* other);
-int loc_network_gt(struct loc_network* self, struct loc_network* other);
+int loc_network_cmp(struct loc_network* self, struct loc_network* other);
 int loc_network_overlaps(struct loc_network* self, struct loc_network* other);
 int loc_network_is_subnet(struct loc_network* self, struct loc_network* other);
-int loc_network_is_subnet_of(struct loc_network* self, struct loc_network* other);
-struct loc_network_list* loc_network_subnets(struct loc_network* network);
+int loc_network_subnets(struct loc_network* network, struct loc_network** subnet1, struct loc_network** subnet2);
 struct loc_network_list* loc_network_exclude(
 		struct loc_network* self, struct loc_network* other);
 struct loc_network_list* loc_network_exclude_list(

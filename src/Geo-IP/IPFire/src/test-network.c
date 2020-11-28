@@ -26,8 +26,6 @@
 #include <loc/network.h>
 #include <loc/writer.h>
 
-#define IPV4_TEST 0
-
 int main(int argc, char** argv) {
 	int err;
 
@@ -47,6 +45,13 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 #endif
+
+	struct in6_addr address;
+	err = inet_pton(AF_INET6, "2001:db8::1", &address);
+	if (err != 1) {
+		fprintf(stderr, "Could not parse IP address\n");
+		exit(EXIT_FAILURE);
+	}
 
 	// Create a network
 	struct loc_network* network1;
@@ -83,7 +88,6 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	free(string);
 	string = loc_network_format_last_address(network1);
 	if (!string) {
 		fprintf(stderr, "Did get NULL instead of a string for the last address\n");
@@ -94,7 +98,12 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Got an incorrect last address: %s\n", string);
 		exit(EXIT_FAILURE);
 	}
-	free(string);
+
+	err = loc_network_match_address(network1, &address);
+	if (!err) {
+		fprintf(stderr, "Network1 does not match address\n");
+		exit(EXIT_FAILURE);
+	}
 
 	struct loc_network* network2;
 	err = loc_network_new_from_string(ctx, &network2, "2001:db8:ffff::/48");
@@ -125,65 +134,75 @@ int main(int argc, char** argv) {
 	}
 
 	size_t nodes = loc_network_tree_count_nodes(tree);
-	printf("The tree has %zu IPv6-only nodes with %zu networks\n", nodes,
-	       loc_network_tree_count_networks(tree));
+	printf("The tree has %zu nodes\n", nodes);
 #endif
 
 	// Check equals function
-	err = loc_network_eq(network1, network1);
-	if (!err) {
+	err = loc_network_cmp(network1, network1);
+	if (err) {
 		fprintf(stderr, "Network is not equal with itself\n");
 		exit(EXIT_FAILURE);
 	}
 
-	err = loc_network_eq(network1, network2);
-	if (err) {
+	err = loc_network_cmp(network1, network2);
+	if (!err) {
 		fprintf(stderr, "Networks equal unexpectedly\n");
 		exit(EXIT_FAILURE);
 	}
 
 	// Check subnet function
-	err = loc_network_is_subnet_of(network1, network2);
-	if (err != 0) {
+	err = loc_network_is_subnet(network1, network2);
+	if (!err) {
 		fprintf(stderr, "Subnet check 1 failed: %d\n", err);
 		exit(EXIT_FAILURE);
 	}
 
-	err = loc_network_is_subnet_of(network2, network1);
-	if (err != 1) {
+	err = loc_network_is_subnet(network2, network1);
+	if (err) {
 		fprintf(stderr, "Subnet check 2 failed: %d\n", err);
 		exit(EXIT_FAILURE);
 	}
 
-	// Make list of subnets
-	struct loc_network_list* subnets = loc_network_subnets(network1);
-	if (!subnets) {
-		fprintf(stderr, "Could not find subnets of network\n");
+	// Make subnets
+	struct loc_network* subnet1 = NULL;
+	struct loc_network* subnet2 = NULL;
+
+	err  = loc_network_subnets(network1, &subnet1, &subnet2);
+	if (err || !subnet1 || !subnet2) {
+		fprintf(stderr, "Could not find subnets of network: %d\n", err);
 		exit(EXIT_FAILURE);
 	}
 
-	loc_network_list_dump(subnets);
+	char* s = loc_network_str(subnet1);
+	printf("Received subnet1 = %s\n", s);
+	free(s);
 
-	while (!loc_network_list_empty(subnets)) {
-		struct loc_network* subnet = loc_network_list_pop(subnets);
-		if (!subnet) {
-			fprintf(stderr, "Received an empty subnet\n");
-			exit(EXIT_FAILURE);
-		}
+	s = loc_network_str(subnet2);
+	printf("Received subnet2 = %s\n", s);
+	free(s);
 
-		char* s = loc_network_str(subnet);
-		printf("Received subnet %s\n", s);
-		free(s);
-
-		if (!loc_network_is_subnet_of(subnet, network1)) {
-			fprintf(stderr, "Not a subnet\n");
-			exit(EXIT_FAILURE);
-		}
-
-		loc_network_unref(subnet);
+	if (!loc_network_is_subnet(network1, subnet1)) {
+		fprintf(stderr, "Subnet1 is not a subnet\n");
+		exit(EXIT_FAILURE);
 	}
 
-	loc_network_list_unref(subnets);
+	if (!loc_network_is_subnet(network1, subnet2)) {
+		fprintf(stderr, "Subnet2 is not a subnet\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (!loc_network_overlaps(network1, subnet1)) {
+		fprintf(stderr, "Network1 does not seem to contain subnet1\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (!loc_network_overlaps(network1, subnet2)) {
+		fprintf(stderr, "Network1 does not seem to contain subnet2\n");
+		exit(EXIT_FAILURE);
+	}
+
+	loc_network_unref(subnet1);
+	loc_network_unref(subnet2);
 
 	struct loc_network_list* excluded = loc_network_exclude(network1, network2);
 	if (!excluded) {
@@ -192,15 +211,6 @@ int main(int argc, char** argv) {
 	}
 
 	loc_network_list_dump(excluded);
-
-	// Reverse it
-	loc_network_list_reverse(excluded);
-	loc_network_list_dump(excluded);
-
-	// Sort them and dump them again
-	loc_network_list_sort(excluded);
-	loc_network_list_dump(excluded);
-
 	loc_network_list_unref(excluded);
 
 	// Create a database
@@ -233,45 +243,26 @@ int main(int argc, char** argv) {
 	loc_network_set_asn(network4, 1024);
 
 	// Try adding an invalid network
-	struct loc_network* network5;
-	err = loc_writer_add_network(writer, &network5, "xxxx:xxxx::/32");
+	struct loc_network* network;
+	err = loc_writer_add_network(writer, &network, "xxxx:xxxx::/32");
 	if (err != -EINVAL) {
 		fprintf(stderr, "It was possible to add an invalid network (err = %d)\n", err);
 		exit(EXIT_FAILURE);
 	}
 
 	// Try adding a single address
-	err = loc_writer_add_network(writer, &network5, "2001:db8::");
+	err = loc_writer_add_network(writer, &network, "2001:db8::");
 	if (err) {
 		fprintf(stderr, "It was impossible to add an single IP address (err = %d)\n", err);
 		exit(EXIT_FAILURE);
 	}
 
 	// Try adding localhost
-	err = loc_writer_add_network(writer, &network5, "::1/128");
+	err = loc_writer_add_network(writer, &network, "::1/128");
 	if (err != -EINVAL) {
 		fprintf(stderr, "It was possible to add localhost (::1/128): %d\n", err);
 		exit(EXIT_FAILURE);
 	}
-
-#if IPV4_TEST
-	struct loc_network* network6;
-	err = loc_writer_add_network(writer, &network6, "1.2.3.4/16");
-	if (err) {
-		fprintf(stderr, "Could not add IPv4 network\n");
-		exit(EXIT_FAILURE);
-	}
-
-	// Set country code
-	loc_network_set_country_code(network6, "ZZ");
-
-	// Set ASN
-	loc_network_set_asn(network6, 1234);
-	loc_network_tree_dump(tree);
-	printf("The tree has %zu IPv4/6-mixed nodes with %zu networks\n",
-	       loc_network_tree_count_nodes(tree),
-	       loc_network_tree_count_networks(tree));
-#endif
 
 	FILE* f = tmpfile();
 	if (!f) {
@@ -290,7 +281,6 @@ int main(int argc, char** argv) {
 	loc_network_unref(network2);
 	loc_network_unref(network3);
 	loc_network_unref(network4);
-	loc_network_unref(network5);
 
 #if 0
 	loc_network_tree_unref(tree);
@@ -320,16 +310,6 @@ int main(int argc, char** argv) {
 	}
 	loc_network_unref(network1);
 
-#if IPV4_TEST
-	err = loc_database_lookup_from_string(db, "1.2.3.4", &network6);
-	if (err) {
-		fprintf(stderr, "Could not look up 1.2.3.4\n");
-		exit(EXIT_FAILURE);
-	}
-	loc_network_unref(network6);
-#endif
-
-	loc_database_unref(db);
 	loc_unref(ctx);
 	fclose(f);
 

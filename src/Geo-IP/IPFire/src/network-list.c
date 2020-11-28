@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <loc/libloc.h>
 #include <loc/network.h>
@@ -69,8 +70,8 @@ LOC_EXPORT struct loc_network_list* loc_network_list_ref(struct loc_network_list
 static void loc_network_list_free(struct loc_network_list* list) {
 	DEBUG(list->ctx, "Releasing network list at %p\n", list);
 
-	for (unsigned int i = 0; i < list->size; i++)
-		loc_network_unref(list->elements[i]);
+	// Remove all content
+	loc_network_list_clear(list);
 
 	loc_unref(list->ctx);
 	free(list);
@@ -103,6 +104,7 @@ LOC_EXPORT void loc_network_list_clear(struct loc_network_list* list) {
 		loc_network_unref(list->elements[i]);
 
 	free(list->elements);
+	list->elements = NULL;
 	list->elements_size = 0;
 
 	list->size = 0;
@@ -117,7 +119,7 @@ LOC_EXPORT void loc_network_list_dump(struct loc_network_list* list) {
 
 		s = loc_network_str(network);
 
-		INFO(list->ctx, "%s\n", s);
+		INFO(list->ctx, "%4d: %s\n", i, s);
 		free(s);
 	}
 }
@@ -130,10 +132,94 @@ LOC_EXPORT struct loc_network* loc_network_list_get(struct loc_network_list* lis
 	return loc_network_ref(list->elements[index]);
 }
 
-LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_network* network) {
-	// Do not add networks that are already on the list
-	if (loc_network_list_contains(list, network))
+static off_t loc_network_list_find(struct loc_network_list* list,
+		struct loc_network* network, int* found) {
+	// Insert at the beginning for an empty list
+	if (loc_network_list_empty(list))
 		return 0;
+
+	off_t lo = 0;
+	off_t hi = list->size - 1;
+	int result;
+
+	// Since we are working on an ordered list, there is often a good chance that
+	// the network we are looking for is at the end or has to go to the end.
+	if (hi >= 0) {
+		result = loc_network_cmp(network, list->elements[hi]);
+
+		// Match, so we are done
+		if (result == 0) {
+			*found = 1;
+
+			return hi;
+
+		// This needs to be added after the last one
+		} else if (result > 0) {
+			*found = 0;
+
+			return hi + 1;
+		}
+	}
+
+#ifdef ENABLE_DEBUG
+	// Save start time
+	clock_t start = clock();
+#endif
+
+	off_t i = 0;
+
+	while (lo <= hi) {
+		i = (lo + hi) / 2;
+
+		// Check if this is a match
+		result = loc_network_cmp(network, list->elements[i]);
+
+		if (result == 0) {
+			*found = 1;
+
+#ifdef ENABLE_DEBUG
+			clock_t end = clock();
+
+			// Log how fast this has been
+			DEBUG(list->ctx, "Found network in %.4fms at %jd\n",
+				(double)(end - start) / CLOCKS_PER_SEC * 1000, (intmax_t)i);
+#endif
+
+			return i;
+		}
+
+		if (result > 0) {
+			lo = i + 1;
+			i++;
+		} else {
+			hi = i - 1;
+		}
+	}
+
+	*found = 0;
+
+#ifdef ENABLE_DEBUG
+	clock_t end = clock();
+
+	// Log how fast this has been
+	DEBUG(list->ctx, "Did not find network in %.4fms (last i = %jd)\n",
+		(double)(end - start) / CLOCKS_PER_SEC * 1000, (intmax_t)i);
+#endif
+
+	return i;
+}
+
+LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_network* network) {
+	int found = 0;
+
+	off_t index = loc_network_list_find(list, network, &found);
+
+	// The network has been found on the list. Nothing to do.
+	if (found)
+		return 0;
+
+	DEBUG(list->ctx, "%p: Inserting network %p at index %jd\n",
+		list, network, (intmax_t)index);
 
 	// Check if we have space left
 	if (list->size >= list->elements_size) {
@@ -142,9 +228,15 @@ LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_n
 			return r;
 	}
 
-	DEBUG(list->ctx, "%p: Pushing network %p onto stack\n", list, network);
+	// The list is now larger
+	list->size++;
 
-	list->elements[list->size++] = loc_network_ref(network);
+	// Move all elements out of the way
+	for (unsigned int i = list->size - 1; i > index; i--)
+		list->elements[i] = list->elements[i - 1];
+
+	// Add the new element at the right place
+	list->elements[index] = loc_network_ref(network);
 
 	return 0;
 }
@@ -173,9 +265,12 @@ LOC_EXPORT struct loc_network* loc_network_list_pop_first(struct loc_network_lis
 	struct loc_network* network = list->elements[0];
 
 	// Move all elements to the top of the stack
-	for (unsigned int i = 0; i < --list->size; i++) {
+	for (unsigned int i = 0; i < list->size - 1; i++) {
 		list->elements[i] = list->elements[i+1];
 	}
+
+	// The list is shorter now
+	--list->size;
 
 	DEBUG(list->ctx, "%p: Popping network %p from stack\n", list, network);
 
@@ -183,51 +278,11 @@ LOC_EXPORT struct loc_network* loc_network_list_pop_first(struct loc_network_lis
 }
 
 LOC_EXPORT int loc_network_list_contains(struct loc_network_list* list, struct loc_network* network) {
-	for (unsigned int i = 0; i < list->size; i++) {
-		if (loc_network_eq(list->elements[i], network))
-			return 1;
-	}
+	int found = 0;
 
-	return 0;
-}
+	loc_network_list_find(list, network, &found);
 
-static void loc_network_list_swap(struct loc_network_list* list, unsigned int i1, unsigned int i2) {
-	// Do nothing for invalid indices
-	if (i1 >= list->size || i2 >= list->size)
-		return;
-
-	struct loc_network* network1 = list->elements[i1];
-	struct loc_network* network2 = list->elements[i2];
-
-	list->elements[i1] = network2;
-	list->elements[i2] = network1;
-}
-
-LOC_EXPORT void loc_network_list_reverse(struct loc_network_list* list) {
-	unsigned int i = 0;
-	unsigned int j = list->size - 1;
-
-	while (i < j) {
-		loc_network_list_swap(list, i++, j--);
-	}
-}
-
-LOC_EXPORT void loc_network_list_sort(struct loc_network_list* list) {
-	unsigned int n = list->size;
-	int swapped;
-
-	do {
-		swapped = 0;
-
-		for (unsigned int i = 1; i < n; i++) {
-			if (loc_network_gt(list->elements[i-1], list->elements[i]) > 0) {
-				loc_network_list_swap(list, i-1, i);
-				swapped = 1;
-			}
-		}
-
-		n--;
-	} while (swapped);
+	return found;
 }
 
 LOC_EXPORT int loc_network_list_merge(

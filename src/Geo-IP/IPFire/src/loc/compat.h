@@ -40,9 +40,9 @@
   #include <stdint.h>
   #include <string.h>
   #include <time.h>
+  #include <limits.h>
   #include <io.h>
   #include <intrin.h>
-
 
   #if defined(__CYGWIN__)
     #include <endian.h>
@@ -77,7 +77,14 @@
       #define ssize_t SSIZE_T     /* From <basetsd.h> */
       #define _SSIZE_T_DEFINED 1
     #endif
-  #endif
-#endif
 
+    #if !defined(__WORDSIZE)
+      #ifdef _WIN64
+      #define __WORDSIZE   64
+      #else
+      #define __WORDSIZE   32
+      #endif
+    #endif
+  #endif    /* LIBLOC_PRIVATE */
+#endif      /* _WIN32 || __CYGWIN__ */
 #endif
