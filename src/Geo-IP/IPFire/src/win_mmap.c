@@ -145,6 +145,9 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
     else
       fprintf (stderr, "Last chunk of data covered by the first chunk.\n\n");
   }
+#else
+  (void) err1;  // unused
+  (void) err2;  // unused
 #endif
   return (rval);
 }
