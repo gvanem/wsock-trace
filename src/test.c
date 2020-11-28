@@ -99,6 +99,23 @@ struct test_struct {
 static int chatty = 0;
 static int last_result = 0;
 
+static CONSOLE_SCREEN_BUFFER_INFO c_info;
+static HANDLE c_hnd = INVALID_HANDLE_VALUE;
+
+#define COLOUR_GREEN  (FOREGROUND_INTENSITY | 2)
+#define COLOUR_RED    (FOREGROUND_INTENSITY | 4)
+#define COLOUR_YELLOW (FOREGROUND_INTENSITY | 6)
+
+#define SGR_RED       "\x1B[1;31m"
+#define SGR_GREEN     "\x1B[1;32m"
+#define SGR_YELLOW    "\x1B[1;33m"
+#define SGR_DEFAULT   "\x1B[0m"
+
+static int use_wincon = -1;
+static int use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWin and AppVeyor */
+
+static void set_colour (int col);
+
 /**
  * Set the prigram-name for getopt.c.
  */
@@ -223,8 +240,12 @@ static int run_test (const char *wildcard)
     }
     rc++;
     if (chatty >= 1)
-       printf ("\nTesting %s():\n", t->name);
- // WSASetLastError (0);   /* clear any previous error */
+    {
+      printf ("\nTesting ");
+      set_colour (COLOUR_YELLOW);
+      printf ("%s():\n", t->name);
+      set_colour (0);
+    }
     (*t->func)();
   }
   return (rc);
@@ -1044,19 +1065,6 @@ static void test_wstring (const wchar_t *expect, const wchar_t *result, const ch
   }
 }
 
-static CONSOLE_SCREEN_BUFFER_INFO c_info;
-static HANDLE c_hnd = INVALID_HANDLE_VALUE;
-
-#define COLOUR_GREEN  (FOREGROUND_INTENSITY | 2)
-#define COLOUR_RED    (FOREGROUND_INTENSITY | 4)
-
-#define SGR_GREEN     "\x1B[1;32m"
-#define SGR_RED       "\x1B[1;31m"
-#define SGR_DEFAULT   "\x1B[0m"
-
-static int use_wincon = -1;
-static int use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWin and AppVeyor */
-
 static void set_colour (int col)
 {
   if (use_SGR == -1)
@@ -1086,6 +1094,8 @@ static void set_colour (int col)
        fputs (SGR_GREEN, stdout);
     else if (col == COLOUR_RED)
        fputs (SGR_RED, stdout);
+    else if (col == COLOUR_YELLOW)
+       fputs (SGR_YELLOW, stdout);
   }
   else if (use_wincon == 1)
   {
