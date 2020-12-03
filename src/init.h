@@ -74,6 +74,7 @@ struct ASN_cfg {
        char   *asn_csv_file;
        char   *asn_bin_file;
        char   *asn_bin_url;
+       int     max_days;
      };
 
 struct IDNA_cfg {

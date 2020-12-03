@@ -956,6 +956,9 @@ static void parse_asn_settings (const char *key, const char *val, unsigned line)
   else if (!stricmp(key, "asn_bin_url"))
        g_cfg.ASN.asn_bin_url = strdup (val);
 
+  else if (!stricmp(key, "max_days"))
+       g_cfg.ASN.max_days = atoi (val);
+
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }

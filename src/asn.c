@@ -33,6 +33,17 @@
   #include <loc/resolv.h>
   #include <loc/windows/syslog.h> /* LOG_DEBUG */
 
+  #define LOCATION_URL  "https://location.ipfire.org/databases/1/location.db.xz"
+
+  /*
+   * Use a mini version of the LZMA library to decompress a 'location.db.xz' file at runtime.
+   */
+  #ifdef USE_LZMA
+    #include <Xz.h>
+
+    static BOOL XZ_decompress (const char *from_file, const char *to_file);
+  #endif
+
   /*
    * Ignore some MinGW/gcc warnings below.
    */
@@ -86,6 +97,7 @@ static u_long g_num_asn, g_num_as_names, g_num_compares;
  */
 static smartlist_t *ASN_entries;
 
+static BOOL   ASN_check_file_age (const char *db_file);
 static size_t ASN_load_bin_file (const char *file);
 static size_t ASN_load_CSV_file (const char *file);
 static int    ASN_CSV_add (struct CSV_context *ctx, const char *value);
@@ -102,7 +114,10 @@ void ASN_init (void)
      return;
 
   if (g_cfg.ASN.asn_bin_file)
-     num_AS = ASN_load_bin_file (g_cfg.ASN.asn_bin_file);
+  {
+    ASN_check_file_age (g_cfg.ASN.asn_bin_file);
+    num_AS = ASN_load_bin_file (g_cfg.ASN.asn_bin_file);
+  }
 
   if (g_cfg.ASN.asn_csv_file)
      num_AS += ASN_load_CSV_file (g_cfg.ASN.asn_csv_file);
@@ -227,7 +242,7 @@ static void ASN_bin_close (void)
  */
 static int ASN_check_database (const char *local_db)
 {
-  const char *default_url = "https://location.ipfire.org/databases/1/location.db.xz";
+  const char *default_url = LOCATION_URL;
   const char *url = g_cfg.ASN.asn_bin_url;
   struct stat st;
   time_t time_local_db = 0;
@@ -563,12 +578,51 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   return (rc);
 }
 
-#else
+static BOOL ASN_check_file_age (const char *db_file)
+{
+#ifdef USE_LZMA
+  char        db_xz_temp [MAX_PATH];
+  char        db_temp [MAX_PATH];
+  const char *env = getenv ("TEMP");
+  time_t      db_xz_time, now, expiry;
+;
+  int         rc = 0;
+
+  snprintf (db_temp, sizeof(db_temp), "%s\\%s", env, "location.db");
+  strcat (db_xz_temp, ".xz");
+
+  now = time (NULL);
+  expiry = now - g_cfg.ASN.max_days * 24 * 3600;
+  if (!file_exists(db_xz_temp))
+  {
+    rc = INET_util_download_file (db_xz_temp, LOCATION_URL);
+    if (rc)
+       db_xz_time = now;
+  }
+  else rc = 1;
+
+  if (rc > 0 && XZ_decompress(db_xz_temp, db_temp))
+  {
+//  CopyFile (db_temp, db_file, TRUE);
+    return (TRUE);
+  }
+#endif
+  return (FALSE);
+}
+
+#else   /* !USE_LIBLOC */
 static size_t ASN_load_bin_file (const char *file)
 {
   TRACE (1, "Sorry, OpenWatcom is not supported; cannot load database '%s' file.\n", file);
   ARGSUSED (file);
   return (0);
+}
+
+static BOOL ASN_check_file_age (const char *file)
+{
+  TRACE (1, "Sorry, OpenWatcom is not supported; cannot check database '%s' file.\n", file);
+  ARGSUSED (file);
+  return (FALSE);
 }
 
 int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6)
@@ -578,7 +632,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   ARGSUSED (ip6);
   return (0);
 }
-#endif
+#endif  /* USE_LIBLOC */
 
 /**
  * Find and print the ASN information for an IPv4 address.
@@ -675,4 +729,15 @@ void ASN_report (void)
   trace_printf ("\n  ASN statistics:\n"
                 "    Got %lu ASN-numbers, %lu AS-names.\n", g_num_asn, g_num_as_names);
 }
+
+#if defined(USE_LIBLOC) && defined(USE_LZMA)
+static BOOL XZ_decompress (const char *from_file, const char *to_file)
+{
+  CXzUnpacker p;
+  ISzAlloc alloc;
+
+  XzUnpacker_Create (&p, &alloc);
+  return (TRUE);
+}
+#endif
 

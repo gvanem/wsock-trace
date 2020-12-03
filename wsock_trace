@@ -189,16 +189,19 @@
   ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DB11.IPV6.BIN
 
 #
-# ASN (Autonomous System Number) settings.
+# ASN (Autonomous System Number) settings:
 #
 [asn]
   enable = 1    # Show ASN info for addresses in traced functions
 
   #
-  # The IP2Location ASN .csv file.
+  # The IP2Location ASN .csv files.
   #
-  # asn_csv_file = %APPDATA%\IP2LOCATION-LITE-ASN.CSV
-
+  # asn_csv_file = %APPDATA%\IP2LOCATION-LITE-ASN.CSV         #  This is for IPv4 addresses only.
+  # asn_csv_file = %APPDATA%\IP2LOCATION-LITE-ASN.IPV6.CSV    #  This is for IPv6 addresses only.
+  #
+  # The above file are huge which takes time to load and parse.
+  # Uncomment the above lines only if you need this feature.
   #
   # TODO:
   # asn_csv_url =
@@ -212,19 +215,29 @@
   # The URL of the latest version of the above .db-file.
   # This URL is only used to check for the latest version (in ASN_check_database()).
   #
-  # It can not easily be downloaded and updated automatically since that requires
-  # the 'xz' program to be available (or an equivalent using the 'lzma' library).
-  # Instead download it manually.
-  # Like:
-  #
-  #   c:\temp> wget https://location.ipfire.org/databases/1/location.db.xz
-  #   c:\temp> xz -d location.db.xz
-  #   c:\temp> move /Y location.db %APPDATA%\IPFire-database.db
-  #
   asn_bin_url = https://location.ipfire.org/databases/1/location.db.xz
 
+  #
+  # Use the built-in LZMA decompressor for the 'location.db.xz' file.
+  #
+  # If 'enable_xz_decompress = 0', it can be downloaded manually and extracted
+  # using the 'xz' (or '7z') programs instead. Like:
+  #
+  #   c:\temp> wget https://location.ipfire.org/databases/1/location.db.xz
+  #   c:\temp> xz -d location.db.xz                      (or '7z x location.db.xz')
+  #   c:\temp> move /Y location.db %APPDATA%\IPFire-database.db
+  #
+  enable_xz_decompress = 1
+
+  #
+  # When 'enable_xz_decompress = 1', the maximum allowed days old before
+  # forcing an update of 'location.db.xz'. An update will do the same as
+  # the above 'wget', 'xz' and 'move' commands.
+  #
+  max_days = 10
+
 #
-# IANA (Internet Assigned Numbers Authority) settings.
+# IANA (Internet Assigned Numbers Authority) settings:
 #
 [iana]
   enable   = 0                                               # Show IANA info for addresses in traced functions
@@ -237,7 +250,7 @@
   #
 
 #
-# IDNA settings. Internationalizing Domain Names in Applications.
+# IDNA (Internationalizing Domain Names in Applications) settings:
 #
 [idna]
   enable     = 1
@@ -246,7 +259,7 @@
   fix_getaddrinfo = 0
 
 #
-# DNSBL (Domain Name System Blacklists) settings
+# DNSBL (Domain Name System Blacklists) settings:
 #
 [DNSBL]
   enable      = 0
