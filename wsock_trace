@@ -220,17 +220,17 @@
   #
   # Use the built-in LZMA decompressor for the 'location.db.xz' file.
   #
-  # If 'enable_xz_decompress = 0', it can be downloaded manually and extracted
+  # If 'xz_decompress = 0', it can be downloaded manually and extracted
   # using the 'xz' (or '7z') programs instead. Like:
   #
   #   c:\temp> wget https://location.ipfire.org/databases/1/location.db.xz
   #   c:\temp> xz -d location.db.xz                      (or '7z x location.db.xz')
   #   c:\temp> move /Y location.db %APPDATA%\IPFire-database.db
   #
-  enable_xz_decompress = 1
+  xz_decompress = 1
 
   #
-  # When 'enable_xz_decompress = 1', the maximum allowed days old before
+  # When 'xz_decompress = 1', the maximum allowed days old before
   # forcing an update of 'location.db.xz'. An update will do the same as
   # the above 'wget', 'xz' and 'move' commands.
   #
