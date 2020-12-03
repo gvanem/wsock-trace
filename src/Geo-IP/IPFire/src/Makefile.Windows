@@ -139,11 +139,6 @@ else
 endif
 
 #
-# Until 'win_mmap.c' is working 100%
-#
-# CFLAGS += -DEXTRA_DEBUG_PARANOIA
-
-#
 # Warning control.
 #
 ifeq ($(CC),gcc)
@@ -633,7 +628,7 @@ define CPP_FILTER_PY
     last_line = line
 
   if empty_lines > 0:
-    sys.stderr.write ("Removed %d empty lines." % empty_lines)
+    sys.stderr.write ("Removed %d empty lines.\n" % empty_lines)
 
 endef
 

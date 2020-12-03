@@ -12,7 +12,6 @@
 #define DWORD_HI(x)  ((uint64_t)(x) >> 32)
 #define DWORD_LO(x)  ((x) & 0xffffffff)
 
-static int debug = -1;
 static SYSTEM_INFO si;
 
 /**
@@ -29,12 +28,7 @@ static struct mmap_info mmap_storage[10];
 static void *mmap_remember (void *map, uint64_t offset, HANDLE handle);
 static int   mmap_forget (void *map, struct mmap_info *info);
 
-#ifdef EXTRA_DEBUG_PARANOIA
-  static void  hex_dump (const char *what, const void *data_p, size_t datalen);
-#endif
-
-void *_mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset,
-             const char *fname, unsigned line)
+void *mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset)
 {
   void     *map = NULL;
   void     *rval = NULL;
@@ -46,25 +40,9 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
   uint64_t  pstart, psize, poffset;
 
   (void) address;  // unused
-#ifndef EXTRA_DEBUG_PARANOIA
-  (void) fname;    // unused
-  (void) line;     // unused
-#endif
 
-  if (debug == -1)
-  {
-     const char *env = getenv ("LOC_LOG");
-     int   v;
-
-     debug = 0;
+  if (si.dwAllocationGranularity == 0)
      GetSystemInfo (&si);
-     if (env)
-     {
-       v = *env - '0';
-       if (v >= LOG_DEBUG+1)   /* >= 8 */
-          debug = 1;
-     }
-  }
 
   pstart  = (offset / si.dwAllocationGranularity) * si.dwAllocationGranularity;
   poffset = offset - pstart;
@@ -105,78 +83,25 @@ void *_mmap (void *address, size_t length, int protection, int flags, int fd, of
 
   SetLastError (0); /* clear any possible error from above */
   rval = mmap_remember (map, poffset, handle);
-
-#ifdef EXTRA_DEBUG_PARANOIA
-  if (!debug)
-     return (rval);
-
-  fprintf (stderr,
-           "%s(%u):\n"
-           "   pstart: %lld, poffset: %lld, psize: %lld, length: %zu, fd: %d, offset: %ld,\n"
-           "   err1: %lu, err2: %lu  -> map: 0x%p, 0x%p\n",
-           fname, line, pstart, poffset, psize, length, fd, (long int)offset, err1, err2, map, rval);
-
-  /* Now for the paranoia:
-   *
-   * Test the low and high end of the mmap'ed region to check
-   * we get no exceptions. Only test 'PROT_READ' since that's the only
-   * protection used in libloc.
-   */
-  if (map != MAP_FAILED && protection == PROT_READ)
-  {
-    const char  *p = (char*) rval;
-    const char  *p_min = p;
-    const char  *p_max = p + length - 2;
-    BOOL   p_min_ok = !IsBadReadPtr (p_min, 1);
-    BOOL   p_max_ok = !IsBadReadPtr (p_max, 1);
-    size_t len;
-
-    if (!p_min_ok || !p_max_ok)
-    {
-      fprintf (stderr, "   p_min_ok: %d, p_min: 0x%p, p_max_ok: %d, p_max: 0x%p\n\n",
-               p_min_ok, p_min, p_max_ok, p_max);
-      return (MAP_FAILED);
-    }
-
-    len = min (length, 100);
-    hex_dump ("Dumping first %zu bytes:\n", p, len);
-    if (length > 100)
-      hex_dump ("Dumping last %zu bytes:\n", p + length - 100, len);
-    else
-      fprintf (stderr, "Last chunk of data covered by the first chunk.\n\n");
-  }
-#else
-  (void) err1;  // unused
-  (void) err2;  // unused
-#endif
   return (rval);
 }
 
-int _munmap (void *map, size_t length, const char *fname, unsigned line)
+int munmap (void *map, size_t length)
 {
   struct mmap_info info;
   int    rc = 0;
-  char   result [200] = "okay";
 
   if (mmap_forget(map, &info))
   {
-    strcpy (result, "EINVAL.");
+    errno = EINVAL;
     rc = -1;
   }
-  else if (!UnmapViewOfFile(info.map) && debug)
+  else if (!UnmapViewOfFile(info.map))
   {
-    snprintf (result, sizeof(result), "failed: %lu -> EFAULT", GetLastError());
     errno = EFAULT;
     SetLastError (0);
     rc = -1;
   }
-#ifdef EXTRA_DEBUG_PARANOIA
-  if (debug)
-     fprintf (stderr, "%s(%u):\n   munmap (0x%p, %zu), %s.\n", fname, line, map, length, result);
-#else
-  (void) &result;
-#endif
-
   return (rc);
 }
 
@@ -223,43 +148,6 @@ static int mmap_forget (void *map, struct mmap_info *info)
       return (0);
     }
   }
-  errno = EINVAL;
   return (-1);  /* not found! */
 }
-
-#ifdef EXTRA_DEBUG_PARANOIA
-/**
- * Do not use 'hexdump()' in 'loc/private.h'.
- */
-static void hex_dump (const char *what, const void *data_p, size_t datalen)
-{
-  const BYTE *data = (const BYTE*) data_p;
-  UINT  ofs;
-
-  fprintf (stderr, what, datalen);
-  for (ofs = 0; ofs < datalen; ofs += 16)
-  {
-    UINT j;
-
-    fprintf (stderr, "  %p: ", data+ofs);
-    for (j = 0; j < 16 && j+ofs < datalen; j++)
-        fprintf (stderr, "%02X%c", (unsigned)data[j+ofs],
-                 j == 7 && j+ofs < datalen-1 ? '-' : ' ');
-
-    for ( ; j < 16; j++)       /* pad line to 16 positions */
-        fputs ("   ", stderr);
-
-    for (j = 0; j < 16 && j+ofs < datalen; j++)
-    {
-      int ch = data[j+ofs];
-
-      if (ch < ' ')            /* non-printable */
-           putc ('.', stderr);
-      else putc (ch, stderr);
-    }
-    putc ('\n', stderr);
-  }
-  putc ('\n', stderr);
-}
-#endif /* EXTRA_DEBUG_PARANOIA */
 
