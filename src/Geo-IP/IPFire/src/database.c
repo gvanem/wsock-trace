@@ -253,11 +253,11 @@ static int loc_database_read_signature(struct loc_database* db,
 		char** dst, char* src, size_t length) {
 	// Check for a plausible signature length
 	if (length > LOC_SIGNATURE_MAX_LENGTH) {
-		ERROR(db->ctx, "Signature too long: %u\n", length);
+		ERROR(db->ctx, "Signature too long: %zu\n", length);
 		return -EINVAL;
 	}
 
-	DEBUG(db->ctx, "Reading signature of %u bytes\n", length);
+	DEBUG(db->ctx, "Reading signature of %zu bytes\n", length);
 
 	// Allocate space
 	*dst = malloc(length);
@@ -1383,11 +1383,11 @@ static int __loc_database_enumerator_next_network_flattened(
 	loc_network_list_unref(subnets);
 	loc_network_list_unref(excluded);
 
-	// Replace network with the first one from the stack
+	// Drop the network and restart the whole process again to pick the next network
 	loc_network_unref(*network);
 	*network = loc_network_list_pop_first(enumerator->stack);
 
-	return 0;
+	return __loc_database_enumerator_next_network_flattened(enumerator, network);
 }
 
 LOC_EXPORT int loc_database_enumerator_next_network(
