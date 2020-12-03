@@ -49,9 +49,11 @@ before_build:
   #
   - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
   - cmd: curl -O -# http://www.watt-32.net/CI/IP4-ASN.CSV.xz
+  - cmd: curl -O -# http://www.watt-32.net/CI/IP6-ASN.CSV.xz
   - cmd: curl -O -# https://location.ipfire.org/databases/1/location.db.xz
   - cmd: 7z x IP46-COUNTRY.BIN.xz               > NUL
   - cmd: 7z x IP4-ASN.CSV.xz                    > NUL
+  - cmd: 7z x IP6-ASN.CSV.xz                    > NUL
   - cmd: 7z x location.db.xz                    > NUL
   - cmd: copy /Y location.db IPFire-database.db > NUL
 
