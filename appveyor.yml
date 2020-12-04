@@ -105,7 +105,7 @@ test_script:
 # - cmd: set WSOCK_TRACE_LEVEL=0 &                 idna.exe -c1252 -w www.seoghør.no
 
   #
-  # Delete IPFire-database.db to force a download and decompression.
+  # Delete '..\IPFire-database.db' to force a download and decompression.
   # Since now it's not done via 'DllMain()', it should be safe.
   #
   - cmd: del /Q ..\IPFire-database.db
