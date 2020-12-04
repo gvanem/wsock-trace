@@ -33,16 +33,8 @@
   #include <loc/resolv.h>
   #include <loc/windows/syslog.h> /* LOG_DEBUG */
 
-  #define LOCATION_URL  "https://location.ipfire.org/databases/1/location.db.xz"
-
-  /*
-   * Use a mini version of the LZMA library to decompress a 'location.db.xz' file at runtime.
-   */
-  #ifdef USE_LZMA
-    #include <Xz.h>
-
-    static BOOL XZ_decompress (const char *from_file, const char *to_file);
-  #endif
+  #define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
+  #define SZ_OK                 0
 
   /*
    * Ignore some MinGW/gcc warnings below.
@@ -78,6 +70,9 @@
        };
 
   static void ASN_bin_close (void);
+  int         XZ_decompress (const char *from_file, const char *to_file);
+  const char *XZ_strerror (int rc);
+
 
   static int _IN6_IS_ADDR_TEREDO (const struct in6_addr *ip6)
   {
@@ -85,7 +80,7 @@
        return (0);
     return (ip6->s6_bytes[0] == 0x20 && ip6->s6_bytes[1] == 0x01 && ip6->s6_bytes[2] == 0x00);
   }
-#endif
+#endif  /* USE_LIBLOC */
 
 /**
  * Module global variables.
@@ -97,7 +92,7 @@ static u_long g_num_asn, g_num_as_names, g_num_compares;
  */
 static smartlist_t *ASN_entries;
 
-static BOOL   ASN_check_file_age (const char *db_file);
+static BOOL   ASN_check_and_update (const char *db_file);
 static size_t ASN_load_bin_file (const char *file);
 static size_t ASN_load_CSV_file (const char *file);
 static int    ASN_CSV_add (struct CSV_context *ctx, const char *value);
@@ -115,7 +110,7 @@ void ASN_init (void)
 
   if (g_cfg.ASN.asn_bin_file)
   {
-    ASN_check_file_age (g_cfg.ASN.asn_bin_file);
+    ASN_check_and_update (g_cfg.ASN.asn_bin_file);
     num_AS = ASN_load_bin_file (g_cfg.ASN.asn_bin_file);
   }
 
@@ -238,12 +233,133 @@ static void ASN_bin_close (void)
 }
 
 /**
- * Check for latest version of the `libloc` database.
+ * Return the user-defined URL for the 'location.db.xz' file
+ * or the default URL.
+ */
+static const char *ASN_get_url (void)
+{
+  const char *default_url = LOCATION_DEFAULT_URL;
+  const char *url = g_cfg.ASN.asn_bin_url;
+
+  if (!url)
+     url = default_url;
+  return (url);
+}
+
+/**
+ * Check if a temporary `%TEMP%/location.db.xz` file exists.
+ * Otherwise download and decompress it to `%TEMP%/location.db`.
+ *
+ * Then compare the file-time of `%TEMP%/location.db` with the final `.db`
+ * file specified by caller. If the latter is too old; the time-difference is
+ * `>= g_cfg.ASN.max_days`, copy over the temporary .db-file to the `.db`
+ * specified  by `db_file`.
+ */
+static BOOL ASN_check_and_update (const char *db_file)
+{
+  struct stat st;
+  char   db_xz_temp_file [MAX_PATH];
+  char   db_temp_file [MAX_PATH];
+  time_t now, expiry, when;
+  time_t db_time, db_temp_time;
+  DWORD  db_xz_temp_size = 0;
+  BOOL   need_update = FALSE;
+  char  *db_dir = NULL;
+
+  if (g_cfg.ASN.xz_decompress <= 0)
+  {
+    TRACE (1, "Nothing to do for '%s' file with XZ-decompression disabled.\n", db_file);
+    return (FALSE);
+  }
+
+  db_dir = dirname (db_file);
+  if (!db_dir || !file_exists(db_dir))
+  {
+    TRACE (1, "Directory '%s' does not exist.\n", db_dir);
+    free (db_dir);
+    return (FALSE);
+  }
+
+  free (db_dir);
+  snprintf (db_temp_file, sizeof(db_temp_file)-3, "%s\\%s", getenv("TEMP"), "location.db");
+  strcpy (db_xz_temp_file, db_temp_file);
+  strcat (db_xz_temp_file, ".xz");
+
+  memset (&st, '\0', sizeof(st));
+  stat (db_temp_file, &st);
+  if (st.st_size == 0)
+     need_update = TRUE;
+
+  now = time (NULL);
+  expiry = now - g_cfg.ASN.max_days * 24 * 3600;
+  expiry -= 10;   /* Give a 10 sec time slack */
+
+  memset (&st, '\0', sizeof(st));
+  stat (db_file, &st);
+  db_time = st.st_mtime;
+
+  /* 'db_file' exists and is not too old.
+   */
+  if (db_time && db_time > expiry)
+  {
+    when = now + g_cfg.ASN.max_days * 24 * 3600;
+    TRACE (2, "Update of '%s' not needed until '%.24s'\n", db_file, ctime(&when));
+    return (FALSE);
+  }
+
+  need_update = TRUE;
+
+  if (!file_exists(db_xz_temp_file))
+  {
+    db_xz_temp_size = INET_util_download_file (db_xz_temp_file, ASN_get_url());
+    TRACE (1, "Downloaded '%s' -> '%s'. %s\n",
+           ASN_get_url(), db_xz_temp_file, db_xz_temp_file > 0 ? "OK" : "Failed");
+
+    if (db_xz_temp_size == 0)
+       return (FALSE);
+  }
+
+  memset (&st, '\0', sizeof(st));
+  stat (db_temp_file, &st);
+  db_temp_time = st.st_mtime;
+  if (db_temp_time && db_time && db_temp_time == db_time)
+     need_update = FALSE;
+
+  /* `%TEMP%/location.db` not found or is 0 bytes. Or 'db_file' is too old.
+   * Force a XZ-decompress and copy.
+   */
+  if (need_update)
+  {
+    unsigned rc = XZ_decompress (db_xz_temp_file, db_temp_file);
+
+    TRACE (1, "XZ_decompress(): rc: %d/%s\n", rc, XZ_strerror(rc));
+
+    if (rc == SZ_OK)
+    {
+      INET_util_touch_file (db_xz_temp_file);
+      INET_util_touch_file (db_temp_file);
+
+      memset (&st, '\0', sizeof(st));
+      stat (db_temp_file, &st);
+
+      TRACE (1, "Compressed: %s bytes. Uncompressed %s bytes.\n",
+             dword_str(db_xz_temp_size), dword_str(st.st_size));
+
+      rc = (BOOL) CopyFile (db_temp_file, db_file, FALSE);
+      TRACE (2, "CopyFile(): rc: %d, %s -> %s\n", rc, db_temp_file, db_file);
+      INET_util_touch_file (db_file);
+    }
+    return (TRUE);
+  }
+  return (FALSE);
+}
+
+/**
+ * Check for latest version of the `libloc` database
+ * using a `TXT _v1._db.location.ipfire.org` DNS query.
  */
 static int ASN_check_database (const char *local_db)
 {
-  const char *default_url = LOCATION_URL;
-  const char *url = g_cfg.ASN.asn_bin_url;
   struct stat st;
   time_t time_local_db = 0;
   time_t time_remote_db = 0;
@@ -265,13 +381,10 @@ static int ASN_check_database (const char *local_db)
                  (long)((time_remote_db - time_local_db) / 3600));
   }
 
-  if (!url)
-     url = default_url;
-
   TRACE (1, "IPFire's latest database time-stamp: %.24s (UTC)\n"
             "            It should be at: %s\n"
             "            Your local database is %sup-to-date.%s\n",
-            ctime(&time_remote_db), url, older ? "not " : "", hours_behind);
+            ctime(&time_remote_db), ASN_get_url(), older ? "not " : "", hours_behind);
 
   time_local_db += _timezone;
   TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), _tzname[0]);
@@ -578,38 +691,6 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   return (rc);
 }
 
-static BOOL ASN_check_file_age (const char *db_file)
-{
-#ifdef USE_LZMA
-  char        db_xz_temp [MAX_PATH];
-  char        db_temp [MAX_PATH];
-  const char *env = getenv ("TEMP");
-  time_t      db_xz_time, now, expiry;
-;
-  int         rc = 0;
-
-  snprintf (db_temp, sizeof(db_temp), "%s\\%s", env, "location.db");
-  strcat (db_xz_temp, ".xz");
-
-  now = time (NULL);
-  expiry = now - g_cfg.ASN.max_days * 24 * 3600;
-  if (!file_exists(db_xz_temp))
-  {
-    rc = INET_util_download_file (db_xz_temp, LOCATION_URL);
-    if (rc)
-       db_xz_time = now;
-  }
-  else rc = 1;
-
-  if (rc > 0 && XZ_decompress(db_xz_temp, db_temp))
-  {
-//  CopyFile (db_temp, db_file, TRUE);
-    return (TRUE);
-  }
-#endif
-  return (FALSE);
-}
-
 #else   /* !USE_LIBLOC */
 static size_t ASN_load_bin_file (const char *file)
 {
@@ -618,9 +699,9 @@ static size_t ASN_load_bin_file (const char *file)
   return (0);
 }
 
-static BOOL ASN_check_file_age (const char *file)
+static BOOL ASN_check_and_update (const char *file)
 {
-  TRACE (1, "Sorry, OpenWatcom is not supported; cannot check database '%s' file.\n", file);
+  TRACE (1, "Sorry, OpenWatcom is not supported; cannot update database '%s' file automatically.\n", file);
   ARGSUSED (file);
   return (FALSE);
 }
@@ -730,14 +811,25 @@ void ASN_report (void)
                 "    Got %lu ASN-numbers, %lu AS-names.\n", g_num_asn, g_num_as_names);
 }
 
-#if defined(USE_LIBLOC) && defined(USE_LZMA)
-static BOOL XZ_decompress (const char *from_file, const char *to_file)
-{
-  CXzUnpacker p;
-  ISzAlloc alloc;
+/**
+ * The code for `XZ_decompress()` is included below for easy building.
+ */
+#ifdef USE_LIBLOC
+  #define INCLUDED_FROM_WSOCK_TRACE
+  #if 0
+    #define CONFIG_PROB32
+    #define CONFIG_SIZE_OPT
+    #define CONFIG_DEBUG
+  #endif
 
-  XzUnpacker_Create (&p, &alloc);
-  return (TRUE);
-}
+  #define RINOK(x)  do {                                  \
+                      unsigned  _res = x;                 \
+                      if (_res != 0) {                    \
+                         TRACE (1, "RINOK() -> %u/%s.\n", \
+                                _res, XZ_strerror(_res)); \
+                         return (_res);                   \
+                      }                                   \
+                    } while (0)
+
+  #include "xz_decompress.c"
 #endif
-
