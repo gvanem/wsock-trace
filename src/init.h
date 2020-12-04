@@ -75,7 +75,8 @@ struct ASN_cfg {
        char   *asn_bin_file;
        char   *asn_bin_url;
        int     max_days;
-     };
+       int     xz_decompress;
+    };
 
 struct IDNA_cfg {
        BOOL    enable;

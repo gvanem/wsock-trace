@@ -959,6 +959,9 @@ static void parse_asn_settings (const char *key, const char *val, unsigned line)
   else if (!stricmp(key, "max_days"))
        g_cfg.ASN.max_days = atoi (val);
 
+  else if (!stricmp(key, "xz_decompress"))
+       g_cfg.ASN.xz_decompress = atoi (val);
+
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
 }
