@@ -303,17 +303,24 @@ static BOOL ASN_check_and_update (const char *db_file)
   if (db_time && db_time > expiry)
   {
     when = now + g_cfg.ASN.max_days * 24 * 3600;
-    TRACE (2, "Update of '%s' not needed until '%.24s'\n", db_file, ctime(&when));
+    TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n", db_file, ctime(&when));
     return (FALSE);
   }
 
   need_update = TRUE;
 
-  if (!file_exists(db_xz_temp_file))
+  memset (&st, '\0', sizeof(st));
+  stat (db_xz_temp_file, &st);
+  db_xz_temp_size = st.st_size;
+
+  /* `%TEMP%/location.db.xz` not found or is 0 bytes.
+   * Force a download.
+   */
+  if (db_xz_temp_size == 0)
   {
     db_xz_temp_size = INET_util_download_file (db_xz_temp_file, ASN_get_url());
     TRACE (1, "Downloaded '%s' -> '%s'. %s\n",
-           ASN_get_url(), db_xz_temp_file, db_xz_temp_file > 0 ? "OK" : "Failed");
+           ASN_get_url(), db_xz_temp_file, db_xz_temp_size > 0 ? "OK" : "Failed");
 
     if (db_xz_temp_size == 0)
        return (FALSE);
