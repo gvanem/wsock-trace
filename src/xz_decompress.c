@@ -103,6 +103,11 @@ struct IntegerTypeAsserts {
   int UInt32IsUnsigned : (UInt32)-1 > 0;
 };
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  #define write(fd, buf, sz)  _write (fd, buf, sz)
+  #define read(fd, buf, sz)   _read (fd, buf, sz)
+#endif
+
 #ifdef CONFIG_DEBUG
   /*
    * This is guaranteed to work with Linux and gcc only. For example, %lld in
@@ -264,7 +269,7 @@ static SRes Flush (void)
 
   while (p != q)
   {
-    Int32 got = (Int32) _write (out_fd, p, q - p);
+    Int32 got = (Int32) write (out_fd, p, q - p);
 
     if (got <= 0)
        return SZ_ERROR_WRITE;
@@ -1311,7 +1316,7 @@ static UInt32 Preread (UInt32 r)
        */
       DEBUGF ("READ size=%d\n", r - p);
       {
-        const Int32 got = _read (in_fd, readEnd, r - p);
+        const Int32 got = read (in_fd, readEnd, r - p);
 
         if (got <= 0)  /* EOF or error on input. */
            break;
