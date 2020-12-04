@@ -4309,8 +4309,8 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
     return (FALSE);
   }
 
-  if (exclude_list_get(a_base,EXCL_PROGRAM) ||  /* short file-name */
-      exclude_list_get(a_name,EXCL_PROGRAM))    /* full file-name */
+  if (exclude_list_get(a_base, EXCL_PROGRAM) ||  /* short file-name */
+      exclude_list_get(a_name, EXCL_PROGRAM))    /* full file-name */
   {
     TRACE (2, "Ignoring event for '%s'.\n", a_name);
     return (FALSE);
