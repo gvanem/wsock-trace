@@ -107,7 +107,8 @@ test_script:
   #
   # Delete IPFire-database.db to force a download and decompression.
   # Since now it's not done via 'DllMain()', it should be safe.
-  - cmd: del /Q IPFire-database.db
+  #
+  - cmd: del /Q ..\IPFire-database.db
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat --ip2loc_6
 
