@@ -75,8 +75,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-
-#define CONFIG_PROB32
+#include <assert.h>
 
 typedef int32_t  Int32;
 typedef uint32_t UInt32;
@@ -87,23 +86,11 @@ typedef uint8_t  Byte;
 static FILE *in_file  = NULL;
 static FILE *out_file = NULL;
 
-#ifndef STDIN_FILENO
-#define STDIN_FILENO 0
-#endif
+static int in_fd  = -1;
+static int out_fd = -1;
 
-#ifndef STDOUT_FILENO
-#define STDOUT_FILENO 1
-#endif
-
-static int in_fd  = STDIN_FILENO;
-static int out_fd = STDOUT_FILENO;
-
-#if defined(__clang__)
-  #pragma clang diagnostic ignored "-Wextra-semi-stmt"
-  #pragma clang diagnostic ignored "-Wshadow"
-#endif
-
-/* This fails to compile if any condition after the : is false. */
+/* This fails to compile if any condition after the : is false.
+ */
 struct IntegerTypeAsserts {
   int ByteIsInteger : (Byte)1 / 2 == 0;
   int ByteIs8Bits : sizeof(Byte) == 1;
@@ -117,35 +104,31 @@ struct IntegerTypeAsserts {
 };
 
 #ifdef CONFIG_DEBUG
-  /* This is guaranteed to work with Linux and gcc only. For example, %lld in
+  /*
+   * This is guaranteed to work with Linux and gcc only. For example, %lld in
    * printf doesn't work with MinGW.
    */
-  #undef NDEBUG
-
-  #include <assert.h>
-  #include <stdio.h>
-  #define DEBUGF(...) fprintf(stderr, "DEBUG: " __VA_ARGS__)
-  #define ASSERT(condition) assert(condition)
+  #define DEBUGF(fmt, ...)   printf ("xz_decompress.c(%u): " fmt, __LINE__, ## __VA_ARGS__)
+  #define ASSERT(condition)  assert (condition)
 #else
-  #define DEBUGF(...)
-
-  /* Just check that it compiles.
-   */
-  #define ASSERT(condition) do {} while (0 && (condition))
+  #define DEBUGF(fmt, ...)
+  #define ASSERT(condition)
 #endif
 
 /* gcc-4.8 -Os is smart enough to generate rep movsb for this C
  * implementation, there is no size difference. In fact, it generates
  * better code with this than the inline assembly.
  */
-static void MemmoveOverlap(void *dest, const void *src, UInt32 n)
+static void MemmoveOverlap (void *dest, const void *src, UInt32 n)
 {
   char *destCp = (char*)dest;
   char *srcCp = (char*)src;
-  for (; n > 0; --n)
-    *destCp++ = *srcCp++;
+
+  for ( ; n > 0; --n)
+     *destCp++ = *srcCp++;
 }
 
+#undef  SZ_OK
 #define SZ_OK                              0
 #define SZ_ERROR_DATA                      1
 #define SZ_ERROR_MEM                       2      /* Out of memory. */
@@ -166,7 +149,13 @@ static void MemmoveOverlap(void *dest, const void *src, UInt32 n)
 typedef UInt32 SRes;
 
 #ifndef RINOK
-#define RINOK(x) do { SRes __result__ = (x); if (__result__ != 0) return __result__; } while (0)
+  #define RINOK(x)   do {                                       \
+                       SRes _result = (x);                      \
+                       if (_result != 0) {                      \
+                          DEBUGF ("RINOK() -> %u.\n", _result); \
+                          return _result;                       \
+                       }                                        \
+                     } while (0)
 #endif
 
 typedef Byte Bool;
@@ -178,24 +167,25 @@ typedef Byte Bool;
 /* CONFIG_PROB32 can increase the speed on some CPUs,
    but memory usage for CLzmaDec::probs will be doubled in that case
    CONFIG_PROB32 increases memory usage by 28268 bytes.
-   */
+ */
 #ifdef CONFIG_PROB32
   #define CLzmaProb UInt32
 #else
   #define CLzmaProb UInt16
 #endif
 
-#define LZMA_BASE_SIZE 1846
-#define LZMA_LIT_SIZE 768
-#define LZMA2_LCLP_MAX 4
+#define LZMA_BASE_SIZE     1846
+#define LZMA_LIT_SIZE       768
+#define LZMA2_LCLP_MAX        4
 
-#define MAX_DIC_SIZE 1610612736  /* ~1.61 GB. 2 GiB is user virtual memory limit for many 32-bit systems. */
-#define MAX_DIC_SIZE_PROP 37
+#define MAX_DIC_SIZE       1610612736  /* ~1.61 GB. 2 GiB is user virtual memory limit for many 32-bit systems. */
+#define MAX_DIC_SIZE_PROP  37
 
-#define MAX_MATCH_SIZE 273
-#define MAX_DICF_SIZE (MAX_DIC_SIZE + MAX_MATCH_SIZE)  /* Maximum number of bytes in global.dicf. */
+#define MAX_MATCH_SIZE     273
+#define MAX_DICF_SIZE      (MAX_DIC_SIZE + MAX_MATCH_SIZE)  /* Maximum number of bytes in global.dicf. */
 
-/* For LZMA streams, lc <= 8, lp <= 4, lc + lp <= 8 + 4 == 12.
+/*
+ * For LZMA streams, lc <= 8, lp <= 4, lc + lp <= 8 + 4 == 12.
  * For LZMA2 streams, lc + lp <= 4.
  * Minimum value: 1846.
  * Maximum value for LZMA streams: 1846 + (768 << (8 + 4)) == 3147574.
@@ -220,6 +210,7 @@ typedef struct {
    * * 0 <= lc + lp <= 4 by LZMA2 and muxzcat-LZMA and muxzcat-LZMA2.
    */
   UInt32 lc, lp, pb; /* Configured in prop byte. */
+
   /* Maximum lookback delta.
    * More optimized implementations (but not this version of muxzcat) need
    * that many bytes of storage for the dictionary. muxzcat uses more,
@@ -231,13 +222,13 @@ typedef struct {
   UInt32 dicSize;
   const Byte *buf;
   UInt32 range, code;
-  UInt32 dicfPos;  /* The next decompression output byte will be written to dicf + dicfPos. */
-  UInt32 dicfLimit;  /* It's OK to write this many decompression output bytes to dic. GrowDic(dicfPos + len) must be called before writing len bytes at dicfPos. */
-  UInt32 writtenPos;  /* Decompression output bytes dicf[:writtenPos] are already written to the output file. writtenPos <= dicfPos. */
-  UInt32 discardedSize;  /* Number of decompression output bytes discarded. */
+  UInt32 dicfPos;         /* The next decompression output byte will be written to dicf + dicfPos. */
+  UInt32 dicfLimit;       /* It's OK to write this many decompression output bytes to dic. GrowDic(dicfPos + len) must be called before writing len bytes at dicfPos. */
+  UInt32 writtenPos;      /* Decompression output bytes dicf[:writtenPos] are already written to the output file. writtenPos <= dicfPos. */
+  UInt32 discardedSize;   /* Number of decompression output bytes discarded. */
   UInt32 writeRemaining;  /* Maximum number of remaining bytes to write, or ~(UInt32)0 for unlimited. */
-  UInt32 allocCapacity;  /* Number of bytes allocated in dic. */
-  UInt32 processedPos;  /* Decompression output byte count since the last call to LzmaDec_InitDicAndState(True, ...); */
+  UInt32 allocCapacity;   /* Number of bytes allocated in dic. */
+  UInt32 processedPos;    /* Decompression output byte count since the last call to LzmaDec_InitDicAndState(True, ...); */
   UInt32 checkDicSize;
   UInt32 state;
   UInt32 reps[4];
@@ -260,9 +251,9 @@ typedef struct {
 static CLzmaDec global;
 
 /*
- * Writes uncompressed data (global.dicf[global.writtenPos : global.dicfPos] to 'fd_out'.
+ * Writes uncompressed data (global.dicf[global.writtenPos : global.dicfPos] to 'out_fd'.
  */
-static SRes Flush(void)
+static SRes Flush (void)
 {
   const UInt32 flushSize1 = global.dicfPos - global.writtenPos;
   const UInt32 flushSize = flushSize1 > global.writeRemaining ? global.writeRemaining : flushSize1;
@@ -273,7 +264,7 @@ static SRes Flush(void)
 
   while (p != q)
   {
-    const Int32 got = _write(out_fd, p, q - p);
+    const Int32 got = _write (out_fd, p, q - p);
 
     if (got <= 0)
       return SZ_ERROR_WRITE;
@@ -285,7 +276,7 @@ static SRes Flush(void)
   return SZ_OK;
 }
 
-static SRes FlushDiscardOldFromStartOfDic(void)
+static SRes FlushDiscardOldFromStartOfDic (void)
 {
   if (global.dicfPos > global.dicSize)
   {
@@ -305,17 +296,17 @@ static SRes FlushDiscardOldFromStartOfDic(void)
   return SZ_OK;
 }
 
-static SRes GrowCapacity(UInt32 newCapacity)
+static SRes GrowCapacity (UInt32 newCapacity)
 {
   if (newCapacity > global.allocCapacity)
   {
-    DEBUGF("GROWCAPACITY allocCapacity/old=%d newCapacity=%d\n", global.allocCapacity, newCapacity);
+    DEBUGF ("GROWCAPACITY allocCapacity/old=%d newCapacity=%d\n", global.allocCapacity, newCapacity);
     if (newCapacity > MAX_DICF_SIZE)
        return SZ_ERROR_MEM;
 
     /* Possible memory leak if realloc fails, returning NULL.
      */
-    global.dicf = realloc(global.dicf, newCapacity);
+    global.dicf = realloc (global.dicf, newCapacity);
     if (!global.dicf)
         return SZ_ERROR_MEM;
     global.allocCapacity = newCapacity;
@@ -361,62 +352,117 @@ static SRes FlushDiscardGrowDic (UInt32 dicfPosDelta)
 #define kNumMoveBits          5
 
 #define RC_INIT_SIZE  5
-#define NORMALIZE     if (range < kTopValue) { range <<= 8; code = (code << 8) | (*buf++); }
+#define NORMALIZE()   do {                               \
+                        if (range < kTopValue) {         \
+                          range <<= 8;                   \
+                          code = (code << 8) | (*buf++); \
+                        }                                \
+                      } while (0)
 
-#define IF_BIT_0(p) ttt = *(p); NORMALIZE; \
+#define IF_BIT_0(p) ttt = *(p); NORMALIZE();                        \
                     bound = (range >> kNumBitModelTotalBits) * ttt; \
                     if (code < bound)
 
-#define UPDATE_0(p) range = bound; *(p) = (CLzmaProb)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits));
-#define UPDATE_1(p) range -= bound; code -= bound; *(p) = (CLzmaProb)(ttt - (ttt >> kNumMoveBits));
-#define GET_BIT2(p, i, A0, A1) IF_BIT_0(p) \
-        { UPDATE_0(p); i = (i + i); A0; } else \
-        { UPDATE_1(p); i = (i + i) + 1; A1; }
+#define UPDATE_0(p)  do {             \
+                       range = bound; \
+                       *(p) = (CLzmaProb)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits)); \
+                     } while (0)
 
-#define GET_BIT(p, i) GET_BIT2(p, i, ; , ;)
+#define UPDATE_1(p)  do {              \
+                       range -= bound; \
+                       code -= bound;  \
+                       *(p) = (CLzmaProb)(ttt - (ttt >> kNumMoveBits)); \
+                     } while (0)
 
-#define TREE_GET_BIT(probs, i) { GET_BIT((probs + i), i); }
-#define TREE_DECODE(probs, limit, i) \
-        { i = 1; do { TREE_GET_BIT(probs, i); } while (i < limit); i -= limit; }
+#define GET_BIT2(p, i, A0, A1) do {                 \
+                                 IF_BIT_0 (p) {     \
+                                   UPDATE_0 (p);    \
+                                   i = (i + i);     \
+                                   A0;              \
+                                 }                  \
+                                 else {             \
+                                   UPDATE_1 (p);    \
+                                   i = (i + i) + 1; \
+                                   A1;              \
+                                 }                  \
+                               } while (0)
+
+#define GET_BIT(p, i) GET_BIT2 (p, i,,)
+
+#define TREE_GET_BIT(probs, i)        do {                      \
+                                        GET_BIT (probs + i, i); \
+                                      } while (0)
+
+#define TREE_DECODE(probs, limit, i)  do {                         \
+                                        i = 1;                     \
+                                        do {                       \
+                                          TREE_GET_BIT (probs, i); \
+                                        } while (i < limit);       \
+                                        i -= limit;                \
+                                      } while (0)
 
 #ifdef CONFIG_SIZE_OPT
-  #define TREE_6_DECODE(probs, i) TREE_DECODE(probs, (1 << 6), i)
+  #define TREE_6_DECODE(probs, i) TREE_DECODE (probs, (1 << 6), i)
 #else
-  #define TREE_6_DECODE(probs, i) \
-          { i = 1;                \
-          TREE_GET_BIT(probs, i); \
-          TREE_GET_BIT(probs, i); \
-          TREE_GET_BIT(probs, i); \
-          TREE_GET_BIT(probs, i); \
-          TREE_GET_BIT(probs, i); \
-          TREE_GET_BIT(probs, i); \
-          i -= 0x40; }
+  #define TREE_6_DECODE(probs, i)  do {                       \
+                                     i = 1;                   \
+                                     TREE_GET_BIT (probs, i); \
+                                     TREE_GET_BIT (probs, i); \
+                                     TREE_GET_BIT (probs, i); \
+                                     TREE_GET_BIT (probs, i); \
+                                     TREE_GET_BIT (probs, i); \
+                                     TREE_GET_BIT (probs, i); \
+                                     i -= 0x40;               \
+                                   } while (0)
 #endif
 
-#define NORMALIZE_CHECK                  \
-        if (range < kTopValue) {         \
-          if (buf >= bufLimit)           \
-             return DUMMY_ERROR;         \
-          range <<= 8;                   \
-          code = (code << 8) | (*buf++); \
-        }
+#define NORMALIZE_CHECK() do {             \
+          if (range < kTopValue) {         \
+            if (buf >= bufLimit)           \
+               return DUMMY_ERROR;         \
+            range <<= 8;                   \
+            code = (code << 8) | (*buf++); \
+          }                                \
+        } while (0)
 
 #define IF_BIT_0_CHECK(p)                               \
-        ttt = *(p); NORMALIZE_CHECK;                    \
+        ttt = *(p);                                     \
+        NORMALIZE_CHECK();                              \
         bound = (range >> kNumBitModelTotalBits) * ttt; \
         if (code < bound)
 
-#define UPDATE_0_CHECK  range = bound;
-#define UPDATE_1_CHECK  range -= bound; code -= bound;
+#define UPDATE_0_CHECK()  range = bound
+#define UPDATE_1_CHECK()  range -= bound; \
+                          code  -= bound
 
-#define GET_BIT2_CHECK(p, i, A0, A1)              \
-        IF_BIT_0_CHECK(p)                         \
-        { UPDATE_0_CHECK; i = (i + i); A0; } else \
-        { UPDATE_1_CHECK; i = (i + i) + 1; A1; }
+#define GET_BIT2_CHECK(p, i, A0, A1) \
+        do {                         \
+          IF_BIT_0_CHECK (p) {       \
+            UPDATE_0_CHECK();        \
+            i = (i + i);             \
+            A0;                      \
+          }                          \
+          else {                     \
+            UPDATE_1_CHECK();        \
+            i = (i + i) + 1;         \
+            A1;                      \
+          }                          \
+        } while (0)
 
-#define GET_BIT_CHECK(p, i) GET_BIT2_CHECK(p, i, ; , ;)
+#define GET_BIT_CHECK(p, i)        \
+        do {                       \
+          GET_BIT2_CHECK (p, i,,); \
+        } while (0)
+
 #define TREE_DECODE_CHECK(probs, limit, i) \
-        { i = 1; do { GET_BIT_CHECK(probs + i, i) } while (i < limit); i -= limit; }
+        do {                               \
+          i = 1;                           \
+          do {                             \
+            GET_BIT_CHECK (probs + i, i);  \
+          }                                \
+          while (i < limit);               \
+          i -= limit;                      \
+        } while (0)
 
 #define kNumPosBitsMax     4
 #define kNumPosStatesMax   (1 << kNumPosBitsMax)
@@ -425,7 +471,7 @@ static SRes FlushDiscardGrowDic (UInt32 dicfPosDelta)
 #define kLenNumLowSymbols  (1 << kLenNumLowBits)
 #define kLenNumMidBits     3
 #define kLenNumMidSymbols  (1 << kLenNumMidBits)
-#define kLenNumHighBits     8
+#define kLenNumHighBits    8
 #define kLenNumHighSymbols (1 << kLenNumHighBits)
 
 #define LenChoice    0
@@ -445,8 +491,8 @@ static SRes FlushDiscardGrowDic (UInt32 dicfPosDelta)
 #define kNumPosSlotBits    6
 #define kNumLenToPosStates 4
 
-#define kNumAlignBits   4
-#define kAlignTableSize (1 << kNumAlignBits)
+#define kNumAlignBits      4
+#define kAlignTableSize    (1 << kNumAlignBits)
 
 #define kMatchMinLen       2
 #define kMatchSpecLenStart (kMatchMinLen + kLenNumLowSymbols + kLenNumMidSymbols + kLenNumHighSymbols)
@@ -470,7 +516,7 @@ static SRes FlushDiscardGrowDic (UInt32 dicfPosDelta)
 
 #define LZMA_DIC_MIN (1 << 12)
 
-static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
+static SRes LzmaDec_DecodeReal (UInt32 limit, const Byte *bufLimit)
 {
   CLzmaProb *probs = global.probs;
   UInt32 state = global.state;
@@ -499,23 +545,25 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
     UInt32 posState = processedPos & pbMask;
 
     prob = probs + IsMatch + (state << kNumPosBitsMax) + posState;
-    IF_BIT_0(prob)
+    IF_BIT_0 (prob)
     {
       UInt32 symbol;
 
-      UPDATE_0(prob);
+      UPDATE_0 (prob);
       prob = probs + Literal;
       if (checkDicSize != 0 || processedPos != 0)
       {
         prob += (LZMA_LIT_SIZE * (((processedPos & lpMask) << lc) +
-        (dicl[(diclPos == 0 ? diclLimit : diclPos) - 1] >> (8 - lc))));
+                (dicl[(diclPos == 0 ? diclLimit : diclPos) - 1] >> (8 - lc))));
       }
 
       if (state < kNumLitStates)
       {
         state -= (state < 4) ? state : 3;
         symbol = 1;
-        do { GET_BIT(prob + symbol, symbol) } while (symbol < 0x100);
+        do {
+          GET_BIT (prob + symbol, symbol);
+        } while (symbol < 0x100);
       }
       else
       {
@@ -532,15 +580,17 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
           matchByte <<= 1;
           bit = (matchByte & offs);
           probLit = prob + offs + bit + symbol;
-          GET_BIT2(probLit, symbol, offs &= ~bit, offs &= bit)
+          GET_BIT2 (probLit, symbol, offs &= ~bit, offs &= bit);
         }
         while (symbol < 0x100);
       }
       if (diclPos >= global.allocCapacity)
       {
         global.dicfPos = diclPos;
-        RINOK(FlushDiscardGrowDic(1));
-        dicl = global.dicf; diclLimit = global.dicfLimit; diclPos = global.dicfPos;
+        RINOK (FlushDiscardGrowDic(1));
+        dicl = global.dicf;
+        diclLimit = global.dicfLimit;
+        diclPos = global.dicfPos;
       }
       dicl[diclPos++] = (Byte)symbol;
       processedPos++;
@@ -548,32 +598,35 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
     }
     else
     {
-      UPDATE_1(prob);
+      UPDATE_1 (prob);
       prob = probs + IsRep + state;
-      IF_BIT_0(prob)
+      IF_BIT_0 (prob)
       {
-        UPDATE_0(prob);
+        UPDATE_0 (prob);
         state += kNumStates;
         prob = probs + LenCoder;
       }
       else
       {
-        UPDATE_1(prob);
+        UPDATE_1 (prob);
         if (checkDicSize == 0 && processedPos == 0)
            return SZ_ERROR_DATA;
+
         prob = probs + IsRepG0 + state;
-        IF_BIT_0(prob)
+        IF_BIT_0 (prob)
         {
-          UPDATE_0(prob);
+          UPDATE_0 (prob);
           prob = probs + IsRep0Long + (state << kNumPosBitsMax) + posState;
-          IF_BIT_0(prob)
+          IF_BIT_0 (prob)
           {
-            UPDATE_0(prob);
+            UPDATE_0 (prob);
             if (diclPos >= global.allocCapacity)
             {
               global.dicfPos = diclPos;
-              RINOK(FlushDiscardGrowDic(1));
-              dicl = global.dicf; diclLimit = global.dicfLimit; diclPos = global.dicfPos;
+              RINOK (FlushDiscardGrowDic(1));
+              dicl = global.dicf;
+              diclLimit = global.dicfLimit;
+              diclPos = global.dicfPos;
             }
             dicl[diclPos] = dicl[(diclPos - rep0) + ((diclPos < rep0) ? diclLimit : 0)];
             diclPos++;
@@ -581,31 +634,31 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
             state = state < kNumLitStates ? 9 : 11;
             continue;
           }
-          UPDATE_1(prob);
+          UPDATE_1 (prob);
         }
         else
         {
           UInt32 distance;
 
-          UPDATE_1(prob);
+          UPDATE_1 (prob);
           prob = probs + IsRepG1 + state;
-          IF_BIT_0(prob)
+          IF_BIT_0 (prob)
           {
-            UPDATE_0(prob);
+            UPDATE_0 (prob);
             distance = rep1;
           }
           else
           {
-            UPDATE_1(prob);
+            UPDATE_1 (prob);
             prob = probs + IsRepG2 + state;
-            IF_BIT_0(prob)
+            IF_BIT_0 (prob)
             {
-              UPDATE_0(prob);
+              UPDATE_0 (prob);
               distance = rep2;
             }
             else
             {
-              UPDATE_1(prob);
+              UPDATE_1 (prob);
               distance = rep3;
               rep3 = rep2;
             }
@@ -622,33 +675,33 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
         UInt32 limit, offset;
         CLzmaProb *probLen = prob + LenChoice;
 
-        IF_BIT_0(probLen)
+        IF_BIT_0 (probLen)
         {
-          UPDATE_0(probLen);
+          UPDATE_0 (probLen);
           probLen = prob + LenLow + (posState << kLenNumLowBits);
           offset = 0;
           limit = (1 << kLenNumLowBits);
         }
         else
         {
-          UPDATE_1(probLen);
+          UPDATE_1 (probLen);
           probLen = prob + LenChoice2;
-          IF_BIT_0(probLen)
+          IF_BIT_0 (probLen)
           {
-            UPDATE_0(probLen);
+            UPDATE_0 (probLen);
             probLen = prob + LenMid + (posState << kLenNumMidBits);
             offset = kLenNumLowSymbols;
             limit = (1 << kLenNumMidBits);
           }
           else
           {
-            UPDATE_1(probLen);
+            UPDATE_1 (probLen);
             probLen = prob + LenHigh;
             offset = kLenNumLowSymbols + kLenNumMidSymbols;
             limit = (1 << kLenNumHighBits);
           }
         }
-        TREE_DECODE(probLen, limit, len);
+        TREE_DECODE (probLen, limit, len);
         len += offset;
       }
 
@@ -658,11 +711,13 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
 
         prob = probs + PosSlot +
               ((len < kNumLenToPosStates ? len : kNumLenToPosStates - 1) << kNumPosSlotBits);
-        TREE_6_DECODE(prob, distance);
+
+        TREE_6_DECODE (prob, distance);
         if (distance >= kStartPosModelIndex)
         {
           UInt32 posSlot = (UInt32)distance;
-          int numDirectBits = (int)(((distance >> 1) - 1));
+          int    numDirectBits = (int)(((distance >> 1) - 1));
+
           distance = (2 | (distance & 1));
           if (posSlot < kEndPosModelIndex)
           {
@@ -673,7 +728,7 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
               UInt32 i = 1;
               do
               {
-                GET_BIT2(prob + i, i, ; , distance |= mask);
+                GET_BIT2 (prob + i, i,,distance |= mask);
                 mask <<= 1;
               }
               while (--numDirectBits != 0);
@@ -684,7 +739,7 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
             numDirectBits -= kNumAlignBits;
             do
             {
-              NORMALIZE
+              NORMALIZE();
               range >>= 1;
               {
                 UInt32 t;
@@ -710,10 +765,10 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
             {
               UInt32 i = 1;
 
-              GET_BIT2 (prob + i, i, ; , distance |= 1);
-              GET_BIT2 (prob + i, i, ; , distance |= 2);
-              GET_BIT2 (prob + i, i, ; , distance |= 4);
-              GET_BIT2 (prob + i, i, ; , distance |= 8);
+              GET_BIT2 (prob + i, i,,distance |= 1);
+              GET_BIT2 (prob + i, i,,distance |= 2);
+              GET_BIT2 (prob + i, i,,distance |= 4);
+              GET_BIT2 (prob + i, i,,distance |= 8);
             }
             if (distance == (UInt32)0xFFFFFFFF)
             {
@@ -732,13 +787,13 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
           if (distance >= processedPos)
              return SZ_ERROR_DATA;
         }
-        if (distance >= checkDicSize)
-           return SZ_ERROR_DATA;
+        else if (distance >= checkDicSize)
+                return SZ_ERROR_DATA;
         state = (state < kNumStates + kNumLitStates) ? kNumLitStates : kNumLitStates + 3;
       }
 
       len += kMatchMinLen;
-      ASSERT(len <= MAX_MATCH_SIZE);
+      ASSERT (len <= MAX_MATCH_SIZE);
 
       if (limit == diclPos)
          return SZ_ERROR_DATA;
@@ -753,15 +808,17 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
         if (diclPos + curLen > global.allocCapacity)   /* + cannot overflow. */
         {
           global.dicfPos = diclPos;
-          RINOK(FlushDiscardGrowDic(curLen));
+          RINOK (FlushDiscardGrowDic(curLen));
           pos += global.dicfPos - diclPos;
-          dicl = global.dicf; diclLimit = global.dicfLimit; diclPos = global.dicfPos;
+          dicl = global.dicf;
+          diclLimit = global.dicfLimit;
+          diclPos = global.dicfPos;
         }
         if (pos + curLen <= diclLimit)
         {
-          ASSERT(diclPos > pos);
-          ASSERT(curLen > 0);
-          MemmoveOverlap(dicl + diclPos, dicl + pos, curLen);
+          ASSERT (diclPos > pos);
+          ASSERT (curLen > 0);
+          MemmoveOverlap (dicl + diclPos, dicl + pos, curLen);
           diclPos += curLen;
         }
         else
@@ -779,7 +836,7 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
   }
   while (diclPos < limit && buf < bufLimit);
 
-  NORMALIZE;
+  NORMALIZE();
   global.buf = buf;
   global.range = range;
   global.code = code;
@@ -794,11 +851,11 @@ static SRes LzmaDec_DecodeReal(UInt32 limit, const Byte *bufLimit)
   return SZ_OK;
 }
 
-static SRes LzmaDec_WriteRem(UInt32 limit)
+static SRes LzmaDec_WriteRem (UInt32 limit)
 {
   if (global.remainLen != 0 && global.remainLen < kMatchSpecLenStart)
   {
-    Byte *dicl = global.dicf;
+    Byte  *dicl = global.dicf;
     UInt32 diclPos = global.dicfPos;
     UInt32 diclLimit = global.dicfLimit;
     UInt32 len = global.remainLen;
@@ -808,8 +865,10 @@ static SRes LzmaDec_WriteRem(UInt32 limit)
        len = (UInt32)(limit - diclPos);
     if (diclPos + len > global.allocCapacity)   /* + cannot overflow, see below. */
     {
-      RINOK(FlushDiscardGrowDic(len));
-      dicl = global.dicf; diclLimit = global.dicfLimit; diclPos = global.dicfPos;
+      RINOK (FlushDiscardGrowDic(len));
+      dicl = global.dicf;
+      diclLimit = global.dicfLimit;
+      diclPos = global.dicfPos;
     }
 
     if (global.checkDicSize == 0 && global.dicSize - global.processedPos <= len)
@@ -828,7 +887,7 @@ static SRes LzmaDec_WriteRem(UInt32 limit)
   return SZ_OK;
 }
 
-static SRes LzmaDec_DecodeReal2(UInt32 limit, const Byte *bufLimit)
+static SRes LzmaDec_DecodeReal2 (UInt32 limit, const Byte *bufLimit)
 {
   do
   {
@@ -837,15 +896,18 @@ static SRes LzmaDec_DecodeReal2(UInt32 limit, const Byte *bufLimit)
     if (global.checkDicSize == 0)
     {
       UInt32 rem = global.dicSize - global.processedPos;
+
       if (limit - global.dicfPos > rem)
          limit2 = global.dicfPos + rem;
     }
-    RINOK(LzmaDec_DecodeReal(limit2, bufLimit));
+    RINOK (LzmaDec_DecodeReal(limit2, bufLimit));
     if (global.processedPos >= global.dicSize)
        global.checkDicSize = global.dicSize;
-    RINOK(LzmaDec_WriteRem(limit));
+    RINOK (LzmaDec_WriteRem(limit));
   }
-  while (global.dicfPos < limit && global.buf < bufLimit && global.remainLen < kMatchSpecLenStart);
+  while (global.dicfPos < limit &&
+         global.buf < bufLimit  &&
+         global.remainLen < kMatchSpecLenStart);
 
   if (global.remainLen > kMatchSpecLenStart)
      global.remainLen = kMatchSpecLenStart;
@@ -875,9 +937,9 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
     UInt32 posState = (global.processedPos) & ((1 << global.pb) - 1);
 
     prob = probs + IsMatch + (state << kNumPosBitsMax) + posState;
-    IF_BIT_0_CHECK(prob)
+    IF_BIT_0_CHECK (prob)
     {
-      UPDATE_0_CHECK
+      UPDATE_0_CHECK();
 
       /* if (bufLimit - buf >= 7) return DUMMY_LIT; */
 
@@ -892,7 +954,7 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
         UInt32 symbol = 1;
 
         do {
-          GET_BIT_CHECK(prob + symbol, symbol)
+          GET_BIT_CHECK (prob + symbol, symbol);
         } while (symbol < 0x100);
       }
       else
@@ -910,7 +972,7 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
           matchByte <<= 1;
           bit = (matchByte & offs);
           probLit = prob + offs + bit + symbol;
-          GET_BIT2_CHECK(probLit, symbol, offs &= ~bit, offs &= bit)
+          GET_BIT2_CHECK (probLit, symbol, offs &= ~bit, offs &= bit);
         }
         while (symbol < 0x100);
       }
@@ -920,55 +982,52 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
     {
       UInt32 len;
 
-      UPDATE_1_CHECK;
+      UPDATE_1_CHECK();
 
       prob = probs + IsRep + state;
-      IF_BIT_0_CHECK(prob)
+      IF_BIT_0_CHECK (prob)
       {
-        UPDATE_0_CHECK;
+        UPDATE_0_CHECK();
         state = 0;
         prob = probs + LenCoder;
         res = DUMMY_MATCH;
       }
       else
       {
-        UPDATE_1_CHECK;
+        UPDATE_1_CHECK();
         res = DUMMY_REP;
         prob = probs + IsRepG0 + state;
-        IF_BIT_0_CHECK(prob)
+        IF_BIT_0_CHECK (prob)
         {
-          UPDATE_0_CHECK;
+          UPDATE_0_CHECK();
           prob = probs + IsRep0Long + (state << kNumPosBitsMax) + posState;
-          IF_BIT_0_CHECK(prob)
+          IF_BIT_0_CHECK (prob)
           {
-            UPDATE_0_CHECK;
-            NORMALIZE_CHECK;
+            UPDATE_0_CHECK();
+            NORMALIZE_CHECK();
             return DUMMY_REP;
           }
-          else
-          {
-            UPDATE_1_CHECK;
-          }
+          UPDATE_1_CHECK();
         }
         else
         {
-          UPDATE_1_CHECK;
+          UPDATE_1_CHECK();
           prob = probs + IsRepG1 + state;
-          IF_BIT_0_CHECK(prob)
+          IF_BIT_0_CHECK (prob)
           {
-            UPDATE_0_CHECK;
+            UPDATE_0_CHECK();
           }
           else
           {
-            UPDATE_1_CHECK;
+            UPDATE_1_CHECK();
             prob = probs + IsRepG2 + state;
-            IF_BIT_0_CHECK(prob)
+            IF_BIT_0_CHECK (prob)
             {
-              UPDATE_0_CHECK;
+              UPDATE_0_CHECK();
             }
             else
             {
-              UPDATE_1_CHECK;
+              UPDATE_1_CHECK();
             }
           }
         }
@@ -979,33 +1038,33 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
         UInt32 limit, offset;
         const CLzmaProb *probLen = prob + LenChoice;
 
-        IF_BIT_0_CHECK(probLen)
+        IF_BIT_0_CHECK (probLen)
         {
-          UPDATE_0_CHECK;
+          UPDATE_0_CHECK();
           probLen = prob + LenLow + (posState << kLenNumLowBits);
           offset = 0;
           limit = 1 << kLenNumLowBits;
         }
         else
         {
-          UPDATE_1_CHECK;
+          UPDATE_1_CHECK();
           probLen = prob + LenChoice2;
-          IF_BIT_0_CHECK(probLen)
+          IF_BIT_0_CHECK (probLen)
           {
-            UPDATE_0_CHECK;
+            UPDATE_0_CHECK();
             probLen = prob + LenMid + (posState << kLenNumMidBits);
             offset = kLenNumLowSymbols;
             limit = 1 << kLenNumMidBits;
           }
           else
           {
-            UPDATE_1_CHECK;
+            UPDATE_1_CHECK();
             probLen = prob + LenHigh;
             offset = kLenNumLowSymbols + kLenNumMidSymbols;
             limit = 1 << kLenNumHighBits;
           }
         }
-        TREE_DECODE_CHECK(probLen, limit, len);
+        TREE_DECODE_CHECK (probLen, limit, len);
         len += offset;
       }
 
@@ -1015,7 +1074,7 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
 
         prob = probs + PosSlot +
                ((len < kNumLenToPosStates ? len : kNumLenToPosStates - 1) << kNumPosSlotBits);
-        TREE_DECODE_CHECK(prob, 1 << kNumPosSlotBits, posSlot);
+        TREE_DECODE_CHECK (prob, 1 << kNumPosSlotBits, posSlot);
         if (posSlot >= kStartPosModelIndex)
         {
           UInt32 numDirectBits = ((posSlot >> 1) - 1);
@@ -1031,7 +1090,7 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
             numDirectBits -= kNumAlignBits;
             do
             {
-              NORMALIZE_CHECK
+              NORMALIZE_CHECK();
               range >>= 1;
               code -= range & (((code - range) >> 31) - 1);
               /* if (code >= range) code -= range; */
@@ -1044,7 +1103,7 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
             UInt32 i = 1;
             do
             {
-              GET_BIT_CHECK(prob + i, i);
+              GET_BIT_CHECK (prob + i, i);
             }
             while (--numDirectBits != 0);
           }
@@ -1052,19 +1111,19 @@ static ELzmaDummy LzmaDec_TryDummy (const Byte *buf, UInt32 inSize)
       }
     }
   }
-  NORMALIZE_CHECK;
+  NORMALIZE_CHECK();
   return res;
 }
 
 
-static void LzmaDec_InitRc(const Byte *data)
+static void LzmaDec_InitRc (const Byte *data)
 {
   global.code = ((UInt32)data[1] << 24) | ((UInt32)data[2] << 16) | ((UInt32)data[3] << 8) | ((UInt32)data[4]);
   global.range = 0xFFFFFFFF;
   global.needFlush = False;
 }
 
-static void LzmaDec_InitDicAndState(Bool initDic, Bool initState)
+static void LzmaDec_InitDicAndState (Bool initDic, Bool initState)
 {
   global.needFlush = True;
   global.remainLen = 0;
@@ -1077,7 +1136,7 @@ static void LzmaDec_InitDicAndState(Bool initDic, Bool initState)
     global.needInitLzma = True;
   }
   if (initState)
-    global.needInitLzma = True;
+     global.needInitLzma = True;
 }
 
 static void LzmaDec_InitStateReal (void)
@@ -1096,108 +1155,115 @@ static void LzmaDec_InitStateReal (void)
 static SRes LzmaDec_DecodeToDic (const Byte *src, UInt32 srcLen)
 {
   const UInt32 srcLen0 = srcLen;
-  UInt32 inSize = srcLen = 0;
+  UInt32 inSize = srcLen;
 
-  RINOK(LzmaDec_WriteRem(global.dicfLimit));
+  srcLen = 0;
+
+  RINOK (LzmaDec_WriteRem(global.dicfLimit));
 
   while (global.remainLen != kMatchSpecLenStart)
   {
-      Bool checkEndMarkNow;
+    Bool checkEndMarkNow;
 
-      if (global.needFlush)
+    if (global.needFlush)
+    {
+      for ( ; inSize > 0 && global.tempBufSize < RC_INIT_SIZE; srcLen++, inSize--)
+         global.tempBuf[global.tempBufSize++] = *src++;
+
+      if (global.tempBufSize < RC_INIT_SIZE)
       {
-        for (; inSize > 0 && global.tempBufSize < RC_INIT_SIZE; srcLen++, inSize--)
-           global.tempBuf[global.tempBufSize++] = *src++;
-        if (global.tempBufSize < RC_INIT_SIZE)
-        {
-        on_needs_more_input:
-          if (srcLen != srcLen0)
-             return SZ_ERROR_NEEDS_MORE_INPUT_PARTIAL;
-          return SZ_ERROR_NEEDS_MORE_INPUT;
-        }
-        if (global.tempBuf[0] != 0)
-           return SZ_ERROR_DATA;
-
-        LzmaDec_InitRc(global.tempBuf);
-        global.tempBufSize = 0;
+      on_needs_more_input:
+        if (srcLen != srcLen0)
+           return SZ_ERROR_NEEDS_MORE_INPUT_PARTIAL;
+        return SZ_ERROR_NEEDS_MORE_INPUT;
       }
+      if (global.tempBuf[0] != 0)
+         return SZ_ERROR_DATA;
 
-      checkEndMarkNow = False;
-      if (global.dicfPos >= global.dicfLimit)
+      LzmaDec_InitRc (global.tempBuf);
+      global.tempBufSize = 0;
+    }
+
+    checkEndMarkNow = False;
+    if (global.dicfPos >= global.dicfLimit)
+    {
+      if (global.remainLen == 0 && global.code == 0)
       {
-        if (global.remainLen == 0 && global.code == 0)
+        if (srcLen != srcLen0)
+           return SZ_ERROR_CHUNK_NOT_CONSUMED;
+        return SZ_MAYBE_FINISHED_WITHOUT_MARK;
+      }
+      if (global.remainLen != 0)
+         return SZ_ERROR_NOT_FINISHED;
+      checkEndMarkNow = True;
+    }
+
+    if (global.needInitLzma)
+       LzmaDec_InitStateReal();
+
+    if (global.tempBufSize == 0)
+    {
+      UInt32 processed;
+      const Byte *bufLimit;
+
+      if (inSize < LZMA_REQUIRED_INPUT_MAX || checkEndMarkNow)
+      {
+        SRes dummyRes = LzmaDec_TryDummy (src, inSize);
+
+        if (dummyRes == DUMMY_ERROR)
         {
-          if (srcLen != srcLen0)
-             return SZ_ERROR_CHUNK_NOT_CONSUMED;
-          return SZ_OK /* MAYBE_FINISHED_WITHOUT_MARK */;
+          memcpy (global.tempBuf, src, inSize);
+          global.tempBufSize = (UInt32)inSize;
+          srcLen += inSize;
+          goto on_needs_more_input;
         }
-        if (global.remainLen != 0)
+        if (checkEndMarkNow && dummyRes != DUMMY_MATCH)
            return SZ_ERROR_NOT_FINISHED;
-        checkEndMarkNow = True;
-      }
-
-      if (global.needInitLzma)
-         LzmaDec_InitStateReal();
-
-      if (global.tempBufSize == 0)
-      {
-        UInt32 processed;
-        const Byte *bufLimit;
-
-        if (inSize < LZMA_REQUIRED_INPUT_MAX || checkEndMarkNow)
-        {
-          SRes dummyRes = LzmaDec_TryDummy(src, inSize);
-          if (dummyRes == DUMMY_ERROR)
-          {
-            memcpy(global.tempBuf, src, inSize);
-            global.tempBufSize = (UInt32)inSize;
-            srcLen += inSize;
-            goto on_needs_more_input;
-          }
-          if (checkEndMarkNow && dummyRes != DUMMY_MATCH)
-             return SZ_ERROR_NOT_FINISHED;
-          bufLimit = src;
-        }
-        else
-          bufLimit = src + inSize - LZMA_REQUIRED_INPUT_MAX;
-
-        global.buf = src;
-        if (LzmaDec_DecodeReal2(global.dicfLimit, bufLimit) != 0)
-           return SZ_ERROR_DATA;
-        processed = (UInt32)(global.buf - src);
-        srcLen += processed;
-        src += processed;
-        inSize -= processed;
+        bufLimit = src;
       }
       else
+        bufLimit = src + inSize - LZMA_REQUIRED_INPUT_MAX;
+
+      global.buf = src;
+      if (LzmaDec_DecodeReal2(global.dicfLimit, bufLimit) != 0)
+         return SZ_ERROR_DATA;
+
+      processed = (UInt32)(global.buf - src);
+      srcLen += processed;
+      src    += processed;
+      inSize -= processed;
+    }
+    else
+    {
+      UInt32 rem = global.tempBufSize, lookAhead = 0;
+
+      while (rem < LZMA_REQUIRED_INPUT_MAX && lookAhead < inSize)
+           global.tempBuf[rem++] = src[lookAhead++];
+
+      global.tempBufSize = rem;
+      if (rem < LZMA_REQUIRED_INPUT_MAX || checkEndMarkNow)
       {
-        UInt32 rem = global.tempBufSize, lookAhead = 0;
-        while (rem < LZMA_REQUIRED_INPUT_MAX && lookAhead < inSize)
-          global.tempBuf[rem++] = src[lookAhead++];
+        SRes dummyRes = LzmaDec_TryDummy (global.tempBuf, rem);
 
-        global.tempBufSize = rem;
-        if (rem < LZMA_REQUIRED_INPUT_MAX || checkEndMarkNow)
+        if (dummyRes == DUMMY_ERROR)
         {
-          SRes dummyRes = LzmaDec_TryDummy(global.tempBuf, rem);
-
-          if (dummyRes == DUMMY_ERROR)
-          {
-            srcLen += lookAhead;
-            goto on_needs_more_input;
-          }
-          if (checkEndMarkNow && dummyRes != DUMMY_MATCH)
-             return SZ_ERROR_NOT_FINISHED;
+          srcLen += lookAhead;
+          goto on_needs_more_input;
         }
-        global.buf = global.tempBuf;
-        if (LzmaDec_DecodeReal2(global.dicfLimit, global.buf) != 0)
-           return SZ_ERROR_DATA;
-
-        lookAhead -= (rem - (UInt32)(global.buf - global.tempBuf));
-        srcLen += lookAhead;
-        src += lookAhead;
-        inSize -= lookAhead;
-        global.tempBufSize = 0;
+        if (checkEndMarkNow && dummyRes != DUMMY_MATCH)
+           return SZ_ERROR_NOT_FINISHED;
       }
+
+      global.buf = global.tempBuf;
+      if (LzmaDec_DecodeReal2(global.dicfLimit, global.buf) != 0)
+         return SZ_ERROR_DATA;
+
+      lookAhead -= (rem - (UInt32)(global.buf - global.tempBuf));
+      srcLen += lookAhead;
+      src    += lookAhead;
+      inSize -= lookAhead;
+      global.tempBufSize = 0;
+    }
   }
   if (global.code != 0)
      return SZ_ERROR_DATA;
@@ -1212,9 +1278,7 @@ static SRes LzmaDec_DecodeToDic (const Byte *src, UInt32 srcLen)
 
 static Byte readBuf[65536 + 12], *readCur = readBuf, *readEnd = readBuf;
 
-#ifdef CONFIG_DEBUG
 static long long readFileOfs = 0;
-#endif
 
 /* Tries to preread r bytes to the read buffer. Returns the number of bytes
  * available in the read buffer. If smaller than r, that indicates EOF.
@@ -1228,38 +1292,36 @@ static UInt32 Preread (UInt32 r)
 {
   UInt32 p = readEnd - readCur;
 
-  ASSERT(r <= sizeof(readBuf));
+  ASSERT (r <= sizeof(readBuf));
   if (p < r)   /* Not enough pending available. */
   {
     if (readBuf + sizeof(readBuf) - readCur + 0U < r)
     {
       /* If no room for r bytes to the end, discard bytes from the beginning.
        */
-      DEBUGF("MEMMOVE size=%d\n", p);
-      MemmoveOverlap(readBuf, readCur, p);
+      DEBUGF ("MEMMOVE size=%d\n", p);
+      MemmoveOverlap (readBuf, readCur, p);
       readEnd = readBuf + p;
       readCur = readBuf;
     }
     while (p < r)
     {
-      /* Instead of (r - p) we could use (readBuf + sizeof(readBuf) -
-       * readEnd) to read as much as the buffer has room for.
+      /* Instead of (r - p) we could use (readBuf + sizeof(readBuf) - readEnd)
+      * to read as much as the buffer has room for.
        */
-      DEBUGF("READ size=%d\n", r - p);
+      DEBUGF ("READ size=%d\n", r - p);
       {
         const Int32 got = _read (in_fd, readEnd, r - p);
 
         if (got <= 0)  /* EOF or error on input. */
            break;
-        readEnd += got;
-        p += got;
-#ifdef CONFIG_DEBUG
+        readEnd     += got;
+        p           += got;
         readFileOfs += got;
-#endif
       }
     }
   }
-  DEBUGF("PREREAD r=%d p=%d\n", r, p);
+  DEBUGF ("PREREAD r=%d p=%d\n", r, p);
   return p;
 }
 
@@ -1267,36 +1329,36 @@ static UInt32 Preread (UInt32 r)
 /*
  * Returns the number of bytes read from 'in_fd'.
  */
-static long long GetReadPosForDebug(void)
+static long long GetReadPosForDebug (void)
 {
   return readFileOfs - (readEnd - readCur);
 }
 #endif
 
-#define SZ_ERROR_BAD_MAGIC 51
-#define SZ_ERROR_BAD_STREAM_FLAGS 52  /* SZ_ERROR_BAD_MAGIC is reported instead. */
-#define SZ_ERROR_UNSUPPORTED_FILTER_COUNT 53
-#define SZ_ERROR_BAD_BLOCK_FLAGS 54
-#define SZ_ERROR_UNSUPPORTED_FILTER_ID 55
+#define SZ_ERROR_BAD_MAGIC                          51
+#define SZ_ERROR_BAD_STREAM_FLAGS                   52  /* SZ_ERROR_BAD_MAGIC is reported instead. */
+#define SZ_ERROR_UNSUPPORTED_FILTER_COUNT           53
+#define SZ_ERROR_BAD_BLOCK_FLAGS                    54
+#define SZ_ERROR_UNSUPPORTED_FILTER_ID              55
 #define SZ_ERROR_UNSUPPORTED_FILTER_PROPERTIES_SIZE 56
-#define SZ_ERROR_BAD_PADDING 57
-#define SZ_ERROR_BLOCK_HEADER_TOO_LONG 58
-#define SZ_ERROR_BAD_CHUNK_CONTROL_BYTE 59
-#define SZ_ERROR_BAD_CHECKSUM_TYPE 60
-#define SZ_ERROR_BAD_DICTIONARY_SIZE 61
-#define SZ_ERROR_UNSUPPORTED_DICTIONARY_SIZE 62
-#define SZ_ERROR_FEED_CHUNK 63
-#define SZ_ERROR_NOT_FINISHED_WITH_MARK 64
-#define SZ_ERROR_BAD_DICPOS 65
-#define SZ_ERROR_MISSING_INITPROP 67
-#define SZ_ERROR_BAD_LCLPPB_PROP 68
+#define SZ_ERROR_BAD_PADDING                        57
+#define SZ_ERROR_BLOCK_HEADER_TOO_LONG              58
+#define SZ_ERROR_BAD_CHUNK_CONTROL_BYTE             59
+#define SZ_ERROR_BAD_CHECKSUM_TYPE                  60
+#define SZ_ERROR_BAD_DICTIONARY_SIZE                61
+#define SZ_ERROR_UNSUPPORTED_DICTIONARY_SIZE        62
+#define SZ_ERROR_FEED_CHUNK                         63
+#define SZ_ERROR_NOT_FINISHED_WITH_MARK             64
+#define SZ_ERROR_BAD_DICPOS                         65
+#define SZ_ERROR_MISSING_INITPROP                   67
+#define SZ_ERROR_BAD_LCLPPB_PROP                    68
 
-static void IgnoreVarint(void)
+static void IgnoreVarint (void)
 {
-  while (*readCur++ >= 0x80) {}
+  while (*readCur++ >= 0x80) { }
 }
 
-static SRes IgnoreZeroBytes(UInt32 c)
+static SRes IgnoreZeroBytes (UInt32 c)
 {
   for (; c > 0; --c)
   {
@@ -1306,16 +1368,17 @@ static SRes IgnoreZeroBytes(UInt32 c)
   return SZ_OK;
 }
 
-#if defined(__i386) || defined(_M_IX86) || defined(__i386__) || defined(__amd64) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
+#if defined(__i386) || defined(_M_IX86) || defined(__i386__) || defined(__amd64) || \
+    defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 /*
  * Shortcut for little endian CPU supporting unaligned access.
  */
-static __inline__ UInt32 GetLE4 (const Byte *p)
+static __inline UInt32 GetLE4 (const Byte *p)
 {
   return *(const UInt32*)(char*)p;
 }
 #else
-static UInt32 GetLE4 (Byte *p)
+static __inline UInt32 GetLE4 (Byte *p)
 {
   return p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
 }
@@ -1336,7 +1399,7 @@ static void InitDecode (void)
   global.writeRemaining = ~(UInt32)0;
   global.discardedSize = 0;
   global.dicfPos = 0;
-  LzmaDec_InitDicAndState(True, True);
+  LzmaDec_InitDicAndState (True, True);
 }
 
 static SRes InitProp (Byte b)
@@ -1345,12 +1408,14 @@ static SRes InitProp (Byte b)
 
   if (b >= (9 * 5 * 5))
      return SZ_ERROR_BAD_LCLPPB_PROP;
+
   lc = b % 9;
   b /= 9;
   global.pb = b / 5;
   lp = b % 5;
   if (lc + lp > LZMA2_LCLP_MAX)
      return SZ_ERROR_BAD_LCLPPB_PROP;
+
   global.lc = lc;
   global.lp = lp;
   global.needInitProp = False;
@@ -1359,14 +1424,14 @@ static SRes InitProp (Byte b)
 
 #define FILTER_ID_LZMA2 0x21
 
-/* Reads .xz or .lzma data from stdin, writes uncompressed bytes to stdout,
+/* Reads .xz or .lzma data from `in_fd`, writes uncompressed bytes to `out_fd`,
  * uses CLzmaDec.dic. It verifies some aspects of the file format (so it
- * can't be tricked to an infinite loop etc.), itdoesn't verify checksums
+ * can't be tricked to an infinite loop etc.), it doesn't verify checksums
  * (e.g. CRC32).
  */
 static SRes DecompressXzOrLzma (void)
 {
-  Byte checksumSize;
+  Byte   checksumSize;
   UInt32 bhf;  /* Block header flags */
 
   /* 12 for the stream header + 12 for the first block header + 6 for the
@@ -1403,13 +1468,13 @@ static SRes DecompressXzOrLzma (void)
      * CLzmaDec.probs), thus we are not able to extract some legitimate
      * .lzma files.
      */
-    RINOK(InitProp(readCur[0]));
-    readCur += 13;  /* Start decompressing the 0 byte. */
+    RINOK (InitProp(readCur[0]));
+    readCur += 13;                                  /* Start decompressing the 0 byte. */
     global.dicfLimit = global.writeRemaining = us;  /* Works even if us == ~(UInt32)0. */
     if (us <= global.dicSize)
-       RINOK(GrowCapacity(us));  /* Preallocate small output buffer, for speed. */
+       RINOK (GrowCapacity(us));                    /* Preallocate small output buffer, for speed. */
 
-    DEBUGF("LZMA dicSize=0x%x=%d us=%d\n", global.dicSize, global.dicSize, us);
+    DEBUGF ("LZMA dicSize=0x%x=%d us=%d\n", global.dicSize, global.dicSize, us);
 
     /* Any Preread(...) amount starting from 1 works here, but higher values
      * are faster.
@@ -1420,18 +1485,19 @@ static SRes DecompressXzOrLzma (void)
 
       if ((srcLen = Preread(sizeof(readBuf))) == 0)
       {
-        if (us != ~(UInt32)0) return SZ_ERROR_INPUT_EOF;
+        if (us != ~(UInt32)0)
+           return SZ_ERROR_INPUT_EOF;
         break;
       }
-      res = LzmaDec_DecodeToDic(readCur, srcLen);
-      DEBUGF("LZMADEC res=%d\n", res);
+      res = LzmaDec_DecodeToDic (readCur, srcLen);
+      DEBUGF ("LZMADEC res=%d\n", res);
       readCur += srcLen;
       if (res == SZ_ERROR_FINISHED_WITH_MARK)
          break;
       if (res != SZ_ERROR_NEEDS_MORE_INPUT && res != SZ_OK)
          return res;
     }
-    RINOK(Flush());
+    RINOK (Flush());
     return SZ_OK;
   }
   else
@@ -1454,28 +1520,32 @@ static SRes DecompressXzOrLzma (void)
         return SZ_ERROR_BAD_CHECKSUM_TYPE;
   }
 
-  /* Also ignore the CRC32 after checksumSize. */
+  /* Also ignore the CRC32 after checksumSize.
+   */
   readCur += 12;
   global.allocCapacity = 0;
   global.dicf = NULL;
 
   for (;;)   /* Next block. */
   {
-    /* We need it modulo 4, so a Byte is enough. */
-    Byte blockSizePad = 3;
-    UInt32 bhs, bhs2; /* Block header size */
-    Byte dicSizeProp;
-    Byte* readAtBlock;
+    /* We need it modulo 4, so a Byte is enough.
+     */
+    Byte   blockSizePad = 3;
+    UInt32 bhs, bhs2;     /* Block header size */
+    Byte   dicSizeProp;
+    Byte  *readAtBlock;
 
-    ASSERT(readEnd - readCur >= 12);  /* At least 12 bytes preread. */
-    if ((bhs = *readCur++) == 0)      /* Last block, index follows. */
+    ASSERT (readEnd - readCur >= 12);  /* At least 12 bytes preread. */
+    if ((bhs = *readCur++) == 0)       /* Last block, index follows. */
        break;
 
-    /* Block header size includes the bhs field above and the CRC32 below. */
+    /* Block header size includes the bhs field above and the CRC32 below.
+     */
     bhs = (bhs + 1) << 2;
-    DEBUGF("bhs=%d\n", bhs);
+    DEBUGF ("bhs=%d\n", bhs);
 
-    /* Typically the Preread(12 + 12 + 6) above covers it. */
+    /* Typically the Preread(12 + 12 + 6) above covers it.
+     */
     if (Preread(bhs) < bhs)
        return SZ_ERROR_INPUT_EOF;
 
@@ -1484,7 +1554,7 @@ static SRes DecompressXzOrLzma (void)
     if ((bhf & 2) != 0)
        return SZ_ERROR_UNSUPPORTED_FILTER_COUNT;
 
-    DEBUGF("filter count=%d\n", (bhf & 2) + 1);
+    DEBUGF ("filter count=%d\n", (bhf & 2) + 1);
     if ((bhf & 20) != 0)
        return SZ_ERROR_BAD_BLOCK_FLAGS;
 
@@ -1520,7 +1590,7 @@ static SRes DecompressXzOrLzma (void)
      *  * 39: 3221225472 bytes == 3 GiB
      *  * 40: 4294967295 bytes, largest supported by .xz
      */
-    DEBUGF("dicSizeProp=0x%02x\n", dicSizeProp);
+    DEBUGF ("dicSizeProp=0x%02x\n", dicSizeProp);
 
     if (dicSizeProp > 40)
        return SZ_ERROR_BAD_DICTIONARY_SIZE;
@@ -1531,9 +1601,10 @@ static SRes DecompressXzOrLzma (void)
     if (dicSizeProp > MAX_DIC_SIZE_PROP)
        return SZ_ERROR_UNSUPPORTED_DICTIONARY_SIZE;
 
-    global.dicSize = LZMA2_DIC_SIZE_FROM_SMALL_PROP(dicSizeProp);
+    global.dicSize = LZMA2_DIC_SIZE_FROM_SMALL_PROP (dicSizeProp);
 
-    /* TODO(pts): Free dic after use, also after realloc error. */
+    /* TODO(pts): Free dic after use, also after realloc error.
+     */
     ASSERT (global.dicSize >= LZMA_DIC_MIN);
     DEBUGF ("dicSize39=%u\n", LZMA2_DIC_SIZE_FROM_SMALL_PROP(39));
     DEBUGF ("dicSize38=%u\n", LZMA2_DIC_SIZE_FROM_SMALL_PROP(38));
@@ -1546,24 +1617,27 @@ static SRes DecompressXzOrLzma (void)
     if (bhs2 > bhs)
        return SZ_ERROR_BLOCK_HEADER_TOO_LONG;
 
-    RINOK(IgnoreZeroBytes(bhs - bhs2));
+    RINOK (IgnoreZeroBytes(bhs - bhs2));
     readCur += 4;  /* Ignore CRC32. */
 
-    /* Typically it's offset 24, xz creates it by default, minimal. */
-    DEBUGF("LZMA2 at %lld\n", GetReadPosForDebug());
+    /* Typically it's offset 24, xz creates it by default, minimal.
+     */
+    DEBUGF ("LZMA2 at %lld\n", GetReadPosForDebug());
 
     {
       /* Parse LZMA2 stream. */
       /* Based on https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm#LZMA2_format
        */
       UInt32 us, cs;  /* Uncompressed and compressed chunk sizes. */
+
       InitDecode();
 
       for (;;)
       {
         Byte control;
 
-        ASSERT(global.dicfPos == global.dicfLimit);
+        ASSERT (global.dicfPos == global.dicfLimit);
+
         /* Actually 2 bytes is enough to get to the index if everything is
          * aligned and there is no block checksum.
          */
@@ -1571,15 +1645,17 @@ static SRes DecompressXzOrLzma (void)
            return SZ_ERROR_INPUT_EOF;
 
         control = readCur[0];
-        DEBUGF("CONTROL control=0x%02x at=%lld inbuf=%d\n", control, GetReadPosForDebug(), (UInt32)(readCur - readBuf));
+        DEBUGF ("CONTROL control=0x%02x at=%lld inbuf=%d\n",
+                control, GetReadPosForDebug(), (UInt32)(readCur - readBuf));
+
         if (control == 0)
         {
-          DEBUGF("LASTFED\n");
+          DEBUGF ("LASTFED\n");
           ++readCur;
           break;
         }
-        else if ((Byte)(control - 3) < 0x80 - 3U)
-          return SZ_ERROR_BAD_CHUNK_CONTROL_BYTE;
+        if ((Byte)(control - 3) < 0x80 - 3U)
+           return SZ_ERROR_BAD_CHUNK_CONTROL_BYTE;
 
         us = (readCur[1] << 8) + readCur[2] + 1;
         if (control < 3)   /* Uncompressed chunk. */
@@ -1594,10 +1670,11 @@ static SRes DecompressXzOrLzma (void)
             global.needInitProp = global.needInitState = True;
             global.needInitDic = False;
           }
-          else if (global.needInitDic)
-            return SZ_ERROR_DATA;
+          else
+          if (global.needInitDic)
+             return SZ_ERROR_DATA;
 
-          LzmaDec_InitDicAndState(initDic, False);
+          LzmaDec_InitDicAndState (initDic, False);
         }
         else   /* LZMA chunk. */
         {
@@ -1610,7 +1687,7 @@ static SRes DecompressXzOrLzma (void)
           cs = (readCur[3] << 8) + readCur[4] + 1;
           if (isProp)
           {
-            RINOK(InitProp(readCur[5]));
+            RINOK (InitProp(readCur[5]));
             ++readCur;
             --blockSizePad;
           }
@@ -1619,12 +1696,13 @@ static SRes DecompressXzOrLzma (void)
             if (global.needInitProp)
                return SZ_ERROR_MISSING_INITPROP;
           }
-          readCur += 5;
+          readCur      += 5;
           blockSizePad -= 5;
+
           if ((!initDic && global.needInitDic) || (!initState && global.needInitState))
              return SZ_ERROR_DATA;
 
-          LzmaDec_InitDicAndState(initDic, initState);
+          LzmaDec_InitDicAndState (initDic, initState);
           global.needInitDic = False;
           global.needInitState = False;
         }
@@ -1632,7 +1710,7 @@ static SRes DecompressXzOrLzma (void)
         ASSERT (us <= (1 << 24));
         ASSERT (cs <= (1 << 16));
         ASSERT (global.dicfPos == global.dicfLimit);
-        RINOK( FlushDiscardOldFromStartOfDic());
+        RINOK (FlushDiscardOldFromStartOfDic());
         global.dicfLimit += us;
 
         if (global.dicfLimit < us)   /* `+=' above overflowed. */
@@ -1644,13 +1722,14 @@ static SRes DecompressXzOrLzma (void)
         if (Preread(cs + 6) < cs)
            return SZ_ERROR_INPUT_EOF;
 
-        DEBUGF("FEED us=%d cs=%d dicfPos=%d\n", us, cs, global.dicfPos);
+        DEBUGF ("FEED us=%d cs=%d dicfPos=%d\n", us, cs, global.dicfPos);
+
         if (control < 3)   /* Uncompressed chunk, at most 64 KiB. */
         {
           DEBUGF ("DECODE uncompressed\n");
           ASSERT (global.dicfPos + us == global.dicfLimit);
-          FlushDiscardGrowDic(us);
-          memcpy(global.dicf + global.dicfPos, readCur, us);
+          FlushDiscardGrowDic (us);
+          memcpy (global.dicf + global.dicfPos, readCur, us);
           global.dicfPos += us;
           if (global.checkDicSize == 0 && global.dicSize - global.processedPos <= us)
              global.checkDicSize = global.dicSize;
@@ -1658,15 +1737,17 @@ static SRes DecompressXzOrLzma (void)
         }
         else   /* Compressed chunk. */
         {
-          DEBUGF("DECODE call\n");
-          /* This call doesn't change global.dicfLimit. */
-          RINOK(LzmaDec_DecodeToDic(readCur, cs));
+          DEBUGF ("DECODE call\n");
+
+          /* This call doesn't change global.dicfLimit.
+           */
+          RINOK (LzmaDec_DecodeToDic(readCur, cs));
         }
 
         if (global.dicfPos != global.dicfLimit)
            return SZ_ERROR_BAD_DICPOS;
 
-        readCur += cs;
+        readCur      += cs;
         blockSizePad -= cs;
 
         /* We can't discard decompressbuf[:global.dicfLimit] now,
@@ -1674,10 +1755,10 @@ static SRes DecompressXzOrLzma (void)
          * Lzma2Dec_DecodeToDic will look up backreferences.
          */
       }
-      RINOK(Flush());
+      RINOK (Flush());
     }  /* End of LZMA2 stream. */
 
-    DEBUGF("TELL %lld\n", GetReadPosForDebug());
+    DEBUGF ("TELL %lld\n", GetReadPosForDebug());
     /* End of block. */
 
     /* 7 for padding4 and CRC32 + 12 for the next block header + 6 for the next
@@ -1701,7 +1782,6 @@ int XZ_decompress (const char *from_file, const char *to_file)
   SRes res = 0;
 
   in_file = fopen (from_file, "rb");
-
   if (!in_file)
   {
     TRACE (1, "Failed to open 'from_file: %s'; errno: %d.\n", from_file, errno);
@@ -1721,10 +1801,60 @@ int XZ_decompress (const char *from_file, const char *to_file)
   global.allocCapacity = global.dicSize = 0;
   res = DecompressXzOrLzma();
 
+#ifdef TRACE /* if 'INCLUDED_FROM_WSOCK_TRACE' defined */
   TRACE (1, "res=%d dicSize=%d allocCapacity=%d.\n", res, global.dicSize, global.allocCapacity);
+#endif
+
   free (global.dicf);
 
   fclose (in_file);
   fclose (out_file);
   return (int) res;
 }
+
+#if defined(INCLUDED_FROM_WSOCK_TRACE)
+
+#undef  ADD_VALUE
+#define ADD_VALUE(v)  { v, #v }
+
+static const struct search_list xz_errors[] = {
+                    ADD_VALUE (SZ_OK),
+                    ADD_VALUE (SZ_ERROR_DATA),
+                    ADD_VALUE (SZ_ERROR_MEM),
+                    ADD_VALUE (SZ_ERROR_CRC),
+                    ADD_VALUE (SZ_ERROR_UNSUPPORTED),
+                    ADD_VALUE (SZ_ERROR_PARAM),
+                    ADD_VALUE (SZ_ERROR_INPUT_EOF),
+                    ADD_VALUE (SZ_ERROR_OUTPUT_EOF),
+                    ADD_VALUE (SZ_ERROR_READ),
+                    ADD_VALUE (SZ_ERROR_WRITE),
+                    ADD_VALUE (SZ_ERROR_FINISHED_WITH_MARK),
+                    ADD_VALUE (SZ_ERROR_NOT_FINISHED),
+                    ADD_VALUE (SZ_ERROR_NEEDS_MORE_INPUT),
+                    ADD_VALUE (SZ_MAYBE_FINISHED_WITHOUT_MARK),
+                    ADD_VALUE (SZ_ERROR_CHUNK_NOT_CONSUMED),
+                    ADD_VALUE (SZ_ERROR_NEEDS_MORE_INPUT_PARTIAL),
+                    ADD_VALUE (SZ_ERROR_BAD_MAGIC),
+                    ADD_VALUE (SZ_ERROR_BAD_STREAM_FLAGS),
+                    ADD_VALUE (SZ_ERROR_UNSUPPORTED_FILTER_COUNT),
+                    ADD_VALUE (SZ_ERROR_BAD_BLOCK_FLAGS),
+                    ADD_VALUE (SZ_ERROR_UNSUPPORTED_FILTER_ID),
+                    ADD_VALUE (SZ_ERROR_UNSUPPORTED_FILTER_PROPERTIES_SIZE),
+                    ADD_VALUE (SZ_ERROR_BAD_PADDING),
+                    ADD_VALUE (SZ_ERROR_BLOCK_HEADER_TOO_LONG),
+                    ADD_VALUE (SZ_ERROR_BAD_CHUNK_CONTROL_BYTE),
+                    ADD_VALUE (SZ_ERROR_BAD_CHECKSUM_TYPE),
+                    ADD_VALUE (SZ_ERROR_BAD_DICTIONARY_SIZE),
+                    ADD_VALUE (SZ_ERROR_UNSUPPORTED_DICTIONARY_SIZE),
+                    ADD_VALUE (SZ_ERROR_FEED_CHUNK),
+                    ADD_VALUE (SZ_ERROR_NOT_FINISHED_WITH_MARK),
+                    ADD_VALUE (SZ_ERROR_BAD_DICPOS),
+                    ADD_VALUE (SZ_ERROR_MISSING_INITPROP),
+                    ADD_VALUE (SZ_ERROR_BAD_LCLPPB_PROP)
+                  };
+
+const char *XZ_strerror (int rc)
+{
+  return list_lookup_name (rc, xz_errors, DIM(xz_errors));
+}
+#endif /* INCLUDED_FROM_WSOCK_TRACE */
