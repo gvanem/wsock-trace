@@ -33,8 +33,6 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   void     *map = NULL;
   void     *rval = NULL;
   HANDLE    handle = INVALID_HANDLE_VALUE;
-  DWORD     err1 = 0;
-  DWORD     err2 = 0;
   intptr_t  h = _get_osfhandle (fd);
   DWORD     access = 0;
   uint64_t  pstart, psize, poffset;
@@ -67,18 +65,12 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   }
 
   if (!handle)
-  {
-    map = MAP_FAILED;
-    err1 = GetLastError();
-  }
+     map = MAP_FAILED;
   else
   {
     map = MapViewOfFile (handle, access, DWORD_HI(pstart), DWORD_LO(pstart), (SIZE_T)psize);
     if (!map)
-    {
-      map = MAP_FAILED;
-      err2 = GetLastError();
-    }
+       map = MAP_FAILED;
   }
 
   SetLastError (0); /* clear any possible error from above */
