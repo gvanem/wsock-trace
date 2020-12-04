@@ -264,10 +264,10 @@ static SRes Flush (void)
 
   while (p != q)
   {
-    const Int32 got = _write (out_fd, p, q - p);
+    Int32 got = (Int32) _write (out_fd, p, q - p);
 
     if (got <= 0)
-      return SZ_ERROR_WRITE;
+       return SZ_ERROR_WRITE;
     p += got;
     global.writtenPos += got;
     if (global.writeRemaining != ~(UInt32)0) global.writeRemaining -= got;
@@ -1290,7 +1290,7 @@ static long long readFileOfs = 0;
  */
 static UInt32 Preread (UInt32 r)
 {
-  UInt32 p = readEnd - readCur;
+  UInt32 p = (UInt32) (readEnd - readCur);
 
   ASSERT (r <= sizeof(readBuf));
   if (p < r)   /* Not enough pending available. */
@@ -1611,7 +1611,7 @@ static SRes DecompressXzOrLzma (void)
     DEBUGF ("dicSize37=%u\n", LZMA2_DIC_SIZE_FROM_SMALL_PROP(37));
     DEBUGF ("dicSize36=%u\n", LZMA2_DIC_SIZE_FROM_SMALL_PROP(36));
     DEBUGF ("dicSize35=%u\n", LZMA2_DIC_SIZE_FROM_SMALL_PROP(35));
-    bhs2 = readCur - readAtBlock + 5;  /* Won't overflow. */
+    bhs2 = (UInt32) (readCur - readAtBlock + 5);  /* Won't overflow. */
     DEBUGF ("bhs=%d bhs2=%d\n", bhs, bhs2);
 
     if (bhs2 > bhs)
