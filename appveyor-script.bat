@@ -124,9 +124,6 @@ set COLUMNS=120
 :: 'wsock_trace.appveyor' in AppVeyor's %APPDATA% directory.
 ::
 copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace > NUL
-
-echo Delete IPFire-database.db to force a downloaded and decompression.
-del /Q IPFire-database.db
 exit /b 0
 
 ::
