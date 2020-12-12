@@ -179,7 +179,7 @@ static const char *CSV_get_next_field (struct CSV_context *ctx)
     old_state = ctx->state;  (*ctx->state_func) (ctx);
     new_state = ctx->state;
 
-    /* Set new state for this context. (Or stay in ame state).
+    /* Set new state for this context. (Or stay in same state).
      */
     switch (new_state)
     {
