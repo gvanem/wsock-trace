@@ -173,6 +173,7 @@ struct config_table {
        WORD    color_trace;
        WORD    color_data;
 
+       BOOL    from_dll_main;
        BOOL    use_winhttp;
        BOOL    msvc_only;
        BOOL    mingw_only;
