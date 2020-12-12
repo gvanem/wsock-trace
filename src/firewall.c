@@ -4054,7 +4054,7 @@ static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia
    * Create a `ASN_libloc_print()` function that can
    * print to `fw_buf_add()` and return 1 if some ASN info was found.
    */
-  snprintf (intro, sizeof(intro), "%-*sASN:  ", INDENT_SZ, "");
+  snprintf (intro, sizeof(intro), "%-*sASN:     ", INDENT_SZ, "");
   return ASN_libloc_print (intro, ia4, ia6);
 }
 
@@ -4303,7 +4303,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
   {
     if (!stricmp(fw_module, a_name) || !stricmp(fw_module, a_base))
     {
-      TRACE (1, "Got event for fw_module: '%s' matching '%s'.\n", fw_module, a_name);
+      TRACE (1, "Got event for fw_module: '%s' matching '%s'.\n", fw_module, a_base);
       return (TRUE);
     }
     return (FALSE);
