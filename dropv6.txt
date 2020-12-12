@@ -1,7 +1,7 @@
-; Spamhaus IPv6 DROP List 2020/12/01 - (c) 2020 The Spamhaus Project
+; Spamhaus IPv6 DROP List 2020/12/12 - (c) 2020 The Spamhaus Project
 ; https://www.spamhaus.org/drop/dropv6.txt
 ; Last-Modified: Wed, 25 Nov 2020 10:54:12 GMT
-; Expires: Tue, 01 Dec 2020 09:39:16 GMT
+; Expires: Sat, 12 Dec 2020 06:58:21 GMT
 2a0e:fa00::/29 ; SBL494572
 2a07:6800::/29 ; SBL300238
 2a09:ac80::/29 ; SBL494347
