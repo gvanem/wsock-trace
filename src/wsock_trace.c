@@ -3404,6 +3404,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   DWORD tid = 0;
   BOOL  rc = TRUE;
 
+  g_cfg.from_dll_main = TRUE;  /* signal we're called via DllMain() */
+
   switch (reason)
   {
     case DLL_PROCESS_ATTACH:

@@ -266,6 +266,12 @@ static BOOL ASN_check_and_update (const char *db_file)
   BOOL   need_update = FALSE;
   char  *db_dir = NULL;
 
+  if (g_cfg.from_dll_main)
+  {
+    TRACE (1, "Not safe to enter here from 'DllMain()'.\n");
+    return (FALSE);
+  }
+
   if (g_cfg.ASN.xz_decompress <= 0)
   {
     TRACE (1, "Nothing to do for '%s' file with XZ-decompression disabled.\n", db_file);
