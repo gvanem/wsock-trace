@@ -4,25 +4,17 @@
 :: Rewrite this into a Python script some day.
 ::
 setlocal
-set WSOCK_TRACE_LEVEL=0
 set TEST_INPUT_4=%TEMP%\geoip-addr_4.test
 set TEST_INPUT_6=%TEMP%\geoip-addr_6.test
 
 if %1. == -h. (
-  echo Usage: %0 [-h ^| -d ^| --ip2loc_4 ^| --ip2loc_6]
-  echo ^    -h:         this help.
-  echo ^    -d:         sets "WSOCK_TRACE_LEVEL=2".
-  echo ^    -r4:        test 10 random IPv4 addresses.
-  echo ^    -r6:        test 10 random IPv6 addresses.
-  echo ^    --ip2loc_4: test using addresses in "%TEST_INPUT_4%".
-  echo ^    --ip2loc_6: test using addresses in "%TEST_INPUT_6%".
+  echo Usage: %0 [options]
+  echo ^    -h:   this help.
+  echo ^    -r4:  test 10 random IPv4 addresses.
+  echo ^    -r6:  test 10 random IPv6 addresses.
+  echo ^    -4:   test using addresses in "%TEST_INPUT_4%".
+  echo ^    -6:   test using addresses in "%TEST_INPUT_6%".
   exit /b 0
-)
-
-if %1. == -d. (
-  set WSOCK_TRACE_LEVEL=2
-  echo on
-  shift
 )
 
 if %1. == -r4. (
@@ -35,13 +27,15 @@ if %1. == -r6. (
   exit /b 0
 )
 
-if %1. == --ip2loc_4. (
+if %1. == -4. (
+  shift
   call :generate_test_input_4
   %~dp0geoip.exe -4 %2 %3 %4 < %TEST_INPUT_4%
   exit /b 0
 )
 
-if %1. == --ip2loc_6. (
+if %1. == -6. (
+  shift
   call :generate_test_input_6
   %~dp0geoip.exe -6 %2 %3 %4 < %TEST_INPUT_6%
   exit /b 0
@@ -63,26 +57,15 @@ exit /b 0
   echo 25.5.10.2        >> %TEST_INPUT_4%
   echo 43.5.10.3        >> %TEST_INPUT_4%
   echo 47.5.10.4        >> %TEST_INPUT_4%
-  echo 51.5.10.5        >> %TEST_INPUT_4%
   echo 53.5.10.6        >> %TEST_INPUT_4%
-  echo 80.5.10.7        >> %TEST_INPUT_4%
   echo 81.5.10.8        >> %TEST_INPUT_4%
-  echo 83.5.10.9        >> %TEST_INPUT_4%
   echo 85.5.10.0        >> %TEST_INPUT_4%
   echo 194.38.123.15    >> %TEST_INPUT_4%
   echo 218.156.62.27    >> %TEST_INPUT_4%
-  echo 104.218.222.242  >> %TEST_INPUT_4%
-  echo 69.86.117.107    >> %TEST_INPUT_4%
-  echo 36.237.237.167   >> %TEST_INPUT_4%
-  echo 99.163.121.226   >> %TEST_INPUT_4%
-  echo 101.159.46.181   >> %TEST_INPUT_4%
   echo 78.33.206.219    >> %TEST_INPUT_4%
   echo 96.135.76.208    >> %TEST_INPUT_4%
   echo 192.31.5.47      >> %TEST_INPUT_4%
   echo 244.210.76.66    >> %TEST_INPUT_4%
-  echo 210.113.60.169   >> %TEST_INPUT_4%
-  echo 59.169.95.118    >> %TEST_INPUT_4%
-  echo 86.104.62.176    >> %TEST_INPUT_4%
   echo 170.185.77.168   >> %TEST_INPUT_4%
   echo 201.227.72.250   >> %TEST_INPUT_4%
   echo 226.212.139.179  >> %TEST_INPUT_4%
