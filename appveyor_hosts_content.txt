@@ -1,13 +1,14 @@
 #
 # This text will generate a 'appveyor-hosts' file.
-# This file was generated from %0.
+# This file was generated from 'appveyor-script.bat'.
 #
 127.0.0.1   localhost
 ::1         localhost
 127.0.0.1   mpa.one.microsoft.com
 8.8.8.8     google-public-dns-a.google.com
+
 #
-# This hostname is used in test.exe
-# check that it prints "from 'hosts' file".
+# This hostname is used in test.exe.
+# Check that it prints "from 'hosts' file".
 #
 10.0.0.20   www.no-such-host.com
