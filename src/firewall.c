@@ -174,9 +174,8 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define INDENT_SZ         2
 
   /* Used for the reference-timestamp value in `get_time_string (NULL)`.
-   * Allocated in 'cpu.c'.
    */
-  // func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
+  func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
 
   /* Show statistics on the Console Title bar
    */
