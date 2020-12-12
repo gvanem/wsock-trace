@@ -136,8 +136,8 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   * Besides including <asm/byteorder.h> fails since <winsock2.h>
   * was already included. Sigh!
   */
-  #define _byteswap_ulong(x)   swap32(x)
-  #define _byteswap_ushort(x)  swap16(x)
+  #define _byteswap_ulong(x)   swap32 (x)
+  #define _byteswap_ushort(x)  swap16 (x)
 #endif
 
 /**
@@ -174,8 +174,9 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define INDENT_SZ         2
 
   /* Used for the reference-timestamp value in `get_time_string (NULL)`.
+   * Allocated in 'cpu.c'.
    */
-  func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
+  // func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
 
   /* Show statistics on the Console Title bar
    */
