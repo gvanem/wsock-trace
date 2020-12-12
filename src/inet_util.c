@@ -489,7 +489,7 @@ static void CALLBACK download_callback (HINTERNET hnd,
         context->bytes_read     = ctx->inet_buf.dwBufferLength;
         context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
         ctx->inet_buf.dwBufferLength = sizeof(context->file_buf);
-        TRACE (1, "  InternetReadFileExA(): rc: %d, %lu bytes\n", rc, (unsigned long)context->bytes_read);
+        TRACE (2, "  InternetReadFileExA(): rc: %d, %lu bytes\n", rc, (unsigned long)context->bytes_read);
       }
       while (rc && context->bytes_read > 0);
 
@@ -610,7 +610,7 @@ static DWORD WINAPI download_sync_loop (struct download_context *context)
     if (!(*p_InternetReadFile)(ctx->h2, context->file_buf, sizeof(context->file_buf), &context->bytes_read))
        break;
 
-    TRACE (1, "InternetReadFile() read %lu bytes.\n", (unsigned long)context->bytes_read);
+    TRACE (2, "InternetReadFile() read %lu bytes.\n", (unsigned long)context->bytes_read);
     if (context->bytes_read == 0)
        break;
     context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
