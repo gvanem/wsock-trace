@@ -745,6 +745,7 @@ static char *volume_to_path (char *path)
  *   warning: '\System32\' directive output may be truncated writing 10 bytes into a
  *            region of size between 1 and 256 [-Wformat-truncation=]
  */
+GCC_PRAGMA (GCC diagnostic push)
 GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
 
 static char *get_native_path (const char *path)
@@ -773,6 +774,8 @@ static char *get_native_path (const char *path)
   }
   return (NULL);
 }
+
+GCC_PRAGMA (GCC diagnostic pop)
 
 /**
  * Returns the true casing for a file or path.

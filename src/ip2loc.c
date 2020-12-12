@@ -43,7 +43,7 @@
 #endif
 
 #if defined(__CYGWIN__) || defined(__WATCOMC__)
-  #define _byteswap_ulong(x)   swap32(x)
+  #define _byteswap_ulong(x)   swap32 (x)
 #endif
 
 /*
@@ -342,15 +342,9 @@ DWORD ip2loc_num_ipv6_entries (void)
  * And turn off some warnings:
  */
 #if defined(__GNUC__) || defined(__clang__)
-  #if 1
-    GCC_PRAGMA (GCC diagnostic ignored     "-Wunused-function")
-    GCC_PRAGMA (GCC diagnostic ignored     "-Wunused-variable")
-    GCC_PRAGMA (GCC diagnostic ignored     "-Wunused-parameter")
-  #else
-    #pragma GCC diagnostic ignored     "-Wunused-function"
-    #pragma GCC diagnostic ignored     "-Wunused-variable"
-    #pragma GCC diagnostic ignored     "-Wunused-parameter"
-  #endif
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-variable")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-parameter")
 
   #if defined(__clang__)
     #pragma clang diagnostic ignored "-Wcast-qual"
