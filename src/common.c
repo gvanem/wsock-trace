@@ -49,8 +49,8 @@ HINSTANCE ws_trace_base;        /* Our base-address */
 
 int trace_binmode = 0;
 
-void (__stdcall *g_WSASetLastError)(int err) = NULL;
-int  (__stdcall *g_WSAGetLastError)(void) = NULL;
+void (__stdcall *g_WSASetLastError) (int err) = NULL;
+int  (__stdcall *g_WSAGetLastError) (void) = NULL;
 
 /*
  * A cache of file-names with true casing as returned from
@@ -200,8 +200,10 @@ static const struct WSAE_search_list err_list[] = {
   ADD_VALUE (WSA_INVALID_HANDLE,        "Invalid handle")                                     /* == WSANOTSOCK == 10038 */
 };
 
-/*
- * todo: do a qsort() of 'err_list' (make a copy). And use bsearch() to lookup 'err'.
+/**
+ * Return a text for a Winsock2 error-code.
+ *
+ * \todo do a qsort() of 'err_list' (make a copy). And use bsearch() to lookup 'err'.
  */
 char *ws_strerror (DWORD err, char *buf, size_t len)
 {
@@ -246,7 +248,7 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
   return (buf);
 }
 
-/*
+/**
  * Removes the 1st end-of-line termination from a string.
  * Removes "\n" (Unix), "\r" (MacOS) or "\r\n" (DOS) terminations.
  */
@@ -315,8 +317,8 @@ char *win_strerror (DWORD err)
   return (buf);
 }
 
-/*
- * Handling of dynamic loading and unloading of DLLs and their functions.
+/**
+ * Handles dynamic loading and unloading of DLLs and their functions.
  */
 int load_dynamic_table (struct LoadTable *tab, int tab_size)
 {
@@ -476,7 +478,7 @@ char *_utoa10w (int value, int width, char *buf)
   return _strreverse (buf);
 }
 
-/*
+/**
  * Search 'list' for 'value' and return it's name.
  */
 const char *list_lookup_name (unsigned value, const struct search_list *list, int num)
@@ -493,7 +495,7 @@ const char *list_lookup_name (unsigned value, const struct search_list *list, in
   return _itoa (value, buf, 10);
 }
 
-/*
+/**
  * Search 'list' for 'name' and return it's 'value'.
  */
 unsigned list_lookup_value (const char *name, const struct search_list *list, int num)
@@ -531,9 +533,9 @@ const char *flags_decode (DWORD flags, const struct search_list *list, int num)
   return (buf);
 }
 
-/*
- * Traverse 'list' and check that all values are unique and no 'value'
- * (except the last) is UINT_MAX.
+/**
+ * Traverse `list` and check that all values are unique and no `value`
+ * (except the last) is `UINT_MAX`.
  */
 int list_lookup_check (const struct search_list *list, int num, int *err_idx1, int *err_idx2)
 {
@@ -590,7 +592,7 @@ unsigned short swap16 (WORD val)
   return ((val & 0x00FF) << 8) | ((val & 0xFF00) >> 8);
 }
 
-/*
+/**
  * Return the filename without any path or drive specifiers.
  */
 char *basename (const char *fname)
@@ -615,7 +617,7 @@ char *basename (const char *fname)
   return (char*) base;
 }
 
-/*
+/**
  * Return the malloc'ed directory part of a filename.
  */
 char *dirname (const char *fname)
@@ -634,7 +636,8 @@ char *dirname (const char *fname)
     p += 2;
   }
 
-  /* Find the rightmost slash.  */
+  /* Find the rightmost slash
+   */
   while (*p)
   {
     if (IS_SLASH(*p))
@@ -649,11 +652,13 @@ char *dirname (const char *fname)
   }
   else
   {
-    /* Remove any trailing slashes.  */
+    /* Remove any trailing slashes
+     */
     while (slash > fname && IS_SLASH(slash[-1]))
         slash--;
 
-    /* How long is the directory we will return?  */
+    /* How long is the directory we will return?
+     */
     dirlen = slash - fname + (slash == fname || slash[-1] == ':');
     if (*slash == ':' && dirlen == 1)
        dirlen += 2;
@@ -669,9 +674,9 @@ char *dirname (const char *fname)
   return (dirpart);
 }
 
-/*
- * Copy and replace (single or multiple) '\\' with single '/' if use == '/'. And vice-versa.
- * Assume 'in_path' and 'out_path' are not larger than '_MAX_PATH'.
+/**
+ * Copy and replace (single or multiple) `\\` with single `/` if `use == /`. And vice-versa.
+ * Assume `in_path` and `out_path` are not larger than `_MAX_PATH`.
  */
 char *copy_path (char *out_path, const char *in_path, char use)
 {
@@ -683,16 +688,17 @@ char *copy_path (char *out_path, const char *in_path, char use)
   return (out_path);
 }
 
-/*
- * Canonize file and paths names. E.g. convert this:
- *   g:\mingw32\bin\../lib/gcc/x86_64-w64-mingw32/4.8.1/include
- * into something more readable:
- *   g:\mingw32\lib\gcc\x86_64-w64-mingw32\4.8.1\include
+/**
+ * Canonize file and paths names. E.g. convert this: \n
+ *  `g:\mingw32\bin\../lib/gcc/x86_64-w64-mingw32/4.8.1/include`
  *
- * I.e. turns 'path' into a fully-qualified path.
+ * into something more readable: \n
+ *   `g:\mingw32\lib\gcc\x86_64-w64-mingw32\4.8.1\include`
  *
- * Note: the 'path' doesn't have to exist.
- *       assumes 'result' is at least '_MAX_PATH' characters long (if non-NULL).
+ * I.e. turns `path` into a fully-qualified path.
+ *
+ * \note the `path` doesn't have to exist.
+ *       Assumes `result` is at least `_MAX_PATH` characters long (if non-NULL).
  */
 char *fix_path (const char *path)
 {
@@ -713,10 +719,10 @@ char *fix_path (const char *path)
 }
 
 /**
- * Check for a path starting with "\\device\\harddiskvolume[0-9]\\" and map
+ * Check for a path starting with `"\\device\\harddiskvolume[0-9]\\"` and map
  * to a drive letter the easy way.
  *
- * E.g. "\\device\\harddiskvolume1\\x" -> "d:\\x"
+ * E.g. `"\\device\\harddiskvolume1\\x"` -> `"d:\\x"`
  *
  * Somewhat related:
  *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
@@ -959,8 +965,8 @@ const char *str_hex_dword (DWORD val)
   return (hex_result);
 }
 
-/*
- * Replace 'ch1' with 'ch2' in string 'str'.
+/**
+ * Replace `ch1` with `ch2` in string `str`.
  */
 char *str_replace (int ch1, int ch2, char *str)
 {
@@ -975,9 +981,9 @@ char *str_replace (int ch1, int ch2, char *str)
   return (str);
 }
 
-/*
- * Return the left-trimmed place where paths 'p1' and 'p2' are similar.
- * Not case sensitive. Treats '/' and '\\' equally.
+/**
+ * Return the left-trimmed place where paths `p1` and `p2` are similar.
+ * Not case sensitive. Treats `/` and `\\` equally.
  */
 const char *path_ltrim (const char *p1, const char *p2)
 {
@@ -1003,13 +1009,13 @@ char *fix_drive (char *path)
   return (path);
 }
 
-/*
- * This function is called from StackWalkShow() to return a
- * short version of 'Line.FileName'. I.e. a file-name relative to
+/**
+ * This function is called from `StackWalkShow()` to return a
+ * short version of `Line.FileName`. I.e. a file-name relative to
  * the path of the calling program.
  *
- * Note: The SymGetLineFromAddr64() function always seems to
- *       return 'Line.FileName' in lower-case.
+ * \note The `SymGetLineFromAddr64()` function always seems to
+ *       return `Line.FileName` in lower-case.
  */
 const char *shorten_path (const char *path)
 {
@@ -1052,7 +1058,7 @@ static const char *fname_cache_get (const char *fname)
   return (NULL);
 }
 
-/*
+/**
  * Add a filename to the cache.
  */
 static const char *fname_cache_add (const char *fname)
@@ -1110,8 +1116,8 @@ static void fname_cache_free (void)
   fname_list = NULL;
 }
 
-/*
- * Only used by the TRACE() macro in common.h.
+/**
+ * Only used by the `TRACE()` macro in `common.h`.
  */
 void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 {
@@ -1141,29 +1147,19 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   LEAVE_CRIT();
 }
 
-/*
- * Indent a printed line to 'indent' spaces.
+/**
+ * Indent a printed line to `indent` spaces.
  */
 int trace_indent (size_t indent)
 {
-#if 1
   int rc = 0;
 
   while (indent--)
     rc += trace_putc_raw (' ');
-#else
-  int save = tilde_escape;
-  int rc = 0;
-
-  tilde_escape = FALSE;  /* never look for '~' now */
-  while (indent--)
-    rc += trace_putc (' ');
-  tilde_escape = save;
-#endif
   return (rc);
 }
 
-/*
+/**
  * Write out the trace-buffer.
  */
 size_t trace_flush (void)
@@ -1363,13 +1359,13 @@ int trace_puts (const char *str)
   return (rc);
 }
 
-/*
- * Save and restore the 'g_cfg.trace_level' value:
- *   pop = 0: set it to 0.
+/**
+ * Save and restore the `g_cfg.trace_level` value: \n
+ *   pop = 0: set it to 0. \n
  *   pop = 1: restore the global value.
 
- * Used e.g. when firewall.c calls 'getservbyport()' in
- * order NOT to 'WSTRACE()' for it.
+ * Used e.g. when firewall.c calls `getservbyport()` in
+ * order NOT to `WSTRACE()` for it.
  */
 int trace_level_save_restore (int pop)
 {
@@ -1389,7 +1385,7 @@ int trace_level_save_restore (int pop)
  * Open an existing file (or create) in share-mode but deny other
  * processes to write to the file.
  *
- * On Watcom, fopen() already seems to open with `SH_DENYWR` internally.
+ * On Watcom, `fopen()` already seems to open with `SH_DENYWR` internally. \n
  * CygWin does not have `_sopen()`. Simply call `fopen()` for CygWin and Watcom.
  */
 FILE *fopen_excl (const char *file, const char *mode)
@@ -1435,7 +1431,7 @@ FILE *fopen_excl (const char *file, const char *mode)
 }
 
 /**
- * Return nicely formatted string "xx,xxx,xxx"
+ * Return nicely formatted string `"xx,xxx,xxx"`
  * with thousand separators (left adjusted).
  *
  * Use 4 buffers in round-robin.
@@ -1479,8 +1475,8 @@ const char *dword_str (DWORD val)
   return qword_str ((uint64)val);
 }
 
-/*
- * Similar to strncpy(), but always returns 'dst' with 0-termination.
+/**
+ * Similar to `strncpy()`, but always returns `dst` with 0-termination.
  */
 char *_strlcpy (char *dst, const char *src, size_t len)
 {
@@ -1498,8 +1494,8 @@ char *_strlcpy (char *dst, const char *src, size_t len)
   return (dst);
 }
 
-/*
- * Return a string with 'ch' repeated 'num' times.
+/**
+ * Return a string with `ch` repeated `num` times. \n
  * Limited to 200 characters.
  */
 char *_strrepeat (int ch, size_t num)
@@ -1515,8 +1511,8 @@ char *_strrepeat (int ch, size_t num)
   return (buf);
 }
 
-/*
- * A strtok_r() function taken from libcurl:
+/**
+ * A `strtok_r()` function taken from libcurl:
  *
  * Copyright (C) 1998 - 2007, Daniel Stenberg, <daniel@haxx.se>, et al.
   */
@@ -1558,8 +1554,8 @@ char *_strtok_r (char *ptr, const char *sep, char **end)
   return (NULL);
 }
 
-/*
- * Reverse string 'str' in place.
+/**
+ * Reverse string `str` in place.
  */
 char *_strreverse (char *str)
 {
@@ -1580,14 +1576,14 @@ char *_strreverse (char *str)
  */
 #define MAX_ENV_VAR 32767
 
-/*
+/**
  * Returns the expanded version of an environment variable.
  * This function also works for env-vars inside a variable.
- * E.g. it will expand:
- *   variable = "%TEMP%\foo" into "c:\temp\foo".
+ * E.g. it will expand: \n
+ *   variable = `"%TEMP%\foo"` into `"c:\temp\foo"`.
  *
- * The expanded result is copied into user supplied 'buf'.
- * If expansion fails, it will return 'variable' unchanged into 'buf'.
+ * The expanded result is copied into user supplied `buf`. \n
+ * If expansion fails, it will return `variable` unchanged into `buf`.
  */
 char *getenv_expand (const char *variable, char *buf, size_t size)
 {
@@ -1614,7 +1610,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
       env = buf2;
   }
 
-  rc = env ? _strlcpy(buf,env,size) : orig_var;
+  rc = env ? _strlcpy(buf, env, size) : orig_var;
   TRACE (3, "env: '%s', expanded: '%s'\n", orig_var, rc);
   return (rc);
 }
@@ -1752,10 +1748,11 @@ static DWORD crc_bytes (const char *buf, size_t len)
   return (accum);
 }
 
-/*
+/**
  * Simple check for file-existence.
- * Using 'access()' for CygWin in case the file is on a
- * Posix "/usr/bin/foo" form. But try 'GetFileAttributes()'
+ *
+ * Using `access()` for CygWin in case the file is on a
+ * Posix `"/usr/bin/foo"` form. But try `GetFileAttributes()`
  * also in case it's on Windows form (but that would match a directory
  * too).
  */
@@ -1766,14 +1763,14 @@ int file_exists (const char *fname)
   return (attr != INVALID_FILE_ATTRIBUTES || access(fname,0) == 0);
 }
 
-/*
+/**
  * Include the resource-file. This is the only place (besides the makefiles)
- * where the basenames for 'wsock_trace*.dll' is set. We use these here to
+ * where the basenames for `wsock_trace*.dll` is set. We use these here to
  * return those short-names and also the fully qualified names when known at
  * runtime.
  *
  * The .lua-scripts needs this information to know which .DLL to integrate with.
- * Some of these functions are also called from geoip.c.
+ * Some of these functions are also called from `geoip.c`.
  */
 #include "wsock_trace.rc"
 
@@ -1819,7 +1816,7 @@ const char *get_dll_build_date (void)
   return (__DATE__);
 }
 
-/*
+/**
  * Returns e.g. "Visual-C, 32-bit"
  */
 const char *get_builder (BOOL show_dbg_rel)
