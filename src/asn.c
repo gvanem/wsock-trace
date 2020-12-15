@@ -358,8 +358,25 @@ static BOOL ASN_check_and_update (const char *db_file)
       TRACE (1, "Compressed: %s bytes. Uncompressed %s bytes.\n",
              dword_str(db_xz_temp_size), dword_str(st.st_size));
 
+#ifdef __CYGWIN__
+       /*
+        * Since 'CopyFile()' does not understand a POSIX-path like
+        * "/cygdrive/c/TEMP\\location.db" or "/c/TEMP\\location.db".
+        * Just try to convert to Windows-form.
+        */
+       {
+         char temp_result [_MAX_PATH];
+
+         if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, db_temp_file, temp_result, sizeof(temp_result)) == 0)
+         {
+           TRACE (1, "cygwin_conv_path(): %s -> %s.\n", db_temp_file, temp_result);
+           db_temp_file = temp_result;
+         }
+       }
+#endif
+
       rc = (BOOL) CopyFile (db_temp_file, db_file, FALSE);
-      TRACE (2, "CopyFile(): rc: %d, %s -> %s\n", rc, db_temp_file, db_file);
+      TRACE (1, "CopyFile(): rc: %d, %s -> %s\n", rc, db_temp_file, db_file);
       INET_util_touch_file (db_file);
     }
     return (TRUE);
