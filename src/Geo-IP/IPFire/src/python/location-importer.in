@@ -990,7 +990,7 @@ class CLI(object):
 							)
 
 						else:
-							log.warning("Unsupport type: %s" % type)
+							log.warning("Unsupported type: %s" % type)
 
 	@staticmethod
 	def _parse_bool(block, key):
