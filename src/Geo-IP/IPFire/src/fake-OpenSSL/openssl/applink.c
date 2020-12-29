@@ -36,11 +36,14 @@
  * Avoid the dependency on this OpenSSL function called in libloc.c.
  * And avoid `WSAStartup()` etc. too.
  */
-#define OpenSSL_add_all_algorithms()        ((void) 0)
-#define WSAStartup(ver, wsa)                ((void) 0)
-#define WSAGetLastError()                   0
-#define inet_ntop(family, addr, dst, size)  _wsock_trace_inet_ntop (family, addr, dst, size, NULL)
-#define inet_pton(family, addr, dst)        _wsock_trace_inet_pton (family, addr, dst, NULL)
+#define OpenSSL_add_all_algorithms()          ((void) 0)
+
+#if !defined(USE_Winsock2)
+  #define WSAStartup(ver, wsa)                ((void) 0)
+  #define WSAGetLastError()                   0
+  #define inet_ntop(family, addr, dst, size)  _wsock_trace_inet_ntop (family, addr, dst, size, NULL)
+  #define inet_pton(family, addr, dst)        _wsock_trace_inet_pton (family, addr, dst, NULL)
+#endif
 
 /**
  * Ignore some MinGW/Cygwin warnings in all `libloc` files.
