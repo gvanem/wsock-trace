@@ -813,10 +813,10 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 {
   int rc;
 
+  cleaned_up = 0;
+
   CHECK_PTR (p_WSAStartup);
   rc = (*p_WSAStartup) (ver, data);
-
-  cleaned_up = 0;
 
   if (startup_count < INT_MAX)
      startup_count++;
