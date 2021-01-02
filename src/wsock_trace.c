@@ -69,7 +69,9 @@ static fd_set *last_ex_fd = NULL;
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
-static void        wstrace_printf (BOOL first_line, const char *fmt, ...);
+static void        wstrace_printf (BOOL first_line,
+                                   _Printf_format_string_ const char *fmt, ...)
+                                   ATTR_PRINTF (2, 3);
 
 #if defined(USE_BFD) || defined(__clang__)
   static void test_get_caller (const void *from);
@@ -1111,7 +1113,7 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
            caller_data, callee_data, socket_or_error(rc));
 
 #if 0
-  if (!exclude_this && g_cfg.dump_data)
+  if (!exclude_this && rc == NO_ERROR && g_cfg.dump_data)
    {
      dump_wsabuf (caller_data, 1);
      dump_wsabuf (callee_data, 1);
@@ -1954,16 +1956,26 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   if (!exclude_this)
   {
     char        res[100];
+    char        nbytes[20];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
+
+    if (num_bytes)
+         _itoa (*num_bytes, nbytes, 10);
+    else strcpy (nbytes, "??");
 
     strcpy (res, get_error(rc, 0));
 
-    WSTRACE ("WSARecv (%s, 0x%p, %lu, %lu, <%s>, 0x%p, 0x%p) --> %s",
-             socket_number(s), bufs, DWORD_CAST(num_bufs),
-             DWORD_CAST(*num_bytes), flg, ov, func, res);
+    WSTRACE ("WSARecv (%s, 0x%p, %lu, %s, <%s>, 0x%p, 0x%p) --> %s",
+             socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, flg, ov, func, res);
 
-    if (g_cfg.dump_data)
-       dump_wsabuf (bufs, num_bufs);
+    if (rc == NO_ERROR && g_cfg.dump_data)
+    {
+      WSABUF bufs2;
+
+      bufs2.buf = bufs->buf;
+      bufs2.len = num_bytes ? *num_bytes : size;
+      dump_wsabuf (&bufs2, 1);
+    }
 
     if (ov)
        overlap_store (s, ov, size, TRUE);
@@ -2019,14 +2031,23 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, flg,
              sockaddr_str2(from, from_len), ov, func, res);
 
-    if (rc > 0 && g_cfg.dump_data)
-       dump_wsabuf (bufs, num_bufs);
+    if (rc == NO_ERROR && g_cfg.dump_data)
+    {
+      WSABUF bufs2;
 
-    if (g_cfg.GEOIP.enable)
-       dump_countries_sockaddr (from);
+      bufs2.buf = bufs->buf;
+      bufs2.len = num_bytes ? *num_bytes : size;
+      dump_wsabuf (&bufs2, 1);
+    }
 
-    if (g_cfg.DNSBL.enable)
-       dump_DNSBL_sockaddr (from);
+    if (WSAError_save_restore(0) != WSA_IO_PENDING)
+    {
+      if (g_cfg.GEOIP.enable)
+         dump_countries_sockaddr (from);
+
+      if (g_cfg.DNSBL.enable)
+         dump_DNSBL_sockaddr (from);
+    }
 
     if (ov)
        overlap_store (s, ov, size, TRUE);
