@@ -290,6 +290,14 @@
 #define IP_RECVERR              75   /* Receive ICMP errors. */
 #endif
 
+#ifndef IPV6_RECVERR
+#define IPV6_RECVERR            75   /* Receive ICMPv6 errors. */
+#endif
+
+#ifndef IPV6_USER_MTU
+#define IPV6_USER_MTU           76   /* App defined upper bound IP layer MTU. */
+#endif
+
 /**
  * These are a rewrite of the enums in `<ws2def.h>` and `<wsrm.h>`. <br>
  * Since many of these are missing in e.g. MinGW, using `#ifndef IPPROTO_x` around them are not safe.
@@ -928,6 +936,8 @@ static const struct search_list ip6_options[] = {
                     ADD_VALUE (IPV6_PROTECTION_LEVEL),
                     ADD_VALUE (IPV6_RECVIF),
                     ADD_VALUE (IPV6_RECVDSTADDR),
+                    ADD_VALUE (IPV6_RECVERR),
+                    ADD_VALUE (IPV6_USER_MTU),
                     ADD_VALUE (IPV6_CHECKSUM),
                     ADD_VALUE (IPV6_V6ONLY),
                     ADD_VALUE (IPV6_IFLIST),
@@ -994,6 +1004,7 @@ static const struct search_list levels[] = {
                     ADD_VALUE (IPPROTO_UDP),
                     ADD_VALUE (IPPROTO_TCP),
                     ADD_VALUE (IPPROTO_IP),
+                    ADD_VALUE (IPPROTO_IPV6),
                     ADD_VALUE (IPPROTO_ICMP),
                     ADD_VALUE (IPPROTO_RM),
                   };
