@@ -646,6 +646,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "use_full_path"))
      g_cfg.use_full_path = atoi (val);
 
+  else if (!stricmp(key, "use_short_path"))
+     g_cfg.use_short_path = atoi (val);
+
   else if (!stricmp(key, "color_file"))
      get_color (val, &g_cfg.color_file);
 

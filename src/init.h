@@ -159,6 +159,7 @@ struct config_table {
        BOOL    compact;
        BOOL    short_errors;
        BOOL    use_full_path;
+       BOOL    use_short_path;
        BOOL    use_toolhlp32;
        BOOL    use_ole32;
        BOOL    pdb_report;

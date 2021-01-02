@@ -1027,10 +1027,12 @@ const char *shorten_path (const char *path)
     if (!real_name)
        return (path);
   }
-  if (!g_cfg.use_full_path)
+  if (g_cfg.use_short_path)
+     real_name = basename (path);
+
+  else if (!g_cfg.use_full_path)
   {
     size_t len = strlen (prog_dir);
-
     if (len >= 3 && !strnicmp(prog_dir, path, len))
        return (real_name + len);
   }
