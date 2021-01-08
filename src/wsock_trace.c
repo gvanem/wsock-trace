@@ -2308,17 +2308,13 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
   return (rc);
 }
 
+#if defined(__WATCOMC__)
+/*
+ * Since OpenWatcom is so limited with regard to 'WSANETWORKEVENTS' etc.
+ */
 EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
 {
-  int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events);
-
-#if !defined(__WATCOMC__)
-  WSANETWORKEVENTS in_events;
-
-  if (do_it && events)
-       memcpy (&in_events, events, sizeof(in_events));
-  else memset (&in_events, '\0', sizeof(in_events));
-#endif
+  int rc;
 
   CHECK_PTR (p_WSAEnumNetworkEvents);
   rc = (*p_WSAEnumNetworkEvents) (s, ev, events);
@@ -2328,16 +2324,35 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
   WSTRACE ("WSAEnumNetworkEvents (%s, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s",
            socket_number(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc, 0));
 
-#if !defined(__WATCOMC__)
+  LEAVE_CRIT();
+  return (rc);
+}
+
+#else
+EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
+{
+  int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events);
+  WSANETWORKEVENTS in_events;
+
+  if (do_it && events)
+       memcpy (&in_events, events, sizeof(in_events));
+  else memset (&in_events, '\0', sizeof(in_events));
+
+  CHECK_PTR (p_WSAEnumNetworkEvents);
+  rc = (*p_WSAEnumNetworkEvents) (s, ev, events);
+
+  ENTER_CRIT();
+
+  WSTRACE ("WSAEnumNetworkEvents (%s, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s",
+           socket_number(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc, 0));
+
   if (rc == 0 && !exclude_this && do_it)
      dump_events (&in_events, events);
-#else
-  ARGSUSED (do_it);
-#endif
 
   LEAVE_CRIT();
   return (rc);
 }
+#endif  /* !__WATCOMC__ */
 
 /*
  * This function is what the command "netsh WinSock Show Catalog" uses.
