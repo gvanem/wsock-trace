@@ -172,6 +172,10 @@
   #else
     #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
   #endif
+
+  #ifndef WSA_IO_PENDING
+  #define WSA_IO_PENDING  ERROR_IO_PENDING
+  #endif
 #endif  /* IN_WSOCK_TRACE_C */
 
 
