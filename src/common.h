@@ -178,8 +178,6 @@
 extern void debug_printf (const char *file, unsigned line,
                           _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (3,4);
 
-extern int    trace_binmode;
-
 extern int    trace_printf   (_Printf_format_string_ const char *fmt, ...)          ATTR_PRINTF (1,2);
 extern int    trace_vprintf  (_Printf_format_string_ const char *fmt, va_list args) ATTR_PRINTF (1,0);
 extern int    trace_puts     (const char *str);

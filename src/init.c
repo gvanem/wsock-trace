@@ -44,7 +44,7 @@ static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
 /* Use CreateSemaphore() to check for multiple instances of ourself.
  */
-HANDLE      ws_sema;
+HANDLE      ws_sema = INVALID_HANDLE_VALUE;
 BOOL        ws_sema_inherited;
 const char *ws_sema_name = "Global\\wsock_trace-semaphore";
 
@@ -70,12 +70,17 @@ static smartlist_t *exclude_list = NULL;
  */
 void ws_sema_wait (void)
 {
-  while (ws_sema)
+  while (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
   {
     DWORD ret = WaitForSingleObject (ws_sema, 0);
 
     if (ret == WAIT_OBJECT_0)
        break;
+    if (ret == WAIT_FAILED)
+    {
+      SetLastError (0);
+      break;
+    }
     g_cfg.counts.sema_waits++;
     Sleep (5);
   }
@@ -86,7 +91,7 @@ void ws_sema_wait (void)
  */
 void ws_sema_release (void)
 {
-  if (ws_sema)
+  if (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
      ReleaseSemaphore (ws_sema, 1, NULL);
 }
 
@@ -1189,9 +1194,6 @@ static void trace_report (void)
 
     trace_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n",
                   DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
-
-    trace_printf ("  # of IP2Location shared-mem index errors: %lu\n",
-                  DWORD_CAST(ip2loc_index_errors()));
   }
 
   if (g_cfg.IANA.enable)
@@ -1284,7 +1286,7 @@ void wsock_trace_exit (void)
   ASN_exit();
   IDNA_exit();
 
-  if (ws_sema)
+  if (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
      CloseHandle (ws_sema);
   ws_sema = NULL;
   DeleteCriticalSection (&crit_sect);
@@ -1390,7 +1392,7 @@ void wsock_trace_init (void)
     g_cfg.trace_stream      = NULL;
     g_cfg.trace_file_device = TRUE;
     g_cfg.trace_use_ods     = TRUE;
-    trace_binmode = 1;
+    g_cfg.trace_binmode     = 1;
   }
   else if (g_cfg.trace_file && g_cfg.trace_level > 0)
   {
@@ -1417,10 +1419,7 @@ void wsock_trace_init (void)
        setvbuf (g_cfg.trace_stream, NULL, _IONBF, 0);
 
     if (g_cfg.trace_binmode)
-    {
-      _setmode (_fileno(g_cfg.trace_stream), O_BINARY);
-      trace_binmode = 1;
-    }
+       _setmode (_fileno(g_cfg.trace_stream), O_BINARY);
   }
 
   if (g_cfg.PCAP.enable)
