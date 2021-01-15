@@ -370,7 +370,7 @@ static BOOL ASN_check_and_update (const char *db_file)
          if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, db_temp_file, temp_result, sizeof(temp_result)) == 0)
          {
            TRACE (1, "cygwin_conv_path(): %s -> %s.\n", db_temp_file, temp_result);
-           db_temp_file = temp_result;
+           _strlcpy (db_temp_file, temp_result, sizeof(db_temp_file));
          }
        }
 #endif
