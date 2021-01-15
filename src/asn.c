@@ -23,6 +23,10 @@
 #endif
 
 #ifdef USE_LIBLOC
+  #ifdef __CYGWIN__
+  #include <sys/cygwin.h>
+  #endif
+
   #if defined(__CYGWIN__) && !defined(_WIN32)
   #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/loc/libloc.h' only */
   #endif
