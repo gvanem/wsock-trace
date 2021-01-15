@@ -4494,7 +4494,11 @@ static void print_reauth_reason (const _FWPM_NET_EVENT_HEADER3         *header,
 
 static const char *get_protocol (UINT8 proto)
 {
+#if 0  // Use this later?
+  return protocol_name (proto);
+#else
   return list_lookup_name (proto, protocols, DIM(protocols));
+#endif
 }
 
 static void CALLBACK

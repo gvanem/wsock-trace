@@ -2626,7 +2626,11 @@ static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
 
 void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events)
 {
+#if 0
   _dump_events (FALSE, in_events);
+#else
+  (void) in_events;
+#endif
   _dump_events (TRUE, out_events);
 }
 

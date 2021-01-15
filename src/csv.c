@@ -327,6 +327,8 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     TRACE (1, "Allocation of 'parse_buf' failed.\n");
     return (0);
   }
+
+  TRACE (2, "Opening file \"%s\".\n", ctx->file_name);
   ctx->file = fopen (ctx->file_name, "rt");
   if (!ctx->file)
   {
