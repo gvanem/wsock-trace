@@ -54,6 +54,10 @@
 #include "wsock_trace_lua.h"
 #include "wsock_trace.h"
 
+#ifndef WSA_IO_PENDING
+#define WSA_IO_PENDING  ERROR_IO_PENDING
+#endif
+
 /**
  * Keep track of number of calls to `WSAStartup()` and `WSACleanup()`.
  *
