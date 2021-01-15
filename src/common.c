@@ -47,10 +47,18 @@ char prog_dir  [MAX_PATH] = { '\0' };
 
 HINSTANCE ws_trace_base;        /* Our base-address */
 
-int trace_binmode = 0;
+static void __stdcall dummy_WSASetLastError (int err)
+{
+  ARGSUSED (err);
+}
 
-void (__stdcall *g_WSASetLastError) (int err) = NULL;
-int  (__stdcall *g_WSAGetLastError) (void) = NULL;
+static int __stdcall dummy_WSAGetLastError (void)
+{
+  return (0);
+}
+
+void (__stdcall *g_WSASetLastError) (int err) = dummy_WSASetLastError;
+int  (__stdcall *g_WSAGetLastError) (void)    = dummy_WSAGetLastError;
 
 /*
  * A cache of file-names with true casing as returned from
@@ -197,7 +205,7 @@ static const struct WSAE_search_list err_list[] = {
   /* WSAx overlapped errors */
   ADD_VALUE (WSA_IO_PENDING,            "Overlapped I/O operation in progress"),              /* == ERROR_IO_PENDING == 997 */
   ADD_VALUE (WSA_IO_INCOMPLETE,         "Overlapped I/O operation not in signalled status"),  /* == ERROR_IO_INCOMPLETE == 996 */
-  ADD_VALUE (WSA_INVALID_HANDLE,        "Invalid handle")                                     /* == WSANOTSOCK == 10038 */
+  ADD_VALUE (WSA_INVALID_HANDLE,        "Invalid handle")                                     /* == ERROR_INVALID_HANDLE == 6 */
 };
 
 /**
@@ -1192,7 +1200,6 @@ size_t trace_flush (void)
   trace_ptr = trace_buf;   /* restart buffer */
 
   ws_sema_release();
-
   return (written);
 }
 
@@ -1311,7 +1318,7 @@ int trace_putc (int ch)
     return (1);
   }
 
-  if (ch == '\n' && (trace_binmode || g_cfg.trace_use_ods))
+  if (ch == '\n' && (g_cfg.trace_binmode || g_cfg.trace_use_ods))
   {
     if ((trace_ptr == trace_buf) ||
         (trace_ptr > trace_buf && trace_ptr[-1] != '\r'))
