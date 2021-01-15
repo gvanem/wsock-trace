@@ -630,7 +630,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   struct loc_network *net = NULL;
   struct in6_addr     addr;
   char                addr_str [MAX_IP6_SZ+1];
-  int                 rc, save, err_save;
+  int                 rc, save;
 
   if (!libloc.db)
   {
@@ -649,7 +649,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
     return (0);
   }
 
-  if (ip4) /* Convert to IPv6-mapped address */
+  if (ip4)   /* Convert to IPv6-mapped address */
   {
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
     *(u_long*) &addr.s6_words[6] = ip4->s_addr;
@@ -669,10 +669,6 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
    */
   save = g_cfg.trace_level;
   g_cfg.trace_level = 0;
-
-  /* Save WSA error-status since loc_database_lookup() could set it.
-   */
-  err_save = WSAGetLastError();
 
   trace_puts (intro);
 
@@ -714,9 +710,8 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   smartlist_insert (ASN_entries, at_sorted_pos, copy);
 #endif
 
-  /* Restore WSA-error and trace-level
+  /* Restore trace-level
    */
-  WSASetLastError (err_save);
   g_cfg.trace_level = save;
   return (rc);
 }
