@@ -856,7 +856,6 @@ EXPORT int WINAPI WSACleanup (void)
 
   WSLUA_HOOK (rc, wslua_WSACleanup());
   LEAVE_CRIT();
-
   return (rc);
 }
 
@@ -1525,6 +1524,8 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
 
   if (!exclude_this)
   {
+    WSAERROR_PUSH();
+
     if (g_cfg.GEOIP.enable)
        dump_countries_sockaddr (addr);
 
@@ -1543,6 +1544,8 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
     if (g_cfg.cache_file)
        cache_store_connect (addr);
 #endif
+
+    WSAERROR_POP();
   }
   LEAVE_CRIT();
   return (rc);
@@ -1789,7 +1792,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
     else
     {
       strcpy (res, get_error(rc, 0));
-      if (rc == WSAEWOULDBLOCK)
+      if ((*g_WSAGetLastError)() == WSAEWOULDBLOCK)
          g_cfg.counts.recv_EWOULDBLOCK++;
     }
 
@@ -2040,7 +2043,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
       dump_wsabuf (&bufs2, 1);
     }
 
-    if (WSAError_save_restore(0) != WSA_IO_PENDING)
+    if ((*g_WSAGetLastError)() != WSA_IO_PENDING)
     {
       if (g_cfg.GEOIP.enable)
          dump_countries_sockaddr (from);
@@ -3232,6 +3235,8 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
   static int reentry = 0;
   char  *ret = NULL;
 
+  WSAERROR_PUSH();
+
   if (reentry++)
   {
     ret = "get_caller() reentry. Breaking out.";
@@ -3250,7 +3255,6 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     void   *frames [10];
     USHORT  num_frames;
 
-    WSAERROR_PUSH();
     memset (frames, '\0', sizeof(frames));
     num_frames = (*p_RtlCaptureStackBackTrace) (0, DIM(frames), frames, NULL);
     if (num_frames <= 2)
@@ -3280,10 +3284,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
      */
     ret_addr = (ULONG_PTR) frames [2];
 #endif
-
-#else  /* USE_BFD */
-    WSAERROR_PUSH();
-#endif
+#endif  /* USE_BFD */
 
     /* We don't need a CONTEXT_FULL; only EIP+EBP (or RIP+RBP for x64). We want the caller's
      * address of a traced function (e.g. select()). Since we're called twice, that address
@@ -3317,8 +3318,6 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       sprintf (ret, "%s\n               %s", a, b);
     }
 #endif
-
-    WSAERROR_POP();
   }
 
 #ifndef USE_BFD /* Avoid a '-Wunused-label' warning */
@@ -3326,6 +3325,7 @@ quit:
 #endif
 
   reentry--;
+  WSAERROR_POP();
   return (ret);
 }
 
