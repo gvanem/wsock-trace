@@ -1976,8 +1976,20 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwProviderReserved));
 
   if (ascii_or_wide == 'A')
-       dump_one_proto_infof ("szProtocol:         \"%.*s\"\n", WSAPROTOCOL_LEN, pi_a->szProtocol);
-  else dump_one_proto_infof ("szProtocol:         \"%.*S\"\n", WSAPROTOCOL_LEN, pi_w->szProtocol);
+     dump_one_proto_infof ("szProtocol:         \"%.*s\"\n", WSAPROTOCOL_LEN, pi_a->szProtocol);
+  else
+  {
+    char proto_buf [40] = "<none>";
+
+    if (!pi_w->szProtocol[0])
+       dump_one_proto_infof ("szProtocol:         \"%s\"\n", proto_buf);
+    else
+    {
+      if (WideCharToMultiByte(CP_ACP, 0, pi_w->szProtocol, WSAPROTOCOL_LEN, proto_buf, (int)sizeof(proto_buf), NULL, NULL) == 0)
+         strcpy (proto_buf, "??");
+      dump_one_proto_infof ("szProtocol:         \"%s\"\n", proto_buf);
+    }
+  }
 
   dump_one_proto_infof ("ProviderId:         %s\n", get_guid_string(&pi_a->ProviderId));
 
