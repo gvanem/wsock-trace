@@ -1100,14 +1100,12 @@ static const struct search_list protocols[] = {
                     ADD_PROTO (IPPROTO_PGM),
                     ADD_PROTO (IPPROTO_L2TP),
                     ADD_PROTO (IPPROTO_SCTP),
-                    ADD_PROTO (IPPROTO_RESERVED_IPSEC),
-                    ADD_PROTO (IPPROTO_RESERVED_IPSECOFFLOAD),
-                    ADD_PROTO (IPPROTO_RESERVED_WNV),
                     ADD_PROTO (IPPROTO_RAW),
-                    ADD_PROTO (IPPROTO_RESERVED_RAW),
                     ADD_PROTO (IPPROTO_NONE),
+                    ADD_PROTO (IPPROTO_MAX),
                     ADD_PROTO (IPPROTO_RESERVED_IPSEC),
                     ADD_PROTO (IPPROTO_RESERVED_IPSECOFFLOAD),
+                    ADD_PROTO (IPPROTO_RESERVED_RAW),
                     ADD_PROTO (IPPROTO_RESERVED_WNV),
                     ADD_PROTO (IPPROTO_RESERVED_MAX)
                   };
