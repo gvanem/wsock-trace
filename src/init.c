@@ -711,6 +711,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "start_new_line"))
      g_cfg.start_new_line = atoi (val);
 
+  else if (!stricmp(key, "extra_new_line"))
+     g_cfg.extra_new_line = atoi (val);
+
   else if (!stricmp(key, "msvc_only"))
      g_cfg.msvc_only = atoi (val);
 

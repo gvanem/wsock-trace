@@ -187,7 +187,7 @@ void overlap_recall_all (const WSAEVENT *event)
     {
       ENTER_CRIT();
       rc = (*p_WSAGetOverlappedResult) (ov->sock, ov->ov, &bytes, 0, NULL);
-      LEAVE_CRIT();
+      LEAVE_CRIT (0);
 
       if (rc)
       {

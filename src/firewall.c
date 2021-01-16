@@ -1759,7 +1759,7 @@ static void fw_add_long_line (const char *start, size_t indent, int brk_ch)
                                  (const _FWPM_NET_EVENT_CAPABILITY_ALLOW0*) allow_member2 : NULL);           \
           }                                                                                                  \
           ARGSUSED (context);                                                                                \
-          LEAVE_CRIT();                                                                                      \
+          LEAVE_CRIT (0);                                                                                    \
         }
 
 static void CALLBACK fw_event_callback (const UINT                               event_type,

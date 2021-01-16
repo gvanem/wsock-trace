@@ -147,6 +147,7 @@ struct config_table {
        BOOL    use_sema;
        BOOL    trace_raw;
        BOOL    start_new_line;
+       BOOL    extra_new_line;
        BOOL    dump_data;
        BOOL    dump_select;
        BOOL    dump_nameinfo;
@@ -251,9 +252,12 @@ extern size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, 
 
 extern CRITICAL_SECTION crit_sect;
 
-#define ENTER_CRIT()    EnterCriticalSection (&crit_sect)
-#define LEAVE_CRIT()    LeaveCriticalSection (&crit_sect)
-
+#define ENTER_CRIT()        EnterCriticalSection (&crit_sect)
+#define LEAVE_CRIT(extra)   do {                                 \
+                              if (extra && g_cfg.extra_new_line) \
+                                 trace_putc ('\n');              \
+                              LeaveCriticalSection (&crit_sect); \
+                            } while (0)
 #endif
 
 

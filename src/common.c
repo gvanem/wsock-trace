@@ -1154,7 +1154,7 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 
   g_cfg.trace_raw    = save1;
   g_cfg.trace_indent = save2;
-  LEAVE_CRIT();
+  LEAVE_CRIT (0);
 }
 
 /**

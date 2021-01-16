@@ -42,7 +42,7 @@
              trace_printf ("~8%s(%u): ~9" fmt "~0", \
                            __FILE__, __LINE__,      \
                            ## __VA_ARGS__);         \
-             LEAVE_CRIT();                          \
+             LEAVE_CRIT (0);                        \
              trace_flush();                         \
           }                                         \
         } while (0)
@@ -52,7 +52,7 @@
           ENTER_CRIT();                       \
           trace_printf ("~8LUA: ~9" fmt "~0", \
                         ## __VA_ARGS__);      \
-          LEAVE_CRIT();                       \
+          LEAVE_CRIT (0);                     \
         } while (0)
 
 /* There is only one Lua-state variable.

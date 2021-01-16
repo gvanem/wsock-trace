@@ -37,6 +37,7 @@
   dump_modules = 0                   # Dump information on all process modules.
   pdb_report  = 1                    # Report PDB-symbols information found in all modules.
   use_sema = 0
+  no_buffering  = 0
 
   #
   # For tracing of overlapped transfers in some WSA* functions:
@@ -81,6 +82,7 @@
   use_toolhlp32  = 1
   use_ole32      = 0                 # Decode and print GUIDs using internal functions
   start_new_line = 0                 # Always start tracing on column 1.
+  extra_new_line = 0                 # Add an extra newline after each traced function.
   show_caller    = 0                 # Internal: show file/line where TRACE() was called.
 
   compact        = 0                 # Compact or detailed dump (not yet).
