@@ -2780,7 +2780,7 @@ void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
 
   for (i = 0; i < DIM(extension_guids); guid = &extension_guids[++i].guid)
   {
-    if (!memcmp(in_guid,guid,sizeof(*guid)))
+    if (!memcmp(in_guid, guid, sizeof(*guid)))
     {
       name = extension_guids[i].name;
       break;
