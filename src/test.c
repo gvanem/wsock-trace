@@ -168,6 +168,7 @@ static void test_WSAAddressToStringWP (void);
 static void test_WSAStringToAddressA (void);
 static void test_WSAStringToAddressW (void);
 static void test_WSAEnumProtocols (void);
+static void test_WSAIoctl (void);
 static void test_IDNA_functions (void);
 
 /*
@@ -215,6 +216,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAStringToAddressA),
                     ADD_TEST (WSAStringToAddressW),
                     ADD_TEST (WSAEnumProtocols),
+                    ADD_TEST (WSAIoctl),
                     ADD_TEST (WSACleanup)
                   };
 
@@ -701,6 +703,52 @@ static void test_WSAEnumProtocols (void)
      p_info = alloca (len);
 
   TEST_CONDITION ( > 0, WSAEnumProtocols (NULL, p_info, &len));
+}
+
+static const char *get_addr_str (const sockaddr_gen *sa)
+{
+  static char abuf [30];
+  DWORD asize = sizeof(abuf);
+  const SOCKADDR_IN *sa4 = (const SOCKADDR_IN*) sa;
+
+  if (sa4->sin_family == AF_INET)
+  {
+    const IN_ADDR *in = &sa4->sin_addr;
+
+    snprintf (abuf, sizeof(abuf), "%d.%d.%d.%d",
+              in->S_un.S_un_b.s_b1, in->S_un.S_un_b.s_b2,
+              in->S_un.S_un_b.s_b3, in->S_un.S_un_b.s_b4);
+  }
+  else
+  {
+    strcpy (abuf, "??");
+    WSAAddressToStringA ((SOCKADDR*)sa, sizeof(*sa), NULL, (LPTSTR)&abuf, &asize);
+  }
+  return (abuf);
+}
+
+static void test_WSAIoctl (void)
+{
+  INTERFACE_INFO if_info [10];
+  DWORD           size_ret = 0;
+  int             i, num;
+
+  /* Use 's2' which is a 'SOCK_DGRAM' socket.
+   */
+  TEST_CONDITION ( == 0, WSAIoctl (s2, SIO_GET_INTERFACE_LIST, 0, 0,
+                                   &if_info, sizeof(if_info), &size_ret, NULL, NULL));
+  num = size_ret / sizeof(if_info[0]);
+
+  for (i = 0; last_result == 0 && chatty >= 1 && i < num; i++)
+  {
+    printf ("  %d: flags: 0x%04lX, fam: %d, addr: %-16s",
+            i, if_info[i].iiFlags, if_info[i].iiAddress.Address.sa_family,
+            get_addr_str(&if_info[i].iiAddress));
+
+    printf ("BCast: %-16s", get_addr_str(&if_info[i].iiBroadcastAddress));
+    printf ("Mask: %s\n", get_addr_str(&if_info[i].iiNetmask));
+  }
+  fflush (stdout);
 }
 
 static void test_inet_pton (void)
