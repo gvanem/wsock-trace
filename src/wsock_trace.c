@@ -1621,7 +1621,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
     }
   }
 
-  LEAVE_CRIT (!exclude_this);
+  LEAVE_CRIT (0);
 
   /**
    * The `select()` can block for a long time. And other calls from other
