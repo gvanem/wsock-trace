@@ -228,7 +228,7 @@ const char *get_date_str (const SYSTEMTIME *st)
 }
 
 /**
- * Format a date/time string for currnt local-time.
+ * Format a date/time string for current local-time.
  */
 const char *get_time_now (void)
 {
@@ -284,6 +284,18 @@ static BOOL image_opt_header_is_cygwin (HMODULE mod)
   TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u, wild_tstamp: %d\n",
          opt->MajorLinkerVersion, opt->MinorLinkerVersion, wild_tstamp);
   return ((opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30) || wild_tstamp);
+}
+
+/*
+ * Check if we're linked to a program that is a GUI app.
+ * If we are, we might need to disable sound etc.
+ */
+static BOOL image_opt_header_is_gui_app (HMODULE mod)
+{
+  const IMAGE_DOS_HEADER *dos = (const IMAGE_DOS_HEADER*) mod;
+  const IMAGE_NT_HEADERS *nt = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
+
+  return (nt->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI);
 }
 
 /*
@@ -1340,7 +1352,7 @@ void wsock_trace_init (void)
   GetCurrentDirectory (sizeof(curr_dir), curr_dir);
   GetModuleFileName (NULL, prog_dir, sizeof(prog_dir));
   end = strrchr (prog_dir, '\0');
-  if (!strnicmp(end-4,".exe",4))
+  if (!strnicmp(end-4, ".exe", 4))
   {
     end = strrchr (prog_dir, '\\');
     _strlcpy (curr_prog, end+1, sizeof(curr_prog));
@@ -1383,6 +1395,7 @@ void wsock_trace_init (void)
   {
  // g_cfg.stealth_mode = 1;
     g_cfg.trace_level = g_cfg.trace_report = 0;
+    g_cfg.FIREWALL.sound.enable = 0;
   }
 
   if (g_cfg.trace_file && !stricmp(g_cfg.trace_file,"stderr"))
@@ -1435,6 +1448,12 @@ void wsock_trace_init (void)
   {
     g_cfg.IDNA.enable = FALSE;
     IDNA_exit();
+  }
+
+  if (image_opt_header_is_gui_app(mod))
+  {
+    TRACE (3, "Disabling sound in a GUI-program.\n");
+    g_cfg.FIREWALL.sound.enable = 0;
   }
 
   now = get_time_now();
