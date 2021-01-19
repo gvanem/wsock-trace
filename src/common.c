@@ -1443,11 +1443,11 @@ FILE *fopen_excl (const char *file, const char *mode)
  * Return nicely formatted string `"xx,xxx,xxx"`
  * with thousand separators (left adjusted).
  *
- * Use 4 buffers in round-robin.
+ * Use 8 buffers in round-robin.
  */
 const char *qword_str (unsigned __int64 val)
 {
-  static char buf[4][30];
+  static char buf[8][30];
   static int  idx = 0;
   char   tmp[30];
   char  *rc = buf [idx++];
@@ -1475,7 +1475,7 @@ const char *qword_str (unsigned __int64 val)
     sprintf (tmp, "%15" U64_FMT, val);
     sprintf (rc, "%.3s,%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9, tmp+12);
   }
-  idx &= 3;
+  idx &= 7;
   return str_ltrim (rc);
 }
 
