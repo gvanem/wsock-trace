@@ -152,9 +152,9 @@ static void test_socket (void);
 static void test_socket_unix (void);
 static void test_ioctlsocket (void);
 static void test_connect (void);
-static void test_select1 (void);
-static void test_select2 (void);
-       int  test_select3 (void);
+static void test_select_1 (void);
+static void test_select_2 (void);
+       int  test_select_3 (void);
 static void test_send (void);
 static void test_inet_ntop (void);
 static void test_inet_pton (void);
@@ -168,7 +168,8 @@ static void test_WSAAddressToStringWP (void);
 static void test_WSAStringToAddressA (void);
 static void test_WSAStringToAddressW (void);
 static void test_WSAEnumProtocols (void);
-static void test_WSAIoctl (void);
+static void test_WSAIoctl_1 (void);
+static void test_WSAIoctl_2 (void);
 static void test_IDNA_functions (void);
 
 /*
@@ -201,8 +202,8 @@ static const struct test_struct tests[] = {
                     ADD_TEST (socket_unix),
                     ADD_TEST (ioctlsocket),
                     ADD_TEST (connect),
-                    ADD_TEST (select1),
-                    ADD_TEST (select2),
+                    ADD_TEST (select_1),
+                    ADD_TEST (select_2),
                     ADD_TEST (send),
                     ADD_TEST (inet_ntop),
                     ADD_TEST (inet_pton),
@@ -216,7 +217,8 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAStringToAddressA),
                     ADD_TEST (WSAStringToAddressW),
                     ADD_TEST (WSAEnumProtocols),
-                    ADD_TEST (WSAIoctl),
+                    ADD_TEST (WSAIoctl_1),
+                    ADD_TEST (WSAIoctl_2),
                     ADD_TEST (WSACleanup)
                   };
 
@@ -497,7 +499,7 @@ static void test_connect (void)
 
 static fd_set fd1, fd2;
 
-static void test_select1 (void)
+static void test_select_1 (void)
 {
   struct timeval  tv = { 1, 1 };
   int    i;
@@ -522,7 +524,7 @@ static void test_select1 (void)
 #undef  FD_SETSIZE
 #define FD_SETSIZE   512
 
-static void test_select2 (void)
+static void test_select_2 (void)
 {
   int i;
   struct {
@@ -538,13 +540,13 @@ static void test_select2 (void)
 }
 
 /**
- * Since `test_select3()` takes a long time, it is NOT in the `tests[]` table.
+ * Since `test_select_3()` takes a long time, it is NOT in the `tests[]` table.
  *
  * \todo Poll keyboard too just for fun.
  *
  * \note This function is not `static` since that caused it to be inlined in below `main()`.
  */
-int test_select3 (void)
+int test_select_3 (void)
 {
   struct timeval tv = { 100, 1 };
   fd_set fd;
@@ -727,11 +729,13 @@ static const char *get_addr_str (const sockaddr_gen *sa)
   return (abuf);
 }
 
-static void test_WSAIoctl (void)
+static void test_WSAIoctl_1 (void)
 {
   INTERFACE_INFO if_info [10];
-  DWORD           size_ret = 0;
-  int             i, num;
+  DWORD          size_ret = 0;
+  int            i, num;
+
+  memset (&if_info, '\0', sizeof(if_info));
 
   /* Use 's2' which is a 'SOCK_DGRAM' socket.
    */
@@ -749,6 +753,24 @@ static void test_WSAIoctl (void)
     printf ("Mask: %s\n", get_addr_str(&if_info[i].iiNetmask));
   }
   fflush (stdout);
+}
+
+static void test_WSAIoctl_2 (void)
+{
+  TCP_INFO_v0 info;
+  DWORD       size_ret = 0;
+  DWORD       ver = 0;       /* Only version 0 is supported at this moment */
+
+  memset (&info, '\0', sizeof(info));
+  TEST_CONDITION ( == 0, WSAIoctl (s1, SIO_TCP_INFO, &ver, sizeof(ver),
+                                   &info, sizeof(info), &size_ret, NULL, NULL));
+
+  printf ("  size_ret: %lu.\n", size_ret);
+
+  if (last_result == 0 && chatty >= 1)
+  {
+    printf ("  TCP_INFO_v0: State: %d.\n", info.State);
+  }
 }
 
 static void test_inet_pton (void)
@@ -911,7 +933,7 @@ static int show_help (void)
   puts ("Usage: test [-h] [-d] [-f] [-l] [-t] [test-wildcard]  (default = '*')");
   puts ("       -h:     this help.");
   puts ("       -d:     increase verbosity.");
-  puts ("       -f:     Firewall event monitoring calling 'test_select3()' for 100 sec.\n"
+  puts ("       -f:     Firewall event monitoring calling 'test_select_3()' for 100 sec.\n"
         "               Similar to 'firewall_test.exe' but monitors events together with 'wsock_trace.dll'.");
   puts ("       -l:     list tests and exit.");
   puts ("       -t [N]: only do a thread test with <N> running threads.");
@@ -958,7 +980,7 @@ int MS_CDECL main (int argc, char **argv)
            exit (list_tests());
            break;
       case 'f':
-           return test_select3();
+           return test_select_3();
 
           /* The above "t::" means 'optarg' is optional.
            * A limitation in getopt.c shows that if 4 threads is wanted, start this
