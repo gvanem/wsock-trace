@@ -765,12 +765,8 @@ static void test_WSAIoctl_2 (void)
   TEST_CONDITION ( == 0, WSAIoctl (s1, SIO_TCP_INFO, &ver, sizeof(ver),
                                    &info, sizeof(info), &size_ret, NULL, NULL));
 
-  printf ("  size_ret: %lu.\n", size_ret);
-
   if (last_result == 0 && chatty >= 1)
-  {
-    printf ("  TCP_INFO_v0: State: %d.\n", info.State);
-  }
+     printf ("  TCP_INFO_v0: State: %d.\n", info.State);
 }
 
 static void test_inet_pton (void)
