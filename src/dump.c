@@ -1605,7 +1605,7 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
  */
 void dump_tcp_info (const TCP_INFO_v0 *info)
 {
-  trace_printf ("%*s~4TCP_INFO: State: %s, Mss: %lu, ConnectionTimeMs: %s, RttUs: %s,\n",
+  trace_printf ("%*s~4TCP_INFO: State: %s, Mss: %u, ConnectionTimeMs: %s, RttUs: %s,\n",
                 g_cfg.trace_indent+2, "",
                 list_lookup_name(info->State, tcp_states, DIM(tcp_states)),
                 info->Mss,

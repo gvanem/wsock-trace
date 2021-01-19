@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 #include <ctype.h>
 #include <string.h>
@@ -38,10 +39,6 @@
   #include <specstrings.h>
 #endif
 
-#if defined(__WATCOMC__) || defined(__MINGW32__)
-  #include <stdint.h>   /* 'uintptr_t' */
-#endif
-
 #if defined(_MSC_VER) && defined(_DEBUG)  /* use CrtDebug in MSVC debug-mode */
   #undef  _CRTDBG_MAP_ALLOC
   #define _CRTDBG_MAP_ALLOC
@@ -68,7 +65,6 @@
  */
 #if defined(__WATCOMC__)
   #include <math.h>
-  #include <time.h>
 
   #define _timezone   (*__get_timezone_ptr())
   #define fabsf(val)  fabs (val)
@@ -237,7 +233,6 @@
  * 64-bit CygWin.
  */
 #define __ULONG32  unsigned __LONG32
-#define __ULONG64  unsigned __int64
 
 #if !defined(__CYGWIN__)
   #if !defined(__MINGW32__)
@@ -251,7 +246,7 @@
     * Not sure about the above CYGWIN_VERSION_DLL_COMBINED value.
     * Never mind this shit. Add it for all 32-bit CygWin.
     */
-  #define __ms_u_long u_long
+  #define __ms_u_long  u_long
 #endif
 
 #if defined(_MSC_VER)
@@ -317,29 +312,29 @@
 /*
  * For decoding 'WSAIoctl (sock, SIO_TCP_INFO, ...)':
  *
- * The 'TCP_INFO_v0' structure seems only to be valid for WinHTTP:
+ * The more advanced 'TCP_INFO_v1' structure seems only to be valid for WinHTTP:
  *   https://docs.microsoft.com/en-us/windows/win32/winhttp/option-flags
  */
 typedef struct local_TCP_INFO_v0 {
-        int           State;       /* TCPSTATE_CLOSED=0, ... TCPSTATE_TIME_WAIT=10 */
-        __LONG32      Mss;
-       __ULONG64      ConnectionTimeMs;
-        unsigned char TimestampsEnabled;
-        __LONG32      RttUs;
-        __LONG32      MinRttUs;
-        __LONG32      BytesInFlight;
-        __LONG32      Cwnd;
-        __LONG32      SndWnd;
-        __LONG32      RcvWnd;
-        __LONG32      RcvBuf;
-        __ULONG64     BytesOut;
-        __ULONG64     BytesIn;
-        __LONG32      BytesReordered;
-        __LONG32      BytesRetrans;
-        __LONG32      FastRetrans;
-        __LONG32      DupAcksIn;
-        __LONG32      TimeoutEpisodes;
-        unsigned char SynRetrans;
+        uint32_t   State;       /* TCPSTATE_CLOSED=0, ... TCPSTATE_TIME_WAIT=10 */
+        uint32_t   Mss;
+        uint64_t   ConnectionTimeMs;
+        uint8_t    TimestampsEnabled;
+        uint32_t   RttUs;
+        uint32_t   MinRttUs;
+        uint32_t   BytesInFlight;
+        uint32_t   Cwnd;
+        uint32_t   SndWnd;
+        uint32_t   RcvWnd;
+        uint32_t   RcvBuf;
+        uint64_t   BytesOut;
+        uint64_t   BytesIn;
+        uint32_t   BytesReordered;
+        uint32_t   BytesRetrans;
+        uint32_t   FastRetrans;
+        uint32_t   DupAcksIn;
+        uint32_t   TimeoutEpisodes;
+        uint8_t    SynRetrans;
      } local_TCP_INFO_v0;
 
 #define TCP_INFO_v0  local_TCP_INFO_v0
