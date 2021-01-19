@@ -1395,7 +1395,7 @@ void wsock_trace_init (void)
   {
  // g_cfg.stealth_mode = 1;
     g_cfg.trace_level = g_cfg.trace_report = 0;
-    g_cfg.FIREWALL.sound.enable = 0;
+    g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = 0;
   }
 
   if (g_cfg.trace_file && !stricmp(g_cfg.trace_file,"stderr"))
@@ -1452,7 +1452,7 @@ void wsock_trace_init (void)
 
   if (image_opt_header_is_gui_app(mod))
   {
-    TRACE (3, "Disabling sound in a GUI-program.\n");
+    TRACE (2, "Disabling sound in a GUI-program.\n");
     g_cfg.FIREWALL.sound.enable = 0;
   }
 
@@ -1535,9 +1535,6 @@ void wsock_trace_init (void)
        g_cfg.color_data = console_info.wAttributes;
   }
 
-  if (g_cfg.trace_level == 0)
-     g_cfg.dump_data = g_cfg.dump_select = 0;
-
   if (g_cfg.trace_time_format != TS_NONE)
      init_timestamp();
 
@@ -1550,6 +1547,9 @@ void wsock_trace_init (void)
     g_cfg.dump_nameinfo = FALSE;
     g_cfg.dump_wsaprotocol_info  = FALSE;
     g_cfg.dump_wsanetwork_events = FALSE;
+    g_cfg.dump_data      = 0;
+    g_cfg.dump_select    = 0;
+    g_cfg.extra_new_line = 0;
   }
 
   TRACE (3, "curr_prog:           '%s'\n"
@@ -1623,7 +1623,7 @@ void check_ptr (const void **ptr, const char *ptr_name)
     FATAL ("Function '%s()' not initialised.\n", func_name);
   }
 
-  if (cleaned_up)
+  if (cleaned_up && strcmp(func_name, "WSAGetLastError"))
      TRACE (1, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
 #endif  /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
