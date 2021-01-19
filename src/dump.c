@@ -717,7 +717,7 @@
 #endif
 
 #ifndef SIO_TCP_INFO
-#define SIO_TCP_INFO                                 _WSAIOW (IOC_VENDOR, 39)
+#define SIO_TCP_INFO                                 _WSAIORW (IOC_VENDOR, 39)
 #endif
 
 #ifndef SIO_ACQUIRE_PORT_RESERVATION
