@@ -211,7 +211,7 @@ const char *get_timestamp2 (void)
   else clocks = (int64) (ticks.QuadPart - last.QuadPart);
   last = ticks;
   sec  = (double)clocks / (double)frequency;
-  sprintf (buf, "%6.3f usec", 1E6 * sec);
+  sprintf (buf, "%6.0f usec", 1E6 * sec);
   return (buf);
 }
 
