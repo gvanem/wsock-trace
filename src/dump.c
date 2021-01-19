@@ -712,6 +712,14 @@
 #define SIO_TCP_SET_ACK_FREQUENCY                    _WSAIOW (IOC_VENDOR, 23)
 #endif
 
+#ifndef SIO_SET_PRIORITY_HINT
+#define SIO_SET_PRIORITY_HINT                        _WSAIOW (IOC_VENDOR, 24)
+#endif
+
+#ifndef SIO_TCP_INFO
+#define SIO_TCP_INFO                                 _WSAIOW (IOC_VENDOR, 39)
+#endif
+
 #ifndef SIO_ACQUIRE_PORT_RESERVATION
 #define SIO_ACQUIRE_PORT_RESERVATION                 _WSAIOW (IOC_VENDOR, 100)
 #endif
@@ -772,12 +780,12 @@
 #define SIO_QUERY_RSS_SCALABILITY_INFO               _WSAIOR (IOC_VENDOR, 210)
 #endif
 
-#ifndef SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT
-#define SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT    _WSAIOW (IOC_VENDOR, 221)
-#endif
-
 #ifndef SIO_QUERY_WFP_CONNECTION_REDIRECT_RECORDS
 #define SIO_QUERY_WFP_CONNECTION_REDIRECT_RECORDS    _WSAIOW (IOC_VENDOR, 220)
+#endif
+
+#ifndef SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT
+#define SIO_QUERY_WFP_CONNECTION_REDIRECT_CONTEXT    _WSAIOW (IOC_VENDOR, 221)
 #endif
 
 #ifndef SIO_SET_WFP_CONNECTION_REDIRECT_RECORDS
@@ -1265,6 +1273,8 @@ static const struct search_list sio_codes[] = {
                     ADD_VALUE (SIO_SOCKET_USAGE_NOTIFICATION),
                     ADD_VALUE (SIO_TCP_INITIAL_RTO),
                     ADD_VALUE (SIO_TCP_SET_ACK_FREQUENCY),
+                    ADD_VALUE (SIO_SET_PRIORITY_HINT),
+                    ADD_VALUE (SIO_TCP_INFO),
                     ADD_VALUE (SIO_TCP_SET_ICW),
                     ADD_VALUE (SIO_TRANSLATE_HANDLE),
                     ADD_VALUE (SIO_UCAST_IF),
