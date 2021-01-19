@@ -711,6 +711,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "dump_wsanetwork_events"))
      g_cfg.dump_wsanetwork_events = atoi (val);
 
+  else if (!stricmp(key, "dump_tcpinfo"))
+     g_cfg.dump_tcpinfo = atoi (val);
+
   else if (!stricmp(key, "max_data"))
      g_cfg.max_data = atoi (val);
 
@@ -1394,7 +1397,7 @@ void wsock_trace_init (void)
       (g_cfg.cygwin_only && !is_cygwin) )
   {
  // g_cfg.stealth_mode = 1;
-    g_cfg.trace_level = g_cfg.trace_report = 0;
+    g_cfg.trace_level = g_cfg.trace_report = g_cfg.dump_tcpinfo = 0;
     g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = 0;
   }
 
@@ -1403,7 +1406,7 @@ void wsock_trace_init (void)
     g_cfg.trace_stream      = stderr;
     g_cfg.trace_file_device = TRUE;
   }
-  else if (g_cfg.trace_file && !stricmp(g_cfg.trace_file,"$ODS"))
+  else if (g_cfg.trace_file && !stricmp(g_cfg.trace_file, "$ODS"))
   {
     g_cfg.trace_stream      = NULL;
     g_cfg.trace_file_device = TRUE;
@@ -1549,6 +1552,7 @@ void wsock_trace_init (void)
     g_cfg.dump_wsanetwork_events = FALSE;
     g_cfg.dump_data      = 0;
     g_cfg.dump_select    = 0;
+    g_cfg.dump_tcpinfo   = 0;
     g_cfg.extra_new_line = 0;
   }
 

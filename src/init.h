@@ -157,6 +157,7 @@ struct config_table {
        BOOL    dump_wsaprotocol_info;
        BOOL    dump_wsanetwork_events;
        BOOL    dump_modules;
+       BOOL    dump_tcpinfo;
        BOOL    compact;
        BOOL    short_errors;
        BOOL    use_full_path;

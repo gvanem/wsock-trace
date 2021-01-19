@@ -41,6 +41,7 @@ echo   dump_nameinfo          = 1                                           >> w
 echo   dump_wsaprotocol_info  = 1                                           >> wsock_trace.appveyor
 echo   dump_wsanetwork_events = 1                                           >> wsock_trace.appveyor
 echo   dump_data              = 1                                           >> wsock_trace.appveyor
+echo   dump_tcpinfo           = 1                                           >> wsock_trace.appveyor
 echo   max_data               = 5000                                        >> wsock_trace.appveyor
 echo   max_displacement       = 1000                                        >> wsock_trace.appveyor
 echo   exclude                = htons,htonl,inet_addr                       >> wsock_trace.appveyor

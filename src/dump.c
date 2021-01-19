@@ -1294,6 +1294,23 @@ static const struct search_list wsapollfd_flgs[] = {
                     ADD_VALUE (POLLPRI)
                   };
 
+/**
+ * For `dump_tcp_info()`:
+ */
+static const struct search_list tcp_states[] = {
+           {  0, "CLOSED"      },
+           {  1, "LISTEN"      },
+           {  2, "SYN_SENT"    },
+           {  3, "SYN_RCVD"    },
+           {  4, "ESTABLISHED" },
+           {  5, "FIN_WAIT_1"  },
+           {  6, "FIN_WAIT_2"  },
+           {  7, "CLOSE_WAIT"  },
+           {  8, "CLOSING"     },
+           {  9, "LAST_ACK"    },
+           { 10, "TIME_WAIT"   }
+         };
+
 const char *socket_family (int family)
 {
   return list_lookup_name (family, families, DIM(families));
@@ -1581,6 +1598,42 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
     snprintf (prefix, sizeof(prefix), "iov %d: ", i);
     dump_data_internal (bufs->buf, bufs->len, prefix);
   }
+}
+
+/**
+ * Print the `TCP_INFO_v0` structure obtained in `closesocket()`.
+ */
+void dump_tcp_info (const TCP_INFO_v0 *info)
+{
+  trace_printf ("%*s~4TCP_INFO: State: %s, Mss: %lu, ConnectionTimeMs: %s, RttUs: %s,\n",
+                g_cfg.trace_indent+2, "",
+                list_lookup_name(info->State, tcp_states, DIM(tcp_states)),
+                info->Mss,
+                qword_str(info->ConnectionTimeMs),
+                dword_str(info->RttUs));
+
+  trace_printf ("%*sTSenabled: %d, BytesInFlight: %s, Cwnd: %s, DupAcksIn: %s,\n",
+                g_cfg.trace_indent+12, "",
+                info->TimestampsEnabled,
+                dword_str(info->BytesInFlight),
+                dword_str(info->Cwnd),
+                dword_str(info->DupAcksIn));
+
+  trace_printf ("%*sSndWnd: %s, RcvWnd: %s, RcvBuf: %s, info->BytesOut: %s, info->BytesIn: %s,\n",
+                g_cfg.trace_indent+12, "",
+                dword_str(info->SndWnd),
+                dword_str(info->RcvWnd),
+                qword_str(info->RcvBuf),
+                qword_str(info->BytesOut),
+                qword_str(info->BytesIn));
+
+  trace_printf ("%*sBytesReordered: %s, BytesRetrans: %s, FastRetrans: %s, TimeoutEpisodes: %s, SynRetrans: %d.~0\n",
+                g_cfg.trace_indent+12, "",
+                dword_str(info->BytesReordered),
+                dword_str(info->BytesRetrans),
+                dword_str(info->FastRetrans),
+                dword_str(info->TimeoutEpisodes),
+                info->SynRetrans);
 }
 
 static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out)

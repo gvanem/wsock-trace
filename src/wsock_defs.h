@@ -237,6 +237,7 @@
  * 64-bit CygWin.
  */
 #define __ULONG32  unsigned __LONG32
+#define __ULONG64  unsigned __int64
 
 #if !defined(__CYGWIN__)
   #if !defined(__MINGW32__)
@@ -311,6 +312,40 @@
   #define ATTR_PRINTF(_1,_2)   __attribute__((format(printf,_1,_2)))
 #else
   #define ATTR_PRINTF(_1,_2)   /* nothing */
+#endif
+
+/*
+ * For decoding 'WSAIoctl (sock, SIO_TCP_INFO, ...)':
+ *
+ * The 'TCP_INFO_v0' structure seems only to be valid for WinHTTP:
+ *   https://docs.microsoft.com/en-us/windows/win32/winhttp/option-flags
+ */
+typedef struct local_TCP_INFO_v0 {
+        int           State;       /* TCPSTATE_CLOSED=0, ... TCPSTATE_TIME_WAIT=10 */
+        __LONG32      Mss;
+       __ULONG64      ConnectionTimeMs;
+        unsigned char TimestampsEnabled;
+        __LONG32      RttUs;
+        __LONG32      MinRttUs;
+        __LONG32      BytesInFlight;
+        __LONG32      Cwnd;
+        __LONG32      SndWnd;
+        __LONG32      RcvWnd;
+        __LONG32      RcvBuf;
+        __ULONG64     BytesOut;
+        __ULONG64     BytesIn;
+        __LONG32      BytesReordered;
+        __LONG32      BytesRetrans;
+        __LONG32      FastRetrans;
+        __LONG32      DupAcksIn;
+        __LONG32      TimeoutEpisodes;
+        unsigned char SynRetrans;
+     } local_TCP_INFO_v0;
+
+#define TCP_INFO_v0  local_TCP_INFO_v0
+
+#ifndef SIO_TCP_INFO
+#define SIO_TCP_INFO   0xD8000027   /* == _WSAIORW (IOC_VENDOR, 39) */
 #endif
 
 #endif /* _WSOCK_DEFS_H */
