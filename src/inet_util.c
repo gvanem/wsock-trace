@@ -342,7 +342,7 @@ static const char *wininet_strerror (DWORD err)
     p = err_buf;
     p += snprintf (err_buf, sizeof(err_buf), "%lu: %s", (u_long)err, buf);
 
-    if ((*p_InternetGetLastResponseInfoA)(&wininet_err,wininet_err_buf,&wininet_err_len) &&
+    if ((*p_InternetGetLastResponseInfoA) (&wininet_err, wininet_err_buf, &wininet_err_len) &&
         wininet_err > INTERNET_ERROR_BASE && wininet_err <= INTERNET_ERROR_LAST)
     {
       snprintf (p, (size_t)(p-err_buf), " (%lu/%s)", (u_long)wininet_err, wininet_err_buf);

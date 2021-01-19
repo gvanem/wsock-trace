@@ -162,7 +162,7 @@ static void print_symbols (const smartlist_t *sl, BOOL print_all)
   for (i = 0; i < max; i++)
   {
     const struct SymbolEntry *se = smartlist_get (sl, i);
-    BOOL is_ours = (stricmp(se->module,g_module) == 0);
+    BOOL is_ours = (stricmp(se->module, g_module) == 0);
 
     if (print_all || is_ours)
     {
@@ -278,7 +278,7 @@ static char *search_symbols_list (ULONG_PTR addr)
 
   if (se)
   {
-    if (stricmp(se->module,g_module))
+    if (stricmp(se->module, g_module))
        snprintf (mod, sizeof(mod), "%s!", se->module);
     if (se->file_name)
     {

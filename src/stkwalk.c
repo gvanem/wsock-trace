@@ -584,7 +584,7 @@ static DWORD enum_and_load_symbols (const char *module)
   sym_len = smartlist_len (g_symbols_list);
 
   me      = smartlist_get (g_modules_list, mod_len-1);
-  is_last = (stricmp(module,me->module_name) == 0);
+  is_last = (stricmp(module, me->module_name) == 0);
   num     = enum_module_symbols (g_symbols_list, module, is_last, g_cfg.pdb_report == 0);
 
   TRACE (2, "num: %5lu, sym_len: %5d, num+sym_len: %5lu.\n",
@@ -991,7 +991,7 @@ static void enum_and_load_modules (void)
     (*p_SymLoadModule64) (g_proc, 0, me->module_name, me->module_name,
                           me->base_addr, me->size);
 
-    if (!stricmp(g_module,me->module_name))
+    if (!stricmp(g_module, me->module_name))
     {
    // add_to_shared_list (base);   /* \todo */
       ws_trace_base = (HINSTANCE) me->base_addr;
@@ -1025,7 +1025,7 @@ static BOOL set_symbol_search_path (void)
   if (GetModuleFileName(NULL, tmp, sizeof(tmp)) && (dir = dirname(tmp)) != NULL)
   {
 #if 0
-    if (!strnicmp(basename(tmp),"python",6))
+    if (!strnicmp(basename(tmp), "python", 6))
     {
       TRACE (2, "Using Python from: \"%s\".\n", dir);
       /**
@@ -1033,7 +1033,7 @@ static BOOL set_symbol_search_path (void)
        */
     }
 #endif
-    if (strcmp(dir,curr_dir))
+    if (strcmp(dir, curr_dir))
     {
       p   += snprintf (p, left, "%s;", dir);
       left = end - p;
@@ -1102,7 +1102,7 @@ static int find_module_index (const char *module, ULONG64 base_addr)
   {
     const struct ModuleEntry *me = smartlist_get (g_modules_list, i);
 
-    if (module && !stricmp(module,me->module_name))
+    if (module && !stricmp(module, me->module_name))
        return (i);
     if (me->base_addr == (ULONG_PTR)base_addr)
        return (i);
@@ -1172,7 +1172,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
     assert (idx >= 0);
     me = smartlist_get (g_modules_list, idx);
     module = me->module_name;
-    is_ours = (stricmp(g_module,module) == 0);
+    is_ours = (stricmp(g_module, module) == 0);
     have_PDB = FALSE;
 
 #if defined(_MSC_VER)
@@ -1251,7 +1251,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
 #endif
     if (is_cv_cpp && (*p_UnDecorateSymbolName)(raw_name, und_name, sizeof(und_name), UNDNAME_COMPLETE))
     {
-      if (!strncmp(und_name,"`string",7))
+      if (!strncmp(und_name, "`string", 7))
          goto junk_sym;
       me->stat.num_cpp_syms++;
       (*_trace_printf) (name_fmt, und_name);
@@ -1381,13 +1381,13 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
     DWORD  size;
     BOOL   found_func = FALSE;
 
-    if (!fgets(buf,sizeof(buf)-1,fil) ||  /* EOF */
-        !strncmp(buf,"*(SORT(",7))        /* End of ".text" section */
+    if (!fgets(buf, sizeof(buf)-1, fil) ||  /* EOF */
+        !strncmp(buf, "*(SORT(", 7))        /* End of ".text" section */
        break;
 
     line++;
 
-    if (!strncmp(buf,"LOAD ",5))
+    if (!strncmp(buf, "LOAD ", 5))
     {
       found_load = TRUE;
       continue;
@@ -1401,7 +1401,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
 #define TEXT_SECTION   ".text          0x"
 #define TEXT_CONTINUE  "               0x"
 
-    if (!found_text && !strncmp(p,TEXT_SECTION,sizeof(TEXT_SECTION)))
+    if (!found_text && !strncmp(p, TEXT_SECTION, sizeof(TEXT_SECTION)))
     {
       p += sizeof(TEXT_SECTION);
       found_text = (sscanf(p, "%p 0x%lx %s", &addr, &size, file) == 3);
@@ -1412,7 +1412,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
       continue;
     }
 
-    if (found_text && !strncmp(p,TEXT_CONTINUE,sizeof(TEXT_CONTINUE)))
+    if (found_text && !strncmp(p, TEXT_CONTINUE, sizeof(TEXT_CONTINUE)))
     {
       p += sizeof(TEXT_CONTINUE);
       found_func = (sscanf(p, "%p %100s", &addr, func) == 2);
@@ -1487,7 +1487,7 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
   g_cfg.trace_raw = 1;
 
 #if !defined(_MSC_VER) && !defined(__clang__)
-  if (!stricmp(g_module,module))
+  if (!stricmp(g_module, module))
   {
     TRACE (3, "Not searching for PDB-symbols in module %s.\n", module);
     goto check_mingw_map_file;
@@ -1693,7 +1693,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
     char    path [MAX_PATH] = { '\0' };
 
     if (GetModuleFileName((HANDLE)(uintptr_t)base, path, sizeof(path)) &&
-        !stricmp(g_module,path))
+        !stricmp(g_module, path))
        have_PDB_info = FALSE;
   }
   /* otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.

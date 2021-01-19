@@ -1587,7 +1587,7 @@ static void fw_check_n_format (BOOL init, BOOL push)
     int  len;
 
     n_state = _SET_PRINTF_COUNT_OUTPUT (1);
-    if (snprintf(buf,sizeof(buf),"12345%n6789",&len) == 5)
+    if (snprintf(buf, sizeof(buf), "12345%n6789", &len) == 5)
        fw_have_n_format = TRUE;
 
     _SET_PRINTF_COUNT_OUTPUT (n_state);
@@ -2467,7 +2467,7 @@ static char *add_app (const char *app, BOOL *exist, BOOL *is_native)
   char *exp, *p, path[_MAX_PATH];
   int   save;
 
-  if (!stricmp(app,"System"))
+  if (!stricmp(app, "System"))
   {
     *exist = TRUE;
     return strdup (app);
@@ -2519,7 +2519,7 @@ static struct rule_entry *parse_program_rule (const char *_rule)
      return (NULL);
 
   active_str = extract_word (NULL, "Active=", &strtok_end);
-  if (!active_str || strcmp(active_str,"TRUE"))
+  if (!active_str || strcmp(active_str, "TRUE"))
      return (NULL);
 
   dir_str = extract_word (NULL, "Dir=", &strtok_end);
@@ -2548,30 +2548,30 @@ static struct rule_entry *parse_program_rule (const char *_rule)
     if (!w)
        break;
 
-    if (!r->protocol && !strncmp(w,"Protocol=",9))
+    if (!r->protocol && !strncmp(w, "Protocol=", 9))
     {
       r->protocol = atoi (w+9);
     }
-    else if (!strncmp(w,"RA4=",4))
+    else if (!strncmp(w, "RA4=", 4))
     {
       INET_util_get_CIDR_from_IPv4_string (w+4, &r->RA4, &r->RA4_cidr_len);
     }
-    else if (!strncmp(w,"RA6=",4))
+    else if (!strncmp(w, "RA6=", 4))
     {
       INET_util_get_CIDR_from_IPv6_string (w+4, &r->RA6, &r->RA6_cidr_len);
     }
-    else if (!r->app && !strncmp(w,"App=",4))
+    else if (!r->app && !strncmp(w, "App=",4))
     {
       r->app = add_app (w+4, &r->app_exist, &r->app_native);
     }
-    else if (!r->embed_ctxt && !strncmp(w,"EmbedCtxt=",10))
+    else if (!r->embed_ctxt && !strncmp(w, "EmbedCtxt=", 10))
     {
       char  context [_MAX_PATH];
       char *exp = getenv_expand (w+10, context, sizeof(context));
 
       r->embed_ctxt = strdup (exp);
     }
-    else if (!r->app_pkg_id && !strncmp(w,"AppPkgId=",9))
+    else if (!r->app_pkg_id && !strncmp(w, "AppPkgId=", 9))
     {
       SID *sid = NULL;
 
@@ -2632,8 +2632,8 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
 
   if (r->RA4.s_addr)
   {
-    char RA4_addr [40];
-    char CIDR [100] = "";
+    char  RA4_addr [40];
+    char  CIDR [100] = "";
     const char *cc, *loc;
 
     _wsock_trace_inet_ntop (AF_INET, &r->RA4, RA4_addr, sizeof(RA4_addr), NULL);
@@ -3586,7 +3586,7 @@ static const char *get_callout_layer_name (const GUID *layer)
 
   for (i = 0; i < DIM(fwpm_GUIDs); i++)
   {
-    if (!memcmp(layer,guid,sizeof(*guid)))
+    if (!memcmp(layer, guid, sizeof(*guid)))
        return (list->name);
     list++;
     guid = list->guid;
@@ -3820,11 +3820,11 @@ static BOOL fw_dump_events (void)
           } while (0)
 
 
- /*
-  * Ref:
-  *   https://github.com/Microsoft/Windows-classic-samples/blob/master/Samples/Win7Samples/netds/wfp/diagevents/diagevents.c#L188
-  * for an example use.
-  */
+  /*
+   * Ref:
+   *   https://github.com/Microsoft/Windows-classic-samples/blob/master/Samples/Win7Samples/netds/wfp/diagevents/diagevents.c#L188
+   * for an example use.
+   */
   #define GET_ENUM_ENTRIES(N, allow_member1, allow_member2, drop_member1, drop_member2) do { \
           if (api_level == N && p_FwpmNetEventEnum##N) {                                     \
             _FWPM_NET_EVENT##N **entries##N = NULL;                                          \
@@ -4823,7 +4823,7 @@ static int run_program (const char *program)
     return (1);
   }
 
-  while (fgets(p_buf,sizeof(p_buf)-1,p) && !quit)
+  while (fgets(p_buf, sizeof(p_buf)-1, p) && !quit)
   {
     trace_puts ("~1program: ");
     trace_puts_raw (p_buf);
@@ -4846,7 +4846,7 @@ int main (int argc, char **argv)
   char   *log_file = NULL;
   FILE   *log_f    = NULL;
   WSADATA wsa;
-  WORD    ver = MAKEWORD(2,2);
+  WORD    ver = MAKEWORD (2, 2);
 
   wsock_trace_init();
 

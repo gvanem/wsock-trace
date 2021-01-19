@@ -684,7 +684,7 @@ BOOL IDNA_convert_from_ACE (
     const char *ascii = NULL;
     const char *label = labels[i];
 
-    if (!strncmp(label,"xn--",4) && label[4])
+    if (!strncmp(label, "xn--", 4) && label[4])
     {
       ascii = convert_from_ACE (label+4);
       if (!ascii)
