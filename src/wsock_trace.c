@@ -1494,7 +1494,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
   TCP_INFO_v0 info;
   int  rc, rc2 = -1;
 
-  if (p_WSAIoctl && g_cfg.dump_tcpinfo > 0)
+  if (p_WSAIoctl && g_cfg.dump_tcpinfo)
      rc2 = get_tcp_info (s, &info);
 
   CHECK_PTR (p_closesocket);
