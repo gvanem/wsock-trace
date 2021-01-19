@@ -1383,9 +1383,9 @@ static __inline UInt32 GetLE4 (const Byte *p)
   return *(const UInt32*)(char*)p;
 }
 #else
-static __inline UInt32 GetLE4 (Byte *p)
+static __inline UInt32 GetLE4 (const Byte *p)
 {
-  return p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
+  return (p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24);
 }
 #endif
 
