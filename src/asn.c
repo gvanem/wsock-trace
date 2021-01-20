@@ -828,6 +828,7 @@ void ASN_exit (void)
   free (g_cfg.ASN.asn_csv_file);
   free (g_cfg.ASN.asn_bin_file);
   free (g_cfg.ASN.asn_bin_url);
+  g_cfg.ASN.asn_csv_file = g_cfg.ASN.asn_bin_file = g_cfg.ASN.asn_bin_url = NULL;
 }
 
 /**

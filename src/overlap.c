@@ -71,8 +71,12 @@ static DWORD        num_overlaps;  /**< Number of overlapped operations pending 
 void overlap_exit (void)
 {
   struct overlapped *ov;
-  int    i, max = smartlist_len (ov_list);
+  int    i, max;
 
+  if (!ov_list)
+     return;
+
+  max = smartlist_len (ov_list);
   if (max >= 1)
   {
     TRACE ("%d overlapped transfers not completed:\n", max);
