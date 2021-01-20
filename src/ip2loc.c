@@ -217,6 +217,12 @@ static IP2Location *open_file (const char *fname)
   UINT   IPvX;
   BOOL   is_IPv4_only, is_IPv6_only;
 
+  if (!loc)
+  {
+    TRACE (1, "Failed to allocate memory.\n");
+    return (NULL);
+  }
+
   loc->file = fopen_excl (fname, "rb");
   if (!loc->file)
   {

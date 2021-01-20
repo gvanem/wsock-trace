@@ -200,6 +200,7 @@ void iana_exit (void)
   iana_entries_ip4 = iana_entries_ip6 = NULL;
   free (g_cfg.IANA.ip4_file);
   free (g_cfg.IANA.ip6_file);
+  g_cfg.IANA.ip4_file = g_cfg.IANA.ip6_file = NULL;
 }
 
 /**
@@ -628,34 +629,36 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
 
 /* For getopt.c.
  */
-const char *program_name = "iana.exe";
+char *program_name;
 
-#define DO_NOTHING(f)  void f(void) {}
+#if !defined(IN_WS_TOOL_C)
+  #define DO_NOTHING(f)  void f(void) {}
 
-DO_NOTHING (ip2loc_init)
-DO_NOTHING (ip2loc_exit)
-DO_NOTHING (ip2loc_get_ipv4_entry)
-DO_NOTHING (ip2loc_get_ipv6_entry)
-DO_NOTHING (ip2loc_num_ipv4_entries)
-DO_NOTHING (ip2loc_num_ipv6_entries)
+  DO_NOTHING (ip2loc_init)
+  DO_NOTHING (ip2loc_exit)
+  DO_NOTHING (ip2loc_get_ipv4_entry)
+  DO_NOTHING (ip2loc_get_ipv6_entry)
+  DO_NOTHING (ip2loc_num_ipv4_entries)
+  DO_NOTHING (ip2loc_num_ipv6_entries)
+#endif
 
-static void usage (void)
+static void show_help (void)
 {
-  puts ("Usage: iana.exe [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] <ipv4-address-space.csv>\n"
-        "  or   iana.exe [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
-        "\n"
-        "  options:\n"
-        "    -a:    the ASN-file is a CSV database.\n"
-        "    -b:    the ASN-file is a binary IPFire database.\n"
-        "    -m N:  stops after 'N' records.\n"
-        "\n"
-        "  both '-a' and '-b' options can be used to show both ASN-types.\n"
-        "  E.g.: running 'iana.exe -b ..\\IPFire-database.db ..\\ipv4-address-space.csv':\n"
-        "  ...\n"
-        "  test_ip4_address (\"37.142.14.15\"):\n"
-        "    ASN: 037/8, RIPE NCC, 2010-11, whois.ripe.net, https://rdap.db.ripe.net/, ALLOCATED\n"
-        "    ASN: 12849, 21450 (status: ALLOCATED)\n"
-        "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)");
+  printf ("Usage: %s [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] <ipv4-address-space.csv>\n"
+          "  or   %s [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
+          "\n"
+          "  options:\n"
+          "    -a:    the ASN-file is a CSV database.\n"
+          "    -b:    the ASN-file is a binary IPFire database.\n"
+          "    -m N:  stops after 'N' records.\n"
+          "\n"
+          "  both '-a' and '-b' options can be used to show both ASN-types.\n"
+          "  E.g.: running 'iana -b ..\\IPFire-database.db ..\\ipv4-address-space.csv':\n"
+          "  ...\n"
+          "  test_ip4_address (\"37.142.14.15\"):\n"
+          "    ASN: 037/8, RIPE NCC, 2010-11, whois.ripe.net, https://rdap.db.ripe.net/, ALLOCATED\n"
+          "    ASN: 12849, 21450 (status: ALLOCATED)\n"
+          "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)\n", program_name, program_name);
   exit (0);
 }
 
@@ -698,8 +701,10 @@ int main (int argc, char **argv)
            };
   int i, ch, do_ip6 = 0;
 
+  program_name = argv[0];
+
   if (argc < 2)
-     usage();
+     show_help();
 
   while ((ch = getopt(argc, argv, "6a:b:dm:h?")) != EOF)
      switch (ch)
@@ -722,12 +727,12 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            usage();
+            show_help();
             break;
   }
   argv += optind;
   if (!*argv)
-     usage();
+     show_help();
 
   g_cfg.trace_stream = stdout;
   g_cfg.show_caller  = 1;

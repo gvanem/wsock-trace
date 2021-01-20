@@ -298,7 +298,7 @@ static char *search_symbols_list (ULONG_PTR addr)
 
 /* For getopt.c.
  */
-const char *program_name = "bt_test.exe";
+char *program_name;
 
 static int threaded        = 0;
 static int test_vm_bug     = 0;
@@ -413,12 +413,12 @@ DWORD WINAPI foo_first (void *arg)
 
 static int show_help (void)
 {
-  puts ("bt_test.exe: [-abstd] [-r <depth>]\n"
-        "  -a: test vm_bug_abort_handler().\n"
-        "  -b: test vm_bug_list().\n"
-        "  -s: test symbol-list and not StackWalkShow().\n"
-        "  -t: run threaded test.\n"
-        "  -d: increase debug-level.\n");
+  printf ("Usage: %s [-abstd] [-r <depth>]\n"
+          "  -a: test vm_bug_abort_handler().\n"
+          "  -b: test vm_bug_list().\n"
+          "  -s: test symbol-list and not StackWalkShow().\n"
+          "  -t: run threaded test.\n"
+          "  -d: increase debug-level.\n", program_name);
   return (0);
 }
 
@@ -453,6 +453,8 @@ static void test_unwind_fooX (void)
 int main (int argc, char **argv)
 {
   int c, chat_level = 0;
+
+  program_name = argv[0];
 
   while ((c = getopt (argc, argv, "dstbah?r:")) != EOF)
     switch (c)
@@ -525,36 +527,38 @@ int main (int argc, char **argv)
   return (0);
 }
 
-int volatile cleaned_up = 0;
+#if !defined(IN_WS_TOOL_C)
+  int volatile cleaned_up = 0;
 
-#define DO_NOTHING(f)  void f(void) {}
+  #define DO_NOTHING(f)  void f(void) {}
 
-DO_NOTHING (check_all_search_lists)
-DO_NOTHING (ws_lwip_init)
-DO_NOTHING (overlap_exit)
-DO_NOTHING (overlap_init)
-DO_NOTHING (ip2loc_init)
-DO_NOTHING (ip2loc_exit)
-DO_NOTHING (ip2loc_get_ipv4_entry)
-DO_NOTHING (ip2loc_get_ipv6_entry)
-DO_NOTHING (ip2loc_num_ipv4_entries)
-DO_NOTHING (ip2loc_num_ipv6_entries)
-DO_NOTHING (hosts_file_exit)
-DO_NOTHING (DNSBL_exit)
-DO_NOTHING (DNSBL_test)
-DO_NOTHING (ASN_init)
-DO_NOTHING (ASN_exit)
-DO_NOTHING (iana_init)
-DO_NOTHING (iana_exit)
+  DO_NOTHING (check_all_search_lists)
+  DO_NOTHING (ws_lwip_init)
+  DO_NOTHING (overlap_exit)
+  DO_NOTHING (overlap_init)
+  DO_NOTHING (ip2loc_init)
+  DO_NOTHING (ip2loc_exit)
+  DO_NOTHING (ip2loc_get_ipv4_entry)
+  DO_NOTHING (ip2loc_get_ipv6_entry)
+  DO_NOTHING (ip2loc_num_ipv4_entries)
+  DO_NOTHING (ip2loc_num_ipv6_entries)
+  DO_NOTHING (hosts_file_exit)
+  DO_NOTHING (DNSBL_exit)
+  DO_NOTHING (DNSBL_test)
+  DO_NOTHING (ASN_init)
+  DO_NOTHING (ASN_exit)
+  DO_NOTHING (iana_init)
+  DO_NOTHING (iana_exit)
 
-void DNSBL_init (BOOL update)
-{
-  ARGSUSED (update);
-}
+  void DNSBL_init (BOOL update)
+  {
+    ARGSUSED (update);
+  }
 
-const struct LoadTable *find_ws2_func_by_name (const char *func)
-{
-  ARGSUSED (func);
-  return (NULL);
-}
+  const struct LoadTable *find_ws2_func_by_name (const char *func)
+  {
+    ARGSUSED (func);
+    return (NULL);
+  }
+#endif
 #endif /* TEST_BACKTRACE */

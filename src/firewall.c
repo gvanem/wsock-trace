@@ -173,13 +173,17 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define EVENT_STRING_FMT  " ~4%s~0"
   #define INDENT_SZ         2
 
-  /* Used for the reference-timestamp value in `get_time_string (NULL)`.
-   */
-  func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
+  #if !defined(IN_WS_TOOL_C)
+    /*
+     * Used for the reference-timestamp value in `get_time_string (NULL)`.
+     */
+    func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
+  #endif
 
   /* Show statistics on the Console Title bar
    */
   static void fw_console_stats (void);
+  static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent);
 #else
 
   /* Similar as to how wsock_trace.c shows a time-stamp.
@@ -2031,7 +2035,7 @@ void fw_exit (void)
   smartlist_wipe (SBL_entries, free);
   smartlist_wipe (rule_entries, fw_rule_free);
 
-  SID_entries = filter_entries = SBL_entries = NULL;
+  SID_entries = filter_entries = SBL_entries = rule_entries = NULL;
 
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
@@ -2602,8 +2606,8 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
   if (RA4_only && !r->RA4.s_addr)
      return (0);
 
-  trace_printf ("%3lu: Action:   %s\n", DWORD_CAST(fw_num_rules), r->action);
-  trace_printf ("     Dir:      %s\n", r->dir);
+  trace_printf ("%4lu: Action:   %s\n", DWORD_CAST(fw_num_rules), r->action);
+  trace_printf ("      Dir:      %s\n", r->dir);
 
   if (r->protocol == 0)
        strcpy (proto_str, "Any");
@@ -2613,11 +2617,11 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
        strcpy (proto_str, "UDP");
   else _itoa (r->protocol, proto_str, 10); /* \todo use 'getprotobynumber()' */
 
-  trace_printf ("     Protocol: %s\n", proto_str);
+  trace_printf ("      Protocol: %s\n", proto_str);
 
   if (r->app)
   {
-    trace_printf ("     App:      %s%s%s\n",
+    trace_printf ("      App:      %s%s%s\n",
                   r->app, r->app_exist ? "" : " (does not exist)",
                   r->app_native ? " (native file)" : "");
     if (!r->app_exist)
@@ -2625,10 +2629,10 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
   }
 
   if (r->embed_ctxt)
-     trace_printf ("     Context:  %s\n", r->embed_ctxt);
+     trace_printf ("      Context:  %s\n", r->embed_ctxt);
 
   if (r->app_pkg_id)
-     trace_printf ("     PkgId:    %s\n", r->app_pkg_id);
+     trace_printf ("      PkgId:    %s\n", r->app_pkg_id);
 
   if (r->RA4.s_addr)
   {
@@ -2639,39 +2643,41 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
     _wsock_trace_inet_ntop (AF_INET, &r->RA4, RA4_addr, sizeof(RA4_addr), NULL);
     if (r->RA4_cidr_len > 0 && r->RA4_cidr_len < 32)
        snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA4_addr, r->RA4_cidr_len);
-    trace_printf ("     RA4:      %s\n", CIDR[0] ? CIDR : RA4_addr);
+    trace_printf ("      RA4:      %s\n", CIDR[0] ? CIDR : RA4_addr);
 
     cc  = geoip_get_country_by_ipv4 (&r->RA4);
     loc = geoip_get_location_by_ipv4 (&r->RA4);
 
     if (cc && cc[0] != '-')
-       trace_printf ("     GeoIP:    %s, %s\n", cc, loc);
+       trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
+    print_ASN_info (&r->RA4, NULL, 4);
   }
   else if (r->RA6.s6_addr[0])
   {
-    char RA6_addr [80];
-    char CIDR [120] = "";
+    char  RA6_addr [INET6_ADDRSTRLEN];
+    char  CIDR [INET6_ADDRSTRLEN+20] = "";
     const char *cc, *loc;
 
     _wsock_trace_inet_ntop (AF_INET6, &r->RA6, RA6_addr, sizeof(RA6_addr), NULL);
     if (r->RA6_cidr_len > 0 && r->RA6_cidr_len < 128)
        snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA6_addr, r->RA6_cidr_len);
-    trace_printf ("     RA6:      %s\n", CIDR[0] ? CIDR : RA6_addr);
+    trace_printf ("      RA6:      %s\n", CIDR[0] ? CIDR : RA6_addr);
 
     cc  = geoip_get_country_by_ipv6 (&r->RA6);
     loc = geoip_get_location_by_ipv6 (&r->RA6);
 
     if (cc && cc[0] != '-')
-       trace_printf ("     GeoIP:    %s, %s\n", cc, loc);
+       trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
+    print_ASN_info (NULL, &r->RA6, 4);
   }
   if (r->se)
-       trace_printf ("     SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
-  else trace_printf ("     SidEntry: <none>\n");
+       trace_printf ("      SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
+  else trace_printf ("      SidEntry: <none>\n");
 
   if (g_cfg.FIREWALL.show_all)
   {
-    trace_printf ("     RegValue: %s\n", r->value);
-    trace_printf ("     RegData:  %s\n", r->data);
+    trace_printf ("      RegValue: %s\n", r->value);
+    trace_printf ("      RegData:  %s\n", r->data);
   }
   trace_putc ('\n');
   return (rc);
@@ -2850,19 +2856,21 @@ static int fw_enumerate_rules (void)
   return (num);
 }
 
-const struct LoadTable *find_ws2_func_by_name (const char *func)
-{
-  ARGSUSED (func);
-  return (NULL);
-}
+#if !defined(IN_WS_TOOL_C)
+  const struct LoadTable *find_ws2_func_by_name (const char *func)
+  {
+    ARGSUSED (func);
+    return (NULL);
+  }
 
-void hosts_file_exit (void)
-{
-}
+  void hosts_file_exit (void)
+  {
+  }
 
-void check_all_search_lists (void)
-{
-}
+  void check_all_search_lists (void)
+  {
+  }
+  #endif
 #endif  /* TEST_FIREWALL */
 
 /**
@@ -4046,15 +4054,23 @@ static BOOL print_country_location (const struct in_addr *ia4, const struct in6_
  * Try to get some ASN information from the address.
  * Using 'libloc'.
  */
-static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6)
+static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent)
 {
-  char intro [50];
+  char  intro [50];
+  const char *remark;
+
+  if (!INET_util_addr_is_global(ia4, ia6))
+     return (FALSE);
+  if (INET_util_addr_is_special(ia4, ia6, &remark))
+     return (FALSE);
 
   /** \todo
    * Create a `ASN_libloc_print()` function that can
    * print to `fw_buf_add()` and return 1 if some ASN info was found.
    */
-  snprintf (intro, sizeof(intro), "%-*sASN:     ", INDENT_SZ, "");
+  if (extra_indent)
+       snprintf (intro, sizeof(intro), "%-*sASN:      ", INDENT_SZ + extra_indent, "");
+  else snprintf (intro, sizeof(intro), "%-*sASN:     ", INDENT_SZ, "");
   return ASN_libloc_print (intro, ia4, ia6);
 }
 
@@ -4204,7 +4220,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     print_country_location (&ia4_rem, NULL);
-    print_ASN_info (&ia4_rem, NULL);
+    print_ASN_info (&ia4_rem, NULL, 0);
     print_DNSBL_info (&ia4_rem, NULL);
   }
   return (TRUE);
@@ -4278,7 +4294,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     print_country_location (NULL, &ia6_rem);
-    print_ASN_info (NULL, &ia6_rem);
+    print_ASN_info (NULL, &ia6_rem, 0);
     print_DNSBL_info (NULL, &ia6_rem);
   }
   return (TRUE);
@@ -4409,8 +4425,12 @@ static struct SID_entry *lookup_or_add_SID (SID *sid)
 {
   struct SID_entry *se;
   DWORD  len;
-  int    i, max = smartlist_len (SID_entries);
+  int    i, max;
 
+  if (!SID_entries)
+     return (NULL);
+
+  max = smartlist_len (SID_entries);
   for (i = 0; i < max; i++)
   {
     se = smartlist_get (SID_entries, i);
@@ -4690,12 +4710,13 @@ const char *fw_strerror (DWORD err)
 /**
  * For getopt.c.
  */
-const char *program_name = "firewall_test.exe";
+char *program_name;
 static int  quit;
 
-int volatile cleaned_up = 0;
-int volatile startup_count = 0;
-
+#if !defined(IN_WS_TOOL_C)
+  int volatile cleaned_up = 0;
+  int volatile startup_count = 0;
+#endif
 
 /**
  * Return a `malloc()`ed string of the program (with arguments) to pass to `_popen()`.
@@ -4722,7 +4743,7 @@ static char *set_net_program (int argc, char **argv)
   return (prog);
 }
 
-static int show_help (const char *my_name)
+static int show_help (void)
 {
   printf ("Simple Windows ICF Firewall monitor test program.\n"
           "  Usage: %s [options] [program]\n"
@@ -4743,7 +4764,7 @@ static int show_help (const char *my_name)
           "      pause\n"
           "      ping -n 10 www.google.com\n"
           "      \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
-          my_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT);
+          program_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT);
   return (0);
 }
 
@@ -4848,6 +4869,9 @@ int main (int argc, char **argv)
   WSADATA wsa;
   WORD    ver = MAKEWORD (2, 2);
 
+  program_name = argv[0];
+
+#if !defined(IN_WS_TOOL_C)
   wsock_trace_init();
 
 //g_cfg.trace_use_ods = FALSE;
@@ -4855,6 +4879,7 @@ int main (int argc, char **argv)
   g_cfg.trace_indent  = 0;
   g_cfg.trace_report  = 1;
   g_cfg.FIREWALL.show_all = 0;
+#endif
 
   while ((ch = getopt(argc, argv, "a:fh?cel:prRtv")) != EOF)
     switch (ch)
@@ -4890,14 +4915,13 @@ int main (int argc, char **argv)
            break;
       case '?':
       case 'h':
-           return show_help (argv[0]);
+           return show_help();
     }
 
   program = set_net_program (argc-optind, argv+optind);
 
   if (dump_events || dump_rules || dump_callouts || log_file)
      g_cfg.FIREWALL.sound.enable = FALSE;
-
 
   /* Because we use `getservbyport()` above, we need to call `WSAStartup()` first.
    */
@@ -4965,7 +4989,7 @@ int main (int argc, char **argv)
   {
     fprintf (stderr, "fw_monitor_start() failed: %s.\n", win_strerror(fw_errno));
     if (fw_errno == ERROR_ACCESS_DENIED)
-       fprintf (stderr, "%s needs to be run as Adminstrator.\n", argv[0]);
+       fprintf (stderr, "%s needs to be run as Adminstrator.\n", program_name);
   }
 
 quit:

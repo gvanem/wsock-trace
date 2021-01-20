@@ -375,32 +375,35 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
 
 /* For getopt.c.
  */
-const char *program_name = "csv.exe";
+char *program_name;
 
-struct config_table g_cfg;
+#if !defined(IN_WS_TOOL_C)
 
-/*
- * Copy some functions from common.c to keep the Makefiles tidy.
- */
-void debug_printf (const char *file, unsigned line, const char *fmt, ...)
-{
-  va_list args;
+  struct config_table g_cfg;
 
-  printf ("%s(%u): ", file, line);
-  va_start (args, fmt);
-  vprintf (fmt, args);
-  va_end (args);
-}
+  /*
+   * Copy some functions from common.c to keep the Makefiles tidy.
+   */
+  void debug_printf (const char *file, unsigned line, const char *fmt, ...)
+  {
+    va_list args;
 
-/*
- * Trim leading blanks (space/tab) from a string.
- */
-char *str_ltrim (char *s)
-{
-  while (s[0] && s[1] && isspace ((int)s[0]))
-       s++;
-  return (s);
-}
+    printf ("%s(%u): ", file, line);
+    va_start (args, fmt);
+    vprintf (fmt, args);
+    va_end (args);
+  }
+
+  /*
+   * Trim leading blanks (space/tab) from a string.
+   */
+  char *str_ltrim (char *s)
+  {
+    while (s[0] && s[1] && isspace ((int)s[0]))
+         s++;
+    return (s);
+  }
+#endif
 
 /*
  * A do-nothing callback. Just report the parsed record and fields.
@@ -416,13 +419,13 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
   return (1);
 }
 
-static int usage (void)
+static int show_help (void)
 {
-  puts ("Usage: csv.exe [-d] [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
-        "       -d: increase trace-level            (optional).\n"
-        "       -f: set field delimiter             (optional, default is ',').\n"
-        "       -m: max number of records to handle (optional).\n"
-        "       -n: number of fields in CSV-records (mandatory).");
+  printf ("Usage: %s [-d] [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
+          "       -d: increase trace-level            (optional).\n"
+          "       -f: set field delimiter             (optional, default is ',').\n"
+          "       -m: max number of records to handle (optional).\n"
+          "       -n: number of fields in CSV-records (mandatory).\n", program_name);
   exit (0);
 }
 
@@ -431,6 +434,7 @@ int main (int argc, char **argv)
   struct CSV_context ctx;
   int    ch;
 
+  program_name = argv[0];
   memset (&ctx, '\0', sizeof(ctx));
 
   while ((ch = getopt(argc, argv, "df:m:n:h?")) != EOF)
@@ -451,12 +455,12 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            usage();
+            show_help();
             break;
   }
   argv += optind;
   if (!*argv)
-     usage();
+     show_help();
 
   ctx.file_name = argv[0];
   ctx.callback  = csv_callback;

@@ -646,8 +646,27 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 
 #include "getopt.h"
 
+char *program_name;
+
 int main (int argc, char **argv)
 {
+  program_name = argv[0];
+  printf ("Nothing to do in %s now.\n", program_name);
+
+#if 0
+  if (argc > 0 && !strcmp(argv[1], "-t"))
+  {
+    g_cfg.DNSBL.enable = 1;
+    g_cfg.DNSBL.test = 1;
+    return DNSBL_test();
+  }
+  if (argc > 0 && !strcmp(argv[1], "-t"))
+  {
+    g_cfg.DNSBL.enable = 1;
+    return DNSBL_dump();
+  }
+#endif
+
   return (0);
 }
 #endif

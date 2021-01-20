@@ -1477,7 +1477,7 @@ void geoip_update_file (int family, BOOL force_update)
 
 /* For getopt.c.
  */
-const char *program_name = "geoip.exe";
+char *program_name;
 
 /**
  * Simplified version of the `get_error()` function in `wsock_trace.c`.
@@ -2011,12 +2011,8 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   int i;
 
   if (addr4)
-  {
-    addr4->S_un.S_un_b.s_b1 = rand_range (1, 255);
-    addr4->S_un.S_un_b.s_b2 = rand_range (1, 255);
-    addr4->S_un.S_un_b.s_b3 = rand_range (1, 255);
-    addr4->S_un.S_un_b.s_b4 = rand_range (1, 255);
-  }
+     addr4->s_addr = rand_range (1, ULONG_MAX);
+
   if (addr6)
   {
     addr6->s6_words[0] = swap16 (0x2001); /* Since most IPv6 addr has this prefix */
@@ -2025,7 +2021,7 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   }
 }
 
-static int show_help (const char *my_name, int err_code)
+static int show_help (int err_code)
 {
   printf ("Usage: %s [-cdfinruh] <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
@@ -2038,7 +2034,7 @@ static int show_help (const char *my_name, int err_code)
           "       -4:      test IPv4 address(es).\n"
           "       -6:      test IPv6 address(es).\n"
           "       -h:      this help.\n",
-          my_name);
+          program_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"geoip.exe -4 < file-with-addr\".\n"
           "   Built by %s\n", get_builder(FALSE));
@@ -2189,13 +2185,15 @@ static int check_requirements (void)
 
 int main (int argc, char **argv)
 {
-  int         c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
-  int         do_update = 0, do_dump = 0, do_rand = 0;
-  int         use_ip2loc = 1;
-  int         loops = 10;
-  const char *my_name = argv[0];
-  WSADATA     wsa;
+  int     c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
+  int     do_update = 0, do_dump = 0, do_rand = 0;
+  int     use_ip2loc = 1;
+  int     loops = 10;
+  WSADATA wsa;
 
+  program_name = argv[0];
+
+#if !defined(IN_WS_TOOL_C)
   crtdbg_init();
   wsock_trace_init();
 
@@ -2206,13 +2204,14 @@ int main (int argc, char **argv)
 
   g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
   g_cfg.trace_time_format = TS_RELATIVE;
+#endif
 
   while ((c = getopt (argc, argv, "h?cdfin:ru46")) != EOF)
     switch (c)
     {
       case '?':
       case 'h':
-           return show_help (my_name, 0);
+           return show_help (0);
       case 'c':
            do_cidr = 1;
            break;
@@ -2241,11 +2240,11 @@ int main (int argc, char **argv)
            do_6 = 1;
            break;
       default:
-           return show_help (my_name, 1);
+           return show_help (1);
     }
 
   if (!do_4 && !do_6)
-     return show_help (my_name, 1);
+     return show_help (1);
 
   /** Possibly call `ip2loc_init()` again.
    */

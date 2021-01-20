@@ -1025,9 +1025,24 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
 /* For getopt.c.
  */
-const char *program_name = "idna.exe";
+char *program_name;
 
-struct config_table g_cfg;
+#if !defined(IN_WS_TOOL_C)
+  struct config_table g_cfg;
+
+  void set_color (const WORD *col)
+  {
+    ARGSUSED (col);
+  }
+
+  void ws_sema_wait (void)
+  {
+  }
+
+  void ws_sema_release (void)
+  {
+  }
+#endif
 
 #if (USE_WINIDN)
   #define W_GETOPT "w"
@@ -1039,28 +1054,15 @@ struct config_table g_cfg;
   #define W_HELP   ""
 #endif
 
-void usage (const char *argv0)
+void show_help (void)
 {
   printf ("%s [-d] %s[-c CP-number] hostname | ip-address\n"
           "   -d debug level, \"-dd\" for more details\n"
           "%s"
           "   -c select codepage (active is CP%d)\n",
-          argv0, W_OPT, W_HELP, IDNA_GetCodePage());
+          program_name, W_OPT, W_HELP, IDNA_GetCodePage());
   common_exit();
   exit (0);
-}
-
-void set_color (const WORD *col)
-{
-  ARGSUSED (col);
-}
-
-void ws_sema_wait (void)
-{
-}
-
-void ws_sema_release (void)
-{
 }
 
 void print_last_error (void)
@@ -1150,10 +1152,10 @@ static int do_test (WORD cp, const char *host)
 
 int main (int argc, char **argv)
 {
-  const char *my_name = argv[0];
-  WORD  cp = 0;
-  int   ch, rc;
+  WORD cp = 0;
+  int  ch, rc;
 
+  program_name = argv[0];
   sock_init();
   common_init();
   InitializeCriticalSection (&crit_sect);
@@ -1186,14 +1188,14 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            usage (my_name);
+            show_help();
             break;
   }
 
   argc -= optind;
   argv += optind;
   if (!*argv)
-     usage (my_name);
+     show_help();
 
   rc = do_test (cp, argv[0]);
   common_exit();
