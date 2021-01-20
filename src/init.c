@@ -65,6 +65,11 @@ typedef struct exclude {
  */
 static smartlist_t *exclude_list = NULL;
 
+/* Set and restore the "Invalid Parameter Handler".
+ */
+static void set_invalid_handler (void);
+static void reset_invalid_handler (void);
+
 /*
  * Wait on the global semaphore to get freed.
  */
@@ -1304,6 +1309,7 @@ void wsock_trace_exit (void)
   ASN_exit();
   IDNA_exit();
 
+  reset_invalid_handler();
   if (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
      CloseHandle (ws_sema);
   ws_sema = NULL;
@@ -1391,6 +1397,8 @@ void wsock_trace_init (void)
          ws_sema_inherited = TRUE;
     else ws_sema_inherited = FALSE;
   }
+
+  set_invalid_handler();
 
   if ((g_cfg.msvc_only   && !is_msvc)  ||
       (g_cfg.mingw_only  && !is_mingw) ||
@@ -2072,21 +2080,22 @@ static void __cdecl invalid_parameter_handler (const wchar_t *expression,
                                                unsigned int   line,
                                                uintptr_t      dummy)
 {
-  TRACE (2, "%s (%ws, %ws, %ws, %u, %p)\n",
+  TRACE (1, "%s (%" WCHAR_FMT ", %" WCHAR_FMT ", %" WCHAR_FMT ", %u, %p)\n",
          __FUNCTION__, expression, function, file, line, (void*)dummy);
   RaiseException (STATUS_GNULIB_INVALID_PARAMETER, 0, 0, NULL);
 }
 #endif
 
+static int inv_handler_set = 0;
+
 static void set_invalid_handler (void)
 {
 #if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
-  static int init = 0;
 
-  if (!init)
+  if (g_cfg.trace_level >= 1 && !inv_handler_set)
   {
     _set_invalid_parameter_handler (invalid_parameter_handler);
-    init = 1;
+    inv_handler_set = 1;
   }
 #endif
 }
@@ -2094,7 +2103,9 @@ static void set_invalid_handler (void)
 static void reset_invalid_handler (void)
 {
 #if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
-  _set_invalid_parameter_handler (NULL);
+  if (inv_handler_set)
+     _set_invalid_parameter_handler (NULL);
+  inv_handler_set = 0;
 #endif
 }
 
@@ -2132,7 +2143,6 @@ static void reset_invalid_handler (void)
              /* _CRTDBG_CHECK_ALWAYS_DF   | */   /* This flag makes things extremely slow */
                 _CRTDBG_ALLOC_MEM_DF;
 
-    set_invalid_handler();
     _CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
     _CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
     _CrtSetDbgFlag (flags | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
@@ -2161,10 +2171,8 @@ static void reset_invalid_handler (void)
 #else
   void crtdbg_init (void)
   {
-    set_invalid_handler();
   }
   void crtdbg_exit (void)
   {
-    reset_invalid_handler();
   }
 #endif
