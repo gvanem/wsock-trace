@@ -1871,8 +1871,6 @@ static void fw_play_sound (const struct FREQ_MILLISEC *sound)
   static BOOL warned = FALSE;
 
 #if defined(TEST_FIREWALL)
-  static void fw_warning_sound (void);
-
   if (sound == &g_cfg.FIREWALL.sound.beep.event_DNSBL)
      fw_warning_sound();
   else
@@ -12145,7 +12143,7 @@ static const BYTE warning_sound[] = {
  *
  * No need to stop it as it will fade away by itself.
  */
-static void fw_warning_sound (void)
+void fw_warning_sound (void)
 {
   if (g_cfg.FIREWALL.sound.enable)
      sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
