@@ -23,6 +23,11 @@
 
 int vm_bug_debug = 0;
 
+/*
+ * Since OpenWatcom 2.x is hardly able to compile anything here.
+ */
+#if !defined(__WATCOMC__)
+
 #undef  TRACE
 #define TRACE(level, fmt, ...)                           \
         do {                                             \
@@ -145,8 +150,8 @@ static void print_one_address (thread_args *args, DWORD64 addr)
   if (GetModuleFileName((HANDLE)(uintptr_t)base, path, sizeof(path)))
      printf ("%-15s", shorten_path(path));
 
-#if !defined(_MSC_VER) && !defined(__clang__)
-  if (path[0] && !stricmp(our_module,path))
+#if !defined(_MSC_VER)
+  if (path[0] && !stricmp(our_module, path))
      have_PDB_info = FALSE;
 
   /* Otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
@@ -357,7 +362,7 @@ static void init (void)
    * This is important only for the return value of 'shorten_path()'.
    */
   end = strrchr (our_module, '\0');
-  if (!strnicmp(end-4,".exe",4))
+  if (!strnicmp(end-4, ".exe", 4))
   {
     end = strrchr (our_module, '\\');   /* Ensure 'prog_dir' has a trailing '\\' */
     strncpy (prog_dir, our_module, end-our_module+1);
@@ -444,3 +449,24 @@ void vm_bug_abort_init (void)
 #endif
   }
 }
+
+#else
+  static void unimplemented (const char *func, const char *file, unsigned line)
+  {
+    fprintf (stderr, "%s(%u): Function \"%s()\" not implemented for __WATCOMC__.\n", file, line, func);
+  }
+  #define UNIMPLEMENTED(ret) unimplemented (__FUNCTION__, __FILE__, __LINE__)
+
+  void vm_bug_report (void)
+  {
+    UNIMPLEMENTED();
+  }
+  void vm_bug_list (int skip, void *list)
+  {
+    UNIMPLEMENTED();
+  }
+  void vm_bug_abort_init (void)
+  {
+    UNIMPLEMENTED();
+  }
+#endif  /* __WATCOMC__ */
