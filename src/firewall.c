@@ -98,6 +98,12 @@
     ARGSUSED (force);
     UNIMPLEMENTED();
   }
+  int firewall_main (int argc, char **argv)
+  {
+    (void) argc;
+    (void) argv;
+    UNIMPLEMENTED (0);
+  }
 #else  /* Rest of file */
 
 typedef LONG NTSTATUS;
@@ -1234,6 +1240,8 @@ DEF_FUNC (ULONG, FWStatusMessageFromStatusCode, (FW_RULE_STATUS status_code,
 
 DEF_FUNC (ULONG, FWFreeFirewallRules, (FW_RULE *pFwRules));
 DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
+
+#undef DEF_FUNC
 
 // Add this 'FWQueryFirewallRules'?
 
