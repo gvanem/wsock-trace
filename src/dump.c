@@ -1603,10 +1603,19 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
 /**
  * Print the `TCP_INFO_v0` structure obtained in `closesocket()`.
  */
-void dump_tcp_info (const TCP_INFO_v0 *info)
+void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
 {
-  trace_printf ("%*s~4TCP_INFO: State: %s, Mss: %u, ConnectionTimeMs: %s, RttUs: %s,\n",
-                g_cfg.trace_indent+2, "",
+  trace_printf ("%*s~4TCP_INFO:", g_cfg.trace_indent+2, "");
+
+  if (err_code)
+  {
+    char buf[150];
+
+    trace_printf (" %s~0\n", ws_strerror(err_code, buf, sizeof(buf)));
+    return;
+  }
+
+  trace_printf ("State: %s, Mss: %u, ConnectionTimeMs: %s, RttUs: %s,\n",
                 list_lookup_name(info->State, tcp_states, DIM(tcp_states)),
                 info->Mss,
                 qword_str(info->ConnectionTimeMs),

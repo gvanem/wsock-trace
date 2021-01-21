@@ -73,7 +73,7 @@ static fd_set *last_ex_fd = NULL;
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
-static int         get_tcp_info (SOCKET s, TCP_INFO_v0 *info);
+static void        get_tcp_info (SOCKET s, TCP_INFO_v0 *info, int *err);
 static void        wstrace_printf (BOOL first_line,
                                    _Printf_format_string_ const char *fmt, ...)
                                    ATTR_PRINTF (2, 3);
@@ -1495,7 +1495,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
   int  rc, rc2 = -1;
 
   if (p_WSAIoctl && g_cfg.dump_tcpinfo)
-     rc2 = get_tcp_info (s, &info);
+     get_tcp_info (s, &info, &rc2);
 
   CHECK_PTR (p_closesocket);
   rc = (*p_closesocket) (s);
@@ -1503,10 +1503,9 @@ EXPORT int WINAPI closesocket (SOCKET s)
   ENTER_CRIT();
 
   WSTRACE ("closesocket (%s) --> %s", socket_number(s), get_error(rc, 0));
-  overlap_remove (s);
 
-  if (rc2 == 0)
-     dump_tcp_info (&info);
+  overlap_remove (s);
+  dump_tcp_info (&info, rc2);
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -3245,7 +3244,7 @@ EXPORT PCWSTR WINAPI InetNtopW (int af, const void *addr, PWSTR res_buf, size_t 
 
 /****************** Internal utility functions **********************************/
 
-static int get_tcp_info (SOCKET s, TCP_INFO_v0 *info)
+static void get_tcp_info (SOCKET s, TCP_INFO_v0 *info, int *err)
 {
   DWORD size_ret = 0;
   DWORD ver = 0;       /* Only version 0 is supported at this moment */
@@ -3254,8 +3253,10 @@ static int get_tcp_info (SOCKET s, TCP_INFO_v0 *info)
   ENTER_CRIT();
   memset (info, '\0', sizeof(*info));
   rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, sizeof(*info), &size_ret, NULL, NULL);
+  if (rc == SOCKET_ERROR)
+       *err = (*g_WSAGetLastError)();
+  else *err = 0;
   LEAVE_CRIT (0);
-  return (rc);
 }
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
