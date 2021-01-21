@@ -1779,6 +1779,9 @@ int file_exists (const char *fname)
  * runtime.
  *
  * The .lua-scripts needs this information to know which .DLL to integrate with.
+ * If called from 'ws_tool.c', the `full_name` is `ws_tool.exe`. Hopefully LUA
+ * will be able to import from that.
+ *
  * Some of these functions are also called from `geoip.c`.
  */
 #include "wsock_trace.rc"

@@ -65,6 +65,7 @@ const char *wslua_func_sig = NULL;
 
 static BOOL init_script_ok = FALSE;
 static BOOL open_ok        = TRUE;
+static BOOL ws_tool_import = FALSE;
 
 static void wslua_init (const char *script);
 static void wslua_exit (const char *script);
@@ -81,7 +82,10 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
   if (reason == DLL_PROCESS_ATTACH)
   {
-    const char *full_name = get_dll_full_name();   /* Set by the real 'DllMain()' */
+    /* Set by the real 'DllMain()'.
+     * Of 'run_main()' in 'ws_tool.exe'.
+     */
+    const char *full_name = get_dll_full_name();
     const char *loaded;
 
     reason_str = "DLL_PROCESS_ATTACH";
@@ -95,13 +99,16 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
        get_color (NULL, &g_cfg.LUA.color_body);
 
     loaded = basename (full_name);
-    if (stricmp(loaded, dll))
+    ws_tool_import = !stricmp (loaded, "ws_tool.exe");
+    if (stricmp(loaded, dll) && !ws_tool_import)
     {
       LUA_WARNING ("Expected %s, but loaded DLL was '%s:\n", dll, loaded);
       rc = FALSE;
     }
     else
     {
+      if (ws_tool_import)
+         LUA_TRACE (1, "Importing from 'ws_tool.exe'\n");
       wslua_set_path (full_name);
       wslua_init (g_cfg.LUA.init_script);
     }
@@ -296,7 +303,9 @@ static int wslua_trace_printf (lua_State *l)
 
 static int wslua_get_dll_short_name (lua_State *l)
 {
-  lua_pushstring (l, get_dll_short_name());
+  if (ws_tool_import)
+       lua_pushstring (l, "ws_tool.exe");
+  else lua_pushstring (l, get_dll_short_name());
   return (1);
 }
 

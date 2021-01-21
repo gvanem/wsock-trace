@@ -261,7 +261,7 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 	@type link.tmp >> test.map
 	@echo
 
-ws_tool.exe: $(WS_TOOL_OBJ) libloc$(X_SUFFIX)$(_D).lib
+ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_DEP)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
 	@type link.tmp >> ws_tool.map
 	@echo

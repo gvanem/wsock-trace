@@ -212,7 +212,7 @@ geoip.exe: $(GEOIP_OBJ) $(LIBLOC_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -lws2_32 -lole32 > geoip.map
 	@echo
 
-ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB)
+ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -ladvapi32 -lole32 -lwinmm > ws_tool.map
 	@echo
 

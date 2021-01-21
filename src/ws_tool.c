@@ -25,6 +25,7 @@
 #include "init.h"
 #include "geoip.h"
 #include "getopt.h"
+#include "wsock_trace_lua.h"
 
 #define program_name backtrace_program_name
 #define show_help    backtrace_show_help
@@ -117,9 +118,12 @@ static int show_help (const char *extra)
 int run_mains (int argc, char **argv)
 {
   int rc;
+  HANDLE instance = GetModuleHandle(NULL);
+
+  set_dll_full_name (instance);
 
 #if defined(USE_LUA)
-  wslua_DllMain (GetModuleHandle(NULL), DLL_PROCESS_ATTACH);
+  wslua_DllMain (instance, DLL_PROCESS_ATTACH);
 #endif
 
   if (!stricmp(*argv, "geoip"))
@@ -150,7 +154,7 @@ int run_mains (int argc, char **argv)
   }
 
 #if defined(USE_LUA)
-  wslua_DllMain (GetModuleHandle(NULL), DLL_PROCESS_DETACH);
+  wslua_DllMain (instance, DLL_PROCESS_DETACH);
 #endif
 
   return (rc);
@@ -194,10 +198,7 @@ int main (int argc, char **argv)
        rc = show_help ("Please give a command");
   else rc = run_mains (argc, argv);
 
-  if (*argv && (stricmp(*argv, "geoip"))) // && stricmp(*argv, "firewall"))
-  {
-    wsock_trace_exit();
-    crtdbg_exit();
-  }
+  wsock_trace_exit();
+  crtdbg_exit();
   return (rc);
 }
