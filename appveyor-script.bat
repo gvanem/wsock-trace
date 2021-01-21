@@ -59,7 +59,7 @@ echo   ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN                       >> w
 
 echo [asn]                                                                  >> wsock_trace.appveyor
 echo   enable       = 1                                                     >> wsock_trace.appveyor
-echo   asn_csv_file = %CD%\IP4-ASN.CSV                                      >> wsock_trace.appveyor
+echo  #asn_csv_file = %CD%\IP4-ASN.CSV                                      >> wsock_trace.appveyor
 echo  #asn_csv_file = %CD%\IP6-ASN.CSV                                      >> wsock_trace.appveyor
 echo   asn_bin_file = %CD%\IPFire-database.db                               >> wsock_trace.appveyor
 echo   asn_bin_url = https://location.ipfire.org/databases/1/location.db.xz >> wsock_trace.appveyor
@@ -67,7 +67,7 @@ echo   xz_decompress = 1                                                    >> w
 echo   max_days      = 1                                                    >> wsock_trace.appveyor
 
 echo [iana]                                                                 >> wsock_trace.appveyor
-echo   enable       = 1                                                     >> wsock_trace.appveyor
+echo   enable       = 0                                                     >> wsock_trace.appveyor
 echo   ip4_file     = %CD%\IPv4-address-space.csv                           >> wsock_trace.appveyor
 echo   ip6_file     = %CD%\IPv6-unicast-address-assignments.csv             >> wsock_trace.appveyor
 
