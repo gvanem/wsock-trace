@@ -3464,6 +3464,15 @@ static void test_get_caller (const void *from)
 
 /**
  * The `wsock_trace*.dll` main entry point.
+ *
+ * The 'DLL_x' events happens rought like this:
+ *
+ *   DLL_PROCESS_ATTACH. instDLL: 0x642B0000,  thr-id: 7892   Our program start
+ *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  thr-id: 9896   A new thread in our program starts
+ *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  thr-id: 9896   This thread exits
+ *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  thr-id: 6648   We're back to our program main thread
+ *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  thr-id: 6648   Our program exits
+ *   DLL_PROCESS_DETACH. instDLL: 0x642B0000,  thr-id: ??     Program gone; we'll never get this
  */
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
