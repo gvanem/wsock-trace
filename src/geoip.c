@@ -2023,9 +2023,9 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 
 static int show_help (int err_code)
 {
-  printf ("Usage: %s [-cdfinruh] <-4|-6> address(es)\n"
+  printf ("Usage: %s [-cDfinruh] <-4|-6> address(es)\n"
           "       -c:      dump addresses on CIDR form.\n"
-          "       -d:      dump address entries for countries and count of blocks.\n"
+          "       -D:      dump address entries for countries and count of blocks.\n"
           "       -f:      force an update with the '-u' option.\n"
           "       -i:      do no use the IP2Location database.\n"
           "       -n #:    number of loops for random test.\n"
@@ -2206,7 +2206,7 @@ int main (int argc, char **argv)
   g_cfg.trace_time_format = TS_RELATIVE;
 #endif
 
-  while ((c = getopt (argc, argv, "h?cdfin:ru46")) != EOF)
+  while ((c = getopt (argc, argv, "h?cDfin:ru46")) != EOF)
     switch (c)
     {
       case '?':
@@ -2215,7 +2215,7 @@ int main (int argc, char **argv)
       case 'c':
            do_cidr = 1;
            break;
-      case 'd':
+      case 'D':
            do_dump++;
            break;
       case 'f':
