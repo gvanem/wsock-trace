@@ -14,35 +14,41 @@ if %1. == -h. (
   echo ^    -r6:  test 10 random IPv6 addresses.
   echo ^    -4:   test using addresses in "%TEST_INPUT_4%".
   echo ^    -6:   test using addresses in "%TEST_INPUT_6%".
+  echo ^   The above will be run via "ws_tool.exe geoip .."
+  exit /b 0
+)
+
+if not exist %~dp0ws_tool.exe (
+  echo The needed 'ws_tool.exe' program was not found.
   exit /b 0
 )
 
 if %1. == -r4. (
-  %~dp0geoip.exe %1 %2 %3 %4
+  %~dp0ws_tool.exe geoip %1 %2 %3 %4
   exit /b 0
 )
 
 if %1. == -r6. (
-  %~dp0geoip.exe %1 %2 %3 %4
+  %~dp0ws_tool.exe geoip %1 %2 %3 %4
   exit /b 0
 )
 
 if %1. == -4. (
   shift
   call :generate_test_input_4
-  %~dp0geoip.exe -4 %2 %3 %4 < %TEST_INPUT_4%
+  %~dp0ws_tool.exe geoip -4 %2 %3 %4 < %TEST_INPUT_4%
   exit /b 0
 )
 
 if %1. == -6. (
   shift
   call :generate_test_input_6
-  %~dp0geoip.exe -6 %2 %3 %4 < %TEST_INPUT_6%
+  %~dp0ws_tool.exe geoip -6 %2 %3 %4 < %TEST_INPUT_6%
   exit /b 0
 )
 
 call :generate_test_input_4
-%~dp0geoip.exe -4 %1 %2 %3 < %TEST_INPUT_4%
+%~dp0ws_tool.exe geoip -4 %1 %2 %3 < %TEST_INPUT_4%
 exit /b 0
 
 :generate_test_input_4
