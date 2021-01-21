@@ -740,16 +740,17 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 #else   /* !USE_LIBLOC */
 static size_t ASN_load_bin_file (const char *file)
 {
-  TRACE (1, "Sorry, OpenWatcom is not supported; cannot load database '%s' file.\n", file);
+  TRACE (2, "Sorry, OpenWatcom is not supported:\n            "
+            "Cannot load database '%s' file.\n", file);
   ARGSUSED (file);
   return (0);
 }
 
-static BOOL ASN_check_and_update (const char *file)
+static void ASN_check_and_update (const char *file)
 {
-  TRACE (1, "Sorry, OpenWatcom is not supported; cannot update database '%s' file automatically.\n", file);
+  TRACE (2, "Sorry, OpenWatcom is not supported:\n            "
+            "Cannot update database '%s' file automatically.\n", file);
   ARGSUSED (file);
-  return (FALSE);
 }
 
 int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6)
