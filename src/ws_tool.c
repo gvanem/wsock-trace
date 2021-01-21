@@ -21,6 +21,21 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
+#if defined(__WATCOMC__)
+  /*
+   * Required to define `IN6_IS_ADDR_LOOPBACK()` etc. in
+   * OpenWatcom's <ws2ipdef.h>.
+   */
+  #undef  NTDDI_VERSION
+  #define NTDDI_VERSION 0x05010000
+#endif
+
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <signal.h>
+#include <tchar.h>
+
 #include "common.h"
 #include "init.h"
 #include "geoip.h"
@@ -107,6 +122,14 @@
 #undef show_help
 
 char *program_name;  /* For getopt.c */
+
+/* Prevent MinGW + Cygwin from globbing the cmd-line.
+ */
+#ifdef __CYGWIN__
+  int _CRT_glob = 0;
+#else
+  int _dowildcard = -1;
+#endif
 
 static int show_help (const char *extra)
 {

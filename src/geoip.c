@@ -1467,12 +1467,15 @@ void geoip_update_file (int family, BOOL force_update)
 #include "getopt.h"
 #include "dnsbl.h"
 
-/* Prevent MinGW + Cygwin from globbing the cmd-line.
- */
-#ifdef __CYGWIN__
-  int _CRT_glob = 0;
-#else
-  int _dowildcard = -1;
+#if !defined(IN_WS_TOOL_C)
+  /*
+   * Prevent MinGW + Cygwin from globbing the cmd-line.
+   */
+  #ifdef __CYGWIN__
+    int _CRT_glob = 0;
+  #else
+    int _dowildcard = -1;
+  #endif
 #endif
 
 /* For getopt.c.
