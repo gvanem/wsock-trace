@@ -15,6 +15,12 @@
  */
 #define IN_WS_TOOL_C
 
+/* Because of warning "Use getaddrinfo() or GetAddrInfoW() instead ..." in idna.c.
+ */
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
+
 #include "common.h"
 #include "init.h"
 #include "geoip.h"
@@ -79,6 +85,7 @@
 
 #undef  TEST_DNSBL
 #undef  ADD_VALUE
+#undef  DEF_FUNC
 #undef  program_name
 #undef  show_help
 #undef  main
