@@ -1240,6 +1240,7 @@ DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
 /*
  * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
  */
+#undef  ADD_VALUE
 #define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
 
 static struct LoadTable fw_funcs[] = {
@@ -1466,11 +1467,10 @@ static const struct search_list protocols[] = {
 #define FWPM_CALLOUT_FLAG_REGISTERED                 0x00040000
 #endif
 
-#undef ADD_VALUE
-
 /*
  * Add a `FWPM_CALLOUT_X` value and it's name to the `callout_flags[]` array.
  */
+#undef  ADD_VALUE
 #define ADD_VALUE(v)  { v, #v }
 
 /* Enter flags with highest bit first.
@@ -3881,6 +3881,8 @@ static const struct search_list network_capabilities[] = {
                     ADD_VALUE (INTERNET_PRIVATE_NETWORK)
                   };
 
+#undef ADD_VALUE
+
 static const char *get_network_capability_id (int id)
 {
   return list_lookup_name (id, network_capabilities, DIM(network_capabilities));
@@ -4612,6 +4614,8 @@ static void CALLBACK
   {
     direction_in = TRUE;
 
+    fw_buf_add (", ~3IN~0");
+
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
 
@@ -4621,6 +4625,8 @@ static void CALLBACK
   else if (event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
   {
     direction_in = TRUE;
+
+    fw_buf_add (", ~3IN~0");
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
