@@ -419,7 +419,7 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
   return (1);
 }
 
-static int show_help (void)
+static void show_help (void)
 {
   printf ("Usage: %s [-d] [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
           "       -d: increase trace-level            (optional).\n"
