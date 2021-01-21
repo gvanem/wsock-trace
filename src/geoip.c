@@ -2299,12 +2299,15 @@ int main (int argc, char **argv)
      smartlist_wipe (list, free);
   }
 
+#if !defined(IN_WS_TOOL_C)
   wsock_trace_exit();
 
   /* Since this is inside a 'if !defined(TEST_GEOIP)' block in init.c
    */
   exclude_list_free();
   crtdbg_exit();
+#endif
+
   return (0);
 }
 #endif  /* TEST_GEOIP */
