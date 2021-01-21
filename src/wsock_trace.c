@@ -3471,7 +3471,9 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   DWORD tid = 0;
   BOOL  rc = TRUE;
 
-  g_cfg.from_dll_main = TRUE;  /* signal we're called via DllMain() */
+  /* If we're called from DllMain(), we cnnot use WinHTTP in inet_util.c etc.
+   */
+  ws_from_dll_main = TRUE;
 
   switch (reason)
   {

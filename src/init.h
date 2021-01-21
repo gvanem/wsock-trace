@@ -176,7 +176,6 @@ struct config_table {
        WORD    color_trace;
        WORD    color_data;
 
-       BOOL    from_dll_main;
        BOOL    use_winhttp;
        BOOL    msvc_only;
        BOOL    mingw_only;
@@ -206,6 +205,7 @@ struct config_table {
 extern struct config_table g_cfg;
 extern int                 fatal_error;
 
+extern BOOL        ws_from_dll_main;
 extern HANDLE      ws_sema;
 extern BOOL        ws_sema_inherited;
 extern const char *ws_sema_name;

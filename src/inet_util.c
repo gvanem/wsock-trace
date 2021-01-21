@@ -828,7 +828,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
   BOOL              use_threaded = FALSE;
   BOOL              use_async    = FALSE;
 
-  if (g_cfg.from_dll_main)
+  if (ws_from_dll_main)
   {
     TRACE (1, "Not safe to enter here from 'DllMain()'.\n");
     return (0);

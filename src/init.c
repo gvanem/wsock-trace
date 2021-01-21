@@ -42,6 +42,10 @@ CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
+/* Signal we're called via DllMain()
+ */
+BOOL ws_from_dll_main;
+
 /* Use CreateSemaphore() to check for multiple instances of ourself.
  */
 HANDLE      ws_sema = INVALID_HANDLE_VALUE;
