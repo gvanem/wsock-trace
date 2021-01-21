@@ -319,8 +319,6 @@ static void ASN_check_and_update (const char *db_file)
   BOOL   db_dir_ok, need_update;
   DWORD  downloaded;
 
-  TRACE (1, "In %s().\n", __FUNCTION__);
-
   if (g_cfg.ASN.xz_decompress <= 0)
   {
     TRACE (1, "Nothing to do for '%s' file with XZ-decompression disabled.\n", db_file);
@@ -385,7 +383,10 @@ static void ASN_check_and_update (const char *db_file)
   }
 
   if (!need_update)
-     return;
+  {
+    TRACE (2, "Returning since 'need_update == FALSE'.\n");
+    return;
+  }
 
   /* `%TEMP%/location.db.xz` need to be updated.
    * Force a download, XZ-decompress and copy to the final `db_file`.
