@@ -197,6 +197,27 @@ IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
            $(OBJ_DIR)\smartlist.obj
 
 #
+# .obj-files for 'ws_tool.exe'.
+#
+WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             \
+              $(OBJ_DIR)\common.obj          \
+              $(OBJ_DIR)\cpu.obj             \
+              $(OBJ_DIR)\dump.obj            \
+              $(OBJ_DIR)\getopt.obj          \
+              $(OBJ_DIR)\hosts.obj           \
+              $(OBJ_DIR)\in_addr.obj         \
+              $(OBJ_DIR)\init.obj            \
+              $(OBJ_DIR)\inet_util.obj       \
+              $(OBJ_DIR)\ip2loc.obj          \
+              $(OBJ_DIR)\overlap.obj         \
+              $(OBJ_DIR)\smartlist.obj       \
+              $(OBJ_DIR)\stkwalk.obj         \
+              $(OBJ_DIR)\vm_dump.obj         \
+              $(OBJ_DIR)\wsock_trace.obj     \
+              $(OBJ_DIR)\wsock_trace_lua.obj \
+              $(OBJ_DIR)\ws_tool.obj
+
+#
 # .obj-files for 'libloc$(X_SUFFIX)$(_D).lib'.
 #
 LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
@@ -214,7 +235,7 @@ LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
              $(OBJ_DIR)\win_mmap.obj
 
 all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) \
-     csv.exe geoip.exe test.exe iana.exe idna.exe firewall_test.exe
+     geoip.exe test.exe iana.exe idna.exe firewall_test.exe ws_tool.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and test-programs.
 
 $(OBJ_DIR):
@@ -240,9 +261,9 @@ test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
 	@type link.tmp >> test.map
 	@echo
 
-csv.exe: $(OBJ_DIR)\csv_1.obj $(OBJ_DIR)\getopt.obj
-	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
-	@type link.tmp >> csv.map
+ws_tool.exe: $(WS_TOOL_OBJ) libloc$(X_SUFFIX)$(_D).lib
+	link.exe $(LDFLAGS) -verbose -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
+	@type link.tmp >> ws_tool.map
 	@echo
 
 idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
@@ -292,11 +313,11 @@ vclean realclean: clean
 	      wsock_trace$(X_SUFFIX)$(_D).dll \
 	      wsock_trace$(X_SUFFIX)$(_D).map \
 	      wsock_trace$(X_SUFFIX)$(_D).pdb
-	- del csv.exe           csv.map           csv.pdb
 	- del geoip.exe         geoip.map         geoip.pdb
 	- del iana.exe          iana.map          iana.pdb
 	- del idna.exe          idna.map          idna.pdb
 	- del test.exe          test.map          test.pdb
+	- del ws_tool.exe       ws_tool.map       ws_tool.pdb
 	- del firewall_test.exe firewall_test.map firewall_test.pdb
 	- rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
@@ -384,19 +405,19 @@ wsock_trace_d.def: wsock_trace.def Makefile.VC6
 
 common.h: wsock_defs.h
 
-$(OBJ_DIR)/asn.obj: asn.c common.h in_addr.h common.h \
+$(OBJ_DIR)\asn.obj: asn.c common.h in_addr.h common.h \
                     csv.h smartlist.h inet_util.h     \
                     in_addr.h init.h iana.h asn.h     \
-                    $(LIBLOC_ROOT)/loc/libloc.h       \
-                    $(LIBLOC_ROOT)/loc/compat.h       \
-                    $(LIBLOC_ROOT)/loc/database.h     \
-                    $(LIBLOC_ROOT)/loc/network.h      \
-                    $(LIBLOC_ROOT)/loc/format.h       \
-                    $(LIBLOC_ROOT)/loc/as.h           \
-                    $(LIBLOC_ROOT)/loc/stringpool.h   \
-                    $(LIBLOC_ROOT)/loc/country.h      \
-                    $(LIBLOC_ROOT)/loc/resolv.h       \
-                    $(LIBLOC_ROOT)/loc/windows/syslog.h
+                    $(LIBLOC_ROOT)\loc\libloc.h       \
+                    $(LIBLOC_ROOT)\loc\compat.h       \
+                    $(LIBLOC_ROOT)\loc\database.h     \
+                    $(LIBLOC_ROOT)\loc\network.h      \
+                    $(LIBLOC_ROOT)\loc\format.h       \
+                    $(LIBLOC_ROOT)\loc\as.h           \
+                    $(LIBLOC_ROOT)\loc\stringpool.h   \
+                    $(LIBLOC_ROOT)\loc\country.h      \
+                    $(LIBLOC_ROOT)\loc\resolv.h       \
+                    $(LIBLOC_ROOT)\loc\windows\syslog.h
 
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
 $(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h
@@ -407,7 +428,7 @@ $(OBJ_DIR)\dnsbl.obj:       dnsbl.c dnsbl.h common.h init.h in_addr.h inet_util.
 $(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h in_addr.h hosts.h
 $(OBJ_DIR)\geoip.obj:       geoip.c common.h smartlist.h init.h in_addr.h inet_util.h geoip.h
 
-$(OBJ_DIR)/iana.obj:        iana.c common.h in_addr.h common.h csv.h smartlist.h asn.h \
+$(OBJ_DIR)\iana.obj:        iana.c common.h in_addr.h common.h csv.h smartlist.h asn.h \
                             inet_util.h in_addr.h init.h iana.h
 
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h smartlist.h idna.h
@@ -421,6 +442,7 @@ $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h vm_dump.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h smartlist.h
 $(OBJ_DIR)\test.obj:        test.c getopt.h
 $(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
+$(OBJ_DIR)\ws_tool.obj:     csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h \
                             init.h cpu.h stkwalk.h smartlist.h \
                             overlap.h dump.h wsock_trace_lua.h \
@@ -429,20 +451,20 @@ $(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h in_addr
 
 !if "$(USE_LUA)" == "1"
 wsock_trace_lua.h:             \
-  $(LUAJIT_ROOT)/src/lua.h     \
-  $(LUAJIT_ROOT)/src/luaconf.h \
-  $(LUAJIT_ROOT)/src/lualib.h  \
-  $(LUAJIT_ROOT)/src/lua.h     \
-  $(LUAJIT_ROOT)/src/lauxlib.h
+  $(LUAJIT_ROOT)\src\lua.h     \
+  $(LUAJIT_ROOT)\src\luaconf.h \
+  $(LUAJIT_ROOT)\src\lualib.h  \
+  $(LUAJIT_ROOT)\src\lua.h     \
+  $(LUAJIT_ROOT)\src\lauxlib.h
 
 $(OBJ_DIR)/wsock_trace_lua.obj: \
   wsock_trace_lua.c common.h    \
   init.h wsock_trace_lua.h      \
-  $(LUAJIT_ROOT)/src/lua.h      \
-  $(LUAJIT_ROOT)/src/luaconf.h  \
-  $(LUAJIT_ROOT)/src/lualib.h   \
-  $(LUAJIT_ROOT)/src/lua.h      \
-  $(LUAJIT_ROOT)/src/lauxlib.h  \
-  $(LUAJIT_ROOT)/src/lj_arch.h  \
-  $(LUAJIT_ROOT)/src/lj_debug.h
+  $(LUAJIT_ROOT)\src\lua.h      \
+  $(LUAJIT_ROOT)\src\luaconf.h  \
+  $(LUAJIT_ROOT)\src\lualib.h   \
+  $(LUAJIT_ROOT)\src\lua.h      \
+  $(LUAJIT_ROOT)\src\lauxlib.h  \
+  $(LUAJIT_ROOT)\src\lj_arch.h  \
+  $(LUAJIT_ROOT)\src\lj_debug.h
 !endif

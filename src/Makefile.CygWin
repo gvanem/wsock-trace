@@ -104,6 +104,25 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
               ip2loc.o               \
               smartlist.o)
 
+WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
+                asn.o                  \
+                common.o               \
+                cpu.o                  \
+                dump.o                 \
+                getopt.o               \
+                hosts.o                \
+                in_addr.o              \
+                init.o                 \
+                inet_util.o            \
+                ip2loc.o               \
+                overlap.o              \
+                smartlist.o            \
+                stkwalk.o              \
+                vm_dump.o              \
+                wsock_trace.o          \
+                wsock_trace_lua.o      \
+                ws_tool.o)
+
 #
 # .o-files for '$(LIBLOC_LIB).
 #
@@ -157,10 +176,6 @@ test.exe: $(OBJ_DIR)/test.o $(WSOCK_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
 	@echo
 
-csv.exe: csv.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_CSV $^ > csv.map
-	@echo
-
 iana.exe: asn.c common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c $(LIBLOC_LIB)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -ldnsapi -lole32 -ladvapi32 > iana.map
 	@echo
@@ -175,6 +190,10 @@ firewall_test.exe: asn.c common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c
 
 geoip.exe: $(GEOIP_OBJ) $(LIBLOC_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ -lws2_32 -ldnsapi -lole32 > geoip.map
+	@echo
+
+ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB)
+	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -ladvapi32 -lole32 -lwinmm > ws_tool.map
 	@echo
 
 $(OBJ_DIR)/init_1.o: init.c
@@ -233,7 +252,7 @@ clean: clean_lua
 
 vclean realclean: clean
 	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map   \
-	      csv.exe csv.map iana.exe iana.map idna.exe idna.map           \
+	      iana.exe iana.map idna.exe idna.map           \
 	      geoip.exe geoip.map test.exe test.map cyg-ver.exe cyg-ver.map \
 	      firewall_test.exe firewall_test.map .depend.CygWin $(LIBLOC_LIB)
 	- rmdir $(OBJ_DIR)
@@ -247,6 +266,12 @@ else ifeq ($(CHECK_MACHINE),x86_64-pc-cygwin)
 else
 	$(call yellow_msg, Using an unknown Cygwin.)
 endif
+
+
+#
+# Some fixed dependencies:
+#
+$(OBJ_DIR)/ws_tool.o: csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c
 
 #
 # The following codes used in macro 'colour_msg' uses Cygwin's echo with colour support.

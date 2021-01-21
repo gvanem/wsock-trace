@@ -126,6 +126,25 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
               ip2loc.o               \
               smartlist.o)
 
+WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
+                asn.o                  \
+                common.o               \
+                cpu.o                  \
+                dump.o                 \
+                getopt.o               \
+                hosts.o                \
+                in_addr.o              \
+                init.o                 \
+                inet_util.o            \
+                ip2loc.o               \
+                overlap.o              \
+                smartlist.o            \
+                stkwalk.o              \
+                vm_dump.o              \
+                wsock_trace.o          \
+                wsock_trace_lua.o      \
+                ws_tool.o)
+
 #
 # .c and .o-files for '$(LIBLOC_LIB).
 #
@@ -152,7 +171,7 @@ LIBLOC_CFLAGS = -I.                           \
                 -I$(LIBLOC_ROOT)/loc/windows  \
                 --include $(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
-all: message $(OBJ_DIR) $(WSOCK_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe
+all: message $(OBJ_DIR) $(WSOCK_LIB) geoip.exe test.exe iana.exe idna.exe firewall_test.exe ws_tool.exe
 	$(call green_msg, Welcome to Wsock_trace library and examples.)
 
 message:
@@ -177,10 +196,6 @@ test.exe: $(OBJ_DIR)/test.o $(WSOCK_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ > test.map
 	@echo
 
-csv.exe: csv.c
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_CSV $^ > csv.map
-	@echo
-
 iana.exe: asn.c common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c $(LIBLOC_LIB)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -ldnsapi -lole32 -ladvapi32 > iana.map
 	@echo
@@ -195,6 +210,10 @@ firewall_test.exe: asn.c common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c
 
 geoip.exe: $(GEOIP_OBJ) $(LIBLOC_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -lws2_32 -lole32 > geoip.map
+	@echo
+
+ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB)
+	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -ladvapi32 -lole32 -lwinmm > ws_tool.map
 	@echo
 
 run_test: test.exe
@@ -226,7 +245,7 @@ clean: clean_lua
 
 vclean realclean: clean
 	rm -f $(WSOCK_LIB) $(WSOCK_DLL) $(WSOCK_DLL:.dll=.map) $(LIBLOC_LIB) \
-	      csv.exe csv.map idna.exe idna.map geoip.exe geoip.map test.exe test.map \
+	      idna.exe idna.map geoip.exe geoip.map test.exe test.map \
 	      firewall_test.exe firewall_test.map .depend.MinGW
 	- rmdir $(OBJ_DIR)
 
