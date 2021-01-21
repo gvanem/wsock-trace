@@ -96,7 +96,7 @@ static u_long g_num_asn, g_num_as_names, g_num_compares;
  */
 static smartlist_t *ASN_entries;
 
-static BOOL   ASN_check_and_update (const char *db_file);
+static void   ASN_check_and_update (const char *db_file);
 static size_t ASN_load_bin_file (const char *file);
 static size_t ASN_load_CSV_file (const char *file);
 static int    ASN_CSV_add (struct CSV_context *ctx, const char *value);
@@ -251,141 +251,151 @@ static const char *ASN_get_url (void)
 }
 
 /**
+ * XZ-decompress and copy a file.
+ *
+ * \param[in]  db_xz_temp_file  The XZ-compressed file to decompress.
+ * \param[in]  db_temp_file     The file to decompress to.
+ * \param[in]  db_file          The final file to copy `db_temp_file` to if decompression succeeded.
+ */
+static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_file, const char *db_file)
+{
+  struct stat st;
+  DWORD  compr_size, uncompr_size;
+  char   win_db_file [_MAX_PATH];   /* For Cygwin only */
+  int    rc;
+
+  rc = XZ_decompress (db_xz_temp_file, db_temp_file);
+  TRACE (1, "XZ_decompress(): rc: %d/%s\n", rc, XZ_strerror(rc));
+  if (rc != SZ_OK)
+     return;
+
+  INET_util_touch_file (db_xz_temp_file);
+  INET_util_touch_file (db_temp_file);
+
+  memset (&st, '\0', sizeof(st));
+  stat (db_xz_temp_file, &st);
+  compr_size = st.st_size;
+
+  memset (&st, '\0', sizeof(st));
+  stat (db_temp_file, &st);
+  uncompr_size = st.st_size;
+
+  TRACE (1, "Compressed: %s bytes. Uncompressed %s bytes.\n", dword_str(compr_size), dword_str(uncompr_size));
+
+#ifdef __CYGWIN__
+  /*
+   * Since 'CopyFile()' does not understand a POSIX-path like
+   * "/cygdrive/c/TEMP\\location.db" or "/c/TEMP\\location.db".
+   * Just try to convert to Windows-form.
+   */
+  if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, db_temp_file, win_db_file, sizeof(win_db_file)) == 0)
+  {
+    TRACE (1, "cygwin_conv_path(): %s -> %s.\n", db_temp_file, win_db_file);
+    db_temp_file = win_db_file;
+  }
+#else
+   ARGSUSED (win_db_file);
+#endif
+
+  rc = (BOOL) CopyFile (db_temp_file, db_file, FALSE);
+  TRACE (1, "CopyFile(): rc: %d, %s -> %s\n", rc, db_temp_file, db_file);
+  INET_util_touch_file (db_file);
+}
+
+/**
  * Check if a temporary `%TEMP%/location.db.xz` file exists.
  * Otherwise download and decompress it to `%TEMP%/location.db`.
  *
- * Then compare the file-time of `%TEMP%/location.db` with the final `.db`
- * file specified by caller. If the latter is too old; the time-difference is
- * `>= g_cfg.ASN.max_days`, copy over the temporary .db-file to the `.db`
- * specified  by `db_file`.
+ * Then compare the file-time of `%TEMP%/location.db` with the final `db_file`.
+ * If the latter is too old; the time-difference is `>= g_cfg.ASN.max_days`,
+ * copy `%TEMP%/location.db` to `db_file`.
  */
-static BOOL ASN_check_and_update (const char *db_file)
+static void ASN_check_and_update (const char *db_file)
 {
   struct stat st;
   char   db_xz_temp_file [MAX_PATH];
   char   db_temp_file [MAX_PATH];
-  time_t now, expiry, when;
-  time_t db_time, db_temp_time;
-  DWORD  db_xz_temp_size = 0;
-  BOOL   need_update = FALSE;
-  char  *db_dir = NULL;
+  char  *db_dir;
+  BOOL   db_dir_ok, need_update;
+  DWORD  downloaded;
 
-  if (g_cfg.from_dll_main)
-  {
-    TRACE (1, "Not safe to enter here from 'DllMain()'.\n");
-    return (FALSE);
-  }
+  TRACE (1, "In %s().\n", __FUNCTION__);
 
   if (g_cfg.ASN.xz_decompress <= 0)
   {
     TRACE (1, "Nothing to do for '%s' file with XZ-decompression disabled.\n", db_file);
-    return (FALSE);
+    return;
   }
 
   db_dir = dirname (db_file);
-  if (!db_dir || !file_exists(db_dir))
+  db_dir_ok = (db_dir && file_exists(db_dir));   /* Target .db directory okay? */
+  free (db_dir);
+  if (!db_dir_ok)
   {
     TRACE (1, "Directory '%s' does not exist.\n", db_dir);
-    free (db_dir);
-    return (FALSE);
+    return;
   }
 
-  free (db_dir);
-  snprintf (db_temp_file, sizeof(db_temp_file)-3, "%s\\%s", getenv("TEMP"), "location.db");
-  strcpy (db_xz_temp_file, db_temp_file);
-  strcat (db_xz_temp_file, ".xz");
+  snprintf (db_temp_file, sizeof(db_temp_file)-3, "%s\\location.db", getenv("TEMP"));
+  strcpy (db_xz_temp_file, db_temp_file);  /* == `%TEMP%/location.db` */
+  strcat (db_xz_temp_file, ".xz");         /* == `%TEMP%/location.db.xz` */
 
   memset (&st, '\0', sizeof(st));
   stat (db_temp_file, &st);
+
+  need_update = FALSE;
+
+  /* If `%TEMP%/location.db` does not exist or is 0 bytes, it needs an update.
+   */
   if (st.st_size == 0)
      need_update = TRUE;
-
-  now = time (NULL);
-  expiry = now - g_cfg.ASN.max_days * 24 * 3600;
-  expiry -= 10;   /* Give a 10 sec time slack */
-
-  memset (&st, '\0', sizeof(st));
-  stat (db_file, &st);
-  db_time = st.st_mtime;
-
-  /* 'db_file' exists and is not too old.
-   */
-  if (db_time && db_time > expiry)
+  else
   {
-    when = now + g_cfg.ASN.max_days * 24 * 3600;
-    TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n", db_file, ctime(&when));
-    return (FALSE);
-  }
+    time_t now = time (NULL);
+    time_t expiry = now - g_cfg.ASN.max_days * 24 * 3600;
+    time_t when;
 
-  need_update = TRUE;
+    expiry -= 10;   /* Give a 10 sec time slack */
 
-  memset (&st, '\0', sizeof(st));
-  stat (db_xz_temp_file, &st);
-  db_xz_temp_size = st.st_size;
+    memset (&st, '\0', sizeof(st));
+    stat (db_file, &st);
 
-  /* `%TEMP%/location.db.xz` not found or is 0 bytes.
-   * Force a download.
-   */
-  if (db_xz_temp_size == 0)
-  {
-    db_xz_temp_size = INET_util_download_file (db_xz_temp_file, ASN_get_url());
-    TRACE (1, "Downloaded '%s' -> '%s'. %s\n",
-           ASN_get_url(), db_xz_temp_file, db_xz_temp_size > 0 ? "OK" : "Failed");
-
-    if (db_xz_temp_size == 0)
-       return (FALSE);
-  }
-
-  memset (&st, '\0', sizeof(st));
-  stat (db_temp_file, &st);
-  db_temp_time = st.st_mtime;
-  if (db_temp_time && db_time && db_temp_time == db_time)
-     need_update = FALSE;
-
-  /* `%TEMP%/location.db` not found or is 0 bytes. Or 'db_file' is too old.
-   * Force a XZ-decompress and copy.
-   */
-  if (need_update)
-  {
-    unsigned rc = XZ_decompress (db_xz_temp_file, db_temp_file);
-
-    TRACE (1, "XZ_decompress(): rc: %d/%s\n", rc, XZ_strerror(rc));
-
-    if (rc == SZ_OK)
+    /* 'db_file' exists, is not 0 bytes and is not too old.
+     */
+    if (st.st_size && st.st_mtime > expiry)
     {
-      INET_util_touch_file (db_xz_temp_file);
-      INET_util_touch_file (db_temp_file);
-
-      memset (&st, '\0', sizeof(st));
-      stat (db_temp_file, &st);
-
-      TRACE (1, "Compressed: %s bytes. Uncompressed %s bytes.\n",
-             dword_str(db_xz_temp_size), dword_str(st.st_size));
-
-#ifdef __CYGWIN__
-       /*
-        * Since 'CopyFile()' does not understand a POSIX-path like
-        * "/cygdrive/c/TEMP\\location.db" or "/c/TEMP\\location.db".
-        * Just try to convert to Windows-form.
-        */
-       {
-         char temp_result [_MAX_PATH];
-
-         if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, db_temp_file, temp_result, sizeof(temp_result)) == 0)
-         {
-           TRACE (1, "cygwin_conv_path(): %s -> %s.\n", db_temp_file, temp_result);
-           _strlcpy (db_temp_file, temp_result, sizeof(db_temp_file));
-         }
-       }
-#endif
-
-      rc = (BOOL) CopyFile (db_temp_file, db_file, FALSE);
-      TRACE (1, "CopyFile(): rc: %d, %s -> %s\n", rc, db_temp_file, db_file);
-      INET_util_touch_file (db_file);
+      when = now + g_cfg.ASN.max_days * 24 * 3600;
+      TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n", db_file, ctime(&when));
+      return;
     }
-    return (TRUE);
+
+    memset (&st, '\0', sizeof(st));
+    stat (db_xz_temp_file, &st);
+
+    /* 'db_xz_temp_file' exists, is not 0 bytes and is not too old.
+     */
+    if (st.st_size && st.st_mtime > expiry)
+    {
+      when = now + g_cfg.ASN.max_days * 24 * 3600;
+      TRACE (2, "Download of \"%s\" not needed until \"%.24s\"\n", db_xz_temp_file, ctime(&when));
+      ASN_xz_decompress (db_xz_temp_file, db_temp_file, db_file);
+      return;
+    }
+    need_update = TRUE;
   }
-  return (FALSE);
+
+  if (!need_update)
+     return;
+
+  /* `%TEMP%/location.db.xz` need to be updated.
+   * Force a download, XZ-decompress and copy to the final `db_file`.
+   */
+  downloaded = INET_util_download_file (db_xz_temp_file, ASN_get_url());
+  TRACE (1, "Downloaded '%s' -> '%s'. %s\n",
+         ASN_get_url(), db_xz_temp_file, downloaded > 0 ? "OK" : "Failed");
+
+  if (downloaded > 0)  /* If download succeeded */
+     ASN_xz_decompress (db_xz_temp_file, db_temp_file, db_file);
 }
 
 /**
@@ -398,7 +408,7 @@ static int ASN_check_database (const char *local_db)
   time_t time_local_db = 0;
   time_t time_remote_db = 0;
   BOOL   older = FALSE;
-  char   hours_behind [50] = "";
+  char   days_behind [50] = "";
 
   if (loc_discover_latest_version(libloc.ctx, LOC_DATABASE_VERSION_LATEST, &time_remote_db) != 0)
   {
@@ -411,14 +421,18 @@ static int ASN_check_database (const char *local_db)
     time_local_db = st.st_mtime - _timezone;
     older = (time_local_db < time_remote_db);
     if (older)
-       snprintf (hours_behind, sizeof(hours_behind), " (%ld hours behind) ",
-                 (long)((time_remote_db - time_local_db) / 3600));
+    {
+      double day_diff = (double) (time_remote_db - time_local_db);
+
+      day_diff /= 24.0 * 3600;
+      snprintf (days_behind, sizeof(days_behind), " (%.1f days behind) ", day_diff);
+    }
   }
 
   TRACE (1, "IPFire's latest database time-stamp: %.24s (UTC)\n"
             "            It should be at: %s\n"
             "            Your local database is %sup-to-date.%s\n",
-            ctime(&time_remote_db), ASN_get_url(), older ? "not " : "", hours_behind);
+            ctime(&time_remote_db), ASN_get_url(), older ? "not " : "", days_behind);
 
   time_local_db += _timezone;
   TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), _tzname[0]);
@@ -633,7 +647,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
 {
   struct loc_network *net = NULL;
   struct in6_addr     addr;
-  char                addr_str [MAX_IP6_SZ+1];
+  char                addr_str [MAX_IP6_SZ+1] = "?";
   int                 rc, save;
 
   if (!libloc.db)
@@ -657,12 +671,14 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   {
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
     *(u_long*) &addr.s6_words[6] = ip4->s_addr;
-    _wsock_trace_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
+    if (g_cfg.trace_level >= 2)
+       _wsock_trace_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
   }
   else if (ip6)
   {
     memcpy (&addr, ip6, sizeof(addr));
-    _wsock_trace_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
+    if (g_cfg.trace_level >= 2)
+       _wsock_trace_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
   }
   else
     return (0);
