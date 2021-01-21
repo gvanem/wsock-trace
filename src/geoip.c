@@ -2024,16 +2024,16 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
 static int show_help (int err_code)
 {
   printf ("Usage: %s [-cDfinruh] <-4|-6> address(es)\n"
-          "       -c:      dump addresses on CIDR form.\n"
-          "       -D:      dump address entries for countries and count of blocks.\n"
-          "       -f:      force an update with the '-u' option.\n"
-          "       -i:      do no use the IP2Location database.\n"
-          "       -n #:    number of loops for random test.\n"
-          "       -r:      random test for '-n' rounds (default 10).\n"
-          "       -u:      test updating of geoip files.\n"
-          "       -4:      test IPv4 address(es).\n"
-          "       -6:      test IPv6 address(es).\n"
-          "       -h:      this help.\n",
+          "       -c:     dump addresses on CIDR form.\n"
+          "       -D:     dump address entries for countries and count of blocks.\n"
+          "       -f:     force an update with the '-u' option.\n"
+          "       -i:     do no use the IP2Location database.\n"
+          "       -n #:   number of loops for random test.\n"
+          "       -r:     random test for '-n' rounds (default 10).\n"
+          "       -u:     test updating of geoip files.\n"
+          "       -4:     test IPv4 address(es).\n"
+          "       -6:     test IPv6 address(es).\n"
+          "       -h:     this help.\n",
           program_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
           "   Or from 'stdin': \"geoip.exe -4 < file-with-addr\".\n"
