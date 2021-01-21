@@ -1505,7 +1505,9 @@ EXPORT int WINAPI closesocket (SOCKET s)
   WSTRACE ("closesocket (%s) --> %s", socket_number(s), get_error(rc, 0));
 
   overlap_remove (s);
-  dump_tcp_info (&info, rc2);
+
+  if (g_cfg.dump_tcpinfo)
+     dump_tcp_info (&info, rc2);
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -3255,7 +3257,7 @@ static void get_tcp_info (SOCKET s, TCP_INFO_v0 *info, int *err)
   rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, sizeof(*info), &size_ret, NULL, NULL);
   if (rc == SOCKET_ERROR)
        *err = (*g_WSAGetLastError)();
-  else *err = 0;
+  else *err = NO_ERROR;
   LEAVE_CRIT (0);
 }
 

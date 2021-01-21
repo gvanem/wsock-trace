@@ -1607,7 +1607,7 @@ void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
 {
   trace_printf ("%*s~4TCP_INFO:", g_cfg.trace_indent+2, "");
 
-  if (err_code)
+  if (err_code != NO_ERROR)
   {
     char buf[150];
 
