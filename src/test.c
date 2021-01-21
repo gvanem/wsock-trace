@@ -96,7 +96,7 @@ struct test_struct {
        test_func2   func;
      };
 
-static int chatty = 0;
+static int verbose = 0;
 static int last_result = 0;
 
 static CONSOLE_SCREEN_BUFFER_INFO c_info;
@@ -238,12 +238,12 @@ static int run_test (const char *wildcard)
 
     if (name_match(wildcard, t_name) != NAME_MATCH)
     {
-      if (chatty >= 2)
+      if (verbose >= 2)
          printf ("Skipping %s().\n", t->name);
       continue;
     }
     rc++;
-    if (chatty >= 1)
+    if (verbose >= 1)
     {
       printf ("\nTesting ");
       set_colour (COLOUR_YELLOW);
@@ -591,7 +591,7 @@ static void test_WSAPoll (void)
 
   TEST_CONDITION (== 1, WSAPoll ((WSAPOLLFD*)&poll, 2, 100));
 #else
-  if (chatty >= 1)
+  if (verbose >= 1)
      puts ("  disabled.");
 #endif
 }
@@ -630,7 +630,7 @@ static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
 
   WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, (wchar_t*)&data, &size);
 
-  if (chatty >= 1)
+  if (verbose >= 1)
      printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
 
   TEST_CONDITION (== 0, wcscmp(data, L"127.0.0.1"));
@@ -745,7 +745,7 @@ static void test_WSAIoctl_1 (void)
                                    &if_info, sizeof(if_info), &size_ret, NULL, NULL));
   num = size_ret / sizeof(if_info[0]);
 
-  for (i = 0; last_result == 0 && chatty >= 1 && i < num; i++)
+  for (i = 0; last_result == 0 && verbose >= 1 && i < num; i++)
   {
     printf ("  %d: flags: 0x%04lX, fam: %d, addr: %-16s",
             i, DWORD_CAST(if_info[i].iiFlags), if_info[i].iiAddress.Address.sa_family,
@@ -767,7 +767,7 @@ static void test_WSAIoctl_2 (void)
   TEST_CONDITION ( == 0, WSAIoctl (s1, SIO_TCP_INFO, &ver, sizeof(ver),
                                    &info, sizeof(info), &size_ret, NULL, NULL));
 
-  if (last_result == 0 && chatty >= 1)
+  if (last_result == 0 && verbose >= 1)
      printf ("  TCP_INFO_v0: State: %d.\n", info.State);
 }
 
@@ -992,7 +992,7 @@ int MS_CDECL main (int argc, char **argv)
            exit (thread_test(num));
            break;
       case 'v':
-           chatty++;
+           verbose++;
            break;
     }
 
@@ -1106,7 +1106,7 @@ static void test_ptr_or_error64 (void)
  */
 static void test_condition (int okay, const char *function)
 {
-  if (chatty >= 1)
+  if (verbose >= 1)
   {
     if (okay)
          test_okay ("%s\n", function);
@@ -1116,7 +1116,7 @@ static void test_condition (int okay, const char *function)
 
 static void test_string (const char *expect, const char *result, const char *function)
 {
-  if (chatty >= 1)
+  if (verbose >= 1)
   {
     if (!strcmp(expect,result))
          test_okay ("%s\n", function);
@@ -1126,7 +1126,7 @@ static void test_string (const char *expect, const char *result, const char *fun
 
 static void test_wstring (const wchar_t *expect, const wchar_t *result, const char *function)
 {
-  if (chatty >= 1)
+  if (verbose >= 1)
   {
     if (!wcscmp(expect, result))
          test_okay ("%s\n", function);
