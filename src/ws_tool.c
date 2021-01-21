@@ -94,6 +94,14 @@
 #define TEST_IDNA
 #include "idna.c"
 
+#undef  program_name
+#undef  show_help
+#undef  main
+#define program_name test_program_name
+#define show_help    test_show_help
+#define main         test_main
+#include "test.c"
+
 #undef main
 #undef program_name
 #undef show_help
@@ -107,11 +115,14 @@ static int show_help (const char *extra)
   printf ("Wsock-trace test tool.\n"
           "Usage: %s [-d] <command> [<args>]\n"
           "  Available commands:\n"
-          "    geoip        - Run a test command for 'geoip'\n"
-          "    csv          - Run a test command for 'csv'\n"
           "    backtrace    - Run a test command for 'backtrace'\n"
+          "    csv          - Run a test command for 'csv'\n"
+          "    dnsbl        - Run a test command for 'dnsbl'\n"
+          "    firewall     - Run a test command for 'firewall'\n"
+          "    geoip        - Run a test command for 'geoip'\n"
           "    iana         - Run a test command for 'iana'\n"
-          "    firewall\n", program_name);
+          "    idna         - Run a test command for 'idna'\n"
+          "    test         - Run a test command for 'test'\n", program_name);
   return (1);
 }
 
@@ -125,26 +136,29 @@ int run_mains (int argc, char **argv)
   wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
 #endif
 
-  if (!stricmp(*argv, "geoip"))
+  if (!stricmp(*argv, "backtrace"))
+     rc = backtrace_main (argc, argv);
+
+  else if (!stricmp(*argv, "csv"))
+     rc = csv_main (argc, argv);
+
+  else if (!stricmp(*argv, "dnsbl"))
+     rc = dnsbl_main (argc, argv);
+
+  else if (!stricmp(*argv, "firewall"))
+     rc = firewall_main (argc, argv);
+
+  else if (!stricmp(*argv, "geoip"))
      rc = geoip_main (argc, argv);
 
   else if (!stricmp(*argv, "iana"))
      rc = iana_main (argc, argv);
 
-  else if (!stricmp(*argv, "csv"))
-     rc = csv_main (argc, argv);
-
-  else if (!stricmp(*argv, "firewall"))
-     rc = firewall_main (argc, argv);
-
-  else if (!stricmp(*argv, "backtrace"))
-     rc = backtrace_main (argc, argv);
-
-  else if (!stricmp(*argv, "dnsbl"))
-     rc = dnsbl_main (argc, argv);
-
   else if (!stricmp(*argv, "idna"))
      rc = idna_main (argc, argv);
+
+  else if (!stricmp(*argv, "test"))
+     rc = test_main (argc, argv);
 
   else
   {

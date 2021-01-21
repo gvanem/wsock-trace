@@ -89,11 +89,11 @@ int _CRT_glob = 0;
   #define IN6ADDR_LOOPBACK_INIT   { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }
 #endif
 
-typedef void (*test_func) (void);
+typedef void (*test_func2) (void);
 
 struct test_struct {
        const char *name;
-       test_func   func;
+       test_func2   func;
      };
 
 static int chatty = 0;
@@ -117,9 +117,9 @@ static int use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWi
 static void set_colour (int col);
 
 /**
- * Set the prigram-name for getopt.c.
+ * Set the program-name for getopt.c.
  */
-const char *program_name = "test.exe";
+char *program_name;
 
 #define TEST_STRING(expect, func)                  test_string (expect, func, #func)
 #define TEST_WSTRING(expect, func_res, func_name)  test_wstring (expect, func_res, func_name)
@@ -558,6 +558,8 @@ int test_select_3 (void)
   s = socket (AF_INET, SOCK_STREAM, 0);
   FD_SET (s, &fd);
 
+  puts ("  Waiting 100 sec for 'select()' to return and show the trace.");
+
   TEST_CONDITION (== 0, select (0, &fd, &fd, NULL, &tv));
   TEST_CONDITION (== 0, WSACleanup());
   return (0);
@@ -886,16 +888,16 @@ DWORD WINAPI thread_worker (void *arg)
  */
 static int thread_test (int num_threads)
 {
-  CRITICAL_SECTION crit_sect;
+  CRITICAL_SECTION _crit_sect;
   struct thr_data *td = calloc (1, num_threads * sizeof(*td));
   int    i;
 
-  InitializeCriticalSection (&crit_sect);
+  InitializeCriticalSection (&_crit_sect);
 
   strcpy (td[0].t_name, "main");
   td[0].t_id  = GetCurrentThreadId();
   td[0].t_err = 0;
-  td[0].t_crit = &crit_sect;
+  td[0].t_crit = &_crit_sect;
   TEST_CONDITION (!= 0, td[0].t_id);
 
   for (i = 1; i < num_threads; i++)
@@ -905,7 +907,7 @@ static int thread_test (int num_threads)
     /* Start at 'WSABASEERR + 40' which is a range with no holes.
      */
     td[i].t_err  = WSABASEERR + 39 + i;
-    td[i].t_crit = &crit_sect;
+    td[i].t_crit = &_crit_sect;
     td[i].t_hnd  = CreateThread (NULL, 0, thread_worker, td+i, 0, &td[i].t_id);
     TEST_CONDITION (!= 0, td[i].t_id);
   }
@@ -919,20 +921,19 @@ static int thread_test (int num_threads)
     CloseHandle (td[i].t_hnd);
   }
 
-  DeleteCriticalSection (&crit_sect);
+  DeleteCriticalSection (&_crit_sect);
   free (td);
   return (0);
 }
 
 static int show_help (void)
 {
-  puts ("Usage: test [-h] [-d] [-f] [-l] [-t] [test-wildcard]  (default = '*')");
-  puts ("       -h:     this help.");
-  puts ("       -d:     increase verbosity.");
-  puts ("       -f:     Firewall event monitoring calling 'test_select_3()' for 100 sec.\n"
-        "               Similar to 'firewall_test.exe' but monitors events together with 'wsock_trace.dll'.");
-  puts ("       -l:     list tests and exit.");
-  puts ("       -t [N]: only do a thread test with <N> running threads.");
+  printf ("Usage: %s [-h] [-v] [-f] [-l] [-t] [test-wildcard]  (default = '*')\n"
+          "       -h:     this help.\n"
+          "       -v:     increase verbosity.\n"
+          "       -f:     calls 'test_select_3()' for 100 sec (handy for Firewall event monitoring).\n"
+          "       -l:     list tests and exit.\n"
+          "       -t [N]: only do a thread test with <N> running threads.\n", program_name);
   return (0);
 }
 
@@ -951,7 +952,7 @@ static int list_tests (void)
   return (0);
 }
 
-static void MS_CDECL quit (int sig)
+static void MS_CDECL exit_test (int sig)
 {
   fputs ("Got ^C.\n", stderr);
   fflush (stderr);
@@ -963,9 +964,11 @@ int MS_CDECL main (int argc, char **argv)
 {
   int i, c, num = 0;
 
-  signal (SIGINT, quit);
+  program_name = argv[0];
 
-  while ((c = getopt (argc, argv, "h?fdlt::")) != EOF)
+  signal (SIGINT, exit_test);
+
+  while ((c = getopt (argc, argv, "h?fvlt::")) != EOF)
     switch (c)
     {
       case '?':
@@ -988,7 +991,7 @@ int MS_CDECL main (int argc, char **argv)
            else num = 1;
            exit (thread_test(num));
            break;
-      case 'd':
+      case 'v':
            chatty++;
            break;
     }
