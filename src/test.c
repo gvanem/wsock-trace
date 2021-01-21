@@ -31,7 +31,7 @@
 
 #include "common.h"
 #include "getopt.h"
-#endif
+#endif   /* IN_WS_TOOL_C */
 
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
@@ -75,10 +75,12 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
   extern wchar_t *gai_strerrorW (int err);
 #endif
 
-/**
- * Prevent MinGW globbing the cmd-line if we do `test *`.
- */
-int _CRT_glob = 0;
+#if !defined(IN_WS_TOOL_C)
+  /**
+   * Prevent MinGW globbing the cmd-line if we do `test *`.
+   */
+  int _dowildcard = -1;
+#endif
 
 #if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__WATCOMC__)
   int WSAAPI inet_pton (int Family, PCSTR pszAddrString, void *pAddrBuf);
