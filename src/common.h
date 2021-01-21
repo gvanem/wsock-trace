@@ -296,4 +296,8 @@ extern const char *get_builder (BOOL show_dbg_rel);
   extern int   _getch (void);
 #endif
 
+#ifndef AF_UNIX
+#define AF_UNIX 1
+#endif
+
 #endif  /* _COMMON_H */

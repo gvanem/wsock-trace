@@ -10,6 +10,8 @@
   #define _UNICODE
 #endif
 
+#if !defined(IN_WS_TOOL_C)
+
 #undef  _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
@@ -27,8 +29,9 @@
 #include <signal.h>
 #include <tchar.h>
 
-#include "wsock_defs.h"
+#include "common.h"
 #include "getopt.h"
+#endif
 
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
@@ -42,10 +45,6 @@
   #define USE_WSAPoll 1
 #else
   #define USE_WSAPoll 0
-#endif
-
-#ifndef AF_UNIX
-#define AF_UNIX 1
 #endif
 
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
@@ -613,7 +612,7 @@ static void test_WSAAddressToStringA (void)
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   WSAAddressToStringA ((SOCKADDR*)&sa4, sizeof(sa4), NULL, (LPTSTR)&data, &size);
 
-  TEST_CONDITION (== 0, strcmp(data,"127.0.0.1"));
+  TEST_CONDITION (== 0, strcmp(data, "127.0.0.1"));
   TEST_CONDITION (== 1, (size == sizeof("127.0.0.1")));
 }
 
@@ -1118,7 +1117,7 @@ static void test_string (const char *expect, const char *result, const char *fun
 {
   if (verbose >= 1)
   {
-    if (!strcmp(expect,result))
+    if (!strcmp(expect, result))
          test_okay ("%s\n", function);
     else test_failed ("%s: expected: '%s', got: '%s'\n", function, expect, result);
   }

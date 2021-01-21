@@ -676,10 +676,6 @@ struct fake_sockaddr_un {
      };
 #define sockaddr_un fake_sockaddr_un
 
-#ifndef AF_UNIX
-#define AF_UNIX 1
-#endif
-
 /**
  * This returns the address *and* the port in the `buf`. <br>
  * Like:
