@@ -26,43 +26,33 @@
 #include "geoip.h"
 #include "getopt.h"
 
-#define program_name csv_program_name
-#define show_help    csv_show_help
-#define main         csv_main
-#define TEST_CSV
-#include "csv.c"
-
-#undef  TEST_CSV
-#undef  program_name
-#undef  show_help
-#undef  main
 #define program_name backtrace_program_name
 #define show_help    backtrace_show_help
 #define main         backtrace_main
 #define TEST_BACKTRACE
 #include "backtrace.c"
-
 #undef  TEST_BACKTRACE
+
 #undef  program_name
 #undef  show_help
 #undef  main
-#define program_name geoip_program_name
-#define show_help    geoip_show_help
-#define main         geoip_main
-#define TEST_GEOIP
-#include "geoip.c"
+#define program_name csv_program_name
+#define show_help    csv_show_help
+#define main         csv_main
+#define TEST_CSV
+#include "csv.c"
+#undef  TEST_CSV
 
-#undef  TEST_GEOIP
 #undef  program_name
 #undef  show_help
 #undef  main
-#define program_name iana_program_name
-#define show_help    iana_show_help
-#define main iana_main
-#define TEST_IANA
-#include "iana.c"
+#define program_name dnsbl_program_name
+#define show_help    dnsbl_show_help
+#define main         dnsbl_main
+#define TEST_DNSBL
+#include "dnsbl.c"
+#undef  TEST_DNSBL
 
-#undef  TEST_IANA
 #undef  program_name
 #undef  show_help
 #undef  main
@@ -71,21 +61,29 @@
 #define main         firewall_main
 #define TEST_FIREWALL
 #include "firewall.c"
-
 #undef  TEST_FIREWALL
+
 #undef  program_name
 #undef  show_help
 #undef  main
-#define update_file  dnsbl_update_file
-#define program_name dnsbl_program_name
-#define show_help    dnsbl_show_help
-#define main         dnsbl_main
-#define TEST_DNSBL
-#include "dnsbl.c"
+#define update_file  geoip_local_update_file
+#define program_name geoip_program_name
+#define show_help    geoip_show_help
+#define main         geoip_main
+#define TEST_GEOIP
+#include "geoip.c"
+#undef  TEST_GEOIP
 
-#undef  TEST_DNSBL
-#undef  ADD_VALUE
-#undef  DEF_FUNC
+#undef  program_name
+#undef  show_help
+#undef  main
+#define program_name iana_program_name
+#define show_help    iana_show_help
+#define main iana_main
+#define TEST_IANA
+#include "iana.c"
+#undef  TEST_IANA
+
 #undef  program_name
 #undef  show_help
 #undef  main
