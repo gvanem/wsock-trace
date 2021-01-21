@@ -2090,7 +2090,7 @@ static void __cdecl invalid_parameter_handler (const wchar_t *expression,
 }
 #endif
 
-static int inv_handler_set = 0;
+int inv_handler_set = 0;
 
 static void set_invalid_handler (void)
 {

@@ -2011,7 +2011,7 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   int i;
 
   if (addr4)
-     addr4->s_addr = rand_range (1, ULONG_MAX);
+     addr4->s_addr = rand_range (1, 0xFFFFFFFF);
 
   if (addr6)
   {

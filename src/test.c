@@ -748,7 +748,7 @@ static void test_WSAIoctl_1 (void)
   for (i = 0; last_result == 0 && chatty >= 1 && i < num; i++)
   {
     printf ("  %d: flags: 0x%04lX, fam: %d, addr: %-16s",
-            i, if_info[i].iiFlags, if_info[i].iiAddress.Address.sa_family,
+            i, DWORD_CAST(if_info[i].iiFlags), if_info[i].iiAddress.Address.sa_family,
             get_addr_str(&if_info[i].iiAddress));
 
     printf ("BCast: %-16s", get_addr_str(&if_info[i].iiBroadcastAddress));
