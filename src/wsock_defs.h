@@ -93,7 +93,7 @@
 #define QWORD_MAX  U64_SUFFIX (0xFFFFFFFFFFFFFFFF)
 #endif
 
-#if defined(__GNUC__) && defined(__MINGW32__)
+#if defined(__GNUC__) && !defined(__CYGWIN__) /* Implies MinGW */
   #define WCHAR_FMT      "S"
   #define S64_FMT        "I64d"
   #define U64_FMT        "I64u"
