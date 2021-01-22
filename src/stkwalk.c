@@ -55,6 +55,7 @@
 
 #include <time.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "common.h"
 #include "init.h"
