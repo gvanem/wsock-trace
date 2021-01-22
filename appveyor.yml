@@ -100,7 +100,7 @@ build_script:
 
 test_script:
   - cmd: set POSIXLY_CORRECT=1
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & test.exe -d & set USE_LUA=0
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & test.exe -v & set USE_LUA=0
 
   #
   # Delete '..\IPFire-database.db' to force a download and decompression.
