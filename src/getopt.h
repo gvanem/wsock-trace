@@ -76,4 +76,7 @@ extern int   opterr;  /**< if caller set this to zero, an error-message will nev
 extern int   optopt;  /**< on errors, an unrecognised option character is stored in `optopt`. */
 
 #endif  /* __CYGWIN__ || __MINGW32__ */
+
+extern char *program_name;
+
 #endif  /* !_GETOPT_H_ */

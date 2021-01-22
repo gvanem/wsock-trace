@@ -170,7 +170,6 @@ static void permute_args (int panonopt_start, int panonopt_end,
  */
 static void warnx (const char *fmt, ...)
 {
-  extern char *program_name;
   va_list ap;
 
   va_start (ap, fmt);
