@@ -203,7 +203,7 @@ int run_mains (int argc, char **argv)
 
 int main (int argc, char **argv)
 {
-  int i, c, rc;
+  int c, rc;
 
   program_name = argv[0];
 

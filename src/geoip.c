@@ -2178,7 +2178,7 @@ int main (int argc, char **argv)
   int     c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
   int     do_update = 0, do_dump = 0, do_rand = 0;
   int     use_ip2loc = 1;
-  int     i, loops = 10;
+  int     loops = 10;
   WSADATA wsa;
 
   program_name = argv[0];
