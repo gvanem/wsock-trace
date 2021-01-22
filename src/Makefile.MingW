@@ -67,16 +67,8 @@ else
 endif
 
 ifeq ($(USE_BFD),1)
-  CFLAGS += -DUSE_BFD
+  CFLAGS += -DUSE_BFD -DBFD_ARCH_SIZE=$(BITS)
   EX_LIBS = -lbfd -liberty -lintl -lz
-
-  ifeq ($(CPU),x86)
-    CFLAGS += -DBFD_ARCH_SIZE=32
-  else ifeq ($(CPU),x64)
-    CFLAGS += -DBFD_ARCH_SIZE=64
-  else
-    $(error "Unknown CPU")
-  endif
 endif
 
 LIBLOC_ROOT = ./Geo-IP/IPFire/src
@@ -128,6 +120,7 @@ GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
 
 WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 asn.o                  \
+                bfd_gcc.o              \
                 common.o               \
                 cpu.o                  \
                 dump.o                 \
@@ -141,7 +134,6 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 smartlist.o            \
                 stkwalk.o              \
                 vm_dump.o              \
-                wsock_trace.o          \
                 wsock_trace_lua.o      \
                 ws_tool.o)
 
@@ -213,8 +205,10 @@ geoip.exe: $(GEOIP_OBJ) $(LIBLOC_LIB)
 	@echo
 
 ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -ladvapi32 -lole32 -lwinmm > ws_tool.map
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lwinmm -lws2_32 > ws_tool.map
 	@echo
+
+$(OBJ_DIR)/ws_tool.o: csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c test.c
 
 run_test: test.exe
 	test.exe -dd

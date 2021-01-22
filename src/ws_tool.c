@@ -238,3 +238,32 @@ int main (int argc, char **argv)
   crtdbg_exit();
   return (rc);
 }
+
+#if defined(__MINGW32__)
+
+int volatile cleaned_up = 0;
+int volatile startup_count = 0;
+
+int WSAError_save_restore (int pop)
+{
+  ARGSUSED (pop);
+  return (0);
+}
+
+void load_ws2_funcs (void)
+{
+}
+
+const struct LoadTable *find_ws2_func_by_name (const char *func)
+{
+  ARGSUSED (func);
+  return (NULL);
+}
+
+const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
+{
+  ARGSUSED (sa);
+  ARGSUSED (sa_len);
+  return (NULL);
+}
+#endif
