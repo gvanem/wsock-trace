@@ -159,7 +159,7 @@ int BFD_load_debug_symbols (const char *fname, bfd_vma base_addr, DWORD mod_size
   {
     struct _symbol_info ret;
 
-    if (sym->flags == BSF_LOCAL || !strncmp(".weak",sym->name,5))
+    if (sym->flags == BSF_LOCAL || !strncmp(".weak", sym->name, 5))
        continue;
 
     memset (&ret, '\0', sizeof(ret));
@@ -278,7 +278,7 @@ static void sort_symbol_table (struct BFD_table *BFD)
     char *name = g_cfg.cpp_demangle ? bfd_demangle (BFD->BFD, sym->name, -1) : NULL;
 
     TRACE (4, "%3u: value: " VMA_X_FMT ", stype: %c, name: %s\n",
-           i, sym->value, sym->stype, name ? name :sym->name);
+           i, sym->value, sym->stype, name ? name : sym->name);
     if (name)
        free (name);
   }
