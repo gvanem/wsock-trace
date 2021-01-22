@@ -404,6 +404,21 @@ static void test_getaddrinfo (void)
 
   TEST_CONDITION (== 0, getaddrinfo ("www.ssllabs.com", "443", &hints, &res));
   TEST_CONDITION (== 0, getaddrinfo ("localhost", NULL, &hints, &res));
+
+  if (res)
+     freeaddrinfo (res);
+
+#if 0
+  memset (&hints, 0, sizeof(hints));
+  hints.ai_family   = AF_INET;
+  hints.ai_flags    = AI_PASSIVE | AI_NUMERICHOST;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol = IPPROTO_UDP;
+  res = NULL;
+  TEST_CONDITION (== 0, getaddrinfo (NULL, "1", &hints, &res));
+  if (res)
+     freeaddrinfo (res);
+#endif
 }
 
 static void test_gai_strerror (void)
@@ -716,6 +731,8 @@ static const char *get_addr_str (const sockaddr_gen *sa)
   DWORD asize = sizeof(abuf);
   const SOCKADDR_IN *sa4 = (const SOCKADDR_IN*) sa;
 
+  strcpy (abuf, "??");
+
   if (sa4->sin_family == AF_INET)
   {
     const IN_ADDR *in = &sa4->sin_addr;
@@ -723,12 +740,10 @@ static const char *get_addr_str (const sockaddr_gen *sa)
     snprintf (abuf, sizeof(abuf), "%d.%d.%d.%d",
               in->S_un.S_un_b.s_b1, in->S_un.S_un_b.s_b2,
               in->S_un.S_un_b.s_b3, in->S_un.S_un_b.s_b4);
+    return (abuf);
   }
-  else
-  {
-    strcpy (abuf, "??");
-    WSAAddressToStringA ((SOCKADDR*)sa, sizeof(*sa), NULL, (LPTSTR)&abuf, &asize);
-  }
+  if (sa4->sin_family == AF_INET6)
+     WSAAddressToStringA ((SOCKADDR*)sa, sizeof(*sa), NULL, (LPTSTR)&abuf, &asize);
   return (abuf);
 }
 
