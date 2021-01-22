@@ -37,7 +37,7 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   DWORD     access = 0;
   uint64_t  pstart, psize, poffset;
 
-  (void) address;  // unused
+  (void) address;  /* unused arg */
 
   if (si.dwAllocationGranularity == 0)
      GetSystemInfo (&si);
@@ -101,7 +101,7 @@ static void *mmap_remember (void *map, uint64_t offset, HANDLE handle)
 {
   size_t i;
 
-  if (map == MAP_FAILED)  /* never rememember this */
+  if (map == MAP_FAILED)  /* never remember this */
   {
     errno = EFAULT;
     return (MAP_FAILED);
@@ -137,6 +137,7 @@ static int mmap_forget (void *map, struct mmap_info *info)
 
       if (hnd && hnd != INVALID_HANDLE_VALUE)
          CloseHandle (hnd);
+      SetLastError (0);
       return (0);
     }
   }
