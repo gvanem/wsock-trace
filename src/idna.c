@@ -1023,11 +1023,8 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
 #include "getopt.h"
 
-/* For getopt.c.
- */
-char *program_name;
-
 #if !defined(IN_WS_TOOL_C)
+  char  *program_name;
   struct config_table g_cfg;
 
   void set_color (const WORD *col)
@@ -1061,8 +1058,6 @@ void show_help (void)
           "%s"
           "   -c select codepage (active is CP%d)\n",
           program_name, W_OPT, W_HELP, IDNA_GetCodePage());
-  common_exit();
-  exit (0);
 }
 
 void print_last_error (void)
@@ -1153,7 +1148,7 @@ static int do_test (WORD cp, const char *host)
 int main (int argc, char **argv)
 {
   WORD cp = 0;
-  int  ch, rc;
+  int  ch, rc = 0;
 
   program_name = argv[0];
   sock_init();
@@ -1189,15 +1184,16 @@ int main (int argc, char **argv)
        case 'h':
        default:
             show_help();
-            break;
+            goto quit;
   }
 
   argc -= optind;
   argv += optind;
-  if (!*argv)
-     show_help();
+  if (*argv)
+       rc = do_test (cp, argv[0]);
+  else show_help();
 
-  rc = do_test (cp, argv[0]);
+quit:
   common_exit();
   return (rc);
 }
