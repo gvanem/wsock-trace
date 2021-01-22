@@ -369,15 +369,12 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
 /*
  * A simple test program for the above CVS-parser.
  */
-#ifdef TEST_CSV
+#if defined(TEST_CSV)
 
 #include "getopt.h"
 
-/* For getopt.c.
- */
-char *program_name;
-
 #if !defined(IN_WS_TOOL_C)
+  char *program_name;
 
   struct config_table g_cfg;
 
@@ -419,14 +416,14 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
   return (1);
 }
 
-static void show_help (void)
+static int show_help (void)
 {
   printf ("Usage: %s [-d] [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
           "       -d: increase trace-level            (optional).\n"
           "       -f: set field delimiter             (optional, default is ',').\n"
           "       -m: max number of records to handle (optional).\n"
           "       -n: number of fields in CSV-records (mandatory).\n", program_name);
-  exit (0);
+  return (0);
 }
 
 int main (int argc, char **argv)
@@ -455,12 +452,11 @@ int main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            show_help();
-            break;
+            return show_help();
   }
   argv += optind;
   if (!*argv)
-     show_help();
+     return show_help();
 
   ctx.file_name = argv[0];
   ctx.callback  = csv_callback;

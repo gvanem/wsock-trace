@@ -627,11 +627,9 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
 
 #include "getopt.h"
 
-/* For getopt.c.
- */
-char *program_name;
-
 #if !defined(IN_WS_TOOL_C)
+  char *program_name;
+
   #define DO_NOTHING(f)  void f(void) {}
 
   DO_NOTHING (ip2loc_init)
@@ -659,7 +657,6 @@ static void show_help (void)
           "    ASN: 037/8, RIPE NCC, 2010-11, whois.ripe.net, https://rdap.db.ripe.net/, ALLOCATED\n"
           "    ASN: 12849, 21450 (status: ALLOCATED)\n"
           "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)\n", program_name, program_name);
-  exit (0);
 }
 
 typedef struct TEST_ADDR {
@@ -704,7 +701,10 @@ int main (int argc, char **argv)
   program_name = argv[0];
 
   if (argc < 2)
-     show_help();
+  {
+    show_help();
+    return (0);
+  }
 
   while ((ch = getopt(argc, argv, "6a:b:dm:h?")) != EOF)
      switch (ch)
@@ -728,11 +728,14 @@ int main (int argc, char **argv)
        case 'h':
        default:
             show_help();
-            break;
+            return (0);
   }
   argv += optind;
   if (!*argv)
-     show_help();
+  {
+    show_help();
+    return (0);
+  }
 
   g_cfg.trace_stream = stdout;
   g_cfg.show_caller  = 1;

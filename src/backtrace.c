@@ -296,10 +296,6 @@ static char *search_symbols_list (ULONG_PTR addr)
 
 #if defined(TEST_BACKTRACE)
 
-/* For getopt.c.
- */
-char *program_name;
-
 static int threaded        = 0;
 static int test_vm_bug     = 0;
 static int test_vm_abort   = 0;
@@ -528,6 +524,8 @@ int main (int argc, char **argv)
 }
 
 #if !defined(IN_WS_TOOL_C)
+  char *program_name;
+
   int volatile cleaned_up = 0;
 
   #define DO_NOTHING(f)  void f(void) {}

@@ -646,7 +646,14 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 
 #include "getopt.h"
 
+#if !defined(IN_WS_TOOL_C)
 char *program_name;
+#endif
+
+void show_help (void)
+{
+  printf ("No help in %s yet.\n", program_name);
+}
 
 int main (int argc, char **argv)
 {
