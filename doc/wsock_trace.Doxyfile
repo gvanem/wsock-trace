@@ -760,6 +760,8 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT = main_page.dox            \
+       ../src/asn.c              \
+       ../src/asn.h              \
        ../src/bfd.h              \
        ../src/bfd_gcc.h          \
        ../src/bfd_gcc.c          \
@@ -769,9 +771,6 @@ INPUT = main_page.dox            \
        ../src/dump.c             \
        ../src/firewall.c         \
        ../src/geoip.c            \
-       ../src/geoip-gen4.c       \
-       ../src/geoip-gen6.c       \
-       ../src/geoip-null.c       \
        ../src/getopt.c           \
        ../src/hosts.c            \
        ../src/iana.c             \
@@ -785,7 +784,6 @@ INPUT = main_page.dox            \
        ../src/overlap.c          \
        ../src/smartlist.c        \
        ../src/stkwalk.c          \
-       ../src/test.c             \
        ../src/vm_dump.c          \
        ../src/wsock_trace.c      \
        ../src/wsock_trace_lua.c  \
