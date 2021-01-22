@@ -16,6 +16,12 @@
   #define EXPORT  __declspec(dllexport)
 #endif
 
+#ifdef _MSC_VER
+  #define NO_INLINE  __declspec(noinline)
+#else
+  #define NO_INLINE
+#endif
+
 #if defined(IN_WSOCK_TRACE_C) && (defined(UNICODE) || defined(_UNICODE))
   #error "Compiling this as UNICODE breaks in countless ways."
 #endif
