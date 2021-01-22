@@ -99,7 +99,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
        get_color (NULL, &g_cfg.LUA.color_body);
 
     loaded = basename (full_name);
-    ws_tool_import = !stricmp (loaded, "ws_tool.exe");
+    ws_tool_import = (stricmp (loaded, "ws_tool.exe") == 0);
     if (stricmp(loaded, dll) && !ws_tool_import)
     {
       LUA_WARNING ("Expected %s, but loaded DLL was '%s:\n", dll, loaded);
@@ -107,8 +107,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     }
     else
     {
-      if (ws_tool_import)
-         LUA_TRACE (1, "Importing from 'ws_tool.exe'\n");
+      LUA_TRACE (1, "Importing from '%s'\n", full_name);
       wslua_set_path (full_name);
       wslua_init (g_cfg.LUA.init_script);
     }
