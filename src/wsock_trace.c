@@ -3030,12 +3030,16 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
   rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("getaddrinfo", EXCL_FUNCTION));
+  if (!host_name || !(g_cfg.IDNA.enable && g_cfg.IDNA.fix_getaddrinfo))
+     exclude_this = TRUE;
+
   /**
-   * If no address was found for the `host_name`, then convert it to ACE-form and call
+   * If no address was found for the non-NULL `host_name`, then convert it to ACE-form and call
    * `*p_getaddrinfo()` again with the converted host-name from `IDNA_convert_to_ACE()`.
    */
 #if 1
-  if (rc != 0 && g_cfg.IDNA.enable && g_cfg.IDNA.fix_getaddrinfo && !IDNA_is_ASCII(host_name))
+  if (rc != NO_ERROR && !exclude_this && !IDNA_is_ASCII(host_name))
   {
     char   buf [MAX_HOST_LEN] = "?";
     size_t size;
@@ -3050,13 +3054,15 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
   }
 #endif
 
+  /* 'exclude_this' set once more inside the 'WSTRACE()' macro.
+   */
   WSTRACE ("getaddrinfo (\"%s\", %s, <hints>, ...) --> %s\n"
            "%*shints: %s",
            host_name, serv_name, get_error(rc, 0),
            g_cfg.trace_indent+4, "",
            hints ? get_addrinfo_hint(hints,g_cfg.trace_indent+3+sizeof("hints: ")) : "<none>");
 
-  if (rc == 0 && *res && !exclude_this)
+  if (rc == NO_ERROR && *res && !exclude_this)
   {
     if (g_cfg.dump_data)
        dump_addrinfo (host_name, *res);
