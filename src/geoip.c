@@ -55,6 +55,10 @@
  *       https://git.ipfire.org/pub/git/location/libloc.git
  */
 
+#if defined(TEST_GEOIP) && !defined(IN_WS_TOOL_C)
+#error "'geoip.c' must be tested inside 'ws_tool.c' only."
+#endif
+
 #include <assert.h>
 #include <limits.h>
 #include <errno.h>
@@ -1462,25 +1466,10 @@ void geoip_update_file (int family, BOOL force_update)
     TRACE (0, "Unknown address-family %d\n", family);
 }
 
-#if defined(TEST_GEOIP) && !defined(TEST_FIREWALL)   /* If not used with firewall_test.exe */
+#if defined(TEST_GEOIP)
 
 #include "getopt.h"
 #include "dnsbl.h"
-
-#if !defined(IN_WS_TOOL_C)
-  /*
-   * Prevent MinGW + Cygwin from globbing the cmd-line.
-   */
-  #ifdef __CYGWIN__
-    int _CRT_glob = 0;
-  #else
-    int _dowildcard = -1;
-  #endif
-#endif
-
-/* For getopt.c.
- */
-char *program_name;
 
 /**
  * Simplified version of the `get_error()` function in `wsock_trace.c`.
@@ -2024,7 +2013,7 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   }
 }
 
-static int show_help (int err_code)
+static void show_help (void)
 {
   printf ("Usage: %s [-cDfinruh] <-4|-6> address(es)\n"
           "       -c:     dump addresses on CIDR form.\n"
@@ -2039,10 +2028,8 @@ static int show_help (int err_code)
           "       -h:     this help.\n",
           program_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
-          "   Or from 'stdin': \"geoip.exe -4 < file-with-addr\".\n"
-          "   Built by %s\n", get_builder(FALSE));
-  wsock_trace_exit();
-  return (err_code);
+          "   Or from 'stdin': \"%s -4 < file-with-addr\".\n"
+          "   Built by %s\n", program_name, get_builder(FALSE));
 }
 
 typedef void (*test_func) (const char *addr, BOOL use_ip2loc);
@@ -2191,30 +2178,18 @@ int main (int argc, char **argv)
   int     c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
   int     do_update = 0, do_dump = 0, do_rand = 0;
   int     use_ip2loc = 1;
-  int     loops = 10;
+  int     i, loops = 10;
   WSADATA wsa;
 
   program_name = argv[0];
-
-#if !defined(IN_WS_TOOL_C)
-  crtdbg_init();
-  wsock_trace_init();
-
-  /* Since these are inside a 'if !defined(TEST_GEOIP)' block in init.c
-   */
-  iana_init();
-  ASN_init();
-
-  g_cfg.trace_use_ods = g_cfg.DNSBL.test = FALSE;
-  g_cfg.trace_time_format = TS_RELATIVE;
-#endif
 
   while ((c = getopt (argc, argv, "h?cDfin:ru46")) != EOF)
     switch (c)
     {
       case '?':
       case 'h':
-           return show_help (0);
+           show_help();
+           goto quit;
       case 'c':
            do_cidr = 1;
            break;
@@ -2243,11 +2218,15 @@ int main (int argc, char **argv)
            do_6 = 1;
            break;
       default:
-           return show_help (1);
+           show_help();
+           goto quit;
     }
 
   if (!do_4 && !do_6)
-     return show_help (1);
+  {
+    show_help();
+    goto quit;
+  }
 
   /** Possibly call `ip2loc_init()` again.
    */
@@ -2302,15 +2281,7 @@ int main (int argc, char **argv)
      smartlist_wipe (list, free);
   }
 
-#if !defined(IN_WS_TOOL_C)
-  wsock_trace_exit();
-
-  /* Since this is inside a 'if !defined(TEST_GEOIP)' block in init.c
-   */
-  exclude_list_free();
-  crtdbg_exit();
-#endif
-
+quit:
   return (0);
 }
 #endif  /* TEST_GEOIP */

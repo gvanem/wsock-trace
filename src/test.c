@@ -11,27 +11,8 @@
 #endif
 
 #if !defined(IN_WS_TOOL_C)
-
-#undef  _WINSOCK_DEPRECATED_NO_WARNINGS
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-
-#if defined(__WATCOMC__)
-  /*
-   * Required to pull in `inet_ntop()` in `<ws2tcpip.h>`.
-   */
-  #undef  NTDDI_VERSION
-  #define NTDDI_VERSION 0x06000000
+#error "'test.c' must be included inside 'ws_tool.c' only."
 #endif
-
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <signal.h>
-#include <tchar.h>
-
-#include "common.h"
-#include "getopt.h"
-#endif   /* IN_WS_TOOL_C */
 
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
@@ -73,13 +54,6 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
    */
   extern char    *gai_strerrorA (int err);
   extern wchar_t *gai_strerrorW (int err);
-#endif
-
-#if !defined(IN_WS_TOOL_C)
-  /**
-   * Prevent MinGW globbing the cmd-line if we do `test *`.
-   */
-  int _dowildcard = -1;
 #endif
 
 #if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__WATCOMC__)

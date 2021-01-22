@@ -53,6 +53,10 @@
   #define _WIN32_WINNT MIN_WINNT_VALUE
 #endif
 
+#if defined(TEST_FIREWALL) && !defined(IN_WS_TOOL_C)
+#error "'firewall.c' must be tested inside 'ws_tool.c' only."
+#endif
+
 #include "common.h"
 #include "smartlist.h"
 #include "init.h"
@@ -179,7 +183,7 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
   #define EVENT_STRING_FMT  " ~4%s~0"
   #define INDENT_SZ         2
 
-  #if !defined(IN_WS_TOOL_C)
+  #if 0
     /*
      * Used for the reference-timestamp value in `get_time_string (NULL)`.
      */
@@ -2861,22 +2865,6 @@ static int fw_enumerate_rules (void)
      TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
   return (num);
 }
-
-#if !defined(IN_WS_TOOL_C)
-  const struct LoadTable *find_ws2_func_by_name (const char *func)
-  {
-    ARGSUSED (func);
-    return (NULL);
-  }
-
-  void hosts_file_exit (void)
-  {
-  }
-
-  void check_all_search_lists (void)
-  {
-  }
-  #endif
 #endif  /* TEST_FIREWALL */
 
 /**
@@ -3937,8 +3925,8 @@ static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
   return (fe);
 }
 
-static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
-                               const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
+NO_INLINE static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
+                                         const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
   FWPM_LAYER0 *layer_item = NULL;
   UINT16       id = 0;
@@ -3956,8 +3944,8 @@ static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event
   return (id != 0);
 }
 
-static BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
-                               const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
+NO_INLINE static BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+                                         const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
   const char *capability_id_str   = "?";
   char        is_loopback_str[10] = "?";
@@ -4719,16 +4707,7 @@ const char *fw_strerror (DWORD err)
 #include <signal.h>
 #include "getopt.h"
 
-/**
- * For getopt.c.
- */
-char *program_name;
-static int  quit;
-
-#if !defined(IN_WS_TOOL_C)
-  int volatile cleaned_up = 0;
-  int volatile startup_count = 0;
-#endif
+static int quit;
 
 /**
  * Return a `malloc()`ed string of the program (with arguments) to pass to `_popen()`.
@@ -4883,16 +4862,6 @@ int main (int argc, char **argv)
 
   program_name = argv[0];
 
-#if !defined(IN_WS_TOOL_C)
-  wsock_trace_init();
-
-//g_cfg.trace_use_ods = FALSE;
-  g_cfg.DNSBL.test = FALSE;
-  g_cfg.trace_indent  = 0;
-  g_cfg.trace_report  = 1;
-  g_cfg.FIREWALL.show_all = 0;
-#endif
-
   while ((ch = getopt(argc, argv, "a:fh?cel:prRtv")) != EOF)
     switch (ch)
     {
@@ -5009,8 +4978,6 @@ quit:
 
   free (program);
   free (log_file);
-  wsock_trace_exit();
-
   if (log_f)
      fclose (log_f);
 

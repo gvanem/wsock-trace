@@ -42,116 +42,120 @@
 #include "getopt.h"
 #include "wsock_trace_lua.h"
 
-#define program_name backtrace_program_name
-#define show_help    backtrace_show_help
-#define main         backtrace_main
+#define show_help   backtrace_show_help
+#define main        backtrace_main
 #define TEST_BACKTRACE
 #include "backtrace.c"
 #undef  TEST_BACKTRACE
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define program_name csv_program_name
-#define show_help    csv_show_help
-#define main         csv_main
+#define show_help   csv_show_help
+#define main        csv_main
 #define TEST_CSV
 #include "csv.c"
 #undef  TEST_CSV
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define program_name dnsbl_program_name
-#define show_help    dnsbl_show_help
-#define main         dnsbl_main
+#define show_help   dnsbl_show_help
+#define main        dnsbl_main
 #define TEST_DNSBL
 #include "dnsbl.c"
 #undef  TEST_DNSBL
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define program_name firewall_program_name
-#define show_help    firewall_show_help
-#define main         firewall_main
+#define show_help   firewall_show_help
+#define main        firewall_main
 #define TEST_FIREWALL
 #include "firewall.c"
 #undef  TEST_FIREWALL
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define update_file  geoip_local_update_file
-#define program_name geoip_program_name
-#define show_help    geoip_show_help
-#define main         geoip_main
+#define update_file geoip_local_update_file
+#define show_help   geoip_show_help
+#define main        geoip_main
 #define TEST_GEOIP
 #include "geoip.c"
 #undef  TEST_GEOIP
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define program_name iana_program_name
-#define show_help    iana_show_help
-#define main iana_main
+#define show_help   iana_show_help
+#define main        iana_main
 #define TEST_IANA
 #include "iana.c"
 #undef  TEST_IANA
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define program_name idna_program_name
-#define show_help    idna_show_help
-#define main         idna_main
+#define show_help   idna_show_help
+#define main        idna_main
 #define TEST_IDNA
 #include "idna.c"
 
-#undef  program_name
 #undef  show_help
 #undef  main
-#define program_name test_program_name
-#define show_help    test_show_help
-#define main         test_main
+#define show_help   test_show_help
+#define main        test_main
 #include "test.c"
 
 #undef main
-#undef program_name
 #undef show_help
 
 char *program_name;  /* For getopt.c */
 
 /* Prevent MinGW + Cygwin from globbing the cmd-line.
  */
-#ifdef __CYGWIN__
-  int _CRT_glob = 0;
-#else
-  int _dowildcard = -1;
-#endif
+int _dowildcard = 0;
 
 static int show_help (const char *extra)
 {
   if (extra)
      puts (extra);
   printf ("Wsock-trace test tool.\n"
-          "Usage: %s [-d] <command> [<args>]\n"
+          "Usage: %s [-dhH] <command> [<args>]\n"
           "  Available commands:\n"
-          "    backtrace    - Run a test command for 'backtrace'\n"
-          "    csv          - Run a test command for 'csv'\n"
-          "    dnsbl        - Run a test command for 'dnsbl'\n"
-          "    firewall     - Run a test command for 'firewall'\n"
-          "    geoip        - Run a test command for 'geoip'\n"
-          "    iana         - Run a test command for 'iana'\n"
-          "    idna         - Run a test command for 'idna'\n"
-          "    test         - Run a test command for 'test'\n", program_name);
+          "    backtrace   - Run a command in 'backtrace'\n"
+          "    csv         - Run a command in 'csv'\n"
+          "    dnsbl       - Run a command in 'dnsbl'\n"
+          "    firewall    - Run a command in 'firewall'\n"
+          "    geoip       - Run a command in 'geoip'\n"
+          "    iana        - Run a command in 'iana'\n"
+          "    idna        - Run a command in 'idna'\n"
+          "    test        - Run a command in 'test'\n", program_name);
+  return (1);
+}
+
+#define _STR2(x) #x
+#define _STR(x)  _STR2(x)
+
+#define SHOW_SUB_HELP(prog) do {          \
+        puts ("\nHelp for '" #prog "':"); \
+        program_name = _STR(prog);        \
+        prog ##_show_help();              \
+      } while (0)
+
+static int show_help_all (void)
+{
+  show_help (NULL);
+  SHOW_SUB_HELP (backtrace);
+  SHOW_SUB_HELP (csv);
+  SHOW_SUB_HELP (dnsbl);
+  SHOW_SUB_HELP (firewall);
+  SHOW_SUB_HELP (geoip);
+  SHOW_SUB_HELP (iana);
+  SHOW_SUB_HELP (idna);
+  SHOW_SUB_HELP (test);
   return (1);
 }
 
 int run_mains (int argc, char **argv)
 {
-  int rc;
+  char buf[100];
+  int  rc;
 
   set_dll_full_name (GetModuleHandle(NULL));
 
@@ -185,7 +189,8 @@ int run_mains (int argc, char **argv)
 
   else
   {
-    show_help ("Unknown command.");
+    snprintf (buf, sizeof(buf), "Unknown command '%s'", *argv);
+    show_help (buf);
     rc = 1;
   }
 
@@ -210,12 +215,14 @@ int main (int argc, char **argv)
   g_cfg.DNSBL.test    = FALSE;
   g_cfg.trace_time_format = TS_RELATIVE;
 
-  while ((c = getopt (argc, argv, "+dh?")) != EOF)
+  while ((c = getopt (argc, argv, "+dHh?")) != EOF)
     switch (c)
     {
       case 'd':
            g_cfg.trace_level++;
            break;
+      case 'H':
+           return show_help_all();
       case '?':
       case 'h':
            return show_help (NULL);
@@ -225,10 +232,13 @@ int main (int argc, char **argv)
 
   argc -= optind;
   argv += optind;
-  optind = 0;     /* restart 'getopt()' */
 
-  for (i = 0; i < argc; i++)
-     TRACE (2, "argv[%d]: '%s'\n", i, argv[i]);
+  /* Restart 'getopt()'
+   */
+  optind = 1;
+#if defined(__CYGWIN__)
+  optreset = 1;
+#endif
 
   if (!*argv)
        rc = show_help ("Please give a command");
@@ -239,8 +249,7 @@ int main (int argc, char **argv)
   return (rc);
 }
 
-#if defined(__MINGW32__)
-
+#if defined(__GNUC__)
 int volatile cleaned_up = 0;
 int volatile startup_count = 0;
 

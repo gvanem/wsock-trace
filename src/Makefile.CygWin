@@ -2,7 +2,7 @@
 # Wsock-trace makefile for CygWin32 / CygWin64.
 # This requires GNU make v4 or later.
 #
-# G. Vanem <gvanem@yahoo.no> 2011 - 2020.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2021.
 #
 USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
@@ -90,26 +90,12 @@ SOURCES = asn.c         \
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
-GEOIP_OBJ = $(addprefix $(OBJ_DIR)/, \
-              geoip_1.o              \
-              asn.o                  \
-              common.o               \
-              csv.o                  \
-              dnsbl.o                \
-              iana.o                 \
-              idna.o                 \
-              inet_util.o            \
-              init_1.o               \
-              in_addr.o              \
-              ip2loc.o               \
-              smartlist.o)
-
 WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 asn.o                  \
+                bfd_gcc.o              \
                 common.o               \
                 cpu.o                  \
                 dump.o                 \
-                getopt.o               \
                 hosts.o                \
                 in_addr.o              \
                 init.o                 \
@@ -119,7 +105,6 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 smartlist.o            \
                 stkwalk.o              \
                 vm_dump.o              \
-                wsock_trace.o          \
                 wsock_trace_lua.o      \
                 ws_tool.o)
 
@@ -148,7 +133,7 @@ LIBLOC_CFLAGS = -I.                           \
                 -I$(LIBLOC_ROOT)/loc/windows  \
                 --include $(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
-all: message $(OBJ_DIR) $(WSOCK_LIB) geoip.exe test.exe idna.exe firewall_test.exe
+all: message $(OBJ_DIR) $(WSOCK_LIB) idna.exe ws_tool.exe
 	$(call green_msg, Welcome to Wsock_trace library and example.)
 
 comma := ,
@@ -172,10 +157,6 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 	cp --update $(WSOCK_LIB)  $(LIB_TARGET)
 	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
-test.exe: $(OBJ_DIR)/test.o $(WSOCK_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > test.map
-	@echo
-
 iana.exe: asn.c common.c csv.c dnsbl.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c smartlist.c $(LIBLOC_LIB)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IANA $^ -lws2_32 -ldnsapi -lole32 -ladvapi32 > iana.map
 	@echo
@@ -184,24 +165,8 @@ idna.exe: idna.c common.c smartlist.c $(WSOCK_LIB)
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_IDNA $^ -lole32 > idna.map
 	@echo
 
-firewall_test.exe: asn.c common.c csv.c dnsbl.c firewall.c geoip.c iana.c idna.c in_addr.c inet_util.c init.c ip2loc.c smartlist.c $(LIBLOC_LIB)
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -DTEST_FIREWALL -DTEST_GEOIP $^ -lws2_32 -ldnsapi -lole32 -ladvapi32 -lwinmm > firewall_test.map
-	@echo
-
-geoip.exe: $(GEOIP_OBJ) $(LIBLOC_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ -lws2_32 -ldnsapi -lole32 > geoip.map
-	@echo
-
 ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ -ldnsapi -ladvapi32 -lole32 -lwinmm > ws_tool.map
-	@echo
-
-$(OBJ_DIR)/init_1.o: init.c
-	$(CC) -c $(CFLAGS) -o $@ -DTEST_GEOIP $<
-	@echo
-
-$(OBJ_DIR)/geoip_1.o: geoip.c
-	$(CC) -c $(CFLAGS) -o $@ -DTEST_GEOIP $<
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lws2_32 -lole32 -lwinmm > ws_tool.map
 	@echo
 
 $(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c
@@ -212,8 +177,8 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 	@echo
 
-run_test: test.exe
-	test.exe
+run_test: ws_tool.exe
+	ws_tool.exe -dd test
 
 #
 # Just a simple Cygwin version test program.
@@ -251,10 +216,9 @@ clean: clean_lua
 	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
 
 vclean realclean: clean
-	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map   \
-	      iana.exe iana.map idna.exe idna.map           \
-	      geoip.exe geoip.map test.exe test.map cyg-ver.exe cyg-ver.map \
-	      firewall_test.exe firewall_test.map .depend.CygWin $(LIBLOC_LIB)
+	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map \
+	      iana.exe iana.map idna.exe idna.map geoip.exe geoip.map \
+	      cyg-ver.exe cyg-ver.map .depend.CygWin $(LIBLOC_LIB)
 	- rmdir $(OBJ_DIR)
 
 machine_test:

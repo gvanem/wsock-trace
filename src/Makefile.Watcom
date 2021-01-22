@@ -43,23 +43,6 @@ WSOCK_TRACE_OBJS = $(OBJ_DIR)\wsock_trace.obj     &
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
 #
-# .obj-files for 'geoip.exe'.
-#
-GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj    &
-            $(OBJ_DIR)\asn.obj        &
-            $(OBJ_DIR)\common.obj     &
-            $(OBJ_DIR)\csv.obj        &
-            $(OBJ_DIR)\dnsbl.obj      &
-            $(OBJ_DIR)\iana.obj       &
-            $(OBJ_DIR)\idna.obj       &
-            $(OBJ_DIR)\in_addr.obj    &
-            $(OBJ_DIR)\init_1.obj     &
-            $(OBJ_DIR)\inet_util.obj  &
-            $(OBJ_DIR)\ip2loc.obj     &
-            $(OBJ_DIR)\getopt.obj     &
-            $(OBJ_DIR)\smartlist.obj
-
-#
 # .obj-files for 'ws_tool.exe'.
 #
 WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             &
@@ -90,7 +73,7 @@ WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             &
 WSOCK_LIB = wsock_trace_ow.lib
 WSOCK_DLL = wsock_trace_ow.dll
 
-TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) test.exe geoip.exe idna.exe # ws_tool.exe
+TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) idna.exe # ws_tool.exe
 
 all: $(OBJ_DIR) $(TARGETS) .SYMBOLIC
 	@echo Welcome to Wsock-trace library and example.
@@ -102,18 +85,8 @@ clean: .SYMBOLIC
 	- rm -f $(OBJ_DIR)/*.*
 
 vclean realclean: clean .SYMBOLIC
-	- rm -f $(TARGETS) wsock_trace_ow.map test.map geoip.map idna.map ws_tool.map
+	- rm -f $(TARGETS) wsock_trace_ow.map idna.map ws_tool.map
 	- rmdir $(OBJ_DIR)
-
-.ERASE
-$(OBJ_DIR)/init_1.obj: init.c
-	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$@ $[@
-	@echo.
-
-.ERASE
-$(OBJ_DIR)/geoip_1.obj: geoip.c
-	*$(CC) $(CFLAGS) -DTEST_GEOIP -fo=$@ $[@
-	@echo.
 
 .ERASE
 .c{$(OBJ_DIR)}.obj:
@@ -137,14 +110,6 @@ uninstall: .SYMBOLIC
 	- rm $(LIB_TARGET)/$(WSOCK_LIB)
 	- rm $(BIN_TARGET)/$(WSOCK_DLL)
 
-test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj
-	wlink $(LDFLAGS) name $@ file $(OBJ_DIR)\test.obj, $(OBJ_DIR)\getopt.obj library $(WSOCK_LIB)
-	@echo.
-
-geoip.exe: $(GEOIP_OBJ)
-	wlink $(LDFLAGS) name $@ file { $(GEOIP_OBJ) } library { clib3$(STACK_OR_REG).lib ws2_32.lib }
-	@echo.
-
 idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
 	*$(CC) $(CFLAGS) -DTEST_IDNA -fo=$(OBJ_DIR)\idna.obj idna.c
 	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\idna.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj } &
@@ -159,9 +124,6 @@ idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlis
 ws_tool.exe: $(WS_TOOL_OBJ)
 	wlink $(LDFLAGS) name $@ file { $(WS_TOOL_OBJ) } library { clib3$(STACK_OR_REG).lib dnsapi.lib advapi32.lib ole32.lib winmm.lib }
 	@echo.
-
-run_test: test.exe .SYMBOLIC
-	test.exe
 
 $(LINK_ARG): $(__MAKEFILES__)
 	%create $^@
@@ -192,7 +154,6 @@ $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
 $(OBJ_DIR)\overlap.obj:     overlap.c common.h init.h smartlist.h overlap.h
 $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h vm_dump.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h smartlist.h
-$(OBJ_DIR)\test.obj:        test.c getopt.h wsock_defs.h
 $(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h &
                             init.h cpu.h stkwalk.h smartlist.h &

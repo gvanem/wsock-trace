@@ -1121,7 +1121,7 @@ static int parse_config_file (FILE *file)
   return (lines);
 }
 
-#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 static void trace_report (void)
 {
   const struct exclude *ex;
@@ -1232,7 +1232,7 @@ static void trace_report (void)
   if (g_cfg.FIREWALL.enable)
      fw_report();
 }
-#endif /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif /* !TEST_CSV && !TEST_IANA && !TEST_BACKTRACE && !TEST_NLM */
 
 /*
  * Called from DllMain(): dwReason == DLL_PROCESS_DETACH
@@ -1246,7 +1246,7 @@ void wsock_trace_exit (void)
   if (fatal_error)
      g_cfg.trace_report = FALSE;
 
-#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 #if 0
   if (!cleaned_up || startup_count > 0)
@@ -1277,7 +1277,7 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
-#endif  /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif  /* !TEST_CSV && !TEST_IANA && !TEST_BACKTRACE && !TEST_NLM */
 
   common_exit();
 
@@ -1577,7 +1577,7 @@ void wsock_trace_init (void)
 
   geoip_init (NULL, NULL);
 
-#if defined(TEST_IANA) || defined(TEST_GEOIP) || defined(TEST_NLM)
+#if defined(TEST_IANA) || defined(TEST_NLM)
   DNSBL_init (TRUE);
 
 #else
@@ -1586,7 +1586,7 @@ void wsock_trace_init (void)
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
 
-#if !defined(TEST_BACKTRACE) && !defined(TEST_CSV) && !defined(TEST_FIREWALL)
+#if !defined(TEST_BACKTRACE) && !defined(TEST_CSV)
   load_ws2_funcs();
   hosts_file_init();
 #endif
@@ -1606,10 +1606,10 @@ void wsock_trace_init (void)
 
   if (g_cfg.DNSBL.test)
      DNSBL_test();
-#endif  /* TEST_IANA || TEST_GEOIP || TEST_NLM */
+#endif  /* TEST_IANA || TEST_NLM */
 }
 
-#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_CSV) && !defined(TEST_IANA) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
 
 /**
  * Check if a Winsock function pointer was set.
@@ -1642,7 +1642,7 @@ void check_ptr (const void **ptr, const char *ptr_name)
   if (cleaned_up && strcmp(func_name, "WSAGetLastError"))
      TRACE (1, "Function '%s()' called after 'WSACleanup()' was done.\n", func_name);
 }
-#endif  /* !TEST_CSV && !TEST_IANA && !TEST_GEOIP && !TEST_BACKTRACE && !TEST_NLM */
+#endif  /* !TEST_CSV && !TEST_IANA && !TEST_BACKTRACE && !TEST_NLM */
 
 static const struct search_list colors[] = {
                               { 0, "black"   },
@@ -1970,7 +1970,7 @@ static void _gettimeofday (struct pcap_timeval *tv)
   FILETIME ft;
   uint64   tim;
 
-#if !defined(TEST_IANA) && !defined(TEST_GEOIP) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
+#if !defined(TEST_IANA) && !defined(TEST_BACKTRACE) && !defined(TEST_NLM)
   if (p_GetSystemTimePreciseAsFileTime)
     (*p_GetSystemTimePreciseAsFileTime) (&ft);
   else

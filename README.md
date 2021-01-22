@@ -177,7 +177,7 @@ it's best to define a `%HOME%` to point to the excact place for such config-file
 
 ### Running samples
 
-Example output from `src/test.exe` (built with MSVC):
+Example output from `src/ws_tool.exe test` (built with MSVC):
  ```c
    * ws_trace/test.c(45) (main+50):              WSAStartup (2.2) --> No error.
    * ws_trace/test.c(24) (do_wsock_tests+125):   gethostbyaddr (127.0.0.1, 4, AF_INET) --> 0x003C8780.
@@ -306,7 +306,7 @@ A **[Larger](http://www.watt-32.net/misc/screenshot-openvpn.png)** version.
 
 ### Firewall Monitor
 
-The `firewall_test.exe` program show a screen like:
+The `ws_tool.exe firewall` program show a screen like:
 [![screenshot](screenshot_firewall_test_DNSBL.png?raw=true)](screenshot_firewall_test_DNSBL.png?raw=true)
 
 Together with `[DNSBL], enable = 1` it shows remote addresses in **[SpamHaus](https://www.spamhaus.org/sbl/)** DROP-lists.
@@ -314,7 +314,7 @@ In this case the **[address](https://blackhat.directory/ip/176.119.4.53)** `176.
 in *Ukraine / Donetsk* is *very* active giving a Firewall event approximately every 5 minutes.
 
 A good test of the `firewall.c` features is to open up your router (create a DMZ) and start a remote
-**[port-scan](http://www.whatsmyip.org/port-scanner/server/)** while `firewall_test.exe`
+**[port-scan](http://www.whatsmyip.org/port-scanner/server/)** while `ws_tool.exe firewall`
 is running. You'll see a lot of **DROP**-events like:
 ```
 6.700 sec: FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP

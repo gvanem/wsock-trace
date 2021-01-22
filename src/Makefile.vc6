@@ -139,46 +139,12 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
 #
-# These .obj-files are for 'firewall_test.exe', 'idna.exe'.
+# These .obj-files are for 'idna.exe':
 #
-FIREWALL_TEST_OBJ = $(OBJ_DIR)\common.obj     \
-                    $(OBJ_DIR)\csv.obj        \
-                    $(OBJ_DIR)\dnsbl.obj      \
-                    $(OBJ_DIR)\firewall_1.obj \
-                    $(OBJ_DIR)\geoip.obj      \
-                    $(OBJ_DIR)\getopt.obj     \
-                    $(OBJ_DIR)\asn.obj        \
-                    $(OBJ_DIR)\iana.obj       \
-                    $(OBJ_DIR)\idna.obj       \
-                    $(OBJ_DIR)\in_addr.obj    \
-                    $(OBJ_DIR)\inet_util.obj  \
-                    $(OBJ_DIR)\init_2.obj     \
-                    $(OBJ_DIR)\ip2loc.obj     \
-                    $(OBJ_DIR)\overlap.obj    \
-                    $(OBJ_DIR)\smartlist.obj  \
-                    $(OBJ_DIR)\stkwalk.obj
-
 IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
            $(OBJ_DIR)\getopt.obj \
            $(OBJ_DIR)\common.obj \
            $(OBJ_DIR)\smartlist.obj
-
-#
-# .obj-files for 'geoip.exe'.
-#
-GEOIP_OBJ = $(OBJ_DIR)\geoip_1.obj   \
-            $(OBJ_DIR)\common.obj    \
-            $(OBJ_DIR)\csv.obj       \
-            $(OBJ_DIR)\dnsbl.obj     \
-            $(OBJ_DIR)\asn.obj       \
-            $(OBJ_DIR)\iana.obj      \
-            $(OBJ_DIR)\idna.obj      \
-            $(OBJ_DIR)\inet_util.obj \
-            $(OBJ_DIR)\init_1.obj    \
-            $(OBJ_DIR)\in_addr.obj   \
-            $(OBJ_DIR)\ip2loc.obj    \
-            $(OBJ_DIR)\getopt.obj    \
-            $(OBJ_DIR)\smartlist.obj
 
 #
 # .obj-files for 'iana.exe'.
@@ -235,7 +201,7 @@ LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
              $(OBJ_DIR)\win_mmap.obj
 
 all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) \
-     geoip.exe test.exe iana.exe idna.exe firewall_test.exe ws_tool.exe
+     iana.exe idna.exe ws_tool.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and test-programs.
 
 $(OBJ_DIR):
@@ -256,11 +222,6 @@ uninstall:
 	- del "$(BIN_TARGET)\$(WSOCK_TRACE_DLL)"
 	- del "$(BIN_TARGET)\wsock_trace$(X_SUFFIX).pdb"
 
-test.exe: $(OBJ_DIR)\test.obj $(OBJ_DIR)\getopt.obj $(WSOCK_TRACE_LIB)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** > link.tmp
-	@type link.tmp >> test.map
-	@echo
-
 ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_DEP)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
 	@type link.tmp >> ws_tool.map
@@ -272,24 +233,15 @@ idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
 	@echo
 
 #
-# These does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
+# This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
 #
-firewall_test.exe: $(FIREWALL_TEST_OBJ)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** $(EX_LIBS) advapi32.lib ws2_32.lib winmm.lib > link.tmp
-	@type link.tmp >> firewall_test.map
-	@echo
-
-geoip.exe: $(GEOIP_OBJ)
-	link.exe $(LDFLAGS) -out:$@  $** ws2_32.lib $(EX_LIBS)
-	@echo
-
 iana.exe: $(IANA_OBJ)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib $(EX_LIBS) > link.tmp
 	@type link.tmp >> iana.map
 	@echo
 
-run_test: test.exe
-	test.exe -dd
+run_test: ws_tool.exe
+	ws_tool.exe -dd test
 
 compile_luajit_ compile_luajit_0:
 	@echo
@@ -305,7 +257,7 @@ libloc$(X_SUFFIX)$(_D).lib: $(LIBLOC_OBJ)
 	@echo
 
 clean:
-	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res test.lib
+	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\wsock_trace.res
 	- del libloc*.lib
 
 vclean realclean: clean
@@ -313,12 +265,9 @@ vclean realclean: clean
 	      wsock_trace$(X_SUFFIX)$(_D).dll \
 	      wsock_trace$(X_SUFFIX)$(_D).map \
 	      wsock_trace$(X_SUFFIX)$(_D).pdb
-	- del geoip.exe         geoip.map         geoip.pdb
-	- del iana.exe          iana.map          iana.pdb
-	- del idna.exe          idna.map          idna.pdb
-	- del test.exe          test.map          test.pdb
-	- del ws_tool.exe       ws_tool.map       ws_tool.pdb
-	- del firewall_test.exe firewall_test.map firewall_test.pdb
+	- del iana.exe    iana.map    iana.pdb
+	- del idna.exe    idna.map    idna.pdb
+	- del ws_tool.exe ws_tool.map ws_tool.pdb
 	- rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
 	- del $(LUAJIT_ROOT)\src\lua51*.lib
@@ -342,10 +291,6 @@ $(OBJ_DIR)\csv_1.obj: csv.c
 	$(CC) -c $(CFLAGS) -DTEST_CSV -Fo$*.obj $**
 	@echo
 
-$(OBJ_DIR)\firewall_1.obj: firewall.c
-	$(CC) -c $(CFLAGS) -DTEST_FIREWALL -Fo$*.obj $**
-	@echo
-
 $(OBJ_DIR)\iana_1.obj: iana.c
 	$(CC) -c $(CFLAGS) -DTEST_IANA -Fo$*.obj $**
 	@echo
@@ -355,15 +300,7 @@ $(OBJ_DIR)\idna_1.obj: idna.c
 	@echo
 
 $(OBJ_DIR)\init_1.obj: init.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP -Fo$*.obj $**
-	@echo
-
-$(OBJ_DIR)\init_2.obj: init.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP -DTEST_FIREWALL -Fo$*.obj $**
-	@echo
-
-$(OBJ_DIR)\geoip_1.obj: geoip.c
-	$(CC) -c $(CFLAGS) -DTEST_GEOIP -Fo$(OBJ_DIR)/geoip_1.obj $**
+	$(CC) -c $(CFLAGS) -DTEST_IANA -Fo$*.obj $**
 	@echo
 
 #
@@ -440,7 +377,6 @@ $(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
 $(OBJ_DIR)\overlap.obj:     overlap.c common.h init.h smartlist.h overlap.h
 $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h vm_dump.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h smartlist.h
-$(OBJ_DIR)\test.obj:        test.c getopt.h
 $(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
 $(OBJ_DIR)\ws_tool.obj:     csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c
 $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h \
