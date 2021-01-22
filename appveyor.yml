@@ -99,15 +99,15 @@ build_script:
   - cmd: set USE_LUA=0
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & ws_tool.exe test -v & set USE_LUA=0
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & ws_tool.exe test -v & set USE_LUA=0 & WSOCK_TRACE_LEVEL=0
 
   #
   # Delete '..\IPFire-database.db' to force a download and decompression.
   # Since now it's not done via 'DllMain()', it should be safe.
   #
   - cmd: if not %BUILDER%. == watcom. del /Q ..\IPFire-database.db
-  - cmd: set WSOCK_TRACE_LEVEL=1 & geoip-test.bat -4
-  - cmd: set WSOCK_TRACE_LEVEL=1 & geoip-test.bat -6
+  - cmd: geoip-test.bat -4
+  - cmd: geoip-test.bat -6
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
