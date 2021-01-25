@@ -13,22 +13,7 @@
  *    will set `g_cfg.trace_level = 1` and call `geoip_main()` with
  *    "-4" and "8.8.8.8" in it's `argv[]`.
  */
-#define IN_WS_TOOL_C
-
-/* Because of warning "Use getaddrinfo() or GetAddrInfoW() instead ..." in idna.c.
- */
-#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#endif
-
-#if defined(__WATCOMC__)
-  /*
-   * Required to define `IN6_IS_ADDR_LOOPBACK()` etc. in
-   * OpenWatcom's <ws2ipdef.h>.
-   */
-  #undef  NTDDI_VERSION
-  #define NTDDI_VERSION 0x05010000
-#endif
+#include "config.h"
 
 #include <windows.h>
 #include <winsock2.h>

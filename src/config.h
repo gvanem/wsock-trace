@@ -20,4 +20,11 @@
 #else
   #define HAVE_WINHTTP_H
 #endif
+
+/* Because of warning "Use getaddrinfo() or GetAddrInfoW() instead ..." in idna.c.
+ */
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
+
 #endif

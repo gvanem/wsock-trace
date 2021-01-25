@@ -7,21 +7,7 @@
  *
  * inet_util.c - Part of Wsock-Trace.
  */
-#if defined(__WATCOMC__)
-  /*
-   * Required to define `IN6_IS_ADDR_LOOPBACK()` etc. in
-   * OpenWatcom's <ws2ipdef.h>.
-   */
-  #undef  NTDDI_VERSION
-  #define NTDDI_VERSION 0x05010000
-
-  /* No <winhttp.h> in OpenWatcom.
-   */
-  #undef HAVE_WINHTTP_H
-#else
-  #define HAVE_WINHTTP_H
-#endif
-
+#include "config.h"
 #include <windows.h>
 #include <limits.h>
 #include <errno.h>
