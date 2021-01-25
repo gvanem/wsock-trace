@@ -96,10 +96,10 @@ build_script:
   - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU%
   - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU%
   - cmd: if %BUILDER%. == watcom. wmake -h      -f Makefile.Watcom CPU=%CPU%
-  - cmd: set USE_LUA=0
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & ws_tool.exe test -v & set USE_LUA=0 & set WSOCK_TRACE_LEVEL=0
+  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & ws_tool.exe test -v
+  - cmd: set WSOCK_TRACE_LEVEL=0 & set USE_LUA=0
 
   #
   # Delete '..\IPFire-database.db' to force a download and decompression.
