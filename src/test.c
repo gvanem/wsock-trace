@@ -1139,8 +1139,7 @@ static void set_colour (int col)
   if (use_wincon == -1)
   {
     c_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
-    if (c_hnd != INVALID_HANDLE_VALUE &&
-        GetConsoleScreenBufferInfo(c_hnd, &c_info))
+    if (c_hnd != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(c_hnd, &c_info))
          use_wincon = 1;
     else use_wincon = 0;
   }

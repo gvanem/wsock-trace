@@ -8,16 +8,16 @@ function os_details()
 end
 
 function __FILE__()
-  local src = debug.getinfo(2,'S').source
-  return string.sub (src,2)
+  local src = debug.getinfo (2, 'S').source
+  return string.sub (src, 2)
 end
 
 function __LINE__()
-  return debug.getinfo(2,'l').currentline
+  return debug.getinfo (2, 'l').currentline
 end
 
 function __FUNC__()
-  return debug.getinfo(2,'n').name
+  return debug.getinfo (2, 'n').name
 end
 
 function local_trace (str)
@@ -40,13 +40,15 @@ ws_name = "wsock_trace"
 
 if package.loaded [ws_name] then
   ws.trace_puts (string.format("  Package ~2%s~0 already loaded; ~1ws -> %p~0\n", ws_name, ws))
+
 else
+  io.write ("  Loading package 'wsock_trace'...\n");
   ws = require (ws_name)
 end
 
 function trace_printf (fmt, ...)
   ws.trace_puts ("  trace_printf():\n")
-  ws.trace_puts ("    fmt: " .. string.gsub(fmt,"\n","") .. "\n")
+  ws.trace_puts ("    fmt: " .. string.gsub(fmt, "\n", "") .. "\n")
   tab = {...}
   for key, val in pairs(tab) do
     ws.trace_puts ("    key: " .. key .. ", val: " .. val .. "\n")
