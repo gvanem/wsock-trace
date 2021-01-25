@@ -584,7 +584,7 @@ int list_lookup_check (const struct search_list *list, int num, int *err_idx1, i
 /**
  * Convert 32-bit big-endian (network order) to host order format.
  */
-unsigned long swap32 (DWORD val)
+DWORD swap32 (DWORD val)
 {
   return ((val & 0x000000FFU) << 24) |
          ((val & 0x0000FF00U) <<  8) |
@@ -595,7 +595,7 @@ unsigned long swap32 (DWORD val)
 /**
  * Convert 16-bit big-endian (network order) to host order format.
  */
-unsigned short swap16 (WORD val)
+WORD swap16 (WORD val)
 {
   return ((val & 0x00FF) << 8) | ((val & 0xFF00) >> 8);
 }
