@@ -1073,7 +1073,9 @@ static int parse_config_file (FILE *file)
            parse_core_settings (key, val, line);
            strcpy (last_section, "core");
            if (!done)
-              TRACE (1, "Parsing config-file \"%s\" for \"%s\".\n", fname, get_builder(TRUE));
+              TRACE (1, "Parsing config-file \"%s\"\n"
+                        "              for \"%s, %s\".\n",
+                     fname, get_builder(TRUE), get_dll_build_date());
            done = TRUE;
            break;
       case CFG_LUA:
