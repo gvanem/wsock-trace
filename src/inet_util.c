@@ -8,6 +8,7 @@
  * inet_util.c - Part of Wsock-Trace.
  */
 #include "config.h"
+
 #include <windows.h>
 #include <limits.h>
 #include <errno.h>

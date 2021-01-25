@@ -43,7 +43,7 @@
 #endif
 
 #if defined(__CYGWIN__) || defined(__WATCOMC__)
-  #define _byteswap_ulong(x)   swap32 (x)
+  #define _byteswap_ulong(x)  (unsigned long) swap32 (x)
 #endif
 
 /*
