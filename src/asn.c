@@ -483,7 +483,7 @@ static size_t ASN_load_bin_file (const char *file)
   if (g_cfg.trace_level == 0)
      _ws_setenv ("LOC_LOG", "", 1);  /* Clear the 'libloc' internal trace-level */
 
-  if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_NUMBER"))
+  if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_FOLDER"))
      ASN_check_database (file);
 
   err = loc_database_new (libloc.ctx, &libloc.db, libloc.file);
@@ -538,7 +538,7 @@ static size_t ASN_load_bin_file (const char *file)
 #define ASN_MAX_NAME 250
 
 /**
- * Internal functoion called from `ASN_libloc_print()`.
+ * Internal function called from `ASN_libloc_print()`.
  */
 static int libloc_handle_net (struct loc_network    *net,
                               const struct in_addr  *ip4,
@@ -649,7 +649,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   struct loc_network *net = NULL;
   struct in6_addr     addr;
   char                addr_str [MAX_IP6_SZ+1] = "?";
-  int                 rc, save;
+  int                 rc, save, ip6_teredo;
 
   if (!libloc.db)
   {
@@ -661,7 +661,10 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
     TRACE (2, "LIBLOC has no AS-info!\n");
     return (0);
   }
-  if (!_IN6_IS_ADDR_TEREDO(ip6) &&  /* since a Terodo can have an AS-number assigned */
+
+  ip6_teredo = ip6 && _IN6_IS_ADDR_TEREDO (ip6);
+
+  if (!ip6_teredo &&  /* since a Terodo can have an AS-number assigned */
       !INET_util_addr_is_global(ip4, ip6))
   {
     trace_printf ("%s<not global>\n", intro);
