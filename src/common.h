@@ -242,8 +242,8 @@ extern char        curr_prog [MAX_PATH];
 extern char        prog_dir  [MAX_PATH];
 extern HINSTANCE   ws_trace_base;        /* Our base-address */
 
-extern void (__stdcall *g_WSASetLastError)(int err);
-extern int  (__stdcall *g_WSAGetLastError)(void);
+extern void (__stdcall *g_WSASetLastError) (int err);
+extern int  (__stdcall *g_WSAGetLastError) (void);
 
 extern char       *ws_strerror (DWORD err, char *buf, size_t len);
 extern char       *win_strerror (DWORD err);
@@ -257,13 +257,15 @@ extern const char *get_path (const char    *apath,
                              BOOL          *exist,
                              BOOL          *is_native);
 
-extern char       *str_replace (int ch1, int ch2, char *str);
 extern const char *shorten_path (const char *path);
 extern const char *list_lookup_name (unsigned value, const struct search_list *list, int num);
 extern unsigned    list_lookup_value (const char *name, const struct search_list *list, int num);
 extern const char *flags_decode (DWORD flags, const struct search_list *list, int num);
 extern int         list_lookup_check (const struct search_list *list, int num, int *idx1, int *idx2);
+extern DWORD       swap32 (DWORD val);
+extern WORD        swap16 (WORD val);
 
+extern char       *str_replace (int ch1, int ch2, char *str);
 extern const char *str_hex_byte (BYTE val);
 extern const char *str_hex_word (WORD val);
 extern const char *str_hex_dword (DWORD val);
@@ -271,23 +273,20 @@ extern char       *str_rip  (char *s);
 extern wchar_t    *str_ripw (wchar_t *s);
 extern char       *str_ltrim (char *s);
 
-extern unsigned long  swap32 (DWORD val);
-extern unsigned short swap16 (WORD val);
+extern const char *get_guid_string (const GUID *guid);
+extern const char *get_guid_path_string (const GUID *guid);
+extern const char *dword_str (DWORD val);
+extern const char *qword_str (unsigned __int64 val);
 
-extern const char    *get_guid_string (const GUID *guid);
-extern const char    *get_guid_path_string (const GUID *guid);
-extern const char    *dword_str (DWORD val);
-extern const char    *qword_str (unsigned __int64 val);
-
-extern char * _strlcpy (char *dst, const char *src, size_t len);
-extern char * _strtok_r (char *ptr, const char *sep, char **end);
-extern char * _strrepeat (int ch, size_t num);
-extern char * _strreverse (char *str);
-extern char * _utoa10w (int value, int width, char *buf);
-extern char * getenv_expand (const char *variable, char *buf, size_t size);
-extern int    _ws_setenv (const char *env, const char *val, int overwrite);
-extern FILE * fopen_excl (const char *file, const char *mode);
-extern int    file_exists (const char *fname);
+extern char       *_strlcpy (char *dst, const char *src, size_t len);
+extern char       *_strtok_r (char *ptr, const char *sep, char **end);
+extern char       *_strrepeat (int ch, size_t num);
+extern char       *_strreverse (char *str);
+extern char       *_utoa10w (int value, int width, char *buf);
+extern char       *getenv_expand (const char *variable, char *buf, size_t size);
+extern int         _ws_setenv (const char *env, const char *val, int overwrite);
+extern FILE       *fopen_excl (const char *file, const char *mode);
+extern int         file_exists (const char *fname);
 
 extern const char *get_dll_full_name (void);
 extern void        set_dll_full_name (HINSTANCE inst_dll);
