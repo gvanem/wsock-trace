@@ -32,12 +32,12 @@
 /**\typedef smartlist_sort_func
  * A function used to compare smartlist elements must match this type.
  */
-typedef int (MS_CDECL *smartlist_sort_func) (const void **a, const void **b);
+typedef int (*smartlist_sort_func) (const void **a, const void **b);
 
 /**\typedef smartlist_parse_func
  * A function used to parse lines from a text-file must match this type.
  */
-typedef void (MS_CDECL *smartlist_parse_func) (smartlist_t *sl, const char *line);
+typedef void (*smartlist_parse_func) (smartlist_t *sl, const char *line);
 
 #if defined(_CRTDBG_MAP_ALLOC)
   extern smartlist_t *_smartlist_new (const char *file, unsigned line);

@@ -284,18 +284,6 @@
   #define vsnprintf _vsnprintf
 #endif
 
-
-#if defined(_MSC_VER) && !defined(__POCC__)
-  /*
-   * All MS compilers insists that 'main()', signal-handlers, atexit functions and
-   * var-arg functions must be defined as cdecl. This is only an issue if a program
-   * is using 'fastcall' globally (cl option '-Gr').
-   */
-  #define MS_CDECL __cdecl
-#else
-  #define MS_CDECL
-#endif
-
 /*
  * Defined in newer <sal.h> for MSVC.
  */

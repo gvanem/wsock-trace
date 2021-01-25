@@ -100,7 +100,7 @@ typedef struct thread_args {
 
 static char our_module [_MAX_PATH];
 
-static void (MS_CDECL *orig_abort_handler)(int) = SIG_DFL;
+static void (*orig_abort_handler)(int) = SIG_DFL;
 
 static void print_one_address (thread_args *args, DWORD64 addr)
 {
@@ -421,7 +421,7 @@ void vm_bug_report (void)
   vm_bug_list (0, NULL);
 }
 
-static void MS_CDECL abort_handler (int sig)
+static void abort_handler (int sig)
 {
   fflush (stderr);
 

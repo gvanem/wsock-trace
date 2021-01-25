@@ -36,6 +36,7 @@
 #include "in_addr.h"
 #include "smartlist.h"
 #include "geoip.h"
+#include "getopt.h"
 #include "inet_util.h"
 #include "dnsbl.h"
 
@@ -69,10 +70,10 @@ struct DNSBL_info {
 
 static smartlist_t *DNSBL_list = NULL;
 
-static int           DNSBL_update_files (void);
-static void MS_CDECL DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
-static void MS_CDECL DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
-static void MS_CDECL DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
+static int  DNSBL_update_files (void);
+static void DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
+static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
+static void DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
 
 static const char *DNSBL_type_name (DNSBL_type type)
 {
@@ -596,7 +597,7 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
 /**
  * Parser for a "drop.txt" file.
  */
-static void MS_CDECL DNSBL_parse_DROP (smartlist_t *sl, const char *line)
+static void DNSBL_parse_DROP (smartlist_t *sl, const char *line)
 {
   DNSBL_parse4 (sl, line, DNSBL_DROP);
 }
@@ -604,7 +605,7 @@ static void MS_CDECL DNSBL_parse_DROP (smartlist_t *sl, const char *line)
 /**
  * Parser for a "edrop.txt" file.
  */
-static void MS_CDECL DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
+static void DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
 {
   DNSBL_parse4 (sl, line, DNSBL_EDROP);
 }
@@ -643,12 +644,6 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
  * \todo: create a small test for DNSBL.
  */
 #if defined(TEST_DNSBL)
-
-#include "getopt.h"
-
-#if !defined(IN_WS_TOOL_C)
-char *program_name;
-#endif
 
 void show_help (void)
 {

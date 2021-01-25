@@ -55,10 +55,6 @@
  *       https://git.ipfire.org/pub/git/location/libloc.git
  */
 
-#if defined(TEST_GEOIP) && !defined(IN_WS_TOOL_C)
-#error "'geoip.c' must be tested inside 'ws_tool.c' only."
-#endif
-
 #include <assert.h>
 #include <limits.h>
 #include <errno.h>
@@ -74,6 +70,8 @@
 #include "iana.h"
 #include "asn.h"
 #include "csv.h"
+#include "getopt.h"
+#include "dnsbl.h"
 #include "geoip.h"
 
 /** Number of calls for `smartlist_bsearch()` to find an IPv4 entry. <br>
@@ -1005,7 +1003,7 @@ static const struct country_list c_list[] = {
 static struct country_list *c_list_sorted_on_short_name = NULL;
 static struct country_list *c_list_sorted_on_country_number = NULL;
 
-typedef int (MS_CDECL *Qsort_func) (const void *a, const void *b);
+typedef int (*Qsort_func) (const void *a, const void *b);
 
 /**
  * `qsort()` helpers for sorted copies of `c_list[]`.
@@ -1468,9 +1466,6 @@ void geoip_update_file (int family, BOOL force_update)
 
 #if defined(TEST_GEOIP)
 
-#include "getopt.h"
-#include "dnsbl.h"
-
 /**
  * Simplified version of the `get_error()` function in `wsock_trace.c`.
  */
@@ -1791,7 +1786,6 @@ static void test_addr_common (const char            *addr_str,
   const char *remark   = NULL;
   const char *cc;
   const BYTE *nibble;
-  const position *pos;
   int   save, flag, ip_width;
   char  buf1 [200];
   char  buf2 [200];
@@ -1853,7 +1847,7 @@ static void test_addr_common (const char            *addr_str,
       }
       else if (a6 && !stricmp(remark, "IPv4 compatible"))
       {
-        trace_printf ("Recursing for a %s address.\n", remark);
+        trace_printf ("Recursing for a \"%s\" address.\n", remark);
         test_addr_common (addr_str, (const struct in_addr*)&a6->s6_words[6], NULL, use_ip2loc);
         return;
       }
@@ -1872,24 +1866,25 @@ static void test_addr_common (const char            *addr_str,
 
   trace_printf ("%-*.*s: %s %s\n", ip_width, ip_width, addr_str, buf1, buf2);
 
-  pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
-
   if (g_cfg.GEOIP.show_position)
   {
-    if (pos)
-         trace_printf ("  Pos:  %.3f%c, %.3f%c\n",
-                       fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
-                       fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
-    else trace_printf ("  Pos:  <none>\n");
-  }
-
-  if (g_cfg.GEOIP.show_map_url)
-  {
-    const char *zoom = "10z";
+    const position *pos = a4 ? geoip_get_position_by_ipv4 (a4) : geoip_get_position_by_ipv6 (a6);
+    char  pos_buf [50] = "<none>";
 
     if (pos)
-         trace_printf ("  URL:  https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
-    else trace_printf ("  URL:  <none>\n");
+       snprintf (pos_buf, sizeof(pos_buf), "%.3f%c, %.3f%c",
+                 fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
+                 fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
+    trace_printf ("  Pos:  %s\n", pos_buf);
+
+    if (g_cfg.GEOIP.show_map_url)
+    {
+      const char *zoom = "10z";
+
+      if (pos)
+           trace_printf ("  URL:  https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
+      else trace_printf ("  URL:  <none>\n");
+    }
   }
 
   if (g_cfg.IANA.enable || g_cfg.ASN.enable)
@@ -2143,7 +2138,7 @@ static smartlist_t *make_argv_list (int _argc, char **_argv)
    * But try anyway.
    */
   if (_argc > 0 && _argv[0][0] == '@')
-     return read_file (fopen(_argv[0]+1,"rb"), list);
+     return read_file (fopen(_argv[0]+1, "rb"), list);
 
   if (isatty(fileno(stdin)) == 0)
      return read_file (stdin, list);
@@ -2173,7 +2168,7 @@ static int check_requirements (void)
   return (1);
 }
 
-int main (int argc, char **argv)
+int geoip_main (int argc, char **argv)
 {
   int     c, do_cidr = 0,  do_4 = 0, do_6 = 0, do_force = 0;
   int     do_update = 0, do_dump = 0, do_rand = 0;
