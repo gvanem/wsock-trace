@@ -8,24 +8,13 @@
  *
  * idna.c - Part of Wsock-Trace.
  */
+#include "config.h"
 
-/* Do not pull in <winsock.h> in <windows.h>
- */
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-/* Because of warning "Use getaddrinfo() or GetAddrInfoW() instead ..."
- */
-#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#endif
-
-#include <assert.h>
 #include <windows.h>
 
 #include "common.h"
 #include "init.h"
+#include "getopt.h"
 #include "smartlist.h"
 #include "idna.h"
 
@@ -1020,26 +1009,6 @@ static enum punycode_status punycode_decode (size_t      input_length,
 }
 
 #if defined(TEST_IDNA)
-
-#include "getopt.h"
-
-#if !defined(IN_WS_TOOL_C)
-  char  *program_name;
-  struct config_table g_cfg;
-
-  void set_color (const WORD *col)
-  {
-    ARGSUSED (col);
-  }
-
-  void ws_sema_wait (void)
-  {
-  }
-
-  void ws_sema_release (void)
-  {
-  }
-#endif
 
 #if (USE_WINIDN)
   #define W_GETOPT "w"

@@ -53,14 +53,13 @@
   #define _WIN32_WINNT MIN_WINNT_VALUE
 #endif
 
-#if defined(TEST_FIREWALL) && !defined(IN_WS_TOOL_C)
-#error "'firewall.c' must be tested inside 'ws_tool.c' only."
-#endif
+#include <signal.h>
 
 #include "common.h"
 #include "smartlist.h"
 #include "init.h"
 #include "in_addr.h"
+#include "getopt.h"
 #include "dump.h"
 #include "cpu.h"
 #include "geoip.h"
@@ -69,6 +68,7 @@
 #include "iana.h"
 #include "inet_util.h"
 #include "wsock_trace.h"
+#include <MMsystem.h>
 
 #if defined(__WATCOMC__)
   /*
@@ -4702,10 +4702,6 @@ const char *fw_strerror (DWORD err)
 }
 
 #if defined(TEST_FIREWALL)
-
-#include <MMsystem.h>
-#include <signal.h>
-#include "getopt.h"
 
 static int quit;
 

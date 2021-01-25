@@ -15,19 +15,12 @@
  */
 #include <limits.h>
 
-#if defined(__WATCOMC__)
-  /*
-   * Required to define `IN6_IS_ADDR_LOOPBACK()` etc. in
-   * OpenWatcom's <ws2ipdef.h>.
-   */
-  #undef  NTDDI_VERSION
-  #define NTDDI_VERSION 0x05010000
-#endif
-
+#include "config.h"
 #include "common.h"
 #include "csv.h"
 #include "smartlist.h"
 #include "asn.h"
+#include "getopt.h"
 #include "inet_util.h"
 #include "in_addr.h"
 #include "init.h"
@@ -624,21 +617,6 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
 }
 
 #ifdef TEST_IANA
-
-#include "getopt.h"
-
-#if !defined(IN_WS_TOOL_C)
-  char *program_name;
-
-  #define DO_NOTHING(f)  void f(void) {}
-
-  DO_NOTHING (ip2loc_init)
-  DO_NOTHING (ip2loc_exit)
-  DO_NOTHING (ip2loc_get_ipv4_entry)
-  DO_NOTHING (ip2loc_get_ipv6_entry)
-  DO_NOTHING (ip2loc_num_ipv4_entries)
-  DO_NOTHING (ip2loc_num_ipv6_entries)
-#endif
 
 static void show_help (void)
 {

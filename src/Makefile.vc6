@@ -139,29 +139,6 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
 #
-# These .obj-files are for 'idna.exe':
-#
-IDNA_OBJ = $(OBJ_DIR)\idna_1.obj \
-           $(OBJ_DIR)\getopt.obj \
-           $(OBJ_DIR)\common.obj \
-           $(OBJ_DIR)\smartlist.obj
-
-#
-# .obj-files for 'iana.exe'.
-#
-IANA_OBJ = $(OBJ_DIR)\iana_1.obj    \
-           $(OBJ_DIR)\asn.obj       \
-           $(OBJ_DIR)\common.obj    \
-           $(OBJ_DIR)\csv.obj       \
-           $(OBJ_DIR)\dnsbl.obj     \
-           $(OBJ_DIR)\geoip.obj     \
-           $(OBJ_DIR)\idna.obj      \
-           $(OBJ_DIR)\inet_util.obj \
-           $(OBJ_DIR)\init_1.obj    \
-           $(OBJ_DIR)\in_addr.obj   \
-           $(OBJ_DIR)\getopt.obj    \
-           $(OBJ_DIR)\smartlist.obj
-
 #
 # .obj-files for 'ws_tool.exe'.
 #
@@ -200,9 +177,8 @@ LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
              $(OBJ_DIR)\win_str.obj      \
              $(OBJ_DIR)\win_mmap.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) \
-     iana.exe idna.exe ws_tool.exe
-	@echo Welcome to Wsock_trace $(MACHINE) library and test-programs.
+all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) ws_tool.exe
+	@echo Welcome to Wsock_trace $(MACHINE) library and ws_tool.exe test-program.
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
@@ -225,19 +201,6 @@ uninstall:
 ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_DEP)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
 	@type link.tmp >> ws_tool.map
-	@echo
-
-idna.exe: $(IDNA_OBJ) $(WSOCK_TRACE_LIB)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** ole32.lib > link.tmp
-	@type link.tmp >> idna.map
-	@echo
-
-#
-# This does NOT need to use '$(WSOCK_TRACE_LIB)', but 'ws2_32.lib'.
-#
-iana.exe: $(IANA_OBJ)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** ws2_32.lib $(EX_LIBS) > link.tmp
-	@type link.tmp >> iana.map
 	@echo
 
 run_test: ws_tool.exe
@@ -265,8 +228,6 @@ vclean realclean: clean
 	      wsock_trace$(X_SUFFIX)$(_D).dll \
 	      wsock_trace$(X_SUFFIX)$(_D).map \
 	      wsock_trace$(X_SUFFIX)$(_D).pdb
-	- del iana.exe    iana.map    iana.pdb
-	- del idna.exe    idna.map    idna.pdb
 	- del ws_tool.exe ws_tool.map ws_tool.pdb
 	- rd $(OBJ_DIR)
 !if "$(USE_LUA)" == "1"
@@ -286,22 +247,6 @@ where VAR can have of the following 'x' values:
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 	rc -nologo -DDEBUG=$(USE_CRT_DEBUG) -DBITNESS=$(BITNESS) -D_MSC_VER -Fo $(OBJ_DIR)\wsock_trace.res $**
-
-$(OBJ_DIR)\csv_1.obj: csv.c
-	$(CC) -c $(CFLAGS) -DTEST_CSV -Fo$*.obj $**
-	@echo
-
-$(OBJ_DIR)\iana_1.obj: iana.c
-	$(CC) -c $(CFLAGS) -DTEST_IANA -Fo$*.obj $**
-	@echo
-
-$(OBJ_DIR)\idna_1.obj: idna.c
-	$(CC) -c $(CFLAGS) -DTEST_IDNA -Fo$*.obj $**
-	@echo
-
-$(OBJ_DIR)\init_1.obj: init.c
-	$(CC) -c $(CFLAGS) -DTEST_IANA -Fo$*.obj $**
-	@echo
 
 #
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake

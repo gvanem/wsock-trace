@@ -73,7 +73,7 @@ WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             &
 WSOCK_LIB = wsock_trace_ow.lib
 WSOCK_DLL = wsock_trace_ow.dll
 
-TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) idna.exe # ws_tool.exe
+TARGETS = $(WSOCK_DLL) $(WSOCK_LIB) # ws_tool.exe
 
 all: $(OBJ_DIR) $(TARGETS) .SYMBOLIC
 	@echo Welcome to Wsock-trace library and example.
@@ -85,7 +85,7 @@ clean: .SYMBOLIC
 	- rm -f $(OBJ_DIR)/*.*
 
 vclean realclean: clean .SYMBOLIC
-	- rm -f $(TARGETS) wsock_trace_ow.map idna.map ws_tool.map
+	- rm -f $(TARGETS) wsock_trace_ow.map ws_tool.map
 	- rmdir $(OBJ_DIR)
 
 .ERASE
@@ -109,13 +109,6 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 uninstall: .SYMBOLIC
 	- rm $(LIB_TARGET)/$(WSOCK_LIB)
 	- rm $(BIN_TARGET)/$(WSOCK_DLL)
-
-idna.exe: idna.c $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj $(WSOCK_LIB)
-	*$(CC) $(CFLAGS) -DTEST_IDNA -fo=$(OBJ_DIR)\idna.obj idna.c
-	wlink $(LDFLAGS) name $@ file { $(OBJ_DIR)\idna.obj $(OBJ_DIR)\getopt.obj $(OBJ_DIR)\common.obj $(OBJ_DIR)\smartlist.obj } &
-	                         library { clib3$(STACK_OR_REG).lib $(WSOCK_LIB) }
-	rm -f $(OBJ_DIR)/idna.obj
-	@echo.
 
 #
 # Fails to link due to some issue with 'ws_tool.obj':

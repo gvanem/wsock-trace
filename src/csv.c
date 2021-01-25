@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "init.h"
+#include "getopt.h"
 #include "csv.h"
 
 #define DEFAULT_BUF_SIZE 1000
@@ -370,37 +371,6 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
  * A simple test program for the above CVS-parser.
  */
 #if defined(TEST_CSV)
-
-#include "getopt.h"
-
-#if !defined(IN_WS_TOOL_C)
-  char *program_name;
-
-  struct config_table g_cfg;
-
-  /*
-   * Copy some functions from common.c to keep the Makefiles tidy.
-   */
-  void debug_printf (const char *file, unsigned line, const char *fmt, ...)
-  {
-    va_list args;
-
-    printf ("%s(%u): ", file, line);
-    va_start (args, fmt);
-    vprintf (fmt, args);
-    va_end (args);
-  }
-
-  /*
-   * Trim leading blanks (space/tab) from a string.
-   */
-  char *str_ltrim (char *s)
-  {
-    while (s[0] && s[1] && isspace ((int)s[0]))
-         s++;
-    return (s);
-  }
-#endif
 
 /*
  * A do-nothing callback. Just report the parsed record and fields.

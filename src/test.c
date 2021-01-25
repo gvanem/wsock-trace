@@ -10,10 +10,6 @@
   #define _UNICODE
 #endif
 
-#if !defined(IN_WS_TOOL_C)
-#error "'test.c' must be included inside 'ws_tool.c' only."
-#endif
-
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
 #endif
@@ -90,11 +86,6 @@ static int use_wincon = -1;
 static int use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWin and AppVeyor */
 
 static void set_colour (int col);
-
-/**
- * Set the program-name for getopt.c.
- */
-char *program_name;
 
 #define TEST_STRING(expect, func)                  test_string (expect, func, #func)
 #define TEST_WSTRING(expect, func_res, func_name)  test_wstring (expect, func_res, func_name)
@@ -942,7 +933,7 @@ static int list_tests (void)
   return (0);
 }
 
-static void MS_CDECL exit_test (int sig)
+static void exit_test (int sig)
 {
   fputs ("Got ^C.\n", stderr);
   fflush (stderr);
@@ -950,7 +941,7 @@ static void MS_CDECL exit_test (int sig)
   exit (1);
 }
 
-int MS_CDECL main (int argc, char **argv)
+int test_main (int argc, char **argv)
 {
   int i, c, num = 0;
 

@@ -31,7 +31,6 @@
 #define main        backtrace_main
 #define TEST_BACKTRACE
 #include "backtrace.c"
-#undef  TEST_BACKTRACE
 
 #undef  show_help
 #undef  main
@@ -39,7 +38,6 @@
 #define main        csv_main
 #define TEST_CSV
 #include "csv.c"
-#undef  TEST_CSV
 
 #undef  show_help
 #undef  main
@@ -47,7 +45,6 @@
 #define main        dnsbl_main
 #define TEST_DNSBL
 #include "dnsbl.c"
-#undef  TEST_DNSBL
 
 #undef  show_help
 #undef  main
@@ -55,7 +52,6 @@
 #define main        firewall_main
 #define TEST_FIREWALL
 #include "firewall.c"
-#undef  TEST_FIREWALL
 
 #undef  show_help
 #undef  main
@@ -64,7 +60,6 @@
 #define main        geoip_main
 #define TEST_GEOIP
 #include "geoip.c"
-#undef  TEST_GEOIP
 
 #undef  show_help
 #undef  main
@@ -72,7 +67,6 @@
 #define main        iana_main
 #define TEST_IANA
 #include "iana.c"
-#undef  TEST_IANA
 
 #undef  show_help
 #undef  main

@@ -522,41 +522,4 @@ int main (int argc, char **argv)
   backtrace_exit();
   return (0);
 }
-
-#if !defined(IN_WS_TOOL_C)
-  char *program_name;
-
-  int volatile cleaned_up = 0;
-
-  #define DO_NOTHING(f)  void f(void) {}
-
-  DO_NOTHING (check_all_search_lists)
-  DO_NOTHING (ws_lwip_init)
-  DO_NOTHING (overlap_exit)
-  DO_NOTHING (overlap_init)
-  DO_NOTHING (ip2loc_init)
-  DO_NOTHING (ip2loc_exit)
-  DO_NOTHING (ip2loc_get_ipv4_entry)
-  DO_NOTHING (ip2loc_get_ipv6_entry)
-  DO_NOTHING (ip2loc_num_ipv4_entries)
-  DO_NOTHING (ip2loc_num_ipv6_entries)
-  DO_NOTHING (hosts_file_exit)
-  DO_NOTHING (DNSBL_exit)
-  DO_NOTHING (DNSBL_test)
-  DO_NOTHING (ASN_init)
-  DO_NOTHING (ASN_exit)
-  DO_NOTHING (iana_init)
-  DO_NOTHING (iana_exit)
-
-  void DNSBL_init (BOOL update)
-  {
-    ARGSUSED (update);
-  }
-
-  const struct LoadTable *find_ws2_func_by_name (const char *func)
-  {
-    ARGSUSED (func);
-    return (NULL);
-  }
-#endif
 #endif /* TEST_BACKTRACE */
