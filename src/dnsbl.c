@@ -70,7 +70,6 @@ struct DNSBL_info {
 
 static smartlist_t *DNSBL_list = NULL;
 
-static int  DNSBL_update_files (void);
 static void DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
 static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
 static void DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
@@ -259,16 +258,15 @@ BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
 }
 
 /**
- * Called from `DNSBL_test()`.
  * Simply prints all the members of the `DNSBL_list` smartlist.
  */
 static void DNSBL_dump (void)
 {
   int i, max = DNSBL_list ? smartlist_len(DNSBL_list) : 0;
-  const char *head_fmt = "%3s  SBL%-6s  %-20s %-20s %s\n";
-  const char *line_fmt = "%3d: SBL%-6s  %-20s %-20s %s\n";
+  const char *head_fmt = "%4s  SBL%-6s  %-20s %-20s %s\n";
+  const char *line_fmt = "%4d: SBL%-6s  %-20s %-20s %s\n";
 
-  trace_puts ("DNSBL_dump()\n");
+  trace_puts ("DNSBL_dump():\n");
   trace_printf (head_fmt, "Num", "-ref", "Network", "Mask", "Type");
 
   for (i = 0; i < max; i++)
@@ -342,8 +340,6 @@ int DNSBL_test (void)
     TRACE (2, "g_cfg.DNSBL.enable = 0 or g_cfg.DNSBL.test = 0\n");
     return (0);
   }
-
-  DNSBL_dump();
 
   if (g_cfg.DNSBL.drop_file && file_exists(g_cfg.DNSBL.drop_file))
      INET_util_test_mask4();
@@ -426,16 +422,13 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
  * via `IP2Location_get_record()`, the `DNSBL_test()` must be postponed to a later
  * stage in `wsock_trace_init()`.
  */
-void DNSBL_init (BOOL update)
+void DNSBL_init (void)
 {
   if (!g_cfg.DNSBL.enable)
   {
     TRACE (2, "g_cfg.DNSBL.enable = 0\n");
     return;
   }
-
-  if (update)
-     DNSBL_update_files();
 
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.drop_file, DNSBL_parse_DROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.edrop_file, DNSBL_parse_EDROP);
@@ -467,7 +460,7 @@ void DNSBL_exit (void)
  * If it does (or if it is truncated or does not exist), download it using
  * WinInet.dll and `touch` it.
  */
-static int update_file (const char *fname, const char *tmp_file, const char *url, time_t now, time_t expiry)
+static int DNSBL_update_file (const char *fname, const char *tmp_file, const char *url, time_t now, time_t expiry)
 {
   struct stat st;
   time_t      when;
@@ -478,8 +471,7 @@ static int update_file (const char *fname, const char *tmp_file, const char *url
   if (stat(tmp_file, &st) != 0)
   {
     st.st_mtime = 0;
-    TRACE (2, "File \"%s\" doesn't exist. Forcing a download from \"%s\".\n",
-           tmp_file, url);
+    TRACE (2, "File \"%s\" doesn't exist. Forcing a download from \"%s\".\n", tmp_file, url);
   }
   else if (st.st_size == 0)
   {
@@ -495,7 +487,7 @@ static int update_file (const char *fname, const char *tmp_file, const char *url
      */
     expiry -= 10;
 
-    if (st.st_mtime > expiry)
+    if (expiry && st.st_mtime > expiry)
     {
       when = now + g_cfg.DNSBL.max_days * 24 * 3600;
       TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n",
@@ -535,7 +527,7 @@ static int update_file (const char *fname, const char *tmp_file, const char *url
  * file header is a bit too hard to parse. Simply use `g_cfg.DNSBL.max_days`
  * and download it if it's too old.
  */
-static int DNSBL_update_files (void)
+int DNSBL_update_files (BOOL force_update)
 {
   char        tmp_file [MAX_PATH];
   const char *env = getenv ("TEMP");
@@ -550,16 +542,18 @@ static int DNSBL_update_files (void)
 
   tzset();
   now = time (NULL);
-  expiry = now - g_cfg.DNSBL.max_days * 24 * 3600;
+  expiry = now;
+  if (!force_update)
+     expiry -= g_cfg.DNSBL.max_days * 24 * 3600;
 
   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.drop_file));
-  num += update_file (g_cfg.DNSBL.drop_file, tmp_file, g_cfg.DNSBL.drop_url, now, expiry);
+  num += DNSBL_update_file (g_cfg.DNSBL.drop_file, tmp_file, g_cfg.DNSBL.drop_url, now, expiry);
 
   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.edrop_file));
-  num += update_file (g_cfg.DNSBL.edrop_file, tmp_file, g_cfg.DNSBL.edrop_url, now, expiry);
+  num += DNSBL_update_file (g_cfg.DNSBL.edrop_file, tmp_file, g_cfg.DNSBL.edrop_url, now, expiry);
 
   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.dropv6_file));
-  num += update_file (g_cfg.DNSBL.dropv6_file, tmp_file, g_cfg.DNSBL.dropv6_url, now, expiry);
+  num += DNSBL_update_file (g_cfg.DNSBL.dropv6_file, tmp_file, g_cfg.DNSBL.dropv6_url, now, expiry);
 
   return (num);
 }
@@ -641,33 +635,70 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 }
 
 /*
- * \todo: create a small test for DNSBL.
+ * A small test for DNSBL.
  */
 #if defined(TEST_DNSBL)
 
 void show_help (void)
 {
-  printf ("No help in %s yet.\n", program_name);
+  printf ("Usage: %s [-Dftu]\n"
+          "  options:\n"
+          "    -D:  run 'DNSBL_dump()' to dump the DNSBL list.\n"
+          "    -f:  force an update with the '-u' option.\n"
+          "    -t:  run 'DNSBL_test()' for a simple test.\n"
+          "    -u:  update the SpamHaus' 'DROP.txt', 'DROPv6.txt' and 'EDROP.txt' files.\n"
+  , program_name);
 }
 
-int main (int argc, char **argv)
+int dnsbl_main (int argc, char **argv)
 {
-  program_name = argv[0];
-  printf ("Nothing to do in %s now.\n", program_name);
+  int ch, do_dump = 0, do_force = 0, do_test = 0, do_update = 0;
 
-#if 0
-  if (argc > 0 && !strcmp(argv[1], "-t"))
+  program_name = argv[0];
+
+  while ((ch = getopt(argc, argv, "Dftuh?")) != EOF)
+     switch (ch)
+     {
+       case 'D':
+            do_dump = 1;
+            break;
+       case 'f':
+            do_force = 1;
+            break;
+       case 't':
+            do_test = 1;
+            break;
+       case 'u':
+            do_update = 1;
+            break;
+       case '?':
+       case 'h':
+       default:
+            show_help();
+            return (0);
+  }
+  if (do_test)
   {
     g_cfg.DNSBL.enable = 1;
     g_cfg.DNSBL.test = 1;
-    return DNSBL_test();
+    DNSBL_test();
   }
-  if (argc > 0 && !strcmp(argv[1], "-t"))
+  else if (do_dump)
   {
     g_cfg.DNSBL.enable = 1;
-    return DNSBL_dump();
+    DNSBL_dump();
   }
-#endif
+  else if (do_update)
+  {
+    int save = g_cfg.trace_level;
+
+    g_cfg.DNSBL.enable = 1;
+    g_cfg.trace_level = 2;
+    DNSBL_update_files (do_force);
+    g_cfg.trace_level = save;
+  }
+  else
+    printf ("Nothing done in %s.\n", program_name);
 
   return (0);
 }

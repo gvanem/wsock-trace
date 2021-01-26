@@ -1574,7 +1574,7 @@ void wsock_trace_init (void)
 
   geoip_init (NULL, NULL);
 
-  DNSBL_init (FALSE);
+  DNSBL_init();
 
   if (g_cfg.trace_level >= 3)
      check_all_search_lists();
