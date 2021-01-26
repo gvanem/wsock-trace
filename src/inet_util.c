@@ -696,7 +696,7 @@ static void download_winhttp (struct download_context *context)
   path [url_comp->dwUrlPathLength] = L'\0';
 
   TRACE (2, "host: '%" WCHAR_FMT "'.\n"
-            "                    path: '%" WCHAR_FMT "'.\n", host, path);
+            "                  path: '%" WCHAR_FMT "'.\n", host, path);
 
   /* Obtain a session handle.
    */
@@ -1560,7 +1560,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
  */
 void INET_util_test_mask4 (void)
 {
-  trace_puts ("\nINET_util_test_mask4()\n");
+  trace_puts ("\nINET_util_test_mask4():\n");
   test_mask (AF_INET, (int)strlen(IP4_NET), (int)strlen("255.255.255.255"), (int)strlen(IP4_NET "/32"));
 }
 
@@ -1572,7 +1572,7 @@ void INET_util_test_mask4 (void)
  */
 void INET_util_test_mask6 (void)
 {
-  trace_puts ("\nINET_util_test_mask6()\n");
+  trace_puts ("\nINET_util_test_mask6():\n");
   test_mask (AF_INET6, (int)strlen(IP6_NET), MAX_IP6_SZ-7, (int)strlen(IP6_NET "/128"));
 }
 
