@@ -26,16 +26,12 @@
 #include "init.h"
 #include "iana.h"
 
-#ifdef TEST_IANA
-  static unsigned rec_max = UINT_MAX;
-  static unsigned rec_illegal;
-#endif
-
 static smartlist_t *iana_entries_ip4;
 static smartlist_t *iana_entries_ip6;
-
-static DWORD g_num_ipv4, g_num_ipv6;
-static char  print_buf [500];
+static DWORD        g_num_ipv4, g_num_ipv6;
+static char         print_buf [500];
+static unsigned     rec_max = UINT_MAX;
+static unsigned     rec_illegal;
 
 static void iana_sort_lists (void);
 static void iana_load_and_parse (int family, const char *file, const char *cfg_setting);
@@ -248,10 +244,7 @@ static void iana_load_and_parse (int family, const char *file, const char *cfg_s
   ctx.num_fields = 7;
   ctx.delimiter  = ',';
   ctx.callback   = family == AF_INET ? iana_CSV_add4 : iana_CSV_add6;
-
-  #ifdef TEST_IANA
   ctx.rec_max = rec_max;
-  #endif
 
   CSV_open_and_parse_file (&ctx);
 }
@@ -389,12 +382,10 @@ static int iana_add_entry (const struct IANA_record *rec)
   if (!copy)
      return (0);
 
-#ifdef TEST_IANA
    if (rec->family == AF_INET && rec->mask == -1)
       rec_illegal++;
    else if (rec->family == AF_INET6 && IN6_IS_ADDR_UNSPECIFIED(&rec->net_num.ip6))
       rec_illegal++;
-#endif
 
   memcpy (copy, rec, sizeof(*copy));
   if (rec->family == AF_INET)
@@ -616,17 +607,16 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
   return (0);
 }
 
-#ifdef TEST_IANA
-
-static void show_help (void)
+/*
+ * A simple test for this module called from 'ws_tool.c'.
+ */
+static int show_help (void)
 {
-  printf ("Usage: %s [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] <ipv4-address-space.csv>\n"
-          "  or   %s [-d] [-a ASN-csv-file] [-b ASN-bin-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
-          "\n"
-          "  options:\n"
-          "    -a:    the ASN-file is a CSV database.\n"
-          "    -b:    the ASN-file is a binary IPFire database.\n"
-          "    -m N:  stops after 'N' records.\n"
+  printf ("Usage: %s [-a ASN-csv-file] [-b ASN-bin-file] [-m max] <ipv4-address-space.csv>\n"
+          "  or   %s [-a ASN-csv-file] [-b ASN-bin-file] [-m max] -6 <ipv6-unicast-address-assignments.csv>\n"
+          "       -a:    the ASN-file is a CSV database.\n"
+          "       -b:    the ASN-file is a binary IPFire database.\n"
+          "       -m N:  stops after 'N' records.\n"
           "\n"
           "  both '-a' and '-b' options can be used to show both ASN-types.\n"
           "  E.g.: running 'iana -b ..\\IPFire-database.db ..\\ipv4-address-space.csv':\n"
@@ -635,6 +625,7 @@ static void show_help (void)
           "    ASN: 037/8, RIPE NCC, 2010-11, whois.ripe.net, https://rdap.db.ripe.net/, ALLOCATED\n"
           "    ASN: 12849, 21450 (status: ALLOCATED)\n"
           "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)\n", program_name, program_name);
+  return (0);
 }
 
 typedef struct TEST_ADDR {
@@ -643,7 +634,7 @@ typedef struct TEST_ADDR {
         IN6_ADDR ip6;
       } TEST_ADDR;
 
-int main (int argc, char **argv)
+int iana_main (int argc, char **argv)
 {
   struct IANA_record rec;
   static const TEST_ADDR test_addr[] = {
@@ -679,12 +670,9 @@ int main (int argc, char **argv)
   program_name = argv[0];
 
   if (argc < 2)
-  {
-    show_help();
-    return (0);
-  }
+     return show_help();
 
-  while ((ch = getopt(argc, argv, "6a:b:dm:h?")) != EOF)
+  while ((ch = getopt(argc, argv, "6a:b:m:h?")) != EOF)
      switch (ch)
      {
        case '6':
@@ -699,35 +687,28 @@ int main (int argc, char **argv)
        case 'm':
             rec_max = atoi (optarg);
             break;
-       case 'd':
-            g_cfg.trace_level++;
-            break;
        case '?':
        case 'h':
        default:
-            show_help();
-            return (0);
+            return show_help();
   }
   argv += optind;
   if (!*argv)
-  {
-    show_help();
-    return (0);
-  }
+     return show_help();
 
-  g_cfg.trace_stream = stdout;
-  g_cfg.show_caller  = 1;
-  g_cfg.IANA.enable  = 1;
-  g_cfg.ASN.enable   = 1;
+  g_cfg.IANA.enable = 1;
+  g_cfg.ASN.enable  = 1;
 
   if (do_ip6)
-       g_cfg.IANA.ip6_file = strdup (argv[0]);
-  else g_cfg.IANA.ip4_file = strdup (argv[0]);
-
-  InitializeCriticalSection (&crit_sect);
-  common_init();
-  iana_init();
-  ASN_init();
+  {
+    free (g_cfg.IANA.ip6_file);
+    g_cfg.IANA.ip6_file = strdup (argv[0]);
+  }
+  else
+  {
+    free (g_cfg.IANA.ip4_file);
+    g_cfg.IANA.ip4_file = strdup (argv[0]);
+  }
 
   if (rec_illegal > 0)
      printf ("File %s does not look like a valid IPv%c assignment file.\n",
@@ -748,7 +729,7 @@ int main (int argc, char **argv)
         iana_print_rec ("  IANA: ", &rec);
         ASN_print ("  ASN:  ", &rec, &test_addr[i].ip4, NULL);
       }
-      ASN_libloc_print ("  ASN:  ", &test_addr[i].ip4, NULL);
+      ASN_libloc_print ("  ASN:  ", &test_addr[i].ip4, NULL, NULL);
     }
     else
     {
@@ -759,12 +740,9 @@ int main (int argc, char **argv)
         iana_print_rec ("  IANA: ", &rec);
         ASN_print ("  ASN:  ", &rec, NULL, &test_addr[i].ip6);
       }
-      ASN_libloc_print ("  ASN: ", NULL, &test_addr[i].ip6);
+      ASN_libloc_print ("  ASN: ", NULL, &test_addr[i].ip6, NULL);
     }
   }
-
-  iana_exit();
-  ASN_exit();
   return (0);
 }
-#endif  /* TEST_IANA */
+

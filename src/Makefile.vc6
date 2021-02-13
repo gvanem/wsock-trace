@@ -70,7 +70,7 @@ BIN_TARGET = $(VSINSTALLDIR)\bin
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
 LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console
-LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:uuid.lib
+LDFLAGS = $(LDFLAGS) -machine:$(MACHINE) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
 
 OBJ_DIR = MSVC_obj$(X_SUFFIX)
 
@@ -90,6 +90,7 @@ LDFLAGS_DEF = -def:$(WSOCK_DEF)
 
 !if "$(USE_LUA)" == "1"
 CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
+LUAJIT_LIB = $(LUAJIT_ROOT)/src/lua51_static.lib
 EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
@@ -129,8 +130,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\common.obj          \
                   $(OBJ_DIR)\stkwalk.obj         \
                   $(OBJ_DIR)\vm_dump.obj         \
                   $(OBJ_DIR)\wsock_trace_lua.obj \
-                  $(OBJ_DIR)\wsock_trace.obj     \
-                  $(OBJ_DIR)\wsock_trace.res
+                  $(OBJ_DIR)\wsock_trace.obj
 
 #
 # This .obj-file does not export any functions or data.
@@ -160,6 +160,16 @@ WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             \
               $(OBJ_DIR)\wsock_trace_lua.obj \
               $(OBJ_DIR)\ws_tool.obj
 
+WS_TOOL_OBJ += $(OBJ_DIR)\backtrace.obj  \
+               $(OBJ_DIR)\csv.obj        \
+               $(OBJ_DIR)\dnsbl.obj      \
+               $(OBJ_DIR)\firewall.obj   \
+               $(OBJ_DIR)\geoip.obj      \
+               $(OBJ_DIR)\getopt.obj     \
+               $(OBJ_DIR)\iana.obj       \
+               $(OBJ_DIR)\idna.obj       \
+               $(OBJ_DIR)\test.obj
+
 #
 # .obj-files for 'libloc$(X_SUFFIX)$(_D).lib'.
 #
@@ -183,8 +193,8 @@ all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP)
-	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(EX_LIBS) advapi32.lib
+$(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP) $(OBJ_DIR)\wsock_trace.res
+	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(OBJ_DIR)\wsock_trace.res $(EX_LIBS) advapi32.lib
 	lib -nologo $(WSOCK_TRACE_LIB) $(NON_EXPORT_OBJ)
 	@del $(WSOCK_TRACE_LIB:.lib=.exp)
 

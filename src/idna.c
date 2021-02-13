@@ -1008,33 +1008,34 @@ static enum punycode_status punycode_decode (size_t      input_length,
   return (punycode_success);
 }
 
-#if defined(TEST_IDNA)
-
+/*
+ * A simple test for this module
+ */
 #if (USE_WINIDN)
   #define W_GETOPT "w"
   #define W_OPT    "[-w] "
-  #define W_HELP   "   -w use the Windows Idn functions\n"
+  #define W_HELP   "       -w use the Windows Idn functions\n"
 #else
   #define W_GETOPT ""
   #define W_OPT    ""
   #define W_HELP   ""
 #endif
 
-void show_help (void)
+static int show_help (void)
 {
-  printf ("%s [-d] %s[-c CP-number] hostname | ip-address\n"
-          "   -d debug level, \"-dd\" for more details\n"
+  printf ("Usage: %s %s[-c CP-number] hostname | ip-address\n"
           "%s"
-          "   -c select codepage (active is CP%d)\n",
+          "       -c select codepage (active is CP%d)\n",
           program_name, W_OPT, W_HELP, IDNA_GetCodePage());
+  return (0);
 }
 
-void print_last_error (void)
+static void print_last_error (void)
 {
   printf ("IDNA error: %s\n", IDNA_strerror(_idna_errno));
 }
 
-int resolve_name (const char *name)
+static int resolve_name (const char *name)
 {
   struct hostent *he;
   char   host [100];
@@ -1055,7 +1056,7 @@ int resolve_name (const char *name)
   return (0);
 }
 
-int reverse_resolve (struct in_addr addr)
+static int reverse_resolve (struct in_addr addr)
 {
   struct hostent *he = gethostbyaddr ((char*)&addr, sizeof(addr), AF_INET);
   char   host [100];
@@ -1075,11 +1076,11 @@ int reverse_resolve (struct in_addr addr)
     print_last_error();
     return (-1);
   }
-  printf (" -> \"%.*s\"", (int)len, host);
+  printf (" -> \"%.*s\"\n", (int)len, host);
   return (0);
 }
 
-void sock_init (void)
+static void sock_init (void)
 {
   WSADATA wsa;
   WORD    ver = MAKEWORD(1,1);
@@ -1094,6 +1095,8 @@ void sock_init (void)
 static int do_test (WORD cp, const char *host)
 {
   struct in_addr addr;
+
+  sock_init();
 
   if (!IDNA_init(cp, g_cfg.IDNA.use_winidn))
   {
@@ -1114,20 +1117,14 @@ static int do_test (WORD cp, const char *host)
   return resolve_name (host);
 }
 
-int main (int argc, char **argv)
+int idna_main (int argc, char **argv)
 {
   WORD cp = 0;
   int  ch, rc = 0;
 
   program_name = argv[0];
-  sock_init();
-  common_init();
-  InitializeCriticalSection (&crit_sect);
 
-  g_cfg.trace_stream = stdout;
-  g_cfg.show_caller = TRUE;
-
-  while ((ch = getopt(argc, argv, "c:d" W_GETOPT "h?")) != EOF)
+  while ((ch = getopt(argc, argv, "c:" W_GETOPT "h?")) != EOF)
      switch (ch)
      {
        case 'c':
@@ -1143,27 +1140,20 @@ int main (int argc, char **argv)
               printf ("'-c0' maps to code-page %u.\n", cp);
             }
             break;
-       case 'd':
-            g_cfg.trace_level++;
-            break;
        case 'w':
             g_cfg.IDNA.use_winidn = 1;
             break;
        case '?':
        case 'h':
        default:
-            show_help();
-            goto quit;
+            return show_help();
   }
 
   argc -= optind;
   argv += optind;
   if (*argv)
        rc = do_test (cp, argv[0]);
-  else show_help();
+  else rc = show_help();
 
-quit:
-  common_exit();
   return (rc);
 }
-#endif  /* TEST_IDNA */

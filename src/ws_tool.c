@@ -27,201 +27,151 @@
 #include "getopt.h"
 #include "wsock_trace_lua.h"
 
-#define show_help   backtrace_show_help
-#define main        backtrace_main
-#define TEST_BACKTRACE
-#include "backtrace.c"
-
-#undef  show_help
-#undef  main
-#define show_help   csv_show_help
-#define main        csv_main
-#define TEST_CSV
-#include "csv.c"
-
-#undef  show_help
-#undef  main
-#define show_help   dnsbl_show_help
-#define main        dnsbl_main
-#define TEST_DNSBL
-#include "dnsbl.c"
-
-#undef  show_help
-#undef  main
-#define show_help   firewall_show_help
-#define main        firewall_main
-#define TEST_FIREWALL
-#include "firewall.c"
-
-#undef  show_help
-#undef  main
-#define update_file geoip_local_update_file
-#define show_help   geoip_show_help
-#define main        geoip_main
-#define TEST_GEOIP
-#include "geoip.c"
-
-#undef  show_help
-#undef  main
-#define show_help   iana_show_help
-#define main        iana_main
-#define TEST_IANA
-#include "iana.c"
-
-#undef  show_help
-#undef  main
-#define show_help   idna_show_help
-#define main        idna_main
-#define TEST_IDNA
-#include "idna.c"
-
-#undef  show_help
-#undef  main
-#define show_help   test_show_help
-#define main        test_main
-#include "test.c"
-
-#undef main
-#undef show_help
-
-char *program_name;  /* For getopt.c */
+extern int asn_main       (int argc, char **argv);
+extern int backtrace_main (int argc, char **argv);
+extern int csv_main       (int argc, char **argv);
+extern int dnsbl_main     (int argc, char **argv);
+extern int firewall_main  (int argc, char **argv);
+extern int geoip_main     (int argc, char **argv);
+extern int iana_main      (int argc, char **argv);
+extern int idna_main      (int argc, char **argv);
+extern int test_main      (int argc, char **argv);
 
 /* Prevent MinGW + Cygwin from globbing the cmd-line.
  */
 int _dowildcard = 0;
 
-static int show_help (const char *extra)
-{
-  if (extra)
-     puts (extra);
-  printf ("Wsock-trace test tool.\n"
-          "Usage: %s [-dhH] <command> [<args>]\n"
-          "  Available commands:\n"
-          "    backtrace   - Run a command in 'backtrace'\n"
-          "    csv         - Run a command in 'csv'\n"
-          "    dnsbl       - Run a command in 'dnsbl'\n"
-          "    firewall    - Run a command in 'firewall'\n"
-          "    geoip       - Run a command in 'geoip'\n"
-          "    iana        - Run a command in 'iana'\n"
-          "    idna        - Run a command in 'idna'\n"
-          "    test        - Run a command in 'test'\n", program_name);
-  return (1);
-}
+static const struct {
+       int (*main_func) (int, char**);
+       char *main_name;
+     } sub_commands[] = {
+       { asn_main,       "asn" },
+       { backtrace_main, "backtrace" },
+       { csv_main,       "csv" },
+       { dnsbl_main,     "dnsbl" },
+#if !defined(__WATCOMC__)
+       { firewall_main, "firewall" },
+#endif
+       { geoip_main, "geoip" },
+       { iana_main,  "iana" },
+       { idna_main,  "idna" },
+       { test_main,  "test" }
+     };
 
-#define _STR2(x) #x
-#define _STR(x)  _STR2(x)
+static void show_help (const char *extra, BOOL show_sub_help);
 
-#define SHOW_SUB_HELP(prog) do {          \
-        puts ("\nHelp for '" #prog "':"); \
-        program_name = _STR(prog);        \
-        prog ##_show_help();              \
-      } while (0)
-
-static int show_help_all (void)
-{
-  show_help (NULL);
-  SHOW_SUB_HELP (backtrace);
-  SHOW_SUB_HELP (csv);
-  SHOW_SUB_HELP (dnsbl);
-  SHOW_SUB_HELP (firewall);
-  SHOW_SUB_HELP (geoip);
-  SHOW_SUB_HELP (iana);
-  SHOW_SUB_HELP (idna);
-  SHOW_SUB_HELP (test);
-  return (1);
-}
-
-int run_mains (int argc, char **argv)
+static int run_sub_command (int argc, char **argv)
 {
   char buf[100];
-  int  rc;
+  int  i, rc = 1;
 
+  for (i = 0; i < DIM(sub_commands); i++)
+  {
+    if (stricmp(*argv, sub_commands[i].main_name))
+       continue;
+
+    optind = 1;         /* Restart 'getopt()' */
+#if defined(__CYGWIN__)
+    optreset = 1;
+#endif
+
+    rc = (*sub_commands[i].main_func) (argc, argv);
+    break;
+  }
+  if (i == DIM(sub_commands))
+  {
+    snprintf (buf, sizeof(buf), "Unknown sub-command '%s'\n", *argv);
+    show_help (buf, FALSE);
+  }
+  return (rc);
+}
+
+static void show_help (const char *extra, BOOL show_sub_help)
+{
+  int i;
+
+  printf ("%sWsock-trace test tool.\n"
+          "Usage: %s [-dh] <command> [<args>]\n"
+          "       -d:     global debug-level\n"
+          "       -h:     this short help\n"
+          "       -hh:    show help for all sub-commands\n"
+          "Available sub-commands:\n", extra ? extra : "", program_name);
+
+  for (i = 0; i < DIM(sub_commands); i++)
+  {
+    program_name = sub_commands[i].main_name;
+    printf ("  %-10s - Run a command in '%s'\n", program_name, program_name);
+  }
+
+  if (show_sub_help)
+  {
+    char *Argv[3] = { NULL, "-h", NULL };
+
+    for (i = 0; i < DIM(sub_commands); i++)
+    {
+      printf ("\nHelp for '%s':\n", program_name);
+      Argv[0] = sub_commands[i].main_name;
+      run_sub_command (2, Argv);
+    }
+  }
+}
+
+int main (int argc, char **argv)
+{
+  int c, do_help = 0, rc = 0;
+
+  program_name = argv[0];
+
+  memset (&g_cfg, '\0', sizeof(g_cfg));
+
+  /* Does the same as 'DllMain (inst, DLL_PROCESS_ATTACH, ...)'
+   */
   set_dll_full_name (GetModuleHandle(NULL));
+  crtdbg_init();
+  wsock_trace_init();
 
 #if defined(USE_LUA)
   wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
 #endif
 
-  if (!stricmp(*argv, "backtrace"))
-     rc = backtrace_main (argc, argv);
-
-  else if (!stricmp(*argv, "csv"))
-     rc = csv_main (argc, argv);
-
-  else if (!stricmp(*argv, "dnsbl"))
-     rc = dnsbl_main (argc, argv);
-
-  else if (!stricmp(*argv, "firewall"))
-     rc = firewall_main (argc, argv);
-
-  else if (!stricmp(*argv, "geoip"))
-     rc = geoip_main (argc, argv);
-
-  else if (!stricmp(*argv, "iana"))
-     rc = iana_main (argc, argv);
-
-  else if (!stricmp(*argv, "idna"))
-     rc = idna_main (argc, argv);
-
-  else if (!stricmp(*argv, "test"))
-     rc = test_main (argc, argv);
-
-  else
-  {
-    snprintf (buf, sizeof(buf), "Unknown command '%s'", *argv);
-    show_help (buf);
-    rc = 1;
-  }
-
-#if defined(USE_LUA)
-  wslua_DllMain (NULL, DLL_PROCESS_DETACH);
-#endif
-
-  return (rc);
-}
-
-int main (int argc, char **argv)
-{
-  int c, rc;
-
-  program_name = argv[0];
-
-  memset (&g_cfg, '\0', sizeof(g_cfg));
-  crtdbg_init();
-  wsock_trace_init();
-
   g_cfg.trace_use_ods = FALSE;
-  g_cfg.DNSBL.test    = FALSE;
   g_cfg.trace_time_format = TS_RELATIVE;
 
-  while ((c = getopt (argc, argv, "+dHh?")) != EOF)
+  while ((c = getopt (argc, argv, "+dh?")) != EOF)
     switch (c)
     {
       case 'd':
            g_cfg.trace_level++;
            break;
-      case 'H':
-           return show_help_all();
       case '?':
       case 'h':
-           return show_help (NULL);
+           do_help++;
+           break;
       default:
-           return show_help ("Illegal option");
+           show_help ("Illegal option\n", FALSE);
+           goto quit;
     }
+
+  if (do_help >= 1)
+  {
+    show_help (NULL, do_help >= 2 ? TRUE : FALSE);
+    goto quit;
+  }
 
   argc -= optind;
   argv += optind;
 
-  /* Restart 'getopt()'
-   */
-  optind = 1;
-#if defined(__CYGWIN__)
-  optreset = 1;
-#endif
-
   if (!*argv)
-       rc = show_help ("Please give a command");
-  else rc = run_mains (argc, argv);
+       show_help ("Please give a sub-command\n", FALSE);
+  else rc = run_sub_command (argc, argv);
+
+quit:
+
+  /* Does the same as 'DllMain (inst, DLL_PROCESS_DETACH, ...)'
+   */
+#if defined(USE_LUA)
+  wslua_DllMain (NULL, DLL_PROCESS_DETACH);
+#endif
 
   wsock_trace_exit();
   crtdbg_exit();

@@ -18,6 +18,7 @@
 #include <imagehlp.h>
 
 #include "common.h"
+#include "init.h"
 #include "cpu.h"
 #include "vm_dump.h"
 
@@ -436,6 +437,8 @@ static void abort_handler (int sig)
   if (orig_abort_handler != SIG_DFL)
     (*orig_abort_handler) (sig);
 
+  wsock_trace_exit();
+  crtdbg_exit();
   exit (-1);
 }
 

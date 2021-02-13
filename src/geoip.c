@@ -360,13 +360,8 @@ static DWORD geoip_parse_file (const char *file, int family)
 int geoip_init (DWORD *_num4, DWORD *_num6)
 {
   DWORD num4 = 0, num6 = 0;
-  BOOL  open_geoip = FALSE;
 
-#if defined(TEST_GEOIP)
-  open_geoip = TRUE;
-#endif
-
-  if (g_cfg.GEOIP.enable || open_geoip)
+  if (g_cfg.GEOIP.enable)
   {
     num4 = geoip_parse_file (g_cfg.GEOIP.ip4_file, AF_INET);
     num6 = geoip_parse_file (g_cfg.GEOIP.ip6_file, AF_INET6);
@@ -1395,7 +1390,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
   struct stat st_tmp,  st_loc;
   BOOL       _st_tmp, _st_loc, equal = FALSE;
   time_t      now  = time (NULL);
-  time_t      past = now - 24 * 3600 * g_cfg.GEOIP.max_days;
+  time_t      past = now - (24 * 3600 * g_cfg.GEOIP.max_days);
   DWORD       rc = 0;
 
   _st_tmp = (stat(tmp_file, &st_tmp) == 0);
@@ -1405,8 +1400,10 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
 
   if (!force_update && _st_loc && st_loc.st_mtime >= past)
   {
-    TRACE (1, "update not needed for \"%s\". Try again in %ld days.\n",
-           loc_file, g_cfg.GEOIP.max_days + (long int)(now-st_loc.st_mtime)/(24*3600));
+    time_t when = st_loc.st_mtime + (24 * 3600 * g_cfg.GEOIP.max_days);
+
+    TRACE (1, "Update of \"%s\" not needed until \"%.24s\". Try again in %.1f days.\n",
+           loc_file, ctime(&when), (double)(when - now)/(24*3600.0));
     return (rc);
   }
 
@@ -1463,8 +1460,6 @@ void geoip_update_file (int family, BOOL force_update)
   else
     TRACE (0, "Unknown address-family %d\n", family);
 }
-
-#if defined(TEST_GEOIP)
 
 /**
  * Simplified version of the `get_error()` function in `wsock_trace.c`.
@@ -1902,7 +1897,7 @@ static void test_addr_common (const char            *addr_str,
       iana_print_rec ("  IANA: ", &rec);
       ASN_print ("  ASN:  ", &rec, NULL, a6);
     }
-    ASN_libloc_print ("  ASN:  ", a4, a6);
+    ASN_libloc_print ("  ASN:  ", a4, a6, NULL);
   }
 
   /** Check the global IPv4 / IPv6 address for membership in a SpamHaus `DROP` / `EDROP` list
@@ -2008,23 +2003,22 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   }
 }
 
-static void show_help (void)
+static int show_help (void)
 {
   printf ("Usage: %s [-cDfinruh] <-4|-6> address(es)\n"
           "       -c:     dump addresses on CIDR form.\n"
           "       -D:     dump address entries for countries and count of blocks.\n"
           "       -f:     force an update with the '-u' option.\n"
-          "       -i:     do no use the IP2Location database.\n"
+          "       -i:     do not use the IP2Location database.\n"
           "       -n #:   number of loops for random test.\n"
           "       -r:     random test for '-n' rounds (default 10).\n"
           "       -u:     test updating of geoip files.\n"
           "       -4:     test IPv4 address(es).\n"
           "       -6:     test IPv6 address(es).\n"
-          "       -h:     this help.\n",
-          program_name);
+          "       -h:     this help.\n", program_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
-          "   Or from 'stdin': \"%s -4 < file-with-addr\".\n"
-          "   Built by %s\n", program_name, get_builder(FALSE));
+          "   Or from 'stdin': \"%s -4 < file-with-addr\".\n", program_name);
+  return (0);
 }
 
 typedef void (*test_func) (const char *addr, BOOL use_ip2loc);
@@ -2152,12 +2146,12 @@ static int check_requirements (void)
 {
   if (!g_cfg.GEOIP.ip4_file || !file_exists(g_cfg.GEOIP.ip4_file))
   {
-    trace_printf ("'geoip4' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip4_file);
+    trace_printf ("'[geoip::ip4_file]' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip4_file);
     return (0);
   }
   if (!g_cfg.GEOIP.ip6_file || !file_exists(g_cfg.GEOIP.ip6_file))
   {
-    trace_printf ("'geoip6' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip6_file);
+    trace_printf ("'[geoip::ip6_file]' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip6_file);
     return (0);
   }
   if (!g_cfg.GEOIP.enable)
@@ -2183,8 +2177,7 @@ int geoip_main (int argc, char **argv)
     {
       case '?':
       case 'h':
-           show_help();
-           goto quit;
+           return show_help();
       case 'c':
            do_cidr = 1;
            break;
@@ -2213,15 +2206,11 @@ int geoip_main (int argc, char **argv)
            do_6 = 1;
            break;
       default:
-           show_help();
-           goto quit;
+           return show_help();
     }
 
   if (!do_4 && !do_6)
-  {
-    show_help();
-    goto quit;
-  }
+     return show_help();
 
   /** Possibly call `ip2loc_init()` again.
    */
@@ -2275,9 +2264,7 @@ int geoip_main (int argc, char **argv)
        test_addr_list (list, use_ip2loc, test_addr6);
      smartlist_wipe (list, free);
   }
-
-quit:
   return (0);
 }
-#endif  /* TEST_GEOIP */
+
 

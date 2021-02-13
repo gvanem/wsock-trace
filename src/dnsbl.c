@@ -335,12 +335,6 @@ int DNSBL_test (void)
                   };
   const struct test_list *test = tests;
 
-  if (!(g_cfg.DNSBL.enable && g_cfg.DNSBL.test))
-  {
-    TRACE (2, "g_cfg.DNSBL.enable = 0 or g_cfg.DNSBL.test = 0\n");
-    return (0);
-  }
-
   if (g_cfg.DNSBL.drop_file && file_exists(g_cfg.DNSBL.drop_file))
      INET_util_test_mask4();
 
@@ -637,17 +631,15 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
 /*
  * A small test for DNSBL.
  */
-#if defined(TEST_DNSBL)
-
-void show_help (void)
+static int show_help (void)
 {
   printf ("Usage: %s [-Dftu]\n"
-          "  options:\n"
-          "    -D:  run 'DNSBL_dump()' to dump the DNSBL list.\n"
-          "    -f:  force an update with the '-u' option.\n"
-          "    -t:  run 'DNSBL_test()' for a simple test.\n"
-          "    -u:  update the SpamHaus' 'DROP.txt', 'DROPv6.txt' and 'EDROP.txt' files.\n"
-  , program_name);
+          "       -D:  run 'DNSBL_dump()' to dump the DNSBL list.\n"
+          "       -f:  force an update with the '-u' option.\n"
+          "       -t:  run 'DNSBL_test()' for a simple test.\n"
+          "       -u:  update the SpamHaus' 'DROP.txt', 'DROPv6.txt' and 'EDROP.txt' files.\n",
+          program_name);
+  return (0);
 }
 
 int dnsbl_main (int argc, char **argv)
@@ -674,13 +666,12 @@ int dnsbl_main (int argc, char **argv)
        case '?':
        case 'h':
        default:
-            show_help();
-            return (0);
+            return show_help();
   }
+
   if (do_test)
   {
     g_cfg.DNSBL.enable = 1;
-    g_cfg.DNSBL.test = 1;
     DNSBL_test();
   }
   else if (do_dump)
@@ -702,4 +693,3 @@ int dnsbl_main (int argc, char **argv)
 
   return (0);
 }
-#endif

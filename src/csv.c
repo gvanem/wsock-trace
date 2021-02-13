@@ -369,10 +369,7 @@ unsigned CSV_open_and_parse_file (struct CSV_context *ctx)
 
 /*
  * A simple test program for the above CVS-parser.
- */
-#if defined(TEST_CSV)
-
-/*
+ *
  * A do-nothing callback. Just report the parsed record and fields.
  */
 static int csv_callback (struct CSV_context *ctx, const char *value)
@@ -388,15 +385,14 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
 
 static int show_help (void)
 {
-  printf ("Usage: %s [-d] [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
-          "       -d: increase trace-level            (optional).\n"
-          "       -f: set field delimiter             (optional, default is ',').\n"
-          "       -m: max number of records to handle (optional).\n"
-          "       -n: number of fields in CSV-records (mandatory).\n", program_name);
+  printf ("Usage: %s [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
+          "       -f: set field delimiter (default is ',').\n"
+          "       -m: max number of records to handle.\n"
+          "       -n: number of fields in CSV-records.\n", program_name);
   return (0);
 }
 
-int main (int argc, char **argv)
+int csv_main (int argc, char **argv)
 {
   struct CSV_context ctx;
   int    ch;
@@ -404,7 +400,7 @@ int main (int argc, char **argv)
   program_name = argv[0];
   memset (&ctx, '\0', sizeof(ctx));
 
-  while ((ch = getopt(argc, argv, "df:m:n:h?")) != EOF)
+  while ((ch = getopt(argc, argv, "f:m:n:h?")) != EOF)
      switch (ch)
      {
        case 'f':
@@ -415,9 +411,6 @@ int main (int argc, char **argv)
             break;
        case 'n':
             ctx.num_fields = atoi (optarg);
-            break;
-       case 'd':
-            g_cfg.trace_level++;
             break;
        case '?':
        case 'h':
@@ -432,4 +425,4 @@ int main (int argc, char **argv)
   ctx.callback  = csv_callback;
   return CSV_open_and_parse_file (&ctx) > 0 ? 0 : 1;
 }
-#endif  /* TEST_CSV */
+

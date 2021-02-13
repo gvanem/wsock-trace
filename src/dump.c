@@ -1605,17 +1605,17 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
  */
 void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
 {
-  trace_printf ("%*s~4TCP_INFO:", g_cfg.trace_indent+2, "");
+  trace_printf ("%*s~4TCP_INFO: ", g_cfg.trace_indent+2, "");
 
   if (err_code != NO_ERROR)
   {
     char buf[150];
 
-    trace_printf (" %s~0\n", ws_strerror(err_code, buf, sizeof(buf)));
+    trace_printf ("%s~0\n", ws_strerror(err_code, buf, sizeof(buf)));
     return;
   }
 
-  trace_printf ("State: %s, Mss: %u, ConnectionTimeMs: %s, RttUs: %s,\n",
+  trace_printf ("State: %s, Mss: %u, ConnectionTime: %s msec, RTT: %s usec,\n",
                 list_lookup_name(info->State, tcp_states, DIM(tcp_states)),
                 info->Mss,
                 qword_str(info->ConnectionTimeMs),
@@ -1628,7 +1628,7 @@ void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
                 dword_str(info->Cwnd),
                 dword_str(info->DupAcksIn));
 
-  trace_printf ("%*sSndWnd: %s, RcvWnd: %s, RcvBuf: %s, info->BytesOut: %s, info->BytesIn: %s,\n",
+  trace_printf ("%*sSndWnd: %s, RcvWnd: %s, RcvBuf: %s, BytesOut: %s, BytesIn: %s,\n",
                 g_cfg.trace_indent+12, "",
                 dword_str(info->SndWnd),
                 dword_str(info->RcvWnd),
@@ -2444,7 +2444,7 @@ dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_sin
        snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
   else snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN(%d):  ", g_cfg.trace_indent+2, "", num);
 
-  return ASN_libloc_print (ASN_intro, ia4, ia6);
+  return ASN_libloc_print (ASN_intro, ia4, ia6, NULL);
 }
 
 /*

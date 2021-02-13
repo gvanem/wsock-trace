@@ -48,6 +48,10 @@
   #define MIN_WINNT_VALUE 0x600
 #endif
 
+#if defined(__WATCOMC__)
+  #error "OpenWatcom is not able to compile this."
+#endif
+
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT_VALUE)
   #undef  _WIN32_WINNT
   #define _WIN32_WINNT MIN_WINNT_VALUE
@@ -68,58 +72,17 @@
 #include "iana.h"
 #include "inet_util.h"
 #include "wsock_trace.h"
-#include <MMsystem.h>
-
-#if defined(__WATCOMC__)
-  /*
-   * OpenWatcom 2.x is hardly able to compile anything here.
-   */
-  static void unimplemented (const char *func, const char *file, unsigned line)
-  {
-    fprintf (stderr, "%s(%u): Function \"%s()\" not implemented for __WATCOMC__.\n", file, line, func);
-  }
-  #define UNIMPLEMENTED(ret) unimplemented (__FUNCTION__, __FILE__, __LINE__); return ret
-
-  BOOL fw_init (void)
-  {
-    UNIMPLEMENTED (FALSE);
-  }
-  void fw_exit (void)
-  {
-    UNIMPLEMENTED();
-  }
-  void fw_report (void)
-  {
-    UNIMPLEMENTED();
-  }
-  BOOL fw_monitor_start (void)
-  {
-    UNIMPLEMENTED (FALSE);
-  }
-
-  void fw_monitor_stop (BOOL force)
-  {
-    ARGSUSED (force);
-    UNIMPLEMENTED();
-  }
-  int firewall_main (int argc, char **argv)
-  {
-    (void) argc;
-    (void) argv;
-    UNIMPLEMENTED (0);
-  }
-#else  /* Rest of file */
+#include "firewall.h"
 
 typedef LONG NTSTATUS;
 
 #include <sddl.h>   /* For `ConvertSidToStringSid()` */
 #include <fwpmu.h>
+#include <MMsystem.h>
 
 #if !defined(__MINGW32__) && !defined(__CYGWIN__)
 #include <fwpsu.h>
 #endif
-
-#include "firewall.h"
 
 #define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
 
@@ -172,42 +135,43 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 #define FW_FUNC_ERROR  ERROR_FUNCTION_FAILED
 
 /**
- * \def TIME_STRING_FMT
- *  The `fw_buf_add()` format for a `get_time_string()` result.
- *
- * \def INDENT_SZ
- *  The number of spaces to indent a printed line.
+ * \def TIME_STRING_FMT_1
+ * The `fw_buf_add()` format for a `get_time_string()` result to use when called from `firewall_main()`.
+ * Uses colour-code '~1' for the time-value.
+ * Uses colour-code '~4' for the event-name.
  */
-#if defined(TEST_FIREWALL)
-  #define TIME_STRING_FMT   "\n~1%s"
-  #define EVENT_STRING_FMT  " ~4%s~0"
-  #define INDENT_SZ         2
+#define TIME_STRING_FMT_1   "\n~1%s ~4%s~0"
 
-  #if 0
-    /*
-     * Used for the reference-timestamp value in `get_time_string (NULL)`.
-     */
-    func_GetSystemTimePreciseAsFileTime p_GetSystemTimePreciseAsFileTime;
-  #endif
-
-  /* Show statistics on the Console Title bar
-   */
-  static void fw_console_stats (void);
-  static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent);
-#else
-
-  /* Similar as to how wsock_trace.c shows a time-stamp.
-   * Use format '~3' for the time-value.
-   * Use format '~5' for the event-name.
-   */
-  #define TIME_STRING_FMT   "\n  ~1* ~3%s"
-  #define EVENT_STRING_FMT  " ~2%s~0"
-  #define INDENT_SZ         (2 + g_cfg.trace_indent)
-#endif
+/**
+ * \def TIME_STRING_FMT_2
+ *  The `fw_buf_add()` format for a `get_time_string()` result to use when NOT called from `firewall_main()`.
+ *
+ * This is similar as to how wsock_trace.c shows a time-stamp.
+ * Uses colour-code '~3' for the time-value.
+ * Uses colour-code '~2' for the event-name.
+ */
+#define TIME_STRING_FMT_2   "\n  ~1* ~3%s ~2%s~0"
 
 DWORD fw_errno;
 int   fw_api = FW_API_DEFAULT;
 BOOL  fw_force_init = FALSE;
+
+/**
+ * TRUE if we've been called from `firewall_main()`.
+ */
+static BOOL from_firewall_main = FALSE;
+
+/**
+ * The number of spaces to indent a printed line.
+ */
+static size_t fw_indent_sz;
+
+static const char *fw_time_string_fmt = TIME_STRING_FMT_2;
+
+/* Show statistics on the Console Title bar
+ */
+static void fw_console_stats (void);
+static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent, str_put_func func);
 
 typedef enum FW_STORE_TYPE {
              FW_STORE_TYPE_INVALID,
@@ -1637,7 +1601,19 @@ static char  fw_buf [2000];
 static char *fw_ptr  = fw_buf;
 static int   fw_left = (int)sizeof(fw_buf) - 1;
 
-static int fw_buf_add (const char *fmt, ...)
+static int fw_buf_add (const char *str)
+{
+  int len = (int) strlen (str);
+
+  if (fw_left < len)
+     return (0);
+  strcpy (fw_ptr, str);
+  fw_ptr  += len;
+  fw_left -= len;
+  return (len);
+}
+
+static int fw_buf_addf (const char *fmt, ...)
 {
   va_list args;
   int     len;
@@ -1857,7 +1833,7 @@ static const char *get_time_string (const FILETIME *ts)
       msec = -msec;
       sign = "-";
     }
-    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec: ", sign, sec, msec);
+    snprintf (time_str, sizeof(time_str), "%s%ld.%03ld sec:", sign, sec, msec);
   }
   else if (g_cfg.trace_time_format == TS_ABSOLUTE)
   {
@@ -1869,7 +1845,7 @@ static const char *get_time_string (const FILETIME *ts)
     FileTimeToLocalFileTime (ts, &loc_time);
     FileTimeToSystemTime (&loc_time, &sys_time);
 
-    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u: ",
+    snprintf (time_str, sizeof(time_str), "%02u:%02u:%02u.%03u:",
               sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
   }
   return (time_str);
@@ -1880,25 +1856,13 @@ static const char *get_time_string (const FILETIME *ts)
  */
 static void fw_play_sound (const struct FREQ_MILLISEC *sound)
 {
-  static BOOL warned = FALSE;
-
-#if defined(TEST_FIREWALL)
-  if (sound == &g_cfg.FIREWALL.sound.beep.event_DNSBL)
-     fw_warning_sound();
-  else
-#endif
-
-  if (!g_cfg.FIREWALL.sound.enable)
+  if (!g_cfg.FIREWALL.enable || !g_cfg.FIREWALL.sound.enable)
      return;
 
-  if (!g_cfg.FIREWALL.enable && !warned)
-  {
-    WARNING ("'%s()' called with 'g_cfg.FIREWALL.enable == TRUE'!!\n", __FUNCTION__);
-    warned = TRUE;
-    return;
-  }
+  if (sound == &g_cfg.FIREWALL.sound.beep.event_DNSBL)
+     fw_warning_sound();
 
-  if (g_cfg.FIREWALL.sound.enable && sound->frequency > 0 && sound->milli_sec > 0)
+  else if (sound->frequency > 0 && sound->milli_sec > 0)
      Beep (sound->frequency, sound->milli_sec);
 }
 
@@ -1950,6 +1914,9 @@ BOOL fw_init (void)
 {
   USHORT api_version;
   ULONG  user_len;
+
+  if (!g_cfg.FIREWALL.enable)
+     return (FALSE);
 
   /**
    * \todo
@@ -2023,9 +1990,23 @@ static void fw_rule_free (void *_r)
   FREE (r->action);
   FREE (r->dir);
   FREE (r->app);
+  FREE (r->value);
   FREE (r->embed_ctxt);
   FREE (r->app_pkg_id);
   free (r);
+}
+
+/**
+ * Free all smartlists and their data.
+ */
+static void fw_free_data (void)
+{
+  smartlist_wipe (SID_entries, fw_SID_free);
+  smartlist_wipe (filter_entries, free);
+  smartlist_wipe (SBL_entries, free);
+  smartlist_wipe (rule_entries, fw_rule_free);
+
+  SID_entries = filter_entries = SBL_entries = rule_entries = NULL;
 }
 
 /**
@@ -2039,14 +2020,7 @@ void fw_exit (void)
   fw_policy_handle = INVALID_HANDLE_VALUE;
 
   fw_monitor_stop (FALSE);
-
-  smartlist_wipe (SID_entries, fw_SID_free);
-  smartlist_wipe (filter_entries, free);
-  smartlist_wipe (SBL_entries, free);
-  smartlist_wipe (rule_entries, fw_rule_free);
-
-  SID_entries = filter_entries = SBL_entries = rule_entries = NULL;
-
+  fw_free_data();
   unload_dynamic_table (fw_funcs, DIM(fw_funcs));
 }
 
@@ -2315,11 +2289,18 @@ BOOL fw_monitor_start (void)
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
 
+  if (!g_cfg.FIREWALL.enable)
+  {
+    fw_errno = ERROR_NOT_SUPPORTED;
+    return (FALSE);
+  }
+
   fw_num_events = fw_num_ignored = num_SBL_hits = 0;
 
   if (ws_sema_inherited && !fw_force_init)
   {
     TRACE (1, "Not safe to use 'fw_monitor_start()' in a sub-process.\n");
+    fw_errno = ERROR_NOT_SUPPORTED;
     return (FALSE);
   }
 
@@ -2401,24 +2382,24 @@ static void fw_dump_rule (const FW_RULE *rule)
      strcpy (ascii, "?");
 
   if (fw_have_n_format)
-       fw_buf_add ("~4%3lu: ~3%s:~0%*s%n", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "", &indent);
-  else indent = fw_buf_add ("~4%3lu: ~3%s:~0%*s", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "");
+       fw_buf_addf ("~4%3lu: ~3%s:~0%*s%n", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "", &indent);
+  else indent = fw_buf_addf ("~4%3lu: ~3%s:~0%*s", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "");
 
   fw_add_long_line (ascii, indent-6, ' ');
   fw_buf_flush();
 
-//fw_buf_add ("     ~2status:~0  0x%08X, 0x%08X, 0x%p\n", rule->Status, rule->wFlags, rule->pMetaData);
+//fw_buf_addf ("     ~2status:~0  0x%08X, 0x%08X, 0x%p\n", rule->Status, rule->wFlags, rule->pMetaData);
 
   if (rule->wszName)
   {
     if (WideCharToMultiByte (fw_acp, 0, rule->wszName, -1, ascii, (int)sizeof(ascii)-1, NULL, NULL) == 0)
        strcpy (ascii, "?");
-    fw_buf_add ("     ~2name:~0    %s\n", ascii);
+    fw_buf_addf ("     ~2name:~0    %s\n", ascii);
   }
 
   if (rule->wszLocalApplication)
   {
-    fw_buf_add ("     ~2prog:~0    %s", get_path(NULL, rule->wszLocalApplication, &fexist, &is_native));
+    fw_buf_addf ("     ~2prog:~0    %s", get_path(NULL, rule->wszLocalApplication, &fexist, &is_native));
     if (!fexist)
        fw_buf_add ("  (does not exist)");
     else if (is_native)
@@ -2427,7 +2408,7 @@ static void fw_dump_rule (const FW_RULE *rule)
   }
 
   if (rule->wszEmbeddedContext)
-     fw_buf_add ("     ~2context:~0 %s\n", get_path(NULL, rule->wszEmbeddedContext, NULL, NULL));
+     fw_buf_addf ("     ~2context:~0 %s\n", get_path(NULL, rule->wszEmbeddedContext, NULL, NULL));
 
   fw_buf_addc ('\n');
   fw_buf_flush();
@@ -2601,7 +2582,6 @@ static struct rule_entry *parse_program_rule (const char *_rule)
   return (r);
 }
 
-#if defined(TEST_FIREWALL)
 /**
  * Print the Firewall rules.
  */
@@ -2660,7 +2640,7 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
 
     if (cc && cc[0] != '-')
        trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
-    print_ASN_info (&r->RA4, NULL, 4);
+    print_ASN_info (&r->RA4, NULL, 4, NULL);
   }
   else if (r->RA6.s6_addr[0])
   {
@@ -2678,7 +2658,7 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
 
     if (cc && cc[0] != '-')
        trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
-    print_ASN_info (NULL, &r->RA6, 4);
+    print_ASN_info (NULL, &r->RA6, 4, NULL);
   }
   if (r->se)
        trace_printf ("      SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
@@ -2865,7 +2845,6 @@ static int fw_enumerate_rules (void)
      TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
   return (num);
 }
-#endif  /* TEST_FIREWALL */
 
 /**
  * Get the `FWPM_LAYER_xx` name from `<fwpmu.h>` for this layer.
@@ -3660,8 +3639,8 @@ BOOL fw_enumerate_callouts (void)
          WideCharToMultiByte (fw_acp, 0, entry->displayData.description, -1, descr, (int)sizeof(descr), NULL, NULL);
     else strcpy (descr, "<None>");
 
-    fw_buf_add ("~4%2u~0: calloutId: ~3%u:~0\n", i, entry->calloutId);
-    fw_buf_add ("    ~4name:~0            %S\n", entry->displayData.name);
+    fw_buf_addf ("~4%2u~0: calloutId: ~3%u:~0\n", i, entry->calloutId);
+    fw_buf_addf ("    ~4name:~0            %S\n", entry->displayData.name);
 
     indent = fw_buf_add ("    ~4descr:~0           ") - 4;
     fw_add_long_line (descr, indent, ' ');
@@ -3669,15 +3648,15 @@ BOOL fw_enumerate_callouts (void)
     fw_buf_add ("    ~4flags:~2           ");
     fw_add_long_line (get_callout_flag(entry->flags), indent, '|');
 
-    fw_buf_add ("    ~4calloutKey:~0      %s\n", get_guid_string(&entry->calloutKey));
-    fw_buf_add ("    ~4providerKey:~0     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
-    fw_buf_add ("    ~4applicableLayer:~0 %s\n%*s= ~2%s~0\n", get_guid_string(&entry->applicableLayer), indent, "",
-                                                              get_callout_layer_name(&entry->applicableLayer));
+    fw_buf_addf ("    ~4calloutKey:~0      %s\n", get_guid_string(&entry->calloutKey));
+    fw_buf_addf ("    ~4providerKey:~0     %s\n", entry->providerKey ? get_guid_string(entry->providerKey) : "<None>");
+    fw_buf_addf ("    ~4applicableLayer:~0 %s\n%*s= ~2%s~0\n", get_guid_string(&entry->applicableLayer), indent, "",
+                                                               get_callout_layer_name(&entry->applicableLayer));
 
 #if 0  /* Never anything here */
    fw_buf_add ("    ~4providerData:~0    ");
    if (entry->providerData.data && entry->providerData.size > 0)
-         fw_buf_add ("%.*S\n", entry->providerData.size, entry->providerData.data);
+         fw_buf_addf ("%.*S\n", entry->providerData.size, entry->providerData.data);
     else fw_buf_add ("<None>\n");
 #endif
     fw_buf_addc ('\n');
@@ -3685,7 +3664,7 @@ BOOL fw_enumerate_callouts (void)
   }
 
   if (fw_unknown_layers)
-     fw_buf_add ("Found %lu unknown callout layer GUIDs.\n", DWORD_CAST(fw_unknown_layers));
+     fw_buf_addf ("Found %lu unknown callout layer GUIDs.\n", DWORD_CAST(fw_unknown_layers));
 
   fw_buf_flush();
   fw_unknown_layers = 0;
@@ -3938,7 +3917,7 @@ NO_INLINE static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *
 
   if (id && (*p_FwpmLayerGetById0)(fw_engine_handle, id, &layer_item) == ERROR_SUCCESS)
   {
-    fw_buf_add ("%-*slayer:   (%u) %S\n", INDENT_SZ, "", id, layer_item->displayData.name);
+    fw_buf_addf ("%-*slayer:   (%u) %S\n", fw_indent_sz, "", id, layer_item->displayData.name);
     (*p_FwpmFreeMemory0) ((void**)&layer_item);
   }
   return (id != 0);
@@ -3951,7 +3930,7 @@ NO_INLINE static BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0 
   char        is_loopback_str[10] = "?";
   UINT64      filter_id = 0ULL;
 
-  fw_buf_add ("%-*slayer2:  ", INDENT_SZ, "");
+  fw_buf_addf ("%-*slayer2:  ", fw_indent_sz, "");
 
   if (allow_event)
   {
@@ -3970,9 +3949,9 @@ NO_INLINE static BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0 
   {
     const struct filter_entry *fe = lookup_or_add_filter (filter_id);
 
-    fw_buf_add ("(%" U64_FMT ") %s, ", fe->value, fe->name);
+    fw_buf_addf ("(%" U64_FMT ") %s, ", fe->value, fe->name);
   }
-  fw_buf_add ("%s, isLoopback: %s\n", capability_id_str, is_loopback_str);
+  fw_buf_addf ("%s, isLoopback: %s\n", capability_id_str, is_loopback_str);
   return (filter_id != 0);
 }
 
@@ -3990,7 +3969,7 @@ static BOOL print_filter_rule2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_even
   {
     const struct filter_entry *fe = lookup_or_add_filter (filter_id);
 
-    fw_buf_add ("%-*sfilter:  (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
+    fw_buf_addf ("%-*sfilter:  (%" U64_FMT ") %s\n", fw_indent_sz, "", fe->value, fe->name);
     return (TRUE);
   }
   return (FALSE);
@@ -4010,7 +3989,7 @@ static BOOL print_filter_rule0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_ev
   {
     const struct filter_entry *fe = lookup_or_add_filter (filter_id);
 
-    fw_buf_add ("%-*sfilter:  (%" U64_FMT ") %s\n", INDENT_SZ, "", fe->value, fe->name);
+    fw_buf_addf ("%-*sfilter:  (%" U64_FMT ") %s\n", fw_indent_sz, "", fe->value, fe->name);
     return (TRUE);
   }
   return (FALSE);
@@ -4035,13 +4014,13 @@ static BOOL print_country_location (const struct in_addr *ia4, const struct in6_
     /* Location is known. Print as "country, city/region".
      */
     location = ia4 ? geoip_get_location_by_ipv4(ia4) : geoip_get_location_by_ipv6(ia6);
-    fw_buf_add ("%-*sgeo-IP:  %s, %s\n", INDENT_SZ, "", country, location ? location : "?");
+    fw_buf_addf ("%-*sgeo-IP:  %s, %s\n", fw_indent_sz, "", country, location ? location : "?");
   }
   else
   {
     /* Location is unknown. Just print the country.
      */
-    fw_buf_add ("%-*geo-IP:  %s\n", INDENT_SZ, "", country);
+    fw_buf_addf ("%-*geo-IP:  %s\n", fw_indent_sz, "", country);
   }
   return (TRUE);
 }
@@ -4050,7 +4029,7 @@ static BOOL print_country_location (const struct in_addr *ia4, const struct in6_
  * Try to get some ASN information from the address.
  * Using 'libloc'.
  */
-static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent)
+static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent, str_put_func func)
 {
   char  intro [50];
   const char *remark;
@@ -4060,14 +4039,11 @@ static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia
   if (INET_util_addr_is_special(ia4, ia6, &remark))
      return (FALSE);
 
-  /** \todo
-   * Create a `ASN_libloc_print()` function that can
-   * print to `fw_buf_add()` and return 1 if some ASN info was found.
-   */
   if (extra_indent)
-       snprintf (intro, sizeof(intro), "%-*sASN:      ", INDENT_SZ + extra_indent, "");
-  else snprintf (intro, sizeof(intro), "%-*sASN:     ", INDENT_SZ, "");
-  return ASN_libloc_print (intro, ia4, ia6);
+       snprintf (intro, sizeof(intro), "%-*sASN:      ", fw_indent_sz + extra_indent, "");
+  else snprintf (intro, sizeof(intro), "%-*sASN:     ", fw_indent_sz, "");
+
+  return ASN_libloc_print (intro, ia4, ia6, func);
 }
 
 /**
@@ -4097,7 +4073,7 @@ static BOOL print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
   fw_play_sound (&g_cfg.FIREWALL.sound.beep.event_DNSBL);
 
   num_SBL_hits++;   /* Increment total "SpamHaus Block List" hits */
-  fw_buf_add ("%-*sSBL-ref: %s\n", INDENT_SZ, "", sbl_ref);
+  fw_buf_addf ("%-*sSBL-ref: %s\n", fw_indent_sz, "", sbl_ref);
   return (TRUE);
 }
 
@@ -4205,18 +4181,18 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     return (FALSE);
   }
 
-  fw_buf_add ("%-*s", INDENT_SZ, "");
+  fw_buf_addf ("%-*s", fw_indent_sz, "");
 
   ports = get_ports (header, direction_in);
 
   if (direction_in)
-       fw_buf_add ("addr:    %s -> %s%s\n", remote_addr, local_addr, ports);
-  else fw_buf_add ("addr:    %s -> %s%s\n", local_addr, remote_addr, ports);
+       fw_buf_addf ("addr:    %s -> %s%s\n", remote_addr, local_addr, ports);
+  else fw_buf_addf ("addr:    %s -> %s%s\n", local_addr, remote_addr, ports);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     print_country_location (&ia4_rem, NULL);
-    print_ASN_info (&ia4_rem, NULL, 0);
+    print_ASN_info (&ia4_rem, NULL, 0, fw_buf_add);
     print_DNSBL_info (&ia4_rem, NULL);
   }
   return (TRUE);
@@ -4271,7 +4247,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     return (FALSE);
   }
 
-  fw_buf_add ("%-*s", INDENT_SZ, "");
+  fw_buf_addf ("%-*s", fw_indent_sz, "");
 
   ports = get_ports (header, direction_in);
 
@@ -4284,13 +4260,13 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
     scope[0] = '\0';
 
   if (direction_in)
-       fw_buf_add ("addr:    %s -> %s%s%s\n", remote_addr, local_addr, scope, ports);
-  else fw_buf_add ("addr:    %s%s -> %s%s\n", local_addr, scope, remote_addr, ports);
+       fw_buf_addf ("addr:    %s -> %s%s%s\n", remote_addr, local_addr, scope, ports);
+  else fw_buf_addf ("addr:    %s%s -> %s%s\n", local_addr, scope, remote_addr, ports);
 
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     print_country_location (NULL, &ia6_rem);
-    print_ASN_info (NULL, &ia6_rem, 0);
+    print_ASN_info (NULL, &ia6_rem, 0, fw_buf_add);
     print_DNSBL_info (NULL, &ia6_rem);
   }
   return (TRUE);
@@ -4328,7 +4304,7 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
     return (FALSE);
   }
 
-  fw_buf_add ("%-*sapp:     %s", INDENT_SZ, "", a_name);
+  fw_buf_addf ("%-*sapp:     %s", fw_indent_sz, "", a_name);
 
   if (!fexist)
      fw_buf_add (" (does not exist)");
@@ -4353,7 +4329,7 @@ static void print_eff_name_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   w_name = (LPCWSTR) header->effectiveName.data;
   w_len  = header->effectiveName.size;
-  fw_buf_add ("\n%-*seff:      %.*S\n", INDENT_SZ, "", w_len, w_name);
+  fw_buf_addf ("\n%-*seff:      %.*S\n", fw_indent_sz, "", w_len, w_name);
 }
 
 /**
@@ -4467,8 +4443,8 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
   if (g_cfg.FIREWALL.show_user && !stricmp(se->account, fw_logged_on_user))
      return (FALSE);
 
-  fw_buf_add ("%-*suser:    %s\\%s\n",
-              INDENT_SZ, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
+  fw_buf_addf ("%-*suser:    %s\\%s\n",
+               fw_indent_sz, "", se->domain[0] ? se->domain : "?", se->account[0] ? se->account : "?");
   return (TRUE);
 }
 
@@ -4489,7 +4465,7 @@ static BOOL print_package_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   if (se->sid_str && (g_cfg.FIREWALL.show_all || strcmp(NULL_SID, se->sid_str)))
   {
-    fw_buf_add ("%-*spackage: %s\n", INDENT_SZ, "", se->sid_str);
+    fw_buf_addf ("%-*spackage: %s\n", fw_indent_sz, "", se->sid_str);
     return (TRUE);
   }
   return (FALSE);
@@ -4502,10 +4478,10 @@ static void print_reauth_reason (const _FWPM_NET_EVENT_HEADER3         *header,
   if (!(header->flags & FWPM_NET_EVENT_FLAG_REAUTH_REASON_SET))
      return;
 
-  fw_buf_add ("%-*sreauth:  ", INDENT_SZ, "");
+  fw_buf_addf ("%-*sreauth:  ", fw_indent_sz, "");
   if (drop_event)
-       fw_buf_add ("%lu\n", DWORD_CAST(drop_event->reauthReason));
-  else fw_buf_add ("%lu\n", DWORD_CAST(allow_event->reauthReason));
+       fw_buf_addf ("%lu\n", DWORD_CAST(drop_event->reauthReason));
+  else fw_buf_addf ("%lu\n", DWORD_CAST(allow_event->reauthReason));
 }
 
 static const char *get_protocol (UINT8 proto)
@@ -4531,6 +4507,17 @@ static void CALLBACK
   DWORD       unhandled_flags;
   const char *event_name;
 
+  if (from_firewall_main)
+  {
+    fw_indent_sz = 2;
+    fw_time_string_fmt = TIME_STRING_FMT_1;
+  }
+  else
+  {
+    fw_indent_sz = 2 + g_cfg.trace_indent;
+    fw_time_string_fmt = TIME_STRING_FMT_2;
+  }
+
   fw_buf_reset();
 
   if (header->flags & FWPM_NET_EVENT_FLAG_IP_VERSION_SET)
@@ -4553,8 +4540,7 @@ static void CALLBACK
    */
   event_name = list_lookup_name (event_type, events, DIM(events));
 
-  fw_buf_add (TIME_STRING_FMT EVENT_STRING_FMT,
-              get_time_string(&header->timeStamp), event_name);
+  fw_buf_addf (fw_time_string_fmt, get_time_string(&header->timeStamp), event_name);
 
   if (event_type == _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP)
   {
@@ -4572,10 +4558,10 @@ static void CALLBACK
        direction_in = TRUE;
 
     if (direction_in || direction_out)
-       fw_buf_add (", ~3%s~0", list_lookup_name(drop_event1->msFwpDirection, directions, DIM(directions)));
+       fw_buf_addf (", ~3%s~0", list_lookup_name(drop_event1->msFwpDirection, directions, DIM(directions)));
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-         fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+         fw_buf_addf (", %s\n", get_protocol(header->ipProtocol));
     else fw_buf_addc ('\n');
 
     print_layer_item2 (drop_event1, NULL);
@@ -4597,10 +4583,10 @@ static void CALLBACK
        direction_in = TRUE;
 
     if (direction_in || direction_out)
-       fw_buf_add (", ~3%s~0", list_lookup_name(allow_event1->msFwpDirection, directions, DIM(directions)));
+       fw_buf_addf (", ~3%s~0", list_lookup_name(allow_event1->msFwpDirection, directions, DIM(directions)));
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-         fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+         fw_buf_addf (", %s\n", get_protocol(header->ipProtocol));
     else fw_buf_addc ('\n');
 
     print_layer_item2 (NULL, allow_event1);
@@ -4613,7 +4599,7 @@ static void CALLBACK
     fw_buf_add (", ~3IN~0");
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-       fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+       fw_buf_addf (", %s\n", get_protocol(header->ipProtocol));
 
     print_layer_item0 (NULL, allow_event2);
     print_filter_rule0 (NULL, allow_event2);
@@ -4625,7 +4611,7 @@ static void CALLBACK
     fw_buf_add (", ~3IN~0");
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
-       fw_buf_add (", %s\n", get_protocol(header->ipProtocol));
+       fw_buf_addf (", %s\n", get_protocol(header->ipProtocol));
 
     print_layer_item0 (drop_event2, NULL);
     print_filter_rule0 (drop_event2, NULL);
@@ -4661,6 +4647,8 @@ static void CALLBACK
 
   if (address_printed || program_printed || user_printed || pkg_printed)
   {
+    if (!from_firewall_main && g_cfg.extra_new_line)
+       fw_buf_addc ('\n');
     fw_buf_flush();
     fw_num_events++;
 
@@ -4672,9 +4660,8 @@ static void CALLBACK
         event_type == _FWPM_NET_EVENT_TYPE_CAPABILITY_DROP)
        fw_play_sound (&g_cfg.FIREWALL.sound.beep.event_drop);
 
-#ifdef TEST_FIREWALL
-    fw_console_stats();
-#endif
+    if (from_firewall_main)
+        fw_console_stats();
   }
   else
   {
@@ -4700,8 +4687,6 @@ const char *fw_strerror (DWORD err)
 {
   return win_strerror (err);
 }
-
-#if defined(TEST_FIREWALL)
 
 static int quit;
 
@@ -4733,17 +4718,17 @@ static char *set_net_program (int argc, char **argv)
 static int show_help (void)
 {
   printf ("Simple Windows ICF Firewall monitor test program.\n"
-          "  Usage: %s [options] [program]\n"
-          "  options:\n"
-          "    -a:  the API-level to use (%d-%d, default: %d).\n"
-          "    -c:  only dump the callout rules.\n"
-          "    -e:  only dump recent event; does not work with \"-a0\" or \"-a1\".\n"
-          "    -f:  force an init in 'fw_monitor_start()'.\n"
-          "    -l:  print to \"log-file\" only.\n"
-          "    -p:  print events for the below program only (implies your \"user-activity\" only).\n"
-          "    -r:  only dump the firewall rules and programs.\n"
-          "    -R:  with option '-r', only show program-rules with an IPv4/6 address.\n"
-          "    -v:  sets \"g_cfg.FIREWALL.show_all = 1\".\n"
+          "Usage: %s [-aN] [-A] [-c] [-e] [-f] [-lfile] [-p] [-r] [-R] [-v] [program]\n"
+          "       -aN:    the API-level to use (%d-%d, default: %d).\n"
+          "       -A:     show timestamps on absolute time.\n"
+          "       -c:     only dump the callout rules.\n"
+          "       -e:     only dump recent event; does not work with \"-a0\" or \"-a1\".\n"
+          "       -f:     force an init in 'fw_monitor_start()'.\n"
+          "       -lfile: print to \"log-file\" only.\n"
+          "       -p:     print events for the below program only (implies your \"user-activity\" only).\n"
+          "       -r:     only dump the firewall rules and programs.\n"
+          "       -R:     with option '-r', only show program-rules with an IPv4/6 address.\n"
+          "       -v:     sets \"g_cfg.FIREWALL.show_all = 1\".\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
           "    Does not work with GUI programs. Event may come in late. So an extra \"sleep\" is handy.\n"
@@ -4788,24 +4773,25 @@ static void fw_console_stats (void)
  * This mysterious SID was found in FirewallApi.DLL.
  * Figure out what account it has.
  */
-static int test_SID (void)
+static void test_SID (void)
 {
   const char *sid_str = "S-1-15-3-4214768333-1334025770-122408079-3919188833";
   char        account[MAX_ACCOUNT_SZ];
   char        domain [MAX_DOMAIN_SZ];
   SID        *sid = NULL;
+  int         save = g_cfg.trace_level;
 
   g_cfg.trace_level = 2;
   if (!ConvertStringSidToSid(sid_str, (PSID*)&sid))
+     printf ("ConvertStringSidToSid() failed.\n");
+  else
   {
-    printf ("ConvertStringSidToSid() failed.\n");
-    return (1);
+    account[0] = domain[0] = '\0';
+    lookup_account_SID (sid, sid_str, account, domain);
+    printf ("SID: %s -> %s\n", sid_str, account[0] ? account : "?");
+    LocalFree (sid);
   }
-  account[0] = domain[0] = '\0';
-  lookup_account_SID (sid, sid_str, account, domain);
-  printf ("SID: %s -> %s\n", sid_str, account[0] ? account : "?");
-  LocalFree (sid);
-  return (0);
+  g_cfg.trace_level = save;
 }
 
 static int run_program (const char *program)
@@ -4842,7 +4828,7 @@ static int run_program (const char *program)
   return (0);
 }
 
-int main (int argc, char **argv)
+int firewall_main (int argc, char **argv)
 {
   int     ch, rc = 1;
   int     dump_rules = 0;
@@ -4858,11 +4844,14 @@ int main (int argc, char **argv)
 
   program_name = argv[0];
 
-  while ((ch = getopt(argc, argv, "a:fh?cel:prRtv")) != EOF)
+  while ((ch = getopt(argc, argv, "a:Afh?cel:prRtv")) != EOF)
     switch (ch)
     {
       case 'a':
            fw_api = atoi (optarg);
+           break;
+      case 'A':
+           g_cfg.trace_time_format = TS_ABSOLUTE;
            break;
       case 'c':
            dump_callouts = 1;
@@ -4886,7 +4875,8 @@ int main (int argc, char **argv)
            RA4_only = 1;
            break;
       case 't':
-           return test_SID();
+           test_SID();
+           break;
       case 'v':
            g_cfg.FIREWALL.show_all = 1;
            break;
@@ -4901,12 +4891,15 @@ int main (int argc, char **argv)
      g_cfg.FIREWALL.sound.enable = FALSE;
 
   /* Because we use `getservbyport()` above, we need to call `WSAStartup()` first.
+   * And `fw_init()` gets called by `WSAStartup()`.
    */
   if (WSAStartup(ver, &wsa) != 0 || wsa.wVersion < ver)
   {
     fprintf (stderr, "Winsock init failed: %s.\n", win_strerror(GetLastError()));
     goto quit;
   }
+
+  from_firewall_main = TRUE;
 
   if (log_file)
   {
@@ -4935,11 +4928,13 @@ int main (int argc, char **argv)
     TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
   }
 
+#if 0
   if (!fw_init())
   {
     fprintf (stderr, "fw_init() failed: %s.\n", win_strerror(fw_errno));
     goto quit;
   }
+#endif
 
   if (dump_rules || dump_callouts || dump_events)
   {
@@ -4955,8 +4950,11 @@ int main (int argc, char **argv)
 
     if (dump_callouts)
        fw_enumerate_callouts();
+
+    goto quit;
   }
-  else if (fw_monitor_start())
+
+  if (fw_monitor_start())
   {
     fw_console_stats();  /* Clear the console title bar */
     signal (SIGINT, sig_handler);
@@ -4971,6 +4969,7 @@ int main (int argc, char **argv)
 
 quit:
   fw_report();
+  fw_free_data();   /* just in case */
 
   free (program);
   free (log_file);
@@ -12125,5 +12124,3 @@ void fw_warning_sound (void)
   if (g_cfg.FIREWALL.sound.enable)
      sndPlaySound ((LPCTSTR)&warning_sound, SND_ASYNC | SND_MEMORY);
 }
-#endif  /* TEST_FIREWALL */
-#endif  /* __WATCOMC__ */

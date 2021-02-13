@@ -200,9 +200,6 @@ int backtrace_exit (void)
   /* The 'smartlist_t*' and their contents are freed in stkwalk.c
    */
   symbols_list = modules_list = NULL;
-
-  wsock_trace_exit();
-  crtdbg_exit();
   return (1);
 }
 
@@ -294,8 +291,9 @@ static char *search_symbols_list (ULONG_PTR addr)
   return (buf);
 }
 
-#if defined(TEST_BACKTRACE)
-
+/*
+ * Test-code for this modules called from 'ws_tool.c'
+ */
 static int threaded        = 0;
 static int test_vm_bug     = 0;
 static int test_vm_abort   = 0;
@@ -312,9 +310,9 @@ struct thread_arg {
  * Or use '_Pragma (clang optimize off)' for clang.
  */
 #if defined(__clang__)
-  #define OPT_OFF()  __attribute__((optnone))
+  #define OPT_OFF()   __attribute__((optnone))
 #elif defined(__GNUC__)
-  #define OPT_OFF() __attribute__((optimize("0")))
+  #define OPT_OFF()   __attribute__((optimize("0")))
 #else
   #define OPT_OFF()
 #endif
@@ -409,20 +407,19 @@ DWORD WINAPI foo_first (void *arg)
 
 static int show_help (void)
 {
-  printf ("Usage: %s [-abstd] [-r <depth>]\n"
-          "  -a: test vm_bug_abort_handler().\n"
-          "  -b: test vm_bug_list().\n"
-          "  -s: test symbol-list and not StackWalkShow().\n"
-          "  -t: run threaded test.\n"
-          "  -d: increase debug-level.\n", program_name);
+  printf ("Usage: %s [-abstv] [-r <depth>]\n"
+          "       -a:   test vm_bug_abort_handler().\n"
+          "       -b:   test vm_bug_list().\n"
+          "       -s:   test symbol-list and not StackWalkShow().\n"
+          "       -t:   run threaded test.\n"
+          "       -v:   sets 'vm_bug_debug' value.\n"
+          "       -r #: sets 'foo_first()' recursion-level.\n", program_name);
   return (0);
 }
 
 static void test_unwind_fooX (void)
 {
   struct thread_arg ta;
-
-  backtrace_init();
 
   ta.depth = 0;
 
@@ -446,13 +443,13 @@ static void test_unwind_fooX (void)
   }
 }
 
-int main (int argc, char **argv)
+int backtrace_main (int argc, char **argv)
 {
-  int c, chat_level = 0;
+  int c;
 
   program_name = argv[0];
 
-  while ((c = getopt (argc, argv, "dstbah?r:")) != EOF)
+  while ((c = getopt (argc, argv, "atvsbr:h?")) != EOF)
     switch (c)
     {
       case 'a':
@@ -461,8 +458,7 @@ int main (int argc, char **argv)
       case 't':
            threaded = 1;
            break;
-      case 'd':
-           chat_level++;
+      case 'v':
            vm_bug_debug++;
            break;
       case 's':
@@ -476,8 +472,8 @@ int main (int argc, char **argv)
            break;
       case '?':
       case 'h':
-           exit (show_help());
-           break;
+           show_help();
+           return (0);
     }
 
   argc -= optind;
@@ -491,35 +487,20 @@ int main (int argc, char **argv)
   {
     smartlist_t *sl;
 
-    common_init();
     g_cfg.trace_stream = stdout;
 
     vm_bug_abort_init();
     sl = smartlist_new();
     smartlist_free (sl);
-    smartlist_get (sl, 0);  /* access after free */
-
-    /* Should not reach here, but just in case
-     */
-    common_exit();
+    smartlist_get (sl, 0);  /* access after free should trigger a SIGABRT */
     return (1);
   }
 
-  crtdbg_init();
-  wsock_trace_init();
-
   g_cfg.trace_report = 0;
-  if (g_cfg.trace_level < chat_level)
-     g_cfg.trace_level = chat_level;
 
+  backtrace_init();
   test_unwind_fooX();
-
-  /* Call these explicitly since 'wsock_trace_exit()'
-   * doesn't do that if 'TEST_BACKTRACE' is defined.
-   */
-  exclude_list_free();
-  StackWalkExit();
   backtrace_exit();
   return (0);
 }
-#endif /* TEST_BACKTRACE */
+
