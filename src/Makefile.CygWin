@@ -63,7 +63,7 @@ endif
 LIBLOC_ROOT = ./Geo-IP/IPFire/src
 LIBLOC_LIB  = libloc_cyg$(_D).a
 CFLAGS     += -I$(LIBLOC_ROOT)
-EX_LIBS    += -ldnsapi -lole32 -ladvapi32
+EX_LIBS    += -ldnsapi -lole32 -ladvapi32 -lwinmm
 
 SOURCES = asn.c         \
           bfd_gcc.c     \
@@ -92,11 +92,18 @@ NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
 WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 asn.o                  \
+                backtrace.o            \
                 bfd_gcc.o              \
                 common.o               \
                 cpu.o                  \
+                csv.o                  \
+                dnsbl.o                \
                 dump.o                 \
+                firewall.o             \
+                geoip.o                \
                 hosts.o                \
+                iana.o                 \
+                idna.o                 \
                 in_addr.o              \
                 init.o                 \
                 inet_util.o            \
@@ -104,9 +111,12 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 overlap.o              \
                 smartlist.o            \
                 stkwalk.o              \
+                test.o                 \
                 vm_dump.o              \
-                wsock_trace_lua.o      \
-                ws_tool.o)
+                ws_tool.o              \
+                wsock_trace_lua.o)
+
+WS_TOOL_OBJ += $(OBJ_DIR)/ws_tool.res
 
 #
 # .o-files for '$(LIBLOC_LIB).
@@ -158,7 +168,7 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
 ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lws2_32 -lole32 -lwinmm > ws_tool.map
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lws2_32 > ws_tool.map
 	@echo
 
 $(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c
@@ -237,8 +247,9 @@ colour_msg = @echo -e "$(1)\e[0m"
 green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
 yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 
-$(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
-	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+$(OBJ_DIR)/%.res: %.rc
+	windres $(RCFLAGS) -o $@ $<
+	@echo
 
 DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
