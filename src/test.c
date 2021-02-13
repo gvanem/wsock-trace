@@ -10,6 +10,12 @@
   #define _UNICODE
 #endif
 
+#include <signal.h>
+#include "config.h"
+#include "getopt.h"
+#include "common.h"
+#include "init.h"
+
 #if !defined(s6_bytes)  /* mingw.org */
   #define s6_bytes _s6_bytes
 #endif
@@ -823,7 +829,6 @@ struct thr_data {
        DWORD             t_id;
        HANDLE            t_hnd;
        int               t_err;   /* per-thread error-code */
-       CRITICAL_SECTION *t_crit;  /* the same for all threads */
      };
 
 /**
@@ -837,7 +842,7 @@ struct thr_data {
  */
 void thread_sub_func (const struct thr_data *td)
 {
-  EnterCriticalSection (td->t_crit);
+  ENTER_CRIT();
 
   /* This should demonstate that Winsock preserves 1 error-code per thread.
    * Ref. the 'TEST_CONDITION()' below.
@@ -849,7 +854,7 @@ void thread_sub_func (const struct thr_data *td)
   TEST_CONDITION (== td->t_err, WSAGetLastError());
   fflush (stdout);
 
-  LeaveCriticalSection (td->t_crit);
+  LEAVE_CRIT (0);
   Sleep (300);
 }
 
@@ -869,16 +874,15 @@ DWORD WINAPI thread_worker (void *arg)
  */
 static int thread_test (int num_threads)
 {
-  CRITICAL_SECTION _crit_sect;
   struct thr_data *td = calloc (1, num_threads * sizeof(*td));
   int    i;
 
-  InitializeCriticalSection (&_crit_sect);
+  if (verbose >= 1)
+     printf ("Starting num_threads: %d.\n", num_threads);
 
   strcpy (td[0].t_name, "main");
   td[0].t_id  = GetCurrentThreadId();
   td[0].t_err = 0;
-  td[0].t_crit = &_crit_sect;
   TEST_CONDITION (!= 0, td[0].t_id);
 
   for (i = 1; i < num_threads; i++)
@@ -887,9 +891,8 @@ static int thread_test (int num_threads)
 
     /* Start at 'WSABASEERR + 40' which is a range with no holes.
      */
-    td[i].t_err  = WSABASEERR + 39 + i;
-    td[i].t_crit = &_crit_sect;
-    td[i].t_hnd  = CreateThread (NULL, 0, thread_worker, td+i, 0, &td[i].t_id);
+    td[i].t_err = WSABASEERR + 39 + i;
+    td[i].t_hnd = CreateThread (NULL, 0, thread_worker, td+i, 0, &td[i].t_id);
     TEST_CONDITION (!= 0, td[i].t_id);
   }
 
@@ -901,8 +904,6 @@ static int thread_test (int num_threads)
     WaitForSingleObject (td[i].t_hnd, INFINITE);
     CloseHandle (td[i].t_hnd);
   }
-
-  DeleteCriticalSection (&_crit_sect);
   free (td);
   return (0);
 }
@@ -914,7 +915,7 @@ static int show_help (void)
           "       -v:     increase verbosity.\n"
           "       -f:     calls 'test_select_3()' for 100 sec (handy for Firewall event monitoring).\n"
           "       -l:     list tests and exit.\n"
-          "       -t [N]: only do a thread test with <N> running threads.\n", program_name);
+          "       -t[N]:  only do a thread test with <N> running threads.\n", program_name);
   return (0);
 }
 
@@ -954,11 +955,9 @@ int test_main (int argc, char **argv)
     {
       case '?':
       case 'h':
-           exit (show_help());
-           break;
+           return show_help();
       case 'l':
-           exit (list_tests());
-           break;
+           return list_tests();
       case 'f':
            return test_select_3();
 
@@ -970,8 +969,7 @@ int test_main (int argc, char **argv)
            if (optarg)
                 num = atoi (optarg);
            else num = 1;
-           exit (thread_test(num));
-           break;
+           return thread_test (num);
       case 'v':
            verbose++;
            break;
@@ -1159,24 +1157,28 @@ static void test_okay (const char *fmt, ...)
 {
   va_list args;
 
+  ENTER_CRIT();
   set_colour (COLOUR_GREEN);
   fputs ("  OKAY:   ", stdout);
   set_colour (0);
   va_start (args, fmt);
   vprintf (fmt, args);
   va_end (args);
+  LEAVE_CRIT (0);
 }
 
 static void test_failed (const char *fmt, ...)
 {
   va_list args;
 
+  ENTER_CRIT();
   set_colour (COLOUR_RED);
   fputs ("  FAILED: ", stdout);
   set_colour (0);
   va_start (args, fmt);
   vprintf (fmt, args);
   va_end (args);
+  LEAVE_CRIT (0);
 }
 
 static int name_match (const char *wildcard, const char *string)
