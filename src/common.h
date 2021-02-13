@@ -241,6 +241,7 @@ extern char        curr_dir  [MAX_PATH];
 extern char        curr_prog [MAX_PATH];
 extern char        prog_dir  [MAX_PATH];
 extern HINSTANCE   ws_trace_base;        /* Our base-address */
+extern char       *program_name;         /* For getopt.c */
 
 extern void (__stdcall *g_WSASetLastError) (int err);
 extern int  (__stdcall *g_WSAGetLastError) (void);

@@ -60,6 +60,7 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include "common.h"
 #include "getopt.h"
 
 #define PRINT_ERROR ((opterr) && (*options != ':'))
