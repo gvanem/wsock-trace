@@ -494,12 +494,12 @@ class CLI(object):
 			return False
 
 		if not network.is_global:
-			log.warning("Skipping non-globally routable network: %s" % network)
+			log.debug("Skipping non-globally routable network: %s" % network)
 			return False
 
 		if network.version == 4:
 			if network.prefixlen < 7:
-				log.warning("Skipping too big IP chunk: %s" % network)
+				log.debug("Skipping too big IP chunk: %s" % network)
 				return False
 
 			if network.prefixlen > 24:
@@ -507,12 +507,12 @@ class CLI(object):
 				return False
 
 			if str(network.network_address) == "0.0.0.0":
-				log.warning("Skipping network based on 0.0.0.0: %s" % network)
+				log.debug("Skipping network based on 0.0.0.0: %s" % network)
 				return False
 
 		elif network.version == 6:
 			if network.prefixlen < 10:
-				log.warning("Skipping too big IP chunk: %s" % network)
+				log.debug("Skipping too big IP chunk: %s" % network)
 				return False
 
 			if network.prefixlen > 48:
@@ -520,7 +520,7 @@ class CLI(object):
 				return False
 
 			if str(network.network_address) == "::":
-				log.warning("Skipping network based on '::': %s" % network)
+				log.debug("Skipping network based on '::': %s" % network)
 				return False
 
 		else:
@@ -587,7 +587,7 @@ class CLI(object):
 			# not managed by that specific RIR...
 			if key == "netname":
 				if re.match(r"(ERX-NETBLOCK|(AFRINIC|ARIN|LACNIC|RIPE)-CIDR-BLOCK|IANA-NETBLOCK-\d{1,3}|NON-RIPE-NCC-MANAGED-ADDRESS-BLOCK)", val.strip()):
-					log.warning("Skipping record indicating historic/orphaned data: %s" % val.strip())
+					log.debug("Skipping record indicating historic/orphaned data: %s" % val.strip())
 					return
 
 			if key == "inetnum":
@@ -768,8 +768,9 @@ class CLI(object):
 				-- DELETE link local address space
 				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '169.254.0.0/16';
 
-				-- DELETE IPv6 to IPv4 (6to4) address space
+				-- DELETE IPv6 to IPv4 (6to4) address space (RFC 3068)
 				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '192.88.99.0/24';
+				DELETE FROM announcements WHERE family(network) = 6 AND network <<= '2002::/16';
 
 				-- DELETE multicast and reserved address space
 				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '224.0.0.0/4';
