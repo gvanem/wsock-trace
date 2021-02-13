@@ -868,9 +868,6 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
   if (!stricmp(key, "enable"))
        g_cfg.DNSBL.enable = atoi (val);
 
-  else if (!stricmp(key, "test"))
-       g_cfg.DNSBL.test = atoi (val);
-
   else if (!stricmp(key, "drop_file"))
        g_cfg.DNSBL.drop_file = strdup (val);
 
@@ -1230,8 +1227,10 @@ static void trace_report (void)
   if (g_cfg.ASN.enable)
      ASN_report();
 
+#if !defined(__WATCOMC__)
   if (g_cfg.FIREWALL.enable)
      fw_report();
+#endif
 }
 
 /*
@@ -1267,6 +1266,7 @@ void wsock_trace_exit (void)
   }
 #endif
 
+#if !defined(__WATCOMC__)
   if (g_cfg.FIREWALL.enable)
   {
     TRACE (2, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
@@ -1275,17 +1275,21 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
+#endif
 
   common_exit();
 
   if (g_cfg.trace_stream && !g_cfg.trace_file_device)
      fclose (g_cfg.trace_stream);
 
+  if (g_cfg.PCAP.dump_stream)
+     fclose (g_cfg.PCAP.dump_stream);
+
   for (i = 0; i < DIM(g_cfg.hosts_file); i++)
       FREE (g_cfg.hosts_file[i]);
 
   g_cfg.trace_file_okay = FALSE;
-  g_cfg.trace_stream = NULL;
+  g_cfg.trace_stream = g_cfg.PCAP.dump_stream = NULL;
 
   FREE (g_cfg.trace_file);
   FREE (g_cfg.PCAP.dump_fname);
@@ -1410,7 +1414,7 @@ void wsock_trace_init (void)
     g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = 0;
   }
 
-  if (g_cfg.trace_file && !stricmp(g_cfg.trace_file,"stderr"))
+  if (g_cfg.trace_file && !stricmp(g_cfg.trace_file, "stderr"))
   {
     g_cfg.trace_stream      = stderr;
     g_cfg.trace_file_device = TRUE;
@@ -1452,7 +1456,9 @@ void wsock_trace_init (void)
 
   if (g_cfg.PCAP.enable)
   {
+    errno = 0;
     g_cfg.PCAP.dump_stream = fopen_excl (g_cfg.PCAP.dump_fname, "w+b");
+    TRACE (1, "g_cfg.PCAP.dump_stream: 0x%p, errno: %d.\n", g_cfg.PCAP.dump_stream, errno);
     write_pcap_header();
   }
 
@@ -1552,17 +1558,19 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_level <= 0)
   {
-    g_cfg.dump_data     = FALSE;
-    g_cfg.dump_hostent  = FALSE;
-    g_cfg.dump_servent  = FALSE;
-    g_cfg.dump_protoent = FALSE;
-    g_cfg.dump_nameinfo = FALSE;
+    g_cfg.dump_data              = FALSE;
+    g_cfg.dump_hostent           = FALSE;
+    g_cfg.dump_servent           = FALSE;
+    g_cfg.dump_protoent          = FALSE;
+    g_cfg.dump_nameinfo          = FALSE;
     g_cfg.dump_wsaprotocol_info  = FALSE;
     g_cfg.dump_wsanetwork_events = FALSE;
-    g_cfg.dump_data      = 0;
-    g_cfg.dump_select    = 0;
-    g_cfg.dump_tcpinfo   = 0;
-    g_cfg.extra_new_line = 0;
+    g_cfg.dump_data              = 0;
+    g_cfg.dump_select            = 0;
+    g_cfg.dump_tcpinfo           = 0;
+    g_cfg.extra_new_line         = 0;
+    g_cfg.FIREWALL.enable        = FALSE;
+    g_cfg.FIREWALL.sound.enable  = FALSE;
   }
 
   TRACE (3, "curr_prog:           '%s'\n"
@@ -1594,9 +1602,6 @@ void wsock_trace_init (void)
 #if defined(USE_LWIP)
   ws_lwip_init();
 #endif
-
-  if (g_cfg.DNSBL.test)
-     DNSBL_test();
 }
 
 /**
@@ -1781,8 +1786,6 @@ int get_column (void)
 #define DLT_RAW             12    /* raw IP */
 #define DLT_IPV4            228
 #define DLT_IPV6            229
-#define PROTO_TCP           6     /* on network order */
-#define PROTO_UDP           17    /* on network order */
 
 #if defined(_MSC_VER) || defined(__CYGWIN__)
   #pragma pack(push,1)
@@ -1868,21 +1871,40 @@ struct udp_header {
   #pragma pack()
 #endif
 
+static int make_ip_chksum (const void *buf, size_t len)
+{
+  long  cksum   = 0;
+  long  slen    = (long) len;   /* must be signed */
+  const WORD *w = (const WORD*) buf;
+
+  while (slen > 1)
+  {
+    cksum += *w++;
+    slen  -= 2;
+  }
+  if (slen > 0)
+     cksum += *(const BYTE*) w;
+
+  while (cksum >> 16)
+      cksum = (cksum & 0xFFFF) + (cksum >> 16);
+  return (WORD) cksum;
+}
+
 static const void *make_ip_hdr (size_t data_len)
 {
   static struct ip_header ip;
   static WORD   ip_id = 1;
 
-  data_len += sizeof(ip);
   memset (&ip, 0, sizeof(ip));
   ip.ip_ver  = 4;
   ip.ip_hlen = sizeof(ip) / 4;
-  ip.ip_len  = swap16 ((WORD)data_len);
+  ip.ip_len  = swap16 (sizeof(ip) + data_len);
   ip.ip_ttl  = 255;
-  ip.ip_id   = ip_id++;
-  ip.ip_p    = PROTO_TCP;
-  ip.ip_src  = 0x10203040;
-  ip.ip_dst  = 0x50607080;
+  ip.ip_id   = swap16 (++ip_id);
+  ip.ip_p    = IPPROTO_TCP;
+  ip.ip_src  = 0x10203040;      /* Just for now 64.48.32.16 */
+  ip.ip_dst  = 0x50607080;      /* Just for now 128.112.96.80 */
+  ip.ip_sum  = ~make_ip_chksum (&ip, sizeof(ip));
   return (&ip);
 }
 
@@ -1899,8 +1921,7 @@ const void *make_tcp_hdr (size_t data_len)
 {
   static struct tcp_header th;
 
-  memset (&th, 0xff, sizeof(th));  /* \todo */
-  th.th_flags = 0;
+  memset (&th, '\0', sizeof(th));  /* \todo */
   th.th_offx2 = 16 * (sizeof(th)/4);
   ARGSUSED (data_len);
   return (&th);
@@ -2020,8 +2041,8 @@ size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
   }
 
 #else
-  fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), sizeof(struct ip_header), 1, g_cfg.PCAP.dump_stream);
-  fwrite (make_tcp_hdr(len), sizeof(struct tcp_header), 1, g_cfg.PCAP.dump_stream);
+  fwrite (make_ip_hdr(len + sizeof(struct tcp_header)), 1, sizeof(struct ip_header), g_cfg.PCAP.dump_stream);
+  fwrite (make_tcp_hdr(len), 1, sizeof(struct tcp_header), g_cfg.PCAP.dump_stream);
 
   ARGSUSED (s);
   ARGSUSED (out);
