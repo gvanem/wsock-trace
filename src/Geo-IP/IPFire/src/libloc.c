@@ -103,7 +103,15 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 	// Start Winsock if not done
 	loc_init();
 
+#ifdef _WIN32
+	const char* env = NULL;
+
+	char buf[20];
+	if (GetEnvironmentVariable("LOC_LOG", buf, sizeof(buf)))
+		env = buf;
+#else
 	const char* env = secure_getenv("LOC_LOG");
+#endif
 	if (env)
 		loc_set_log_priority(c, log_priority(env));
 
