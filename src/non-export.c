@@ -94,6 +94,27 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
     defined(__WATCOMC__) || defined(__DOXYGEN__)   /* Rest of file */
 
 /**
+ * Similar to the one in common.c.
+ */
+static char *str_rip2 (char *s)
+{
+  char *p;
+
+  if ((p = strrchr(s, '\n')) != NULL) *p = '\0';
+  if ((p = strrchr(s, '\r')) != NULL) *p = '\0';
+  return (s);
+}
+
+static wchar_t *str_ripw2 (wchar_t *s)
+{
+  wchar_t *p;
+
+  if ((p = wcsrchr(s, L'\n')) != NULL) *p = L'\0';
+  if ((p = wcsrchr(s, L'\r')) != NULL) *p = L'\0';
+  return (s);
+}
+
+/**
  * These are `static __inline` function in MinGW.org's `<ws2tcpip.h>`.
  * But in other MinGW distribution they are not.
  *
@@ -122,7 +143,7 @@ char *gai_strerrorA (int err)
   err_buf[0] = '\0';
   FormatMessageA (FORMAT_FLAGS, NULL, err, LANG_NEUTRAL,
                   err_buf, sizeof(err_buf)-1, NULL);
-  return str_rip (err_buf);
+  return str_rip2 (err_buf);
 }
 
 wchar_t *gai_strerrorW (int err)
@@ -132,33 +153,8 @@ wchar_t *gai_strerrorW (int err)
   err_buf[0] = L'\0';
   FormatMessageW (FORMAT_FLAGS, NULL, err, LANG_NEUTRAL,
                   err_buf, DIM(err_buf)-1, NULL);
-  return str_ripw (err_buf);
+  return str_ripw2 (err_buf);
 }
 
-/**
- * These are also in common.c. But since this module is not part of
- * the `wsock_trace_mw.dll` and `wsock_trace_cyg.dll`, these
- * function must also be here.
- *
- * (they are only added as non-exports to `libwsock_trace_mw.a` and
- *  `libwsock_trace_cyg.a`).
- */
-char *str_rip (char *s)
-{
-  char *p;
-
-  if ((p = strrchr(s,'\n')) != NULL) *p = '\0';
-  if ((p = strrchr(s,'\r')) != NULL) *p = '\0';
-  return (s);
-}
-
-wchar_t *str_ripw (wchar_t *s)
-{
-  wchar_t *p;
-
-  if ((p = wcsrchr(s,L'\n')) != NULL) *p = L'\0';
-  if ((p = wcsrchr(s,L'\r')) != NULL) *p = L'\0';
-  return (s);
-}
 #endif  /* __MINGW32__ || __CYGWIN__ || __WATCOMC__ || __DOXYGEN__ */
 
