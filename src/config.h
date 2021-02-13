@@ -8,11 +8,11 @@
 
 #if defined(__WATCOMC__)
   /*
-   * Required to define `IN6_IS_ADDR_LOOPBACK()` etc. in
-   * OpenWatcom's <ws2ipdef.h>.
+   * Required to define `IN6_IS_ADDR_LOOPBACK()`, `inet_ntop()` etc. in
+   * OpenWatcom's <ws2tcpip.h>.
    */
   #undef  NTDDI_VERSION
-  #define NTDDI_VERSION 0x05010000
+  #define NTDDI_VERSION 0x06000000
 
   /* No <winhttp.h> in OpenWatcom.
    */
