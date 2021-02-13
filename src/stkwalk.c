@@ -1245,7 +1245,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   if (raw_name[0] == '?')
      is_cv_cpp = TRUE;
 
-#if !defined(_MSC_VER) && !defined(__clang__)
+#if !defined(_MSC_VER)
   /*
    * dbghelp.dll can decode C++ symbols in our module only if
    * we were compiled with MSVC or clang-cl.
@@ -1446,7 +1446,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
       TRACE (1, "line: %lu, addr: %p, func: %s.\n", line, addr, func);
     }
 
-    TRACE (1, "line: %lu, addr: %p, found_load: %d, found_text: %d, found_func: %d, p: '%s'.\n",
+    TRACE (3, "line: %lu, addr: %p, found_load: %d, found_text: %d, found_func: %d, p: '%s'.\n",
            line, addr, found_load, found_text, found_func, p);
 
     if (addr && found_func)
@@ -1513,7 +1513,7 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
   save = g_cfg.trace_raw;
   g_cfg.trace_raw = 1;
 
-#if !defined(_MSC_VER) && !defined(__clang__)
+#if !defined(_MSC_VER)
   if (!stricmp(g_module, module))
   {
     TRACE (3, "Not searching for PDB-symbols in module %s.\n", module);
@@ -1531,7 +1531,7 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
                               SYMENUM_OPTIONS_DEFAULT | SYMENUM_OPTIONS_INLINE))
      TRACE (2, "SymEnumSymbolsEx() failed for %s: %s\n", basename(module), get_error());
 
-#if !defined(_MSC_VER) && !defined(__clang__)
+#if !defined(_MSC_VER)
 check_mingw_map_file:
 
 #if defined(__MINGW32__)
@@ -1714,7 +1714,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   if (addr == 0)    /* If we are here, we have no valid callstack entry! */
      return (2);
 
-#if !defined(_MSC_VER) && !defined(__clang__)
+#if !defined(_MSC_VER)
   {
     DWORD64 base = (*p_SymGetModuleBase64) (g_proc, addr);
     char    path [MAX_PATH] = { '\0' };
