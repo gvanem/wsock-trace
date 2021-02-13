@@ -855,6 +855,33 @@ static int compare_on_baseaddr (const void **_a, const void **_b)
   return (0);
 }
 
+/**
+ * Return a shorten string with length `max_len` such that
+ * it looks like `"abcde...12345"`.
+ * I.e. equally many starting and ending characters.
+ */
+static char *shorten_path2 (const char *str, size_t max_len)
+{
+  static char buf [_MAX_PATH];
+  const char *end  = strchr (str,'\0');
+  int         dots_len = 3;
+  int         shift = 0;
+  size_t      len;
+
+  assert (max_len > 5);
+
+  if (strlen(str) <= max_len)
+     return (char*) str;
+
+  len = (max_len - 3) / 2;
+  if ((max_len & 1) == 0)   /* an even number */
+     shift++;
+
+  snprintf (buf, sizeof(buf), "%.*s%.*s%.*s",
+            len, str, dots_len, "...", len+shift, end-len-shift);
+  return (buf);
+}
+
 /*
  * Show the retrieved information on all our modules;
  * PDB symbols etc.
@@ -868,15 +895,18 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   smartlist_t *orig_modules = NULL;
   smartlist_t *modules_copy = NULL;
   const char  *pdb_hdr  = "  PDB: text  data   C++  junk";
-  size_t       dash_len = 72 + 8*IS_WIN64;
+  size_t       mod_len  = 68;
+  size_t       dash_len = mod_len + 22 + 8*IS_WIN64;
   int          i, max = smartlist_len (g_modules_list);
 
   if (do_pdb)
      dash_len += strlen (pdb_hdr);
 
-  trace_printf ("  %-50s %-*s Size%s\n",
-                "Module", 16+8*IS_WIN64, "Baseaddr", do_pdb ? pdb_hdr : "");
-  trace_printf ("  %s\n", _strrepeat('-', dash_len));
+  trace_printf ("  %-*s %-*s Size%s\n  %s\n",
+                mod_len, "Module",
+                16+8*IS_WIN64, "Baseaddr",
+                do_pdb ? pdb_hdr : "",
+                 _strrepeat('-', dash_len));
 
   /* Make a sorted copy before printing the module-list.
    * Sort on Baseaddr
@@ -896,15 +926,11 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   for (i = 0; i < max; i++)
   {
     const struct ModuleEntry *me = smartlist_get (g_modules_list, i);
-    const char  *mod_name = me->module_name;
-    size_t       len = strlen (me->module_name);
 
-    if (len > 50)
-         trace_printf ("  ...%-47s", mod_name+len-47);
-    else trace_printf ("  %-50s", mod_name);
-
-    trace_printf (" 0x%" ADDR_FMT " %7s kB",
-                  ADDR_CAST(me->base_addr), dword_str(me->size/1024));
+    trace_printf ("  %-*s 0x%" ADDR_FMT " %7s kB",
+                  mod_len, shorten_path2(me->module_name, mod_len),
+                  ADDR_CAST(me->base_addr),
+                  dword_str(me->size/1024));
     if (do_pdb)
     {
       trace_printf ("      %5lu %5lu %5lu %5lu",
@@ -941,9 +967,9 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   if (do_pdb)
      trace_printf ("%*s  %s\n"
                    "%*s  = %5lu %5lu %5lu %5lu\n",
-                   76+8*IS_WIN64, "",
+                   26 + mod_len + 8*IS_WIN64, "",
                    _strrepeat('-',  25),
-                   76+8*IS_WIN64, "",
+                   26 + mod_len + 8*IS_WIN64, "",
                    DWORD_CAST(total_text),
                    DWORD_CAST(total_data),
                    DWORD_CAST(total_cpp),
@@ -1610,7 +1636,7 @@ BOOL StackWalkInit (void)
   }
 
 #if USE_SymEnumSymbolsEx
-  if (g_cfg.pdb_report || g_cfg.dump_modules)
+  if (g_cfg.dump_modules)
      print_modules_and_pdb_info (g_cfg.pdb_report, FALSE, TRUE);
 #endif
 
