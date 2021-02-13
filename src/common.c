@@ -46,6 +46,7 @@ char curr_prog [MAX_PATH] = { '\0' };
 char prog_dir  [MAX_PATH] = { '\0' };
 
 HINSTANCE ws_trace_base;        /* Our base-address */
+char     *program_name;         /* For getopt.c and 'xx_main()' functions */
 
 static void __stdcall dummy_WSASetLastError (int err)
 {
@@ -1036,9 +1037,9 @@ const char *shorten_path (const char *path)
        return (path);
   }
   if (g_cfg.use_short_path)
-     real_name = basename (path);
+     return basename (path);
 
-  else if (!g_cfg.use_full_path)
+  if (!g_cfg.use_full_path)
   {
     size_t len = strlen (prog_dir);
     if (len >= 3 && !strnicmp(prog_dir, path, len))
@@ -1372,9 +1373,8 @@ int trace_puts (const char *str)
  * Save and restore the `g_cfg.trace_level` value: \n
  *   pop = 0: set it to 0. \n
  *   pop = 1: restore the global value.
-
- * Used e.g. when firewall.c calls `getservbyport()` in
- * order NOT to `WSTRACE()` for it.
+ *
+ * Used e.g. when firewall.c calls `getservbyport()` to prevent a `WSTRACE()` for it.
  */
 int trace_level_save_restore (int pop)
 {
@@ -1423,7 +1423,7 @@ FILE *fopen_excl (const char *file, const char *mode)
   }
 
   if (mode[1] == '+')
-     open_flags |= _O_TRUNC;
+     open_flags |= _O_CREAT | _O_TRUNC;
 
   if (mode[strlen(mode)-1] == 'b')
      open_flags |= O_BINARY;
@@ -1445,12 +1445,28 @@ FILE *fopen_excl (const char *file, const char *mode)
  *
  * Use 8 buffers in round-robin.
  */
+int use_win_locale = 0;
+
 const char *qword_str (unsigned __int64 val)
 {
   static char buf[8][30];
   static int  idx = 0;
   char   tmp[30];
   char  *rc = buf [idx++];
+
+#if defined(_MSC_VER)
+  if (use_win_locale)
+  {
+    char buf2[30];
+
+    if (_ui64toa_s (val, buf2, sizeof(buf2), 10) == 0 &&
+        GetNumberFormat (LOCALE_USER_DEFAULT, 0, buf2, NULL, rc, sizeof(buf[0])))
+    {
+      idx &= 7;
+      return str_ltrim (rc);
+    }
+  }
+#endif
 
   if (val < U64_SUFFIX(1000))
   {
