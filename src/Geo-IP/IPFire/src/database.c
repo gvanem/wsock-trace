@@ -1385,7 +1385,6 @@ static int __loc_database_enumerator_next_network_flattened(
 
 	// Drop the network and restart the whole process again to pick the next network
 	loc_network_unref(*network);
-	*network = loc_network_list_pop_first(enumerator->stack);
 
 	return __loc_database_enumerator_next_network_flattened(enumerator, network);
 }
