@@ -11,6 +11,7 @@
  */
 #include "common.h"
 #include "csv.h"
+#include "getopt.h"
 #include "smartlist.h"
 #include "inet_util.h"
 #include "in_addr.h"
@@ -96,7 +97,6 @@ static u_long g_num_asn, g_num_as_names, g_num_compares;
  */
 static smartlist_t *ASN_entries;
 
-static void   ASN_check_and_update (const char *db_file);
 static size_t ASN_load_bin_file (const char *file);
 static size_t ASN_load_CSV_file (const char *file);
 static int    ASN_CSV_add (struct CSV_context *ctx, const char *value);
@@ -113,19 +113,13 @@ void ASN_init (void)
      return;
 
   if (g_cfg.ASN.asn_bin_file)
-  {
-    ASN_check_and_update (g_cfg.ASN.asn_bin_file);
-    num_AS = ASN_load_bin_file (g_cfg.ASN.asn_bin_file);
-  }
+     num_AS = ASN_load_bin_file (g_cfg.ASN.asn_bin_file);
 
   if (g_cfg.ASN.asn_csv_file)
      num_AS += ASN_load_CSV_file (g_cfg.ASN.asn_csv_file);
 
   if (num_AS == 0)
      g_cfg.ASN.enable = 0;
-
-  if (g_cfg.trace_level >= 2)
-     ASN_dump();
 }
 
 /**
@@ -297,8 +291,11 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
    ARGSUSED (win_db_file);
 #endif
 
-  rc = (BOOL) CopyFile (db_temp_file, db_file, FALSE);
-  TRACE (1, "CopyFile(): rc: %d, %s -> %s\n", rc, db_temp_file, db_file);
+  /* The CopyFile() fails if 'db_file' is open.
+   */
+  if (!CopyFile (db_temp_file, db_file, FALSE))
+       TRACE (1, "CopyFile(): %s -> %s failed: %s\n", db_temp_file, db_file, win_strerror(GetLastError()));
+  else TRACE (1, "CopyFile(): %s -> %s OK\n", db_temp_file, db_file);
   INET_util_touch_file (db_file);
 }
 
@@ -310,7 +307,7 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
  * If the latter is too old; the time-difference is `>= g_cfg.ASN.max_days`,
  * copy `%TEMP%/location.db` to `db_file`.
  */
-static void ASN_check_and_update (const char *db_file)
+void ASN_update_file (const char *db_file, BOOL force_update)
 {
   struct stat st;
   char   db_xz_temp_file [MAX_PATH];
@@ -343,9 +340,9 @@ static void ASN_check_and_update (const char *db_file)
 
   need_update = FALSE;
 
-  /* If `%TEMP%/location.db` does not exist or is 0 bytes, it needs an update.
+  /* If `%TEMP%/location.db` does not exist, is 0 bytes or 'force_update == TRUE', update it.
    */
-  if (st.st_size == 0)
+  if (st.st_size == 0 || force_update)
      need_update = TRUE;
   else
   {
@@ -456,6 +453,7 @@ static size_t ASN_load_bin_file (const char *file)
   }
 
   TRACE (2, "Trying to open IPFire's database: \"%s\".\n", file);
+
   libloc.file = fopen_excl (file, "rb");
   if (!libloc.file)
   {
@@ -478,10 +476,11 @@ static size_t ASN_load_bin_file (const char *file)
     return (0);
   }
 
-  loc_set_log_priority (libloc.ctx, g_cfg.trace_level >= 2 ? LOG_DEBUG : 0);
+  if (!g_cfg.trace_file_device)
+     loc_set_log_priority (libloc.ctx, g_cfg.trace_level >= 2 ? LOG_DEBUG : 0);
 
   if (g_cfg.trace_level == 0)
-     _ws_setenv ("LOC_LOG", "", 1);  /* Clear the 'libloc' internal trace-level */
+     SetEnvironmentVariable ("LOC_LOG", NULL);  /* Clear the 'libloc' internal trace-level */
 
   if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_FOLDER"))
      ASN_check_database (file);
@@ -542,7 +541,8 @@ static size_t ASN_load_bin_file (const char *file)
  */
 static int libloc_handle_net (struct loc_network    *net,
                               const struct in_addr  *ip4,
-                              const struct in6_addr *ip6)
+                              const struct in6_addr *ip6,
+                              str_put_func           func)
 {
   struct loc_as       *as = NULL;
   struct _loc_network *_net = (struct _loc_network*) net;
@@ -553,6 +553,7 @@ static int libloc_handle_net (struct loc_network    *net,
   const char          *remark;
   const char          *AS_name;
   char                 attributes [100] = "";
+  char                 print_buf [1000];
   int                  rc = 0;
   uint32_t             AS_num;
   BOOL                 is_anycast, is_anon_proxy, sat_provider; //, is_tor_exit /* some day */ ;
@@ -613,7 +614,9 @@ static int libloc_handle_net (struct loc_network    *net,
   if (sat_provider)
      strcat (attributes, ", Satellite Provider");
 
-  trace_printf ("%u, name: %.*s, net: %s%s\n", AS_num, ASN_MAX_NAME-30, AS_name, net_name, attributes);
+  snprintf (print_buf, sizeof(print_buf), "%u, name: %.*s, net: %s%s\n",
+            AS_num, ASN_MAX_NAME-30, AS_name, net_name, attributes);
+  (*func) (print_buf);
 
   if (as)
      loc_as_unref (as);
@@ -644,7 +647,10 @@ static const IN6_ADDR _in6addr_v4mappedprefix = {{
  *  Create a cache for this since calling `loc_database_lookup()` can
  *  sometimes be slow.
  */
-int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6)
+static int __ASN_libloc_print (const char            *intro,
+                               const struct in_addr  *ip4,
+                               const struct in6_addr *ip6,
+                               str_put_func           func)
 {
   struct loc_network *net = NULL;
   struct in6_addr     addr;
@@ -667,7 +673,8 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   if (!ip6_teredo &&  /* since a Terodo can have an AS-number assigned */
       !INET_util_addr_is_global(ip4, ip6))
   {
-    trace_printf ("%s<not global>\n", intro);
+    (*func) (intro);
+    (*func) ("<not global>\n");
     return (0);
   }
 
@@ -694,7 +701,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   save = g_cfg.trace_level;
   g_cfg.trace_level = 0;
 
-  trace_puts (intro);
+  (*func) (intro);
 
 #if 0
   /**
@@ -707,7 +714,7 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
     g_num_compares = 0;
     asn = smartlist_bsearch (ASN_entries, &rec, ASN_compare_on_net);
     if (asn)
-       rc = libloc_handle_net (NULL, asn, ip4, ip6);
+       rc = libloc_handle_net (NULL, asn, ip4, ip6, func);
   }
   else
 #endif
@@ -715,12 +722,12 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   rc = loc_database_lookup (libloc.db, &addr, &net);
   if (rc == 0 && net)
   {
-    rc = libloc_handle_net (net, ip4, ip6);
+    rc = libloc_handle_net (net, ip4, ip6, func);
     loc_network_unref (net);
   }
   else
   {
-    trace_puts ("<no info>\n");
+    (*func) ("<no info>\n");
     TRACE (2, "No data for address: %s, err: %d/%s.\n", addr_str, -rc, strerror(-rc));
     rc = 0;
   }
@@ -740,6 +747,11 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   return (rc);
 }
 
+int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func print_func)
+{
+  return __ASN_libloc_print (intro, ip4, ip6, print_func ? print_func : trace_puts);
+}
+
 #else   /* !USE_LIBLOC */
 static size_t ASN_load_bin_file (const char *file)
 {
@@ -749,18 +761,20 @@ static size_t ASN_load_bin_file (const char *file)
   return (0);
 }
 
-static void ASN_check_and_update (const char *file)
+void ASN_update_file (const char *file, BOOL force_update)
 {
   TRACE (2, "Sorry, OpenWatcom is not supported:\n            "
             "Cannot update database '%s' file automatically.\n", file);
+  ARGSUSED (force_update);
   ARGSUSED (file);
 }
 
-int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6)
+int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func print_func)
 {
   ARGSUSED (intro);
   ARGSUSED (ip4);
   ARGSUSED (ip6);
+  ARGSUSED (print_func);
   return (0);
 }
 #endif  /* USE_LIBLOC */
@@ -805,15 +819,18 @@ void ASN_dump (void)
 {
   int i, num;
 
-  if (!ASN_entries)
-     return;
+  num = ASN_entries ? smartlist_len (ASN_entries) : 0;
 
-  num = smartlist_len (ASN_entries);
-  TRACE (2,
-        "\nParsed %s records from \"%s\":\n"
-        "  Num.  Low              High             Pfx     ASN  Name\n"
-        "-------------------------------------------------------------------\n",
-         dword_str(num), g_cfg.ASN.asn_csv_file);
+  trace_printf ("\nParsed %s records from \"%s\":\n"
+                "  Num.  Low              High             Pfx     ASN  Name\n"
+                "-------------------------------------------------------------------\n",
+                dword_str(num), g_cfg.ASN.asn_csv_file ? g_cfg.ASN.asn_csv_file : "<none>");
+
+  if (!ASN_entries)
+  {
+    trace_printf ("[asn:asn_csv_file] seems to be missing?!\n");
+    return;
+  }
 
   for (i = 0; i < num; i++)
   {
@@ -884,3 +901,63 @@ void ASN_report (void)
 
   #include "xz_decompress.c"
 #endif
+
+/*
+ * A small test for ASN.
+ */
+static int show_help (void)
+{
+  printf ("Usage: %s [-Dftu]\n"
+          "       -D:  run 'ASN_dump()' to dump the list of AS'es.\n"
+          "       -f:  force an update with the '-u' option.\n"
+          "       -u:  update the IPFire database-file.\n",
+          program_name);
+  return (0);
+}
+
+int asn_main (int argc, char **argv)
+{
+  int ch, do_dump = 0, do_force = 0, do_update = 0;
+
+  program_name = argv[0];
+
+  while ((ch = getopt(argc, argv, "Dfuh?")) != EOF)
+     switch (ch)
+     {
+       case 'D':
+            do_dump = 1;
+            break;
+       case 'f':
+            do_force = 1;
+            break;
+       case 'u':
+            do_update = 1;
+            break;
+       case '?':
+       case 'h':
+       default:
+            return show_help();
+  }
+
+  if (do_dump)
+  {
+    g_cfg.ASN.enable = 1;
+    ASN_dump();
+  }
+#ifdef USE_LIBLOC
+  else if (do_update)
+  {
+    int save = g_cfg.trace_level;
+
+    ASN_bin_close();
+    g_cfg.ASN.enable = g_cfg.ASN.xz_decompress = 1;
+    g_cfg.trace_level = 2;
+    ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
+    g_cfg.trace_level = save;
+  }
+#endif
+  else
+    printf ("Nothing done in %s.\n", program_name);
+
+  return (0);
+}
