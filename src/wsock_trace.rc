@@ -100,7 +100,7 @@ BEGIN
       VALUE "ProductName",      RC_DLL_NAME ".dll Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
-                                "\t\t\tCopyright 2012-2020, Gisle Vanem <gvanem@yahoo.no>."
+                                "\t\t\tCopyright 2012-2021, Gisle Vanem <gvanem@yahoo.no>."
     END
   END
 

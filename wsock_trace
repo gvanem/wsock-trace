@@ -276,12 +276,11 @@
   fix_getaddrinfo = 0
 
 #
-# DNSBL (Domain Name System Blacklists) settings:
+# DNSBL (Domain Name System Black Lists) settings:
 #
 [DNSBL]
   enable      = 0
-  test        = 0
-  max_days    = 10                # max allowed age before forcing an update
+  max_days    = 10                # max allowed age (in days) for an update check (not automatic).
   drop_file   = %APPDATA%\drop.txt
   edrop_file  = %APPDATA%\edrop.txt
   dropv6_file = %APPDATA%\dropv6.txt
