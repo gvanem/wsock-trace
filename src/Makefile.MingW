@@ -74,7 +74,7 @@ endif
 LIBLOC_ROOT = ./Geo-IP/IPFire/src
 LIBLOC_LIB  = libloc_mw.a
 CFLAGS     += -I$(LIBLOC_ROOT)
-EX_LIBS    += -lole32 -ladvapi32 -ldnsapi
+EX_LIBS    += -lole32 -ladvapi32 -ldnsapi -lwinmm
 
 WSOCK_DLL = wsock_trace_mw$(X_SUFFIX)$(_D).dll
 WSOCK_LIB = libwsock_trace_mw$(X_SUFFIX)$(_D).a
@@ -106,11 +106,18 @@ NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
 
 WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 asn.o                  \
+                backtrace.o            \
                 bfd_gcc.o              \
                 common.o               \
                 cpu.o                  \
+                csv.o                  \
+                dnsbl.o                \
                 dump.o                 \
+                firewall.o             \
+                geoip.o                \
                 hosts.o                \
+                iana.o                 \
+                idna.o                 \
                 in_addr.o              \
                 init.o                 \
                 inet_util.o            \
@@ -118,9 +125,11 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 overlap.o              \
                 smartlist.o            \
                 stkwalk.o              \
+                test.o                 \
                 vm_dump.o              \
-                wsock_trace_lua.o      \
                 ws_tool.o)
+
+WS_TOOL_OBJ += $(OBJ_DIR)/ws_tool.res
 
 #
 # .c and .o-files for '$(LIBLOC_LIB).
@@ -169,11 +178,9 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 	cp --update $(WSOCK_LIB)  $(LIB_TARGET)
 	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
-ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lwinmm -lws2_32 > ws_tool.map
+ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_LIB) $(LIBLOC_LIB) # $(LUAJIT_LIB)
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > ws_tool.map
 	@echo
-
-$(OBJ_DIR)/ws_tool.o: csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c test.c
 
 run_test: ws_tool.exe
 	ws_tool.exe -dd test
@@ -215,17 +222,14 @@ $(OBJ_DIR)/%.o: %.c
 	@echo
 
 #
-# The following codes used in macro 'colour_msg' uses Cygwin's echo with colour support.
+# The following needs a Cygwin/Msys 'echo' with colour support.
 #
 BRIGHT_GREEN  = \e[1;32m
-BRIGHT_YELLOW = \e[1;33m
+green_msg = @echo -e "$(BRIGHT_GREEN)$(strip $(1))\e[0m"
 
-colour_msg = @echo -e "$(1)\e[0m"
-green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
-yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
-
-$(OBJ_DIR)/wsock_trace.res: wsock_trace.rc
-	windres $(RCFLAGS) -o $(OBJ_DIR)/wsock_trace.res wsock_trace.rc
+$(OBJ_DIR)/%.res: %.rc
+	windres $(RCFLAGS) -o $@ $<
+	@echo
 
 DEP_REPLACE = 's@\(.*\)\.o: @\n$$(OBJ_DIR)\/\1.o: @'
 
