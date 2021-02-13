@@ -815,11 +815,13 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   if (startup_count < INT_MAX)
      startup_count++;
 
+#if !defined(__WATCOMC__)
   if (startup_count == 1 && g_cfg.FIREWALL.enable)
   {
     fw_init();
     fw_monitor_start();
   }
+#endif
 
   ENTER_CRIT();
 
@@ -1759,8 +1761,8 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
        dump_data (buf, rc);
   }
 
-  if (g_cfg.PCAP.enable)
-     write_pcap_packet (s, buf, buf_len, FALSE);
+  if (g_cfg.PCAP.enable && rc > 0 && !(flags & MSG_PEEK))
+     write_pcap_packet (s, buf, rc, FALSE);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -1823,8 +1825,8 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
        dump_DNSBL_sockaddr (from);
   }
 
-  if (g_cfg.PCAP.enable)
-     write_pcap_packet (s, buf, buf_len, FALSE);
+  if (g_cfg.PCAP.enable && rc > 0 && !(flags & MSG_PEEK))
+     write_pcap_packet (s, buf, rc, FALSE);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -1864,8 +1866,8 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
        dump_data (buf, buf_len);
   }
 
-  if (g_cfg.PCAP.enable)
-     write_pcap_packet (s, buf, buf_len, TRUE);
+  if (g_cfg.PCAP.enable && rc > 0)
+     write_pcap_packet (s, buf, rc, TRUE);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -1912,8 +1914,8 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
        dump_DNSBL_sockaddr (to);
   }
 
-  if (g_cfg.PCAP.enable)
-     write_pcap_packet (s, buf, buf_len, TRUE);
+  if (g_cfg.PCAP.enable && rc > 0)
+     write_pcap_packet (s, buf, rc, TRUE);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2105,8 +2107,8 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
        dump_data (buf, rc);
   }
 
-  if (g_cfg.PCAP.enable)
-     write_pcap_packet (s, buf, buf_len, FALSE);
+  if (g_cfg.PCAP.enable && rc > 0)
+     write_pcap_packet (s, buf, rc, FALSE);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2775,12 +2777,14 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
            dump_countries (rc->h_addrtype, (const char**)rc->h_addr_list);
       else dump_countries (type, a);
     }
+
     if (g_cfg.IANA.enable)
     {
       if (rc)
            dump_IANA_addresses (rc->h_addrtype, (const char**)rc->h_addr_list);
       else dump_IANA_addresses (type, a);
     }
+
     if (g_cfg.ASN.enable)
     {
       if (rc)
@@ -3482,7 +3486,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   DWORD tid = 0;
   BOOL  rc = TRUE;
 
-  /* If we're called from DllMain(), we cnnot use WinHTTP in inet_util.c etc.
+  /* If we're called from DllMain(), we cannot use WinHTTP in inet_util.c etc.
    */
   ws_from_dll_main = TRUE;
 
