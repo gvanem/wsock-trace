@@ -90,9 +90,6 @@ src/Geo-IP/IPFire/Git-latest/
 src/Geo-IP/IPFire/get-latest.btm
 src/Geo-IP/IPFire/COPYING
 src/Geo-IP/IPFire/compile-database.py
-src/Geo-IP/IPFire/Makefile.am
-src/Geo-IP/IPFire/autogen.sh
-src/Geo-IP/IPFire/configure.ac
 src/Geo-IP/IPFire/debian/
 src/Geo-IP/IPFire/examples/
 src/Geo-IP/IPFire/m4/
