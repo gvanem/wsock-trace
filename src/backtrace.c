@@ -183,7 +183,7 @@ int backtrace_init (void)
 
   GetModuleFileName (NULL, g_module, sizeof(g_module));
 
-  if (ntdll && ntdll != INVALID_HANDLE_VALUE)
+  if (ntdll)
      p_RtlCaptureStackBackTrace = (func_RtlCaptureStackBackTrace)
                                     GetProcAddress (ntdll, "RtlCaptureStackBackTrace");
   if (use_sym_list)
