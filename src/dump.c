@@ -88,6 +88,22 @@
 #define TCP_DELAY_FIN_ACK 13
 #endif
 
+#ifndef UDP_NOCHECKSUM
+#define UDP_NOCHECKSUM   1
+#endif
+
+#ifndef UDP_SEND_MSG_SIZE
+#define UDP_SEND_MSG_SIZE  2
+#endif
+
+#ifndef UDP_RECV_MAX_COALESCED_SIZE
+#define UDP_RECV_MAX_COALESCED_SIZE  3
+#endif
+
+#ifndef UDP_CHECKSUM_COVERAGE
+#define UDP_CHECKSUM_COVERAGE  20
+#endif
+
 /**
  * Missing `SOL_x` levels.
  */
@@ -885,6 +901,16 @@ static const struct search_list tcp_options[] = {
                   };
 
 /**
+ * The options and their names used in `setsockopt (s, IPPROTO_UDP, opt, ...)` etc.
+ */
+static const struct search_list udp_options[] = {
+                    ADD_VALUE (UDP_NOCHECKSUM),
+                    ADD_VALUE (UDP_SEND_MSG_SIZE),
+                    ADD_VALUE (UDP_RECV_MAX_COALESCED_SIZE),
+                    ADD_VALUE (UDP_CHECKSUM_COVERAGE)
+                  };
+
+/**
  * The IPv4 options and their names used in:
  *   `setsockopt (s, IPPROTO_IP, opt, ...)` and `setsockopt (s, IPPROTO_ICMP, opt, ...)` etc.
  */
@@ -1439,7 +1465,7 @@ const char *sockopt_name (int level, int opt)
          return ("L2CAP option!?");
 
     case IPPROTO_UDP:
-         return ("UDP option!?");
+         return list_lookup_name (opt, udp_options, DIM(udp_options));
 
     case IPPROTO_TCP:
          return list_lookup_name (opt, tcp_options, DIM(tcp_options));
@@ -2906,6 +2932,7 @@ void check_all_search_lists (void)
 
   CHECK (sol_options);
   CHECK (tcp_options);
+  CHECK (udp_options);
   CHECK (ip4_options);
   CHECK (ip6_options);
   CHECK (families);

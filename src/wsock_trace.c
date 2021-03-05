@@ -2602,7 +2602,7 @@ EXPORT int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val,
   ENTER_CRIT();
 
   WSTRACE ("setsockopt (%s, %s, %s, %s, %d) --> %s",
-           socket_number(s), socklevel_name(level), sockopt_name(level,opt),
+           socket_number(s), socklevel_name(level), sockopt_name(level, opt),
            sockopt_value(opt_val, opt_len), opt_len, get_error(rc, 0));
 
   LEAVE_CRIT (!exclude_this);
@@ -2619,7 +2619,7 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
   ENTER_CRIT();
 
   WSTRACE ("getsockopt (%s, %s, %s, %s, %d) --> %s",
-           socket_number(s), socklevel_name(level), sockopt_name(level,opt),
+           socket_number(s), socklevel_name(level), sockopt_name(level, opt),
            sockopt_value(opt_val, opt_len ? *opt_len : 0),
            opt_len ? *opt_len : 0, get_error(rc, 0));
 
