@@ -203,11 +203,19 @@
 #endif
 
 #ifndef IP_RECVTCLASS
-#define IP_RECVTCLASS 40
+#define IP_RECVTCLASS 40    /* == IP_RECVTOS */
 #endif
 
 #ifndef IP_ORIGINAL_ARRIVAL_IF
 #define IP_ORIGINAL_ARRIVAL_IF 47
+#endif
+
+#ifndef IP_ECN
+#define IP_ECN 50
+#endif
+
+#ifndef IP_PKTINFO_EX
+#define IP_PKTINFO_EX 51
 #endif
 
 #ifndef IP_UNSPECIFIED_TYPE_OF_SERVICE
@@ -224,6 +232,10 @@
 
 #ifndef IPV6_DONTFRAG
 #define IPV6_DONTFRAG 14
+#endif
+
+#ifndef IPV6_PKTINFO
+#define IPV6_PKTINFO 19
 #endif
 
 #ifndef IPV6_HOPLIMIT
@@ -270,6 +282,10 @@
 #define IPV6_RTHDR 32
 #endif
 
+#ifndef IPV6_GET_IFLIST
+#define IPV6_GET_IFLIST  33
+#endif
+
 #ifndef IPV6_RECVRTHDR
 #define IPV6_RECVRTHDR 38
 #endif
@@ -280,6 +296,10 @@
 
 #ifndef IPV6_RECVTCLASS
 #define IPV6_RECVTCLASS 40
+#endif
+
+#ifndef IPV6_PKTINFO_EX
+#define IPV6_PKTINFO_EX 51
 #endif
 
 #ifndef IP_WFP_REDIRECT_RECORDS
@@ -294,8 +314,16 @@
 #define IP_MTU_DISCOVER         71   /* Set/get path MTU discover state. */
 #endif
 
+#ifndef IPV6_MTU
+#define IPV6_MTU                72   /* Get path MTU. */
+#endif
+
 #ifndef IP_MTU
 #define IP_MTU                  73   /* Get path MTU. */
+#endif
+
+#ifndef IP_USER_MTU
+#define IP_USER_MTU             76   /* App defined upper bound IP layer MTU. */
 #endif
 
 #ifndef IP_NRT_INTERFACE
@@ -943,12 +971,15 @@ static const struct search_list ip4_options[] = {
                     ADD_VALUE (IP_TCLASS),
                     ADD_VALUE (IP_RECVTCLASS),
                     ADD_VALUE (IP_ORIGINAL_ARRIVAL_IF),
+                    ADD_VALUE (IP_ECN),
+                    ADD_VALUE (IP_PKTINFO_EX),
                     ADD_VALUE (IP_WFP_REDIRECT_RECORDS),
                     ADD_VALUE (IP_WFP_REDIRECT_CONTEXT),
                     ADD_VALUE (IP_MTU_DISCOVER),
                     ADD_VALUE (IP_MTU),
                     ADD_VALUE (IP_NRT_INTERFACE),
                     ADD_VALUE (IP_RECVERR),
+                    ADD_VALUE (IP_USER_MTU),
                     ADD_VALUE (IP_UNSPECIFIED_TYPE_OF_SERVICE)  /* == -1 = UINT_MAX */
                   };
 
@@ -975,13 +1006,16 @@ static const struct search_list ip6_options[] = {
                     ADD_VALUE (IPV6_CHECKSUM),
                     ADD_VALUE (IPV6_V6ONLY),
                     ADD_VALUE (IPV6_IFLIST),
+                    ADD_VALUE (IPV6_PKTINFO_EX),
                     ADD_VALUE (IPV6_ADD_IFLIST),
                     ADD_VALUE (IPV6_DEL_IFLIST),
+                    ADD_VALUE (IPV6_GET_IFLIST),
                     ADD_VALUE (IPV6_UNICAST_IF),
                     ADD_VALUE (IPV6_RTHDR),
                     ADD_VALUE (IPV6_RECVRTHDR),
                     ADD_VALUE (IPV6_TCLASS),
-                    ADD_VALUE (IPV6_RECVTCLASS)
+                    ADD_VALUE (IPV6_RECVTCLASS),
+                    ADD_VALUE (IPV6_MTU)
                   };
 
 /**
