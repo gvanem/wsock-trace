@@ -422,6 +422,14 @@ DEF_FUNC (int, WSCGetProviderPath, (GUID    *provider_id,
                                     wchar_t *provider_dll_path,
                                     int     *provider_dll_path_len,
                                     int     *error));
+
+DEF_FUNC (int, GetAddrInfoW, (const wchar_t   *host_name,
+                              const wchar_t   *serv_name,
+                              const ADDRINFOW *hints,
+                              ADDRINFOW      **res));
+
+DEF_FUNC (void, FreeAddrInfoW, (ADDRINFOW *ai));
+
 /**
  * Windows-Vista functions.
  */
@@ -514,6 +522,8 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", getnameinfo),
               ADD_VALUE (0, "ws2_32.dll", getaddrinfo),
               ADD_VALUE (0, "ws2_32.dll", freeaddrinfo),
+              ADD_VALUE (0, "ws2_32.dll", GetAddrInfoW),
+              ADD_VALUE (0, "ws2_32.dll", FreeAddrInfoW),
               ADD_VALUE (1, "ws2_32.dll", inet_pton),
               ADD_VALUE (1, "ws2_32.dll", inet_ntop),
               ADD_VALUE (1, "ws2_32.dll", InetPtonW),
@@ -3105,27 +3115,70 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
   #define PADDRINFOW void *
 #endif
 
+EXPORT void WINAPI FreeAddrInfoW (ADDRINFOW *ai)
+{
+  CHECK_PTR (p_FreeAddrInfoW);
+  (*p_FreeAddrInfoW) (ai);
+
+  ENTER_CRIT();
+
+  WSTRACE ("FreeAddrInfoW (0x%" ADDR_FMT ")", ADDR_CAST(ai));
+
+  LEAVE_CRIT (!exclude_this);
+}
+
+EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_name,
+                                const ADDRINFOW *hints, ADDRINFOW  **res)
+{
+  int   rc;
+  const char *_hints = "hints";  /**\todo get the wide-char verion of this */
+
+#if 0
+  if (hints)
+       _hints = get_addrinfo_hint(TRUE, hints, g_cfg.trace_indent + 3 + sizeof("hints: "));
+  else _hints = "<none>" ;
+#endif
+
+  CHECK_PTR (p_GetAddrInfoW);
+
+  ENTER_CRIT();
+
+  rc = (*p_GetAddrInfoW) (host_name, serv_name, hints, res);
+
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("GetAddrInfoW", EXCL_FUNCTION));
+
+  /* 'exclude_this' set once more inside the 'WSTRACE()' macro.
+   */
+  WSTRACE ("GetAddrInfoW (\"%" WCHAR_FMT "\", %" WCHAR_FMT ", <hints>, ...) --> %s\n"
+           "%*shints: %s",
+           host_name, serv_name, get_error(rc, 0),
+           g_cfg.trace_indent+4, "", _hints);
+
+#if 0
+  if (rc == NO_ERROR && *res && !exclude_this)
+  {
+    if (g_cfg.dump_data)
+       dump_addrinfoW (host_name, *res);
+
+    if (g_cfg.GEOIP.enable)
+       dump_countries_addrinfoW (*res);
+
+    if (g_cfg.IANA.enable)
+       dump_IANA_addrinfoW (*res);
+
+    if (g_cfg.ASN.enable)
+       dump_ASN_addrinfoW (*res);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_addrinfoW (*res);
+  }
+#endif
+
+  LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
 #define UNIMPLEMENTED() FATAL ("Call to unimplemented function %s().\n", __FUNCTION__)
-
-EXPORT void WINAPI FreeAddrInfoW (PADDRINFOW addr_info)
-{
-  ARGSUSED (addr_info);
-  UNIMPLEMENTED();
-}
-
-EXPORT INT WINAPI GetAddrInfoW (PCWSTR           node_name,
-                                PCWSTR           service_name,
-                                const ADDRINFOW *hints,
-                                PADDRINFOW      *result)
-{
-  UNIMPLEMENTED();
-  ARGSUSED (node_name);
-  ARGSUSED (service_name);
-  ARGSUSED (hints);
-  ARGSUSED (result);
-  return (-1);
-}
-
 
 EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
                                 socklen_t       sockaddr_len,
