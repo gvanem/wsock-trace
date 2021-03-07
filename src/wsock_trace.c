@@ -423,6 +423,10 @@ DEF_FUNC (int, WSCGetProviderPath, (GUID    *provider_id,
                                     int     *provider_dll_path_len,
                                     int     *error));
 
+#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
+  #define ADDRINFOW void
+#endif
+
 DEF_FUNC (int, GetAddrInfoW, (const wchar_t   *host_name,
                               const wchar_t   *serv_name,
                               const ADDRINFOW *hints,
@@ -3110,15 +3114,10 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
   LEAVE_CRIT (!exclude_this);
 }
 
-#if (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)) || defined(__WATCOMC__)
-  #define ADDRINFOW  void *
-  #define PADDRINFOW void *
-#endif
-
 EXPORT void WINAPI FreeAddrInfoW (ADDRINFOW *ai)
 {
   CHECK_PTR (p_FreeAddrInfoW);
-  (*p_FreeAddrInfoW) (ai);
+  (*p_FreeAddrInfoW) ((ADDRINFOW*)ai);
 
   ENTER_CRIT();
 
