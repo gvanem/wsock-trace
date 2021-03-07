@@ -4040,8 +4040,8 @@ static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia
      return (FALSE);
 
   if (extra_indent)
-       snprintf (intro, sizeof(intro), "%-*sASN:      ", fw_indent_sz + extra_indent, "");
-  else snprintf (intro, sizeof(intro), "%-*sASN:     ", fw_indent_sz, "");
+       snprintf (intro, sizeof(intro), "%-*sASN:      ", (int) (fw_indent_sz + extra_indent), "");
+  else snprintf (intro, sizeof(intro), "%-*sASN:     ", (int)fw_indent_sz, "");
 
   return ASN_libloc_print (intro, ia4, ia6, func);
 }

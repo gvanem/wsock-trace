@@ -878,7 +878,7 @@ static char *shorten_path2 (const char *str, size_t max_len)
      shift++;
 
   snprintf (buf, sizeof(buf), "%.*s%.*s%.*s",
-            len, str, dots_len, "...", len+shift, end-len-shift);
+            (int)len, str, dots_len, "...", len+shift, (int)(end-len-shift));
   return (buf);
 }
 
@@ -903,7 +903,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
      dash_len += strlen (pdb_hdr);
 
   trace_printf ("  %-*s %-*s Size%s\n  %s\n",
-                mod_len, "Module",
+                (int)mod_len, "Module",
                 16+8*IS_WIN64, "Baseaddr",
                 do_pdb ? pdb_hdr : "",
                  _strrepeat('-', dash_len));
@@ -928,7 +928,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
     const struct ModuleEntry *me = smartlist_get (g_modules_list, i);
 
     trace_printf ("  %-*s 0x%" ADDR_FMT " %7s kB",
-                  mod_len, shorten_path2(me->module_name, mod_len),
+                  (int)mod_len, shorten_path2(me->module_name, mod_len),
                   ADDR_CAST(me->base_addr),
                   dword_str(me->size/1024));
     if (do_pdb)
@@ -967,9 +967,9 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   if (do_pdb)
      trace_printf ("%*s  %s\n"
                    "%*s  = %5lu %5lu %5lu %5lu\n",
-                   26 + mod_len + 8*IS_WIN64, "",
+                   26 + (int)mod_len + 8*IS_WIN64, "",
                    _strrepeat('-',  25),
-                   26 + mod_len + 8*IS_WIN64, "",
+                   26 + (int)mod_len + 8*IS_WIN64, "",
                    DWORD_CAST(total_text),
                    DWORD_CAST(total_data),
                    DWORD_CAST(total_cpp),
