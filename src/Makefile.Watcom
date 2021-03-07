@@ -10,7 +10,7 @@ STACK_OR_REG = r
 CC = wcc386
 
 CFLAGS = -bt=nt -mf -w6 -d2 -zq -zc -zm -wx -3$(STACK_OR_REG) -fpi -fr=nul -I. &
-         -of+ -s -d2 -hc -DWIN32 -DWIN32_LEAN_AND_MEAN=1 -D_WIN32_WINNT=0x0601
+         -wcd=127 -wcd=201 -of+ -s -d2 -hc -DWIN32 -DWIN32_LEAN_AND_MEAN=1 -D_WIN32_WINNT=0x0601
 
 LDFLAGS = option quiet, map, eliminate, caseexact &
           system nt debug all sort global
