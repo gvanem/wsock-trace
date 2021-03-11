@@ -90,8 +90,7 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
       0x3F,0xFE,0x83,0x1F,0,0,0,0,0,0,0,0,0,0,0,0
     }};
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || \
-    defined(__WATCOMC__) || defined(__DOXYGEN__)   /* Rest of file */
+#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__DOXYGEN__)   /* Rest of file */
 
 /**
  * Similar to the one in common.c.
@@ -156,5 +155,5 @@ wchar_t *gai_strerrorW (int err)
   return str_ripw2 (err_buf);
 }
 
-#endif  /* __MINGW32__ || __CYGWIN__ || __WATCOMC__ || __DOXYGEN__ */
+#endif  /* __MINGW32__ || __CYGWIN__ || __DOXYGEN__ */
 

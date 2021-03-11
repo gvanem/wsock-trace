@@ -39,10 +39,6 @@
   #define RC_BUILDER  "Visual-C"
   #define RC_BASENAME "wsock_trace"
 
-#elif defined(__WATCOMC__)
-  #define RC_BUILDER  "Watcom"
-  #define RC_BASENAME "wsock_trace_ow"
-
 #else
   #define RC_BUILDER  "??"
   #define RC_BASENAME "??"

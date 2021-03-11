@@ -28,8 +28,6 @@
 #include "init.h"
 #include "dump.h"
 
-/* Missing in Open-Watcom's <winsock2.h>.
- */
 #ifndef WSA_QOS_EUNKOWNPSOBJ
 #define WSA_QOS_EUNKOWNPSOBJ  (WSABASEERR + 1024)
 #endif
@@ -1194,9 +1192,6 @@ size_t trace_flush (void)
      * written using 'io.write()' is in sync with our trace-output.
      */
     written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
-#if defined(__WATCOMC__)
-    fflush (g_cfg.trace_stream);
-#endif
   }
   trace_ptr = trace_buf;   /* restart buffer */
 
@@ -1394,12 +1389,11 @@ int trace_level_save_restore (int pop)
  * Open an existing file (or create) in share-mode but deny other
  * processes to write to the file.
  *
- * On Watcom, `fopen()` already seems to open with `SH_DENYWR` internally. \n
- * CygWin does not have `_sopen()`. Simply call `fopen()` for CygWin and Watcom.
+ * CygWin does not have `_sopen()`. Simply call `fopen()`.
  */
 FILE *fopen_excl (const char *file, const char *mode)
 {
-#if defined(__WATCOMC__) || defined(__CYGWIN__)
+#if defined(__CYGWIN__)
   return fopen (file, mode);
 #else
   int fd, open_flags, share_flags;
@@ -1436,7 +1430,7 @@ FILE *fopen_excl (const char *file, const char *mode)
   if (fd <= -1)
      return (NULL);
   return fdopen (fd, mode);
-#endif
+#endif  /* __CYGWIN__ */
 }
 
 /**
@@ -1642,7 +1636,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
 
 int _ws_setenv (const char *env, const char *val, int overwrite)
 {
-#if defined(__CYGWIN__) || defined(__WATCOMC__)
+#if defined(__CYGWIN__)
   int rc = setenv (env,  val, overwrite);
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
@@ -1700,7 +1694,7 @@ int _ws_setenv (const char *env, const char *val, int overwrite)
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
   return (0);
-#endif
+#endif  /* __CYGWIN__ */
 }
 
 /*
@@ -1830,8 +1824,7 @@ const char *get_dll_full_name (void)
  *   "wsock_trace_mw_x64.dll"   for 64-bit MinGW
  *   "wsock_trace_cyg.dll"      for 32-bit CygWin
  *   "wsock_trace_cyg_x64.dll"  for 64-bit CygWin
- *   "wsock_trace_ow.dll"       for 32-bit OpenWatcom
-
+ *
  * And an extra `"_d"` (before `".dll"`) for a CRT-DEBUG version.
  */
 const char *get_dll_short_name (void)

@@ -14,30 +14,26 @@
 #include <errno.h>
 #include <wininet.h>
 
-#if defined(HAVE_WINHTTP_H)
-  /*
-   * Hacks to be able to include <winhttp.h> below.
-   */
-  #define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
-  #define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
+/*
+ * Hacks to be able to include <winhttp.h> below.
+ */
+#define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
+#define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
 
-  #define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
-  #define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
+#define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
+#define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
 
-  #define URL_COMPONENTS       winhttp_URL_COMPONENTS
-  #define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
+#define URL_COMPONENTS       winhttp_URL_COMPONENTS
+#define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
 
-  #define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
-  #define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
+#define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
+#define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
 
-  #undef BOOLAPI
-  #undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
-  #undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
+#undef BOOLAPI
+#undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
+#undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
 
-  #include <winhttp.h>
-#else
-  #define winhttp_URL_COMPONENTSW URL_COMPONENTSW
-#endif  /* HAVE_WINHTTP_H */
+#include <winhttp.h>
 
 #include "common.h"
 #include "init.h"
@@ -125,7 +121,6 @@ static struct LoadTable wininet_funcs[] = {
                         ADD_VALUE (InternetCloseHandle)
                       };
 
-#if defined(HAVE_WINHTTP_H)
 /***
  * A similar interface to WinHTTP. A comparision table: \n
  *   https://docs.microsoft.com/en-us/windows/desktop/winhttp/porting-wininet-applications-to-winhttp
@@ -297,7 +292,6 @@ static const char *winhttp_strerror (DWORD err)
      return list_lookup_name (err, winhttp_errors, DIM(winhttp_errors));
   return win_strerror (err);
 }
-#endif /* HAVE_WINHTTP_H */
 
 /**
  * Return error-string for `err` from `WinInet.dll`.
@@ -660,7 +654,6 @@ static void download_threaded (struct download_context *context)
          __FUNCTION__, t_hnd, (unsigned long)t_id, t_timedout);
 }
 
-#if defined(HAVE_WINHTTP_H)
 /**
  * Download a file using `WinHttp.dll`.
  */
@@ -793,7 +786,6 @@ static void download_winhttp (struct download_context *context)
   if (context->fil)
      fclose (context->fil);
 }
-#endif  /* HAVE_WINHTTP_H */
 
 /**
  * Download a file from url using dynamcally loaded functions
@@ -823,14 +815,9 @@ DWORD INET_util_download_file (const char *file, const char *url)
 
   if (g_cfg.use_winhttp)
   {
-#if defined(HAVE_WINHTTP_H)
     funcs    = winhttp_funcs;
     tab_size = DIM (winhttp_funcs);
     tab_dll  = "WinHttp.dll";
-#else
-    TRACE (1, "WinHttp.dll cannot be used with this compiler.\n");
-    return (0);
-#endif
   }
   else
   {
@@ -874,12 +861,9 @@ DWORD INET_util_download_file (const char *file, const char *url)
 
   if (context.fil)
   {
-#if defined(HAVE_WINHTTP_H)
     if (g_cfg.use_winhttp)
-       download_winhttp (&context);
-    else
-#endif
-    if (use_threaded)
+         download_winhttp (&context);
+    else if (use_threaded)
          download_threaded (&context);
     else if (use_async)
          download_async_loop (&context);
@@ -1436,10 +1420,10 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
   char            network_str [MAX_IP6_SZ+1];
   BOOL lshift_prob = FALSE;
 
-#if defined(__GNUC__) || defined(__WATCOMC__)
+#if defined(__GNUC__)
   /**
    * The below code for `total_ips` shows some stange issues with
-   * GCC/Watcom and left shifts > 32. So just drop showing `total_ips`
+   * GCC and left shifts > 32. So just drop showing `total_ips`
    * for IPv6.
    */
   if (max_bits == 128)

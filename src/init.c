@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <math.h>
 
+#include "config.h"
 #include "common.h"
 #include "wsock_trace.h"
 #include "bfd_gcc.h"
@@ -1227,10 +1228,8 @@ static void trace_report (void)
   if (g_cfg.ASN.enable)
      ASN_report();
 
-#if !defined(__WATCOMC__)
   if (g_cfg.FIREWALL.enable)
      fw_report();
-#endif
 }
 
 /*
@@ -1266,7 +1265,6 @@ void wsock_trace_exit (void)
   }
 #endif
 
-#if !defined(__WATCOMC__)
   if (g_cfg.FIREWALL.enable)
   {
     TRACE (2, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
@@ -1275,7 +1273,6 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
-#endif
 
   common_exit();
 

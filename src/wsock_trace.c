@@ -149,12 +149,6 @@ static void        wstrace_printf (BOOL first_line,
     return (ebp);
   }
 
-#elif defined(__WATCOMC__)  /* OpenWatcom is x86 only */
-  extern ULONG_PTR get_EBP (void);
-  #pragma aux  get_EBP = \
-          "mov eax, ebp" \
-          modify [eax];
-
 #else
   #error "Unsupported compiler."
 #endif
@@ -828,14 +822,6 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 
   if (startup_count < INT_MAX)
      startup_count++;
-
-#if !defined(__WATCOMC__)
-  if (startup_count == 1 && g_cfg.FIREWALL.enable)
-  {
-    fw_init();
-    fw_monitor_start();
-  }
-#endif
 
   ENTER_CRIT();
 
@@ -2333,27 +2319,6 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
   return (rc);
 }
 
-#if defined(__WATCOMC__)
-/*
- * Since OpenWatcom is so limited with regard to 'WSANETWORKEVENTS' etc.
- */
-EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
-{
-  int rc;
-
-  CHECK_PTR (p_WSAEnumNetworkEvents);
-  rc = (*p_WSAEnumNetworkEvents) (s, ev, events);
-
-  ENTER_CRIT();
-
-  WSTRACE ("WSAEnumNetworkEvents (%s, 0x%" ADDR_FMT ", 0x%" ADDR_FMT ") --> %s",
-           socket_number(s), ADDR_CAST(ev), ADDR_CAST(events), get_error(rc, 0));
-
-  LEAVE_CRIT (!exclude_this);
-  return (rc);
-}
-
-#else
 EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
 {
   int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events);
@@ -2377,7 +2342,6 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
-#endif  /* !__WATCOMC__ */
 
 /*
  * This function is what the command "netsh WinSock Show Catalog" uses.
@@ -3368,7 +3332,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 
 #if !defined(__GNUC__)
     /*
-     * For MSVC/clang-cl/Watcom (USE_BFD undefined), the passed 'ret_addr' is
+     * For MSVC and clang-cl (USE_BFD undefined), the passed 'ret_addr' is
      * always 0. We have to get it from 'frames[2]'.
      */
     ret_addr = (ULONG_PTR) frames [2];

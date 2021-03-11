@@ -7,7 +7,7 @@ It sits between your program and the Winsock library (`ws2_32.dll`).
 It works best for MSVC since the stack-walking code requires the program's
 **PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't produce
 PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library). So currently,
-the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
+the MinGW and CygWin targets will only show raw addresses for the traced
 functions.
 
 A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com` <br>
@@ -106,7 +106,6 @@ If the `all` command succeeded, you can do the respective *make* `install` comma
 | CygWin     | make -f Makefile.CygWin | `cp wsock_trace_cyg.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg.a` to `/usr/lib`  |
 | MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw.a` to  `$(MINGW32)/lib`|
 | MSVC | nmake -f makefile.vc6 | `copy wsock_trace.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
-| OpenWatcom | wmake -f Makefile.Watcom | `copy wsock_trace_ow.dll` to `%WATCOM\binnt` and<br> `copy wsock_trace_ow.lib` to `%WATCOM\lib386\nt`|
 
 *Notes:*
   * For a `WIN64` build, the above files will have an extra `_x64` suffix.
@@ -118,12 +117,11 @@ If the `all` command succeeded, you can do the respective *make* `install` comma
 
 Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_32.lib`):
 
-| Builder    | Library |
-| :--------- | :------ |
-| CygWin     | `libwsock_trace_cyg.a` |
-| MinGW      | `libwsock_trace_mw.a` |
-| MSVC       | `wsock_trace.lib` |
-| OpenWatcom | `wsock_trace_ow.lib` |
+| Builder  | Library |
+| :------- | :------ |
+| CygWin   | `libwsock_trace_cyg.a` |
+| MinGW    | `libwsock_trace_mw.a` |
+| MSVC     | `wsock_trace.lib` |
 
 Thus most normal Winsock calls are traced on entry and exit.
 
@@ -330,13 +328,11 @@ The names of the import libraries and the names of the 32-bit .DLLs are:
   * For MSVC:      `wsock_trace.lib` and `wsock_trace.dll` .
   * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw.dll` .
   * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
-  * For OpenWatcom: `wsock_trace_ow.lib` and `wsock_trace_ow.dll`.
 
 And the 64-bit equivalents:
   * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
   * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
   * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`.
-  * For OpenWatcom: not possible (AFAIK there is no way to create `x64` programs on OpenWatcom).
 
 These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications

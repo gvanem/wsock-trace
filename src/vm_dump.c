@@ -24,11 +24,6 @@
 
 int vm_bug_debug = 0;
 
-/*
- * Since OpenWatcom 2.x is hardly able to compile anything here.
- */
-#if !defined(__WATCOMC__)
-
 #undef  TRACE
 #define TRACE(level, fmt, ...)                           \
         do {                                             \
@@ -452,24 +447,3 @@ void vm_bug_abort_init (void)
 #endif
   }
 }
-
-#else
-  static void unimplemented (const char *func, const char *file, unsigned line)
-  {
-    fprintf (stderr, "%s(%u): Function \"%s()\" not implemented for __WATCOMC__.\n", file, line, func);
-  }
-  #define UNIMPLEMENTED(ret) unimplemented (__FUNCTION__, __FILE__, __LINE__)
-
-  void vm_bug_report (void)
-  {
-    UNIMPLEMENTED();
-  }
-  void vm_bug_list (int skip, void *list)
-  {
-    UNIMPLEMENTED();
-  }
-  void vm_bug_abort_init (void)
-  {
-    UNIMPLEMENTED();
-  }
-#endif  /* __WATCOMC__ */

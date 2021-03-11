@@ -42,7 +42,7 @@
                       ((a)->s6_words[4] == 0) && ((a)->s6_words[5] == 0xFFFF) )
 #endif
 
-#if defined(__CYGWIN__) || defined(__WATCOMC__)
+#if defined(__CYGWIN__)
   #define _byteswap_ulong(x)  (unsigned long) swap32 (x)
 #endif
 

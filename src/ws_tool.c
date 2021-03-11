@@ -45,17 +45,15 @@ static const struct {
        int (*main_func) (int, char**);
        char *main_name;
      } sub_commands[] = {
-       { asn_main,       "asn" },
+       { asn_main,       "asn"       },
        { backtrace_main, "backtrace" },
-       { csv_main,       "csv" },
-       { dnsbl_main,     "dnsbl" },
-#if !defined(__WATCOMC__)
-       { firewall_main, "firewall" },
-#endif
-       { geoip_main, "geoip" },
-       { iana_main,  "iana" },
-       { idna_main,  "idna" },
-       { test_main,  "test" }
+       { csv_main,       "csv"       },
+       { dnsbl_main,     "dnsbl"     },
+       { firewall_main,  "firewall"  },
+       { geoip_main,     "geoip"     },
+       { iana_main,      "iana"      },
+       { idna_main,      "idna"      },
+       { test_main,      "test"      }
      };
 
 static void show_help (const char *extra, BOOL show_sub_help);

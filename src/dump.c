@@ -1178,7 +1178,6 @@ static const struct search_list protocols[] = {
                     ADD_PROTO (IPPROTO_RESERVED_MAX)
                   };
 
-#if !defined(__WATCOMC__)
 /**
  * The codes and names used to decode `WSAPROTOCOL_INFOA` and `WSAPROTOCOL_INFOW` in `WSASocketA()` etc.
  */
@@ -1216,7 +1215,6 @@ static const struct search_list wsaprotocol_info_ServiceFlags1[] = {
                     ADD_VALUE (XP1_PARTIAL_MESSAGE),
                     ADD_VALUE (XP1_SAN_SUPPORT_SDP)
                  };
-#endif /* !__WATCOMC__ */
 
 /**
  * The event values and names used for `WSAEventSelect()` etc.
@@ -2010,17 +2008,6 @@ void dump_one_proto_infof (const char *fmt, ...)
   va_end (args);
 }
 
-/*
- * Watcom lacks many things making this difficult.
- */
-#if defined(__WATCOMC__)
-void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func)
-{
-  trace_indent (g_cfg.trace_indent+4);
-  trace_puts ("Unsupported on OpenWatcom~0\n");
-}
-#else
-
 static void dump_provider_path (const GUID *guid, const void *provider_path_func)
 {
   int     error;
@@ -2132,7 +2119,6 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   }
   trace_puts ("~0");
 }
-#endif  /* __WATCOMC__ */
 
 /*
  * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
@@ -2850,8 +2836,6 @@ void dump_DNSBL_addrinfo (const struct addrinfo *ai)
  *
  * Listed at:
  *   https://msdn.microsoft.com/en-us/library/windows/desktop/bb736550(v=vs.85).aspx
- *
- * Should be in <mswsock.h>, but it's not for __WATCOMC__.
  */
 #ifndef WSAID_ACCEPTEX
 #define WSAID_ACCEPTEX  { 0xB5367DF1, 0xCBAC, 0x11CF, { 0x95,0xCA,0x00,0x80,0x5F,0x48,0xA1,0x92 }}

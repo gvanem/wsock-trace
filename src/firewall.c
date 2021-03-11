@@ -48,10 +48,6 @@
   #define MIN_WINNT_VALUE 0x600
 #endif
 
-#if defined(__WATCOMC__)
-  #error "OpenWatcom is not able to compile this."
-#endif
-
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT_VALUE)
   #undef  _WIN32_WINNT
   #define _WIN32_WINNT MIN_WINNT_VALUE

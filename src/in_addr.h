@@ -8,11 +8,6 @@
 #define INADDRSZ    4
 #define IN6ADDRSZ  16
 
-#if defined(IN_WSOCK_TRACE_C) && defined(__WATCOMC__)
-#define u_char unsigned char
-#define u_int  unsigned int
-#endif
-
 /**
  * Max size of an IPv4-address:port string.
  */

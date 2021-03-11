@@ -49,21 +49,10 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
    *   'type cast': pointer truncation from 'hostent *' to 'int'
    */
   #pragma warning (disable: 4311)
-
-#elif defined(__WATCOMC__)
-  /*
-   * In wsock_trace_ow.lib (non-export.c):
-   */
-  extern char    *gai_strerrorA (int err);
-  extern wchar_t *gai_strerrorW (int err);
 #endif
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__WATCOMC__)
+#if defined(__MINGW32__) || defined(__CYGWIN__)
   int WSAAPI inet_pton (int Family, PCSTR pszAddrString, void *pAddrBuf);
-#endif
-
-#if defined(__WATCOMC__) && !defined(IN6ADDR_LOOPBACK_INIT)
-  #define IN6ADDR_LOOPBACK_INIT   { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }
 #endif
 
 typedef void (*test_func2) (void);
@@ -795,7 +784,6 @@ static void test_inet_ntop (void)
 
 static void test_InetPtonW (void)
 {
-#if !defined(__WATCOMC__)
   struct in_addr  in4;
   struct in6_addr in6;
 
@@ -803,12 +791,10 @@ static void test_InetPtonW (void)
   TEST_CONDITION (== 0, InetPtonW (AF_INET, L"a.b.c.d", &in4));
   TEST_CONDITION (== 1, InetPtonW (AF_INET6, L"2A00:1450:400F:805::1011", &in6));
   TEST_CONDITION (== 0, InetPtonW (AF_INET6, L"2H00:1450:400F:805::GGGG", &in6));
-#endif
 }
 
 static void test_InetNtopW (void)
 {
-#if !defined(__WATCOMC__)
   struct in_addr  in4;
   struct in6_addr in6 = IN6ADDR_LOOPBACK_INIT;
   wchar_t buf [INET6_ADDRSTRLEN];
@@ -818,7 +804,6 @@ static void test_InetNtopW (void)
   TEST_CONDITION (!= 0, InetNtopW (AF_INET, &in4, buf, sizeof(buf)/2));
   TEST_CONDITION (!= 0, InetNtopW (AF_INET6, &in6, buf, sizeof(buf)/2));
   TEST_CONDITION (== 0, InetNtopW (AF_UNIX, &in4, buf, sizeof(buf)/2));
-#endif
 }
 
 /**

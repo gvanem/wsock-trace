@@ -19,73 +19,67 @@
 #include "iana.h"
 #include "asn.h"
 
-#if !defined(__WATCOMC__)
-#define USE_LIBLOC 1
-#endif
-
-#ifdef USE_LIBLOC
-  #ifdef __CYGWIN__
+#if defined(__CYGWIN__)
   #include <sys/cygwin.h>
-  #endif
 
-  #if defined(__CYGWIN__) && !defined(_WIN32)
+  #ifndef _WIN32
   #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/loc/libloc.h' only */
   #endif
+#endif
 
-  #include <loc/libloc.h>
-  #include <loc/database.h>
-  #include <loc/network.h>
-  #include <loc/resolv.h>
-  #include <loc/windows/syslog.h> /* LOG_DEBUG */
+#include <loc/libloc.h>
+#include <loc/database.h>
+#include <loc/network.h>
+#include <loc/resolv.h>
+#include <loc/windows/syslog.h> /* LOG_DEBUG */
 
-  #define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
-  #define SZ_OK                 0
+#define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
+#define SZ_OK                 0
 
-  /*
-   * Ignore some MinGW/gcc warnings below.
-   */
-  #if defined(__MINGW32__)
-    #pragma GCC diagnostic ignored  "-Wformat"             /* does not understand '%zu'! */
-    #pragma GCC diagnostic ignored  "-Wformat-extra-args"  /* ditto */
-  #endif
+/*
+ * Ignore some MinGW/gcc warnings below.
+ */
+#if defined(__MINGW32__)
+  #pragma GCC diagnostic ignored  "-Wformat"             /* does not understand '%zu'! */
+  #pragma GCC diagnostic ignored  "-Wformat-extra-args"  /* ditto */
+#endif
 
-  #if defined(__GNUC__)
-    #pragma GCC diagnostic ignored  "-Wstrict-aliasing"
-    #pragma GCC diagnostic ignored  "-Wmissing-braces"
-  #endif
+#if defined(__GNUC__)
+  #pragma GCC diagnostic ignored  "-Wstrict-aliasing"
+  #pragma GCC diagnostic ignored  "-Wmissing-braces"
+#endif
 
-  struct libloc_data {
-         struct loc_ctx      *ctx;
-         struct loc_database *db;
-         FILE                *file;
-         size_t               num_AS;
-       };
-  struct libloc_data libloc;
+struct libloc_data {
+       struct loc_ctx      *ctx;
+       struct loc_database *db;
+       FILE                *file;
+       size_t               num_AS;
+     };
+struct libloc_data libloc;
 
-  struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */
-         struct loc_ctx *ctx;
-         int             refcount;
-         int             family;
-         struct in6_addr first_address;
-         struct in6_addr last_address;
-         unsigned int    prefix;
-         char            country_code[3];
-         uint32_t        asn;
-         int             flags;
-       };
+struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */
+       struct loc_ctx *ctx;
+       int             refcount;
+       int             family;
+       struct in6_addr first_address;
+       struct in6_addr last_address;
+       unsigned int    prefix;
+       char            country_code[3];
+       uint32_t        asn;
+       int             flags;
+     };
 
-  static void ASN_bin_close (void);
-  int         XZ_decompress (const char *from_file, const char *to_file);
-  const char *XZ_strerror (int rc);
+static void ASN_bin_close (void);
+int         XZ_decompress (const char *from_file, const char *to_file);
+const char *XZ_strerror (int rc);
 
 
-  static int _IN6_IS_ADDR_TEREDO (const struct in6_addr *ip6)
-  {
-    if (!ip6)
-       return (0);
-    return (ip6->s6_bytes[0] == 0x20 && ip6->s6_bytes[1] == 0x01 && ip6->s6_bytes[2] == 0x00);
-  }
-#endif  /* USE_LIBLOC */
+static int _IN6_IS_ADDR_TEREDO (const struct in6_addr *ip6)
+{
+  if (!ip6)
+     return (0);
+  return (ip6->s6_bytes[0] == 0x20 && ip6->s6_bytes[1] == 0x01 && ip6->s6_bytes[2] == 0x00);
+}
 
 /**
  * Module global variables.
@@ -212,7 +206,6 @@ static int ASN_compare_on_ip4 (const void *key, const void **member)
   return INET_util_range4cmp (&ipv4, &rec->ipv4.low, rec->prefix);
 }
 
-#ifdef USE_LIBLOC
 /**
  * Close the use of `libloc`.
  */
@@ -763,33 +756,6 @@ int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct
   return __ASN_libloc_print (intro, ip4, ip6, print_func ? print_func : trace_puts);
 }
 
-#else   /* !USE_LIBLOC */
-static size_t ASN_load_bin_file (const char *file)
-{
-  TRACE (2, "Sorry, OpenWatcom is not supported:\n            "
-            "Cannot load database '%s' file.\n", file);
-  ARGSUSED (file);
-  return (0);
-}
-
-void ASN_update_file (const char *file, BOOL force_update)
-{
-  TRACE (2, "Sorry, OpenWatcom is not supported:\n            "
-            "Cannot update database '%s' file automatically.\n", file);
-  ARGSUSED (force_update);
-  ARGSUSED (file);
-}
-
-int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func print_func)
-{
-  ARGSUSED (intro);
-  ARGSUSED (ip4);
-  ARGSUSED (ip6);
-  ARGSUSED (print_func);
-  return (0);
-}
-#endif  /* USE_LIBLOC */
-
 /**
  * Find and print the ASN information for an IPv4 address.
  * (from a CSV file only).
@@ -869,11 +835,9 @@ void ASN_exit (void)
   if (ASN_entries)
      smartlist_wipe (ASN_entries, free);
 
-#ifdef USE_LIBLOC
   ASN_bin_close();
-#endif
-
   ASN_entries = NULL;
+
   free (g_cfg.ASN.asn_csv_file);
   free (g_cfg.ASN.asn_bin_file);
   free (g_cfg.ASN.asn_bin_url);
@@ -893,25 +857,23 @@ void ASN_report (void)
 /**
  * The code for `XZ_decompress()` is included below for easy building.
  */
-#ifdef USE_LIBLOC
-  #define INCLUDED_FROM_WSOCK_TRACE
-  #if 0
-    #define CONFIG_PROB32
-    #define CONFIG_SIZE_OPT
-    #define CONFIG_DEBUG
-  #endif
-
-  #define RINOK(x)  do {                                  \
-                      unsigned  _res = x;                 \
-                      if (_res != 0) {                    \
-                         TRACE (1, "RINOK() -> %u/%s.\n", \
-                                _res, XZ_strerror(_res)); \
-                         return (_res);                   \
-                      }                                   \
-                    } while (0)
-
-  #include "xz_decompress.c"
+#define INCLUDED_FROM_WSOCK_TRACE
+#if 0
+  #define CONFIG_PROB32
+  #define CONFIG_SIZE_OPT
+  #define CONFIG_DEBUG
 #endif
+
+#define RINOK(x)  do {                                  \
+                    unsigned  _res = x;                 \
+                    if (_res != 0) {                    \
+                       TRACE (1, "RINOK() -> %u/%s.\n", \
+                              _res, XZ_strerror(_res)); \
+                       return (_res);                   \
+                    }                                   \
+                  } while (0)
+
+#include "xz_decompress.c"
 
 /*
  * A small test for ASN.
@@ -955,7 +917,6 @@ int asn_main (int argc, char **argv)
     g_cfg.ASN.enable = 1;
     ASN_dump();
   }
-#ifdef USE_LIBLOC
   else if (do_update)
   {
     int save = g_cfg.trace_level;
@@ -966,7 +927,6 @@ int asn_main (int argc, char **argv)
     ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
     g_cfg.trace_level = save;
   }
-#endif
   else
     printf ("Nothing done in %s.\n", program_name);
 
