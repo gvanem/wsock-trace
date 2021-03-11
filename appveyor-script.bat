@@ -113,7 +113,7 @@ echo Generating appveyor-hosts file...
 type appveyor_hosts_content.txt > appveyor-hosts
 
 ::
-:: These should survive until 'build_script' for 'msvc', 'mingw', 'cygwin', or 'watcom' get to run.
+:: These should survive until 'build_script' for 'msvc', 'mingw' or 'cygwin' get to run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
@@ -131,6 +131,6 @@ exit /b 0
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
-del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor appveyor-hosts watcom20.zip 2> NUL
+del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor appveyor-hosts 2> NUL
 echo Cleaning done.
 exit /b 0
