@@ -1895,7 +1895,7 @@ static const void *make_ip_hdr (size_t data_len)
   memset (&ip, 0, sizeof(ip));
   ip.ip_ver  = 4;
   ip.ip_hlen = sizeof(ip) / 4;
-  ip.ip_len  = swap16 (sizeof(ip) + data_len);
+  ip.ip_len  = swap16 ((WORD)(sizeof(ip) + data_len));
   ip.ip_ttl  = 255;
   ip.ip_id   = swap16 (++ip_id);
   ip.ip_p    = IPPROTO_TCP;
