@@ -179,8 +179,8 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 	cp --update $(WSOCK_LIB)  $(LIB_TARGET)
 	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
-ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lws2_32 > ws_tool.map
+ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_LIB) $(LIBLOC_LIB) $(LUAJIT_LIB)
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > ws_tool.map
 	@echo
 
 run_test: ws_tool.exe
