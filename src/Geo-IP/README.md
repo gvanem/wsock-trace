@@ -43,14 +43,14 @@ Ideas for the public interface to a unified "Geo-IP" library:
     .lookup = geoip_MMDB_lookup
   };
 
-  const struct geoip_provider_st ipfire_handler = {
+  const struct geoip_provider_st libloc_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_ASN_FILE,
     .files  = [ "IPFire/location.db", NULL ],
-    .url    = "https://location.ipfire.org/databases/1/location.db.xz"
-    .init   = geoip_ipfire_init,
-    .close  = geoip_ipfire_close,
-    .lookup = geoip_ipfire_lookup,
-    .update = geoip_ipfire_update  // update the local '.files[0]' from '.url'
+    .url    = "https://location.ipfire.org/databases/1/location.db.xz",
+    .init   = geoip_libloc_init,
+    .close  = geoip_libloc_close,
+    .lookup = geoip_libloc_lookup,
+    .update = geoip_libloc_update  // update the local '.files[0]' from '.url'
   };
 
   struct geoip_provider_st asn_handler1 = {
@@ -83,7 +83,7 @@ Add the above provider back-ends in an internal structure for later use:
 
 ```
   geoip_add_provider (&mmdb_handler);
-  geoip_add_provider (&ipfire_handler);
+  geoip_add_provider (&libloc_handler);
   geoip_add_provider (&asn_handler1);
   geoip_add_provider (&asn_handler2);
   geoip_add_provider (&drop_handler);   // For SpamHaus 'DROP' lookups
