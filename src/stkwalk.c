@@ -864,7 +864,6 @@ static char *shorten_path2 (const char *str, size_t max_len)
 {
   static char buf [_MAX_PATH];
   const char *end  = strchr (str,'\0');
-  int         dots_len = 3;
   int         shift = 0;
   size_t      len;
 
@@ -877,8 +876,8 @@ static char *shorten_path2 (const char *str, size_t max_len)
   if ((max_len & 1) == 0)   /* an even number */
      shift++;
 
-  snprintf (buf, sizeof(buf), "%.*s%.*s%.*s",
-            (int)len, str, dots_len, "...", len+shift, (int)(end-len-shift));
+  snprintf (buf, sizeof(buf), "%.*s...%.*s",
+            (int)len, str, (int)(len+shift), end-len-shift);
   return (buf);
 }
 
