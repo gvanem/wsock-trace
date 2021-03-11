@@ -407,6 +407,7 @@ static int ASN_check_database (const char *local_db)
   time_t time_remote_db = 0;
   BOOL   older = FALSE;
   char   days_behind [50] = "";
+  const char *zone = _tzname[0];
 
   if (loc_discover_latest_version(libloc.ctx, LOC_DATABASE_VERSION_LATEST, &time_remote_db) != 0)
   {
@@ -433,7 +434,17 @@ static int ASN_check_database (const char *local_db)
             ctime(&time_remote_db), ASN_get_url(), older ? "not " : "", days_behind);
 
   time_local_db += _timezone;
-  TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), _tzname[0]);
+
+#if defined(__CYGWIN__) /* Cygwin doesn't always set '_tzname[0]' */
+  if (!zone[0])
+  {
+    zone = getenv ("TZ");
+    if (!zone)
+       zone = "?";
+  }
+#endif
+
+  TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
   return (1);
 }
 
