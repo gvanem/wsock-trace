@@ -81,7 +81,8 @@ build_script:
   - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU%
 
 test_script:
-  - cmd: set WSOCK_TRACE_LEVEL=1 & set USE_LUA=1 & ws_tool.exe test -v
+  - cmd: if NOT %BUILDER%. == cygwin. set USE_LUA=1
+  - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe test -v
   - cmd: set WSOCK_TRACE_LEVEL=0 & set USE_LUA=0
 
   #
