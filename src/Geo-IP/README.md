@@ -32,71 +32,86 @@ It's task would be to show additional information for an IPv4/IPv6 address:
 
 Ideas for the public interface to a unified "Geo-IP" library:
 
-* INIT PHASE:
+### INIT PHASE:
+
 ```
   const struct geoip_provider_st mmdb_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_MMDB_FILE,
-    .file   = "DB-IP/dbip-country-lite-2020-03.mmdb",
+    .files  = [ "DB-IP/dbip-country-lite-2020-03.mmdb", NULL ],
     .init   = geoip_MMDB_init,
     .close  = geoip_MMDB_close,
     .lookup = geoip_MMDB_lookup
   };
 
+  const struct geoip_provider_st ipfire_handler = {
+    .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_ASN_FILE,
+    .files  = [ "IPFire/location.db", NULL ],
+    .url    = "https://location.ipfire.org/databases/1/location.db.xz"
+    .init   = geoip_ipfire_init,
+    .close  = geoip_ipfire_close,
+    .lookup = geoip_ipfire_lookup,
+    .update = geoip_ipfire_update  // update the local '.files[0]' from '.url'
+  };
+
   struct geoip_provider_st asn_handler1 = {
-    .flags = GEOIP_ASN | GEOIP_MMDB_FILE,
-    .file   = "DB-IP/dbip-asn-lite-2020-10.mmdb",
+    .flags  = GEOIP_ASN_FILE | GEOIP_MMDB_FILE,
+    .files  = [ "DB-IP/dbip-asn-lite-2020-10.mmdb", NULL ],
     .init   = geoip_ASN_init,
     .close  = geoip_ASN_close,
     .lookup = geoip_ASN_lookup
   };
 
   struct geoip_provider_st asn_handler2 = {
-    .flags = GEOIP_ASN | GEOIP_CSV_FILE,
-    .file   = "IP4-ASN.CSV",
+    .flags  = GEOIP_ASN_FILE | GEOIP_CSV_FILE,
+    .files  = [ "IP4-ASN.CSV", NULL ],
     .init   = geoip_ASN_init,
     .close  = geoip_ASN_close,
     .lookup = geoip_ASN_lookup
   };
 
   struct geoip_provider_st drop_handler = {
-    .flags = GEOIP_DROP | GEOIP_TXT_FILE,
-    .file   = "DROP.txt",
-    .init   = geoip_TXT_init,
-    .close  = geoip_TXT_close,
-    .lookup = geoip_TXT_lookup
+    .flags  = GEOIP_DROP | GEOIP_TXT_FILES,
+    .files  = [ "DROP.txt", "DROPv6.txt", "EDROP.txt", NULL ],
+    .init   = geoip_DROP_init,
+    .close  = geoip_DROP_close,
+    .lookup = geoip_DROP_lookup
   };
 ```
 
-  Will add the above provider back-ends in an internal structure for later use.
+(unset fields above is assumed to be `NULL`).
+Add the above provider back-ends in an internal structure for later use:
 
 ```
   geoip_add_provider (&mmdb_handler);
+  geoip_add_provider (&ipfire_handler);
   geoip_add_provider (&asn_handler1);
   geoip_add_provider (&asn_handler2);
+  geoip_add_provider (&drop_handler);   // For SpamHaus 'DROP' lookups
   ...
 ```
 
-* LOOKUP PHASE:
+### LOOKUP PHASE:
 
-  This lookup depends on `.flags` in the INIT PHASE and `flags` given here. <br>
+  This lookup depends on `.flags` in the **INIT PHASE** and `flags` given here. <br>
   Some precedence could be used or simply look for a flags-match in the order back-ends were added?
 
-```
+
+  ```
   struct in_addr ia4 = ...;
-  const struct geoip_data_rec *rec = geoip_lookup (&ia4, GEOIP_IPV4_ADDR | GEOIP_ASN);
+  const struct geoip_data_rec *rec = geoip_lookup (&ia4, GEOIP_IPV4_ADDR | GEOIP_ASN_FILE);
 
   if (rec)
   {
     printf ("%s, location: %s\"n, rec->country, rec->location);
     printf ("AS%lu, name: %s\"n, rec->as_number, rec->as_name);
-    geoip_free_rec (rec);
+    geoip_free_rec (rec);  // add to internal cache?
   }
-```
+  ```
 
-* CLEANUP PHASE:
+### CLEANUP PHASE:
 
-  Remove all added providers, close open files and free the associated memory.
+  Remove all added providers, close open files and free the memory used in **INIT PHASE**:
 
-```
- geoip_del_providers();
-```
+  ```
+  geoip_del_providers();
+  ```
