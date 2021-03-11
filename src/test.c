@@ -65,9 +65,6 @@ struct test_struct {
 static int verbose = 0;
 static int last_result = 0;
 
-static CONSOLE_SCREEN_BUFFER_INFO c_info;
-static HANDLE c_hnd = INVALID_HANDLE_VALUE;
-
 #define COLOUR_GREEN  (FOREGROUND_INTENSITY | 2)
 #define COLOUR_RED    (FOREGROUND_INTENSITY | 4)
 #define COLOUR_YELLOW (FOREGROUND_INTENSITY | 6)
@@ -76,9 +73,6 @@ static HANDLE c_hnd = INVALID_HANDLE_VALUE;
 #define SGR_GREEN     "\x1B[1;32m"
 #define SGR_YELLOW    "\x1B[1;33m"
 #define SGR_DEFAULT   "\x1B[0m"
-
-static int use_wincon = -1;
-static int use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWin and AppVeyor */
 
 static void set_colour (int col);
 
@@ -1100,18 +1094,21 @@ static void test_wstring (const wchar_t *expect, const wchar_t *result, const ch
 
 static void set_colour (int col)
 {
-  if (use_SGR == -1)
+  static CONSOLE_SCREEN_BUFFER_INFO c_info;
+  static HANDLE c_hnd = INVALID_HANDLE_VALUE;
+  static int    use_wincon = -1;
+  static int    use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWin and AppVeyor */
+
+  if (use_SGR == -1 && use_wincon == -1)  /* Do this once */
   {
-    use_SGR = 0;
 #ifdef __CYGWIN__
     use_SGR = 1;
 #else
     if (getenv("APPVEYOR_BUILD_FOLDER"))
-       use_SGR = 1;
+         use_SGR = 1;
+    else use_SGR = 0;
 #endif
-  }
-  if (use_wincon == -1)
-  {
+
     c_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
     if (c_hnd != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(c_hnd, &c_info))
          use_wincon = 1;
