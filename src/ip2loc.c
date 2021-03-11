@@ -155,8 +155,6 @@ typedef struct IP2Location {
         uint8_t     db_day;
         uint8_t     db_month;
         uint8_t     db_year;
-        uint32_t    db_count;
-        uint32_t    db_addr;
         uint32_t    ip_version;
         uint32_t    ipv4_db_count;
         uint32_t    ipv4_db_addr;
@@ -216,6 +214,7 @@ static IP2Location *open_file (const char *fname)
   struct IP2Location *loc = calloc (1, sizeof(*loc));
   UINT   IPvX;
   BOOL   is_IPv4_only, is_IPv6_only;
+  SYSTEMTIME st;
 
   if (!loc)
   {
@@ -266,16 +265,26 @@ static IP2Location *open_file (const char *fname)
   else if (IPvX == loc->ipv4_db_count && loc->ipv6_db_count == 0)
      is_IPv4_only = TRUE;
 
-  if (loc->db_day == 0 || loc->db_day > 31 || loc->db_month == 0 || loc->db_month >= 12)
+  memset (&st, '\0', sizeof(st));
+  GetLocalTime (&st);
+
+  if (loc->db_day == 0 || loc->db_day > 31 ||
+      loc->db_month == 0 || loc->db_month > 12 ||
+      loc->db_year + 2000 > st.wYear)
   {
     ip2loc_bad = TRUE;   /* Do not attempt this again */
     ip2loc_exit();
-    WARNING ("IP2Loc file '%s' seems to contain junk.\n", fname);
+
+    memset (&st, '\0', sizeof(st));
+    st.wDay   = loc->db_day;
+    st.wMonth = loc->db_month;
+    st.wYear  = loc->db_year + 2000;
+
+    WARNING ("IP2Loc file '%s' seems to contain junk. Date: %s\n",
+             fname, get_date_str(&st));
   }
   else
   {
-    SYSTEMTIME st;
-
     memset (&st, '\0', sizeof(st));
     st.wDay   = loc->db_day;
     st.wMonth = loc->db_month;
@@ -397,13 +406,10 @@ static void IP2Location_initialize (IP2Location *loc)
   loc->db_month      = IP2Location_read8 (loc, 4);
   loc->db_day        = IP2Location_read8 (loc, 5);
 
-  loc->db_count      = IP2Location_read32 (loc, 6);
-  loc->db_addr       = IP2Location_read32 (loc, 10);
-  loc->ip_version    = IP2Location_read32 (loc, 14);
-
   loc->ipv4_db_count = IP2Location_read32 (loc, 6);
   loc->ipv4_db_addr  = IP2Location_read32 (loc, 10);
   loc->ipv6_db_count = IP2Location_read32 (loc, 14);
+  loc->ip_version    = IP2Location_read32 (loc, 14);
   loc->ipv6_db_addr  = IP2Location_read32 (loc, 18);
 
   loc->ipv4_index_db_addr = IP2Location_read32 (loc, 22);
