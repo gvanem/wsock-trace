@@ -65,10 +65,11 @@ Ideas for the public interface to a unified "Geo-IP" library:
     .close  = geoip_TXT_close,
     .lookup = geoip_TXT_lookup
   };
+```
 
-  // Adds the providers in an internal structure for low-level handling.
-  // Action depends on '.flags'.
+  Will add the above provider back-ends in an internal structure for later use.
 
+```
   geoip_add_provider (&mmdb_handler);
   geoip_add_provider (&asn_handler1);
   geoip_add_provider (&asn_handler2);
@@ -76,6 +77,9 @@ Ideas for the public interface to a unified "Geo-IP" library:
 ```
 
 * LOOKUP PHASE:
+
+  This lookup depends on `.flags` in the INIT PHASE and `flags` given here. <br>
+  Some precedence could be used or simply look for a flags-match in the order back-ends were added?
 
 ```
   struct in_addr ia4 = ...;
@@ -87,4 +91,12 @@ Ideas for the public interface to a unified "Geo-IP" library:
     printf ("AS%lu, name: %s\"n, rec->as_number, rec->as_name);
     geoip_free_rec (rec);
   }
+```
+
+* CLEANUP PHASE:
+
+  Remove all added providers, close open files and free the associated memory.
+
+```
+ geoip_del_providers();
 ```

@@ -1,7 +1,8 @@
-## To-do
+## DB-IP Backend
 
-Compressed `CSV` and `MMDB` from **[DB-IP](https://db-ip.com)**.<br>
-The `MMDB` files should be MaxMind compatible.
+Some `CSV` and `MMDB` sample data-files from **[DB-IP](https://db-ip.com)**.<br>
+The `.mmdb` files should be MaxMind compatible. Thus the code in
+**[../GeoipMMDB](../GeoipMMDB)** is used for this backend too.
 
 
 
