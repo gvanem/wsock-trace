@@ -39,7 +39,10 @@ static const luaL_Reg lj_lib_preload[] = {
 LUALIB_API void luaL_openlibs(lua_State *L)
 {
   const luaL_Reg *lib;
+
+  LJ_TRACE(2, "In %s()\n", __FUNCTION__);
   for (lib = lj_lib_load; lib->func; lib++) {
+    LJ_TRACE(2, "Pushing function '%s'\n", lib->name);
     lua_pushcfunction(L, lib->func);
     lua_pushstring(L, lib->name);
     lua_call(L, 1, 0);
@@ -47,6 +50,7 @@ LUALIB_API void luaL_openlibs(lua_State *L)
   luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD",
 		 sizeof(lj_lib_preload)/sizeof(lj_lib_preload[0])-1);
   for (lib = lj_lib_preload; lib->func; lib++) {
+    LJ_TRACE(2, "Pushing function '%s'\n", lib->name);
     lua_pushcfunction(L, lib->func);
     lua_setfield(L, -2, lib->name);
   }

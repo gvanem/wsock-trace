@@ -185,6 +185,7 @@ else
   ifneq (,$(findstring CYGWIN,$(HOST_SYS)))
     HOST_SYS= Windows
     HOST_MSYS= cygwin
+    XCFLAGS += -DLUA_USE_APICHECK -DLUA_USE_ASSERT
   endif
 endif
 
