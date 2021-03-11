@@ -203,7 +203,7 @@ ifeq ($(USE_LUA),1)
   #
 $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a $(LUAJIT_EXTRAS)
+	$(MAKE) -C $(LUAJIT_ROOT)/src libluajit.a
 	@echo
 
 clean_lua:
