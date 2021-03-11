@@ -14,6 +14,7 @@
 #include "lualib.h"
 
 #include "lj_arch.h"
+#include "lj_debug.h"
 
 static const luaL_Reg lj_lib_load[] = {
   { "",			luaopen_base },
