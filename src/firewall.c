@@ -2105,7 +2105,10 @@ static BOOL fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   /* If 'fw_init()' wasn't called or succeeded, return FALSE.
    */
   if (fw_policy_handle == INVALID_HANDLE_VALUE)
-     return (FALSE);
+  {
+    fw_errno = ERROR_INVALID_HANDLE;
+    return (FALSE);
+  }
 
   if (!fw_create_engine())
      return (FALSE);
