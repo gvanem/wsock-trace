@@ -284,9 +284,9 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
    ARGSUSED (win_db_file);
 #endif
 
-  /* The CopyFile() fails if 'db_file' is open.
+  /* The `CopyFile()` fails if `db_file` is open.
    */
-  if (!CopyFile (db_temp_file, db_file, FALSE))
+  if (!CopyFile(db_temp_file, db_file, FALSE))
      TRACE (1, "CopyFile(): %s -> %s failed: %s\n", db_temp_file, db_file, win_strerror(GetLastError()));
   else
   {
@@ -495,7 +495,7 @@ static size_t ASN_load_bin_file (const char *file)
   time_t      created;
   int         err, save;
 
-  memset (&libloc, '\0', sizeof(libloc)); // should be un-needed
+  memset (&libloc, '\0', sizeof(libloc)); /* should be un-needed */
 
   if (!file || !file_exists(file))
   {
@@ -754,7 +754,7 @@ static int __ASN_libloc_print (const char            *intro,
 
   TRACE (2, "Looking up: %s.\n", addr_str);
 
-  /* Do not trace 'inet_pton()' inside libloc or \WSAGetLastError()' below.
+  /* Do not trace 'inet_pton()' inside libloc or `WSAGetLastError()' below.
    */
   save = g_cfg.trace_level;
   g_cfg.trace_level = 0;
