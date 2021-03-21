@@ -8,26 +8,11 @@
  * A resizeable list of pointers, with associated helpful functionality.
  * Taken from Tor's src/common/container.h and modified.
  */
-#if defined(EXPOSE_SMARTLIST_DETAILS) || defined(__DOXYGEN__)
-  /**
-   * \typedef smartlist_t
-   * The members of this struct are exposed only when `EXPOSE_SMARTLIST_DETAILS`
-   * is set inside smartlist.c. Otherwise all access to smartlist internals
-   * should go through the functions defined below.
-   */
-  typedef struct smartlist_t {
-          /**
-           * `list` (of anything) has enough capacity to store exactly `capacity`
-           * elements before it needs to be resized. Only the first `num_used`
-           * (<= `capacity`) elements point to valid data.
-           */
-          void **list;
-          int    num_used;
-          int    capacity;
-        } smartlist_t;
-#else
-  typedef struct smartlist_internal smartlist_t; /* Opaque struct */
-#endif
+
+/**
+ * Opaque struct; defined in smartlist.c
+ */
+typedef struct smartlist_t smartlist_t;
 
 /**\typedef smartlist_sort_func
  * A function used to compare smartlist elements must match this type.

@@ -14,11 +14,31 @@
 #include <assert.h>
 #include <limits.h>
 
-#define EXPOSE_SMARTLIST_DETAILS
-
 #include "common.h"
 #include "vm_dump.h"
 #include "smartlist.h"
+
+/**
+ * \typedef struct smartlist_t
+ *
+ * From Tor's `src/lib/smartlist_core/smartlist.h`:
+ *
+ * A resizeable list of pointers, with associated helpful functionality.
+ *
+ * The members of this struct are exposed only so that macros and inlines can
+ * use them; all access to smartlist internals should go through the functions
+ * and macros defined here.
+ */
+typedef struct smartlist_t {
+        /**
+         * `list` (of anything) has enough capacity to store exactly `capacity`
+         * elements before it needs to be resized. Only the first `num_used`
+         * (<= `capacity`) elements point to valid data.
+         */
+        void **list;
+        int    num_used;
+        int    capacity;
+      } smartlist_t;
 
 /**
  * \def SMARTLIST_DEFAULT_CAPACITY
