@@ -132,7 +132,6 @@ int main (int argc, char **argv)
   wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
 #endif
 
-  g_cfg.trace_use_ods = FALSE;
   g_cfg.trace_time_format = TS_RELATIVE;
 
   while ((c = getopt (argc, argv, "+dh?")) != EOF)
