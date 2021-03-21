@@ -1782,6 +1782,7 @@ static void test_addr_common (const char            *addr_str,
   const char *cc;
   const BYTE *nibble;
   int   save, flag, ip_width;
+  BOOL  excluded;
   char  buf1 [200];
   char  buf2 [200];
 
@@ -1882,7 +1883,12 @@ static void test_addr_common (const char            *addr_str,
     }
   }
 
-  if (g_cfg.IANA.enable || g_cfg.ASN.enable)
+  /* If this wasn't already done in dump.c for the trace of `getaddrinfo()`,
+   * print the `IANA` and `ASN` information here.
+   */
+  excluded = (g_cfg.trace_level == 0 || exclude_list_get("getaddrinfo", EXCL_FUNCTION));
+
+  if (excluded && (g_cfg.IANA.enable || g_cfg.ASN.enable))
   {
     struct IANA_record rec;
 
