@@ -449,6 +449,13 @@ static void loc_database_free(struct loc_database* db) {
 			ERROR(db->ctx, "Could not unmap network nodes section: %s\n", strerror(errno));
 	}
 
+	// Remove mapped countries nodes section
+	if (db->countries_v1) {
+		r = munmap(db->countries_v1, db->countries_count * sizeof(*db->countries_v1));
+		if (r)
+			ERROR(db->ctx, "Could not unmap countries nodes section: %s\n", strerror(errno));
+	}
+
 	if (db->pool)
 		loc_stringpool_unref(db->pool);
 
