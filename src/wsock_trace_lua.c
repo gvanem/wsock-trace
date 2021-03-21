@@ -101,7 +101,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     ws_tool_import = (stricmp (loaded, "ws_tool.exe") == 0);
     if (!ws_tool_import && stricmp(loaded, dll))
     {
-      LUA_WARNING ("Expected %s, but loaded DLL was '%s:\n", dll, loaded);
+      LUA_WARNING ("Expected '%s', but loaded DLL was '%s:\n", dll, loaded);
       rc = FALSE;
     }
     else
