@@ -2,7 +2,7 @@
  *  \ingroup Main
  *
  *  \brief
- *    All previous test-programs are now corrected under this
+ *    All previous test-programs are now collected under this
  *    "umbrella program". Each `main()` function is now `xx_main()`
  *    called from this program depending on the first non-option
  *    given in `argv[]`.
