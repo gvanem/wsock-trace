@@ -64,6 +64,7 @@ struct test_struct {
 
 static int verbose = 0;
 static int last_result = 0;
+static int on_appveyor = 0;
 
 #define COLOUR_GREEN  (FOREGROUND_INTENSITY | 2)
 #define COLOUR_RED    (FOREGROUND_INTENSITY | 4)
@@ -424,9 +425,18 @@ static void test_socket (void)
 
 static void test_socket_unix (void)
 {
-  s1_unix = socket (AF_UNIX, SOCK_STREAM, 0);
-  TEST_CONDITION (!= INVALID_SOCKET, s1_unix);
-  TEST_CONDITION (== 0, WSAGetLastError());
+  if (on_appveyor)
+  {
+    s1_unix = socket (AF_UNIX, SOCK_STREAM, 0);
+    TEST_CONDITION (== INVALID_SOCKET, s1_unix);
+    TEST_CONDITION (== WSAEAFNOSUPPORT, WSAGetLastError());
+  }
+  else
+  {
+    s1_unix = socket (AF_UNIX, SOCK_STREAM, 0);
+    TEST_CONDITION (!= INVALID_SOCKET, s1_unix);
+    TEST_CONDITION (== 0, WSAGetLastError());
+  }
 
   s2_unix = socket (AF_UNIX, SOCK_DGRAM, 0);
   TEST_CONDITION (== INVALID_SOCKET, s2_unix);    /* AF_UNIX on SOCK_DGRAM is unsupported */
@@ -926,6 +936,7 @@ int test_main (int argc, char **argv)
   int i, c, num = 0;
 
   program_name = argv[0];
+  on_appveyor = (getenv("APPVEYOR_BUILD_FOLDER") != NULL);
 
   signal (SIGINT, exit_test);
 
@@ -1104,9 +1115,7 @@ static void set_colour (int col)
 #ifdef __CYGWIN__
     use_SGR = 1;
 #else
-    if (getenv("APPVEYOR_BUILD_FOLDER"))
-         use_SGR = 1;
-    else use_SGR = 0;
+    use_SGR = on_appveyor ? 1: 0;
 #endif
 
     c_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
