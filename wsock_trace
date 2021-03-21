@@ -28,6 +28,8 @@
                                      # Use "$ODS" to print using 'OutputDebugString()' and
                                      # use dbgview to see the traces (no colours).
 
+  trace_file_commit = 0              # Commit a 'trace_file' directly to disk. Effective for a MSVC version only.
+
   trace_time = relative              # Print timestamps at each trace-line. One of these:
                                      #   "absolute" for current-time.
                                      #   "relative" for msec since program started.

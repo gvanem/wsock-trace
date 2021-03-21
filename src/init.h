@@ -131,6 +131,7 @@ struct config_table {
        BOOL    trace_report;
        BOOL    trace_file_okay;
        BOOL    trace_file_device;
+       BOOL    trace_file_commit;
        BOOL    trace_use_ods;
        int     trace_level;
        int     trace_overlap;

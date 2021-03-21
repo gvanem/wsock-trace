@@ -604,6 +604,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "trace_binmode"))
      g_cfg.trace_binmode = atoi (val);
 
+  else if (!stricmp(key, "trace_file_commit"))
+     g_cfg.trace_file_commit = atoi (val);
+
   else if (!stricmp(key, "trace_caller"))
      g_cfg.trace_caller = atoi (val);
 
@@ -1071,9 +1074,20 @@ static int parse_config_file (FILE *file)
            parse_core_settings (key, val, line);
            strcpy (last_section, "core");
            if (!done)
-              TRACE (1, "Parsing config-file \"%s\"\n"
-                        "              for \"%s, %s\".\n",
-                     fname, get_builder(TRUE), get_dll_build_date());
+           {
+            /**
+             * \todo
+             * Let the below be printed at column 0.
+             * I.e. add a newline. But we do not yet have the `console_info`.
+             */
+#if 0
+             if (console_hnd != INVALID_HANDLE_VALUE && console_info.dwCursorPosition.X > 0
+                trace_putc ('\n');
+#endif
+             TRACE (1, "Parsing config-file \"%s\"\n"
+                       "              for \"%s, %s\".\n",
+                    fname, get_builder(TRUE), get_dll_build_date());
+           }
            done = TRUE;
            break;
       case CFG_LUA:
@@ -1337,6 +1351,13 @@ void wsock_trace_init (void)
   HMODULE     mod;
   BOOL        is_msvc, is_mingw, is_cygwin;
 
+  /**
+   * \todo
+   * Use `InitializeCriticalSectionEx (&crit_sect, CRITICAL_SECTION_NO_DEBUG_INFO)` instead?
+   * Ref:
+   *   https://www.codeproject.com/Articles/5278932/Synchronization-with-Visual-Cplusplus-and-the-Wind
+   * and the comments there.
+   */
   InitializeCriticalSection (&crit_sect);
 
   /* Set default values.
@@ -1425,7 +1446,14 @@ void wsock_trace_init (void)
   }
   else if (g_cfg.trace_file && g_cfg.trace_level > 0)
   {
-    g_cfg.trace_stream      = fopen_excl (g_cfg.trace_file, "at+");
+    const char *mode = "at+";
+
+#ifdef _MSC_VER
+    if (g_cfg.trace_file_commit)
+       mode = "atc+";
+#endif
+
+    g_cfg.trace_stream      = fopen_excl (g_cfg.trace_file, mode);
     g_cfg.trace_file_okay   = (g_cfg.trace_stream != NULL);
     g_cfg.trace_file_device = FALSE;
 
@@ -1435,6 +1463,7 @@ void wsock_trace_init (void)
                "Printing to stdout.\n", g_cfg.trace_file, strerror(errno));
       g_cfg.trace_stream = stdout;
       g_cfg.trace_file = NULL;
+      g_cfg.trace_file_commit = FALSE;
     }
   }
 
