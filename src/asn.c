@@ -287,9 +287,12 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
   /* The CopyFile() fails if 'db_file' is open.
    */
   if (!CopyFile (db_temp_file, db_file, FALSE))
-       TRACE (1, "CopyFile(): %s -> %s failed: %s\n", db_temp_file, db_file, win_strerror(GetLastError()));
-  else TRACE (1, "CopyFile(): %s -> %s OK\n", db_temp_file, db_file);
-  INET_util_touch_file (db_file);
+     TRACE (1, "CopyFile(): %s -> %s failed: %s\n", db_temp_file, db_file, win_strerror(GetLastError()));
+  else
+  {
+    TRACE (1, "CopyFile(): %s -> %s OK\n", db_temp_file, db_file);
+    INET_util_touch_file (db_file);
+  }
 }
 
 /**
