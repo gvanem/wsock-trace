@@ -1754,11 +1754,13 @@ void get_color (const char *val, WORD *col)
  * FG is in the low 4 bits.
  * BG is in the upper 4 bits of the BYTE.
  * If 'col == NULL', set default console colour.
+ *
+ * Returns the value of active colour prior to setting a new colour
  */
-void set_color (const WORD *col)
+WORD set_color (const WORD *col)
 {
   BYTE   fg, bg;
-  WORD   attr;
+  WORD   attr, rc;
   static WORD last_attr = (WORD)-1;
 
   if (!col)
@@ -1786,7 +1788,12 @@ void set_color (const WORD *col)
 
   if (attr != last_attr)
      SetConsoleTextAttribute (console_hnd, attr);
+
+  if (last_attr == (WORD)-1)
+       rc = console_info.wAttributes;
+  else rc = last_attr;
   last_attr = attr;
+  return (rc);
 }
 
 int get_column (void)

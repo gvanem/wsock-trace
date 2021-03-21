@@ -219,7 +219,7 @@ extern void crtdbg_exit (void);
 extern void ws_sema_wait (void);
 extern void ws_sema_release (void);
 
-extern void set_color (const WORD *col);
+extern WORD set_color (const WORD *col);
 extern void get_color (const char *str, WORD *col);
 extern int  get_column (void);
 
