@@ -356,7 +356,9 @@ void ASN_update_file (const char *db_file, BOOL force_update)
     if (st.st_size && st.st_mtime > expiry)
     {
       when = now + g_cfg.ASN.max_days * 24 * 3600;
-      TRACE (2, "Update of \"%s\" not needed until \"%.24s\"\n", db_file, ctime(&when));
+      TRACE (0, "Update of \"%s\" not needed until \"%.24s\"\n"
+                "            Use option '-f' to force an update\n",
+             db_file, ctime(&when));
       return;
     }
 
@@ -368,7 +370,9 @@ void ASN_update_file (const char *db_file, BOOL force_update)
     if (st.st_size && st.st_mtime > expiry)
     {
       when = now + g_cfg.ASN.max_days * 24 * 3600;
-      TRACE (2, "Download of \"%s\" not needed until \"%.24s\"\n", db_xz_temp_file, ctime(&when));
+      TRACE (0, "Download of \"%s\" not needed until \"%.24s\"\n"
+                "              Use option '-f' to force an update\n",
+             db_xz_temp_file, ctime(&when));
       ASN_xz_decompress (db_xz_temp_file, db_temp_file, db_file);
       return;
     }
@@ -980,13 +984,9 @@ int asn_main (int argc, char **argv)
   }
   else if (do_update)
   {
-    int save = g_cfg.trace_level;
-
     ASN_bin_close();
     g_cfg.ASN.enable = g_cfg.ASN.xz_decompress = 1;
-    g_cfg.trace_level = 2;
     ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
-    g_cfg.trace_level = save;
   }
   else
     printf ("Nothing done in %s.\n", program_name);
