@@ -998,8 +998,16 @@ int INET_util_addr_is_multicast (const struct in_addr *ip4, const struct in6_add
   return (0);
 }
 
+#define SET_REMARK(what) do {                 \
+                           if (remark)        \
+                              *remark = what; \
+                         } while (0)
+
 int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6, const char **remark)
 {
+  if (remark)
+     *remark = NULL;
+
   if (ip4)
   {
     /* 240.0.0.0/4, https://whois.arin.net/rest/net/NET-240-0-0-0-0
@@ -1007,8 +1015,8 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
     if (ip4->S_un.S_un_b.s_b1 >= 240)
     {
       if (ip4->S_un.S_un_b.s_b1 == 255)
-           *remark = "Broadcast";
-      else *remark = "Future use";
+           SET_REMARK ("Broadcast");
+      else SET_REMARK ("Future use");
       return (1);
     }
 
@@ -1016,7 +1024,7 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
      */
     if (ip4->S_un.S_un_b.s_b1 == 169 && ip4->S_un.S_un_b.s_b2 == 254)
     {
-      *remark = "Link Local";
+      SET_REMARK ("Link Local");
       return (1);
     }
 
@@ -1025,7 +1033,7 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
     if (ip4->S_un.S_un_b.s_b1 == 100 &&
         (ip4->S_un.S_un_b.s_b2 >= 64 && ip4->S_un.S_un_b.s_b2 <= 127))
     {
-      *remark = " Shared Address Space";
+      SET_REMARK ("Shared Address Space");
       return (1);
     }
   }
@@ -1033,37 +1041,37 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
   {
     if (IN6_IS_ADDR_LOOPBACK(ip6))
     {
-      *remark = "Loopback";
+      SET_REMARK ("Loopback");
       return (1);
     }
     if (IN6_IS_ADDR_LINKLOCAL(ip6))
     {
-      *remark = "Link Local";
+      SET_REMARK ("Link Local");
       return (1);
     }
     if (IN6_IS_ADDR_SITELOCAL(ip6))
     {
-      *remark = "Site Local";
+      SET_REMARK ("Site Local");
       return (1);
     }
     if (IN6_IS_ADDR_V4COMPAT(ip6))
     {
-      *remark = "IPv4 compatible";
+      SET_REMARK ("IPv4 compatible");
       return (1);
     }
     if (IN6_IS_ADDR_V4MAPPED(ip6))
     {
-      *remark = "IPv4 mapped";
+      SET_REMARK ("IPv4 mapped");
       return (1);
     }
     if (IN6_IS_ADDR_6TO4(ip6))
     {
-      *remark = "6to4";
+      SET_REMARK ("6to4");
       return (1);
     }
     if (IN6_IS_ADDR_ISATAP(ip6))
     {
-      *remark = "ISATAP";
+      SET_REMARK ("ISATAP");
       return (1);
     }
 
@@ -1075,7 +1083,7 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
         ip6->s6_bytes[1] == 0x01 &&
         ip6->s6_bytes[2] == 0x00)
     {
-      *remark = "Teredo";
+      SET_REMARK ("Teredo");
       return (1);
     }
 
@@ -1085,13 +1093,14 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
     if (ip6->s6_bytes[0] == 0x3F && ip6->s6_bytes[1] == 0xFE &&
         ip6->s6_bytes[2] == 0x83 && ip6->s6_bytes[3] == 0x1F)
     {
-      *remark = "Teredo old";
+      SET_REMARK ("Teredo old");
       return (1);
     }
   }
-  *remark = NULL;
   return (0);
 }
+
+#undef SET_REMARK
 
 /*
  * returns 1 if the `ip4` / `ip6` address is a Global Unicast
