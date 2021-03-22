@@ -447,14 +447,18 @@ static int ASN_check_database (const char *local_db)
 /**
  * A custom libloc logger function used to log to `g_cfg.trace_stream`.
  */
-static void ASN_libloc_logger (struct loc_ctx *ctx, int priority,
-                               const char *file, int line,
-                               const char *function,
-                               const char *format, va_list args)
+static void ASN_libloc_logger (struct loc_ctx *ctx,
+                               int             priority,
+                               const char     *file,
+                               int             line,
+                               const char     *function,
+                               const char     *format,
+                               va_list         args)
 {
   if (g_cfg.trace_stream)
   {
     WORD col = set_color (NULL);  /* Use default console colour */
+
     fprintf (g_cfg.trace_stream, "LIBLOC(%d): %s(%u): ", priority, basename(file), line);
     vfprintf (g_cfg.trace_stream, format, args);
     fflush (g_cfg.trace_stream);
@@ -468,10 +472,13 @@ static void ASN_libloc_logger (struct loc_ctx *ctx, int priority,
  * A custom libloc logger to log to system Debugger
  * via `OutputDebugStringA()`.
  */
-static void ASN_libloc_logger_ods (struct loc_ctx *ctx, int priority,
-                                   const char *file, int line,
-                                   const char *function,
-                                   const char *format, va_list args)
+static void ASN_libloc_logger_ods (struct loc_ctx *ctx,
+                                   int             priority,
+                                   const char     *file,
+                                   int             line,
+                                   const char     *function,
+                                   const char     *format,
+                                   va_list         args)
 {
   char buf [1000];
   int  len;
@@ -527,14 +534,14 @@ static size_t ASN_load_bin_file (const char *file)
     return (0);
   }
 
-  if (g_cfg.trace_level >= 1 && (g_cfg.trace_stream || g_cfg.trace_use_ods))
+  if (g_cfg.trace_level >= 2 && (g_cfg.trace_stream || g_cfg.trace_use_ods))
   {
     /* Let libloc log to trace-stream or system Debugger.
      */
     if (g_cfg.trace_use_ods)
          loc_set_log_fn (libloc.ctx, ASN_libloc_logger_ods);
     else loc_set_log_fn (libloc.ctx, ASN_libloc_logger);
-    loc_set_log_priority (libloc.ctx, g_cfg.trace_level >= 2 ? LOG_DEBUG : LOG_INFO);
+    loc_set_log_priority (libloc.ctx, g_cfg.trace_level >= 3 ? LOG_DEBUG : LOG_INFO);
   }
 
   if (g_cfg.trace_level == 0)
