@@ -592,8 +592,11 @@ const char *config_file_name (void)
  */
 static void parse_core_settings (const char *key, const char *val, unsigned line)
 {
-  if (ws_from_dll_main && !stricmp(key, "trace_level"))
-     g_cfg.trace_level = atoi (val);
+  if (!stricmp(key, "trace_level"))
+  {
+    if (!ws_from_dll_main)
+       g_cfg.trace_level = atoi (val);
+  }
 
   else if (!stricmp(key, "trace_overlap"))
      g_cfg.trace_overlap = atoi (val);
