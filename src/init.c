@@ -594,7 +594,7 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 {
   if (!stricmp(key, "trace_level"))
   {
-    if (!ws_from_dll_main)
+    if (ws_from_dll_main)
        g_cfg.trace_level = atoi (val);
   }
 
