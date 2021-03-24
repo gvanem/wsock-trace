@@ -592,7 +592,7 @@ const char *config_file_name (void)
  */
 static void parse_core_settings (const char *key, const char *val, unsigned line)
 {
-  if (!stricmp(key, "trace_level"))
+  if (ws_from_dll_main && !stricmp(key, "trace_level"))
      g_cfg.trace_level = atoi (val);
 
   else if (!stricmp(key, "trace_overlap"))
@@ -1360,19 +1360,22 @@ void wsock_trace_init (void)
    */
   InitializeCriticalSection (&crit_sect);
 
-  /* Set default values.
-   */
-  memset (&g_cfg, 0, sizeof(g_cfg));
-
-  /* Set trace-level before config-file could reset it.
-   */
-  if (env && isdigit((int)*env))
+  if (ws_from_dll_main)
   {
-    g_cfg.trace_level = (*env - '0');
-    g_cfg.show_caller = 1;
+    /* Set default values.
+     */
+    memset (&g_cfg, 0, sizeof(g_cfg));
+
+    /* Set trace-level before config-file could reset it.
+     */
+    if (env && isdigit((int)*env))
+    {
+      g_cfg.trace_level = (*env - '0');
+      g_cfg.show_caller = 1;
+    }
+    else
+      g_cfg.trace_level = 1;
   }
-  else
-    g_cfg.trace_level = 1;
 
   g_cfg.trace_max_len = 9999;      /* Infinite */
   g_cfg.trace_stream  = stdout;

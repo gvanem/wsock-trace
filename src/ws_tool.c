@@ -121,18 +121,7 @@ int main (int argc, char **argv)
   program_name = argv[0];
 
   memset (&g_cfg, '\0', sizeof(g_cfg));
-
-  /* Does the same as 'DllMain (inst, DLL_PROCESS_ATTACH, ...)'
-   */
-  set_dll_full_name (GetModuleHandle(NULL));
-  crtdbg_init();
-  wsock_trace_init();
-
-#if defined(USE_LUA)
-  wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
-#endif
-
-  g_cfg.trace_time_format = TS_RELATIVE;
+  ws_from_dll_main = FALSE;
 
   while ((c = getopt (argc, argv, "+dh?")) != EOF)
     switch (c)
@@ -154,6 +143,18 @@ int main (int argc, char **argv)
     show_help (NULL, do_help >= 2 ? TRUE : FALSE);
     goto quit;
   }
+
+  /* Does the same as 'DllMain (inst, DLL_PROCESS_ATTACH, ...)'
+   */
+  set_dll_full_name (GetModuleHandle(NULL));
+  crtdbg_init();
+  wsock_trace_init();
+
+#if defined(USE_LUA)
+  wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
+#endif
+
+  g_cfg.trace_time_format = TS_RELATIVE;
 
   argc -= optind;
   argv += optind;
