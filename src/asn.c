@@ -436,15 +436,11 @@ static int ASN_check_database (const char *local_db)
   time_local_db += _timezone;
 
 #if defined(__CYGWIN__) /* Cygwin doesn't always set '_tzname[0]' */
-  if (!zone[0])
-  {
-    zone = getenv ("TZ");
-    if (!zone)
-       zone = "?";
-  }
-#endif
-
+  TRACE (1, "local time-stamp: %.24s\n", ctime(&time_local_db));
+  ARGSUSED (zone);
+#else
   TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
+#endif
   return (1);
 }
 
