@@ -23,11 +23,6 @@ THIS_FILE  = $(firstword $(MAKEFILE_LIST))
 DATABASE_DIR  = $(realpath .)
 
 #
-# Use CRT debug (and 'ENABLE_DEBUG').
-#
-USE_CRT_DEBUG ?= 0
-
-#
 # Use Winsock-trace library, MSVC or clang-cl only.
 #
 USE_WSOCK_TRACE ?= 0
@@ -90,7 +85,7 @@ ifeq ($(CC),gcc)
   IMPORT_LIB = libloc.dll.a
 
 else
-  CFLAGS = -nologo -Zi                \
+  CFLAGS = -nologo -MD -Ot -Zi        \
            -D_CRT_SECURE_NO_WARNINGS  \
            -D_CRT_NONSTDC_NO_WARNINGS \
            -D_CRT_OBSOLETE_NO_WARNINGS
@@ -107,15 +102,6 @@ else
   else
     RCFLAGS += -D_MSC_VER
   endif
-
-  ifeq ($(USE_CRT_DEBUG),1)
-    CFLAGS += -MDd -RTCu -RTCs    \
-              -D_CRTDBG_MAP_ALLOC \
-              -FIcrtdbg.h      # -DENABLE_DEBUG
-    PY_D    = _d
-  else
-    CFLAGS += -MD -Ot
-  endif
 endif
 
 #
@@ -130,7 +116,8 @@ CFLAGS += -I. -I./loc/windows             \
           -DLIBLOC_PRIVATE                \
           -D_WIN32_WINNT=0x601            \
           -DABS_SRCDIR=\"$(realpath ..)\" \
-          -DVERSION=\"$(VERSION)\"
+          -DVERSION=\"$(VERSION)\"        \
+        # -DENABLE_DEBUG
 
 ifeq ($(USE_OPENSSL),1)
   CFLAGS += -I$(OPENSSL_ROOT)/include
@@ -285,9 +272,8 @@ cpp_filter.py: $(THIS_FILE)
 
 #
 # Must use Python3.
-# And with 'USE_CRT_DEBUG = 1', use the debug-version of Python3.
 #
-PYTHON  = python3$(PY_D)
+PYTHON  = py -3
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
 $(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py
@@ -364,7 +350,7 @@ py3_module: py3_install py3_install/location $(PY_GEN_FILES) libloc.dll
 ifeq ($(CC),gcc)
   PY_LIB = $(word 1, $(wildcard $(PY_ROOT)/libs/libpython3*.a))
 else
-  PY_LIB = $(PY_ROOT)/libs/python3$(PY_D).lib
+  PY_LIB = $(PY_ROOT)/libs/python3.lib
 endif
 
 py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install
@@ -525,11 +511,7 @@ define RC_COMMON
   #error "Add a 'RC_DESCRIPTION' first"
   #endif
 
-  #if $(USE_CRT_DEBUG)
-    #define DBG_STRING  "x86, debug"
-  #else
-    #define DBG_STRING  "x86, release"
-  #endif
+  #define DBG_STRING  "x86, release"
 
   #if defined(__MINGW32__)
     #define CC_STRING  "MinGW"
