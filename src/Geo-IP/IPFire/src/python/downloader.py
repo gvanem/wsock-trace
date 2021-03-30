@@ -17,6 +17,7 @@
 #                                                                             #
 ###############################################################################
 
+import sys
 import logging
 import lzma
 import os
@@ -174,8 +175,9 @@ class Downloader(object):
 						t.truncate()
 						continue
 
-					# Make the file readable for everyone
-					os.chmod(t.name, stat.S_IRUSR|stat.S_IRGRP|stat.S_IROTH)
+					# Make the file readable for everyone. On 'win32' this creates a read-only file.
+					if sys.platform != "win32":
+						os.chmod(t.name, stat.S_IRUSR|stat.S_IRGRP|stat.S_IROTH)
 
 					# Return temporary file
 					return t
