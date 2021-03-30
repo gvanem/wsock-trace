@@ -53,7 +53,7 @@ void loc_log(struct loc_ctx* ctx,
 static void log_stderr(struct loc_ctx* ctx,
 		int priority, const char* file, int line, const char* fn,
 		const char* format, va_list args) {
-	fprintf(stderr, "libloc: %s: ", fn);
+	fprintf(stderr, "libloc: %s(): ", fn);
 	vfprintf(stderr, format, args);
 }
 
@@ -77,20 +77,6 @@ static int log_priority(const char* priority) {
 	return 0;
 }
 
-static void loc_init(void) {
-#ifdef _WIN32
-	static int done = 0;
-	WSADATA wsa;
-
-	if (done)
-	   return;
-
-	done = 1;
-	WSAStartup(MAKEWORD(2,2), &wsa);
-	OpenSSL_add_all_algorithms();
-#endif
-}
-
 LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 	struct loc_ctx* c = calloc(1, sizeof(*c));
 	if (!c)
@@ -100,12 +86,18 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 	c->log_fn = log_stderr;
 	c->log_priority = LOG_ERR;
 
-	// Start Winsock if not done
-	loc_init();
-
 #ifdef _WIN32
-	const char* env = NULL;
+	// Start Winsock if not done
+	static int done = 0;
+	WSADATA wsa;
 
+	if (!done) {
+		WSAStartup(MAKEWORD(2,2), &wsa);
+		OpenSSL_add_all_algorithms();
+		done = 1;
+	}
+
+	const char* env = NULL;
 	char buf[20];
 	if (GetEnvironmentVariable("LOC_LOG", buf, sizeof(buf)))
 		env = buf;

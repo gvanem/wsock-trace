@@ -18,6 +18,7 @@
 
 #include <loc/libloc.h>
 #include <loc/writer.h>
+#include <loc/private.h>
 
 #include "locationmodule.h"
 #include "as.h"
@@ -225,6 +226,7 @@ static PyObject* Writer_write(WriterObject* self, PyObject* args) {
 	if (!PyArg_ParseTuple(args, "s|i", &path, &version))
 		return NULL;
 
+	INFO(loc_ctx, "Opening database %s\n", path);
 	FILE* f = fopen(path, "w+b");
 	if (!f) {
 		PyErr_Format(PyExc_IOError, strerror(errno));

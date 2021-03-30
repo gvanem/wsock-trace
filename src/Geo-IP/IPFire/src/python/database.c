@@ -20,6 +20,7 @@
 #include <loc/as.h>
 #include <loc/as-list.h>
 #include <loc/database.h>
+#include <loc/private.h>
 
 #include "locationmodule.h"
 #include "as.h"
@@ -50,6 +51,7 @@ static int Database_init(DatabaseObject* self, PyObject* args, PyObject* kwargs)
 		return -1;
 
 	self->path = strdup(path);
+	INFO(loc_ctx, "Opening database %s\n", self->path);
 
 	// Open the file for reading
 	FILE* f = fopen(self->path, "rb");
@@ -93,7 +95,11 @@ static PyObject* Database_verify(DatabaseObject* self, PyObject* args) {
 		return NULL;
 	}
 
+#ifdef _WIN32   // since we have a fake-OpenSSL
+	int r = 0;
+#else
 	int r = loc_database_verify(self->db, f);
+#endif
 
 	if (r == 0)
 		Py_RETURN_TRUE;
