@@ -70,13 +70,13 @@ char *strcasestr (const char *hay_stack, const char *needle)
 
 /*
  * Number of seconds from start of the Windows epoch
- * (Jan. 1, 1601) and the Unix epoch (Jan. 1, 1970).
+ * (Jan. 1, 1601) and to the Unix epoch (Jan. 1, 1970).
  */
 #define DELTA_EPOCH_SEC  11644473600
 
 time_t timegm (struct tm *tm)
 {
-  time_t ret;
+  time_t         ret;
   SYSTEMTIME     st;
   FILETIME       ft;
   ULARGE_INTEGER uli;
