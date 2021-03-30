@@ -45,7 +45,7 @@ struct LUA_cfg {
 
        /*
         * Path-names for the LuaJIT init/exit script-files.
-        * These are effective only if built with 'USE_LUA'.
+        * These are effective only if built with 'USE_LUAJIT'.
         */
        char   *init_script;
        char   *exit_script;

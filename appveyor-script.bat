@@ -78,7 +78,7 @@ echo   codepage        = 0                                                   >> 
 echo   fix_getaddrinfo = 0                                                   >> wsock_trace.appveyor
 
 echo [lua]                                                                   >> wsock_trace.appveyor
-echo   enable       = %%USE_LUA%%                                            >> wsock_trace.appveyor
+echo   enable       = %%USE_LUAJIT%%                                         >> wsock_trace.appveyor
 echo   trace_level  = 1                                                      >> wsock_trace.appveyor
 echo   profile      = 1                                                      >> wsock_trace.appveyor
 echo   lua_init     = %CD%\src\wsock_trace_init.lua                          >> wsock_trace.appveyor

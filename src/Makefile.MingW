@@ -8,9 +8,9 @@ USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
 
 #
-# If you want Lua-script support, set 'USE_LUA = 1':
+# If you want LuaJIT-script support, set 'USE_LUAJIT = 1':
 #
-USE_LUA    ?= 0
+USE_LUAJIT ?= 0
 LUAJIT_ROOT = ../LuaJIT
 
 BIN_TARGET = $(realpath $(MINGW32))/bin
@@ -50,8 +50,8 @@ CFLAGS   = -Wall -m$(BITS) -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-unus
 LDFLAGS  = -m$(BITS) -Wl,--print-map,--sort-common -t
 RCFLAGS += -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 
-ifeq ($(USE_LUA),1)
-  CFLAGS    += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+ifeq ($(USE_LUAJIT),1)
+  CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
   LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit.a
 else
   LUAJIT_LIB =
@@ -191,7 +191,7 @@ $(LIBLOC_LIB): $(LIBLOC_OBJ)
 	ar rs $@ $^
 	@echo
 
-ifeq ($(USE_LUA),1)
+ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #

@@ -4,7 +4,7 @@
 #ifndef _WSOCK_TRACE_LUA_H
 #define _WSOCK_TRACE_LUA_H
 
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
   #include <lua.h>
   #include <lualib.h>
   #include <lauxlib.h>
@@ -31,4 +31,4 @@
   #define WSLUA_HOOK(rc, func)    ((void)0)
 #endif
 
-#endif /* USE_LUA && !_WSOCK_TRACE_LUA_H */
+#endif /* USE_LUAJIT && !_WSOCK_TRACE_LUA_H */

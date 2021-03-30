@@ -8,9 +8,9 @@ USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
 
 #
-# If you want Lua-script support, set 'USE_LUA = 1':
+# If you want LuaJIT-script support, set 'USE_LUAJIT = 1':
 #
-USE_LUA    ?= 0
+USE_LUAJIT ?= 1
 LUAJIT_ROOT = ../LuaJIT
 
 BIN_TARGET = /usr/bin
@@ -53,8 +53,8 @@ ifeq ($(USE_BFD),1)
   EX_LIBS += -lbfd -liberty -lintl -lz
 endif
 
-ifeq ($(USE_LUA),1)
-  CFLAGS    += -DUSE_LUA -I$(LUAJIT_ROOT)/src
+ifeq ($(USE_LUAJIT),1)
+  CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
   LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit.a
 else
   LUAJIT_LIB =
@@ -150,7 +150,7 @@ comma := ,
 
 message:
 	$(call green_msg, Building CygWin $(CYG_VER) version. \
-	                  USE_LUA=$(USE_LUA)$(comma) USE_CRT_DEBUG=$(USE_CRT_DEBUG)$(comma) USE_BFD=$(USE_BFD).)
+	                  USE_LUAJIT=$(USE_LUAJIT)$(comma) USE_CRT_DEBUG=$(USE_CRT_DEBUG)$(comma) USE_BFD=$(USE_BFD).)
 
 $(OBJ_DIR):
 	- mkdir $(OBJ_DIR)
@@ -197,7 +197,7 @@ $(LIBLOC_LIB): $(LIBLOC_OBJ)
 	ar rs $@ $^
 	@echo
 
-ifeq ($(USE_LUA),1)
+ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #

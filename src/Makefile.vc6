@@ -21,14 +21,14 @@ USE_DEF_FILE = 1
 !endif
 
 #
-# Support for Lua-scripting:
+# Support for LuaJIT-scripting:
 # But we cannot mix objects compiled with both '-MDd' and '-MD'.
 #
-!if "$(USE_LUA)" == "1"
+!if "$(USE_LUAJIT)" == "1"
 LUAJIT_ROOT = ..\LuaJIT
 
 !if "$(USE_CRT_DEBUG)" == "1"
-!error "Cannot have 'USE_LUA=1' with 'USE_CRT_DEBUG=1'."
+!error "Cannot have 'USE_LUAJIT=1' with 'USE_CRT_DEBUG=1'."
 !endif
 !endif
 
@@ -88,8 +88,8 @@ WSOCK_DEF   = wsock_trace$(X_SUFFIX)$(_D).def
 LDFLAGS_DEF = -def:$(WSOCK_DEF)
 !endif
 
-!if "$(USE_LUA)" == "1"
-CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUA
+!if "$(USE_LUAJIT)" == "1"
+CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
 LUAJIT_LIB = $(LUAJIT_ROOT)/src/lua51_static.lib
 EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
 WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
@@ -186,7 +186,7 @@ LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
              $(OBJ_DIR)\win_str.obj      \
              $(OBJ_DIR)\win_mmap.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUA) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) ws_tool.exe
+all: $(OBJ_DIR) compile_luajit_$(USE_LUAJIT) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) ws_tool.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and ws_tool.exe test-program.
 
 $(OBJ_DIR):
@@ -239,7 +239,7 @@ vclean realclean: clean
 	      wsock_trace$(X_SUFFIX)$(_D).pdb
 	- del ws_tool.exe ws_tool.map ws_tool.pdb
 	- rd $(OBJ_DIR)
-!if "$(USE_LUA)" == "1"
+!if "$(USE_LUAJIT)" == "1"
 	- del $(LUAJIT_ROOT)\src\lua51*.lib
 !endif
 
@@ -251,7 +251,7 @@ Run one of the following targets:
 where VAR can have of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
-  USE_LUA          (default: $(USE_LUA))
+  USE_LUAJIT       (default: $(USE_LUAJIT))
 << NOKEEP
 
 $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
@@ -339,7 +339,7 @@ $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h \
                             wsock_trace.h wsock_hooks.c
 $(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h in_addr.h
 
-!if "$(USE_LUA)" == "1"
+!if "$(USE_LUAJIT)" == "1"
 wsock_trace_lua.h:             \
   $(LUAJIT_ROOT)\src\lua.h     \
   $(LUAJIT_ROOT)\src\luaconf.h \

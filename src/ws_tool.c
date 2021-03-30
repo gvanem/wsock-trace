@@ -150,7 +150,7 @@ int main (int argc, char **argv)
   crtdbg_init();
   wsock_trace_init();
 
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
   wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
 #endif
 
@@ -167,7 +167,7 @@ quit:
 
   /* Does the same as 'DllMain (inst, DLL_PROCESS_DETACH, ...)'
    */
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
   wslua_DllMain (NULL, DLL_PROCESS_DETACH);
 #endif
 

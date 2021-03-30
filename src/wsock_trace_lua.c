@@ -18,7 +18,7 @@
  */
 #include "common.h"
 
-#if defined(USE_LUA)  /* Rest of file */
+#if defined(USE_LUAJIT)  /* Rest of file */
 
 #include "init.h"
 #include "wsock_trace_lua.h"
@@ -585,5 +585,5 @@ int luaopen_ws_tool (lua_State *l)
   return (1);
 }
 #endif
-#endif /* USE_LUA */
+#endif /* USE_LUAJIT */
 

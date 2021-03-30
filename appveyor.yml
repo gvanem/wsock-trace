@@ -72,7 +72,7 @@ install:
 build_script:
   - cmd: appveyor-script.bat init
   - cmd: cd src
-  - cmd: set USE_LUA=1
+  - cmd: set USE_LUAJIT=1
   - cmd: set PLATFORM=%CPU%
   - cmd: set CYGWIN=nodosfilewarning
 
@@ -81,9 +81,9 @@ build_script:
   - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU%
 
 test_script:
-  - cmd: if %BUILDER%. == cygwin. (set USE_LUA=0) else (set USE_LUA=1)
+  - cmd: if %BUILDER%. == cygwin. (set USE_LUAJIT=0) else (set USE_LUAJIT=1)
   - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe test -v
-  - cmd: set WSOCK_TRACE_LEVEL=0 & set USE_LUA=0
+  - cmd: set WSOCK_TRACE_LEVEL=0 & set USE_LUAJIT=0
 
   #
   # Delete '..\IPFire-database.db' to force a download and decompression.

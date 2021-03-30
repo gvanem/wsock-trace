@@ -3516,7 +3516,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          wsock_trace_init();
       // smartlist_add (thread_list, tid);
 
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
          rc = wslua_DllMain (instDLL, reason);
 #endif
          break;
@@ -3525,7 +3525,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          tid = GetCurrentThreadId();
       // smartlist_remove (thread_list, tid);
 
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
          wslua_DllMain (instDLL, reason);
 #endif
          wsock_trace_exit();
@@ -3541,7 +3541,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
           *  Add this `tid` as a new thread to a `smartlist_t` and call `print_thread_times()`
           *  for it when `DLL_PROCESS_DETACH` is received.
           */
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
          rc = wslua_DllMain (instDLL, reason);
 #endif
          break;
@@ -3561,7 +3561,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
           *  dying thread and call `print_thread_times()` for all threads (alive or dead) when
           *  `DLL_PROCESS_DETACH` is received.
           */
-#if defined(USE_LUA)
+#if defined(USE_LUAJIT)
          rc = wslua_DllMain (instDLL, reason);
 #endif
          break;
