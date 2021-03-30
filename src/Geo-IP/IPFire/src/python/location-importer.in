@@ -3,7 +3,7 @@
 #                                                                             #
 # libloc - A library to determine the location of someone on the Internet     #
 #                                                                             #
-# Copyright (C) 2020 IPFire Development Team <info@ipfire.org>                #
+# Copyright (C) 2020-2021 IPFire Development Team <info@ipfire.org>           #
 #                                                                             #
 # This library is free software; you can redistribute it and/or               #
 # modify it under the terms of the GNU Lesser General Public                  #
@@ -604,18 +604,10 @@ class CLI(object):
 					log.warning("Could not parse line: %s" % line)
 					return
 
-				# Set prefix to default
-				prefix = 32
-
-				# Count number of addresses in this subnet
-				num_addresses = int(end_address) - int(start_address)
-				if num_addresses:
-					prefix -= math.log(num_addresses, 2)
-
-				inetnum["inetnum"] = "%s/%.0f" % (start_address, prefix)
+				inetnum["inetnum"] = list(ipaddress.summarize_address_range(start_address, end_address))
 
 			elif key == "inet6num":
-				inetnum[key] = val
+				inetnum[key] = [ipaddress.ip_network(val, strict=False)]
 
 			elif key == "country":
 				inetnum[key] = val.upper()
@@ -630,15 +622,14 @@ class CLI(object):
 				(inetnum.get("inet6num") or inetnum.get("inetnum")))
 			return
 
-		network = ipaddress.ip_network(inetnum.get("inet6num") or inetnum.get("inetnum"), strict=False)
-
-		if not self._check_parsed_network(network):
-			return
-
-		self.db.execute("INSERT INTO _rirdata(network, country) \
-			VALUES(%s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
-			"%s" % network, inetnum.get("country"),
-		)
+		# Iterate through all networks enumerated from above, check them for plausibility and insert
+		# them into the database, if _check_parsed_network() succeeded
+		for single_network in inetnum.get("inet6num") or inetnum.get("inetnum"):
+			if self._check_parsed_network(single_network):
+				self.db.execute("INSERT INTO _rirdata(network, country) \
+					VALUES(%s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
+					"%s" % single_network, inetnum.get("country"),
+				)
 
 	def _parse_org_block(self, block):
 		org = {}
