@@ -12,18 +12,18 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{710CAAFD-8FAF-4CAD-BB90-66EA6D461793}</ProjectGuid>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion></WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -56,12 +56,13 @@
       <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
       <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;..\LuaJit\src\luajit_static32.lib</AdditionalDependencies>
       <ManifestFile />
       <EnableUAC>false</EnableUAC>
     </Link>
     <ClCompile>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUA%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/I../LuaJIT/src</AdditionalOptions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -78,12 +79,13 @@
       <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
       <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;..\LuaJit\src\luajit_static32.lib</AdditionalDependencies>
       <ManifestFile />
       <EnableUAC>false</EnableUAC>
     </Link>
     <ClCompile>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUA%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/I../LuaJIT/src</AdditionalOptions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -103,6 +105,7 @@
     <ClCompile Include="dump.c" />
     <ClCompile Include="firewall.c" />
     <ClCompile Include="geoip.c" />
+    <ClCompile Include="getopt.c" />
     <ClCompile Include="hosts.c" />
     <ClCompile Include="asn.c" />
     <ClCompile Include="iana.c" />
@@ -117,7 +120,21 @@
     <ClCompile Include="stkwalk.c" />
     <ClCompile Include="vm_dump.c" />
     <ClCompile Include="wsock_trace.c" />
-  </ItemGroup>
+    <ClCompile Include="wsock_trace_lua.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/as.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/as-list.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/country.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/country-list.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/database.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/libloc.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/network.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/network-list.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/resolv.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/stringpool.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/writer.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/win_str.c" />
+    <ClCompile Include="./Geo-IP/IPFire/src/win_mmap.c" />
+    </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="wsock_trace.rc">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">_MSC_VER;DEBUG=1;BITNESS=32</PreprocessorDefinitions>

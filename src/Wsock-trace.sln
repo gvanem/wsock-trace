@@ -1,8 +1,5 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
-MinimumVisualStudioVersion = 10.0.40219.1
+Microsoft Visual Studio Solution File, Format Version 14.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Wsock-trace", "Wsock-trace.vcxproj", "{710CAAFD-8FAF-4CAD-BB90-66EA6D461793}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{37C44215-F9AC-485A-8235-BAC13316A7C7}"
