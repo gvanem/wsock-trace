@@ -1987,7 +1987,7 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
  */
 unsigned int static rand_range (unsigned int min, unsigned int max)
 {
-  double scaled = (double) rand()/RAND_MAX;
+  double scaled = (double) rand() / RAND_MAX;
   return (unsigned int) ((max - min + 1) * scaled) + min;
 }
 
@@ -1999,7 +1999,12 @@ static void make_random_addr (struct in_addr *addr4, struct in6_addr *addr6)
   int i;
 
   if (addr4)
-     addr4->s_addr = rand_range (1, 0xFFFFFFFF);
+  {
+    addr4->s_addr = rand_range (1, 0xFFFFFFFF);
+    if (INET_util_addr_is_special(addr4, NULL, NULL) ||
+        !INET_util_addr_is_global(addr4, NULL))
+       make_random_addr (addr4, NULL);     /* recurse until it's a global address */
+  }
 
   if (addr6)
   {
