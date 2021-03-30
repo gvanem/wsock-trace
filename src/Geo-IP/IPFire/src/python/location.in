@@ -27,6 +27,7 @@ import shutil
 import socket
 import sys
 import time
+import tempfile
 
 # Load our location module
 import location
@@ -179,10 +180,11 @@ class CLI(object):
 		args = parser.parse_args()
 
 		# Configure logging
-		if args.debug:
-			location.logger.set_level(logging.DEBUG)
-		elif args.quiet:
-			location.logger.set_level(logging.WARNING)
+		if not os.getenv("LOC_LOG"):
+			if args.debug:
+				location.logger.set_level(logging.DEBUG)
+			elif args.quiet:
+				location.logger.set_level(logging.WARNING)
 
 		# Print usage if no action was given
 		if not "func" in args:
@@ -425,8 +427,8 @@ class CLI(object):
 			log.info("Already on the latest version")
 			return
 
-		# Download the database into the correct directory
-		tmpdir = os.path.dirname(ns.database)
+		# Download the database into the TEMP directory
+		tmpdir = tempfile.gettempdir()
 
 		# Create a downloader
 		d = location.downloader.Downloader()
@@ -445,6 +447,7 @@ class CLI(object):
 			return 3
 
 		# Move temporary file to destination
+		log.debug("Copying database %s -> %s" % (t.name, ns.database))
 		shutil.move(t.name, ns.database)
 
 		return 0
@@ -489,7 +492,7 @@ class CLI(object):
 	def handle_list_networks_by_as(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
-		if 1:
+		if 0:
 		  print ("networks by AS%s" % ns.asn[0])
 		  for n in db.search_networks(asns=ns.asn, family=ns.family):
 		    print ("  %s" % n)
@@ -506,7 +509,7 @@ class CLI(object):
 	def handle_list_networks_by_cc(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
-		if 1:
+		if 0:
 			cc = ns.country_code[0].upper()
 			print ("networks in country %s" % cc)
 			for n in db.search_networks(country_codes = [cc], family=ns.family, flatten=1):
@@ -537,7 +540,7 @@ class CLI(object):
 		if not flags:
 			raise ValueError(_("You must at least pass one flag"))
 
-		if 1:
+		if 0:
 			for n in db.search_networks(flags=flags, family=ns.family):
 				print (n)
 
