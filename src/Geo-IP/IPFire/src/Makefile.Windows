@@ -10,7 +10,7 @@
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 4
+LIBLOC_MICRO = 5
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 DATE_STAMP = $(shell date.exe +%d-%B-%Y)
@@ -18,9 +18,10 @@ MINGW_ROOT = $(realpath $(MINGW32))
 THIS_FILE  = $(firstword $(MAKEFILE_LIST))
 
 #
-# Put all the *.db files in CWD:
+# Used in generated Python scripts.
+# This becomes the default database and .pem directory.
 #
-DATABASE_DIR  = $(realpath .)
+DATABASE_DIR = $(realpath .)
 
 #
 # Use CRT debug (and 'ENABLE_DEBUG').
@@ -211,8 +212,8 @@ PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
 all: $(OBJ_DIR) $(TARGETS) py3_module epilogue
 
 epilogue:
-	$(call yellow_msg, \nWelcome to libloc library and test programs.)
-	$(call yellow_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests $(BRIGHT_YELLOW)too.)
+	$(call white_msg, \nWelcome to libloc library and test programs.)
+	$(call white_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests $(BRIGHT_WHITE)too.)
 
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
@@ -240,20 +241,20 @@ else
 endif
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
-	$(call Generating, $@, ;)
-	@echo -e 'LIBRARY libloc.dll\nEXPORTS'                >> $@
+	$(call Generate, $@, ;)
+	@echo -e 'LIBRARY libloc.dll\nEXPORTS'      >> $@
 	nm $< | grep ' T _loc_' | sed 's/^.* _/  /' >> $@
 	@echo
 
 $(OBJ_DIR)/libloc.rc: $(THIS_FILE)
-	$(call Generating, $@, //)
+	$(call Generate, $@, //)
 	$(file >> $@, #define RC_FILENAME     "libloc.dll")
 	$(file >> $@, #define RC_DESCRIPTION  "A library to determine the location of someone on the Internet.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
 $(OBJ_DIR)/_location.rc: $(THIS_FILE)
-	$(call Generating, $@, //)
+	$(call Generate, $@, //)
 	$(file >> $@, #define RC_FILENAME     "_location.pyd")
 	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for 'libloc.dll'.")
 	$(file >> $@, $(RC_COMMON))
@@ -372,18 +373,18 @@ py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py
 	$(call link_PYD, $@, $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res $(PY_LIB))
 
 py3_install/location.py: python/location.in
-	$(call green_msg, Generating $@)
-	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< > $@
+	$(call Generate, $@, #)
+	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< >> $@
 	@echo
 
 py3_install/location-importer.py: python/location-importer.in
-	$(call green_msg, Generating $@)
-	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< > $@
+	$(call Generate, $@, #)
+	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< >> $@
 	@echo
 
 py3_install/location/__init__.py: python/__init__.py.in
-	$(call green_msg, Generating $@)
-	sed -e 's|@VERSION@|$(VERSION)|' < $< > $@
+	$(call Generate, $@, #)
+	sed -e 's|@VERSION@|$(VERSION)|' < $< >> $@
 	@echo
 
 clean: py3_clean
@@ -407,12 +408,12 @@ vclean realclean: clean py3_vclean
 #
 # The following ESC codes assumes you have a MSys/Cygwin 'echo.exe' program with colour support.
 #
-BRIGHT_GREEN  = \e[1;32m
-BRIGHT_YELLOW = \e[1;33m
+BRIGHT_GREEN = \e[1;32m
+BRIGHT_WHITE = \e[1;37m
 
 colour_msg = @echo -e "$(1)\e[0m"
 green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
-yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
+white_msg  = $(call colour_msg,$(BRIGHT_WHITE)$(strip $(1)))
 
 define Warning
   $(1)
@@ -422,9 +423,9 @@ define Warning
   $(1)
 endef
 
-define Generating
+define Generate
   $(call green_msg, Generating $(1))
-  $(file > $(1),$(call Warning, $(2)))
+  $(file > $(1),$(call Warning,$(strip $(2))))
 endef
 
 #
@@ -634,12 +635,12 @@ define CPP_FILTER_PY
 endef
 
 DEP_CFLAGS  = -MM $(filter -D% -I%, $(CFLAGS))
-DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.obj: /'
+DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.$$(O): /'
 
 ALL_SOURCES = $(wildcard test-*.c) $(LIBLOC_SRC)
 
 depend:
-	$(call Generating, .depend.Windows, #)
+	$(call Generate, .depend.Windows, #)
 	gcc $(DEP_CFLAGS) $(ALL_SOURCES) | $(DEP_REPLACE) >> .depend.Windows
 
 -include .depend.Windows
