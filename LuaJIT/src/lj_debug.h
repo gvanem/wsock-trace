@@ -60,9 +60,10 @@ enum {
 };
 
 #if defined(_WIN32)
-  int  ljit_trace_init (void);
-  void ljit_set_color (int color);
-  void ljit_restore_color (void);
+  LUA_API int  ljit_trace_init (void);
+  LUA_API int *ljit_trace_level (void);
+  LUA_API void ljit_set_color (int color);
+  LUA_API void ljit_restore_color (void);
 
   #define LJ_TRACE(level, fmt, ...)                            \
           do {                                                 \

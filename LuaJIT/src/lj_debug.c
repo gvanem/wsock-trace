@@ -613,6 +613,7 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
 
 static HANDLE stdout_hnd = INVALID_HANDLE_VALUE;
 static CONSOLE_SCREEN_BUFFER_INFO console_info;
+static int trace_level = -1;
 
 void ljit_set_color (int color)
 {
@@ -627,12 +628,17 @@ void ljit_restore_color (void)
      SetConsoleTextAttribute (stdout_hnd, console_info.wAttributes);
 }
 
+int *ljit_trace_level (void)
+{
+   return (&trace_level);
+}
+
 int ljit_trace_init (void)
 {
-  static int trace_level = -1;
   const char *env;
 
-  if (trace_level == -1) {
+  if (trace_level == -1)
+  {
     trace_level = 0;
     env = getenv("LUA_TRACE");
     if (env)
