@@ -269,7 +269,7 @@ static SRes Flush (void)
 
   while (p != q)
   {
-    Int32 got = (Int32) write (out_fd, p, q - p);
+    Int32 got = (Int32) write (out_fd, p, (unsigned int)(q - p));
 
     if (got <= 0)
        return SZ_ERROR_WRITE;
