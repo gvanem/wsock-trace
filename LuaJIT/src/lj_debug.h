@@ -59,7 +59,7 @@ enum {
   VARNAME__MAX
 };
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__CYGWIN__)
   LUA_API int  ljit_trace_init (void);
   LUA_API int *ljit_trace_level (void);
   LUA_API void ljit_set_color (int color);
