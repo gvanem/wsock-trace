@@ -195,16 +195,16 @@ ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #
-$(LUAJIT_LIB):
+  $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
 	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)'
 
-clean_lua:
+  clean_lua:
 	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
 	- rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB)
 
 else
-clean_lua: ;
+  clean_lua: ;
 endif
 
 clean: clean_lua
