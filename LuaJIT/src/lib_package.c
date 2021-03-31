@@ -1,6 +1,6 @@
 /*
 ** Package library.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2012 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -77,20 +77,6 @@ static const char *ll_bcsym(void *lib, const char *sym)
 BOOL WINAPI GetModuleHandleExA(DWORD, LPCSTR, HMODULE*);
 #endif
 
-#if LJ_TARGET_UWP
-void *LJ_WIN_LOADLIBA(const char *path)
-{
-  DWORD err = GetLastError();
-  wchar_t wpath[256];
-  HANDLE lib = NULL;
-  if (MultiByteToWideChar(CP_ACP, 0, path, -1, wpath, 256) > 0) {
-    lib = LoadPackagedLibrary(wpath, 0);
-  }
-  SetLastError(err);
-  return lib;
-}
-#endif
-
 #undef setprogdir
 
 static void setprogdir(lua_State *L)
@@ -108,47 +94,13 @@ static void setprogdir(lua_State *L)
   }
 }
 
-#if defined(__CYGWIN__)
-static char *_ultoa (unsigned long value, char *buf, int radix)
-{
-  assert (radix == 8 || radix == 10);
-  sprintf (buf, (radix == 8) ? "%lo" : "%lu", value);
-  return (buf);
-}
-#endif
-
 static void pusherror(lua_State *L)
 {
   DWORD error = GetLastError();
-#if LJ_TARGET_XBOXONE
-  wchar_t wbuffer[128];
-  char buffer[128*2];
-  if (FormatMessageW(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-      NULL, error, 0, wbuffer, sizeof(wbuffer)/sizeof(wchar_t), NULL) &&
-      WideCharToMultiByte(CP_ACP, 0, wbuffer, 128, buffer, 128*2, NULL, NULL))
-#else
-  char buffer[200];
-  char buffer2[20];
+  char buffer[128];
   if (FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-      NULL, error, 0, buffer, sizeof(buffer) - 10, NULL))
-  {
-    char *p = strrchr (buffer, '\r');
-
-    if (p)
-       *p = '\0';
-    p = strrchr (buffer, '\n');
-    if (p)
-       *p = '\0';
-    p = strrchr (buffer, '.');
-    if (p && p[1] == '\0')
-       *p = '\0';
-
-    strcat (buffer, " (");
-    strcat (buffer, _ultoa(error, buffer2, 10));
-    strcat (buffer, ").");
+      NULL, error, 0, buffer, sizeof(buffer), NULL))
     lua_pushstring(L, buffer);
-  }
-#endif
   else
     lua_pushfstring(L, "system error %d\n", error);
 }
@@ -160,13 +112,8 @@ static void ll_unloadlib(void *lib)
 
 static void *ll_load(lua_State *L, const char *path, int gl)
 {
-  HINSTANCE lib = LJ_WIN_LOADLIBA(path);
-
-#if LJ_TARGET_UWP
-  LJ_TRACE (1, "LoadPackagedLibrary (\"%s\") -> %p.\n", path, lib);
-#else
-  LJ_TRACE (1, "LoadLibraryExA (\"%s\") -> %p.\n", path, lib);
-#endif
+  HINSTANCE lib = LoadLibraryA(path);
+  LJ_TRACE (1, "LoadLibraryA (\"%s\") -> %p.\n", path, lib);
   if (lib == NULL) pusherror(L);
   UNUSED(gl);
   return lib;
@@ -181,28 +128,20 @@ static lua_CFunction ll_sym(lua_State *L, void *lib, const char *sym)
   return f;
 }
 
-#if LJ_TARGET_UWP
-EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-#endif
-
 static const char *ll_bcsym(void *lib, const char *sym)
 {
-  const char *p;
+  const void *p;
 
   if (lib) {
-    p = (const char *)GetProcAddress((HINSTANCE)lib, sym);
-  }
-  else {
-#if LJ_TARGET_UWP
-    p = (const char *)GetProcAddress((HINSTANCE)&__ImageBase, sym);
-#else
+    p = GetProcAddress((HINSTANCE)lib, sym);
+  } else {
     HINSTANCE h = GetModuleHandleA(NULL);
 
     p = (const char *)GetProcAddress(h, sym);
-    if (p == NULL && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                                        (const char *)ll_bcsym, &h))
+    if (p == NULL &&
+        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (const char *)ll_bcsym, &h))
       p = (const char *)GetProcAddress(h, sym);
-#endif
   }
   LJ_TRACE (1, "ll_bcsym (%p, \"%s\") -> GetProcAddress (\"%s\") -> %p.\n",
             lib, sym, sym, p);
@@ -256,7 +195,8 @@ static void **ll_register(lua_State *L, const char *path)
     lua_pop(L, 1);
     plib = (void **)lua_newuserdata(L, sizeof(void *));
     *plib = NULL;
-    luaL_setmetatable(L, "_LOADLIB");
+    luaL_getmetatable(L, "_LOADLIB");
+    lua_setmetatable(L, -2);
     lua_pushfstring(L, "LOADLIB: %s", path);
     lua_pushvalue(L, -2);
     lua_settable(L, LUA_REGISTRYINDEX);
@@ -466,7 +406,8 @@ static int lj_cf_package_loader_preload(lua_State *L)
 
 /* ------------------------------------------------------------------------ */
 
-#define sentinel	((void *)0x4004)
+static const int sentinel_ = 0;
+#define sentinel	((void *)&sentinel_)
 
 static int lj_cf_package_require(lua_State *L)
 {
@@ -556,19 +497,29 @@ static void modinit(lua_State *L, const char *modname)
 static int lj_cf_package_module(lua_State *L)
 {
   const char *modname = luaL_checkstring(L, 1);
-  int lastarg = (int)(L->top - L->base);
-  luaL_pushmodule(L, modname, 1);
+  int loaded = lua_gettop(L) + 1;  /* index of _LOADED table */
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_getfield(L, loaded, modname);  /* get _LOADED[modname] */
+  if (!lua_istable(L, -1)) {  /* not found? */
+    lua_pop(L, 1);  /* remove previous result */
+    /* try global variable (and create one if it does not exist) */
+    if (luaL_findtable(L, LUA_GLOBALSINDEX, modname, 1) != NULL)
+      lj_err_callerv(L, LJ_ERR_BADMODN, modname);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, loaded, modname);  /* _LOADED[modname] = new table */
+  }
+  /* check whether table already has a _NAME field */
   lua_getfield(L, -1, "_NAME");
-  if (!lua_isnil(L, -1)) {  /* Module already initialized? */
+  if (!lua_isnil(L, -1)) {  /* is table an initialized module? */
     lua_pop(L, 1);
-  } else {
+  } else {  /* no; initialize it */
     lua_pop(L, 1);
     modinit(L, modname);
   }
   lua_pushvalue(L, -1);
   setfenv(L);
-  dooptions(L, lastarg);
-  return LJ_52;
+  dooptions(L, loaded - 1);
+  return 0;
 }
 
 static int lj_cf_package_seeall(lua_State *L)
@@ -639,16 +590,13 @@ LUALIB_API int luaopen_package(lua_State *L)
   lj_lib_pushcf(L, lj_cf_package_unloadlib, 1);
   lua_setfield(L, -2, "__gc");
   luaL_register(L, LUA_LOADLIBNAME, package_lib);
-  lua_copy(L, -1, LUA_ENVIRONINDEX);
+  lua_pushvalue(L, -1);
+  lua_replace(L, LUA_ENVIRONINDEX);
   lua_createtable(L, sizeof(package_loaders)/sizeof(package_loaders[0])-1, 0);
   for (i = 0; package_loaders[i] != NULL; i++) {
     lj_lib_pushcf(L, package_loaders[i], 1);
     lua_rawseti(L, -2, i+1);
   }
-#if LJ_52
-  lua_pushvalue(L, -1);
-  lua_setfield(L, -3, "searchers");
-#endif
   lua_setfield(L, -2, "loaders");
   lua_getfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
   noenv = lua_toboolean(L, -1);

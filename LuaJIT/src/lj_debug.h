@@ -1,6 +1,6 @@
 /*
 ** Debugging and introspection.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_DEBUG_H
@@ -33,18 +33,14 @@ LJ_FUNC const char *lj_debug_uvnamev(cTValue *o, uint32_t idx, TValue **tvp,
 				     GCobj **op);
 LJ_FUNC const char *lj_debug_slotname(GCproto *pt, const BCIns *pc,
 				      BCReg slot, const char **name);
-LJ_FUNC const char *lj_debug_funcname(lua_State *L, cTValue *frame,
+LJ_FUNC const char *lj_debug_funcname(lua_State *L, TValue *frame,
 				      const char **name);
-LJ_FUNC void lj_debug_shortname(char *out, GCstr *str, BCLine line);
+LJ_FUNC void lj_debug_shortname(char *out, GCstr *str);
 LJ_FUNC void lj_debug_addloc(lua_State *L, const char *msg,
 			     cTValue *frame, cTValue *nextframe);
 LJ_FUNC void lj_debug_pushloc(lua_State *L, GCproto *pt, BCPos pc);
 LJ_FUNC int lj_debug_getinfo(lua_State *L, const char *what, lj_Debug *ar,
 			     int ext);
-#if LJ_HASPROFILE
-LJ_FUNC void lj_debug_dumpstack(lua_State *L, SBuf *sb, const char *fmt,
-				int depth);
-#endif
 
 /* Fixed internal variable names. */
 #define VARNAMEDEF(_) \
@@ -63,25 +59,23 @@ enum {
   VARNAME__MAX
 };
 
-#if LJ_TARGET_WINDOWS || LJ_TARGET_CYGWIN
-  /*
-   * In 'lj_debug.c'
-   */
-  LUALIB_API int *ljit_trace_level (void);
-  LUALIB_API void ljit_set_color (int color);
+#if defined(_WIN32)
+  int  ljit_trace_init (void);
+  void ljit_set_color (int color);
+  void ljit_restore_color (void);
 
-  #define LJ_TRACE(level, fmt, ...)             \
-          do {                                  \
-            if (*ljit_trace_level() >= level) { \
-               ljit_set_color (1);              \
-               printf ("LuaJIT: %s(%u): " fmt,  \
-                       __FILE__, __LINE__,      \
-                       ##__VA_ARGS__);          \
-               ljit_set_color (0);              \
-            }                                   \
+  #define LJ_TRACE(level, fmt, ...)                            \
+          do {                                                 \
+            if (ljit_trace_init() >= level) {                  \
+              ljit_set_color (1);                              \
+              printf ("LuaJIT: %s(%u): ", __FILE__, __LINE__); \
+              printf (fmt, ##__VA_ARGS__);                     \
+              ljit_restore_color();                            \
+            }                                                  \
           } while (0)
+
 #else
   #define LJ_TRACE(level, fmt, ...)   ((void)0)
-#endif
+#endif  /* _WIN32 */
 
 #endif
