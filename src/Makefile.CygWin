@@ -204,8 +204,7 @@ ifeq ($(USE_LUAJIT),1)
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=cygwin DEFAULT_CC='gcc'
-
+	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC=gcc
 	@echo
 
   clean_lua:
