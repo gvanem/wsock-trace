@@ -1788,9 +1788,9 @@ int file_exists (const char *fname)
  * return those short-names and also the fully qualified names when known at
  * runtime.
  *
- * The .lua-scripts needs this information to know which .DLL to integrate with.
- * If called from 'ws_tool.c', the `full_name` is `ws_tool.exe`. Hopefully LUA
- * will be able to import from that.
+ * The .lua-scripts needs this information to know which .DLL (or .EXE) to
+ * integrate with. If called from 'ws_tool.c', the `full_name` is `ws_tool.exe`.
+ * Hopefully LUA will be able to import from that.
  *
  * Some of these functions are also called from `geoip.c`.
  */
@@ -1798,14 +1798,15 @@ int file_exists (const char *fname)
 
 static char full_name [_MAX_PATH];
 
-void set_dll_full_name (HINSTANCE inst_dll)
+const char *set_dll_full_name (HINSTANCE inst_dll)
 {
   if (!full_name[0])  /* prevent re-entry from the same .dll */
      GetModuleFileName (inst_dll, full_name, sizeof(full_name));
+  return (full_name);
 }
 
 /**
- * Returns the full name of our `.dll`.
+ * Returns the full name of our `.dll` (or `.exe`).
  */
 const char *get_dll_full_name (void)
 {
@@ -1826,9 +1827,17 @@ const char *get_dll_full_name (void)
  *   "wsock_trace_cyg_x64.dll"  for 64-bit CygWin
  *
  * And an extra `"_d"` (before `".dll"`) for a CRT-DEBUG version.
+ *
+ * When the code in "wsock_trace*.dll" is loaded via a program,
+ * return that program's shortname.
  */
 const char *get_dll_short_name (void)
 {
+  if (!ws_from_dll_main)
+  {
+    const char *mod_name = set_dll_full_name (GetModuleHandle(NULL));
+    return basename (mod_name);
+  }
   return (RC_BASENAME RC_CPU_SUFFIX RC_DBG_SUFFIX ".dll");
 }
 

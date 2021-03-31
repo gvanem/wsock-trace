@@ -63,11 +63,18 @@ static lua_State *L = NULL;
  */
 const char *wslua_func_sig = NULL;
 
+/*
+ * The open() function for LuaJIT must be marked as a DLL-export.
+ */
+__declspec(dllexport) int luaopen_wsock_trace (lua_State *l);
+
+/*
+ * Globals:
+ */
 static BOOL init_script_ok = FALSE;
 static BOOL open_ok        = TRUE;
-static BOOL ws_tool_import = FALSE;
 
-static void wslua_init (const char *script);
+static void wslua_init (const char *script, BOOL push_wstrace);
 static void wslua_exit (const char *script);
 static void wslua_set_path (const char *full_name);
 
@@ -83,7 +90,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
   if (reason == DLL_PROCESS_ATTACH)
   {
     /* Set by the real 'DllMain()'.
-     * Of 'run_main()' in 'ws_tool.exe'.
+     * Of 'main()' in 'ws_tool.exe'.
      */
     const char *dll = get_dll_short_name();
     const char *loaded = basename (full_name);
@@ -98,17 +105,19 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     if (!g_cfg.LUA.color_body)
        get_color (NULL, &g_cfg.LUA.color_body);
 
-    ws_tool_import = (stricmp (loaded, "ws_tool.exe") == 0);
-    if (!ws_tool_import && stricmp(loaded, dll))
+    if (!ws_from_dll_main && stricmp(loaded, dll))
     {
-      LUA_WARNING ("Expected '%s', but loaded DLL was '%s:\n", dll, loaded);
+      LUA_WARNING ("Expected '%s', but loaded DLL/EXE was '%s:\n", dll, loaded);
       rc = FALSE;
     }
     else
     {
-      LUA_TRACE (1, "Importing from '%s'\n", full_name);
-      wslua_set_path (full_name);
-      wslua_init (g_cfg.LUA.init_script);
+      if (ws_from_dll_main)
+      {
+        LUA_TRACE (1, "Importing from '%s'\n", full_name);
+        wslua_set_path (full_name);
+      }
+      wslua_init (g_cfg.LUA.init_script, ws_from_dll_main ? FALSE : TRUE);
     }
   }
   else if (reason == DLL_PROCESS_DETACH)
@@ -260,7 +269,7 @@ static int wslua_register_hook (lua_State *l)
   const lua_CFunction func1 = lua_tocfunction (L, LUA_ENVIRONINDEX);
   const lua_CFunction func2 = lua_tocfunction (L, 2);
 
-  LUA_TRACE (1, "func1=%p, func2=%p\n", func1, func2);
+  LUA_TRACE (1, "func1=0x%p, func2=0x%p\n", func1, func2);
   ARGSUSED (l);
   return (1);
 }
@@ -301,9 +310,7 @@ static int wslua_trace_printf (lua_State *l)
 
 static int wslua_get_dll_short_name (lua_State *l)
 {
-  if (ws_tool_import)
-       lua_pushstring (l, "ws_tool.exe");
-  else lua_pushstring (l, get_dll_short_name());
+  lua_pushstring (l, get_dll_short_name());
   return (1);
 }
 
@@ -428,7 +435,7 @@ static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
  *    E.g. do a:
  *      set LUA_PATH=c:\net\wsock_trace\LuaJIT\src\?.lua;?.lua
  */
-static void wslua_init (const char *script)
+static void wslua_init (const char *script, BOOL push_wstrace)
 {
   if (L)
      return;
@@ -440,12 +447,20 @@ static void wslua_init (const char *script)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
+  if (push_wstrace)
+  {
+ // luaL_pushmodule (L, "wsock_trace", 1);
+    luaopen_wsock_trace (L);
+  }
 #if 1
-  lua_pushcfunction (L, wslua_get_trace_level);
-  lua_setglobal (L, "get_trace_level");
+  else
+  {
+    lua_pushcfunction (L, wslua_get_trace_level);
+    lua_setglobal (L, "get_trace_level");
 
-  lua_pushcfunction (L, wslua_set_trace_level);
-  lua_setglobal (L, "set_trace_level");
+    lua_pushcfunction (L, wslua_set_trace_level);
+    lua_setglobal (L, "set_trace_level");
+  }
 #endif
 
   if (g_cfg.LUA.trace_level >= 3)
@@ -461,7 +476,7 @@ static void wslua_init (const char *script)
  */
 static void wslua_exit (const char *script)
 {
-  LUA_TRACE (1, "In %s(), L=%p\n", __FUNCTION__, L);
+  LUA_TRACE (1, "In %s(), L=0x%p\n", __FUNCTION__, L);
   if (!L)
      return;
 
@@ -499,13 +514,9 @@ static void wslua_set_path (const char *full_name)
    *   But if "LUA_CPATH=?_cyg.dll" is already defined, set our 'lua_cpath' first.
    *   Otherwise 'LoadLibrary()' in LuaJIT erros with code 193; ERROR_BAD_EXE_FORMAT
    */
-  if (ws_tool_import)
-     len = snprintf (p, left, "%s\\?.exe", dll_path);
-  else
-  {
-    dll_ofs = (const char*) RC_DLL_NAME + strlen ("wsock_trace");
-    len = snprintf (p, left, "%s\\?%s.dll", dll_path, dll_ofs);
-  }
+  dll_ofs = (const char*) RC_DLL_NAME + strlen ("wsock_trace");
+  len = snprintf (p, left, "%s\\?%s.dll", dll_path, dll_ofs);
+
   p    += len;
   left -= len;
 
@@ -535,15 +546,15 @@ static const struct luaL_Reg wslua_table[] = {
 };
 
 /*
- * The open() function for LuaJIT must be marked as a DLL-export.
+ * The open() function exported and called from LuaJIT when "wsock_trace"
+ * is used as a module. This is called explicit when pushing "wsock_trace"
+ * as a global module.
  */
-__declspec(dllexport) int luaopen_wsock_trace (lua_State *l);
-// __declspec(dllexport) int luaopen_ws_tool (lua_State *l);
-
 int luaopen_wsock_trace (lua_State *l)
 {
-  char *dll = strdup (get_dll_short_name());
-  char *dot = strrchr (dll, '.');
+  char *dll_exe = strdup (get_dll_short_name());
+  char *dot = strrchr (dll_exe, '.');
+  char *extension = dot + 1;
 
   *dot = '\0';
 
@@ -554,36 +565,14 @@ int luaopen_wsock_trace (lua_State *l)
    */
   lua_newtable (l);
   luaL_setfuncs (l, wslua_table, 0);
-  lua_setglobal (l, dll);
+  lua_setglobal (l, dll_exe);
 #else
-  luaL_register (l, dll, wslua_table);
+  luaL_register (l, dll_exe, wslua_table);
 #endif
 
-  LUA_TRACE (1, "%s(), dll: \"%s.dll\".\n", __FUNCTION__, dll);
-  free (dll);
+  LUA_TRACE (1, "%s(), dll/exe: \"%s.%s\".\n", __FUNCTION__, dll_exe, extension);
+  free (dll_exe);
   return (1);
 }
-
-#if 0
-int luaopen_ws_tool (lua_State *l)
-{
-  char *exe = strdup (get_dll_full_name());
-  char *dot = strrchr (exe, '.');
-
-  *dot = '\0';
-
-#if (LUA_VERSION_NUM >= 502)
-  lua_newtable (l);
-  luaL_setfuncs (l, wslua_table, 0);
-  lua_setglobal (l, exe);
-#else
-  luaL_register (l, exe, wslua_table);
-#endif
-
-  LUA_TRACE (1, "%s(), exe: \"%s.exe\".\n", __FUNCTION__, exe);
-  free (exe);
-  return (1);
-}
-#endif
 #endif /* USE_LUAJIT */
 
