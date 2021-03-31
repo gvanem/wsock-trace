@@ -74,7 +74,7 @@ __declspec(dllexport) int luaopen_wsock_trace (lua_State *l);
 static BOOL init_script_ok = FALSE;
 static BOOL open_ok        = TRUE;
 
-static void wslua_init (const char *script, BOOL push_wstrace);
+static void wslua_init (const char *script);
 static void wslua_exit (const char *script);
 static void wslua_set_path (const char *full_name);
 
@@ -117,7 +117,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
         LUA_TRACE (1, "Importing from '%s'\n", full_name);
         wslua_set_path (full_name);
       }
-      wslua_init (g_cfg.LUA.init_script, ws_from_dll_main ? FALSE : TRUE);
+      wslua_init (g_cfg.LUA.init_script);
     }
   }
   else if (reason == DLL_PROCESS_DETACH)
@@ -435,7 +435,7 @@ static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
  *    E.g. do a:
  *      set LUA_PATH=c:\net\wsock_trace\LuaJIT\src\?.lua;?.lua
  */
-static void wslua_init (const char *script, BOOL push_wstrace)
+static void wslua_init (const char *script)
 {
   if (L)
      return;
@@ -447,11 +447,9 @@ static void wslua_init (const char *script, BOOL push_wstrace)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
-  if (push_wstrace)
-  {
- // luaL_pushmodule (L, "wsock_trace", 1);
-    luaopen_wsock_trace (L);
-  }
+  if (!ws_from_dll_main)
+     luaopen_wsock_trace (L);
+
 #if 1
   else
   {
