@@ -89,8 +89,7 @@ static void show_help (const char *extra, BOOL show_sub_help)
   int i;
 
   printf ("%sWsock-trace test tool.\n"
-          "Usage: %s [-dh] <command> [<args>]\n"
-          "       -d:     global debug-level\n"
+          "Usage: %s [-h] <command> [<args>]\n"
           "       -h:     this short help\n"
           "       -hh:    show help for all sub-commands\n"
           "Available sub-commands:\n", extra ? extra : "", program_name);
@@ -123,12 +122,9 @@ int main (int argc, char **argv)
   memset (&g_cfg, '\0', sizeof(g_cfg));
   ws_from_dll_main = FALSE;
 
-  while ((c = getopt (argc, argv, "+dh?")) != EOF)
+  while ((c = getopt (argc, argv, "+h?")) != EOF)
     switch (c)
     {
-      case 'd':
-           g_cfg.trace_level++;
-           break;
       case '?':
       case 'h':
            do_help++;
@@ -144,17 +140,14 @@ int main (int argc, char **argv)
     goto quit;
   }
 
-  /* Does the same as 'DllMain (inst, DLL_PROCESS_ATTACH, ...)'
+  /* Do the same as 'DllMain (inst, DLL_PROCESS_ATTACH, ...)' does
    */
-  set_dll_full_name (GetModuleHandle(NULL));
   crtdbg_init();
   wsock_trace_init();
 
 #if defined(USE_LUAJIT)
-  wslua_DllMain (NULL, DLL_PROCESS_ATTACH);
+  wslua_DllMain (GetModuleHandle(NULL), DLL_PROCESS_ATTACH);
 #endif
-
-  g_cfg.trace_time_format = TS_RELATIVE;
 
   argc -= optind;
   argv += optind;
