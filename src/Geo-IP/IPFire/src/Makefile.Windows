@@ -10,7 +10,7 @@
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 5
+LIBLOC_MICRO = 6
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 DATE_STAMP = $(shell date.exe +%d-%B-%Y)
@@ -209,7 +209,7 @@ PY_SRC = $(addprefix python/, \
 PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
            $(notdir $(PY_SRC:.c=.$(O))))
 
-all: $(OBJ_DIR) $(TARGETS) py3_module epilogue
+all: $(OBJ_DIR) loc/version.h $(TARGETS) py3_module epilogue
 
 epilogue:
 	$(call white_msg, \nWelcome to libloc library and test programs.)
@@ -239,6 +239,15 @@ ifeq ($(CC),gcc)
 else
 	$(call link_DLL, $@, -def:$^ $(OPENSSL_LIB) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 endif
+
+loc/version.h: $(THIS_FILE)
+	$(call Generate, $@, //)
+	$(file >> $@, #ifndef LIBLOC_VERSION_H)
+	$(file >> $@, #define LIBLOC_VERSION_H)
+	$(file >> $@, #define LIBLOC_MAJOR_VER  $(LIBLOC_MAJOR))
+	$(file >> $@, #define LIBLOC_MINOR_VER  $(LIBLOC_MINOR))
+	$(file >> $@, #define LIBLOC_MICRO_VER  $(LIBLOC_MICRO))
+	$(file >> $@, #endif)
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
 	$(call Generate, $@, ;)
@@ -388,7 +397,7 @@ py3_install/location/__init__.py: python/__init__.py.in
 	@echo
 
 clean: py3_clean
-	rm -f *.pdb *.map link.tmp cpp_filter.py $(OBJ_DIR)/*
+	rm -f *.pdb *.map link.tmp cpp_filter.py $(OBJ_DIR)/* loc/version.h
 	- rmdir $(OBJ_DIR)
 	@echo
 
