@@ -79,27 +79,28 @@ EX_LIBS    += -lole32 -ladvapi32 -ldnsapi -lwinmm
 WSOCK_DLL = wsock_trace_mw$(X_SUFFIX)$(_D).dll
 WSOCK_LIB = libwsock_trace_mw$(X_SUFFIX)$(_D).a
 
-SOURCES = asn.c         \
-          bfd_gcc.c     \
-          common.c      \
-          cpu.c         \
-          csv.c         \
-          dnsbl.c       \
-          dump.c        \
-          firewall.c    \
-          geoip.c       \
-          hosts.c       \
-          iana.c        \
-          idna.c        \
-          in_addr.c     \
-          inet_util.c   \
-          init.c        \
-          ip2loc.c      \
-          overlap.c     \
-          smartlist.c   \
-          stkwalk.c     \
-          wsock_trace.c \
-          wsock_trace_lua.c
+SOURCES = asn.c             \
+          bfd_gcc.c         \
+          common.c          \
+          cpu.c             \
+          csv.c             \
+          dnsbl.c           \
+          dump.c            \
+          firewall.c        \
+          geoip.c           \
+          hosts.c           \
+          iana.c            \
+          idna.c            \
+          in_addr.c         \
+          inet_util.c       \
+          init.c            \
+          ip2loc.c          \
+          overlap.c         \
+          smartlist.c       \
+          stkwalk.c         \
+          wsock_trace.c     \
+          wsock_trace_lua.c \
+          xz_decompress.c
 
 OBJECTS        = $(addprefix $(OBJ_DIR)/, $(SOURCES:.c=.o) wsock_trace.res)
 NON_EXPORT_OBJ = $(OBJ_DIR)/non-export.o
@@ -128,7 +129,8 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 test.o                 \
                 vm_dump.o              \
                 ws_tool.o              \
-                wsock_trace_lua.o)
+                wsock_trace_lua.o      \
+                xz_decompress.o)
 
 WS_TOOL_OBJ += $(OBJ_DIR)/ws_tool.res
 

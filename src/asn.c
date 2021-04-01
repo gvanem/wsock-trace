@@ -31,6 +31,7 @@
 #include <loc/database.h>
 #include <loc/network.h>
 #include <loc/resolv.h>
+#include <loc/version.h>
 #include <loc/windows/syslog.h> /* LOG_DEBUG */
 
 #define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
@@ -69,10 +70,10 @@ struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */
        int             flags;
      };
 
-static void ASN_bin_close (void);
-int         XZ_decompress (const char *from_file, const char *to_file);
-const char *XZ_strerror (int rc);
+extern int         XZ_decompress (const char *from_file, const char *to_file);
+extern const char *XZ_strerror (int rc);
 
+static void ASN_bin_close (void);
 
 static int _IN6_IS_ADDR_TEREDO (const struct in6_addr *ip6)
 {
@@ -445,6 +446,14 @@ static int ASN_check_database (const char *local_db)
 }
 
 /**
+ * Print the libloc library version.
+ */
+static void ASN_print_libloc_version (void)
+{
+  printf ("libloc ver: %d.%d.%d\n", LIBLOC_MAJOR_VER, LIBLOC_MINOR_VER, LIBLOC_MICRO_VER);
+}
+
+/**
  * A custom libloc logger function used to log to `g_cfg.trace_stream`.
  */
 static void ASN_libloc_logger (struct loc_ctx *ctx,
@@ -548,7 +557,10 @@ static size_t ASN_load_bin_file (const char *file)
      SetEnvironmentVariable ("LOC_LOG", NULL);  /* Clear the 'libloc' internal trace-level */
 
   if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_FOLDER"))
-     ASN_check_database (file);
+  {
+    ASN_print_libloc_version();
+    ASN_check_database (file);
+  }
 
   err = loc_database_new (libloc.ctx, &libloc.db, libloc.file);
   if (err)
@@ -689,10 +701,6 @@ static int libloc_handle_net (struct loc_network    *net,
   return (rc);
 }
 
-static const IN6_ADDR _in6addr_v4mappedprefix = {{
-       0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,0,0,0,0
-     }};
-
 /**
  * Print ASN information for an IPv4 or IPv6 address.
  *
@@ -745,6 +753,10 @@ static int __ASN_libloc_print (const char            *intro,
 
   if (ip4)   /* Convert to IPv6-mapped address */
   {
+    static const IN6_ADDR _in6addr_v4mappedprefix = {{
+                 0,0,0,0,0,0,0,0,0,0,0xFF,0xFF,0,0,0,0
+               }};
+
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
     *(u_long*) &addr.s6_words[6] = ip4->s_addr;
     if (g_cfg.trace_level >= 2)
@@ -915,47 +927,27 @@ void ASN_report (void)
                 "    Got %lu ASN-numbers, %lu AS-names.\n", g_num_asn, g_num_as_names);
 }
 
-/**
- * The code for `XZ_decompress()` is included below for easy building.
- */
-#define INCLUDED_FROM_WSOCK_TRACE
-#if 0
-  #define CONFIG_PROB32
-  #define CONFIG_SIZE_OPT
-  #define CONFIG_DEBUG
-#endif
-
-#define RINOK(x)  do {                                  \
-                    unsigned  _res = x;                 \
-                    if (_res != 0) {                    \
-                       TRACE (1, "RINOK() -> %u/%s.\n", \
-                              _res, XZ_strerror(_res)); \
-                       return (_res);                   \
-                    }                                   \
-                  } while (0)
-
-#include "xz_decompress.c"
-
 /*
  * A small test for ASN.
  */
 static int show_help (void)
 {
-  printf ("Usage: %s [-Dftu]\n"
+  printf ("Usage: %s [-Dftuv]\n"
           "       -D:  run 'ASN_dump()' to dump the list of AS'es.\n"
           "       -f:  force an update with the '-u' option.\n"
-          "       -u:  update the IPFire database-file.\n",
+          "       -u:  update the IPFire database-file.\n"
+          "       -v:  show version of IPFire database and libloc library version.\n",
           program_name);
   return (0);
 }
 
 int asn_main (int argc, char **argv)
 {
-  int ch, do_dump = 0, do_force = 0, do_update = 0;
+  int ch, do_dump = 0, do_force = 0, do_update = 0, do_version = 0;
 
   program_name = argv[0];
 
-  while ((ch = getopt(argc, argv, "Dfuh?")) != EOF)
+  while ((ch = getopt(argc, argv, "Dfuvh?")) != EOF)
      switch (ch)
      {
        case 'D':
@@ -966,6 +958,9 @@ int asn_main (int argc, char **argv)
             break;
        case 'u':
             do_update = 1;
+            break;
+       case 'v':
+            do_version = 1;
             break;
        case '?':
        case 'h':
@@ -984,8 +979,12 @@ int asn_main (int argc, char **argv)
     g_cfg.ASN.enable = g_cfg.ASN.xz_decompress = 1;
     ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
   }
+  else if (do_version)
+  {
+    ASN_print_libloc_version();
+  }
   else
-    printf ("Nothing done in %s.\n", program_name);
+    show_help();
 
   return (0);
 }

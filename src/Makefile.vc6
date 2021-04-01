@@ -110,28 +110,29 @@ WSOCK_TRACE_DLL = wsock_trace$(X_SUFFIX)$(_D).dll
 
 CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
 
-WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj         \
-                  $(OBJ_DIR)\common.obj      \
-                  $(OBJ_DIR)\cpu.obj         \
-                  $(OBJ_DIR)\csv.obj         \
-                  $(OBJ_DIR)\dnsbl.obj       \
-                  $(OBJ_DIR)\dump.obj        \
-                  $(OBJ_DIR)\firewall.obj    \
-                  $(OBJ_DIR)\geoip.obj       \
-                  $(OBJ_DIR)\getopt.obj      \
-                  $(OBJ_DIR)\hosts.obj       \
-                  $(OBJ_DIR)\iana.obj        \
-                  $(OBJ_DIR)\idna.obj        \
-                  $(OBJ_DIR)\in_addr.obj     \
-                  $(OBJ_DIR)\inet_util.obj   \
-                  $(OBJ_DIR)\init.obj        \
-                  $(OBJ_DIR)\ip2loc.obj      \
-                  $(OBJ_DIR)\overlap.obj     \
-                  $(OBJ_DIR)\smartlist.obj   \
-                  $(OBJ_DIR)\stkwalk.obj     \
-                  $(OBJ_DIR)\vm_dump.obj     \
-                  $(OBJ_DIR)\wsock_trace.obj \
-                  $(OBJ_DIR)\wsock_trace_lua.obj
+WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj             \
+                  $(OBJ_DIR)\common.obj          \
+                  $(OBJ_DIR)\cpu.obj             \
+                  $(OBJ_DIR)\csv.obj             \
+                  $(OBJ_DIR)\dnsbl.obj           \
+                  $(OBJ_DIR)\dump.obj            \
+                  $(OBJ_DIR)\firewall.obj        \
+                  $(OBJ_DIR)\geoip.obj           \
+                  $(OBJ_DIR)\getopt.obj          \
+                  $(OBJ_DIR)\hosts.obj           \
+                  $(OBJ_DIR)\iana.obj            \
+                  $(OBJ_DIR)\idna.obj            \
+                  $(OBJ_DIR)\in_addr.obj         \
+                  $(OBJ_DIR)\inet_util.obj       \
+                  $(OBJ_DIR)\init.obj            \
+                  $(OBJ_DIR)\ip2loc.obj          \
+                  $(OBJ_DIR)\overlap.obj         \
+                  $(OBJ_DIR)\smartlist.obj       \
+                  $(OBJ_DIR)\stkwalk.obj         \
+                  $(OBJ_DIR)\vm_dump.obj         \
+                  $(OBJ_DIR)\wsock_trace.obj     \
+                  $(OBJ_DIR)\wsock_trace_lua.obj \
+                  $(OBJ_DIR)\xz_decompress.obj
 
 #
 # This .obj-file does not export any functions or data.
@@ -143,31 +144,32 @@ NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 #
 # .obj-files for 'ws_tool.exe'.
 #
-WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj         \
-              $(OBJ_DIR)\backtrace.obj   \
-              $(OBJ_DIR)\common.obj      \
-              $(OBJ_DIR)\cpu.obj         \
-              $(OBJ_DIR)\csv.obj         \
-              $(OBJ_DIR)\dnsbl.obj       \
-              $(OBJ_DIR)\dump.obj        \
-              $(OBJ_DIR)\firewall.obj    \
-              $(OBJ_DIR)\geoip.obj       \
-              $(OBJ_DIR)\getopt.obj      \
-              $(OBJ_DIR)\hosts.obj       \
-              $(OBJ_DIR)\iana.obj        \
-              $(OBJ_DIR)\idna.obj        \
-              $(OBJ_DIR)\in_addr.obj     \
-              $(OBJ_DIR)\inet_util.obj   \
-              $(OBJ_DIR)\init.obj        \
-              $(OBJ_DIR)\ip2loc.obj      \
-              $(OBJ_DIR)\overlap.obj     \
-              $(OBJ_DIR)\smartlist.obj   \
-              $(OBJ_DIR)\stkwalk.obj     \
-              $(OBJ_DIR)\test.obj        \
-              $(OBJ_DIR)\vm_dump.obj     \
-              $(OBJ_DIR)\ws_tool.obj     \
-              $(OBJ_DIR)\wsock_trace.obj \
-              $(OBJ_DIR)\wsock_trace_lua.obj
+WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             \
+              $(OBJ_DIR)\backtrace.obj       \
+              $(OBJ_DIR)\common.obj          \
+              $(OBJ_DIR)\cpu.obj             \
+              $(OBJ_DIR)\csv.obj             \
+              $(OBJ_DIR)\dnsbl.obj           \
+              $(OBJ_DIR)\dump.obj            \
+              $(OBJ_DIR)\firewall.obj        \
+              $(OBJ_DIR)\geoip.obj           \
+              $(OBJ_DIR)\getopt.obj          \
+              $(OBJ_DIR)\hosts.obj           \
+              $(OBJ_DIR)\iana.obj            \
+              $(OBJ_DIR)\idna.obj            \
+              $(OBJ_DIR)\in_addr.obj         \
+              $(OBJ_DIR)\inet_util.obj       \
+              $(OBJ_DIR)\init.obj            \
+              $(OBJ_DIR)\ip2loc.obj          \
+              $(OBJ_DIR)\overlap.obj         \
+              $(OBJ_DIR)\smartlist.obj       \
+              $(OBJ_DIR)\stkwalk.obj         \
+              $(OBJ_DIR)\test.obj            \
+              $(OBJ_DIR)\vm_dump.obj         \
+              $(OBJ_DIR)\ws_tool.obj         \
+              $(OBJ_DIR)\wsock_trace.obj     \
+              $(OBJ_DIR)\wsock_trace_lua.obj \
+              $(OBJ_DIR)\xz_decompress.obj
 
 #
 # .obj-files for 'libloc$(X_SUFFIX)$(_D).lib'.

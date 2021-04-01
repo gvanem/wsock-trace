@@ -77,6 +77,9 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "common.h"
+#include "init.h"
+
 typedef int32_t  Int32;
 typedef uint32_t UInt32;
 typedef int16_t  Int16;
@@ -113,7 +116,7 @@ struct IntegerTypeAsserts {
    * This is guaranteed to work with Linux and gcc only. For example, %lld in
    * printf doesn't work with MinGW.
    */
-  #define DEBUGF(fmt, ...)   printf ("xz_decompress.c(%u): " fmt, __LINE__, ## __VA_ARGS__)
+  #define DEBUGF(fmt, ...)   TRACE (3, fmt, ## __VA_ARGS__)
   #define ASSERT(condition)  assert (condition)
 #else
   #define DEBUGF(fmt, ...)
@@ -133,7 +136,6 @@ static void MemmoveOverlap (void *dest, const void *src, UInt32 n)
      *destCp++ = *srcCp++;
 }
 
-#undef  SZ_OK
 #define SZ_OK                              0
 #define SZ_ERROR_DATA                      1
 #define SZ_ERROR_MEM                       2      /* Out of memory. */
@@ -153,15 +155,14 @@ static void MemmoveOverlap (void *dest, const void *src, UInt32 n)
 
 typedef UInt32 SRes;
 
-#ifndef RINOK
-  #define RINOK(x)   do {                                       \
-                       SRes _result = (x);                      \
-                       if (_result != 0) {                      \
-                          DEBUGF ("RINOK() -> %u.\n", _result); \
-                          return _result;                       \
-                       }                                        \
-                     } while (0)
-#endif
+#define RINOK(x)  do {                                  \
+                    unsigned  _res = x;                 \
+                    if (_res != 0) {                    \
+                       TRACE (1, "RINOK() -> %u/%s.\n", \
+                              _res, XZ_strerror(_res)); \
+                       return (_res);                   \
+                    }                                   \
+                  } while (0)
 
 typedef Byte Bool;
 #define True  1
@@ -180,8 +181,8 @@ typedef Byte Bool;
 #endif
 
 #define LZMA_BASE_SIZE     1846
-#define LZMA_LIT_SIZE       768
-#define LZMA2_LCLP_MAX        4
+#define LZMA_LIT_SIZE      768
+#define LZMA2_LCLP_MAX     4
 
 #define MAX_DIC_SIZE       1610612736  /* ~1.61 GB. 2 GiB is user virtual memory limit for many 32-bit systems. */
 #define MAX_DIC_SIZE_PROP  37
@@ -255,6 +256,8 @@ typedef struct {
 
 static CLzmaDec global;
 
+const char *XZ_strerror (int rc);
+
 /*
  * Writes uncompressed data (global.dicf[global.writtenPos : global.dicfPos] to 'out_fd'.
  */
@@ -265,7 +268,7 @@ static SRes Flush (void)
   const Byte *p = global.dicf + global.writtenPos;
   const Byte *q = p + flushSize;
 
-  DEBUGF("FLUSH WRITE %d %d dicfPos=%d\n", flushSize1, flushSize, global.dicfPos);
+  DEBUGF ("FLUSH WRITE %d %d dicfPos=%d\n", flushSize1, flushSize, global.dicfPos);
 
   while (p != q)
   {
@@ -1806,9 +1809,7 @@ int XZ_decompress (const char *from_file, const char *to_file)
   global.allocCapacity = global.dicSize = 0;
   res = DecompressXzOrLzma();
 
-#ifdef TRACE /* if 'INCLUDED_FROM_WSOCK_TRACE' defined */
   TRACE (1, "res=%d dicSize=%d allocCapacity=%d.\n", res, global.dicSize, global.allocCapacity);
-#endif
 
   free (global.dicf);
 
@@ -1817,9 +1818,6 @@ int XZ_decompress (const char *from_file, const char *to_file)
   return (int) res;
 }
 
-#if defined(INCLUDED_FROM_WSOCK_TRACE)
-
-#undef  ADD_VALUE
 #define ADD_VALUE(v)  { v, #v }
 
 static const struct search_list xz_errors[] = {
@@ -1862,4 +1860,4 @@ const char *XZ_strerror (int rc)
 {
   return list_lookup_name (rc, xz_errors, DIM(xz_errors));
 }
-#endif /* INCLUDED_FROM_WSOCK_TRACE */
+
