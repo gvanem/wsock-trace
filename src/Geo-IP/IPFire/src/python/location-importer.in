@@ -388,10 +388,17 @@ class CLI(object):
 				TRUNCATE TABLE networks;
 			""")
 
+			# Fetch all valid country codes to check parsed networks aganist...
+			rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+			validcountries = []
+
+			for row in rows:
+				validcountries.append(row.country_code)
+
 			for source in location.importer.WHOIS_SOURCES:
 				with downloader.request(source, return_blocks=True) as f:
 					for block in f:
-						self._parse_block(block)
+						self._parse_block(block, validcountries)
 
 			# Process all parsed networks from every RIR we happen to have access to,
 			# insert the largest network chunks into the networks table immediately...
@@ -467,7 +474,7 @@ class CLI(object):
 				# Download data
 				with downloader.request(source) as f:
 					for line in f:
-						self._parse_line(line)
+						self._parse_line(line, validcountries)
 
 	def _check_parsed_network(self, network):
 		"""
@@ -532,7 +539,7 @@ class CLI(object):
 		# be suitable for libloc consumption...
 		return True
 
-	def _parse_block(self, block):
+	def _parse_block(self, block, validcountries = None):
 		# Get first line to find out what type of block this is
 		line = block[0]
 
@@ -542,7 +549,7 @@ class CLI(object):
 
 		# inetnum
 		if line.startswith("inet6num:") or line.startswith("inetnum:"):
-			return self._parse_inetnum_block(block)
+			return self._parse_inetnum_block(block, validcountries)
 
 		# organisation
 		elif line.startswith("organisation:"):
@@ -573,7 +580,7 @@ class CLI(object):
 			autnum.get("asn"), autnum.get("org"),
 		)
 
-	def _parse_inetnum_block(self, block):
+	def _parse_inetnum_block(self, block, validcountries = None):
 		log.debug("Parsing inetnum block:")
 
 		inetnum = {}
@@ -616,10 +623,10 @@ class CLI(object):
 		if not inetnum or not "country" in inetnum:
 			return
 
-		# Skip objects with bogus country code 'ZZ'
-		if inetnum.get("country") == "ZZ":
-			log.warning("Skipping network with bogus country 'ZZ': %s" % \
-				(inetnum.get("inet6num") or inetnum.get("inetnum")))
+		# Skip objects with unknown country codes
+		if validcountries and inetnum.get("country") not in validcountries:
+			log.warning("Skipping network with bogus country '%s': %s" % \
+				(inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
 			return
 
 		# Iterate through all networks enumerated from above, check them for plausibility and insert
@@ -652,7 +659,7 @@ class CLI(object):
 			org.get("organisation"), org.get("org-name"),
 		)
 
-	def _parse_line(self, line):
+	def _parse_line(self, line, validcountries = None):
 		# Skip version line
 		if line.startswith("2"):
 			return
@@ -667,8 +674,15 @@ class CLI(object):
 			log.warning("Could not parse line: %s" % line)
 			return
 
-		# Skip any lines that are for stats only
-		if country_code == "*":
+		# Skip any lines that are for stats only or do not have a country
+		# code at all (avoids log spam below)
+		if not country_code or country_code == '*':
+			return
+
+		# Skip objects with unknown country codes
+		if validcountries and country_code not in validcountries:
+			log.warning("Skipping line with bogus country '%s': %s" % \
+				(country_code, line))
 			return
 
 		if type in ("ipv6", "ipv4"):

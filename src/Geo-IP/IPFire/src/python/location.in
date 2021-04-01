@@ -492,38 +492,27 @@ class CLI(object):
 	def handle_list_networks_by_as(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
-		if 0:
-		  print ("networks by AS%s" % ns.asn[0])
-		  for n in db.search_networks(asns=ns.asn, family=ns.family):
-		    print ("  %s" % n)
-		else:
-			for asn in ns.asn:
-			  f = writer(sys.stdout, prefix="AS%s" % asn)
+		for asn in ns.asn:
+		  f = writer(sys.stdout, prefix="AS%s" % asn)
 
-			  # Print all matching networks
-			  for n in db.search_networks(asns=[asn], family=ns.family):
-			     f.write(n)
+		  # Print all matching networks
+		  for n in db.search_networks(asns=[asn], family=ns.family):
+		     f.write(n)
 
-			  f.finish()
+		  f.finish()
 
 	def handle_list_networks_by_cc(self, db, ns):
 		writer = self.__get_output_formatter(ns)
 
-		if 0:
-			cc = ns.country_code[0].upper()
-			print ("networks in country %s" % cc)
-			for n in db.search_networks(country_codes = [cc], family=ns.family, flatten=1):
-				print ("  %s" % n)
-		else:
-			for country_code in ns.country_code:
-				# Open standard output
-				f = writer(sys.stdout, prefix=country_code)
+		for country_code in ns.country_code:
+			# Open standard output
+			f = writer(sys.stdout, prefix=country_code)
 
-				# Print all matching networks
-				for n in db.search_networks(country_code=country_code, family=ns.family):
-					f.write(n)
+			# Print all matching networks
+			for n in db.search_networks(country_codes=[country_code.upper()], family=ns.family):
+				f.write(n)
 
-				f.finish()
+			f.finish()
 
 	def handle_list_networks_by_flags(self, db, ns):
 		flags = 0
@@ -540,18 +529,13 @@ class CLI(object):
 		if not flags:
 			raise ValueError(_("You must at least pass one flag"))
 
-		if 0:
-			for n in db.search_networks(flags=flags, family=ns.family):
-				print (n)
+		writer = self.__get_output_formatter(ns)
+		f = writer(sys.stdout, prefix="custom")
 
-		else:
-			writer = self.__get_output_formatter(ns)
-			f = writer(sys.stdout, prefix="custom")
+		for n in db.search_networks(flags=flags, family=ns.family):
+			f.write(n)
 
-			for n in db.search_networks(flags=flags, family=ns.family):
-				f.write(n)
-
-			f.finish()
+		f.finish()
 
 	def handle_export(self, db, ns):
 		countries, asns = [], []
