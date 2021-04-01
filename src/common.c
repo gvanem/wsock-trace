@@ -1815,7 +1815,7 @@ const char *set_dll_full_name (HINSTANCE inst_dll)
 const char *get_dll_full_name (void)
 {
   if (full_name[0] == '\0')
-     return ("?");
+     return (NULL);
   return (full_name);
 }
 
