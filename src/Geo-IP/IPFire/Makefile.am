@@ -228,7 +228,7 @@ build-perl:
 	@test -e $(builddir)/src/perl/t/Location.t || ln -s --relative $(srcdir)/src/perl/t/Location.t $(builddir)/src/perl/t/
 	@test -e $(builddir)/src/perl/typemap || ln -s --relative $(srcdir)/src/perl/typemap $(builddir)/src/perl/
 
-	cd $(builddir)/src/perl && $(PERL) Makefile.PL INSTALLDIRS=vendor \
+	cd $(builddir)/src/perl && $(PERL) Makefile.PL PREFIX="$(prefix)" \
 		INC="-I$(abs_srcdir)/src" LIBS="-L$(abs_builddir)/src/.libs -lloc"
 	cd $(builddir)/src/perl && $(MAKE) LD_RUN_PATH=
 
