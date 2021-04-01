@@ -20,6 +20,8 @@
 
 #if defined(USE_LUAJIT)  /* Rest of file */
 
+#define LUA_USE_ASSERT
+
 #include "init.h"
 #include "wsock_trace_lua.h"
 
@@ -81,11 +83,15 @@ static void wslua_set_path (const char *full_name);
 BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 {
   const char *reason_str = NULL;
-  const char *full_name  = get_dll_full_name();
+  const char *full_name;
   BOOL        rc = TRUE;
 
   if (!g_cfg.LUA.enable)
      return (TRUE);
+
+  full_name = get_dll_full_name();
+  if (!full_name)
+     set_dll_full_name (instDLL);
 
   if (reason == DLL_PROCESS_ATTACH)
   {
@@ -99,13 +105,15 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
     *ljit_trace_level() = g_cfg.LUA.trace_level;
 
+    LUA_TRACE (1, "ws_from_dll_main: %d, dll/exe: '%s', loaded: '%s'\n", ws_from_dll_main, dll, loaded);
+
     if (!g_cfg.LUA.color_head)
        get_color (NULL, &g_cfg.LUA.color_head);
 
     if (!g_cfg.LUA.color_body)
        get_color (NULL, &g_cfg.LUA.color_body);
 
-    if (!ws_from_dll_main && stricmp(loaded, dll))
+    if (ws_from_dll_main && stricmp(loaded, dll))
     {
       LUA_WARNING ("Expected '%s', but loaded DLL/EXE was '%s:\n", dll, loaded);
       rc = FALSE;
@@ -137,7 +145,6 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
   }
 
   LUA_TRACE (1, "rc: %d, full_name: %s, reason_str: %s\n", rc, full_name, reason_str);
-  ARGSUSED (instDLL);
   return (rc);
 }
 
@@ -176,13 +183,23 @@ int wslua_WSACleanup (void)
   return (0);
 }
 
+/**
+ * Execute a script using `lua_pcall()` and
+ * report any errors in it.
+ */
 static BOOL execute_and_report (lua_State *l)
 {
   const char *msg = "";
   int         rc = lua_pcall (l, 0, LUA_MULTRET, 0);
 
   if (rc == 0)
-     return (TRUE);
+  {
+    /* Success. The returned value at the top of the stack (index -1)
+     * would be `lua_tonumber(l, -1)`. But we ignore that except for tracing.
+     */
+    LUA_TRACE (1, "Script OK, ret: %d:\n", (int)lua_tonumber(l, -1));
+    return (TRUE);
+  }
 
   if (!lua_isnil(l, -1))
   {
@@ -215,12 +232,15 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
 
 #if defined(NOT_YET)
 /*
- * Extract a script from a zip-file and run it.
+ * Use 'miniz.c' and extract a script from a zip-file and run it.
+ *
  * Or use one of these:
  *   https://github.com/luaforge/lar/blob/master/lar/lar.lua
  *   https://github.com/davidm/lua-compress-deflatelua
  */
-#include "miniz.c"
+extern void *mz_zip_extract_archive_file_to_heap (const char *pZip_filename,
+                                                  const char *pArchive_name,
+                                                  size_t *pSize, mz_uint zip_flags);
 
 static BOOL wslua_run_zipfile (lua_State *l, const char *zipfile, const char *script)
 {
@@ -393,15 +413,14 @@ static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
          break;
   }
 
-#if 0   /** \todo */
+#if 1   /** \todo */
   if (_ld->event == LUA_HOOKCALL)
   {
     lua_Debug ld;
 
     memset (&ld, '\0', sizeof(ld));
     lua_getinfo (l, ">nl", &ld);
-    trace_printf ("ld.name:        %s\n", ld.name);
-    trace_printf ("ld.short_src:   %s\n", ld.short_src);
+    trace_printf (": ld.name: %s, ld.short_src: %s", ld.name, ld.short_src);
   }
 #else
   ARGSUSED (l);
@@ -442,6 +461,7 @@ static void wslua_init (const char *script)
 
   L = luaL_newstate();
   luaL_openlibs (L);    /* Load LuaJIT libraries */
+  luaopen_jit (L);      /* Turn on he JIT engine */
 
   /* Set up the 'panic' handler, which let's us control LuaJIT execution.
    */
@@ -545,16 +565,23 @@ static const struct luaL_Reg wslua_table[] = {
 
 /*
  * The open() function exported and called from LuaJIT when "wsock_trace"
- * is used as a module. This is called explicit when pushing "wsock_trace"
+ * is used as a module. This is called explicitly when pushing "wsock_trace"
  * as a global module.
  */
 int luaopen_wsock_trace (lua_State *l)
 {
-  char *dll_exe = strdup (get_dll_short_name());
-  char *dot = strrchr (dll_exe, '.');
-  char *extension = dot + 1;
+  char *dot, module [20];
+  const char *comment = "";
 
-  *dot = '\0';
+  _strlcpy (module, get_dll_short_name(), sizeof(module));
+  dot = strrchr (module, '.');
+  dot[0] = '\0';
+
+  if (!ws_from_dll_main)
+  {
+    _strlcpy (module, "wsock_trace", sizeof(module));
+    comment = " (faking 'wsock_trace' module)";
+  }
 
 #if (LUA_VERSION_NUM >= 502)
   /*
@@ -563,13 +590,12 @@ int luaopen_wsock_trace (lua_State *l)
    */
   lua_newtable (l);
   luaL_setfuncs (l, wslua_table, 0);
-  lua_setglobal (l, dll_exe);
+  lua_setglobal (l, module);
 #else
-  luaL_register (l, dll_exe, wslua_table);
+  luaL_register (l, module, wslua_table);
 #endif
 
-  LUA_TRACE (1, "%s(), dll/exe: \"%s.%s\".\n", __FUNCTION__, dll_exe, extension);
-  free (dll_exe);
+  LUA_TRACE (1, "%s(), module: \"%s\"%s.\n", __FUNCTION__, module, comment);
   return (1);
 }
 #endif /* USE_LUAJIT */
