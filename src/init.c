@@ -541,8 +541,10 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
  *   warning: '%.30s' directive output may be truncated writing 11 bytes into a region
  *            of size between 0 and 259 [-Wformat-truncation=]
  */
-GCC_PRAGMA (GCC diagnostic push)
-GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
+#if !defined(__clang__)
+  GCC_PRAGMA (GCC diagnostic push)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
+#ndif
 
 static char fname [MAX_PATH];
 
@@ -580,7 +582,9 @@ static FILE *open_config_file (const char *base_name)
   return (fil);
 }
 
-GCC_PRAGMA (GCC diagnostic pop)
+#if !defined(__clang__)
+  GCC_PRAGMA (GCC diagnostic pop)
+#endif
 
 const char *config_file_name (void)
 {

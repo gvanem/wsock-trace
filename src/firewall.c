@@ -87,11 +87,14 @@ typedef LONG NTSTATUS;
  * a gcc warning. Ignore it.
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
-GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
 GCC_PRAGMA (GCC diagnostic ignored "-Wunused-value")
 GCC_PRAGMA (GCC diagnostic ignored "-Wenum-compare")
 GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
+
+#if !defined(__clang__)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
+#endif
 
 #if defined(__CYGWIN__)
   #include <errno.h>
