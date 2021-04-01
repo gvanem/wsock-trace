@@ -13,6 +13,7 @@
 #include "csv.h"
 #include "getopt.h"
 #include "smartlist.h"
+#include "xz_decompress.h"
 #include "inet_util.h"
 #include "in_addr.h"
 #include "init.h"
@@ -69,9 +70,6 @@ struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */
        uint32_t        asn;
        int             flags;
      };
-
-extern int         XZ_decompress (const char *from_file, const char *to_file);
-extern const char *XZ_strerror (int rc);
 
 static void ASN_bin_close (void);
 

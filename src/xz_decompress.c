@@ -79,6 +79,7 @@
 
 #include "common.h"
 #include "init.h"
+#include "xz_decompress.h"
 
 typedef int32_t  Int32;
 typedef uint32_t UInt32;
@@ -255,8 +256,6 @@ typedef struct {
 } CLzmaDec;
 
 static CLzmaDec global;
-
-const char *XZ_strerror (int rc);
 
 /*
  * Writes uncompressed data (global.dicf[global.writtenPos : global.dicfPos] to 'out_fd'.
