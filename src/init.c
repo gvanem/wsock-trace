@@ -544,7 +544,7 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
 #if !defined(__clang__)
   GCC_PRAGMA (GCC diagnostic push)
   GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
-#ndif
+#endif
 
 static char fname [MAX_PATH];
 
