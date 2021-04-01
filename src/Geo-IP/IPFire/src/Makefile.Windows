@@ -373,17 +373,17 @@ py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py
 	$(call link_PYD, $@, $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res $(PY_LIB))
 
 py3_install/location.py: python/location.in
-	$(call Generate, $@, #)
-	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< >> $@
+	$(call green_msg, Generating $@)
+	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< > $@
 	@echo
 
 py3_install/location-importer.py: python/location-importer.in
-	$(call Generate, $@, #)
-	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< >> $@
+	$(call green_msg, Generating $@)
+	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< > $@
 	@echo
 
 py3_install/location/__init__.py: python/__init__.py.in
-	$(call Generate, $@, #)
+	$(call green_msg, Generating $@)
 	sed -e 's|@VERSION@|$(VERSION)|' < $< >> $@
 	@echo
 
