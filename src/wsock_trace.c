@@ -3530,7 +3530,6 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 #endif
          wsock_trace_exit();
          crtdbg_exit();
-         ws_from_dll_main = FALSE;
          break;
 
     case DLL_THREAD_ATTACH:

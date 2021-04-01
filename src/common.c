@@ -1837,11 +1837,6 @@ const char *get_dll_full_name (void)
  */
 const char *get_dll_short_name (void)
 {
-  if (!ws_from_dll_main)
-  {
-    const char *mod_name = set_dll_full_name (GetModuleHandle(NULL));
-    return basename (mod_name);
-  }
   return (RC_BASENAME RC_CPU_SUFFIX RC_DBG_SUFFIX ".dll");
 }
 
