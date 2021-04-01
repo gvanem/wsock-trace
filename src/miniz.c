@@ -223,6 +223,13 @@
 extern "C" {
 #endif
 
+#include "wsock_defs.h"
+
+GCC_PRAGMA (GCC diagnostic ignored "-Wcomma")
+GCC_PRAGMA (GCC diagnostic ignored "-Wunused-value")
+GCC_PRAGMA (GCC diagnostic ignored "-Wextra-semi-stmt")
+GCC_PRAGMA (GCC diagnostic ignored "-Wtautological-type-limit-compare")
+
 // ------------------- zlib-style API Definitions.
 
 // For more compatibility with zlib, miniz.c uses unsigned long for some parameters/struct members. Beware: mz_ulong can be either 32 or 64-bits!
