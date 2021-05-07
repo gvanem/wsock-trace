@@ -979,7 +979,7 @@ int INET_util_addr_is_zero (const struct in_addr *ip4, const struct in6_addr *ip
   return (0);
 }
 
-/*
+/**
  * returns 1 if the `ip4` / `ip6` address is a multicast address.
  * returns 0 if not
  */
@@ -1003,6 +1003,10 @@ int INET_util_addr_is_multicast (const struct in_addr *ip4, const struct in6_add
                               *remark = what; \
                          } while (0)
 
+/**
+ * Check if an IPv4 or IPv6 address is "special".
+ * If it is return 1. And optionally return a remark describing why.
+ */
 int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr *ip6, const char **remark)
 {
   if (remark)
@@ -1102,15 +1106,17 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
 
 #undef SET_REMARK
 
-/*
- * returns 1 if the `ip4` / `ip6` address is a Global Unicast
+/**
+ * Returns 1 if the `ip4` / `ip6` address is a Global Unicast
  * returns 0 if not
  */
 int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *ip6)
 {
    if (ip4)
    {
-     /** Global for IPv4 means not status "RESERVED" by IANA
+     /**
+      * Global for IPv4 means not status "RESERVED" by IANA.
+      * Ref: https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
       */
      if (ip4->S_un.S_un_b.s_b1 != 0x0  &&                       /* not 0/8        */
          ip4->S_un.S_un_b.s_b1 != 0x7F &&                       /* not 127/8      */

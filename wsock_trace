@@ -246,6 +246,8 @@
   #   c:\temp> xz -d location.db.xz                      (or '7z x location.db.xz')
   #   c:\temp> move /Y location.db %APPDATA%\IPFire-database.db
   #
+  # Or when 'xz_decompress = 1', use 'c:\> ws_tool asn -u'
+  #
   xz_decompress = 1
 
   #
