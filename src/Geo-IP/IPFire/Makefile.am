@@ -79,8 +79,9 @@ update-po: po/POTFILES.in
 	$(MAKE) -C po update-po
 
 po/POTFILES.in: Makefile
-	find $(abs_srcdir)/src | \
-		grep -E "\.(in|py)$$" | sed -e "s@$(abs_srcdir)/@@g" | sort > $@
+	find $(abs_srcdir)/src -type f \( -name '*.in' -o -name '*.py' \) \
+		\! -exec git check-ignore -q {} \; -print | \
+		sed -e "s@$(abs_srcdir)/@@g" | LC_ALL=C sort > $@
 
 EXTRA_DIST += \
 	examples/private-key.pem \
