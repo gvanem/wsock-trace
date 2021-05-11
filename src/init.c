@@ -698,6 +698,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "color_data"))
      get_color (val, &g_cfg.color_data);
 
+  else if (!stricmp(key, "nice_numbers"))
+     g_cfg.nice_numbers = atoi (val);
+
   else if (!stricmp(key, "compact"))
      g_cfg.compact = atoi (val);
 

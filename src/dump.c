@@ -1532,19 +1532,25 @@ const char *sockopt_value (const char *opt_val, int opt_len)
 
     case sizeof(WORD):
          val = *(WORD*) opt_val;
-         snprintf (buf, sizeof(buf), "%u", (WORD)val);
+         if (g_cfg.nice_numbers && val > 1000)
+              snprintf (buf, sizeof(buf), "'%s'", dword_str(val));
+         else snprintf (buf, sizeof(buf), "%u", (WORD)val);
          break;
 
     case sizeof(DWORD):
          val = *(DWORD*) opt_val;
          if (val == DWORD_MAX)
               strcpy (buf, "DWORD_MAX");
+         else if (g_cfg.nice_numbers && val > 1000)
+              snprintf (buf, sizeof(buf), "'%s'", dword_str(val));
          else snprintf (buf, sizeof(buf), "%lu", DWORD_CAST(val));
          break;
 
     case sizeof(ULONG64):
          val64 = *(ULONG64*) opt_val;
-         snprintf (buf, sizeof(buf), "%" U64_FMT, val64);
+         if (g_cfg.nice_numbers && val > 1000)
+              snprintf (buf, sizeof(buf), "'%s'", qword_str(val64));
+         else snprintf (buf, sizeof(buf), "%" U64_FMT, val64);
          break;
 
     default:

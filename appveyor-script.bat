@@ -47,6 +47,7 @@ echo   max_displacement       = 1000                                         >> 
 echo   exclude                = htons,htonl,inet_addr                        >> wsock_trace.appveyor
 echo   hosts_file             = %CD%\appveyor-hosts                          >> wsock_trace.appveyor
 echo   use_winhttp            = 0                                            >> wsock_trace.appveyor
+echo   nice_numbers           = 1                                            >> wsock_trace.appveyor
 
 echo [geoip]                                                                 >> wsock_trace.appveyor
 echo   enable                 = 1                                            >> wsock_trace.appveyor
