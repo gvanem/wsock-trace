@@ -87,11 +87,11 @@ test_script:
 
   #
   # Delete '..\IPFire-database.db' to force a download and decompression.
-  # Since now it's not done via 'DllMain()', it should be safe.
   #
   - cmd: del /Q ..\IPFire-database.db
-  - cmd: geoip-test.bat -4
-  - cmd: geoip-test.bat -6
+  - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe asn -u
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat -4
+  - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat -6
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
