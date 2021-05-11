@@ -1548,7 +1548,7 @@ const char *sockopt_value (const char *opt_val, int opt_len)
 
     case sizeof(ULONG64):
          val64 = *(ULONG64*) opt_val;
-         if (g_cfg.nice_numbers && val > 1000)
+         if (g_cfg.nice_numbers && val64 > 1000)
               snprintf (buf, sizeof(buf), "'%s'", qword_str(val64));
          else snprintf (buf, sizeof(buf), "%" U64_FMT, val64);
          break;
