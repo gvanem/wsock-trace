@@ -198,13 +198,16 @@ class CLI(object):
 		args = self.parse_cli()
 
 		# Open database
+		db = None
 		try:
 			db = location.Database(args.database)
 		except FileNotFoundError as e:
 			# Allow continuing without a database
+			# But on Windows, the shared-mem area must be closed if we have a .db-file open.
 			if args.func == self.handle_update:
+				if db:
+					db.__delete__()
 				db = None
-
 			else:
 				sys.stderr.write("location: Could not open database %s: %s\n" \
 					% (args.database, e))

@@ -156,6 +156,7 @@ class CLI(object):
 
 				-- autnums
 				CREATE TABLE IF NOT EXISTS autnums(number bigint, name text NOT NULL);
+				ALTER TABLE autnums ADD COLUMN IF NOT EXISTS source text NOT NULL;
 				CREATE UNIQUE INDEX IF NOT EXISTS autnums_number ON autnums(number);
 
 				-- countries
@@ -165,6 +166,7 @@ class CLI(object):
 
 				-- networks
 				CREATE TABLE IF NOT EXISTS networks(network inet, country text);
+				ALTER TABLE networks ADD COLUMN IF NOT EXISTS source text NOT NULL;
 				CREATE UNIQUE INDEX IF NOT EXISTS networks_network ON networks(network);
 				CREATE INDEX IF NOT EXISTS networks_family ON networks USING BTREE(family(network));
 				CREATE INDEX IF NOT EXISTS networks_search ON networks USING GIST(network inet_ops);
@@ -369,15 +371,15 @@ class CLI(object):
 		with self.db.transaction():
 			# Create some temporary tables to store parsed data
 			self.db.execute("""
-				CREATE TEMPORARY TABLE _autnums(number integer, organization text)
+				CREATE TEMPORARY TABLE _autnums(number integer, organization text, source text NOT NULL)
 					ON COMMIT DROP;
 				CREATE UNIQUE INDEX _autnums_number ON _autnums(number);
 
-				CREATE TEMPORARY TABLE _organizations(handle text, name text NOT NULL)
+				CREATE TEMPORARY TABLE _organizations(handle text, name text NOT NULL, source text NOT NULL)
 					ON COMMIT DROP;
 				CREATE UNIQUE INDEX _organizations_handle ON _organizations(handle);
 
-				CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL)
+				CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL, source text NOT NULL)
 					ON COMMIT DROP;
 				CREATE INDEX _rirdata_search ON _rirdata USING BTREE(family(network), masklen(network));
 				CREATE UNIQUE INDEX _rirdata_network ON _rirdata(network);
@@ -395,10 +397,11 @@ class CLI(object):
 			for row in rows:
 				validcountries.append(row.country_code)
 
-			for source in location.importer.WHOIS_SOURCES:
-				with downloader.request(source, return_blocks=True) as f:
-					for block in f:
-						self._parse_block(block, validcountries)
+			for source_key in location.importer.WHOIS_SOURCES:
+				for single_url in location.importer.WHOIS_SOURCES[source_key]:
+					with downloader.request(single_url, return_blocks=True) as f:
+						for block in f:
+							self._parse_block(block, source_key, validcountries)
 
 			# Process all parsed networks from every RIR we happen to have access to,
 			# insert the largest network chunks into the networks table immediately...
@@ -407,8 +410,8 @@ class CLI(object):
 			for family in (row.family for row in families):
 				smallest = self.db.get("SELECT MIN(masklen(network)) AS prefix FROM _rirdata WHERE family(network) = %s", family)
 
-				self.db.execute("INSERT INTO networks(network, country) \
-					SELECT network, country FROM _rirdata WHERE masklen(network) = %s AND family(network) = %s", smallest.prefix, family)
+				self.db.execute("INSERT INTO networks(network, country, source) \
+					SELECT network, country, source FROM _rirdata WHERE masklen(network) = %s AND family(network) = %s", smallest.prefix, family)
 
 				# ... determine any other prefixes for this network family, ...
 				prefixes = self.db.query("SELECT DISTINCT masklen(network) AS prefix FROM _rirdata \
@@ -421,7 +424,8 @@ class CLI(object):
 						WITH candidates AS (
 							SELECT
 								_rirdata.network,
-								_rirdata.country
+								_rirdata.country,
+								_rirdata.source
 							FROM
 								_rirdata
 							WHERE
@@ -434,6 +438,7 @@ class CLI(object):
 								DISTINCT ON (c.network)
 								c.network,
 								c.country,
+								c.source,
 								masklen(networks.network),
 								networks.country AS parent_country
 							FROM
@@ -447,10 +452,11 @@ class CLI(object):
 								masklen(networks.network) DESC NULLS LAST
 						)
 						INSERT INTO
-							networks(network, country)
+							networks(network, country, source)
 						SELECT
 							network,
-							country
+							country,
+							source
 						FROM
 							filtered
 						WHERE
@@ -462,19 +468,20 @@ class CLI(object):
 					)
 
 			self.db.execute("""
-				INSERT INTO autnums(number, name)
-					SELECT _autnums.number, _organizations.name FROM _autnums
+				INSERT INTO autnums(number, name, source)
+					SELECT _autnums.number, _organizations.name, _organizations.source FROM _autnums
 						JOIN _organizations ON _autnums.organization = _organizations.handle
 				ON CONFLICT (number) DO UPDATE SET name = excluded.name;
 			""")
 
 		# Download all extended sources
-		for source in location.importer.EXTENDED_SOURCES:
-			with self.db.transaction():
-				# Download data
-				with downloader.request(source) as f:
-					for line in f:
-						self._parse_line(line, validcountries)
+		for source_key in location.importer.EXTENDED_SOURCES:
+			for single_url in location.importer.EXTENDED_SOURCES[source_key]:
+				with self.db.transaction():
+					# Download data
+					with downloader.request(single_url) as f:
+						for line in f:
+							self._parse_line(line, source_key, validcountries)
 
 	def _check_parsed_network(self, network):
 		"""
@@ -539,23 +546,23 @@ class CLI(object):
 		# be suitable for libloc consumption...
 		return True
 
-	def _parse_block(self, block, validcountries = None):
+	def _parse_block(self, block, source_key, validcountries = None):
 		# Get first line to find out what type of block this is
 		line = block[0]
 
 		# aut-num
 		if line.startswith("aut-num:"):
-			return self._parse_autnum_block(block)
+			return self._parse_autnum_block(block, source_key)
 
 		# inetnum
 		if line.startswith("inet6num:") or line.startswith("inetnum:"):
-			return self._parse_inetnum_block(block, validcountries)
+			return self._parse_inetnum_block(block, source_key, validcountries)
 
 		# organisation
 		elif line.startswith("organisation:"):
-			return self._parse_org_block(block)
+			return self._parse_org_block(block, source_key)
 
-	def _parse_autnum_block(self, block):
+	def _parse_autnum_block(self, block, source_key):
 		autnum = {}
 		for line in block:
 			# Split line
@@ -574,13 +581,13 @@ class CLI(object):
 			return
 
 		# Insert into database
-		self.db.execute("INSERT INTO _autnums(number, organization) \
-			VALUES(%s, %s) ON CONFLICT (number) DO UPDATE SET \
+		self.db.execute("INSERT INTO _autnums(number, organization, source) \
+			VALUES(%s, %s, %s) ON CONFLICT (number) DO UPDATE SET \
 				organization = excluded.organization",
-			autnum.get("asn"), autnum.get("org"),
+			autnum.get("asn"), autnum.get("org"), source_key,
 		)
 
-	def _parse_inetnum_block(self, block, validcountries = None):
+	def _parse_inetnum_block(self, block, source_key, validcountries = None):
 		log.debug("Parsing inetnum block:")
 
 		inetnum = {}
@@ -623,22 +630,25 @@ class CLI(object):
 		if not inetnum or not "country" in inetnum:
 			return
 
-		# Skip objects with unknown country codes
-		if validcountries and inetnum.get("country") not in validcountries:
-			log.warning("Skipping network with bogus country '%s': %s" % \
-				(inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
-			return
-
 		# Iterate through all networks enumerated from above, check them for plausibility and insert
 		# them into the database, if _check_parsed_network() succeeded
 		for single_network in inetnum.get("inet6num") or inetnum.get("inetnum"):
 			if self._check_parsed_network(single_network):
-				self.db.execute("INSERT INTO _rirdata(network, country) \
-					VALUES(%s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
-					"%s" % single_network, inetnum.get("country"),
+
+				# Skip objects with unknown country codes - to avoid log spam for invalid or too small
+				# networks, this check is - kinda ugly - done at this point
+				if validcountries and inetnum.get("country") not in validcountries:
+					log.warning("Skipping network with bogus country '%s': %s" % \
+						(inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
+					break
+
+				# Everything is fine here, run INSERT statement...
+				self.db.execute("INSERT INTO _rirdata(network, country, source) \
+					VALUES(%s, %s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
+					"%s" % single_network, inetnum.get("country"), source_key,
 				)
 
-	def _parse_org_block(self, block):
+	def _parse_org_block(self, block, source_key):
 		org = {}
 		for line in block:
 			# Split line
@@ -653,13 +663,13 @@ class CLI(object):
 		if not org:
 			return
 
-		self.db.execute("INSERT INTO _organizations(handle, name) \
-			VALUES(%s, %s) ON CONFLICT (handle) DO \
+		self.db.execute("INSERT INTO _organizations(handle, name, source) \
+			VALUES(%s, %s, %s) ON CONFLICT (handle) DO \
 			UPDATE SET name = excluded.name",
-			org.get("organisation"), org.get("org-name"),
+			org.get("organisation"), org.get("org-name"), source_key,
 		)
 
-	def _parse_line(self, line, validcountries = None):
+	def _parse_line(self, line, source_key, validcountries = None):
 		# Skip version line
 		if line.startswith("2"):
 			return
@@ -686,9 +696,9 @@ class CLI(object):
 			return
 
 		if type in ("ipv6", "ipv4"):
-			return self._parse_ip_line(country_code, type, line)
+			return self._parse_ip_line(country_code, type, line, source_key)
 
-	def _parse_ip_line(self, country, type, line):
+	def _parse_ip_line(self, country, type, line, source_key):
 		try:
 			address, prefix, date, status, organization = line.split("|")
 		except ValueError:
@@ -726,10 +736,10 @@ class CLI(object):
 		if not self._check_parsed_network(network):
 			return
 
-		self.db.execute("INSERT INTO networks(network, country) \
-			VALUES(%s, %s) ON CONFLICT (network) DO \
+		self.db.execute("INSERT INTO networks(network, country, source) \
+			VALUES(%s, %s, %s) ON CONFLICT (network) DO \
 			UPDATE SET country = excluded.country",
-			"%s" % network, country,
+			"%s" % network, country, source_key,
 		)
 
 	def handle_update_announcements(self, ns):
