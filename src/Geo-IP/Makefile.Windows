@@ -79,7 +79,7 @@ CFLAGS += -I./IPFire/src              \
           -I./IPFire/src/fake-OpenSSL \
           -DLIBLOC_PRIVATE
 
-OBJ_DIR = objects
+OBJ_DIR = geoip_obj
 
 VPATH = GeoipMMDB   \
         IP2Location \
@@ -236,12 +236,12 @@ create_lib_clang-cl = $(call create_lib_cl, $(1), $(2))
 #   arg3, $(3): the code/data-symbol prefix(es). E.g. "geoip_ MMDB_"
 #
 extract_code_syms = nm $(1) | grep $(foreach s, $(2), -e ' T _$(s).*') | \
-                    sed 's/^.* _/  /' | sort --unique
+                    sed 's/^.* _/  /' | sort | uniq
 
 extract_data_syms = nm $(1)                                  | \
                     grep $(foreach s, $(2), -e ' [BDCGR] _$(s).*') | \
                     sed -e 's/^.* _\([_a-zA-Z0-9]*\)/  \1  DATA/'  | \
-                    sort --unique
+                    sort | uniq
 
 define make_def_file
   $(call green_msg, Generating $(1).)
