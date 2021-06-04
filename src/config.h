@@ -13,15 +13,4 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
-/*
- * Tests for 'fmodl()' used in init.c:
- */
-#if defined(__CYGWIN__)
-  #if (CYGWIN_VERSION_DLL_COMBINED >= 2009000)
-  #define HAVE_FMODL
-  #endif
-#else
-  #define HAVE_FMODL
-#endif
-
 #endif
