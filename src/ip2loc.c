@@ -280,8 +280,9 @@ static IP2Location *open_file (const char *fname)
     st.wMonth = loc->db_month;
     st.wYear  = loc->db_year + 2000;
 
-    WARNING ("IP2Loc file '%s' seems to contain junk. Date: %s\n",
-             fname, get_date_str(&st));
+    if (g_cfg.trace_level > 0)
+       WARNING ("IP2Loc file '%s' seems to contain junk. Date: %s\n",
+                fname, get_date_str(&st));
   }
   else
   {
