@@ -104,7 +104,7 @@ static void *mmap_remember (void *map, uint64_t offset, HANDLE handle)
   if (map == MAP_FAILED)  /* never remember this */
   {
     errno = EFAULT;
-    return (MAP_FAILED);
+    goto fail;
   }
 
   for (i = 0; i < DIM(mmap_storage); i++)
@@ -117,7 +117,13 @@ static void *mmap_remember (void *map, uint64_t offset, HANDLE handle)
       return (mmap_storage[i].rval);
     }
   }
+
   errno = EAGAIN;
+
+fail:
+  if (handle && handle != INVALID_HANDLE_VALUE)
+      CloseHandle (handle);
+
   return (MAP_FAILED); /* all buckets full */
 }
 
@@ -129,14 +135,14 @@ static int mmap_forget (void *map, struct mmap_info *info)
   {
     if (map == mmap_storage[i].rval)
     {
-      HANDLE hnd = mmap_storage[i].hnd;
+      HANDLE handle = mmap_storage[i].hnd;
 
       *info = mmap_storage[i];
       mmap_storage[i].map = NULL;   /* reuse this */
       mmap_storage[i].hnd = INVALID_HANDLE_VALUE;
 
-      if (hnd && hnd != INVALID_HANDLE_VALUE)
-         CloseHandle (hnd);
+      if (handle && handle != INVALID_HANDLE_VALUE)
+         CloseHandle (handle);
       SetLastError (0);
       return (0);
     }
