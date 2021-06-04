@@ -26,6 +26,7 @@ echo   trace_indent           = 2                                            >> 
 echo   trace_caller           = 1                                            >> wsock_trace.appveyor
 echo   trace_report           = %%WSOCK_TRACE_LEVEL%%                        >> wsock_trace.appveyor
 echo   trace_time             = relative                                     >> wsock_trace.appveyor
+echo   trace_time_usec        = 1                                            >> wsock_trace.appveyor
 echo   trace_max_len          = %%COLUMNS%%                                  >> wsock_trace.appveyor
 echo   callee_level           = 1                                            >> wsock_trace.appveyor
 echo   cpp_demangle           = 1                                            >> wsock_trace.appveyor
