@@ -154,7 +154,6 @@ const char *get_timestamp (void)
   SYSTEMTIME           now;
   LARGE_INTEGER        ticks;
   int64                clocks;
-  double               msec;
 
   switch (g_cfg.trace_time_format)
   {
@@ -169,12 +168,23 @@ const char *get_timestamp (void)
          else clocks = (int64) (ticks.QuadPart - last.QuadPart);
 
          last = ticks;
-         msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
 
-#if !defined(HAVE_FMODL)    /* If no 'fmodl()', fake it */
-         sprintf (buf, "%.3f msec: ", msec);
-#else
+         if (g_cfg.trace_time_usec)
          {
+           double      usec = (double)clocks / (double)g_cfg.clocks_per_usec;
+           int         dec = (int) fmodl (usec, 1000000.0);
+           const char *sec = qword_str ((unsigned __int64) (usec/1000000.0));
+           char *p;
+
+           strcpy (buf, sec);
+           p = strchr (buf, '\0');
+           *p++ = '.';
+           _utoa10w (dec, 6, p);
+           strcat (buf, " sec: ");
+         }
+         else
+         {
+           double      msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
            int         dec = (int) fmodl (msec, 1000.0);
            const char *sec = qword_str ((unsigned __int64) (msec/1000.0));
            char *p;
@@ -185,7 +195,6 @@ const char *get_timestamp (void)
            _utoa10w (dec, 3, p);
            strcat (buf, " sec: ");
          }
-#endif
          return (buf);
 
     case TS_ABSOLUTE:
@@ -628,6 +637,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 
   else if (!stricmp(key, "trace_time"))
      set_time_format (&g_cfg.trace_time_format, val);
+
+  else if (!stricmp(key, "trace_time_usec"))
+     g_cfg.trace_time_usec = atoi (val);
 
   else if (!stricmp(key, "pcap_enable"))
      g_cfg.PCAP.enable = atoi (val);

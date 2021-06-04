@@ -189,6 +189,7 @@ struct config_table {
        DWORD   reentries;
 
        TS_TYPE trace_time_format;
+       BOOL    trace_time_usec;
        uint64  start_ticks;
        uint64  clocks_per_usec;
 
