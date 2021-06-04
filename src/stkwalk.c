@@ -93,6 +93,16 @@ static smartlist_t *g_symbols_list;
 static int          g_quit_count = 0;
 static DWORD        g_num_compares;
 
+static const char *get_error (void);
+
+#if !defined(USE_PythonHook)
+  #define USE_PythonHook     1
+  #define USE_Py_inject_code 0
+#else
+  #define USE_PythonHook     0
+  #define USE_Py_inject_code 0
+#endif
+
 #if USE_SymEnumSymbolsEx
   static BOOL  g_long_CPP_syms = FALSE;
   static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose);
@@ -101,7 +111,7 @@ static DWORD        g_num_compares;
 #define USE_SymFromAaddr 1
 
 #define MAX_NAMELEN  1024        /* max name length for found symbols */
-#define TTBUFLEN     8096        /* for a temp buffer (2^13) */
+#define TBUF_LEN     1024        /* for a temp buffers */
 
 #ifndef IN_OPT
 #define IN_OPT
@@ -514,6 +524,286 @@ static const char *sym_tag_decode (unsigned tag)
 }
 #endif /* USE_SymEnumSymbolsEx */
 
+
+#if USE_PythonHook
+/**
+ * Special hacks for tracing Python scripts:
+ * If a module-list is like (starting with module 0 == python.exe' or 'python3.exe' etc.):
+ * ```
+ *   c:\ProgramFiles\Python39\src\python.exe                              0x1CED0000     104 kB
+ *   c:\gv\VC_2019\bin\wsock_trace.dll                                    0x644D0000     624 kB
+ *   c:\ProgramFiles\Python39\src\python311.dll                           0x64570000   5,816 kB
+ * ```
+ *
+ * Python 3.x: find and hook the `PyModule_Create2()` function. Then when it's called with
+ *   `PySocket_MODULE_NAME == "_socket"` in the `struct PyModuleDef` argument, enumerate
+ *   the `<g_py_dir>/DLLs/_socket.pyd` module for PDB symbols.
+ *
+ * Python 2.x: find and hook the `PyModule_New()` function. The rest is similar.
+ */
+static char     *g_py_dir, *g_py_exe, *g_py_dll;
+static int       g_py_major_ver;
+static HINSTANCE g_py_hnd;
+
+#if !defined(ssize_t) && !defined(_SSIZE_T_DEFINED)
+#define ssize_t INT_PTR
+#endif
+
+#define Py_ssize_t    ssize_t
+#define PyTypeObject  void
+
+typedef struct PyObject {
+        Py_ssize_t    ob_refcnt;
+        PyTypeObject *ob_type;
+      } PyObject;
+
+typedef struct PyModuleDef_Base {
+        PyObject      ob_base;
+        PyObject   *(*m_init)(void);
+        Py_ssize_t    m_index;
+        PyObject     *m_copy;
+      } PyModuleDef_Base;
+
+typedef struct PyModuleDef {
+        PyModuleDef_Base m_base;
+        const char      *m_name;
+        const char      *m_doc;
+      } PyModuleDef;
+
+typedef PyObject *(*func_PyModule_Create2) (PyModuleDef *m_def, int api_ver);
+typedef PyObject *(*func_PyModule_New) (const char *module);
+
+/**
+ * This requires that a `python*.dll` is in the same directory as `python*exe'.
+ * I'm not that's the case for all situations (like with `%WinDir\\py.exe`).
+ */
+static BOOL is_python_dll (const char *fname)
+{
+  BOOL  equal_dir;
+  char *dir;
+  const char *base, *ext;
+
+  dir = dirname (fname);
+  equal_dir = (stricmp(g_py_dir, dir) == 0);
+
+  base = fname + strlen (dir) + 1;
+  ext = strrchr (base, '.');
+
+  if (equal_dir && !stricmp(ext, ".dll") && !strnicmp(base, "python", 5))
+     g_py_dll = strdup (fname);
+
+  ext--;
+  while (isdigit((int)*ext))
+     ext--;
+  g_py_major_ver = ext[1] - '0';
+
+  free (dir);
+
+  if (equal_dir && g_py_dll && (g_py_major_ver == 2 || g_py_major_ver == 3))
+  {
+    TRACE (1, "equal_dir: %d, g_py_dll: '%s', g_py_major_ver: %d\n", equal_dir, g_py_dll, g_py_major_ver);
+    return (TRUE);
+  }
+  return (FALSE);
+}
+
+#if USE_Py_inject_code
+static func_PyModule_Create2 *g_PyModule_Create2 = NULL;
+static func_PyModule_New     *g_PyModule_New = NULL;
+
+static void unpatch_python_dll (void);
+
+static PyObject *our_PyModule_Create2 (PyModuleDef *m_def, int api_ver)
+{
+  PyObject *ret;
+
+  TRACE (1, "m_name: 0x%p, api_ver: %d.\n", m_def->m_name, api_ver);
+
+  unpatch_python_dll();
+
+  ret = (*g_PyModule_Create2) (m_def, api_ver);
+
+  TRACE (1, "ret: 0x%p.\n", ret);
+  return (ret);
+}
+
+static PyObject *our_PyModule_New (const char *m_name)
+{
+  PyObject *ret;
+
+  TRACE (1, "m_name: '%s'.\n", m_name);
+
+  unpatch_python_dll();
+
+  ret = (*g_PyModule_New) (m_name);
+
+  TRACE (1, "ret: 0x%p.\n", ret);
+  return (ret);
+}
+
+/**
+ * Rewritten from:
+ *  https://wiki.skullsecurity.org/.dll_Injection_and_Patching
+ *
+ * Except it's triggering a 'APPLICATION_FAULT_SOFTWARE_NX_FAULT' when
+ * the following 'str*[]' array are in the data-segment. Hence use
+ * `VirtualAlloc()`.
+ */
+
+/* This creates the wrapper, leaving an "????" where the call distance will be inserted.
+ */
+static char str_wrapper[] = "\x89\x90\x58\xee\x4f\x00\x60\xe8????\xc3";
+
+static char str_wrapper_C[] = "\x89\x90\x58\xee\x4f\x00\x60\xe8????\x83\xc4\x08\xc3";  /* add esp,8; ret */
+
+/* This is the actual patch
+ */
+static char str_patch[] = "\xE8????\x90";
+
+/* This is the original buffer, used when the .dll is removed (to restore the program's original
+ * functionality)
+ */
+static char str_unpatch[] = "\x29\x90\x88\xEE\x4F\x00";
+
+static char *vaddr_wrapper, *vaddr_patch;
+
+static void dump_opcodes (SIZE_T written)
+{
+  char  instructions [100];
+  char *p = instructions;
+  int   i;
+
+  for (i = 0; p < instructions + sizeof(instructions) - 2 && i < written; i++)
+  {
+    strcpy (p, str_hex_byte(vaddr_wrapper[i]));
+    p += 2;
+    *p++ = ' ';
+  }
+  *p = '\0';
+  TRACE (1, "WriteProcessMemory() wrote %lu bytes at 0x%p:\n"
+            "       %s\n", written, vaddr_wrapper, instructions);
+}
+
+static void inject_code (void)
+{
+  /* This is the address where the patch is going
+   */
+  INT_PTR addr_to_patch;
+  SIZE_T  written = 0;
+
+  if (g_py_major_ver == 3)
+       addr_to_patch = (INT_PTR) g_PyModule_Create2;
+  else addr_to_patch = (INT_PTR) g_PyModule_New;
+
+  strcpy (vaddr_wrapper, str_wrapper);
+  vaddr_patch = vaddr_wrapper + strlen(str_wrapper);
+  strcpy (vaddr_patch, str_patch);
+
+  /* This sets the "????" in the string to equal the distance between 'our_PyModule_X'
+   * and from the byte immediately after the ????, which is 12 bytes from the beginning of
+   * the string (that's where the relative distance begins)
+   */
+  *((INT_PTR*) (vaddr_wrapper + 8)) = addr_to_patch - (INT_PTR)(vaddr_wrapper + 12);
+
+  /* This replaces the ???? with the distance from the patch to the wrapper. 5 is added because that's
+   * the length of the call instruction (E8 xx xx xx xx xx) and the distance is relative to the byte
+   * after the call.
+   */
+  *((INT_PTR*) (vaddr_patch + 1)) = ((INT_PTR)vaddr_wrapper) - (addr_to_patch + 5);
+
+  /* Write our patch.
+   */
+  WriteProcessMemory (GetCurrentProcess(), (void*)addr_to_patch, vaddr_wrapper, sizeof(str_wrapper) + sizeof(str_patch) - 2, &written);
+  dump_opcodes (written);
+}
+
+/*
+ * Undo the above patch.
+ */
+static void unpatch_python_dll (void)
+{
+  INT_PTR addr_to_patch;
+  SIZE_T  written = 0;
+
+  if (g_py_major_ver == 3)
+       addr_to_patch = (INT_PTR) our_PyModule_Create2;
+  else addr_to_patch = (INT_PTR) our_PyModule_New;
+
+  *((INT_PTR*) (vaddr_wrapper + 8)) = addr_to_patch - (INT_PTR)(vaddr_wrapper + 10);
+  *((INT_PTR*) (vaddr_patch + 1)) = ((INT_PTR)vaddr_wrapper) - (addr_to_patch + 5);
+
+  WriteProcessMemory (GetCurrentProcess(), (void*)addr_to_patch, vaddr_patch, sizeof(str_unpatch) - 1, &written);
+  TRACE (1, "WriteProcessMemory() written: %lu.\n", written);
+}
+
+/*
+ * Patch 'python3*.dll' to call `our_PyModule_Create2()`.
+ * Or if it's Python 2.x, patch 'python2*.dll' to
+ * call `our_PyModule_New()`.
+ */
+static void patch_python_dll (void)
+{
+  DWORD prot = PAGE_READWRITE;
+  BOOL  vaddr_ok;
+
+  g_py_hnd = LoadLibrary (g_py_dll);
+  if (!g_py_hnd)
+  {
+    TRACE (1, "LoadLibrary (\"%s\") failed: %s.\n", g_py_dll, get_error());
+    goto failed;
+  }
+
+  if (g_py_major_ver == 3)
+  {
+    g_PyModule_Create2 = (func_PyModule_Create2*) GetProcAddress (g_py_hnd, "PyModule_Create2");
+    if (!g_PyModule_Create2)
+    {
+      TRACE (1, "Did not find \"PyModule_Create2\" in \"%s\".\n", g_py_dll);
+      goto failed;
+    }
+    TRACE (1, "g_py_dll: '%s', addr: 0x%p.\n", g_py_dll, g_PyModule_Create2);
+  }
+  else
+  {
+    g_PyModule_New = (func_PyModule_New*) GetProcAddress (g_py_hnd, "PyModule_New");
+    if (!g_PyModule_New)
+    {
+      TRACE (1, "Did not find \"PyModule_New\" in \"%s\".\n", g_py_dll);
+      goto failed;
+    }
+    TRACE (1, "g_py_dll: '%s', addr: 0x%p.\n", g_py_dll, g_PyModule_New);
+  }
+
+  vaddr_wrapper = VirtualAlloc (NULL, 1024, MEM_COMMIT, prot);
+  vaddr_ok = VirtualProtect (vaddr_wrapper, 1024, PAGE_EXECUTE_READWRITE, &prot);
+
+  TRACE (1, "vaddr_wrapper: %p, vaddr_ok: %d.\n", vaddr_wrapper, vaddr_ok);
+  if (!vaddr_ok)
+     goto failed;
+
+  inject_code();
+  return;
+
+failed:
+  if (vaddr_wrapper)
+     VirtualFree (vaddr_wrapper, 0, MEM_RELEASE);
+  if (g_py_hnd)
+     FreeLibrary (g_py_hnd);
+  g_py_hnd = NULL;
+  vaddr_wrapper = NULL;
+}
+
+#else
+
+/*
+ * Enumerate the extra .pyd files reported from Python.
+ */
+static void enumerate_py_DLLs (void)
+{
+}
+#endif /* USE_Py_inject_code  */
+#endif /* USE_PythonHook  */
+
 /*
  * Add some module information to 'g_modules_list'.
  */
@@ -653,6 +943,24 @@ BOOL StackWalkExit (void)
 {
   symbols_list_free();
   modules_list_free();
+#if USE_PythonHook
+  free (g_py_dir);
+  free (g_py_exe);
+  free (g_py_dll);
+
+#if USE_Py_inject_code
+  if (vaddr_wrapper)
+     VirtualFree (vaddr_wrapper, 0, MEM_RELEASE);
+  vaddr_wrapper = NULL;
+#endif
+
+  if (g_py_hnd)
+     FreeLibrary (g_py_hnd);
+
+  g_py_dir = g_py_exe = g_py_dll = NULL;
+  g_py_hnd = NULL;
+  g_py_major_ver = 0;
+#endif
   return (TRUE);
 }
 
@@ -1027,6 +1335,17 @@ static void enum_and_load_modules (void)
     BFD_load_debug_symbols (me->module_name, me->base_addr, me->size);
 #endif
 
+#if USE_PythonHook
+    if (g_py_exe && !g_py_dll && is_python_dll(me->module_name))
+    {
+  #if USE_Py_inject_code
+      patch_python_dll();
+  #else
+      enumerate_py_DLLs();
+  #endif
+     }
+#endif
+
 #if USE_SymEnumSymbolsEx
     if (g_cfg.pdb_report || g_cfg.trace_level >= 4)
        enum_and_load_symbols (me->module_name);
@@ -1041,22 +1360,27 @@ static void enum_and_load_modules (void)
 static BOOL set_symbol_search_path (void)
 {
   DWORD  symOptions;
-  char   tmp [TTBUFLEN];
-  char   path[TTBUFLEN];
+  char   tmp [TBUF_LEN], path [TBUF_LEN];
   char  *p    = path;
   char  *end  = path + sizeof(path) - 1;
   char  *dir  = NULL;
-  size_t left = end - path;
+  size_t left = end - p;
 
   if (GetModuleFileName(NULL, tmp, sizeof(tmp)) && (dir = dirname(tmp)) != NULL)
   {
-#if 0
-    if (!strnicmp(basename(tmp), "python", 6))
+#if USE_PythonHook
+    /*
+     * Match all 'python*.exe'.
+     */
+    const char *ext = strrchr (tmp, '.');
+    const char *base = basename (tmp);
+    BOOL        is_py = ext && (stricmp(ext, ".exe") == 0) &&
+                        (strnicmp(base, "python", 6) == 0);
+    if (is_py)
     {
-      TRACE (2, "Using Python from: \"%s\".\n", dir);
-      /**
-       * \todo, add the paths of the loaded PYDs to the 'symbolSearchPath'
-       */
+      g_py_dir = strdup (dir);
+      g_py_exe = strdup (tmp);
+      TRACE (1, "Python detected: \"%s\", g_py_dir: '%s'.\n", g_py_exe, g_py_dir);
     }
 #endif
     if (strcmp(dir, curr_dir))
@@ -1072,6 +1396,14 @@ static BOOL set_symbol_search_path (void)
     p += snprintf (p, left, "%s;", curr_dir);
     left = end - p;
   }
+
+#if USE_PythonHook
+  if (g_py_dir)
+  {
+    p += snprintf (p, left, "%s\\DLLs;", g_py_dir);
+    left = end - p;
+  }
+#endif
 
   if (GetEnvironmentVariable("_NT_SYMBOL_PATH", tmp, sizeof(tmp)))
   {
@@ -1746,7 +2078,6 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
 
 #if USE_SymFromAaddr
   sym.hdr.MaxNameLen = sizeof(sym.name);
-
   if (!(*p_SymFromAddr)(g_proc, addr, &ofs_from_symbol, &sym.hdr))
      return (4);
 
