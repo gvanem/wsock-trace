@@ -141,6 +141,7 @@ static BOOL lookup_ipv4_address (const char *ip_address, BOOL get_asn)
          wprintf (L"  ASN%-5u        %s\n", asn_number, asn_name);
     else wprintf (L"  ASN%-5c        %s\n", '?', L"<none>");
   }
+  puts ("");
   return (TRUE);
 }
 
