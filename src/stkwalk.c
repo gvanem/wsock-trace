@@ -530,9 +530,9 @@ static const char *sym_tag_decode (unsigned tag)
  * Special hacks for tracing Python scripts:
  * If a module-list is like (starting with module 0 == python.exe' or 'python3.exe' etc.):
  * ```
- *   c:\ProgramFiles\Python39\src\python.exe                              0x1CED0000     104 kB
- *   c:\gv\VC_2019\bin\wsock_trace.dll                                    0x644D0000     624 kB
- *   c:\ProgramFiles\Python39\src\python311.dll                           0x64570000   5,816 kB
+ *   c:\ProgramFiles\Python39\src\python.exe                0x1CED0000     104 kB
+ *   c:\gv\VC_2019\bin\wsock_trace.dll                      0x644D0000     624 kB
+ *   c:\ProgramFiles\Python\src\python311.dll               0x64570000   5,816 kB
  * ```
  *
  * Python 3.x: find and hook the `PyModule_Create2()` function. Then when it's called with
@@ -575,7 +575,7 @@ typedef PyObject *(*func_PyModule_New) (const char *module);
 
 /**
  * This requires that a `python*.dll` is in the same directory as `python*exe'.
- * I'm not that's the case for all situations (like with `%WinDir\\py.exe`).
+ * I'm not sure that's the case for all situations (like with `%WinDir\\py.exe`).
  */
 static BOOL is_python_dll (const char *fname)
 {
@@ -610,6 +610,8 @@ static BOOL is_python_dll (const char *fname)
 #if USE_Py_inject_code
 static func_PyModule_Create2 *g_PyModule_Create2 = NULL;
 static func_PyModule_New     *g_PyModule_New = NULL;
+static INT_PTR                addr_to_patch;
+static INT_PTR                addr_to_unpatch;
 
 static void unpatch_python_dll (void);
 
@@ -660,8 +662,8 @@ static char str_wrapper_C[] = "\x89\x90\x58\xee\x4f\x00\x60\xe8????\x83\xc4\x08\
  */
 static char str_patch[] = "\xE8????\x90";
 
-/* This is the original buffer, used when the .dll is removed (to restore the program's original
- * functionality)
+/* This is the original buffer, used when the .dll is removed (to restore the program's
+ * original functionality)
  */
 static char str_unpatch[] = "\x29\x90\x88\xEE\x4F\x00";
 
@@ -688,12 +690,7 @@ static void inject_code (void)
 {
   /* This is the address where the patch is going
    */
-  INT_PTR addr_to_patch;
-  SIZE_T  written = 0;
-
-  if (g_py_major_ver == 3)
-       addr_to_patch = (INT_PTR) g_PyModule_Create2;
-  else addr_to_patch = (INT_PTR) g_PyModule_New;
+  SIZE_T written = 0;
 
   strcpy (vaddr_wrapper, str_wrapper);
   vaddr_patch = vaddr_wrapper + strlen(str_wrapper);
@@ -713,7 +710,8 @@ static void inject_code (void)
 
   /* Write our patch.
    */
-  WriteProcessMemory (GetCurrentProcess(), (void*)addr_to_patch, vaddr_wrapper, sizeof(str_wrapper) + sizeof(str_patch) - 2, &written);
+  WriteProcessMemory (GetCurrentProcess(), (void*)addr_to_patch, vaddr_wrapper,
+                      sizeof(str_wrapper) + sizeof(str_patch) - 2, &written);
   dump_opcodes (written);
 }
 
@@ -722,17 +720,12 @@ static void inject_code (void)
  */
 static void unpatch_python_dll (void)
 {
-  INT_PTR addr_to_patch;
   SIZE_T  written = 0;
 
-  if (g_py_major_ver == 3)
-       addr_to_patch = (INT_PTR) our_PyModule_Create2;
-  else addr_to_patch = (INT_PTR) our_PyModule_New;
+  *((INT_PTR*) (vaddr_wrapper + 8)) = addr_to_unpatch - (INT_PTR)(vaddr_wrapper + 10);
+  *((INT_PTR*) (vaddr_patch + 1)) = ((INT_PTR)vaddr_wrapper) - (addr_to_unpatch + 5);
 
-  *((INT_PTR*) (vaddr_wrapper + 8)) = addr_to_patch - (INT_PTR)(vaddr_wrapper + 10);
-  *((INT_PTR*) (vaddr_patch + 1)) = ((INT_PTR)vaddr_wrapper) - (addr_to_patch + 5);
-
-  WriteProcessMemory (GetCurrentProcess(), (void*)addr_to_patch, vaddr_patch, sizeof(str_unpatch) - 1, &written);
+  WriteProcessMemory (GetCurrentProcess(), (void*)addr_to_unpatch, vaddr_patch, sizeof(str_unpatch) - 1, &written);
   TRACE (1, "WriteProcessMemory() written: %lu.\n", written);
 }
 
@@ -756,23 +749,27 @@ static void patch_python_dll (void)
   if (g_py_major_ver == 3)
   {
     g_PyModule_Create2 = (func_PyModule_Create2*) GetProcAddress (g_py_hnd, "PyModule_Create2");
+    addr_to_patch   = (INT_PTR) g_PyModule_Create2;
+    addr_to_unpatch = (INT_PTR) our_PyModule_Create2;
     if (!g_PyModule_Create2)
     {
       TRACE (1, "Did not find \"PyModule_Create2\" in \"%s\".\n", g_py_dll);
       goto failed;
     }
-    TRACE (1, "g_py_dll: '%s', addr: 0x%p.\n", g_py_dll, g_PyModule_Create2);
   }
   else
   {
     g_PyModule_New = (func_PyModule_New*) GetProcAddress (g_py_hnd, "PyModule_New");
+    addr_to_patch   = (INT_PTR) g_PyModule_New;
+    addr_to_unpatch = (INT_PTR) our_PyModule_New;
     if (!g_PyModule_New)
     {
       TRACE (1, "Did not find \"PyModule_New\" in \"%s\".\n", g_py_dll);
       goto failed;
     }
-    TRACE (1, "g_py_dll: '%s', addr: 0x%p.\n", g_py_dll, g_PyModule_New);
   }
+
+  TRACE (1, "g_py_dll: '%s', addr: 0x%p.\n", g_py_dll, (const void*)addr_to_patch);
 
   vaddr_wrapper = VirtualAlloc (NULL, 1024, MEM_COMMIT, prot);
   vaddr_ok = VirtualProtect (vaddr_wrapper, 1024, PAGE_EXECUTE_READWRITE, &prot);
