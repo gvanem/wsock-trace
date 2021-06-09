@@ -2,6 +2,8 @@
 # This text will generate a 'appveyor-hosts' file.
 # This file was generated from 'appveyor-script.bat'.
 #
+# DO NOT EDIT THE 'appveyor-hosts' FILE. But this one.
+#
 127.0.0.1   localhost
 ::1         localhost
 127.0.0.1   mpa.one.microsoft.com

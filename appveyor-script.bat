@@ -19,6 +19,7 @@ exit /b 1
 echo Generating %CD%\wsock_trace.appveyor...
 echo #                                                                        > wsock_trace.appveyor
 echo # This file was generated from %0.                                      >> wsock_trace.appveyor
+echo # DO NOT EDIT!                                                          >> wsock_trace.appveyor
 echo #                                                                       >> wsock_trace.appveyor
 echo [core]                                                                  >> wsock_trace.appveyor
 echo   trace_level            = %%WSOCK_TRACE_LEVEL%%                        >> wsock_trace.appveyor
@@ -125,7 +126,7 @@ set COLUMNS=120
 :: Some issue with the Cygwin builds forces me to put the generated
 :: 'wsock_trace.appveyor' in AppVeyor's %APPDATA% directory.
 ::
-copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace > NUL
+if exist c:\Users\appveyor\AppData\Roaming\. copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace > NUL
 exit /b 0
 
 ::
