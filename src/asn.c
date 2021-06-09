@@ -631,7 +631,8 @@ static int libloc_handle_net (struct loc_network    *net,
   char                 print_buf [1000];
   int                  rc = 0;
   uint32_t             AS_num;
-  BOOL                 is_anycast, is_anon_proxy, sat_provider; //, is_tor_exit /* some day */ ;
+  BOOL                 is_anycast, is_anon_proxy, sat_provider;
+  BOOL                 is_hostile; /*, is_tor_exit; // some day */
 
   if (ip4)
      _prefix -= 96;
@@ -649,6 +650,7 @@ static int libloc_handle_net (struct loc_network    *net,
   is_anycast    = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANYCAST) != 0);
   is_anon_proxy = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANONYMOUS_PROXY) != 0);
   sat_provider  = (loc_network_has_flag (net, LOC_NETWORK_FLAG_SATELLITE_PROVIDER) != 0);
+  is_hostile    = (loc_network_has_flag (net, LOC_NETWORK_FLAG_DROP) != 0);
 //is_tor_exit   = (loc_network_has_flag (net, LOC_NETWORK_FLAG_TOR_EXIT) != 0);
 
   /* Since a Teredo address is valid here, maybe other blocks have an AS_num too?
@@ -688,6 +690,8 @@ static int libloc_handle_net (struct loc_network    *net,
      strcat (attributes, ", Anonymous Proxy");
   if (sat_provider)
      strcat (attributes, ", Satellite Provider");
+  if (is_hostile)
+     strcat (attributes, ", Hostile");
 
   snprintf (print_buf, sizeof(print_buf), "%u, name: %.*s, net: %s%s\n",
             AS_num, ASN_MAX_NAME-30, AS_name, net_name, attributes);
