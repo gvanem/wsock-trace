@@ -3,7 +3,7 @@
 #                                                                             #
 # libloc - A library to determine the location of someone on the Internet     #
 #                                                                             #
-# Copyright (C) 2020 IPFire Development Team <info@ipfire.org>                #
+# Copyright (C) 2020-2021 IPFire Development Team <info@ipfire.org>           #
 #                                                                             #
 # This library is free software; you can redistribute it and/or               #
 # modify it under the terms of the GNU Lesser General Public                  #
@@ -33,6 +33,7 @@ FLAGS = {
 	_location.NETWORK_FLAG_ANONYMOUS_PROXY    : "A1",
 	_location.NETWORK_FLAG_SATELLITE_PROVIDER : "A2",
 	_location.NETWORK_FLAG_ANYCAST            : "A3",
+	_location.NETWORK_FLAG_DROP               : "XD",
 }
 
 class OutputWriter(object):

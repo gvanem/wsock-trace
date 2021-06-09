@@ -1,7 +1,7 @@
 /*
 	libloc - A library to determine the location of someone on the Internet
 
-	Copyright (C) 2017 IPFire Development Team <info@ipfire.org>
+	Copyright (C) 2017-2021 IPFire Development Team <info@ipfire.org>
 
 	This library is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@ enum loc_network_flags {
 	LOC_NETWORK_FLAG_ANONYMOUS_PROXY    = (1 << 0), // A1
 	LOC_NETWORK_FLAG_SATELLITE_PROVIDER = (1 << 1), // A2
 	LOC_NETWORK_FLAG_ANYCAST            = (1 << 2), // A3
+	LOC_NETWORK_FLAG_DROP               = (1 << 3), // XD
 };
 
 struct loc_network;

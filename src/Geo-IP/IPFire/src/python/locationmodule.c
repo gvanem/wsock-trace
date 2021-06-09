@@ -1,7 +1,7 @@
 /*
 	libloc - A library to determine the location of someone on the Internet
 
-	Copyright (C) 2017 IPFire Development Team <info@ipfire.org>
+	Copyright (C) 2017-2021 IPFire Development Team <info@ipfire.org>
 
 	This library is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -167,6 +167,9 @@ PyMODINIT_FUNC PyInit__location(void) {
 		return NULL;
 
 	if (PyModule_AddIntConstant(m, "NETWORK_FLAG_ANYCAST", LOC_NETWORK_FLAG_ANYCAST))
+		return NULL;
+
+	if (PyModule_AddIntConstant(m, "NETWORK_FLAG_DROP", LOC_NETWORK_FLAG_DROP))
 		return NULL;
 
 	// Add latest database version

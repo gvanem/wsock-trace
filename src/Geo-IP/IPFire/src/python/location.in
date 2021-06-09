@@ -147,6 +147,9 @@ class CLI(object):
 		list_networks_by_flags.add_argument("--anycast",
 			action="store_true", help=_("Anycasts"),
 		)
+		list_networks_by_flags.add_argument("--drop",
+			action="store_true", help=_("Hostile Networks safe to drop"),
+		)
 		list_networks_by_flags.add_argument("--family", choices=("ipv6", "ipv4"))
 		list_networks_by_flags.add_argument("--format",
 			choices=location.export.formats.keys(), default="list")
@@ -208,6 +211,7 @@ class CLI(object):
 				if db:
 					db.__delete__()
 				db = None
+
 			else:
 				sys.stderr.write("location: Could not open database %s: %s\n" \
 					% (args.database, e))
@@ -310,6 +314,12 @@ class CLI(object):
 					_("Anycast"), _("yes"),
 				))
 
+			# Hostile Network
+			if network.has_flag(location.NETWORK_FLAG_DROP):
+				print(format % (
+					_("Hostile Network safe to drop"), _("yes"),
+				))
+
 		return ret
 
 	def handle_dump(self, db, ns):
@@ -351,6 +361,7 @@ class CLI(object):
 			location.NETWORK_FLAG_ANONYMOUS_PROXY    : "is-anonymous-proxy:",
 			location.NETWORK_FLAG_SATELLITE_PROVIDER : "is-satellite-provider:",
 			location.NETWORK_FLAG_ANYCAST            : "is-anycast:",
+			location.NETWORK_FLAG_DROP               : "drop:",
 		}
 
 		# Iterate over all networks
@@ -529,6 +540,9 @@ class CLI(object):
 		if ns.anycast:
 			flags |= location.NETWORK_FLAG_ANYCAST
 
+		if ns.drop:
+			flags |= location.NETWORK_FLAG_DROP
+
 		if not flags:
 			raise ValueError(_("You must at least pass one flag"))
 
@@ -557,7 +571,7 @@ class CLI(object):
 				asns.append(object)
 
 			elif location.country_code_is_valid(object) \
-					or object in ("A1", "A2", "A3"):
+					or object in ("A1", "A2", "A3", "XD"):
 				countries.append(object)
 
 			else:
@@ -566,7 +580,7 @@ class CLI(object):
 
 		# Default to exporting all countries
 		if not countries and not asns:
-			countries = ["A1", "A2", "A3"] + [country.code for country in db.countries]
+			countries = ["A1", "A2", "A3", "XD"] + [country.code for country in db.countries]
 
 		# Select the output format
 		writer = self.__get_output_formatter(ns)

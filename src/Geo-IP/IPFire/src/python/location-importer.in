@@ -166,6 +166,7 @@ class CLI(object):
 
 				-- networks
 				CREATE TABLE IF NOT EXISTS networks(network inet, country text);
+				ALTER TABLE networks ADD COLUMN IF NOT EXISTS original_countries text[];
 				ALTER TABLE networks ADD COLUMN IF NOT EXISTS source text NOT NULL;
 				CREATE UNIQUE INDEX IF NOT EXISTS networks_network ON networks(network);
 				CREATE INDEX IF NOT EXISTS networks_family ON networks USING BTREE(family(network));
@@ -182,6 +183,7 @@ class CLI(object):
 				);
 				CREATE UNIQUE INDEX IF NOT EXISTS autnum_overrides_number
 					ON autnum_overrides(number);
+				ALTER TABLE autnum_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
 
 				CREATE TABLE IF NOT EXISTS network_overrides(
 					network inet NOT NULL,
@@ -194,6 +196,7 @@ class CLI(object):
 					ON network_overrides(network);
 				CREATE INDEX IF NOT EXISTS network_overrides_search
 					ON network_overrides USING GIST(network inet_ops);
+				ALTER TABLE network_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
 			""")
 
 		return db
@@ -301,7 +304,20 @@ class CLI(object):
 							WHERE networks.autnum = overrides.number
 					),
 					FALSE
-				) AS is_anycast
+				) AS is_anycast,
+				COALESCE(
+					(
+						SELECT is_drop FROM network_overrides overrides
+							WHERE networks.network <<= overrides.network
+							ORDER BY masklen(overrides.network) DESC
+							LIMIT 1
+					),
+					(
+						SELECT is_drop FROM autnum_overrides overrides
+							WHERE networks.autnum = overrides.number
+					),
+					FALSE
+				) AS is_drop
 			FROM (
 				SELECT
 					known_networks.network AS network,
@@ -350,6 +366,9 @@ class CLI(object):
 			if row.is_anycast:
 				network.set_flag(location.NETWORK_FLAG_ANYCAST)
 
+			if row.is_drop:
+				network.set_flag(location.NETWORK_FLAG_DROP)
+
 		# Add all countries
 		log.info("Writing countries...")
 		rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
@@ -379,7 +398,7 @@ class CLI(object):
 					ON COMMIT DROP;
 				CREATE UNIQUE INDEX _organizations_handle ON _organizations(handle);
 
-				CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL, source text NOT NULL)
+				CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL, original_countries text[] NOT NULL, source text NOT NULL)
 					ON COMMIT DROP;
 				CREATE INDEX _rirdata_search ON _rirdata USING BTREE(family(network), masklen(network));
 				CREATE UNIQUE INDEX _rirdata_network ON _rirdata(network);
@@ -410,8 +429,8 @@ class CLI(object):
 			for family in (row.family for row in families):
 				smallest = self.db.get("SELECT MIN(masklen(network)) AS prefix FROM _rirdata WHERE family(network) = %s", family)
 
-				self.db.execute("INSERT INTO networks(network, country, source) \
-					SELECT network, country, source FROM _rirdata WHERE masklen(network) = %s AND family(network) = %s", smallest.prefix, family)
+				self.db.execute("INSERT INTO networks(network, country, original_countries, source) \
+					SELECT network, country, original_countries, source FROM _rirdata WHERE masklen(network) = %s AND family(network) = %s", smallest.prefix, family)
 
 				# ... determine any other prefixes for this network family, ...
 				prefixes = self.db.query("SELECT DISTINCT masklen(network) AS prefix FROM _rirdata \
@@ -425,6 +444,7 @@ class CLI(object):
 							SELECT
 								_rirdata.network,
 								_rirdata.country,
+								_rirdata.original_countries,
 								_rirdata.source
 							FROM
 								_rirdata
@@ -438,6 +458,7 @@ class CLI(object):
 								DISTINCT ON (c.network)
 								c.network,
 								c.country,
+								c.original_countries,
 								c.source,
 								masklen(networks.network),
 								networks.country AS parent_country
@@ -452,10 +473,11 @@ class CLI(object):
 								masklen(networks.network) DESC NULLS LAST
 						)
 						INSERT INTO
-							networks(network, country, source)
+							networks(network, country, original_countries, source)
 						SELECT
 							network,
 							country,
+							original_countries,
 							source
 						FROM
 							filtered
@@ -624,28 +646,39 @@ class CLI(object):
 				inetnum[key] = [ipaddress.ip_network(val, strict=False)]
 
 			elif key == "country":
-				inetnum[key] = val.upper()
+				val = val.upper()
+
+				# Catch RIR data objects with more than one country code...
+				if not key in inetnum:
+					inetnum[key] = []
+				else:
+					if val in inetnum.get("country"):
+						# ... but keep this list distinct...
+						continue
+
+				inetnum[key].append(val)
 
 		# Skip empty objects
 		if not inetnum or not "country" in inetnum:
 			return
+
+		# Prepare skipping objects with unknown country codes...
+		invalidcountries = [singlecountry for singlecountry in inetnum.get("country") if singlecountry not in validcountries]
 
 		# Iterate through all networks enumerated from above, check them for plausibility and insert
 		# them into the database, if _check_parsed_network() succeeded
 		for single_network in inetnum.get("inet6num") or inetnum.get("inetnum"):
 			if self._check_parsed_network(single_network):
 
-				# Skip objects with unknown country codes - to avoid log spam for invalid or too small
-				# networks, this check is - kinda ugly - done at this point
-				if validcountries and inetnum.get("country") not in validcountries:
-					log.warning("Skipping network with bogus country '%s': %s" % \
-						(inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
-					break
+				# Skip objects with unknown country codes if they are valid to avoid log spam...
+				if validcountries and invalidcountries:
+					log.warning("Skipping network with bogus countr(y|ies) %s (original countries: %s): %s" % \
+						(invalidcountries, inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
 
 				# Everything is fine here, run INSERT statement...
-				self.db.execute("INSERT INTO _rirdata(network, country, source) \
-					VALUES(%s, %s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
-					"%s" % single_network, inetnum.get("country"), source_key,
+				self.db.execute("INSERT INTO _rirdata(network, country, original_countries, source) \
+					VALUES(%s, %s, %s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
+					"%s" % single_network, inetnum.get("country")[0], inetnum.get("country"), source_key,
 				)
 
 	def _parse_org_block(self, block, source_key):
@@ -736,10 +769,10 @@ class CLI(object):
 		if not self._check_parsed_network(network):
 			return
 
-		self.db.execute("INSERT INTO networks(network, country, source) \
-			VALUES(%s, %s, %s) ON CONFLICT (network) DO \
+		self.db.execute("INSERT INTO networks(network, country, original_countries, source) \
+			VALUES(%s, %s, %s, %s) ON CONFLICT (network) DO \
 			UPDATE SET country = excluded.country",
-			"%s" % network, country, source_key,
+			"%s" % network, country, [country], source_key,
 		)
 
 	def handle_update_announcements(self, ns):
@@ -966,14 +999,16 @@ class CLI(object):
 									country,
 									is_anonymous_proxy,
 									is_satellite_provider,
-									is_anycast
-								) VALUES (%s, %s, %s, %s, %s)
+									is_anycast,
+									is_drop
+								) VALUES (%s, %s, %s, %s, %s, %s)
 								ON CONFLICT (network) DO NOTHING""",
 								"%s" % network,
 								block.get("country"),
 								self._parse_bool(block, "is-anonymous-proxy"),
 								self._parse_bool(block, "is-satellite-provider"),
 								self._parse_bool(block, "is-anycast"),
+								self._parse_bool(block, "drop"),
 							)
 
 						elif type == "aut-num":
@@ -994,8 +1029,9 @@ class CLI(object):
 									country,
 									is_anonymous_proxy,
 									is_satellite_provider,
-									is_anycast
-								) VALUES(%s, %s, %s, %s, %s, %s)
+									is_anycast,
+									is_drop
+								) VALUES(%s, %s, %s, %s, %s, %s, %s)
 								ON CONFLICT DO NOTHING""",
 								autnum,
 								block.get("name"),
@@ -1003,6 +1039,7 @@ class CLI(object):
 								self._parse_bool(block, "is-anonymous-proxy"),
 								self._parse_bool(block, "is-satellite-provider"),
 								self._parse_bool(block, "is-anycast"),
+								self._parse_bool(block, "drop"),
 							)
 
 						else:
