@@ -346,13 +346,10 @@ int load_dynamic_table (struct LoadTable *tab, int tab_size)
     {
       func_addr = GetProcAddress (mod_handle, tab->func_name);
 
-      if (!tab->optional)
+      if (!tab->optional && !func_addr)
       {
-        if (!func_addr)
-        {
-          TRACE (2, "Function \"%s\" not found in %s.\n", tab->func_name, tab->mod_name);
-          j++;
-        }
+        TRACE (2, "Function \"%s\" not found in %s.\n", tab->func_name, tab->mod_name);
+        j++;
       }
       *tab->func_addr = func_addr;
     }
@@ -421,7 +418,7 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
    * '_kbhit()' and '_getch()' for CygWin based on:
    *   https://stackoverflow.com/questions/29335758/using-kbhit-and-getch-on-linux
    */
-  static int ch, bytes_waiting;
+  static int ch_waiting, bytes_waiting;
   static struct termios old_term;
 
   static void enable_raw_mode (void)
@@ -444,20 +441,20 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
     BOOL rc;
 
     enable_raw_mode();
-    ch = ioctl (STDIN_FILENO, FIONREAD, &bytes_waiting);
+    ch_waiting = ioctl (STDIN_FILENO, FIONREAD, &bytes_waiting);
     rc = (bytes_waiting > 0);
     disable_raw_mode();
     tcflush (STDIN_FILENO, TCIFLUSH);
-    TRACE (2, "rc: %d, bytes_waiting: %d\n", rc, bytes_waiting);
+    TRACE (2, "ch_waiting: %d, bytes_waiting: %d\n", ch_waiting, bytes_waiting);
     return (rc);
   }
 
   int _getch (void)
   {
-    if (bytes_waiting)
+    if (bytes_waiting > 0)
     {
-      bytes_waiting = 0;
-      return (ch);
+      bytes_waiting--;
+      return (ch_waiting);
     }
     return (0);
   }
