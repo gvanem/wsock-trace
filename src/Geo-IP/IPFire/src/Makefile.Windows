@@ -1,7 +1,7 @@
 #
 # GNU Makefile for libloc. Supporting MinGW, MSVC or clang-cl.
 #
-# By G. Vanem <gvanem@yahoo.no> 2020.
+# By G. Vanem <gvanem@yahoo.no> 2020 - 2021.
 #
 # Ref: https://git.ipfire.org/pub/git/location/libloc.git
 #      https://location.ipfire.org/how-to-use
@@ -151,6 +151,7 @@ else ifeq ($(CC),clang-cl)
   CFLAGS += -W4                             \
             -ferror-limit=5                 \
             -Wno-unused-parameter           \
+            -Wno-unused-variable            \
             -Wno-visibility                 \
             -Wno-missing-field-initializers \
             -Wno-incompatible-pointer-types
