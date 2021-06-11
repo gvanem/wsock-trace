@@ -19,6 +19,7 @@
 
 import argparse
 import ipaddress
+import json
 import logging
 import math
 import re
@@ -183,6 +184,7 @@ class CLI(object):
 				);
 				CREATE UNIQUE INDEX IF NOT EXISTS autnum_overrides_number
 					ON autnum_overrides(number);
+				ALTER TABLE autnum_overrides ADD COLUMN IF NOT EXISTS source text;
 				ALTER TABLE autnum_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
 
 				CREATE TABLE IF NOT EXISTS network_overrides(
@@ -196,6 +198,7 @@ class CLI(object):
 					ON network_overrides(network);
 				CREATE INDEX IF NOT EXISTS network_overrides_search
 					ON network_overrides USING GIST(network inet_ops);
+				ALTER TABLE network_overrides ADD COLUMN IF NOT EXISTS source text;
 				ALTER TABLE network_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
 			""")
 
@@ -505,6 +508,9 @@ class CLI(object):
 						for line in f:
 							self._parse_line(line, source_key, validcountries)
 
+		# Download and import (technical) AS names from ARIN
+		self._import_as_names_from_arin()
+
 	def _check_parsed_network(self, network):
 		"""
 			Assistive function to detect and subsequently sort out parsed
@@ -775,6 +781,58 @@ class CLI(object):
 			"%s" % network, country, [country], source_key,
 		)
 
+	def _import_as_names_from_arin(self):
+		downloader = location.importer.Downloader()
+
+		# XXX: Download AS names file from ARIN (note that these names appear to be quite
+		# technical, not intended for human consumption, as description fields in
+		# organisation handles for other RIRs are - however, this is what we have got,
+		# and in some cases, it might be still better than nothing)
+		with downloader.request("https://ftp.arin.net/info/asn.txt", return_blocks=False) as f:
+			for line in f:
+				# Convert binary line to string...
+				line = str(line)
+
+				# ... valid lines start with a space, followed by the number of the Autonomous System ...
+				if not line.startswith(" "):
+					continue
+
+				# Split line and check if there is a valid ASN in it...
+				asn, name = line.split()[0:2]
+
+				try:
+					asn = int(asn)
+				except ValueError:
+					log.debug("Skipping ARIN AS names line not containing an integer for ASN")
+					continue
+
+				if not ((1 <= asn and asn <= 23455) or (23457 <= asn and asn <= 64495) or (131072 <= asn and asn <= 4199999999)):
+					log.debug("Skipping ARIN AS names line not containing a valid ASN: %s" % asn)
+					continue
+
+				# Skip any AS name that appears to be a placeholder for a different RIR or entity...
+				if re.match(r"^(ASN-BLK|)(AFCONC|AFRINIC|APNIC|ASNBLK|DNIC|LACNIC|RIPE|IANA)(\d?$|\-.*)", name):
+					continue
+
+				# Bail out in case the AS name contains anything we do not expect here...
+				if re.search(r"[^a-zA-Z0-9-_]", name):
+					log.debug("Skipping ARIN AS name for %s containing invalid characters: %s" % \
+							(asn, name))
+
+				# Things look good here, run INSERT statement and skip this one if we already have
+				# a (better?) name for this Autonomous System...
+				self.db.execute("""
+					INSERT INTO autnums(
+						number,
+						name,
+						source
+					) VALUES (%s, %s, %s)
+					ON CONFLICT (number) DO NOTHING""",
+					asn,
+					name,
+					"ARIN",
+				)
+
 	def handle_update_announcements(self, ns):
 		server = ns.server[0]
 
@@ -974,6 +1032,10 @@ class CLI(object):
 				TRUNCATE TABLE network_overrides;
 			""")
 
+			# Update overrides for various cloud providers big enough to publish their own IP
+			# network allocation lists in a machine-readable format...
+			self._update_overrides_for_aws()
+
 			for file in ns.files:
 				log.info("Reading %s..." % file)
 
@@ -997,14 +1059,16 @@ class CLI(object):
 								INSERT INTO network_overrides(
 									network,
 									country,
+									source,
 									is_anonymous_proxy,
 									is_satellite_provider,
 									is_anycast,
 									is_drop
-								) VALUES (%s, %s, %s, %s, %s, %s)
+								) VALUES (%s, %s, %s, %s, %s, %s, %s)
 								ON CONFLICT (network) DO NOTHING""",
 								"%s" % network,
 								block.get("country"),
+								"manual",
 								self._parse_bool(block, "is-anonymous-proxy"),
 								self._parse_bool(block, "is-satellite-provider"),
 								self._parse_bool(block, "is-anycast"),
@@ -1027,15 +1091,17 @@ class CLI(object):
 									number,
 									name,
 									country,
+									source,
 									is_anonymous_proxy,
 									is_satellite_provider,
 									is_anycast,
 									is_drop
-								) VALUES(%s, %s, %s, %s, %s, %s, %s)
+								) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)
 								ON CONFLICT DO NOTHING""",
 								autnum,
 								block.get("name"),
 								block.get("country"),
+								"manual",
 								self._parse_bool(block, "is-anonymous-proxy"),
 								self._parse_bool(block, "is-satellite-provider"),
 								self._parse_bool(block, "is-anycast"),
@@ -1044,6 +1110,115 @@ class CLI(object):
 
 						else:
 							log.warning("Unsupported type: %s" % type)
+
+	def _update_overrides_for_aws(self):
+		# Download Amazon AWS IP allocation file to create overrides...
+		downloader = location.importer.Downloader()
+
+		try:
+			with downloader.request("https://ip-ranges.amazonaws.com/ip-ranges.json", return_blocks=False) as f:
+				aws_ip_dump = json.load(f.body)
+		except Exception as e:
+			log.error("unable to preprocess Amazon AWS IP ranges: %s" % e)
+			return
+
+		# XXX: Set up a dictionary for mapping a region name to a country. Unfortunately,
+		# there seems to be no machine-readable version available of this other than
+		# https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
+		# (worse, it seems to be incomplete :-/ ); https://www.cloudping.cloud/endpoints
+		# was helpful here as well.
+		aws_region_country_map = {
+				"af-south-1": "ZA",
+				"ap-east-1": "HK",
+				"ap-south-1": "IN",
+				"ap-south-2": "IN",
+				"ap-northeast-3": "JP",
+				"ap-northeast-2": "KR",
+				"ap-southeast-1": "SG",
+				"ap-southeast-2": "AU",
+				"ap-southeast-3": "MY",
+				"ap-southeast-4": "AU",
+				"ap-northeast-1": "JP",
+				"ca-central-1": "CA",
+				"eu-central-1": "DE",
+				"eu-central-2": "CH",
+				"eu-west-1": "IE",
+				"eu-west-2": "GB",
+				"eu-south-1": "IT",
+				"eu-south-2": "ES",
+				"eu-west-3": "FR",
+				"eu-north-1": "SE",
+				"me-central-1": "AE",
+				"me-south-1": "BH",
+				"sa-east-1": "BR"
+				}
+
+		# Fetch all valid country codes to check parsed networks aganist...
+		rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+		validcountries = []
+
+		for row in rows:
+			validcountries.append(row.country_code)
+
+		with self.db.transaction():
+			for snetwork in aws_ip_dump["prefixes"] + aws_ip_dump["ipv6_prefixes"]:
+				try:
+					network = ipaddress.ip_network(snetwork.get("ip_prefix") or snetwork.get("ipv6_prefix"), strict=False)
+				except ValueError:
+					log.warning("Unable to parse line: %s" % snetwork)
+					continue
+
+				# Sanitize parsed networks...
+				if not self._check_parsed_network(network):
+					continue
+
+				# Determine region of this network...
+				region = snetwork["region"]
+				cc = None
+				is_anycast = False
+
+				# Any region name starting with "us-" will get "US" country code assigned straight away...
+				if region.startswith("us-"):
+					cc = "US"
+				elif region.startswith("cn-"):
+					# ... same goes for China ...
+					cc = "CN"
+				elif region == "GLOBAL":
+					# ... funny region name for anycast-like networks ...
+					is_anycast = True
+				elif region in aws_region_country_map:
+					# ... assign looked up country code otherwise ...
+					cc = aws_region_country_map[region]
+				else:
+					# ... and bail out if we are missing something here
+					log.warning("Unable to determine country code for line: %s" % snetwork)
+					continue
+
+				# Skip networks with unknown country codes
+				if not is_anycast and validcountries and cc not in validcountries:
+					log.warning("Skipping Amazon AWS network with bogus country '%s': %s" % \
+						(cc, network))
+					return
+
+				# Conduct SQL statement...
+				self.db.execute("""
+					INSERT INTO network_overrides(
+						network,
+						country,
+						source,
+						is_anonymous_proxy,
+						is_satellite_provider,
+						is_anycast
+					) VALUES (%s, %s, %s, %s, %s, %s)
+					ON CONFLICT (network) DO NOTHING""",
+					"%s" % network,
+					cc,
+					"Amazon AWS IP feed",
+					None,
+					None,
+					is_anycast,
+				)
+
 
 	@staticmethod
 	def _parse_bool(block, key):

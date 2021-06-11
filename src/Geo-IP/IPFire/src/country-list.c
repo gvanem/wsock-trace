@@ -151,8 +151,13 @@ LOC_EXPORT int loc_country_list_contains_code(
 	struct loc_country* country;
 
 	int r = loc_country_new(list->ctx, &country, code);
-	if (r)
-		return -1;
+	if (r) {
+		// Ignore invalid country codes which would never match
+		if (errno == EINVAL)
+			return 0;
+		else
+			return r;
+	}
 
 	r = loc_country_list_contains(list, country);
 	loc_country_unref(country);

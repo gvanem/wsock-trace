@@ -34,8 +34,11 @@ struct loc_country {
 };
 
 LOC_EXPORT int loc_country_new(struct loc_ctx* ctx, struct loc_country** country, const char* country_code) {
-	if (!loc_country_code_is_valid(country_code))
-		return -EINVAL;
+	// Check of the country code is valid
+	if (!loc_country_code_is_valid(country_code)) {
+		errno = EINVAL;
+		return 1;
+	}
 
 	struct loc_country* c = calloc(1, sizeof(*c));
 	if (!c)
