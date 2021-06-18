@@ -86,6 +86,11 @@ EXPORTS
  _GetNameInfoW@28
  _FreeAddrInfoW@4
 
+ _WSAHtons@12
+ _WSAHtonl@12
+ _WSANtohl@12
+ _WSANtohs@12
+
 ;
 ; Other functions exported from ws2_32.dll:
 ;
@@ -98,8 +103,6 @@ EXPORTS
 ;   WSAGetServiceClassInfoW@16
 ;   WSAGetServiceClassNameByClassIdA@12
 ;   WSAGetServiceClassNameByClassIdW@12
-;   WSAHtonl@12
-;   WSAHtons@12
 ;   WSAInstallServiceClassA@4
 ;   WSAInstallServiceClassW@4
 ;   WSAJoinLeaf@32
@@ -109,8 +112,6 @@ EXPORTS
 ;   WSALookupServiceNextA@16
 ;   WSALookupServiceNextW@16
 ;   WSANSPIoctl@32
-;   WSANtohl@12
-;   WSANtohs@12
 ;   WSAProviderConfigChange@12
 ;   WSARemoveServiceClass@4
 ;   WSASetServiceA@12

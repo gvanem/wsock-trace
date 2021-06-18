@@ -188,6 +188,10 @@ DEF_FUNC (u_short,     htons,       (u_short x));
 DEF_FUNC (u_short,     ntohs,       (u_short x));
 DEF_FUNC (__ms_u_long, htonl,       (__ms_u_long x));
 DEF_FUNC (__ms_u_long, ntohl,       (__ms_u_long x));
+DEF_FUNC (int,         WSAHtons,    (SOCKET s, u_short value, u_short *result));
+DEF_FUNC (int,         WSAHtonl,    (SOCKET s, u_long  value, u_long  *result));
+DEF_FUNC (int,         WSANtohs,    (SOCKET s, u_short value, u_short *result));
+DEF_FUNC (int,         WSANtohl,    (SOCKET s, u_long  value, u_long  *result));
 DEF_FUNC (__ULONG32,   inet_addr,   (const char *addr));
 DEF_FUNC (char *,      inet_ntoa,   (struct in_addr addr));
 
@@ -445,7 +449,7 @@ DEF_FUNC (USHORT, RtlCaptureStackBackTrace, (ULONG  frames_to_skip,
                                              void **frames,
                                              ULONG *trace_hash));
 
-#define ADD_VALUE(opt,dll,func)   { opt, NULL, dll, #func, (void**)&p_##func }
+#define ADD_VALUE(opt, dll, func)   { opt, NULL, dll, #func, (void**)&p_##func }
 
 static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSAStartup),
@@ -511,6 +515,10 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", ntohs),
               ADD_VALUE (0, "ws2_32.dll", htonl),
               ADD_VALUE (0, "ws2_32.dll", ntohl),
+              ADD_VALUE (0, "ws2_32.dll", WSAHtons),
+              ADD_VALUE (0, "ws2_32.dll", WSAHtonl),
+              ADD_VALUE (0, "ws2_32.dll", WSANtohs),
+              ADD_VALUE (0, "ws2_32.dll", WSANtohl),
               ADD_VALUE (0, "ws2_32.dll", inet_addr),
               ADD_VALUE (0, "ws2_32.dll", inet_ntoa),
               ADD_VALUE (0, "ws2_32.dll", getpeername),
@@ -2831,6 +2839,54 @@ EXPORT __ms_u_long WINAPI ntohl (__ms_u_long x)
 
   ENTER_CRIT();
   WSTRACE ("ntohl (%lu) --> %lu", DWORD_CAST(x), DWORD_CAST(rc));
+  LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
+EXPORT int WINAPI WSAHtons (SOCKET s, u_short value, u_short *result)
+{
+  int rc;
+
+  CHECK_PTR (p_WSAHtons);
+  rc = (*p_WSAHtons) (s, value, result);
+  ENTER_CRIT();
+  WSTRACE ("WSAHtons (%u, %u, %u) --> %s", s, value, *result, get_error(rc, 0));
+  LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
+EXPORT int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
+{
+  int rc;
+
+  CHECK_PTR (p_WSAHtonl);
+  rc = (*p_WSAHtonl) (s, value, result);
+  ENTER_CRIT();
+  WSTRACE ("WSAHtonl (%u, %lu, %lu) --> %s", s, value, *result, get_error(rc, 0));
+  LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
+EXPORT int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
+{
+  int rc;
+
+  CHECK_PTR (p_WSANtohs);
+  rc = (*p_WSANtohs) (s, value, result);
+  ENTER_CRIT();
+  WSTRACE ("WSANtohs (%u, %u, %u) --> %s", s, value, *result, get_error(rc, 0));
+  LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
+EXPORT int WINAPI WSANtohl (SOCKET s, u_long value, u_long *result)
+{
+  int rc;
+
+  CHECK_PTR (p_WSANtohl);
+  rc = (*p_WSANtohl) (s, value, result);
+  ENTER_CRIT();
+  WSTRACE ("WSANtohl (%u, %lu, %lu) --> %s", s, value, *result, get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
