@@ -811,7 +811,7 @@ class CLI(object):
 					continue
 
 				# Skip any AS name that appears to be a placeholder for a different RIR or entity...
-				if re.match(r"^(ASN-BLK|)(AFCONC|AFRINIC|APNIC|ASNBLK|DNIC|LACNIC|RIPE|IANA)(\d?$|\-.*)", name):
+				if re.match(r"^(ASN-BLK|)(AFCONC|AFRINIC|APNIC|ASNBLK|DNIC|LACNIC|RIPE|IANA)(?:\d?$|\-)", name):
 					continue
 
 				# Bail out in case the AS name contains anything we do not expect here...
