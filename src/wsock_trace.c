@@ -3131,7 +3131,7 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
 
   WSTRACE ("freeaddrinfo (0x%" ADDR_FMT ")", ADDR_CAST(ai));
 
-  LEAVE_CRIT (!exclude_this);
+  LEAVE_CRIT (0);
 }
 
 EXPORT void WINAPI FreeAddrInfoW (ADDRINFOW *ai)

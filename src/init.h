@@ -255,12 +255,12 @@ extern size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, 
 
 extern CRITICAL_SECTION crit_sect;
 
-#define ENTER_CRIT()        EnterCriticalSection (&crit_sect)
-#define LEAVE_CRIT(extra)   do {                                 \
-                              if (extra && g_cfg.extra_new_line) \
-                                 trace_putc ('\n');              \
-                              LeaveCriticalSection (&crit_sect); \
-                            } while (0)
+#define ENTER_CRIT()           EnterCriticalSection (&crit_sect)
+#define LEAVE_CRIT(extra_nl)   do {                                    \
+                                 if (extra_nl && g_cfg.extra_new_line) \
+                                    trace_putc ('\n');                 \
+                                 LeaveCriticalSection (&crit_sect);    \
+                               } while (0)
 #endif
 
 
