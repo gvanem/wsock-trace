@@ -584,7 +584,11 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
     BOOL add_nl = (g_cfg.start_new_line && g_cfg.trace_file_device &&
                    (get_column() > 0 || g_cfg.stdout_redirected));
 
-    if (add_nl || g_cfg.trace_file_okay)
+    /* If `g_cfg.extra_new_line == true` we add an extra newline when leaving a
+     * traced function. Hence do NOT add an extra newline *before* a trace.
+     * That would give 2 empty lines in the trace.
+     */
+    if ((add_nl || g_cfg.trace_file_okay) && !g_cfg.extra_new_line)
        trace_putc ('\n');
 
     trace_indent (g_cfg.trace_indent);
@@ -2589,7 +2593,7 @@ EXPORT int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val,
 
   WSTRACE ("setsockopt (%s, %s, %s, %s, %d) --> %s",
            socket_number(s), socklevel_name(level), sockopt_name(level, opt),
-           sockopt_value(opt_val, opt_len), opt_len, get_error(rc, 0));
+           sockopt_value(level, opt, opt_val, opt_len), opt_len, get_error(rc, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -2606,7 +2610,7 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
 
   WSTRACE ("getsockopt (%s, %s, %s, %s, %d) --> %s",
            socket_number(s), socklevel_name(level), sockopt_name(level, opt),
-           sockopt_value(opt_val, opt_len ? *opt_len : 0),
+           sockopt_value(level, opt, opt_val, opt_len ? *opt_len : 0),
            opt_len ? *opt_len : 0, get_error(rc, 0));
 
 #if 0  /* \todo */

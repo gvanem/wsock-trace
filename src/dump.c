@@ -1515,7 +1515,46 @@ const char *sockopt_name (int level, int opt)
   }
 }
 
-const char *sockopt_value (const char *opt_val, int opt_len)
+static const char *dump_ip_add_membership (char *buf, size_t buf_sz, const char *opt_val)
+{
+  const struct ip_mreq *mreq = (const struct ip_mreq*) opt_val;
+  char  addr [MAX_IP4_SZ];
+  char  iface[MAX_IP4_SZ];
+
+  assert (buf_sz > sizeof(addr) + sizeof(iface) + 5);
+
+  _wsock_trace_inet_ntop (AF_INET, &mreq->imr_multiaddr.s_addr, addr, sizeof(addr), NULL);
+  _wsock_trace_inet_ntop (AF_INET, &mreq->imr_interface.s_addr, iface, sizeof(iface), NULL);
+  snprintf (buf, buf_sz, "{%s, %s}", addr, iface);
+  return (buf);
+}
+
+static const char *dump_ip_multicast_if (char *buf, size_t buf_sz, const char *opt_val)
+{
+  char addr [MAX_IP4_SZ];
+
+  _wsock_trace_inet_ntop (AF_INET, (const void*) opt_val, addr, sizeof(addr), NULL);
+  snprintf (buf, buf_sz, "{%s}", addr);
+  return (buf);
+}
+
+static const char *dump_ipv6_multicast_if (char *buf, size_t buf_sz, const char *opt_val)
+{
+  snprintf (buf, buf_sz, "{scope:%lu}", *(ULONG*)opt_val);
+  return (buf);
+}
+
+static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const char *opt_val)
+{
+  const struct ipv6_mreq *mreq6 = (const struct ipv6_mreq*) opt_val;
+  char  addr [MAX_IP6_SZ];
+
+  _wsock_trace_inet_ntop (AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr, addr, sizeof(addr), NULL);
+  snprintf (buf, buf_sz, "{%s%%%d}", addr, mreq6->ipv6mr_interface);
+  return (buf);
+}
+
+const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
 {
   static  char buf[50];
   DWORD   val;
@@ -1524,11 +1563,29 @@ const char *sockopt_value (const char *opt_val, int opt_len)
   if (!opt_val)
      return ("NULL");
 
+  if (level == IPPROTO_IP)
+  {
+    if (opt == IP_ADD_MEMBERSHIP && opt_len == sizeof(struct ip_mreq))
+       return dump_ip_add_membership (buf, sizeof(buf), opt_val);
+
+    if (opt == IP_MULTICAST_IF && opt_len == sizeof(struct in_addr))
+       return dump_ip_multicast_if (buf, sizeof(buf), opt_val);
+  }
+  else if (level == IPPROTO_IPV6)
+  {
+    if (opt == IPV6_ADD_MEMBERSHIP && opt_len == sizeof(struct ipv6_mreq))
+       return dump_ipv6_add_membership (buf, sizeof(buf), opt_val);
+
+    if (opt == IPV6_MULTICAST_IF && opt_len == sizeof(ULONG))
+       return dump_ipv6_multicast_if (buf, sizeof(buf), opt_val);
+  }
+
   switch (opt_len)
   {
     case sizeof(BYTE):
          val = *(BYTE*) opt_val;
-         return _itoa ((BYTE)val, buf, 10);
+         _itoa ((BYTE)val, buf, 10);
+         break;
 
     case sizeof(WORD):
          val = *(WORD*) opt_val;

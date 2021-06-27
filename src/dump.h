@@ -46,7 +46,7 @@ extern const char *socket_type (int type);
 extern const char *socket_flags (int flags);
 extern const char *socklevel_name (int level);
 extern const char *sockopt_name (int level, int opt);
-extern const char *sockopt_value (const char *opt_val, int opt_len);
+extern const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len);
 extern const char *protocol_name (int proto);
 extern const char *ioctlsocket_cmd_name (long cmd);
 
