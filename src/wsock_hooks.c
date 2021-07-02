@@ -76,11 +76,11 @@ static BOOL PASCAL hooked_ACCEPTEX (SOCKET      listen_sock,
 {
   BOOL rc = (*orig_ACCEPTEX) (listen_sock, accept_sock, out_buf, recv_data_len,
                               local_addr_len, remote_addr_len, bytes_received, ov);
-  ENTER_CRIT();
 
-  WSTRACE ("AcceptEx (%u, %u, ...) --> %s",
+  ENTER_CRIT();
+  WSTRACE ("AcceptEx (%u, %u, ...) (ex-func) --> %s",
            SOCKET_CAST(listen_sock), SOCKET_CAST(accept_sock), get_error(!rc, 0));
-  LEAVE_CRIT (1);
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -95,13 +95,12 @@ static BOOL PASCAL hooked_CONNECTEX (SOCKET                 s,
   BOOL rc = (*orig_CONNECTEX) (s, name, name_len, send_buf, send_data_len, bytes_sent, ov);
 
   ENTER_CRIT();
-
-  WSTRACE ("ConnectEx (%u, ...) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("ConnectEx (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
 
   if (g_cfg.dump_data && send_buf && (rc || WSAERROR_PUSH() == ERROR_IO_PENDING))
      dump_data (send_buf, send_data_len);
 
-  LEAVE_CRIT (1);
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -113,10 +112,8 @@ static BOOL PASCAL hooked_DISCONNECTEX (SOCKET      s,
   BOOL rc = (*orig_DISCONNECTEX) (s, ov, flags, reserved);
 
   ENTER_CRIT();
-
-  WSTRACE ("DisconnectEx (%u, ...) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
-
-  LEAVE_CRIT (1);
+  WSTRACE ("DisconnectEx (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -133,8 +130,8 @@ static void PASCAL hooked_GETACCEPTEXSOCKADDRS (void             *out_buf,
                                 remote_addr_len, local_sa, local_sa_len,
                                 remote_sa, remote_sa_len);
   ENTER_CRIT();
-  WSTRACE ("GetAcceptExSockaddr (...)");
-  LEAVE_CRIT (1);
+  WSTRACE ("GetAcceptExSockaddr (...) (ex-func)");
+  LEAVE_CRIT (!exclude_this);
 }
 
 static BOOL PASCAL hooked_TRANSMITFILE (SOCKET                 s,
@@ -148,8 +145,8 @@ static BOOL PASCAL hooked_TRANSMITFILE (SOCKET                 s,
   BOOL rc = (*orig_TRANSMITFILE) (s, file, bytes_to_write, bytes_per_send,
                                   ov, transmit_bufs, reserved);
   ENTER_CRIT();
-  WSTRACE ("TransmitFile (%u, ...) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
-  LEAVE_CRIT (1);
+  WSTRACE ("TransmitFile (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -160,12 +157,11 @@ static BOOL PASCAL hooked_TRANSMITPACKETS (SOCKET                    s,
                                            OVERLAPPED               *ov,
                                            DWORD                     flags)
 {
-  BOOL rc = (*orig_TRANSMITPACKETS) (s, packet_array, elements, transmit_size,
-                                     ov, flags);
+  BOOL rc = (*orig_TRANSMITPACKETS) (s, packet_array, elements, transmit_size, ov, flags);
 
   ENTER_CRIT();
-  WSTRACE ("TransmitPackets (%u, ...) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
-  LEAVE_CRIT (1);
+  WSTRACE ("TransmitPackets (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -178,8 +174,8 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
   INT rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
 
   ENTER_CRIT();
-  WSTRACE ("WSARecvMsg (%u, ...) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
-  LEAVE_CRIT (1);
+  WSTRACE ("WSARecvMsg (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -193,8 +189,8 @@ static INT PASCAL hooked_WSASENDMSG (SOCKET        s,
   INT rc = (*orig_WSASENDMSG) (s, msg, flags, bytes_sent, ov, complete_func);
 
   ENTER_CRIT();
-  WSTRACE ("WSASendMsg (%u, ...) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
-  LEAVE_CRIT (1);
+  WSTRACE ("WSASendMsg (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -208,9 +204,8 @@ static INT WSAAPI hooked_WSAPOLL (WSAPOLLFD *fdarray,
   INT rc = (*orig_WSAPOLL) (fdarray, num_fds, timeout);
 
   ENTER_CRIT();
-  WSTRACE ("WSAPoll (...) --> %s", get_error(!rc, 0));
-  LEAVE_CRIT (1);
-
+  WSTRACE ("WSAPoll (...) (ex-func) --> %s", get_error(!rc, 0));
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -234,7 +229,7 @@ static extensions find_extension_func (const GUID *in_guid)
   int   i;
 
   for (i = 0; i < DIM(extension_hooks); guid = &extension_hooks[++i].guid)
-      if (!memcmp(in_guid,guid,sizeof(*guid)))
+      if (!memcmp(in_guid, guid, sizeof(*guid)))
          return (extensions) i;
   return (ex_NONE);
 }
