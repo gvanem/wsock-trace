@@ -748,6 +748,10 @@
 #define SIO_QUERY_TRANSPORT_SETTING                  _WSAIOW (IOC_VENDOR, 20)
 #endif
 
+#ifndef SIO_CPU_AFFINITY
+#define SIO_CPU_AFFINITY                             _WSAIOW (IOC_VENDOR, 21)
+#endif
+
 #ifndef SIO_TCP_SET_ICW
 #define SIO_TCP_SET_ICW                              _WSAIOW (IOC_VENDOR, 22)
 #endif
@@ -1333,6 +1337,7 @@ static const struct search_list sio_codes[] = {
                     ADD_VALUE (SIO_TCP_SET_ACK_FREQUENCY),
                     ADD_VALUE (SIO_SET_PRIORITY_HINT),
                     ADD_VALUE (SIO_TCP_INFO),
+                    ADD_VALUE (SIO_CPU_AFFINITY),
                     ADD_VALUE (SIO_TCP_SET_ICW),
                     ADD_VALUE (SIO_TRANSLATE_HANDLE),
                     ADD_VALUE (SIO_UCAST_IF),
@@ -1837,6 +1842,22 @@ void print_long_flags (const char *start, size_t indent, int brk_ch)
 }
 
 const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
+{
+  static char buf[300];
+
+  snprintf (buf, sizeof(buf),
+            "ai_flags:    %s\n"
+            "%*sai_family:   %s\n"
+            "%*sai_socktype: %s\n"
+            "%*sai_protocol: %s",
+            ai_flags_decode(hint->ai_flags),
+            (int)indent, "", socket_family(hint->ai_family),
+            (int)indent, "", socket_type(hint->ai_socktype),
+            (int)indent, "", protocol_name(hint->ai_protocol));
+  return (buf);
+}
+
+const char *get_addrinfo_hintW (const struct addrinfoW *hint, size_t indent)
 {
   static char buf[300];
 
