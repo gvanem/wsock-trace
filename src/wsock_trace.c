@@ -71,6 +71,7 @@ static fd_set *last_rd_fd = NULL;
 static fd_set *last_wr_fd = NULL;
 static fd_set *last_ex_fd = NULL;
 
+static const char *socket_number (SOCKET s);
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 static void        get_tcp_info (SOCKET s, TCP_INFO_v0 *info, int *err);
@@ -442,6 +443,12 @@ DEF_FUNC (INT,   InetPtonW, (int family, PCWSTR waddr, void *waddr_dest));
 DEF_FUNC (PCWSTR,InetNtopW, (int family, const void *addr, PWSTR res_buf, size_t res_buf_size));
 
 /**
+ * Windows-11 functions.
+ */
+DEF_FUNC (INT, WSAGetRecvIPEcn, (SOCKET s, DWORD *enabled));
+DEF_FUNC (INT, WSASetRecvIPEcn, (SOCKET s, DWORD enabled));
+
+/**
  * In ntdll.dll
  */
 DEF_FUNC (USHORT, RtlCaptureStackBackTrace, (ULONG  frames_to_skip,
@@ -534,6 +541,8 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (1, "ws2_32.dll", inet_ntop),
               ADD_VALUE (1, "ws2_32.dll", InetPtonW),
               ADD_VALUE (1, "ws2_32.dll", InetNtopW),
+              ADD_VALUE (1, "ws2_32.dll", WSASetRecvIPEcn),  // Win-11 Preview?
+              ADD_VALUE (1, "ws2_32.dll", WSAGetRecvIPEcn),  // Win-11 Preview?
               ADD_VALUE (0, "ntdll.dll",  RtlCaptureStackBackTrace),
            // ADD_VALUE (1, "kernel32.dll", WaitForMultipleObjectsEx),
 
@@ -811,13 +820,17 @@ static const char *socket_or_error (SOCK_RC_TYPE rc)
  */
 static const char *socket_number (SOCKET s)
 {
-  static char buf [20];
+  static char buf [2][20];
+  static int  idx = 0;
+  char  *rc;
 
   if ((signed int)s == -1)
      return ("-1");
 
-  _itoa ((int)s, buf, 10);
-  return (buf);
+  rc = buf [idx++];
+  idx &= 1;
+  _itoa ((int)s, rc, 10);
+  return (rc);
 }
 
 /*
@@ -2290,6 +2303,9 @@ EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_byt
 
     strcpy (res, get_error(rc, 0));
     WSTRACE ("WSASendMsg (%s, 0x%p, ...) --> %s", socket_number(s), msg, res);
+
+    if (!exclude_this)
+       dump_wsamsg (msg, rc);
   }
 
   LEAVE_CRIT (!exclude_this);
@@ -3171,12 +3187,12 @@ EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_na
            g_cfg.trace_indent+4, "",
            hints ? get_addrinfo_hintW (hints, g_cfg.trace_indent + 3 + sizeof("hints: ")) : "<none>");
 
-#if 0
   if (rc == NO_ERROR && *res && !exclude_this)
   {
     if (g_cfg.dump_data)
        dump_addrinfoW (host_name, *res);
 
+#if 0
     if (g_cfg.GEOIP.enable)
        dump_countries_addrinfoW (*res);
 
@@ -3188,8 +3204,8 @@ EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_na
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_addrinfoW (*res);
-  }
 #endif
+  }
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
