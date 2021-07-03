@@ -78,8 +78,8 @@ static BOOL PASCAL hooked_ACCEPTEX (SOCKET      listen_sock,
                               local_addr_len, remote_addr_len, bytes_received, ov);
 
   ENTER_CRIT();
-  WSTRACE ("AcceptEx (%u, %u, ...) (ex-func) --> %s",
-           SOCKET_CAST(listen_sock), SOCKET_CAST(accept_sock), get_error(!rc, 0));
+  WSTRACE ("AcceptEx (%s, %s, ...) (ex-func) --> %s",
+           socket_number(listen_sock), socket_number(accept_sock), get_error(!rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -95,7 +95,7 @@ static BOOL PASCAL hooked_CONNECTEX (SOCKET                 s,
   BOOL rc = (*orig_CONNECTEX) (s, name, name_len, send_buf, send_data_len, bytes_sent, ov);
 
   ENTER_CRIT();
-  WSTRACE ("ConnectEx (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("ConnectEx (%s, ...) (ex-func) --> %s", socket_number(s), get_error(!rc, 0));
 
   if (g_cfg.dump_data && send_buf && (rc || WSAERROR_PUSH() == ERROR_IO_PENDING))
      dump_data (send_buf, send_data_len);
@@ -112,7 +112,8 @@ static BOOL PASCAL hooked_DISCONNECTEX (SOCKET      s,
   BOOL rc = (*orig_DISCONNECTEX) (s, ov, flags, reserved);
 
   ENTER_CRIT();
-  WSTRACE ("DisconnectEx (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("DisconnectEx (%s, ...) (ex-func) --> %s",
+           socket_number(s), get_error(!rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -145,7 +146,7 @@ static BOOL PASCAL hooked_TRANSMITFILE (SOCKET                 s,
   BOOL rc = (*orig_TRANSMITFILE) (s, file, bytes_to_write, bytes_per_send,
                                   ov, transmit_bufs, reserved);
   ENTER_CRIT();
-  WSTRACE ("TransmitFile (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("TransmitFile (%s, ...) (ex-func) --> %s", socket_number(s), get_error(!rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -160,7 +161,7 @@ static BOOL PASCAL hooked_TRANSMITPACKETS (SOCKET                    s,
   BOOL rc = (*orig_TRANSMITPACKETS) (s, packet_array, elements, transmit_size, ov, flags);
 
   ENTER_CRIT();
-  WSTRACE ("TransmitPackets (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("TransmitPackets (%s, ...) (ex-func) --> %s", socket_number(s), get_error(!rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -174,7 +175,12 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
   INT rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
 
   ENTER_CRIT();
-  WSTRACE ("WSARecvMsg (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("WSARecvMsg (%s, 0x%p, ...) (ex-func) --> %s",
+           socket_number(s), msg, get_error(!rc, 0));
+
+  if (!exclude_this)
+     dump_wsamsg (msg, rc);
+
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -189,7 +195,12 @@ static INT PASCAL hooked_WSASENDMSG (SOCKET        s,
   INT rc = (*orig_WSASENDMSG) (s, msg, flags, bytes_sent, ov, complete_func);
 
   ENTER_CRIT();
-  WSTRACE ("WSASendMsg (%u, ...) (ex-func) --> %s", SOCKET_CAST(s), get_error(!rc, 0));
+  WSTRACE ("WSASendMsg (%s, 0x%p, %s, ...) (ex-func) --> %s",
+           socket_number(s), msg, socket_flags(flags), get_error(!rc, 0));
+
+  if (!exclude_this)
+     dump_wsamsg (msg, rc);
+
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
