@@ -302,3 +302,19 @@ int hosts_file_check_addrinfo (const char *name, const struct addrinfo *ai)
   }
   return (0);
 }
+
+/**
+ * As above, but for an `struct addrinfoW *`.
+ */
+int hosts_file_check_addrinfoW (const wchar_t *name, const struct addrinfoW *aiW)
+{
+  struct addrinfo ai;
+  char  a_name [100] = "??";
+
+  if (WideCharToMultiByte(CP_ACP, 0, name, -1, a_name, (int)sizeof(a_name), NULL, NULL) == 0)
+     return (0);
+
+  ai.ai_family = aiW->ai_family;
+  ai.ai_addr   = aiW->ai_addr;
+  return hosts_file_check_addrinfo (a_name, &ai);
+}
