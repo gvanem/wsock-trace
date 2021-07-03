@@ -1661,7 +1661,6 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
            trace_puts (prefix);
       else trace_indent (strlen(prefix));
     }
-
     trace_puts (str_hex_word(ofs));
     trace_puts (": ");
 
@@ -1675,7 +1674,7 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
     }
 
     for ( ; j < 15; j++)     /* pad line to 16 positions */
-       trace_puts ("   ");
+        trace_puts ("   ");
     trace_putc (' ');
 
     for (i = 0; i < 16 && i+ofs < data_len; i++)
@@ -1698,7 +1697,6 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
   if (ofs + i < data_len - 1)
   {
     trace_indent (g_cfg.trace_indent+2);
-
     trace_printf ("<%d more bytes...>\n", data_len-1-ofs-i);
   }
   trace_puts ("~0");
@@ -1724,6 +1722,20 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
     snprintf (prefix, sizeof(prefix), "iov %d: ", i);
     dump_data_internal (bufs->buf, bufs->len, prefix);
   }
+}
+
+void dump_wsamsg (const WSAMSG *msg, int rc)
+{
+  if (!msg)
+     return;
+
+  trace_printf ("%*sremote: %s, dwFlags: 0x%04lX\n",
+                g_cfg.trace_indent+2, "",
+                sockaddr_str2(msg->name, &msg->namelen),
+                msg->dwFlags);
+
+  if (rc == NO_ERROR && g_cfg.dump_data)
+     dump_wsabuf (msg->lpBuffers, msg->dwBufferCount);
 }
 
 /**
@@ -1895,7 +1907,35 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
     addr_len = (const int*)&ai->ai_addrlen;
 
     trace_printf ("ai_canonname: %s, ai_addr: %s%s\n",
-                  ai->ai_canonname, sockaddr_str2(ai->ai_addr,addr_len),
+                  ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len),
+                  comment);
+  }
+  trace_puts ("~0");
+}
+
+void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
+{
+  for ( ; ai; ai = ai->ai_next)
+  {
+    const int  *addr_len;
+    const char *comment;
+
+    trace_indent (g_cfg.trace_indent+2);
+    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
+                  ai_flags_decode(ai->ai_flags),
+                  socket_family(ai->ai_family),
+                  socket_type(ai->ai_socktype),
+                  protocol_name(ai->ai_protocol));
+
+    if (hosts_file_check_addrinfoW(name, ai) > 0)
+         comment = " (in 'hosts' file)";
+    else comment = "";
+
+    trace_indent (g_cfg.trace_indent+2);
+    addr_len = (const int*)&ai->ai_addrlen;
+
+    trace_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
+                  ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len),
                   comment);
   }
   trace_puts ("~0");
