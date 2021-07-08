@@ -1452,7 +1452,12 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
   ENTER_CRIT();
 
   WSTRACE ("accept (%s, %s) --> %s",
-           socket_number(s), sockaddr_str2(addr, addr_len), socket_or_error(rc));
+           socket_number(s),
+           /*
+            * If `rc == INVALID_SOCKET`, the `addr` is not filled. Hence simply print it's pointer address.
+            */
+           rc == INVALID_SOCKET ? ptr_or_error(addr) : sockaddr_str2(addr, addr_len),
+           socket_or_error(rc));
 
   if (!exclude_this)
   {
