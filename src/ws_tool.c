@@ -56,7 +56,7 @@ static const struct {
        { test_main,      "test"      }
      };
 
-static void show_help (const char *extra, BOOL show_sub_help);
+static void show_help (const char *extra);
 
 static int run_sub_command (int argc, char **argv)
 {
@@ -79,38 +79,22 @@ static int run_sub_command (int argc, char **argv)
   if (i == DIM(sub_commands))
   {
     snprintf (buf, sizeof(buf), "Unknown sub-command '%s'\n", *argv);
-    show_help (buf, FALSE);
+    show_help (buf);
   }
   return (rc);
 }
 
-static void show_help (const char *extra, BOOL show_sub_help)
+static void show_help (const char *extra)
 {
   int i;
 
   printf ("%sWsock-trace test tool.\n"
           "Usage: %s [-h] <command> [<args>]\n"
-          "       -h:     this short help\n"
-          "       -hh:    show help for all sub-commands\n"
+          "       -h:   shows this help\n"
           "Available sub-commands:\n", extra ? extra : "", program_name);
 
   for (i = 0; i < DIM(sub_commands); i++)
-  {
-    program_name = sub_commands[i].main_name;
-    printf ("  %-10s - Run a command in '%s'\n", program_name, program_name);
-  }
-
-  if (show_sub_help)
-  {
-    char *Argv[3] = { NULL, "-h", NULL };
-
-    for (i = 0; i < DIM(sub_commands); i++)
-    {
-      printf ("\nHelp for '%s':\n", program_name);
-      Argv[0] = sub_commands[i].main_name;
-      run_sub_command (2, Argv);
-    }
-  }
+     printf ("  %s\n", sub_commands[i].main_name);
 }
 
 int main (int argc, char **argv)
@@ -130,13 +114,13 @@ int main (int argc, char **argv)
            do_help++;
            break;
       default:
-           show_help ("Illegal option\n", FALSE);
+           show_help ("Illegal option\n");
            goto quit;
     }
 
   if (do_help >= 1)
   {
-    show_help (NULL, do_help >= 2 ? TRUE : FALSE);
+    show_help (NULL);
     goto quit;
   }
 
@@ -153,7 +137,7 @@ int main (int argc, char **argv)
   argv += optind;
 
   if (!*argv)
-       show_help ("Please give a sub-command\n", FALSE);
+       show_help ("Please give a sub-command\n");
   else rc = run_sub_command (argc, argv);
 
 quit:
