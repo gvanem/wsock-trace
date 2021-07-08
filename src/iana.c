@@ -667,7 +667,7 @@ int iana_main (int argc, char **argv)
            };
   int i, ch, do_ip6 = 0;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
 
   if (argc < 2)
      return show_help();

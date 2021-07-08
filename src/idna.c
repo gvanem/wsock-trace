@@ -1122,7 +1122,7 @@ int idna_main (int argc, char **argv)
   WORD cp = 0;
   int  ch, rc = 0;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
 
   while ((ch = getopt(argc, argv, "c:" W_GETOPT "h?")) != EOF)
      switch (ch)

@@ -46,6 +46,15 @@ char prog_dir  [MAX_PATH] = { '\0' };
 HINSTANCE ws_trace_base;        /* Our base-address */
 char     *program_name;         /* For getopt.c and 'xx_main()' functions */
 
+char *set_program_name (char *argv0)
+{
+  static char ret [_MAX_PATH];
+
+  snprintf (ret, sizeof(ret), "%s %s", __argv[0], argv0);
+  program_name = ret;
+  return (ret);
+}
+
 static void __stdcall dummy_WSASetLastError (int err)
 {
   ARGSUSED (err);

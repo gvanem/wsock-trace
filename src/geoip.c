@@ -2181,7 +2181,7 @@ int geoip_main (int argc, char **argv)
   int     loops = 10;
   WSADATA wsa;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
 
   while ((c = getopt (argc, argv, "h?cDfin:ru46")) != EOF)
     switch (c)

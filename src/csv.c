@@ -397,7 +397,7 @@ int csv_main (int argc, char **argv)
   struct CSV_context ctx;
   int    ch;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
   memset (&ctx, '\0', sizeof(ctx));
 
   while ((ch = getopt(argc, argv, "f:m:n:h?")) != EOF)

@@ -646,7 +646,7 @@ int dnsbl_main (int argc, char **argv)
 {
   int ch, do_dump = 0, do_force = 0, do_test = 0, do_update = 0;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
 
   while ((ch = getopt(argc, argv, "Dftuh?")) != EOF)
      switch (ch)

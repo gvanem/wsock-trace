@@ -935,7 +935,7 @@ int test_main (int argc, char **argv)
 {
   int i, c, num = 0;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
   on_appveyor = (getenv("APPVEYOR_BUILD_FOLDER") != NULL);
 
   signal (SIGINT, exit_test);

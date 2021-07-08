@@ -447,7 +447,7 @@ int backtrace_main (int argc, char **argv)
 {
   int c;
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
 
   while ((c = getopt (argc, argv, "atvsbr:h?")) != EOF)
     switch (c)
