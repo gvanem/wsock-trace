@@ -1543,6 +1543,10 @@ struct rule_entry {
  */
 static smartlist_t *rule_entries;
 
+/** A dynamic list of orphaned items among `rule_entry` and `prog_rule` items.
+ */
+static smartlist_t *rule_orphans;
+
 /**
  * Stuff for checking if `%n` can be used in `*printf()` functions.
  *
@@ -1927,6 +1931,7 @@ BOOL fw_init (void)
   filter_entries = smartlist_new();
   SBL_entries    = smartlist_new();
   rule_entries   = smartlist_new();
+  rule_orphans   = smartlist_new();
 
   fw_have_ip2loc4 = (ip2loc_num_ipv4_entries() > 0);
   fw_have_ip2loc6 = (ip2loc_num_ipv6_entries() > 0);
@@ -2004,8 +2009,10 @@ static void fw_free_data (void)
   smartlist_wipe (filter_entries, free);
   smartlist_wipe (SBL_entries, free);
   smartlist_wipe (rule_entries, fw_rule_free);
+  smartlist_wipe (rule_orphans, free);
 
-  SID_entries = filter_entries = SBL_entries = rule_entries = NULL;
+  SID_entries = filter_entries = SBL_entries = NULL;
+  rule_orphans = rule_entries = NULL;
 }
 
 /**
@@ -2384,8 +2391,8 @@ static void fw_dump_rule (const FW_RULE *rule)
      strcpy (ascii, "?");
 
   if (fw_have_n_format)
-       fw_buf_addf ("~4%3lu: ~3%s:~0%*s%n", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "", &indent);
-  else indent = fw_buf_addf ("~4%3lu: ~3%s:~0%*s", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "");
+       fw_buf_addf ("~4%3lu: ~1%s:~0%*s%n", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "", &indent);
+  else indent = fw_buf_addf ("~4%3lu: ~1%s:~0%*s", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "");
 
   fw_add_long_line (ascii, indent-6, ' ');
   fw_buf_flush();
@@ -2401,11 +2408,18 @@ static void fw_dump_rule (const FW_RULE *rule)
 
   if (rule->wszLocalApplication)
   {
-    fw_buf_addf ("     ~2prog:~0    %s", get_path(NULL, rule->wszLocalApplication, &fexist, &is_native));
+    const char *app = get_path (NULL, rule->wszLocalApplication, &fexist, &is_native);
+
+    fw_buf_addf ("     ~2prog:~0    %s", app);
     if (!fexist)
-       fw_buf_add ("  (does not exist)");
+    {
+      fw_buf_add ("  (does not exist)");
+      smartlist_add (rule_orphans, strdup(app));
+    }
     else if (is_native)
-       fw_buf_add ("  (native file)");
+    {
+      fw_buf_add ("  (native file)");
+    }
     fw_buf_addc ('\n');
   }
 
@@ -2587,16 +2601,15 @@ static struct rule_entry *parse_program_rule (const char *_rule)
 /**
  * Print the Firewall rules.
  */
-static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
+static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
 {
   char proto_str [10];
-  int  rc = 0;
 
   if (++fw_num_rules == 1)
      trace_puts ("Firewall ACTIVE program rules from Registry:\n");
 
   if (RA4_only && !r->RA4.s_addr)
-     return (0);
+     return;
 
   trace_printf ("%4lu: Action:   %s\n", DWORD_CAST(fw_num_rules), r->action);
   trace_printf ("      Dir:      %s\n", r->dir);
@@ -2617,7 +2630,7 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
                   r->app, r->app_exist ? "" : " (does not exist)",
                   r->app_native ? " (native file)" : "");
     if (!r->app_exist)
-       rc++;
+       smartlist_add (rule_orphans, strdup(r->app));
   }
 
   if (r->embed_ctxt)
@@ -2642,7 +2655,7 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
 
     if (cc && cc[0] != '-')
        trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
-    print_ASN_info (&r->RA4, NULL, 4, NULL);
+    print_ASN_info (&r->RA4, NULL, 6, NULL);
   }
   else if (r->RA6.s6_addr[0])
   {
@@ -2660,7 +2673,7 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
 
     if (cc && cc[0] != '-')
        trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
-    print_ASN_info (NULL, &r->RA6, 4, NULL);
+    print_ASN_info (NULL, &r->RA6, 6, NULL);
   }
   if (r->se)
        trace_printf ("      SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
@@ -2672,7 +2685,6 @@ static int print_program_rule (struct rule_entry *r, BOOL RA4_only)
     trace_printf ("      RegData:  %s\n", r->data);
   }
   trace_putc ('\n');
-  return (rc);
 }
 
 /**
@@ -2742,6 +2754,17 @@ static int rule_compare_action (const void **_a, const void **_b)
 }
 
 /**
+ * `smartlist_sort()` and `smartlist_make_uniq()` helper; compare on names.
+ */
+static int rule_compare_name (const void **_a, const void **_b)
+{
+  const char *a = *_a;
+  const char *b = *_b;
+
+  return strcmp (a, b);
+}
+
+/**
  * Enumerate the Firewall rules from:
  *   HKLM\SYSTEM\ControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules
  */
@@ -2750,7 +2773,7 @@ static int fw_enumerate_programs (BOOL RA4_only)
   struct rule_entry *r;
   HKEY     key = NULL;
   DWORD    num, rc;
-  int      i, max, orphans = 0;
+  int      i, max;
 
   rc = RegOpenKeyEx (HKEY_LOCAL_MACHINE,
                      "SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules",
@@ -2788,11 +2811,20 @@ static int fw_enumerate_programs (BOOL RA4_only)
   for (i = 0; i < max; i++)
   {
     r = smartlist_get (rule_entries, i);
-    orphans += print_program_rule (r, RA4_only);
+    print_program_rule (r, RA4_only);
   }
+
   trace_printf ("Found %d program-rules. ", max);
-  if (orphans)
-     trace_printf ("Found %d orphaned programs (run CCleaner).\n", orphans);
+
+  smartlist_sort (rule_orphans, rule_compare_name);
+  smartlist_make_uniq (rule_orphans, rule_compare_name, NULL);
+  num = smartlist_len (rule_orphans);
+  if (num > 0)
+  {
+    trace_printf ("Found %lu orphaned programs (run CCleaner):\n", num);
+    for (i = 0; i < (int)num; i++)
+        trace_printf (" %s\n", (const char*) smartlist_get(rule_orphans, i));
+  }
   return (max);
 }
 
@@ -3641,7 +3673,7 @@ BOOL fw_enumerate_callouts (void)
          WideCharToMultiByte (fw_acp, 0, entry->displayData.description, -1, descr, (int)sizeof(descr), NULL, NULL);
     else strcpy (descr, "<None>");
 
-    fw_buf_addf ("~4%2u~0: calloutId: ~3%u:~0\n", i, entry->calloutId);
+    fw_buf_addf ("~4%2u~0: calloutId: ~1%u:~0\n", i, entry->calloutId);
     fw_buf_addf ("    ~4name:~0            %S\n", entry->displayData.name);
 
     indent = fw_buf_add ("    ~4descr:~0           ") - 4;
@@ -4043,7 +4075,7 @@ static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia
 
   if (extra_indent)
        snprintf (intro, sizeof(intro), "%-*sASN:      ", (int) (fw_indent_sz + extra_indent), "");
-  else snprintf (intro, sizeof(intro), "%-*sASN:     ", (int)fw_indent_sz, "");
+  else snprintf (intro, sizeof(intro), "%-*sASN:     ", (int) fw_indent_sz, "");
 
   return ASN_libloc_print (intro, ia4, ia6, func);
 }
@@ -4309,9 +4341,14 @@ static BOOL print_app_id (const _FWPM_NET_EVENT_HEADER3 *header)
   fw_buf_addf ("%-*sapp:     %s", fw_indent_sz, "", a_name);
 
   if (!fexist)
-     fw_buf_add (" (does not exist)");
+  {
+    fw_buf_add (" (does not exist)");
+    smartlist_add (rule_orphans, strdup(a_name));
+  }
   else if (is_native)
-     fw_buf_add ("  (native file)");
+  {
+    fw_buf_add ("  (native file)");
+  }
 
   fw_buf_addc ('\n');
   return (TRUE);
@@ -4598,7 +4635,7 @@ static void CALLBACK
   {
     direction_in = TRUE;
 
-    fw_buf_add (", ~3IN~0");
+    fw_buf_add (", ~1IN~0");
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        fw_buf_addf (", %s\n", get_protocol(header->ipProtocol));
@@ -4610,7 +4647,7 @@ static void CALLBACK
   {
     direction_in = TRUE;
 
-    fw_buf_add (", ~3IN~0");
+    fw_buf_add (", ~1IN~0");
 
     if (header->flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
        fw_buf_addf (", %s\n", get_protocol(header->ipProtocol));
@@ -4733,12 +4770,13 @@ static int show_help (void)
           "       -v:     sets \"g_cfg.FIREWALL.show_all = 1\".\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
-          "    Does not work with GUI programs. Event may come in late. So an extra \"sleep\" is handy.\n"
+          "    Does not work with GUI programs. Events may come in late. So an extra \"sleep\" is handy.\n"
           "    Examples:\n"
-          "      pause\n"
-          "      ping -n 10 www.google.com\n"
-          "      \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
-          program_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT);
+          "      %s pause\n"
+          "      %s ping -n 10 www.google.com\n"
+          "      %s \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
+          program_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT,
+          program_name, program_name, program_name);
   return (0);
 }
 
@@ -4844,7 +4882,7 @@ int firewall_main (int argc, char **argv)
   WSADATA wsa;
   WORD    ver = MAKEWORD (2, 2);
 
-  program_name = argv[0];
+  set_program_name (argv[0]);
 
   while ((ch = getopt(argc, argv, "a:Afh?cel:prRtv")) != EOF)
     switch (ch)
@@ -4930,23 +4968,25 @@ int firewall_main (int argc, char **argv)
     TRACE (1, "fw_module: '%s'. Exists: %d\n", fw_module, file_exists(fw_module));
   }
 
-#if 0
   if (!fw_init())
   {
     fprintf (stderr, "fw_init() failed: %s.\n", win_strerror(fw_errno));
     goto quit;
   }
-#endif
+
+  if (dump_rules)
+  {
+    if (!RA4_only)
+    {
+      rc = fw_enumerate_rules();
+      if (rc < 0)
+         goto quit;
+    }
+    fw_enumerate_programs (RA4_only);
+  }
 
   if (dump_rules || dump_callouts || dump_events)
   {
-    if (dump_rules)
-    {
-      if (!RA4_only)
-         fw_enumerate_rules();
-      fw_enumerate_programs (RA4_only);
-    }
-
     if (dump_events)
        fw_dump_events();
 
