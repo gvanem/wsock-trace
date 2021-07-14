@@ -157,7 +157,7 @@ class CLI(object):
 
 				-- autnums
 				CREATE TABLE IF NOT EXISTS autnums(number bigint, name text NOT NULL);
-				ALTER TABLE autnums ADD COLUMN IF NOT EXISTS source text NOT NULL;
+				ALTER TABLE autnums ADD COLUMN IF NOT EXISTS source text;
 				CREATE UNIQUE INDEX IF NOT EXISTS autnums_number ON autnums(number);
 
 				-- countries
@@ -168,7 +168,7 @@ class CLI(object):
 				-- networks
 				CREATE TABLE IF NOT EXISTS networks(network inet, country text);
 				ALTER TABLE networks ADD COLUMN IF NOT EXISTS original_countries text[];
-				ALTER TABLE networks ADD COLUMN IF NOT EXISTS source text NOT NULL;
+				ALTER TABLE networks ADD COLUMN IF NOT EXISTS source text;
 				CREATE UNIQUE INDEX IF NOT EXISTS networks_network ON networks(network);
 				CREATE INDEX IF NOT EXISTS networks_family ON networks USING BTREE(family(network));
 				CREATE INDEX IF NOT EXISTS networks_search ON networks USING GIST(network inet_ops);

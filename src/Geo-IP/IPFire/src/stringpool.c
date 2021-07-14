@@ -81,7 +81,7 @@ static int loc_stringpool_grow(struct loc_stringpool* pool, size_t length) {
 }
 
 static off_t loc_stringpool_append(struct loc_stringpool* pool, const char* string) {
-	if (!string || !*string)
+	if (!string)
 		return -EINVAL;
 
 	DEBUG(pool->ctx, "Appending '%s' to string pool at %p\n", string, pool);
@@ -105,31 +105,44 @@ static off_t loc_stringpool_append(struct loc_stringpool* pool, const char* stri
 	return offset;
 }
 
-static int __loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool, enum loc_stringpool_mode mode) {
+static void loc_stringpool_free(struct loc_stringpool* pool) {
+	DEBUG(pool->ctx, "Releasing string pool %p\n", pool);
+	int r;
+
+	switch (pool->mode) {
+		case STRINGPOOL_DEFAULT:
+			if (pool->data)
+				free(pool->data);
+			break;
+
+		case STRINGPOOL_MMAP:
+			if (pool->data) {
+				r = munmap(pool->data, pool->length);
+				if (r)
+					ERROR(pool->ctx, "Could not unmap data at %p: %s\n",
+						pool->data, strerror(errno));
+			}
+			break;
+	}
+
+	loc_unref(pool->ctx);
+	free(pool);
+}
+
+LOC_EXPORT int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool) {
 	struct loc_stringpool* p = calloc(1, sizeof(*p));
 	if (!p)
-		return -ENOMEM;
+		return 1;
 
 	p->ctx = loc_ref(ctx);
 	p->refcount = 1;
 
 	// Save mode
-	p->mode = mode;
+	p->mode = STRINGPOOL_DEFAULT;
 
 	*pool = p;
 
 	return 0;
-}
-
-LOC_EXPORT int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool) {
-	int r = __loc_stringpool_new(ctx, pool, STRINGPOOL_DEFAULT);
-	if (r)
-		return r;
-
-	// Add an empty string to new string pools
-	loc_stringpool_append(*pool, "");
-
-	return r;
 }
 
 static int loc_stringpool_mmap(struct loc_stringpool* pool, FILE* f, size_t length, off_t offset) {
@@ -146,24 +159,33 @@ static int loc_stringpool_mmap(struct loc_stringpool* pool, FILE* f, size_t leng
 	pool->length = length;
 
 	if (pool->data == MAP_FAILED)
-		return -errno;
+		return 1;
 
 	return 0;
 }
 
 LOC_EXPORT int loc_stringpool_open(struct loc_ctx* ctx, struct loc_stringpool** pool,
 		FILE* f, size_t length, off_t offset) {
-	int r = __loc_stringpool_new(ctx, pool, STRINGPOOL_MMAP);
+	struct loc_stringpool* p = NULL;
+
+	// Allocate a new stringpool
+	int r = loc_stringpool_new(ctx, &p);
 	if (r)
 		return r;
 
+	// Change mode to mmap
+	p->mode = STRINGPOOL_MMAP;
+
 	// Map data into memory
 	if (length > 0) {
-		r = loc_stringpool_mmap(*pool, f, length, offset);
-		if (r)
+		r = loc_stringpool_mmap(p, f, length, offset);
+		if (r) {
+			loc_stringpool_free(p);
 			return r;
+		}
 	}
 
+	*pool = p;
 	return 0;
 }
 
@@ -171,30 +193,6 @@ LOC_EXPORT struct loc_stringpool* loc_stringpool_ref(struct loc_stringpool* pool
 	pool->refcount++;
 
 	return pool;
-}
-
-static void loc_stringpool_free(struct loc_stringpool* pool) {
-	DEBUG(pool->ctx, "Releasing string pool %p\n", pool);
-	int r;
-
-	switch (pool->mode) {
-		case STRINGPOOL_DEFAULT:
-			if (pool->data)
-				free(pool->data);
-			break;
-
-		case STRINGPOOL_MMAP:
-			if (pool->data && pool->data != MAP_FAILED) {
-				r = munmap(pool->data, pool->length);
-				if (r)
-					ERROR(pool->ctx, "Could not unmap data at %p: %s\n",
-						pool->data, strerror(errno));
-			}
-			break;
-	}
-
-	loc_unref(pool->ctx);
-	free(pool);
 }
 
 LOC_EXPORT struct loc_stringpool* loc_stringpool_unref(struct loc_stringpool* pool) {
@@ -208,6 +206,8 @@ LOC_EXPORT struct loc_stringpool* loc_stringpool_unref(struct loc_stringpool* po
 
 static off_t loc_stringpool_get_next_offset(struct loc_stringpool* pool, off_t offset) {
 	const char* string = loc_stringpool_get(pool, offset);
+	if (!string)
+		return offset;
 
 	return offset + strlen(string) + 1;
 }

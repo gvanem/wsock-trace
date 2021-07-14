@@ -232,7 +232,7 @@ LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_n
 	list->size++;
 
 	// Move all elements out of the way
-	for (unsigned int i = list->size - 1; i > index; i--)
+	for (unsigned int i = list->size - 1; i > (unsigned int)index; i--)
 		list->elements[i] = list->elements[i - 1];
 
 	// Add the new element at the right place

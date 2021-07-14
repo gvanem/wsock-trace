@@ -423,6 +423,8 @@ static int loc_database_write_networks(struct loc_writer* writer,
 	// Add root
 	struct loc_network_tree_node* root = loc_network_tree_get_root(writer->networks);
 	node = make_node(root);
+	if (!node)
+		return 1;
 
 	TAILQ_INSERT_TAIL(&nodes, node, nodes);
 
@@ -463,6 +465,10 @@ static int loc_database_write_networks(struct loc_writer* writer,
 
 			// Append network to be written out later
 			struct network* nw = make_network(network);
+			if (!nw) {
+				free_node(node);
+				return 1;
+			}
 			TAILQ_INSERT_TAIL(&networks, nw, networks);
 
 			db_node.network = htobe32(network_index++);
