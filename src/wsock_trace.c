@@ -549,7 +549,7 @@ static struct LoadTable dyn_funcs [] = {
              /**
               * Allthough `WSASendMsg()` seems to be an "extension-function"
               * accessible only (?) via the `WSAID_WSASENDMSG` GUID, it is present
-              * in `libws2_32.a` in some MinGW distros. <br>
+              * in `%WinDir\ws2_32.dll`.
               * Add it as an option.
               */
               ADD_VALUE (1, "ws2_32.dll", WSASendMsg),
@@ -1548,20 +1548,35 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
    *       It seems the WSAGetLastError() is not reliably returned on a non-blocking socket.
    */
   const struct sockaddr_in *sa = (const struct sockaddr_in*)addr;
+  char  ts_buf [40] = "";    /* timestamp at start of connect() */
+  BOOL  _exclude_this;
   int   rc;
 
   CHECK_PTR (p_connect);
 
   ENTER_CRIT();
 
+  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("connect", EXCL_FUNCTION));
+  _exclude_this = exclude_this;
+
+  if (!_exclude_this)
+     strcpy (ts_buf, get_timestamp());
+
   rc = (*p_connect) (s, addr, addr_len);
 
-  WSTRACE ("connect (%s, %s, fam %s) --> %s",
-           socket_number(s), sockaddr_str2(addr, &addr_len),
-           socket_family(sa->sin_family), get_error(rc, 0));
-
-  if (!exclude_this)
+  if (!_exclude_this)
   {
+    /* We want the timestamp for when connect() was called.
+     * Not the timestamp for when connect() returned. Hence do not
+     * use the WSTRACE() macro here.
+     */
+    wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
+                    ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+
+    wstrace_printf (FALSE, "connect (%s, %s, fam %s) --> %s~0\n",
+                    socket_number(s), sockaddr_str2(addr, &addr_len),
+                    socket_family(sa->sin_family), get_error(rc, 0));
+
     WSAERROR_PUSH();
 
     if (g_cfg.GEOIP.enable)
@@ -1585,7 +1600,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
 
     WSAERROR_POP();
   }
-  LEAVE_CRIT (!exclude_this);
+  LEAVE_CRIT (!_exclude_this);
   return (rc);
 }
 
@@ -2290,13 +2305,13 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
   return (rc);
 }
 
-EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_bytes_sent,
+EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_bytes,
                               WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   int rc;
 
   CHECK_PTR (p_WSASendMsg);
-  rc = (*p_WSASendMsg) (s, msg, flags, num_bytes_sent, ov, func);
+  rc = (*p_WSASendMsg) (s, msg, flags, num_bytes, ov, func);
 
   ENTER_CRIT();
 
@@ -2305,12 +2320,14 @@ EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_byt
   if (!exclude_this)
   {
     char res [100];
+    char sent [20] = "?";
+
+    if (num_bytes)
+      _itoa (*num_bytes, sent, 10);
 
     strcpy (res, get_error(rc, 0));
-    WSTRACE ("WSASendMsg (%s, 0x%p, ...) --> %s", socket_number(s), msg, res);
-
-    if (!exclude_this)
-       dump_wsamsg (msg, rc);
+    WSTRACE ("WSASendMsg (%s, 0x%p, ...) --> %s, sent: %s", socket_number(s), msg, res, sent);
+    dump_wsamsg (msg, rc);
   }
 
   LEAVE_CRIT (!exclude_this);
