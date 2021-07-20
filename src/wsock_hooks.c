@@ -79,7 +79,7 @@ static BOOL PASCAL hooked_ACCEPTEX (SOCKET      listen_sock,
 
   ENTER_CRIT();
   WSTRACE ("AcceptEx (%s, %s, ...) (ex-func) --> %s",
-           socket_number(listen_sock), socket_number(accept_sock), get_error(!rc, 0));
+           socket_number(listen_sock), socket_number(accept_sock), get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -95,7 +95,7 @@ static BOOL PASCAL hooked_CONNECTEX (SOCKET                 s,
   BOOL rc = (*orig_CONNECTEX) (s, name, name_len, send_buf, send_data_len, bytes_sent, ov);
 
   ENTER_CRIT();
-  WSTRACE ("ConnectEx (%s, ...) (ex-func) --> %s", socket_number(s), get_error(!rc, 0));
+  WSTRACE ("ConnectEx (%s, ...) (ex-func) --> %s", socket_number(s), get_error(rc, 0));
 
   if (g_cfg.dump_data && send_buf && (rc || WSAERROR_PUSH() == ERROR_IO_PENDING))
      dump_data (send_buf, send_data_len);
@@ -113,7 +113,7 @@ static BOOL PASCAL hooked_DISCONNECTEX (SOCKET      s,
 
   ENTER_CRIT();
   WSTRACE ("DisconnectEx (%s, ...) (ex-func) --> %s",
-           socket_number(s), get_error(!rc, 0));
+           socket_number(s), get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -146,7 +146,7 @@ static BOOL PASCAL hooked_TRANSMITFILE (SOCKET                 s,
   BOOL rc = (*orig_TRANSMITFILE) (s, file, bytes_to_write, bytes_per_send,
                                   ov, transmit_bufs, reserved);
   ENTER_CRIT();
-  WSTRACE ("TransmitFile (%s, ...) (ex-func) --> %s", socket_number(s), get_error(!rc, 0));
+  WSTRACE ("TransmitFile (%s, ...) (ex-func) --> %s", socket_number(s), get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -161,7 +161,7 @@ static BOOL PASCAL hooked_TRANSMITPACKETS (SOCKET                    s,
   BOOL rc = (*orig_TRANSMITPACKETS) (s, packet_array, elements, transmit_size, ov, flags);
 
   ENTER_CRIT();
-  WSTRACE ("TransmitPackets (%s, ...) (ex-func) --> %s", socket_number(s), get_error(!rc, 0));
+  WSTRACE ("TransmitPackets (%s, ...) (ex-func) --> %s", socket_number(s), get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -172,14 +172,27 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
                                      WSAOVERLAPPED *ov,
                                      LPWSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
 {
-  INT rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
+  char recv[20] = "?";
+  INT  rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
 
   ENTER_CRIT();
-  WSTRACE ("WSARecvMsg (%s, 0x%p, ...) (ex-func) --> %s",
-           socket_number(s), msg, get_error(!rc, 0));
+
+  if (bytes_recv)
+  {
+    _itoa (*bytes_recv, recv, 10);
+    if (rc == NO_ERROR || (*g_WSAGetLastError)() == WSA_IO_PENDING)
+       g_cfg.counts.recv_bytes += *bytes_recv;
+  }
+
+  WSTRACE ("WSARecvMsg (%s, 0x%p, ...) (ex-func) --> %s, recv: %s",
+           socket_number(s), msg, get_error(rc, 0), recv);
 
   if (!exclude_this)
-     dump_wsamsg (msg, rc);
+  {
+    trace_printf ("%*src: %ld, msg->lpBuffers: 0x%p, msg->dwBufferCount: %lu\n",
+                  g_cfg.trace_indent+2, "", (long)rc, msg->lpBuffers, msg->dwBufferCount);
+    dump_wsamsg (msg, rc);
+  }
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -192,11 +205,16 @@ static INT PASCAL hooked_WSASENDMSG (SOCKET        s,
                                      WSAOVERLAPPED *ov,
                                      LPWSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
 {
-  INT rc = (*orig_WSASENDMSG) (s, msg, flags, bytes_sent, ov, complete_func);
+  char sent [20] = "?";
+  INT  rc = (*orig_WSASENDMSG) (s, msg, flags, bytes_sent, ov, complete_func);
 
   ENTER_CRIT();
-  WSTRACE ("WSASendMsg (%s, 0x%p, %s, ...) (ex-func) --> %s",
-           socket_number(s), msg, socket_flags(flags), get_error(!rc, 0));
+
+  if (bytes_sent)
+    _itoa (*bytes_sent, sent, 10);
+
+  WSTRACE ("WSASendMsg (%s, 0x%p, %s, ...) (ex-func) --> %s, sent: %s",
+           socket_number(s), msg, socket_flags(flags), get_error(rc, 0), sent);
 
   if (!exclude_this)
      dump_wsamsg (msg, rc);
@@ -215,7 +233,7 @@ static INT WSAAPI hooked_WSAPOLL (WSAPOLLFD *fdarray,
   INT rc = (*orig_WSAPOLL) (fdarray, num_fds, timeout);
 
   ENTER_CRIT();
-  WSTRACE ("WSAPoll (...) (ex-func) --> %s", get_error(!rc, 0));
+  WSTRACE ("WSAPoll (...) (ex-func) --> %s", get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
