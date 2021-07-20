@@ -1641,13 +1641,13 @@ const char *ioctlsocket_cmd_name (long cmd)
 #define CHECK_MAX_DATA(ofs) \
         (g_cfg.max_data > 0 && (ofs) >= (unsigned)g_cfg.max_data-1)
 
-static void dump_data_internal (const void *data_p, unsigned data_len, const char *prefix)
+static UINT dump_data_internal (const void *data_p, unsigned data_len, const char *prefix)
 {
   const BYTE *data = (const BYTE*) data_p;
   UINT  i = 0, j, ofs;
 
   if (data_len == 0)
-     return;
+     return (0);
 
   trace_puts ("~4");
 
@@ -1697,9 +1697,10 @@ static void dump_data_internal (const void *data_p, unsigned data_len, const cha
   if (ofs + i < data_len - 1)
   {
     trace_indent (g_cfg.trace_indent+2);
-    trace_printf ("<%d more bytes...>\n", data_len-1-ofs-i);
+    trace_printf ("<%d more bytes...>\n", data_len-1 - ofs - i);
   }
   trace_puts ("~0");
+  return (ofs + i);
 }
 
 void dump_data (const void *data_p, unsigned data_len)
@@ -1710,7 +1711,8 @@ void dump_data (const void *data_p, unsigned data_len)
 
 void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
 {
-  int i;
+  UINT total = 0;
+  int  i;
 
   if (g_cfg.max_data <= 0)
      return;
@@ -1720,7 +1722,9 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
     char prefix[30];
 
     snprintf (prefix, sizeof(prefix), "iov %d: ", i);
-    dump_data_internal (bufs->buf, bufs->len, prefix);
+    total += dump_data_internal (bufs->buf, bufs->len, prefix);
+    if (total >= g_cfg.max_data)
+       break;
   }
 }
 
