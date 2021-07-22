@@ -119,6 +119,7 @@ EXPORTS
 ;   WSCDeinstallProvider@8
 ;   WSCEnableNSProvider@8
 ;   WSCEnumProtocols@16
+;   WSCGetProviderPath@16
 ;   WSCGetProviderPathW@16
 ;   WSCInstallNameSpace@20
 ;   WSCInstallNameSpaceEx@24
@@ -139,7 +140,34 @@ EXPORTS
 ;   WSAUnhookBlockingHook@0
 ;   WSAIsBlocking@0
 ;   WEP@0
-;
+;   ProcessSocketNotifications@28
+;   SetAddrInfoExA@48
+:   SetAddrInfoExW@48
+;   FreeAddrInfoExW@4
+;   GetAddrInfoExA@40
+;   GetAddrInfoExCancel@4
+;   GetAddrInfoExOverlappedResult@4
+;   GetAddrInfoExW@40
+;   GetHostNameW@8
+;   WPUGetProviderPathEx@20
+;   WSAUnadvertiseProvider@4
+;   WSCDeinstallProviderEx@12
+;   WSCEnumProtocolsEx@20
+;   WSCGetApplicationCategory@24
+;   WSCGetApplicationCategoryEx@28
+;   WSCGetProviderInfo@24
+;   WSCInstallNameSpaceEx2@28
+;   WSCInstallProviderEx@28
+;   WSCSetApplicationCategory@28
+;   WSCSetApplicationCategoryEx@32
+;   WSCSetProviderInfo@24
+;   WSCUnInstallNameSpaceEx2@8
+;   WSCUpdateProviderEx@24
+;   WSCWriteProviderOrderEx@12
+;   WahCloseApcHelper@4
+;   WahCloseHandleHelper@4
+;   WahCloseNotificationHandleHelper@4
+
 ; Exports from MSWSOCK.DLL
 ;
 ;   AcceptEx@32
