@@ -393,11 +393,11 @@ class CLI(object):
 		with self.db.transaction():
 			# Create some temporary tables to store parsed data
 			self.db.execute("""
-				CREATE TEMPORARY TABLE _autnums(number integer, organization text, source text NOT NULL)
+				CREATE TEMPORARY TABLE _autnums(number integer NOT NULL, organization text NOT NULL, source text NOT NULL)
 					ON COMMIT DROP;
 				CREATE UNIQUE INDEX _autnums_number ON _autnums(number);
 
-				CREATE TEMPORARY TABLE _organizations(handle text, name text NOT NULL, source text NOT NULL)
+				CREATE TEMPORARY TABLE _organizations(handle text NOT NULL, name text NOT NULL, source text NOT NULL)
 					ON COMMIT DROP;
 				CREATE UNIQUE INDEX _organizations_handle ON _organizations(handle);
 
@@ -604,9 +604,31 @@ class CLI(object):
 			elif key == "org":
 				autnum[key] = val.upper()
 
+			elif key == "descr":
+				# Save the first description line as well...
+				if not key in autnum:
+					autnum[key] = val
+
 		# Skip empty objects
-		if not autnum:
+		if not autnum or not "asn" in autnum:
 			return
+
+		# Insert a dummy organisation handle into our temporary organisations
+		# table in case the AS does not have an organisation handle set, but
+		# has a description (a quirk often observed in APNIC area), so we can
+		# later display at least some string for this AS.
+		if not "org" in autnum:
+			if "descr" in autnum:
+				autnum["org"] = "LIBLOC-%s-ORGHANDLE" % autnum.get("asn")
+
+				self.db.execute("INSERT INTO _organizations(handle, name, source) \
+					VALUES(%s, %s, %s) ON CONFLICT (handle) DO NOTHING",
+					autnum.get("org"), autnum.get("descr"), source_key,
+				)
+			else:
+				log.warning("ASN %s neither has an organisation handle nor a description line set, omitting" % \
+						autnum.get("asn"))
+				return
 
 		# Insert into database
 		self.db.execute("INSERT INTO _autnums(number, organization, source) \
