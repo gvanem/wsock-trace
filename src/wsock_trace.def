@@ -142,7 +142,7 @@ EXPORTS
 ;   WEP@0
 ;   ProcessSocketNotifications@28
 ;   SetAddrInfoExA@48
-:   SetAddrInfoExW@48
+;   SetAddrInfoExW@48
 ;   FreeAddrInfoExW@4
 ;   GetAddrInfoExA@40
 ;   GetAddrInfoExCancel@4
