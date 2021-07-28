@@ -12,6 +12,7 @@ extern int _idna_errno, _idna_winnls_errno;
 enum IDNA_errors {
      IDNAERR_OK = 0,
      IDNAERR_NOT_INIT,
+     IDNAERR_ALREADY_PFX,
      IDNAERR_PUNYCODE_BASE,
      IDNAERR_PUNYCODE_BAD_INPUT,
      IDNAERR_PUNYCODE_BIG_OUTBUF,

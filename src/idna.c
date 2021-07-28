@@ -324,6 +324,8 @@ const char *IDNA_strerror (int err)
          return ("No error");
     case IDNAERR_NOT_INIT:
          return ("Not initialised");
+    case IDNAERR_ALREADY_PFX:
+         return ("Already prefixed");
     case IDNAERR_PUNYCODE_BASE:
          return ("No Punycode error");
     case IDNAERR_PUNYCODE_BAD_INPUT:
@@ -600,6 +602,7 @@ BOOL IDNA_convert_to_ACE (
     if (!strncmp("xn--", label, 4))
     {
       TRACE (2, "IDNA_convert_to_ACE: label `%s' already prefixed\n", label);
+      _idna_errno = IDNAERR_ALREADY_PFX;
       goto quit;
     }
     for (p = (const BYTE*)label; *p; p++)
@@ -1046,7 +1049,8 @@ static int resolve_name (const char *name)
   if (!IDNA_convert_to_ACE(host, &len))
   {
     print_last_error();
-    return (-1);
+    if (_idna_errno != IDNAERR_ALREADY_PFX)
+       return (-1);
   }
 
   he = gethostbyname (host);
