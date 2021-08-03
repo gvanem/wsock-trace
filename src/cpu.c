@@ -178,7 +178,6 @@ void print_process_times (void)
     time_t ct      = FILETIME_to_time_t (&cr_time);
     uint64 fract_t = FILETIME_to_unix_epoch (&cr_time) % U64_SUFFIX(1000000);
 
-    tzset();
     tm = localtime (&ct);
     if (tm)
          strftime (time_str, sizeof(time_str), "%Y%m%d/%H:%M:%S", tm);

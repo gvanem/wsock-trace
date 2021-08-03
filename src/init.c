@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <math.h>
+#include <locale.h>
 
 #include "config.h"
 #include "common.h"
@@ -1397,6 +1398,8 @@ void wsock_trace_init (void)
   g_cfg.trace_stream  = stdout;
   g_cfg.trace_file_device = TRUE;
 
+  tzset();
+  setlocale (LC_ALL, "");
   common_init();
 
   mod = GetModuleHandle (NULL);

@@ -534,7 +534,6 @@ int DNSBL_update_files (BOOL force_update)
     return (0);
   }
 
-  tzset();
   now = time (NULL);
   expiry = now;
   if (!force_update)
