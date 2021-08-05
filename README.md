@@ -11,7 +11,7 @@ the MinGW and CygWin targets will only show raw addresses for the traced
 functions.
 
 A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com` <br>
-(`ahost` is part of the DNS library **[C-ares](http://c-ares.haxx.se/)**):
+(`ahost` is part of the DNS library **[C-ares](https://c-ares.haxx.se/)**):
 
 ![screenshot](screenshot_ahost-msdn-com.png?raw=true)
 
@@ -37,8 +37,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   and [`ConnectEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737606.aspx)).
   Wsock-trace is able to trace these too.
 
-* *IP-Country* information thanks to the **[MaxMind](http://www.maxmind.com)** Lite databases.
-  Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+* *IP-Country* information thanks to the **[MaxMind](https://www.maxmind.com/en/geoip2-services-and-databases)**
+  Lite databases. Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
   (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L164)
   and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L165)
@@ -81,7 +81,7 @@ To clone this repository, do this in an **empty** `c:\prog\wsock_trace` director
 * `c:\prog\wsock_trace> git clone https://github.com/gvanem/wsock-trace.git .`
 
 To be able to get more precise Geo-IP information for addresses (city and region), Wsock-trace
-will use a IP2Location LITE [**database**](http://lite.ip2location.com). To make best use of it,
+will use a IP2Location LITE [**database**](https://lite.ip2location.com). To make best use of it,
 do this:
   * Sign-up for an [**account**](https://lite.ip2location.com/sign-up) and download a free
     IP2Location LITE [**database**](https://lite.ip2location.com/database/ip-country-region-city).
@@ -133,7 +133,7 @@ Example screen-shot above or details in **[Running samples](#running-samples)** 
   too (which will eases the debug of optimised code. And remember to use `-debug` when linking your program.
   See [`src/Makefile.vc6`](https://github.com/gvanem/wsock-trace/blob/master/src/Makefile.vc6) for an example.
   It is not adviced to use option [`-Oy`](https://docs.microsoft.com/en-gb/cpp/build/reference/oy-frame-pointer-omission)
-  (*enable frame pointer omission*) since that will make it difficult for [`StackWalk64()`](http://msdn.microsoft.com/library/en-us/debug/base/stackwalk64.asp)
+  (*enable frame pointer omission*) since that will make it difficult for [`StackWalk64()`](https://docs.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-stackwalk64)
   to  figure out the filename and line of the calling function.
 
 
@@ -300,7 +300,7 @@ start /pos=800,150,1000,1000 ..\openvpn.exe --config sample-config-files/loopbac
 ```
 [![screenshot](screenshot-openvpn-tmb.jpg?raw=true)](screenshot-openvpn-tmb.jpg?raw=true):
 
-A **[Larger](http://www.watt-32.net/misc/screenshot-openvpn.png)** version.
+A **[Larger](https://www.watt-32.net/misc/screenshot-openvpn.png)** version.
 
 ### Firewall Monitor
 
@@ -312,7 +312,7 @@ In this case the **[address](https://blackhat.directory/ip/176.119.4.53)** `176.
 in *Ukraine / Donetsk* is *very* active giving a Firewall event approximately every 5 minutes.
 
 A good test of the `firewall.c` features is to open up your router (create a DMZ) and start a remote
-**[port-scan](http://www.whatsmyip.org/port-scanner/server/)** while `ws_tool.exe firewall`
+**[port-scan](https://www.whatsmyip.org/port-scanner/server/)** while `ws_tool.exe firewall`
 is running. You'll see a lot of **DROP**-events like:
 ```
 6.700 sec: FWPM_NET_EVENT_TYPE_CLASSIFY_DROP, IN, IPPROTO_TCP
@@ -354,7 +354,7 @@ Note that some virus scanners may find the behaviour of programs linked to
       functions to trace.
 
    3. Injecting `wsock_trace.dll` into a remote process. Ref:
-      [**http://www.viksoe.dk/code/wepmetering.htm**](http://www.viksoe.dk/code/wepmetering.htm).
+      [**https://www.viksoe.dk/code/wepmetering.htm**](https://www.viksoe.dk/code/wepmetering.htm).
 
    4. Optionally load [**Wireshark's**](https://www.wireshark.org) `libwireshark.dll` to dissect
       transport and application protocols. <br>
@@ -364,12 +364,12 @@ Note that some virus scanners may find the behaviour of programs linked to
       `socket(AF_INET6,...)`).
 
    6. Make it possible to switch network stacks at run-time:
-      select amongst Winsock2, **[lwIP](http://savannah.nongnu.org/projects/lwip/)**,
+      select amongst Winsock2, **[lwIP](https://savannah.nongnu.org/projects/lwip/)**,
       **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or
-      **[Cyclone TCP](http://www.oryx-embedded.com/cyclone_tcp.html)**.
+      **[Cyclone TCP](https://www.oryx-embedded.com/cyclone_tcp.html)**.
 
    7. Make a GUI trace viewer for it. Ref:
-      [**http://www.viksoe.dk/code/windowless1.htm**](http://www.viksoe.dk/code/windowless1.htm)
+      [**https://www.viksoe.dk/code/windowless1.htm**](https://www.viksoe.dk/code/windowless1.htm)
 
    8. Add a Json type config feature to support the above features. E.g.:
       ```
@@ -403,13 +403,13 @@ G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2020.
 
    * [1] Nmap; "*Network Mapper*" is a free and open source (license) utility for
          network  discovery and security auditing. <br>
-         Ref. [**http://nmap.org/download.html**](http://nmap.org/download.html)
+         Ref. [**https://nmap.org/download.html**](https://nmap.org/download.html)
 
    * [2] A C library for asynchronous DNS requests (including name resolves) <br>
-         Ref. [**http://c-ares.haxx.se/**](http://c-ares.haxx.se/)
+         Ref. [**https://c-ares.haxx.se/**](https://c-ares.haxx.se/)
 
    * [3] This product includes IP2Location LITE data available from
-         [**http://lite.ip2location.com**](http://lite.ip2location.com).
+         [**https://lite.ip2location.com**](https://lite.ip2location.com).
 
    * [4] This product includes IPFire location and ASN data available from
          [**https://location.ipfire.org/databases/1/**](https://location.ipfire.org/databases/1/).
