@@ -1399,7 +1399,7 @@ void wsock_trace_init (void)
   g_cfg.trace_file_device = TRUE;
 
   tzset();
-  setlocale (LC_ALL, "");
+//setlocale (LC_ALL, "");
   common_init();
 
   mod = GetModuleHandle (NULL);
