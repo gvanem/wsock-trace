@@ -7,6 +7,7 @@
  * Ref. RFC-3490.
  *
  * idna.c - Part of Wsock-Trace.
+ *
  */
 #include "config.h"
 
