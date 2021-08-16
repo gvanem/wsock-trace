@@ -62,7 +62,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -85,7 +85,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -121,6 +121,9 @@
     <ClCompile Include="vm_dump.c" />
     <ClCompile Include="wsock_trace.c" />
     <ClCompile Include="wsock_trace_lua.c" />
+    <ClCompile Include="xz_decompress.c" />
+    <ClCompile Include="./mhook/mhook.c" />
+    <ClCompile Include="./mhook/disasm.c" />
     <ClCompile Include="./Geo-IP/IPFire/src/as.c" />
     <ClCompile Include="./Geo-IP/IPFire/src/as-list.c" />
     <ClCompile Include="./Geo-IP/IPFire/src/country.c" />

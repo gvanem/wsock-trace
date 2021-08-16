@@ -114,6 +114,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj             \
                   $(OBJ_DIR)\common.obj          \
                   $(OBJ_DIR)\cpu.obj             \
                   $(OBJ_DIR)\csv.obj             \
+                  $(OBJ_DIR)\disasm.obj          \
                   $(OBJ_DIR)\dnsbl.obj           \
                   $(OBJ_DIR)\dump.obj            \
                   $(OBJ_DIR)\firewall.obj        \
@@ -126,6 +127,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj             \
                   $(OBJ_DIR)\inet_util.obj       \
                   $(OBJ_DIR)\init.obj            \
                   $(OBJ_DIR)\ip2loc.obj          \
+                  $(OBJ_DIR)\mhook.obj           \
                   $(OBJ_DIR)\overlap.obj         \
                   $(OBJ_DIR)\smartlist.obj       \
                   $(OBJ_DIR)\stkwalk.obj         \
@@ -140,7 +142,6 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj             \
 #
 NON_EXPORT_OBJ = $(OBJ_DIR)\non-export.obj
 
-#
 #
 # .obj-files for 'ws_tool.exe'.
 #
@@ -188,7 +189,7 @@ LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
              $(OBJ_DIR)\win_str.obj      \
              $(OBJ_DIR)\win_mmap.obj
 
-all: $(OBJ_DIR) compile_luajit_$(USE_LUAJIT) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) ws_tool.exe
+all: $(OBJ_DIR) compile_luajit_$(USE_LUAJIT) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) ws_tool.exe mhook-test.exe
 	@echo Welcome to Wsock_trace $(MACHINE) library and ws_tool.exe test-program.
 
 $(OBJ_DIR):
@@ -212,6 +213,11 @@ uninstall:
 ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_DEP)
 	link.exe $(LDFLAGS) -verbose -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
 	@type link.tmp >> ws_tool.map
+	@echo
+
+mhook-test.exe: $(OBJ_DIR)\mhook-test.obj $(OBJ_DIR)\disasm.obj $(WSOCK_TRACE_LIB)
+	link.exe $(LDFLAGS) -verbose -out:$@ $** gdi32.lib kernel32.lib user32.lib > link.tmp
+	@type link.tmp >> mhook-test.map
 	@echo
 
 run_test: ws_tool.exe
@@ -240,6 +246,7 @@ vclean realclean: clean
 	      wsock_trace$(X_SUFFIX)$(_D).map \
 	      wsock_trace$(X_SUFFIX)$(_D).pdb
 	- del ws_tool.exe ws_tool.map ws_tool.pdb
+	- del mhook-test.exe mhook-test.map mhook-test.pdb
 	- rd $(OBJ_DIR)
 !if "$(USE_LUAJIT)" == "1"
 	- del $(LUAJIT_ROOT)\src\lua51*.lib
@@ -269,6 +276,16 @@ LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/loc/windows  \
 
 {$(LIBLOC_ROOT)}.c{$(OBJ_DIR)}.obj:
 	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo$*.obj $<
+	@echo
+
+MHOOK_CFLAGS = $(CFLAGS) -DUSE_TRACE
+
+{mhook}.c{$(OBJ_DIR)}.obj:
+	$(CC) -c $(MHOOK_CFLAGS) -Fo$*.obj $<
+	@echo
+
+$(OBJ_DIR)\mhook-test.obj: mhook\mhook.c
+	$(CC) -c $(MHOOK_CFLAGS) -DMHOOK_TEST -Fo$*.obj mhook\mhook.c
 	@echo
 
 #
@@ -340,6 +357,10 @@ $(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h \
                             overlap.h dump.h wsock_trace_lua.h \
                             wsock_trace.h wsock_hooks.c
 $(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h in_addr.h
+$(OBJ_DIR)\disasm.obj:      mhook\disasm.c mhook\disasm.h
+$(OBJ_DIR)\mhook.obj:       mhook\mhook.c mhook\disasm.h mhook\mhook.h
+$(OBJ_DIR)\mhook-test.obj:  mhook\mhook.c mhook\mhook.h
+
 
 !if "$(USE_LUAJIT)" == "1"
 wsock_trace_lua.h:             \
