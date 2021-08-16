@@ -702,6 +702,7 @@ class CLI(object):
 				if validcountries and invalidcountries:
 					log.warning("Skipping network with bogus countr(y|ies) %s (original countries: %s): %s" % \
 						(invalidcountries, inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
+					break
 
 				# Everything is fine here, run INSERT statement...
 				self.db.execute("INSERT INTO _rirdata(network, country, original_countries, source) \
