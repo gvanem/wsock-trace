@@ -460,6 +460,12 @@ static void wslua_init (const char *script)
      return;
 
   L = luaL_newstate();
+  if (!L)
+  {
+    LUA_WARNING ("luaL_newstate() failed.\n");
+    return;
+  }
+
   luaL_openlibs (L);    /* Load LuaJIT libraries */
   luaopen_jit (L);      /* Turn on he JIT engine */
 

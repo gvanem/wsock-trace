@@ -10,7 +10,7 @@ USE_BFD       ?= 0
 #
 # If you want LuaJIT-script support, set 'USE_LUAJIT = 1':
 #
-USE_LUAJIT ?= 0
+USE_LUAJIT ?= 1
 LUAJIT_ROOT = ../LuaJIT
 
 BIN_TARGET = /usr/bin
@@ -30,13 +30,15 @@ OBJ_DIR = Cygwin_obj
 CHECK_MACHINE = $(shell gcc -dumpmachine)
 
 ifeq ($(USE_CRT_DEBUG),1)
-  CFLAGS += -O0 -ggdb
-  _D = _d
+  CCOPT = -O0
+  _D    = _d
 else
-  CFLAGS  += -O3 -fomit-frame-pointer
-  LDFLAGS += -s
-  _D =
+  CCOPT = -O3 -fomit-frame-pointer
+  _D    =
 endif
+
+CCDEBUG = -ggdb
+CFLAGS += $(CCDEBUG) $(CCOPT)
 
 ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
   WSOCK_LIB = libwsock_trace_cyg$(_D).a
@@ -169,8 +171,8 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 	cp --update $(WSOCK_LIB)  $(LIB_TARGET)
 	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
-ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_LIB) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > ws_tool.map
+ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
+	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lws2_32 > ws_tool.map
 	@echo
 
 $(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c
@@ -205,16 +207,15 @@ ifeq ($(USE_LUAJIT),1)
   #
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC=gcc
+	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC=gcc CCDEBUG=$(CCDEBUG) CCOPT=$(CCOPT) all
 	@echo
 
   clean_lua:
 	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
-	 - rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB)
-else
+	 - rm -f $(LUAJIT_ROOT)/src/*.o              $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB)
 
-clean_lua: ;
+else
+  clean_lua: ;
 endif
 
 clean: clean_lua
