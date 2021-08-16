@@ -1963,7 +1963,7 @@ static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
     freeaddrinfo (ai);
   }
   else
-    trace_printf ("Invalid address: %s.\n", get_ws_error());
+    trace_printf ("Error: %s.\n", get_ws_error());
 }
 
 static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
@@ -1978,7 +1978,7 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
     freeaddrinfo (ai);
   }
   else
-    trace_printf ("Invalid address: %s.\n", get_ws_error());
+    trace_printf ("Error: %s.\n", get_ws_error());
 }
 
 /**
