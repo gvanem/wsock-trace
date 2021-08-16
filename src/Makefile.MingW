@@ -58,13 +58,15 @@ else
 endif
 
 ifeq ($(USE_CRT_DEBUG),1)
-  CFLAGS += -O0 -ggdb -D_DEBUG
+  CCOPT = -O0 -D_DEBUG
   _D = _d
 else
-  CFLAGS  += -O3 -fomit-frame-pointer
-  LDFLAGS += # -s
+  CCOPT = -O3 -fomit-frame-pointer
   _D =
 endif
+
+CCDEBUG = -ggdb
+CFLAGS += $(CCDEBUG) $(CCOPT)
 
 ifeq ($(USE_BFD),1)
   CFLAGS += -DUSE_BFD -DBFD_ARCH_SIZE=$(BITS)
@@ -199,7 +201,7 @@ ifeq ($(USE_LUAJIT),1)
   #
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src all TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)'
+	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)' all
 
   clean_lua:
 	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe

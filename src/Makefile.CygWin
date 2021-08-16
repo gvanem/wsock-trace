@@ -30,7 +30,7 @@ OBJ_DIR = Cygwin_obj
 CHECK_MACHINE = $(shell gcc -dumpmachine)
 
 ifeq ($(USE_CRT_DEBUG),1)
-  CCOPT = -O0
+  CCOPT = -O0 -D_DEBUG
   _D    = _d
 else
   CCOPT = -O3 -fomit-frame-pointer
@@ -207,7 +207,7 @@ ifeq ($(USE_LUAJIT),1)
   #
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC=gcc CCDEBUG=$(CCDEBUG) CCOPT=$(CCOPT) all
+	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC=gcc CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)' all
 	@echo
 
   clean_lua:

@@ -53,7 +53,7 @@ CCOPT_ppc=
 CCOPT_ppcspe=
 CCOPT_mips=
 #
-CCDEBUG=?
+CCDEBUG ?=
 # Uncomment the next line to generate debug information:
 #CCDEBUG= -g
 #
