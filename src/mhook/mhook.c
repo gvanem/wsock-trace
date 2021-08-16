@@ -1559,7 +1559,7 @@ static void *WINAPI Hook_HeapAlloc (HANDLE a_Handle, DWORD a_Bla, SIZE_T a_Bla2)
   return (ret);
 }
 
-static void *WINAPI Hook_HeapFree (HANDLE a_Handle, DWORD flags, VOID *lpMem)
+static BOOL WINAPI Hook_HeapFree (HANDLE a_Handle, DWORD flags, VOID *lpMem)
 {
   BOOL ret = (*True_HeapFree) (a_Handle, flags, lpMem);
   printf ("***** Call to HeapFree(0x%p, %lu, 0x%p) -> %d\n", a_Handle, flags, lpMem, ret);
