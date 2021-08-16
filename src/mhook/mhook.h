@@ -23,19 +23,13 @@
 extern "C" {
 #endif
 
-#if defined(_M_IX86)
-  #define _M_IX86_X64
-#elif defined(_M_X64)
-  #define _M_IX86_X64
+#if !defined(_M_IX86) && !defined(_M_X64)
+#error "Unsupported platform; MSVC x86 or x64 only"
 #endif
 
-#if !defined(_M_IX86_X64)
-#error unsupported platform
-#endif
-
-BOOL Mhook_SetHook (void **ppSystemFunction,   // pointer to pointer to function to be hooked
-                    void  *pHookFunction);     // the new hook function
-BOOL Mhook_Unhook (void **ppHookedFunction);   // function that was hooked; restore it's address
+BOOL Mhook_SetHook (void **system_function,  // pointer to pointer to function to be hooked
+                    void  *hook_function);   // the new hook function
+BOOL Mhook_Unhook (void **hook_function);    // function that was hooked; restore it's address
 
 #ifdef __cplusplus
 }
