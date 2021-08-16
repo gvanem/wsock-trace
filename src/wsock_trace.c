@@ -2897,18 +2897,6 @@ EXPORT int WINAPI WSAHtons (SOCKET s, u_short value, u_short *result)
   return (rc);
 }
 
-EXPORT int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
-{
-  int rc;
-
-  CHECK_PTR (p_WSAHtonl);
-  rc = (*p_WSAHtonl) (s, value, result);
-  ENTER_CRIT();
-  WSTRACE ("WSAHtonl (%u, %lu, %lu) --> %s", s, value, *result, get_error(rc, 0));
-  LEAVE_CRIT (!exclude_this);
-  return (rc);
-}
-
 EXPORT int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
 {
   int rc;
@@ -2917,6 +2905,23 @@ EXPORT int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
   rc = (*p_WSANtohs) (s, value, result);
   ENTER_CRIT();
   WSTRACE ("WSANtohs (%u, %u, %u) --> %s", s, value, *result, get_error(rc, 0));
+  LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
+/*
+ * Cygwin's <winsock2.h> in some older (?) version does not agree with these
+ * signatures. So just drop these for Cygwin.
+ */
+#if !defined(__CYGWIN__)
+EXPORT int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
+{
+  int rc;
+
+  CHECK_PTR (p_WSAHtonl);
+  rc = (*p_WSAHtonl) (s, value, result);
+  ENTER_CRIT();
+  WSTRACE ("WSAHtonl (%u, %lu, %lu) --> %s", s, value, *result, get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -2932,6 +2937,7 @@ EXPORT int WINAPI WSANtohl (SOCKET s, u_long value, u_long *result)
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
+#endif
 
 EXPORT __ULONG32 WINAPI inet_addr (const char *addr)
 {
