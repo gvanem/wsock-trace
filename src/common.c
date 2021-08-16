@@ -49,8 +49,10 @@ char     *program_name;         /* For getopt.c and 'xx_main()' functions */
 char *set_program_name (char *argv0)
 {
   static char ret [_MAX_PATH];
+  char   my_name [_MAX_PATH];
+  DWORD  len = GetModuleFileName (NULL, my_name, sizeof(my_name));
 
-  snprintf (ret, sizeof(ret), "%s %s", __argv[0], argv0);
+  snprintf (ret, sizeof(ret), "%.*s %s", len, my_name, argv0);
   program_name = ret;
   return (ret);
 }
