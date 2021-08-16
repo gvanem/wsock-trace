@@ -38,7 +38,7 @@
 
 /* PR 14072: Ensure that config.h is included first.  */
 #if !defined PACKAGE && !defined PACKAGE_VERSION
-#error config.h must be included before this header
+#error "config.h must be included before this header"
 #endif
 
 #ifdef __cplusplus
