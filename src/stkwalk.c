@@ -98,9 +98,19 @@ static const char *get_error (void);
 #if !defined(USE_PythonHook)
   #define USE_PythonHook     1
   #define USE_Py_inject_code 0
+  #define USE_Py_mhook_code  1
+
 #else
   #define USE_PythonHook     0
   #define USE_Py_inject_code 0
+  #define USE_Py_mhook_code  0
+#endif
+
+#if USE_Py_mhook_code && (defined(_M_IX86) || defined(_M_X64))
+  #include "mhook/mhook.h"
+#else
+  #undef  USE_Py_mhook_code
+  #define USE_Py_mhook_code 0
 #endif
 
 #if USE_SymEnumSymbolsEx
