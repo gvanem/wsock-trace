@@ -4987,30 +4987,33 @@ INTERNAL uint64_t ApplyDisplacement (uint64_t Address, INSTRUCTION *Instruction)
   X86_INSTRUCTION *X86Instruction = &Instruction->X86;
 
 #ifdef SUPPORT_WRAPAROUND
+  uint64_t PreAddr64, PostAddr64;
+  uint32_t PreAddr32, PostAddr32;
+  uint16_t PreAddr16, PostAddr16;
   uint64_t VirtualAddress = Address + Instruction->VirtualAddressDelta;
 
   switch (X86Instruction->OperandSize)
   {
     case 8:
-         uint64_t PreAddr64 = VirtualAddress;
-         uint64_t PostAddr64 = PreAddr64 + X86Instruction->Displacement;
-         return Address + (PostAddr64 - PreAddr64);
+         PreAddr64 = VirtualAddress;
+         PostAddr64 = PreAddr64 + X86Instruction->Displacement;
+         return (Address + (PostAddr64 - PreAddr64));
 
     case 4:
          // We have to do this carefully...
          // If EIP = FFFFF000 and Displacement=2000 then the final IP should be 1000
          // due to wraparound
-         uint32_t PreAddr32 = (uint32_t) VirtualAddress;
-         uint32_t PostAddr32 = PreAddr32 + (int32_t)X86Instruction->Displacement;
-         return Address + (PostAddr32 - PreAddr32);
+         PreAddr32 = (uint32_t) VirtualAddress;
+         PostAddr32 = PreAddr32 + (int32_t)X86Instruction->Displacement;
+         return (Address + (PostAddr32 - PreAddr32));
 
     case 2:
          // We have to do this carefully...
          // If IP = F000 and Displacement=2000 then the final IP should be 1000
          // due to wraparound
-         uint16_t PreAddr16 = (uint16_t) VirtualAddress;
-         uint16_t PostAddr16 = PreAddr16 + (int16_t)X86Instruction->Displacement;
-         return Address + (PostAddr16 - PreAddr16);
+         PreAddr16 = (uint16_t) VirtualAddress;
+         PostAddr16 = PreAddr16 + (int16_t)X86Instruction->Displacement;
+         return (Address + (PostAddr16 - PreAddr16));
 
     default:
         assert (0);
