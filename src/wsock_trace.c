@@ -66,6 +66,8 @@
 int volatile cleaned_up = 0;
 int volatile startup_count = 0;
 
+static const char *ts_now = NULL;
+
 static BOOL    exclude_this = FALSE;
 static fd_set *last_rd_fd = NULL;
 static fd_set *last_wr_fd = NULL;
@@ -89,8 +91,8 @@ static void        wstrace_printf (BOOL first_line,
  *   macro. `check_ptr()` makes sure `wsock_trace_init()` is called once
  *   and `p_function` is not NULL.
 */
-#if defined(USE_DETOURS)   /* \todo */
-  #define CHECK_PTR(ptr)    /* */
+#if defined(USE_MHOOK)     /* \todo */
+  #define CHECK_PTR(ptr)   /* */
 #else
   #define CHECK_PTR(ptr) check_ptr ((const void**)&ptr, #ptr)
 #endif
@@ -104,7 +106,7 @@ static void        wstrace_printf (BOOL first_line,
  *
  *   If `"g_cfg.trace_caller == 0"` or `"WSAStartup"` is in the
  *   `exclude_list` smartlist, the `!exclude_list_get("WSAStartup...", EXCL_FUNCTION)`
- *   returns `FALSE`.
+ *   returns `TRUE`.
  */
 #define WSTRACE(fmt, ...)                                        \
         do {                                                     \
@@ -114,10 +116,11 @@ static void        wstrace_printf (BOOL first_line,
           {                                                      \
             exclude_this = FALSE;                                \
             wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",            \
-                            get_timestamp(),                     \
+                            ts_now ? ts_now : get_timestamp(),   \
                             get_caller (GET_RET_ADDR(),          \
                                         get_EBP()) );            \
             wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
+            ts_now = NULL;                                       \
           }                                                      \
         } while (0)
 
@@ -1166,8 +1169,12 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
 {
   BOOL rc;
   char tv_buf[30];
+  char ts_buf [40] = "";    /* timestamp at start of WSAConnectByNameA() */
 
   CHECK_PTR (p_WSAConnectByNameA);
+
+  ts_now = strcpy (ts_buf, get_timestamp());
+
   rc = (*p_WSAConnectByNameA) (s, node_name, service_name, local_addr_len, local_addr,
                                remote_addr_len, remote_addr, tv, reserved);
 
@@ -1207,8 +1214,12 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
 {
   BOOL rc;
   char tv_buf[30];
+  char ts_buf [40] = "";    /* timestamp at start of WSAConnectByNameW() */
 
   CHECK_PTR (p_WSAConnectByNameW);
+
+  ts_now = strcpy (ts_buf, get_timestamp());
+
   rc = (*p_WSAConnectByNameW) (s, node_name, service_name, local_addr_len, local_addr,
                                remote_addr_len, remote_addr, tv, reserved);
 
@@ -1247,8 +1258,12 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
 {
   BOOL rc;
   char tv_buf[30];
+  char ts_buf [40] = "";    /* timestamp at start of WSAConnectByList() */
 
   CHECK_PTR (p_WSAConnectByList);
+
+  ts_now = strcpy (ts_buf, get_timestamp());
+
   rc = (*p_WSAConnectByList) (s, socket_addr_list, local_addr_len, local_addr,
                               remote_addr_len, remote_addr, tv, reserved);
 
@@ -1549,34 +1564,26 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
    */
   const struct sockaddr_in *sa = (const struct sockaddr_in*)addr;
   char  ts_buf [40] = "";    /* timestamp at start of connect() */
-  BOOL  _exclude_this;
   int   rc;
 
   CHECK_PTR (p_connect);
 
   ENTER_CRIT();
 
-  exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("connect", EXCL_FUNCTION));
-  _exclude_this = exclude_this;
-
-  if (!_exclude_this)
-     strcpy (ts_buf, get_timestamp());
+  /* We want the timestamp for when connect() was called.
+   * Not the timestamp for when connect() returned. Hence do not
+   * use the WSTRACE() macro here.
+   */
+  ts_now = strcpy (ts_buf, get_timestamp());
 
   rc = (*p_connect) (s, addr, addr_len);
 
-  if (!_exclude_this)
+  WSTRACE ("connect (%s, %s, fam %s) --> %s",
+           socket_number(s), sockaddr_str2(addr, &addr_len),
+           socket_family(sa->sin_family), get_error(rc, 0));
+
+  if (!exclude_this)
   {
-    /* We want the timestamp for when connect() was called.
-     * Not the timestamp for when connect() returned. Hence do not
-     * use the WSTRACE() macro here.
-     */
-    wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
-                    ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
-
-    wstrace_printf (FALSE, "connect (%s, %s, fam %s) --> %s~0\n",
-                    socket_number(s), sockaddr_str2(addr, &addr_len),
-                    socket_family(sa->sin_family), get_error(rc, 0));
-
     WSAERROR_PUSH();
 
     if (g_cfg.GEOIP.enable)
@@ -1600,7 +1607,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
 
     WSAERROR_POP();
   }
-  LEAVE_CRIT (!_exclude_this);
+  LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
@@ -1650,7 +1657,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
   if (!_exclude_this)
   {
-    strcpy (ts_buf, get_timestamp());
+    ts_now = strcpy (ts_buf, get_timestamp());
 
     if (!tv)
          strcpy (tv_buf, "unspec");
@@ -2493,14 +2500,15 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSAPoll", EXCL_FUNCTION));
 
   if (!exclude_this)
-     strcpy (ts_buf, get_timestamp());
-
-  if (!exclude_this && fd_array)
   {
-    size_t size = fds * sizeof(*fd_in);
+    strcpy (ts_buf, get_timestamp());
+    if (fd_array)
+    {
+      size_t size = fds * sizeof(*fd_in);
 
-    fd_in = alloca (size);
-    memcpy (fd_in, fd_array, size);
+      fd_in = alloca (size);
+      memcpy (fd_in, fd_array, size);
+    }
   }
 
   rc = (*p_WSAPoll) (fd_array, fds, timeout_ms);
@@ -3076,6 +3084,9 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   int rc;
 
   CHECK_PTR (p_getnameinfo);
+
+  ts_now = get_timestamp();
+
   rc = (*p_getnameinfo) (sa, sa_len, host, host_size, serv_buf, serv_buf_size, flags);
 
   ENTER_CRIT();
@@ -3112,9 +3123,11 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
   CHECK_PTR (p_getaddrinfo);
 
-  ENTER_CRIT();
+  ts_now = get_timestamp();
 
   rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
+
+  ENTER_CRIT();
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("getaddrinfo", EXCL_FUNCTION));
   if (!host_name || !(g_cfg.IDNA.enable && g_cfg.IDNA.fix_getaddrinfo))
@@ -3202,6 +3215,8 @@ EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_na
   CHECK_PTR (p_GetAddrInfoW);
 
   ENTER_CRIT();
+
+  ts_now = get_timestamp();
 
   rc = (*p_GetAddrInfoW) (host_name, serv_name, hints, res);
 
