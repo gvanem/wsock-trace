@@ -210,29 +210,21 @@ const char *get_timestamp (void)
 }
 
 /*
- * Return only a TS_DELTA time-stamp as "xx.yyy usec".
+ * Return a time-stamp as a double.
  * Works independently of whether 'init_timestamp()' was called or not.
  */
-const char *get_timestamp2 (void)
+double get_timestamp_now (void)
 {
-  static LARGE_INTEGER last = {{ S64_SUFFIX(0) }};
   static uint64 frequency = U64_SUFFIX(0);
-  static char          buf [100];
-  LARGE_INTEGER        ticks;
-  int64                clocks;
-  double               sec;
+  LARGE_INTEGER ticks;
+  double        sec;
 
   if (frequency == U64_SUFFIX(0))
      QueryPerformanceFrequency ((LARGE_INTEGER*)&frequency);
 
   QueryPerformanceCounter (&ticks);
-  if (last.QuadPart == 0ULL)
-       clocks = 0;
-  else clocks = (int64) (ticks.QuadPart - last.QuadPart);
-  last = ticks;
-  sec  = (double)clocks / (double)frequency;
-  sprintf (buf, "%6.0f usec", 1E6 * sec);
-  return (buf);
+  sec = 1E6 * ((double)ticks.QuadPart / (double)frequency);
+  return (sec);
 }
 
 /**

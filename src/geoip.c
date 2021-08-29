@@ -1781,14 +1781,15 @@ static void test_addr_common (const char            *addr_str,
   const char *remark   = NULL;
   const char *cc;
   const BYTE *nibble;
-  int   save, flag, ip_width;
-  BOOL  excluded;
-  char  buf1 [200];
-  char  buf2 [200];
+  int    save, flag, ip_width;
+  BOOL   excluded;
+  double ts_now;
+  char   buf1 [200];
+  char   buf2 [200];
 
   /** Start the timing now. Print the delta-time at the end.
    */
-  get_timestamp2();
+  ts_now = get_timestamp_now();
 
   /** Needed for `geoip_stats_update()` and the "unique" counter to work
    */
@@ -1936,7 +1937,7 @@ static void test_addr_common (const char            *addr_str,
       trace_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
-  trace_printf ("  %s\n", str_ltrim((char*)get_timestamp2()));
+  trace_printf ("  %6.0f usec\n", get_timestamp_now() - ts_now);
 }
 
 static struct addrinfo *resolve_addr_or_name (const char *addr_or_host, int af)
