@@ -1937,7 +1937,7 @@ static void test_addr_common (const char            *addr_str,
       trace_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
-  trace_printf ("  %6.0f usec\n", get_timestamp_now() - ts_now);
+  trace_printf ("  %.0f usec\n", get_timestamp_now() - ts_now);
 }
 
 static struct addrinfo *resolve_addr_or_name (const char *addr_or_host, int af)
