@@ -2821,7 +2821,7 @@ static int fw_enumerate_programs (BOOL RA4_only)
   num = smartlist_len (rule_orphans);
   if (num > 0)
   {
-    trace_printf ("Found %lu orphaned programs (run CCleaner):\n", num);
+    trace_printf ("Found %lu orphaned programs (run CCleaner):\n", DWORD_CAST(num));
     for (i = 0; i < (int)num; i++)
         trace_printf (" %s\n", (const char*) smartlist_get(rule_orphans, i));
   }

@@ -2900,7 +2900,7 @@ EXPORT int WINAPI WSAHtons (SOCKET s, u_short value, u_short *result)
   CHECK_PTR (p_WSAHtons);
   rc = (*p_WSAHtons) (s, value, result);
   ENTER_CRIT();
-  WSTRACE ("WSAHtons (%u, %u, %u) --> %s", s, value, *result, get_error(rc, 0));
+  WSTRACE ("WSAHtons (%u, %u, %u) --> %s", (u_int)s, value, *result, get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -2912,7 +2912,7 @@ EXPORT int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
   CHECK_PTR (p_WSANtohs);
   rc = (*p_WSANtohs) (s, value, result);
   ENTER_CRIT();
-  WSTRACE ("WSANtohs (%u, %u, %u) --> %s", s, value, *result, get_error(rc, 0));
+  WSTRACE ("WSANtohs (%u, %u, %u) --> %s", (u_int)s, value, *result, get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }

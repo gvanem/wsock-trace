@@ -1545,7 +1545,7 @@ static const char *dump_ip_multicast_if (char *buf, size_t buf_sz, const char *o
 
 static const char *dump_ipv6_multicast_if (char *buf, size_t buf_sz, const char *opt_val)
 {
-  snprintf (buf, buf_sz, "{scope:%lu}", *(ULONG*)opt_val);
+  snprintf (buf, buf_sz, "{scope:%lu}", DWORD_CAST(*(ULONG*)opt_val));
   return (buf);
 }
 
@@ -1723,7 +1723,7 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
 
     snprintf (prefix, sizeof(prefix), "iov %d: ", i);
     total += dump_data_internal (bufs->buf, bufs->len, prefix);
-    if (total >= g_cfg.max_data)
+    if (total >= (UINT)g_cfg.max_data)
        break;
   }
 }
@@ -1736,7 +1736,7 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
   trace_printf ("%*sremote: %s, dwFlags: 0x%04lX\n",
                 g_cfg.trace_indent+2, "",
                 sockaddr_str2(msg->name, &msg->namelen),
-                msg->dwFlags);
+                DWORD_CAST(msg->dwFlags));
 
   if (rc == NO_ERROR && g_cfg.dump_data)
      dump_wsabuf (msg->lpBuffers, msg->dwBufferCount);
