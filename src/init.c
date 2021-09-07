@@ -158,6 +158,7 @@ const char *get_timestamp (void)
 
   switch (g_cfg.trace_time_format)
   {
+//  case TS_ELAPSED:
     case TS_RELATIVE:
     case TS_DELTA:
          if (last.QuadPart == 0ULL)
@@ -200,7 +201,9 @@ const char *get_timestamp (void)
 
     case TS_ABSOLUTE:
          GetLocalTime (&now);
-         sprintf (buf, "%02u:%02u:%02u.%03u: ", now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
+         if (g_cfg.trace_time_usec)
+              sprintf (buf, "%02u:%02u:%02u.%06u: ", now.wHour, now.wMinute, now.wSecond, now.wMilliseconds * 1000);
+         else sprintf (buf, "%02u:%02u:%02u.%03u: ", now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
          return (buf);
 
     case TS_NONE:
