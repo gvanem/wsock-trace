@@ -538,7 +538,7 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
  *
  * First try file pointed to by %WSOCK_TRACE%,
  * then in current_dir.
- * then in %APPDATA% or %HOME%.
+ * then in %APPDATA%.
  */
 
 /*
@@ -555,7 +555,7 @@ static char fname [MAX_PATH];
 
 static FILE *open_config_file (const char *base_name)
 {
-  char *home, *env = getenv_expand ("WSOCK_TRACE", fname, sizeof(fname));
+  char *appdata, *env = getenv_expand ("WSOCK_TRACE", fname, sizeof(fname));
   FILE *fil;
 
   TRACE (2, "%%WSOCK_TRACE%%=%s.\n", env);
@@ -574,12 +574,10 @@ static FILE *open_config_file (const char *base_name)
   fil = fopen (fname, "r");
   if (!fil)
   {
-    home = getenv ("APPDATA");
-    if (!home)
-       home = getenv ("HOME");
-    if (home)
+    appdata = getenv ("APPDATA");
+    if (appdata)
     {
-      snprintf (fname, sizeof(fname), "%s\\%s", home, base_name);
+      snprintf (fname, sizeof(fname), "%s\\%s", appdata, base_name);
       fil = fopen (fname, "r");
     }
   }

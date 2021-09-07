@@ -143,8 +143,7 @@ The trace-level and other settings are controlled by a config-file
 `wsock_trace`. This file is searched along these places until found:
   *  The file pointed to by `%WSOCK_TRACE`.
   *  The current directory.
-  *  The `%HOME` directory.
-  *  Then finally the `%APPDATA` directory.
+  *  Then finally the `%APPDATA%` directory.
 
 `wsock_trace` is read in **[init.c](https://github.com/gvanem/wsock-trace/blob/master/src/init.c)**
 at startup. Read it's contents; the comments therein should be self-explanatory.<br>
@@ -152,7 +151,7 @@ If `wsock_trace` is not found in one of the above directories, the default
 `trace_level` is set to 1.
 
 There is currently no `install.bat` file for Wsock-trace. So you should copy the following files (here at GitHub) to your <br>
-`%HOME` or `%APPDATA` directory:
+`%APPDATA%` directory:
 ```
   wsock_trace
   GeoIP.csv
@@ -169,9 +168,6 @@ There is currently no `install.bat` file for Wsock-trace. So you should copy the
 These environment variables are on the form:
   * `<drive>:\Documents and Settings\<User Name>\ProgramData`.  (Win-XP)
   * `<drive>:\Users\<User Name>\AppData\Roaming`.               (Win-Vista+)
-
-Since it's a confusing subject what a program's configuration directory should be,
-it's best to define a `%HOME%` to point to the excact place for such config-files.
 
 ### Running samples
 
@@ -288,7 +284,7 @@ And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
 
 By default, the tracing of `htons()`,`htonl()`, `ntohs()` and `ntohl()` are
 excluded from the trace.<br>
-You can edit the `%HOME/wsock_trace` config-file and exclude whatever calls you like.
+You can edit the `%APPDATA%/wsock_trace` config-file and exclude whatever calls you like.
 And the 2 traces above is showing the effect of the config-value `compact = 1`.
 
 A more eleborated example from 2 **[OpenVPN](https://openvpn.net/)** programs; a client and a
