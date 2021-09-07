@@ -984,6 +984,7 @@ int asn_main (int argc, char **argv)
   else if (do_version)
   {
     ASN_print_libloc_version();
+    ASN_check_database (g_cfg.ASN.asn_bin_file);
   }
   else
     show_help();
