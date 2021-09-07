@@ -294,7 +294,7 @@ cd sample
 start /pos=200,50,1000,800   ..\openvpn.exe --config sample-config-files/loopback-server
 start /pos=800,150,1000,1000 ..\openvpn.exe --config sample-config-files/loopback-client
 ```
-[![screenshot](screenshot_openvpn-tmb.jpg?raw=true)](screenshot_openvpn.jpg?raw=true):
+[![screenshot](screenshot_openvpn-tmb.jpg?raw=true)](screenshot_openvpn.png?raw=true):
 
 A **[Larger](https://www.watt-32.net/misc/screenshot_openvpn.png)** version.
 
