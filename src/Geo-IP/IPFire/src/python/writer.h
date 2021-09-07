@@ -19,7 +19,7 @@
 
 #include <Python.h>
 
-#include <loc/writer.h>
+#include <libloc/writer.h>
 
 typedef struct {
 	PyObject_HEAD

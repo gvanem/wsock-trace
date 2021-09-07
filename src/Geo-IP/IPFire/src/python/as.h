@@ -19,8 +19,8 @@
 
 #include <Python.h>
 
-#include <loc/libloc.h>
-#include <loc/as.h>
+#include <libloc/libloc.h>
+#include <libloc/as.h>
 
 typedef struct {
 	PyObject_HEAD

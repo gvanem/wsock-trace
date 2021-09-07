@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#include <loc/libloc.h>
+#include <libloc/libloc.h>
 
 int main(int argc, char** argv) {
 	struct loc_ctx *ctx;

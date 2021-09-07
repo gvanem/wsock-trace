@@ -16,11 +16,11 @@
 
 #include <Python.h>
 
-#include <loc/libloc.h>
-#include <loc/as.h>
-#include <loc/as-list.h>
-#include <loc/database.h>
-#include <loc/private.h>
+#include <libloc/libloc.h>
+#include <libloc/as.h>
+#include <libloc/as-list.h>
+#include <libloc/database.h>
+#include <libloc/private.h>
 
 #include "locationmodule.h"
 #include "as.h"
@@ -215,7 +215,8 @@ static PyObject* new_database_enumerator(PyTypeObject* type, struct loc_database
 	return (PyObject*)self;
 }
 
-static PyObject* Database_iterate_all(DatabaseObject* self, enum loc_database_enumerator_mode what, int flags) {
+static PyObject* Database_iterate_all(DatabaseObject* self,
+		enum loc_database_enumerator_mode what, int family, int flags) {
 	struct loc_database_enumerator* enumerator;
 
 	int r = loc_database_enumerator_new(&enumerator, self->db, what, flags);
@@ -224,6 +225,10 @@ static PyObject* Database_iterate_all(DatabaseObject* self, enum loc_database_en
 		return NULL;
 	}
 
+	// Set family
+	if (family)
+		loc_database_enumerator_set_family(enumerator, family);
+
 	PyObject* obj = new_database_enumerator(&DatabaseEnumeratorType, enumerator);
 	loc_database_enumerator_unref(enumerator);
 
@@ -231,7 +236,7 @@ static PyObject* Database_iterate_all(DatabaseObject* self, enum loc_database_en
 }
 
 static PyObject* Database_ases(DatabaseObject* self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_ASES, 0);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_ASES, AF_UNSPEC, 0);
 }
 
 static PyObject* Database_search_as(DatabaseObject* self, PyObject* args) {
@@ -258,11 +263,12 @@ static PyObject* Database_search_as(DatabaseObject* self, PyObject* args) {
 }
 
 static PyObject* Database_networks(DatabaseObject* self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS, 0);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS, AF_UNSPEC, 0);
 }
 
 static PyObject* Database_networks_flattened(DatabaseObject *self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS, LOC_DB_ENUMERATOR_FLAGS_FLATTEN);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_NETWORKS, AF_UNSPEC,
+		LOC_DB_ENUMERATOR_FLAGS_FLATTEN);
 }
 
 static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
@@ -423,7 +429,18 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 }
 
 static PyObject* Database_countries(DatabaseObject* self) {
-	return Database_iterate_all(self, LOC_DB_ENUMERATE_COUNTRIES, 0);
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_COUNTRIES, AF_UNSPEC, 0);
+}
+
+static PyObject* Database_list_bogons(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
+	char* kwlist[] = { "family", NULL };
+	int family = AF_UNSPEC;
+
+	// Parse arguments
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i", kwlist, &family))
+		return NULL;
+
+	return Database_iterate_all(self, LOC_DB_ENUMERATE_BOGONS, family, 0);
 }
 
 static struct PyMethodDef Database_methods[] = {
@@ -437,6 +454,12 @@ static struct PyMethodDef Database_methods[] = {
 		"get_country",
 		(PyCFunction)Database_get_country,
 		METH_VARARGS,
+		NULL,
+	},
+	{
+		"list_bogons",
+		(PyCFunction)Database_list_bogons,
+		METH_VARARGS|METH_KEYWORDS,
 		NULL,
 	},
 	{

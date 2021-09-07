@@ -19,7 +19,7 @@
 
 #include <Python.h>
 
-#include <loc/database.h>
+#include <libloc/database.h>
 
 typedef struct {
 	PyObject_HEAD

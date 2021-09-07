@@ -23,9 +23,9 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <loc/libloc.h>
-#include <loc/compat.h>
-#include <loc/private.h>
+#include <libloc/libloc.h>
+#include <libloc/compat.h>
+#include <libloc/private.h>
 
 #ifdef _WIN32
 #include <openssl/evp.h>

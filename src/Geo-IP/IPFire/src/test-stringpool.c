@@ -26,8 +26,8 @@
 #include <time.h>
 #include <syslog.h>
 
-#include <loc/libloc.h>
-#include <loc/stringpool.h>
+#include <libloc/libloc.h>
+#include <libloc/stringpool.h>
 
 static const char* characters = "012345789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 

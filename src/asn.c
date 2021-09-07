@@ -24,16 +24,16 @@
   #include <sys/cygwin.h>
 
   #ifndef _WIN32
-  #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/loc/libloc.h' only */
+  #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/libloc/libloc.h' only */
   #endif
 #endif
 
-#include <loc/libloc.h>
-#include <loc/database.h>
-#include <loc/network.h>
-#include <loc/resolv.h>
-#include <loc/version.h>
-#include <loc/windows/syslog.h> /* LOG_DEBUG */
+#include <libloc/libloc.h>
+#include <libloc/database.h>
+#include <libloc/network.h>
+#include <libloc/resolv.h>
+#include <libloc/version.h>
+#include <libloc/windows/syslog.h> /* LOG_DEBUG */
 
 #define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
 #define SZ_OK                 0

@@ -16,8 +16,8 @@
 
 #include <Python.h>
 
-#include <loc/libloc.h>
-#include <loc/country.h>
+#include <libloc/libloc.h>
+#include <libloc/country.h>
 
 #include "locationmodule.h"
 #include "country.h"

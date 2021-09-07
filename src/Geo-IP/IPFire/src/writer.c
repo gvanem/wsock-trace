@@ -31,15 +31,15 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 
-#include <loc/libloc.h>
-#include <loc/as.h>
-#include <loc/compat.h>
-#include <loc/country.h>
-#include <loc/database.h>
-#include <loc/format.h>
-#include <loc/network.h>
-#include <loc/private.h>
-#include <loc/writer.h>
+#include <libloc/libloc.h>
+#include <libloc/as.h>
+#include <libloc/compat.h>
+#include <libloc/country.h>
+#include <libloc/database.h>
+#include <libloc/format.h>
+#include <libloc/network.h>
+#include <libloc/private.h>
+#include <libloc/writer.h>
 
 struct loc_writer {
 	struct loc_ctx* ctx;

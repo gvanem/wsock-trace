@@ -270,8 +270,8 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/loc/windows  \
-                -I$(LIBLOC_ROOT)/fake-OpenSSL \
+LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/libloc/windows \
+                -I$(LIBLOC_ROOT)/fake-OpenSSL   \
                 -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
 {$(LIBLOC_ROOT)}.c{$(OBJ_DIR)}.obj:
@@ -315,19 +315,19 @@ wsock_trace_d.def: wsock_trace.def Makefile.VC6
 
 common.h: wsock_defs.h
 
-$(OBJ_DIR)\asn.obj: asn.c common.h in_addr.h common.h \
-                    csv.h smartlist.h inet_util.h     \
-                    in_addr.h init.h iana.h asn.h     \
-                    $(LIBLOC_ROOT)\loc\libloc.h       \
-                    $(LIBLOC_ROOT)\loc\compat.h       \
-                    $(LIBLOC_ROOT)\loc\database.h     \
-                    $(LIBLOC_ROOT)\loc\network.h      \
-                    $(LIBLOC_ROOT)\loc\format.h       \
-                    $(LIBLOC_ROOT)\loc\as.h           \
-                    $(LIBLOC_ROOT)\loc\stringpool.h   \
-                    $(LIBLOC_ROOT)\loc\country.h      \
-                    $(LIBLOC_ROOT)\loc\resolv.h       \
-                    $(LIBLOC_ROOT)\loc\windows\syslog.h
+$(OBJ_DIR)\asn.obj: asn.c common.h in_addr.h common.h  \
+                    csv.h smartlist.h inet_util.h      \
+                    in_addr.h init.h iana.h asn.h      \
+                    $(LIBLOC_ROOT)\libloc\libloc.h     \
+                    $(LIBLOC_ROOT)\libloc\compat.h     \
+                    $(LIBLOC_ROOT)\libloc\database.h   \
+                    $(LIBLOC_ROOT)\libloc\network.h    \
+                    $(LIBLOC_ROOT)\libloc\format.h     \
+                    $(LIBLOC_ROOT)\libloc\as.h         \
+                    $(LIBLOC_ROOT)\libloc\stringpool.h \
+                    $(LIBLOC_ROOT)\libloc\country.h    \
+                    $(LIBLOC_ROOT)\libloc\resolv.h     \
+                    $(LIBLOC_ROOT)\libloc\windows\syslog.h
 
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
 $(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h

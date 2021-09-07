@@ -19,7 +19,7 @@
 
 #include <Python.h>
 
-#include <loc/network.h>
+#include <libloc/network.h>
 
 typedef struct {
 	PyObject_HEAD

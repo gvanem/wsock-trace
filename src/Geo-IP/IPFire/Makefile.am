@@ -90,20 +90,20 @@ EXTRA_DIST += \
 	examples/python/read-database.py
 
 pkginclude_HEADERS = \
-	src/loc/libloc.h \
-	src/loc/as.h \
-	src/loc/as-list.h \
-	src/loc/compat.h \
-	src/loc/country.h \
-	src/loc/country-list.h \
-	src/loc/database.h \
-	src/loc/format.h \
-	src/loc/network.h \
-	src/loc/network-list.h \
-	src/loc/private.h \
-	src/loc/stringpool.h \
-	src/loc/resolv.h \
-	src/loc/writer.h
+	src/libloc/libloc.h \
+	src/libloc/as.h \
+	src/libloc/as-list.h \
+	src/libloc/compat.h \
+	src/libloc/country.h \
+	src/libloc/country-list.h \
+	src/libloc/database.h \
+	src/libloc/format.h \
+	src/libloc/network.h \
+	src/libloc/network-list.h \
+	src/libloc/private.h \
+	src/libloc/stringpool.h \
+	src/libloc/resolv.h \
+	src/libloc/writer.h
 
 lib_LTLIBRARIES = \
 	src/libloc.la

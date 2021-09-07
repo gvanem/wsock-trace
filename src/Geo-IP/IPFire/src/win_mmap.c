@@ -1,5 +1,5 @@
-#include <loc/libloc.h>
-#include <loc/private.h>
+#include <libloc/libloc.h>
+#include <libloc/private.h>
 #include <sys/mman.h>
 #include <syslog.h>
 #include <io.h>

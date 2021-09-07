@@ -17,8 +17,7 @@
 #ifndef PYTHON_LOCATION_MODULE_H
 #define PYTHON_LOCATION_MODULE_H
 
-#include <loc/libloc.h>
-#include <loc/as.h>
+#include <libloc/libloc.h>
 
 extern struct loc_ctx* loc_ctx;
 

@@ -17,9 +17,9 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include <loc/as.h>
-#include <loc/as-list.h>
-#include <loc/private.h>
+#include <libloc/as.h>
+#include <libloc/as-list.h>
+#include <libloc/private.h>
 
 struct loc_as_list {
 	struct loc_ctx* ctx;

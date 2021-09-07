@@ -17,9 +17,9 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include <loc/country.h>
-#include <loc/country-list.h>
-#include <loc/private.h>
+#include <libloc/country.h>
+#include <libloc/country-list.h>
+#include <libloc/private.h>
 
 struct loc_country_list {
 	struct loc_ctx* ctx;

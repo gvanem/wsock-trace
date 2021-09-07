@@ -39,17 +39,18 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 
-#include <loc/libloc.h>
-#include <loc/as.h>
-#include <loc/as-list.h>
-#include <loc/compat.h>
-#include <loc/country.h>
-#include <loc/country-list.h>
-#include <loc/database.h>
-#include <loc/format.h>
-#include <loc/network.h>
-#include <loc/private.h>
-#include <loc/stringpool.h>
+#include <libloc/libloc.h>
+#include <libloc/as.h>
+#include <libloc/as-list.h>
+#include <libloc/compat.h>
+#include <libloc/country.h>
+#include <libloc/country-list.h>
+#include <libloc/database.h>
+#include <libloc/format.h>
+#include <libloc/network.h>
+#include <libloc/network-list.h>
+#include <libloc/private.h>
+#include <libloc/stringpool.h>
 
 struct loc_database {
 	struct loc_ctx* ctx;
@@ -124,8 +125,9 @@ struct loc_database_enumerator {
 	int network_stack_depth;
 	unsigned int* networks_visited;
 
-	// For subnet search
+	// For subnet search and bogons
 	struct loc_network_list* stack;
+	struct loc_network* last_network;
 };
 
 static int loc_database_read_magic(struct loc_database* db) {
@@ -982,9 +984,12 @@ static void loc_database_enumerator_free(struct loc_database_enumerator* enumera
 	// Free network search
 	free(enumerator->networks_visited);
 
-	// Free subnet stack
+	// Free subnet/bogons stack
 	if (enumerator->stack)
 		loc_network_list_unref(enumerator->stack);
+
+	if (enumerator->last_network)
+		loc_network_unref(enumerator->last_network);
 
 	free(enumerator);
 }
@@ -1396,17 +1401,91 @@ static int __loc_database_enumerator_next_network_flattened(
 	return __loc_database_enumerator_next_network_flattened(enumerator, network);
 }
 
+/*
+	This function finds all bogons (i.e. gaps) between the input networks
+*/
+static int __loc_database_enumerator_find_bogons(struct loc_ctx* ctx,
+		struct loc_network* first, struct loc_network* second, struct loc_network_list* bogons) {
+	// We do not need to check if first < second because the graph is always ordered
+
+	// The last address of the first network + 1 is the start of the gap
+	struct in6_addr first_address = address_increment(loc_network_get_last_address(first));
+
+	// The first address of the second network - 1 is the end of the gap
+	struct in6_addr last_address = address_decrement(loc_network_get_first_address(second));
+
+	// If first address is now greater than last address, there is no gap
+	if (in6_addr_cmp(&first_address, &last_address) >= 0)
+		return 0;
+
+	return loc_network_list_summarize(ctx, &first_address, &last_address, &bogons);
+}
+
+static int __loc_database_enumerator_next_bogon(
+		struct loc_database_enumerator* enumerator, struct loc_network** bogon) {
+	int r;
+
+	// Return top element from the stack
+	while (1) {
+		*bogon = loc_network_list_pop_first(enumerator->stack);
+
+		// Stack is empty
+		if (!*bogon)
+			break;
+
+		// Return result
+		return 0;
+	}
+
+	struct loc_network* network = NULL;
+
+	while (1) {
+		r = __loc_database_enumerator_next_network(enumerator, &network, 1);
+		if (r)
+			goto ERROR;
+
+		if (!network)
+			break;
+
+		if (enumerator->last_network && loc_network_address_family(enumerator->last_network) == loc_network_address_family(network)) {
+			r = __loc_database_enumerator_find_bogons(enumerator->ctx,
+				enumerator->last_network, network, enumerator->stack);
+			if (r) {
+				loc_network_unref(network);
+				goto ERROR;
+			}
+		}
+
+		// Remember network for next iteration
+		enumerator->last_network = loc_network_ref(network);
+		loc_network_unref(network);
+
+		// Try to return something
+		*bogon = loc_network_list_pop_first(enumerator->stack);
+		if (*bogon)
+			break;
+	}
+
+ERROR:
+	return r;
+}
+
 LOC_EXPORT int loc_database_enumerator_next_network(
 		struct loc_database_enumerator* enumerator, struct loc_network** network) {
-	// Do not do anything if not in network mode
-	if (enumerator->mode != LOC_DB_ENUMERATE_NETWORKS)
-	return 0;
+	switch (enumerator->mode) {
+		case LOC_DB_ENUMERATE_NETWORKS:
+		// Flatten output?
+		if (enumerator->flatten)
+			return __loc_database_enumerator_next_network_flattened(enumerator, network);
 
-	// Flatten output?
-	if (enumerator->flatten)
-		return __loc_database_enumerator_next_network_flattened(enumerator, network);
+		return __loc_database_enumerator_next_network(enumerator, network, 1);
 
-	return __loc_database_enumerator_next_network(enumerator, network, 1);
+		case LOC_DB_ENUMERATE_BOGONS:
+			return __loc_database_enumerator_next_bogon(enumerator, network);
+
+		default:
+			return 0;
+	}
 }
 
 LOC_EXPORT int loc_database_enumerator_next_country(

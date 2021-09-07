@@ -74,9 +74,9 @@ CFLAGS += -I./GeoipMMDB \
 #
 # CFLAG for $(IPFIRE_SRC):
 #
-CFLAGS += -I./IPFire/src              \
-          -I./IPFire/src/loc/windows  \
-          -I./IPFire/src/fake-OpenSSL \
+CFLAGS += -I./IPFire/src                \
+          -I./IPFire/src/libloc/windows \
+          -I./IPFire/src/fake-OpenSSL   \
           -DLIBLOC_PRIVATE
 
 OBJ_DIR = geoip_obj

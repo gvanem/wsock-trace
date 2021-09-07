@@ -19,8 +19,7 @@
 
 #include <Python.h>
 
-//#include <loc/libloc.h>
-#include <loc/country.h>
+#include <libloc/country.h>
 
 typedef struct {
 	PyObject_HEAD

@@ -25,9 +25,9 @@
 #include <string.h>
 #include <time.h>
 
-#include <loc/format.h>
-#include <loc/private.h>
-#include <loc/resolv.h>
+#include <libloc/format.h>
+#include <libloc/private.h>
+#include <libloc/resolv.h>
 
 static int parse_timestamp(const unsigned char* txt, time_t* t) {
     struct tm ts;

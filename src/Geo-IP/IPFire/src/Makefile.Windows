@@ -127,7 +127,7 @@ TARGETS = $(STATIC_LIB) \
           libloc.dll    \
           $(TEST_PROGS)
 
-CFLAGS += -I. -I./loc/windows             \
+CFLAGS += -I. -I./libloc/windows          \
           -DLIBLOC_PRIVATE                \
           -D_WIN32_WINNT=0x601            \
           -DABS_SRCDIR=\"$(realpath ..)\" \
@@ -214,7 +214,7 @@ PY_SRC = $(addprefix python/, \
 PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
            $(notdir $(PY_SRC:.c=.$(O))))
 
-all: $(OBJ_DIR) loc/version.h $(TARGETS) py3_module epilogue
+all: $(OBJ_DIR) libloc/version.h $(TARGETS) py3_module epilogue
 
 epilogue:
 	$(call white_msg, \nWelcome to libloc library and test programs.)
@@ -245,7 +245,7 @@ else
 	$(call link_DLL, $@, -def:$^ $(OPENSSL_LIB) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 endif
 
-loc/version.h: $(THIS_FILE)
+libloc/version.h: $(THIS_FILE)
 	$(call Generate, $@, //)
 	$(file >> $@, #ifndef LIBLOC_VERSION_H)
 	$(file >> $@, #define LIBLOC_VERSION_H)
@@ -402,7 +402,7 @@ py3_install/location/__init__.py: python/__init__.py.in
 	@echo
 
 clean: py3_clean
-	rm -f *.pdb *.map link.tmp cpp_filter.py $(OBJ_DIR)/* loc/version.h
+	rm -f *.pdb *.map link.tmp cpp_filter.py $(OBJ_DIR)/* libloc/version.h
 	- rmdir $(OBJ_DIR)
 	@echo
 

@@ -17,8 +17,8 @@
 #include <Python.h>
 #include <syslog.h>
 
-#include <loc/format.h>
-#include <loc/resolv.h>
+#include <libloc/format.h>
+#include <libloc/resolv.h>
 
 #include "locationmodule.h"
 #include "as.h"

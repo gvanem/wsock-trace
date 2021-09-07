@@ -18,10 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <loc/libloc.h>
-#include <loc/compat.h>
-#include <loc/country.h>
-#include <loc/private.h>
+#include <libloc/libloc.h>
+#include <libloc/compat.h>
+#include <libloc/country.h>
+#include <libloc/private.h>
 
 struct loc_country {
 	struct loc_ctx* ctx;

@@ -155,6 +155,15 @@ class CLI(object):
 			choices=location.export.formats.keys(), default="list")
 		list_networks_by_flags.set_defaults(func=self.handle_list_networks_by_flags)
 
+		# List bogons
+		list_bogons = subparsers.add_parser("list-bogons",
+			help=_("Lists all bogons"),
+		)
+		list_bogons.add_argument("--family", choices=("ipv6", "ipv4"))
+		list_bogons.add_argument("--format",
+			choices=location.export.formats.keys(), default="list")
+		list_bogons.set_defaults(func=self.handle_list_bogons)
+
 		# List countries
 		list_countries = subparsers.add_parser("list-countries",
 			help=_("Lists all countries"),
@@ -550,6 +559,15 @@ class CLI(object):
 		f = writer(sys.stdout, prefix="custom")
 
 		for n in db.search_networks(flags=flags, family=ns.family):
+			f.write(n)
+
+		f.finish()
+
+	def handle_list_bogons(self, db, ns):
+		writer = self.__get_output_formatter(ns)
+		f = writer(sys.stdout, prefix="bogons")
+
+		for n in db.list_bogons(family=ns.family):
 			f.write(n)
 
 		f.finish()

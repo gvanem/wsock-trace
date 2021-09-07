@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
-#include <loc/libloc.h>
-#include <loc/private.h>
+#include <libloc/libloc.h>
+#include <libloc/private.h>
 
 #if !defined(__CYGWIN__) /* rest of file */
 /**

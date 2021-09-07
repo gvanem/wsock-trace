@@ -22,10 +22,10 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include <loc/libloc.h>
-#include <loc/format.h>
-#include <loc/private.h>
-#include <loc/stringpool.h>
+#include <libloc/libloc.h>
+#include <libloc/format.h>
+#include <libloc/private.h>
+#include <libloc/stringpool.h>
 
 enum loc_stringpool_mode {
 	STRINGPOOL_DEFAULT,

@@ -21,9 +21,9 @@
 #include <string.h>
 #include <syslog.h>
 
-#include <loc/libloc.h>
-#include <loc/network.h>
-#include <loc/network-list.h>
+#include <libloc/libloc.h>
+#include <libloc/network.h>
+#include <libloc/network-list.h>
 
 int main(int argc, char** argv) {
 	int err;

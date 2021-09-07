@@ -24,12 +24,12 @@
 #  include <endian.h>
 #endif
 
-#include <loc/libloc.h>
-#include <loc/as.h>
-#include <loc/compat.h>
-#include <loc/format.h>
-#include <loc/private.h>
-#include <loc/stringpool.h>
+#include <libloc/libloc.h>
+#include <libloc/as.h>
+#include <libloc/compat.h>
+#include <libloc/format.h>
+#include <libloc/private.h>
+#include <libloc/stringpool.h>
 
 struct loc_as {
 	struct loc_ctx* ctx;

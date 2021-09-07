@@ -24,9 +24,9 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#include <loc/libloc.h>
-#include <loc/database.h>
-#include <loc/writer.h>
+#include <libloc/libloc.h>
+#include <libloc/database.h>
+#include <libloc/writer.h>
 
 int main(int argc, char** argv) {
 	int err;

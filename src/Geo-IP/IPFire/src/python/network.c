@@ -19,9 +19,9 @@
 #include <errno.h>
 #include <limits.h>
 
-#include <loc/libloc.h>
-#include <loc/network.h>
-#include <loc/network-list.h>
+#include <libloc/libloc.h>
+#include <libloc/network.h>
+#include <libloc/network-list.h>
 
 #include "locationmodule.h"
 #include "network.h"
