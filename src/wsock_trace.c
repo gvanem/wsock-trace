@@ -1189,7 +1189,7 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
                    LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     WSTRACE ("WSAConnectByNameA (%s, %s, %s, %s, ...) --> %s",
-             socket_number(s), node_name, service_name, tv_buf, get_error(rc, 0));
+             socket_number(s), node_name, service_name, tv_buf, get_error(!rc, 0));
 
 #if 0
     /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
@@ -1234,7 +1234,7 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
                    LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     WSTRACE ("WSAConnectByNameW (%s, %" WCHAR_FMT ", %" WCHAR_FMT ", %s, ...) --> %s",
-             socket_number(s), node_name, service_name, tv_buf, get_error(rc, 0));
+             socket_number(s), node_name, service_name, tv_buf, get_error(!rc, 0));
 
 #if 0
     /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
@@ -1278,7 +1278,7 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
                    LONG_CAST(tv->tv_sec), LONG_CAST(tv->tv_usec));
 
     WSTRACE ("WSAConnectByList (%s, %s, ...) --> %s",
-             socket_number(s), tv_buf, get_error(rc, 0));
+             socket_number(s), tv_buf, get_error(!rc, 0));
 
 #if 0
     /**\todo store the address in a connect cache-file with above 'geo-ip', IANA and ASN information.
@@ -1315,7 +1315,7 @@ EXPORT BOOL WINAPI WSASetEvent (WSAEVENT ev)
 
   ENTER_CRIT();
 
-  WSTRACE ("WSASetEvent (0x%" ADDR_FMT ") --> %s", ADDR_CAST(ev), get_error(rc, 0));
+  WSTRACE ("WSASetEvent (0x%" ADDR_FMT ") --> %s", ADDR_CAST(ev), get_error(!rc, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -1330,7 +1330,7 @@ EXPORT BOOL WINAPI WSACloseEvent (WSAEVENT ev)
 
   ENTER_CRIT();
 
-  WSTRACE ("WSACloseEvent (0x%" ADDR_FMT ") --> %s", ADDR_CAST(ev), get_error(rc, 0));
+  WSTRACE ("WSACloseEvent (0x%" ADDR_FMT ") --> %s", ADDR_CAST(ev), get_error(!rc, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -1345,7 +1345,7 @@ EXPORT BOOL WINAPI WSAResetEvent (WSAEVENT ev)
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAResetEvent (0x%" ADDR_FMT ") --> %s", ADDR_CAST(ev), get_error(rc, 0));
+  WSTRACE ("WSAResetEvent (0x%" ADDR_FMT ") --> %s", ADDR_CAST(ev), get_error(!rc, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -1361,7 +1361,7 @@ EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, __LONG32 net_ev)
   ENTER_CRIT();
 
   WSTRACE ("WSAEventSelect (%s, 0x%" ADDR_FMT ", %s) --> %s",
-           socket_number(s), ADDR_CAST(ev), event_bits_decode(net_ev), get_error(rc, 0));
+           socket_number(s), ADDR_CAST(ev), event_bits_decode(net_ev), get_error(rc == SOCKET_ERROR, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -1377,7 +1377,7 @@ EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, __LONG32
   ENTER_CRIT();
 
   WSTRACE ("WSAAsyncSelect (%s, 0x%" ADDR_FMT ", %u, %s) --> %s",
-           socket_number(s), ADDR_CAST(wnd), msg, event_bits_decode(net_ev), get_error(rc, 0));
+           socket_number(s), ADDR_CAST(wnd), msg, event_bits_decode(net_ev), get_error(rc == SOCKET_ERROR, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
