@@ -256,6 +256,7 @@ static void test_gethostbyname (void)
 {
   TEST_CONDITION (!= 0, gethostbyname ("localhost"));
   TEST_CONDITION (!= 0, gethostbyname ("google-public-dns-a.google.com"));
+  TEST_CONDITION (!= 0, gethostbyname ("api.ipify.org"));
 }
 
 /**
