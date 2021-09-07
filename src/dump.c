@@ -1787,25 +1787,31 @@ void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
                 info->SynRetrans);
 }
 
-static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out)
+static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out, int *added_p)
 {
   const char *newline    = strrchr (start, '\n');
   int         i, max_len = g_cfg.screen_width - indent - trailing_len;
+  int         added = 0;
 
   if (newline)
      start = newline;
 
 #if 0
   TRACE (5, "newline: %p, start: %p, out: %p, len: %d, max_len: %d\n",
-            newline, start, out, out-start, max_len);
+            newline, start, out, out - start, max_len);
 #endif
 
   if (out - start >= max_len)
   {
     *out++ = '\n';
+    added++;
     for (i = 0; i < indent; i++)
-       *out++ = ' ';
+    {
+      *out++ = ' ';
+      added++;
+    }
   }
+  *added_p = added;
   return (out);
 }
 
@@ -2254,11 +2260,13 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
 
-static const char *dump_addr_list (int type, const char **addresses)
+static const char *dump_addr_list (int type, const char **addresses, int indent, int column)
 {
-  static char result[200];
+  static char result [300];
   char  *out = result;
   int    num, len, left = (int)sizeof(result)-1;
+  int    total = 0;
+  int    max_len = g_cfg.screen_width - column;
 
   for (num = 0; addresses && addresses[num] && left > 0; num++)
   {
@@ -2267,9 +2275,20 @@ static const char *dump_addr_list (int type, const char **addresses)
 
     if (!addr)
        addr = "<??>";
+
+    if (total >= max_len)
+    {
+      len = snprintf (out-2, left+2, "\n%*s", indent, "");
+      out   = out - 2 + len;
+      left -= len;
+      total = len;
+      max_len = g_cfg.screen_width - indent;
+    }
+
     len = snprintf (out, left, "%s, ", addr);
-    out  += len;
-    left -= len;
+    out   += len;
+    left  -= len;
+    total += len;
     if (left < 15)
     {
       strcpy (out-2, "..  ");
@@ -2289,12 +2308,13 @@ static const char *dump_aliases (char **aliases)
 {
   static char result[500];  /* Win-XP supports only 8 aliases in a 'hostent::h_aliases' */
   char  *out = result;
-  int    i, len, indent = g_cfg.trace_indent + 3 + (int)strlen("aliases:");
+  int    i, len, added, indent = g_cfg.trace_indent + 3 + (int)strlen("aliases:");
   size_t left = sizeof(result)-1;
 
   for (i = 0; aliases && aliases[i]; i++)
   {
-    out = maybe_wrap_line (indent, (int)strlen(aliases[i])+2, result, out);
+    out = maybe_wrap_line (indent, (int)strlen(aliases[i])+2, result, out, &added);
+    left -= added;
     len = snprintf (out, left, "%s, ", aliases[i]);
     out  += len;
     left -= len;
@@ -2803,16 +2823,16 @@ void dump_nameinfo (const char *host, const char *serv, DWORD flags)
 void dump_hostent (const char *name, const struct hostent *host)
 {
   const char *comment;
+  int         column;
 
   if (hosts_file_check_hostent(name, host) > 0)
        comment = " (in a 'hosts' file)";
   else comment = "";
 
   trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4name: %s, addrtype: %s, addr_list: %s%s\n",
-                host->h_name, socket_family(host->h_addrtype),
-                dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list),
-                comment);
+  column = trace_printf ("~4name: %s, addrtype: %s, ", host->h_name, socket_family(host->h_addrtype));
+  column += sizeof("addr_list: ") - 1;
+  trace_printf ("addr_list: %s%s\n", dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list, g_cfg.trace_indent+2, column), comment);
 
   check_and_dump_idna (host->h_name);
 
