@@ -119,8 +119,8 @@ static void        wstrace_printf (BOOL first_line,
                             ts_now ? ts_now : get_timestamp(),   \
                             get_caller (GET_RET_ADDR(),          \
                                         get_EBP()) );            \
-            wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
             ts_now = NULL;                                       \
+            wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
           }                                                      \
         } while (0)
 
@@ -1168,8 +1168,8 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET         s,
                                       WSAOVERLAPPED *reserved)
 {
   BOOL rc;
-  char tv_buf[30];
-  char ts_buf [40] = "";    /* timestamp at start of WSAConnectByNameA() */
+  char tv_buf [30];
+  char ts_buf [40];      /* timestamp at start of WSAConnectByNameA() */
 
   CHECK_PTR (p_WSAConnectByNameA);
 
@@ -1213,8 +1213,8 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET         s,
                                       WSAOVERLAPPED *reserved)
 {
   BOOL rc;
-  char tv_buf[30];
-  char ts_buf [40] = "";    /* timestamp at start of WSAConnectByNameW() */
+  char tv_buf [30];
+  char ts_buf [40];    /* timestamp at start of WSAConnectByNameW() */
 
   CHECK_PTR (p_WSAConnectByNameW);
 
@@ -1257,8 +1257,8 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET               s,
                                      WSAOVERLAPPED       *reserved)
 {
   BOOL rc;
-  char tv_buf[30];
-  char ts_buf [40] = "";    /* timestamp at start of WSAConnectByList() */
+  char tv_buf [30];
+  char ts_buf [40];    /* timestamp at start of WSAConnectByList() */
 
   CHECK_PTR (p_WSAConnectByList);
 
@@ -1563,7 +1563,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
    *       It seems the WSAGetLastError() is not reliably returned on a non-blocking socket.
    */
   const struct sockaddr_in *sa = (const struct sockaddr_in*)addr;
-  char  ts_buf [40] = "";    /* timestamp at start of connect() */
+  char  ts_buf [40];
   int   rc;
 
   CHECK_PTR (p_connect);
@@ -1571,8 +1571,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
   ENTER_CRIT();
 
   /* We want the timestamp for when connect() was called.
-   * Not the timestamp for when connect() returned. Hence do not
-   * use the WSTRACE() macro here.
+   * Not the timestamp for when connect() returned.
    */
   ts_now = strcpy (ts_buf, get_timestamp());
 
@@ -1641,7 +1640,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   fd_set *ex_copy = NULL;
   char    rc_buf [20];
   char    tv_buf [50];
-  char    ts_buf [40] = "";  /* timestamp at start of select() */
+  char    ts_buf [40];
   int     rc;
   size_t  sz;
   BOOL    _exclude_this;
@@ -1719,6 +1718,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
      */
     wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
                     ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+    ts_now = NULL;
 
     wstrace_printf (FALSE, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
                     nfds,
@@ -3081,11 +3081,12 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
                                char *host, DWORD host_size, char *serv_buf,
                                DWORD serv_buf_size, int flags)
 {
-  int rc;
+  char ts_buf [40];
+  int  rc;
 
   CHECK_PTR (p_getnameinfo);
 
-  ts_now = get_timestamp();
+  ts_now = strcpy (ts_buf, get_timestamp());
 
   rc = (*p_getnameinfo) (sa, sa_len, host, host_size, serv_buf, serv_buf_size, flags);
 
@@ -3119,11 +3120,12 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
 EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
                                const struct addrinfo *hints, struct addrinfo **res)
 {
-  int rc;
+  char ts_buf [40];
+  int  rc;
 
   CHECK_PTR (p_getaddrinfo);
 
-  ts_now = get_timestamp();
+  ts_now = strcpy (ts_buf, get_timestamp());
 
   rc = (*p_getaddrinfo) (host_name, serv_name, hints, res);
 
@@ -3210,13 +3212,14 @@ EXPORT void WINAPI FreeAddrInfoW (ADDRINFOW *ai)
 EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_name,
                                 const ADDRINFOW *hints, ADDRINFOW **res)
 {
-  int rc;
+  char ts_buf [40];
+  int  rc;
 
   CHECK_PTR (p_GetAddrInfoW);
 
   ENTER_CRIT();
 
-  ts_now = get_timestamp();
+  ts_now = strcpy (ts_buf, get_timestamp());
 
   rc = (*p_GetAddrInfoW) (host_name, serv_name, hints, res);
 
