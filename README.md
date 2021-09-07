@@ -13,7 +13,7 @@ functions.
 A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com` <br>
 (`ahost` is part of the DNS library **[C-ares](https://c-ares.haxx.se/)**):
 
-![screenshot](screenshot_ahost-msdn-com.png?raw=true)
+[![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
 
 ### Features
 
@@ -294,9 +294,9 @@ cd sample
 start /pos=200,50,1000,800   ..\openvpn.exe --config sample-config-files/loopback-server
 start /pos=800,150,1000,1000 ..\openvpn.exe --config sample-config-files/loopback-client
 ```
-[![screenshot](screenshot-openvpn-tmb.jpg?raw=true)](screenshot-openvpn-tmb.jpg?raw=true):
+[![screenshot](screenshot_openvpn-tmb.jpg?raw=true)](screenshot_openvpn.jpg?raw=true):
 
-A **[Larger](https://www.watt-32.net/misc/screenshot-openvpn.png)** version.
+A **[Larger](https://www.watt-32.net/misc/screenshot_openvpn.png)** version.
 
 ### Firewall Monitor
 
