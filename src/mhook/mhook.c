@@ -1508,7 +1508,7 @@ static ULONG WINAPI Hook_NtOpenProcess (OUT HANDLE     *ProcessHandle,
                                         IN  VOID       *ObjectAttributes,
                                         IN  CLIENT_ID  *ClientId)
 {
-  printf ("***** Call to open process %lu\n", ClientId->UniqueProcess);
+  printf ("***** Call to open process %lu\n", (DWORD)ClientId->UniqueProcess);
   return (*True_NtOpenProcess) (ProcessHandle, AccessMask, ObjectAttributes, ClientId);
 }
 
