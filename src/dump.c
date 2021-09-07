@@ -2276,10 +2276,10 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
     if (!addr)
        addr = "<??>";
 
-    if (total >= max_len)
+    if (total + (int)strlen(addr) + 2 >= max_len)
     {
-      len = snprintf (out-2, left+2, "\n%*s", indent, "");
-      out   = out - 2 + len;
+      len = snprintf (out, left, "\n%*s", indent, "");
+      out  += len;
       left -= len;
       total = len;
       max_len = g_cfg.screen_width - indent;
