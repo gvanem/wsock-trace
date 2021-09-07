@@ -61,7 +61,7 @@ end
 print (string.format("  package.path:  %s", package.path))
 print (string.format("  package.cpath: %s", package.cpath))
 
-if ws.get_trace_level() >= 1 then
+if ws.get_trace_level() >= 2 then
   dump_obj ("jit.opt", jit.opt)
   dump_obj ("jit.util", jit.util)
   dump_obj ("ws", ws)

@@ -214,7 +214,12 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
       BCReg minslot = bc_a(ins);
       if (op >= BC_FORI && op <= BC_JFORL) minslot += FORL_EXT;
       else if (op >= BC_ITERL && op <= BC_JITERL) minslot += bc_b(pc[-2])-1;
-      else if (op == BC_UCLO) { pc += bc_j(ins); break; }
+      else if (op == BC_UCLO) {
+	ptrdiff_t delta = bc_j(ins);
+	if (delta < 0) return maxslot;  /* Prevent loop. */
+	pc += delta;
+	break;
+      }
       for (s = minslot; s < maxslot; s++) DEF_SLOT(s);
       return minslot < maxslot ? minslot : maxslot;
       }
@@ -238,7 +243,7 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
        if (!(op == BC_ISTC || op == BC_ISFC)) DEF_SLOT(bc_a(ins));
        break;
     case BCMbase:
-      if (op >= BC_CALLM && op <= BC_VARG) {
+      if (op >= BC_CALLM && op <= BC_ITERN) {
 	BCReg top = (op == BC_CALLM || op == BC_CALLMT || bc_c(ins) == 0) ?
 		    maxslot : (bc_a(ins) + bc_c(ins));
 	s = bc_a(ins) - ((op == BC_ITERC || op == BC_ITERN) ? 3 : 0);
@@ -248,6 +253,8 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
 	  for (s = 0; s < bc_a(ins); s++) DEF_SLOT(s);
 	  return 0;
 	}
+      } else if (op == BC_VARG) {
+	return maxslot;  /* NYI: punt. */
       } else if (op == BC_KNIL) {
 	for (s = bc_a(ins); s <= bc_d(ins); s++) DEF_SLOT(s);
       } else if (op == BC_TSETM) {
@@ -265,15 +272,45 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
   return 0;  /* unreachable */
 }
 
+/* Mark slots used by upvalues of child prototypes as used. */
+void snap_useuv(GCproto *pt, uint8_t *udf)
+{
+  /* This is a coarse check, because it's difficult to correlate the lifetime
+  ** of slots and closures. But the number of false positives is quite low.
+  ** A false positive may cause a slot not to be purged, which is just
+  ** a missed optimization.
+  */
+  if ((pt->flags & PROTO_CHILD)) {
+    ptrdiff_t i, j, n = pt->sizekgc;
+    GCRef *kr = mref(pt->k, GCRef) - 1;
+    for (i = 0; i < n; i++, kr--) {
+      GCobj *o = gcref(*kr);
+      if (o->gch.gct == ~LJ_TPROTO) {
+	for (j = 0; j < gco2pt(o)->sizeuv; j++) {
+	  uint32_t v = proto_uv(gco2pt(o))[j];
+	  if ((v & PROTO_UV_LOCAL)) {
+	    udf[(v & 0xff)] = 0;
+	  }
+	}
+      }
+    }
+  }
+}
+
 /* Purge dead slots before the next snapshot. */
 void lj_snap_purge(jit_State *J)
 {
   uint8_t udf[SNAP_USEDEF_SLOTS];
-  BCReg maxslot = J->maxslot;
-  BCReg s = snap_usedef(J, udf, J->pc, maxslot);
-  for (; s < maxslot; s++)
-    if (udf[s] != 0)
-      J->base[s] = 0;  /* Purge dead slots. */
+  BCReg s, maxslot = J->maxslot;
+  if (bc_op(*J->pc) == BC_FUNCV && maxslot > J->pt->numparams)
+    maxslot = J->pt->numparams;
+  s = snap_usedef(J, udf, J->pc, maxslot);
+  if (s < maxslot) {
+    snap_useuv(J->pt, udf);
+    for (; s < maxslot; s++)
+      if (udf[s] != 0)
+	J->base[s] = 0;  /* Purge dead slots. */
+  }
 }
 
 /* Shrink last snapshot. */
@@ -286,6 +323,7 @@ void lj_snap_shrink(jit_State *J)
   BCReg maxslot = J->maxslot;
   BCReg minslot = snap_usedef(J, udf, snap_pc(map[nent]), maxslot);
   BCReg baseslot = J->baseslot;
+  if (minslot < maxslot) snap_useuv(J->pt, udf);
   maxslot += baseslot;
   minslot += baseslot;
   snap->nslots = (uint8_t)maxslot;
