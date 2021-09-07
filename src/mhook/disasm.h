@@ -1207,7 +1207,7 @@ typedef struct _X86_INSTRUCTION {
         X86_SEGMENT DstSegment;
         union _DUMMYUNIONNAME2 {
               X86_SEGMENT Segment;
-              DWORD       Selector;
+              WORD        Selector;
             } DUMMYUNIONNAME2;
 
         // NOTE: these are for internal use, use Instruction->Operands[]

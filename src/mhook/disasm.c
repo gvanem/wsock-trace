@@ -2540,7 +2540,7 @@ HasSpecialExtension:
       if (!Instruction->AnomalyOccurred &&
           ((X86Instruction->OperandSize != 2 && (Instruction->StackChange & 3)) || (Instruction->StackChange & 1)))
       {
-          S_PRINTF ("[" ADDR_FMT "] ANOMALY: \"%s\" has invalid stack change 0x%02X\n", VIRTUAL_ADDRESS, X86Opcode->Mnemonic, Instruction->StackChange);
+          S_PRINTF ("[" ADDR_FMT "] ANOMALY: \"%s\" has invalid stack change 0x%02lX\n", VIRTUAL_ADDRESS, X86Opcode->Mnemonic, Instruction->StackChange);
           Instruction->AnomalyOccurred = TRUE;
       }
   }
@@ -5072,8 +5072,6 @@ INTERNAL BOOL IsValidLockPrefix (X86_INSTRUCTION *X86Instruction, uint8_t Opcode
 
   if (!X86Instruction->HasModRM || X86Instruction->modrm.mod == 3 || !X86Instruction->HasDstAddressing)
   {
-    INSTRUCTION *Instruction = X86Instruction->Instruction;
-
     DISASM_OUTPUT ("[" ADDR_FMT "] ERROR: Instruction \"%s\" with LOCK prefix has invalid ModRM addressing\n",
                    VIRTUAL_ADDRESS, X86Instruction->Opcode.Mnemonic);
     return (FALSE);
@@ -5214,8 +5212,6 @@ BYTE *GetAbsoluteAddressFromSelector (WORD Selector, DWORD Offset)
   DESCRIPTOR_ENTRY Entry;
   GATE_ENTRY      *Gate;
   ULONG_PTR        Base;
-
-  assert (Selector < 0x10000);
 
   if (!GetThreadSelectorEntry(GetCurrentThread(), Selector, (LDT_ENTRY*)&Entry))
      return (NULL);
