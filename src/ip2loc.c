@@ -293,12 +293,12 @@ static IP2Location *open_file (const char *fname)
 
     TRACE (2, "Success: %s\n"
               "               Database has %s entries. API-version: %s, size: %s bytes\n"
-              "               Date: %s, IPv4-count: %s, IPv6-count: %s "
-              "(is_IPv4_only: %d, is_IPv6_only: %d).\n",
+              "               Date: %s, IPv4-count: %s, IPv6-count: %s\n"
+              "               (is_IPv4_only: %d, is_IPv6_only: %d, ipv4_index_db_addr: %u, ipv6_index_db_addr: %u).\n",
            fname, dword_str(loc->ipv4_db_count + loc->ipv6_db_count), IP2Location_api_version_str(),
            dword_str(loc->stat_buf.st_size), get_date_str(&st),
            dword_str(loc->ipv4_db_count), dword_str(loc->ipv6_db_count),
-           is_IPv4_only, is_IPv6_only);
+           is_IPv4_only, is_IPv6_only, loc->ipv4_index_db_addr, loc->ipv6_index_db_addr);
   }
   return (loc);
 }
