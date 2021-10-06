@@ -103,6 +103,7 @@ my_CFLAGS="\
 -Wtype-limits \
 "
 AC_SUBST([my_CFLAGS])
+AC_SUBST([my_LDFLAGS])
 
 # Enable -fanalyzer if requested
 AC_ARG_ENABLE([analyzer],
@@ -111,6 +112,10 @@ AC_ARG_ENABLE([analyzer],
 AS_IF([test "x$enable_analyzer" = "xyes"],
 	CC_CHECK_FLAGS_APPEND([my_CFLAGS], [CFLAGS], [-fanalyzer])
 )
+
+# Enable -fno-semantic-interposition (if available)
+CC_CHECK_FLAGS_APPEND([my_CFLAGS], [CFLAGS], [-fno-semantic-interposition])
+CC_CHECK_FLAGS_APPEND([my_LDFLAGS], [LDFLAGS], [-fno-semantic-interposition])
 
 # ------------------------------------------------------------------------------
 

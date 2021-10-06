@@ -22,7 +22,7 @@ AM_CFLAGS = ${my_CFLAGS} \
 	-ffunction-sections \
 	-fdata-sections
 
-AM_LDFLAGS =
+AM_LDFLAGS = ${my_LDFLAGS}
 
 # leaving a space here to work around automake's conditionals
  ifeq ($(OS),Darwin)
@@ -144,6 +144,24 @@ src_libloc_la_LIBADD = \
 
 src_libloc_la_DEPENDENCIES = \
 	${top_srcdir}/src/libloc.sym
+
+noinst_LTLIBRARIES = \
+	src/libloc-internal.la
+
+src_libloc_internal_la_SOURCES = \
+	$(src_libloc_la_SOURCES)
+
+src_libloc_internal_la_CFLAGS = \
+	$(src_libloc_la_CFLAGS)
+
+src_libloc_internal_la_LDFLAGS = \
+	$(filter-out -version-info %,$(src_libloc_la_LDFLAGS))
+
+src_libloc_internal_la_LIBADD = \
+	$(src_libloc_la_LIBADD)
+
+src_libloc_internal_la_DEPENDENCIES = \
+	$(src_libloc_la_DEPENDENCIES)
 
 pkgconfig_DATA = \
 	src/libloc.pc
@@ -296,6 +314,10 @@ TESTS_CFLAGS = \
 	-DLIBLOC_PRIVATE \
 	-DABS_SRCDIR=\"$(abs_srcdir)\"
 
+TESTS_LDADD = \
+	src/libloc.la \
+	src/libloc-internal.la
+
 TESTS = \
 	src/test-libloc \
 	src/test-stringpool \
@@ -330,7 +352,7 @@ src_test_libloc_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_libloc_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_as_SOURCES = \
 	src/test-as.c
@@ -339,7 +361,7 @@ src_test_as_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_as_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_country_SOURCES = \
 	src/test-country.c
@@ -348,7 +370,7 @@ src_test_country_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_country_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_network_SOURCES = \
 	src/test-network.c
@@ -357,7 +379,7 @@ src_test_network_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_network_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_network_list_SOURCES = \
 	src/test-network-list.c
@@ -366,7 +388,7 @@ src_test_network_list_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_network_list_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_stringpool_SOURCES = \
 	src/test-stringpool.c
@@ -375,7 +397,7 @@ src_test_stringpool_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_stringpool_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_database_SOURCES = \
 	src/test-database.c
@@ -384,7 +406,7 @@ src_test_database_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_database_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 src_test_signature_SOURCES = \
 	src/test-signature.c
@@ -393,7 +415,7 @@ src_test_signature_CFLAGS = \
 	$(TESTS_CFLAGS)
 
 src_test_signature_LDADD = \
-	src/libloc.la
+	$(TESTS_LDADD)
 
 # ------------------------------------------------------------------------------
 

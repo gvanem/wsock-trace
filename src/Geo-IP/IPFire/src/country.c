@@ -21,7 +21,19 @@
 #include <libloc/libloc.h>
 #include <libloc/compat.h>
 #include <libloc/country.h>
+#include <libloc/network.h>
 #include <libloc/private.h>
+
+static const struct loc_special_country {
+	const char code[3];
+	enum loc_network_flags flags;
+} loc_special_countries[] = {
+	{ "A1", LOC_NETWORK_FLAG_ANONYMOUS_PROXY },
+	{ "A2", LOC_NETWORK_FLAG_SATELLITE_PROVIDER },
+	{ "A3", LOC_NETWORK_FLAG_ANYCAST },
+	{ "XD", LOC_NETWORK_FLAG_DROP },
+	{ "", 0 },
+};
 
 struct loc_country {
 	struct loc_ctx* ctx;
@@ -197,6 +209,27 @@ LOC_EXPORT int loc_country_code_is_valid(const char* cc) {
 			return 0;
 	}
 
+	// The code cannot begin with an X (those are reserved for private use)
+	if (*cc == 'X')
+		return 0;
+
 	// Looks valid
 	return 1;
+}
+
+LOC_EXPORT int loc_country_special_code_to_flag(const char* cc) {
+	// Check if we got some input
+	if (!cc || !*cc) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// Return flags for any known special country
+	for (const struct loc_special_country* country = loc_special_countries;
+			country->flags; country++) {
+		if (strcmp(country->code, cc) == 0)
+			return country->flags;
+	}
+
+	return 0;
 }

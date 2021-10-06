@@ -788,7 +788,7 @@ static int __loc_database_lookup_handle_leaf(struct loc_database* db, const stru
 	}
 
 	// Check if the given IP address is inside the network
-	if (!loc_network_match_address(*network, address)) {
+	if (!loc_network_matches_address(*network, address)) {
 		DEBUG(db->ctx, "Searched address is not part of the network\n");
 
 		loc_network_unref(*network);
@@ -851,7 +851,7 @@ static int __loc_database_lookup(struct loc_database* db, const struct in6_addr*
 }
 
 LOC_EXPORT int loc_database_lookup(struct loc_database* db,
-		struct in6_addr* address, struct loc_network** network) {
+		const struct in6_addr* address, struct loc_network** network) {
 	struct in6_addr network_address;
 	memset(&network_address, 0, sizeof(network_address));
 
@@ -1192,7 +1192,7 @@ static int loc_database_enumerator_filter_network(
 	}
 
 	// Skip if flags do not match
-	if (enumerator->flags && !loc_network_match_flag(network, enumerator->flags)) {
+	if (enumerator->flags && !loc_network_has_flag(network, enumerator->flags)) {
 		DEBUG(enumerator->ctx, "Filtered network %p because of flags not matching\n", network);
 		return 1;
 	}

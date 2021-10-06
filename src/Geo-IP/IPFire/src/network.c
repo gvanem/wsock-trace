@@ -378,7 +378,7 @@ LOC_EXPORT char* loc_network_format_last_address(struct loc_network* network) {
 	return loc_network_format_address(network, &network->last_address);
 }
 
-LOC_EXPORT int loc_network_match_address(struct loc_network* network, const struct in6_addr* address) {
+LOC_EXPORT int loc_network_matches_address(struct loc_network* network, const struct in6_addr* address) {
 	// Address must be larger than the start address
 	if (in6_addr_cmp(&network->first_address, address) > 0)
 		return 0;
@@ -411,11 +411,19 @@ LOC_EXPORT int loc_network_set_country_code(struct loc_network* network, const c
 	return 0;
 }
 
-LOC_EXPORT int loc_network_match_country_code(struct loc_network* network, const char* country_code) {
+LOC_EXPORT int loc_network_matches_country_code(struct loc_network* network, const char* country_code) {
+	// Search for any special flags
+	const int flag = loc_country_special_code_to_flag(country_code);
+
+	// If we found a flag, we will return whether it is set or not
+	if (flag)
+		return loc_network_has_flag(network, flag);
+
 	// Check country code
 	if (!loc_country_code_is_valid(country_code))
 		return -EINVAL;
 
+	// Check for an exact match
 	return (network->country_code[0] == country_code[0])
 		&& (network->country_code[1] == country_code[1]);
 }
@@ -430,10 +438,6 @@ LOC_EXPORT int loc_network_set_asn(struct loc_network* network, uint32_t asn) {
 	return 0;
 }
 
-LOC_EXPORT int loc_network_match_asn(struct loc_network* network, uint32_t asn) {
-	return network->asn == asn;
-}
-
 LOC_EXPORT int loc_network_has_flag(struct loc_network* network, uint32_t flag) {
 	return network->flags & flag;
 }
@@ -442,10 +446,6 @@ LOC_EXPORT int loc_network_set_flag(struct loc_network* network, uint32_t flag) 
 	network->flags |= flag;
 
 	return 0;
-}
-
-LOC_EXPORT int loc_network_match_flag(struct loc_network* network, uint32_t flag) {
-	return loc_network_has_flag(network, flag);
 }
 
 LOC_EXPORT int loc_network_cmp(struct loc_network* self, struct loc_network* other) {
@@ -466,17 +466,17 @@ LOC_EXPORT int loc_network_cmp(struct loc_network* self, struct loc_network* oth
 
 LOC_EXPORT int loc_network_overlaps(struct loc_network* self, struct loc_network* other) {
 	// Either of the start addresses must be in the other subnet
-	if (loc_network_match_address(self, &other->first_address))
+	if (loc_network_matches_address(self, &other->first_address))
 		return 1;
 
-	if (loc_network_match_address(other, &self->first_address))
+	if (loc_network_matches_address(other, &self->first_address))
 		return 1;
 
 	// Or either of the end addresses is in the other subnet
-	if (loc_network_match_address(self, &other->last_address))
+	if (loc_network_matches_address(self, &other->last_address))
 		return 1;
 
-	if (loc_network_match_address(other, &self->last_address))
+	if (loc_network_matches_address(other, &self->last_address))
 		return 1;
 
 	return 0;
@@ -752,7 +752,7 @@ LOC_EXPORT struct loc_network_list* loc_network_exclude_list(
 	return subnets;
 }
 
-LOC_EXPORT int loc_network_to_database_v1(struct loc_network* network, struct loc_database_network_v1* dbobj) {
+int loc_network_to_database_v1(struct loc_network* network, struct loc_database_network_v1* dbobj) {
 	// Add country code
 	loc_country_code_copy(dbobj->country_code, network->country_code);
 
@@ -765,7 +765,7 @@ LOC_EXPORT int loc_network_to_database_v1(struct loc_network* network, struct lo
 	return 0;
 }
 
-LOC_EXPORT int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** network,
+int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** network,
 		struct in6_addr* address, unsigned int prefix, const struct loc_database_network_v1* dbobj) {
 	char country_code[3] = "\0\0";
 

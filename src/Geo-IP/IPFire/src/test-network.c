@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	err = loc_network_set_country_code(network1, "XX");
+	err = loc_network_set_country_code(network1, "DE");
 	if (err) {
 		fprintf(stderr, "Could not set country code\n");
 		exit(EXIT_FAILURE);
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	err = loc_network_match_address(network1, &address);
+	err = loc_network_matches_address(network1, &address);
 	if (!err) {
 		fprintf(stderr, "Network1 does not match address\n");
 		exit(EXIT_FAILURE);
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	err = loc_network_set_country_code(network2, "XY");
+	err = loc_network_set_country_code(network2, "DE");
 	if (err) {
 		fprintf(stderr, "Could not set country code\n");
 		exit(EXIT_FAILURE);

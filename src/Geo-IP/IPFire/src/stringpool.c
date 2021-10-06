@@ -129,7 +129,7 @@ static void loc_stringpool_free(struct loc_stringpool* pool) {
 	free(pool);
 }
 
-LOC_EXPORT int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool) {
+int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool) {
 	struct loc_stringpool* p = calloc(1, sizeof(*p));
 	if (!p)
 		return 1;
@@ -164,7 +164,7 @@ static int loc_stringpool_mmap(struct loc_stringpool* pool, FILE* f, size_t leng
 	return 0;
 }
 
-LOC_EXPORT int loc_stringpool_open(struct loc_ctx* ctx, struct loc_stringpool** pool,
+int loc_stringpool_open(struct loc_ctx* ctx, struct loc_stringpool** pool,
 		FILE* f, size_t length, off_t offset) {
 	struct loc_stringpool* p = NULL;
 
@@ -189,13 +189,13 @@ LOC_EXPORT int loc_stringpool_open(struct loc_ctx* ctx, struct loc_stringpool** 
 	return 0;
 }
 
-LOC_EXPORT struct loc_stringpool* loc_stringpool_ref(struct loc_stringpool* pool) {
+struct loc_stringpool* loc_stringpool_ref(struct loc_stringpool* pool) {
 	pool->refcount++;
 
 	return pool;
 }
 
-LOC_EXPORT struct loc_stringpool* loc_stringpool_unref(struct loc_stringpool* pool) {
+struct loc_stringpool* loc_stringpool_unref(struct loc_stringpool* pool) {
 	if (--pool->refcount > 0)
 		return NULL;
 
@@ -212,11 +212,11 @@ static off_t loc_stringpool_get_next_offset(struct loc_stringpool* pool, off_t o
 	return offset + strlen(string) + 1;
 }
 
-LOC_EXPORT const char* loc_stringpool_get(struct loc_stringpool* pool, off_t offset) {
+const char* loc_stringpool_get(struct loc_stringpool* pool, off_t offset) {
 	return __loc_stringpool_get(pool, offset);
 }
 
-LOC_EXPORT size_t loc_stringpool_get_size(struct loc_stringpool* pool) {
+size_t loc_stringpool_get_size(struct loc_stringpool* pool) {
 	return loc_stringpool_get_offset(pool, pool->pos);
 }
 
@@ -240,7 +240,7 @@ static off_t loc_stringpool_find(struct loc_stringpool* pool, const char* s) {
 	return -ENOENT;
 }
 
-LOC_EXPORT off_t loc_stringpool_add(struct loc_stringpool* pool, const char* string) {
+off_t loc_stringpool_add(struct loc_stringpool* pool, const char* string) {
 	off_t offset = loc_stringpool_find(pool, string);
 	if (offset >= 0) {
 		DEBUG(pool->ctx, "Found '%s' at position %jd\n", string, (intmax_t)offset);
@@ -250,7 +250,7 @@ LOC_EXPORT off_t loc_stringpool_add(struct loc_stringpool* pool, const char* str
 	return loc_stringpool_append(pool, string);
 }
 
-LOC_EXPORT void loc_stringpool_dump(struct loc_stringpool* pool) {
+void loc_stringpool_dump(struct loc_stringpool* pool) {
 	off_t offset = 0;
 
 	while (offset < pool->length) {
@@ -265,7 +265,7 @@ LOC_EXPORT void loc_stringpool_dump(struct loc_stringpool* pool) {
 	fflush(stdout);
 }
 
-LOC_EXPORT size_t loc_stringpool_write(struct loc_stringpool* pool, FILE* f) {
+size_t loc_stringpool_write(struct loc_stringpool* pool, FILE* f) {
 	size_t size = loc_stringpool_get_size(pool);
 
 	return fwrite(pool->data, sizeof(*pool->data), size, f);

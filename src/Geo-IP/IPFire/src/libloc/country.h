@@ -37,6 +37,7 @@ int loc_country_set_name(struct loc_country* country, const char* name);
 int loc_country_cmp(struct loc_country* country1, struct loc_country* country2);
 
 int loc_country_code_is_valid(const char* cc);
+int loc_country_special_code_to_flag(const char* cc);
 
 #ifdef LIBLOC_PRIVATE
 

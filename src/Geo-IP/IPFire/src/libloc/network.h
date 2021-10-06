@@ -44,19 +44,17 @@ const struct in6_addr* loc_network_get_first_address(struct loc_network* network
 char* loc_network_format_first_address(struct loc_network* network);
 const struct in6_addr* loc_network_get_last_address(struct loc_network* network);
 char* loc_network_format_last_address(struct loc_network* network);
-int loc_network_match_address(struct loc_network* network, const struct in6_addr* address);
+int loc_network_matches_address(struct loc_network* network, const struct in6_addr* address);
 
 const char* loc_network_get_country_code(struct loc_network* network);
 int loc_network_set_country_code(struct loc_network* network, const char* country_code);
-int loc_network_match_country_code(struct loc_network* network, const char* country_code);
+int loc_network_matches_country_code(struct loc_network* network, const char* country_code);
 
 uint32_t loc_network_get_asn(struct loc_network* network);
 int loc_network_set_asn(struct loc_network* network, uint32_t asn);
-int loc_network_match_asn(struct loc_network* network, uint32_t asn);
 
 int loc_network_has_flag(struct loc_network* network, uint32_t flag);
 int loc_network_set_flag(struct loc_network* network, uint32_t flag);
-int loc_network_match_flag(struct loc_network* network, uint32_t flag);
 
 int loc_network_cmp(struct loc_network* self, struct loc_network* other);
 int loc_network_overlaps(struct loc_network* self, struct loc_network* other);
@@ -68,7 +66,6 @@ struct loc_network_list* loc_network_exclude_list(
 		struct loc_network* network, struct loc_network_list* list);
 
 #ifdef LIBLOC_PRIVATE
-
 
 static inline struct in6_addr address_increment(const struct in6_addr* address) {
 	struct in6_addr a = *address;
