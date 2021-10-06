@@ -24,6 +24,7 @@
 
 #include "init.h"
 #include "wsock_trace_lua.h"
+#include "miniz.h"
 
 #include "luajit.h"
 #include "lj_arch.h"
@@ -79,6 +80,7 @@ static BOOL open_ok        = TRUE;
 static void wslua_init (const char *script);
 static void wslua_exit (const char *script);
 static void wslua_set_path (const char *full_name);
+static void wslua_print_stack (void);
 
 BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 {
@@ -163,7 +165,7 @@ static const char *get_func_sig (void)
   return (buf);
 }
 
-/*
+/**
  * The Lua-hooks.
  * For the moment these does nothing.
  */
@@ -214,7 +216,9 @@ static BOOL execute_and_report (lua_State *l)
   return (FALSE);
 }
 
-/*
+/**
+ * Run a .lua script.
+ *
  * Inspired from the example in Swig:
  * <Swig-Root>/Examples/lua/embed/embed.c
  */
@@ -230,18 +234,13 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
   return (FALSE);
 }
 
-#if defined(NOT_YET)
-/*
+/**
  * Use 'miniz.c' and extract a script from a zip-file and run it.
  *
  * Or use one of these:
  *   https://github.com/luaforge/lar/blob/master/lar/lar.lua
  *   https://github.com/davidm/lua-compress-deflatelua
  */
-extern void *mz_zip_extract_archive_file_to_heap (const char *pZip_filename,
-                                                  const char *pArchive_name,
-                                                  size_t *pSize, mz_uint zip_flags);
-
 static BOOL wslua_run_zipfile (lua_State *l, const char *zipfile, const char *script)
 {
   char *buf = mz_zip_extract_archive_file_to_heap (zipfile, script, NULL,
@@ -256,8 +255,6 @@ static BOOL wslua_run_zipfile (lua_State *l, const char *zipfile, const char *sc
      free (buf);
   return (FALSE);
 }
-#endif /* NOT_YET */
-
 
 static int wslua_get_trace_level (lua_State *l)
 {
@@ -358,7 +355,7 @@ static int wslua_get_version (lua_State *l)
   return (1);
 }
 
-void wslua_print_stack (void)
+static void wslua_print_stack (void)
 {
   lua_Debug ar;
   int       level = 0;
@@ -536,7 +533,7 @@ static void wslua_set_path (const char *full_name)
    *   'lua_cpath' MUST end with "?_cyg_x64.dll".
    *
    *   But if "LUA_CPATH=?_cyg.dll" is already defined, set our 'lua_cpath' first.
-   *   Otherwise 'LoadLibrary()' in LuaJIT erros with code 193; ERROR_BAD_EXE_FORMAT
+   *   Otherwise 'LoadLibrary()' in LuaJIT errors with code 193; ERROR_BAD_EXE_FORMAT
    */
   dll_ofs = (const char*) RC_DLL_NAME + strlen ("wsock_trace");
   len = snprintf (p, left, "%s\\?%s.dll", dll_path, dll_ofs);
@@ -569,7 +566,7 @@ static const struct luaL_Reg wslua_table[] = {
   { NULL,                  NULL }
 };
 
-/*
+/**
  * The open() function exported and called from LuaJIT when "wsock_trace"
  * is used as a module. This is called explicitly when pushing "wsock_trace"
  * as a global module.

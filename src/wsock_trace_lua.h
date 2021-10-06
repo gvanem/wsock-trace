@@ -12,10 +12,8 @@
   extern const char *wslua_func_sig;
 
   extern BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason);
-  extern void wslua_print_stack (void);
-
-  extern int wslua_WSAStartup (WORD ver, WSADATA *data);
-  extern int wslua_WSACleanup (void);
+  extern int  wslua_WSAStartup (WORD ver, WSADATA *data);
+  extern int  wslua_WSACleanup (void);
 
   #if defined(_MSC_VER) && defined(__FUNCSIG__)
    /*
