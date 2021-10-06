@@ -50,7 +50,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 * *ASN* information (Autonomous System Number) from **[IPFire](https://location.ipfire.org)**. <br>
   The screen-shot above shows Google has ASN 15169 (for their DNS server-address `8.8.8.8`). <br>
-  More details for that ASN at **[DNSlytics](https://dnslytics.com/bgp/as15169)**.
+  More details for that ASN is at **[DNSlytics](https://dnslytics.com/bgp/as15169)**
+  and even more details at **[PeerDB](https://www.peeringdb.com/asn/15169)**.
   Many thanks to the IPFire developers [**[4]**](#footnotes) for their data-bases.
 
 * *Domain Name System-based Blackhole List*
