@@ -631,8 +631,13 @@ static int libloc_handle_net (struct loc_network    *net,
   char                 print_buf [1000];
   int                  rc = 0;
   uint32_t             AS_num;
-  BOOL                 is_anycast, is_anon_proxy, sat_provider;
-  BOOL                 is_hostile; /*, is_tor_exit; // some day */
+  BOOL                 is_anycast, is_anon_proxy, is_sat_provider, is_hostile;
+#if 0
+  /** \todo: hopefully, some day this could be possible in 'libloc'
+   */
+  BOOL is_tor_exit;  /* Ref: https://en.wikipedia.org/wiki/Tor_(network)#Tor_exit_node_block */
+  BOOL is_bogon;     /* Ref: https://en.wikipedia.org/wiki/Bogon_filtering */
+#endif
 
   if (ip4)
      _prefix -= 96;
@@ -647,11 +652,14 @@ static int libloc_handle_net (struct loc_network    *net,
 
   AS_num = loc_network_get_asn (net);
 
-  is_anycast    = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANYCAST) != 0);
-  is_anon_proxy = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANONYMOUS_PROXY) != 0);
-  sat_provider  = (loc_network_has_flag (net, LOC_NETWORK_FLAG_SATELLITE_PROVIDER) != 0);
-  is_hostile    = (loc_network_has_flag (net, LOC_NETWORK_FLAG_DROP) != 0);
-//is_tor_exit   = (loc_network_has_flag (net, LOC_NETWORK_FLAG_TOR_EXIT) != 0);
+  is_anycast      = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANYCAST) != 0);
+  is_anon_proxy   = (loc_network_has_flag (net, LOC_NETWORK_FLAG_ANONYMOUS_PROXY) != 0);
+  is_sat_provider = (loc_network_has_flag (net, LOC_NETWORK_FLAG_SATELLITE_PROVIDER) != 0);
+  is_hostile      = (loc_network_has_flag (net, LOC_NETWORK_FLAG_DROP) != 0);
+#if 0
+  is_tor_exit     = (loc_network_has_flag (net, LOC_NETWORK_FLAG_TOR_EXIT) != 0);
+  is_bogon        = (loc_network_has_flag (net, LOC_NETWORK_FLAG_BOGON) != 0);
+#endif
 
   /* Since a Teredo address is valid here, maybe other blocks have an AS_num too?
    */
@@ -688,7 +696,7 @@ static int libloc_handle_net (struct loc_network    *net,
      strcat (attributes, ", Anycast");
   if (is_anon_proxy)
      strcat (attributes, ", Anonymous Proxy");
-  if (sat_provider)
+  if (is_sat_provider)
      strcat (attributes, ", Satellite Provider");
   if (is_hostile)
      strcat (attributes, ", Hostile");
@@ -817,7 +825,16 @@ static int __ASN_libloc_print (const char            *intro,
    * Add this to the ASN-list (sorted on net?)
    * Add negative lookups also; no `net` or `AS_num` found.
    */
-  smartlist_insert (ASN_entries, at_sorted_pos, copy);
+  if (rc)
+  {
+    smartlist_insert (ASN_entries, at_sorted_pos, asn);
+
+  /**
+   * \todo
+   * Check if the resulting network is a "Bogon".
+   * Ref: https://en.wikipedia.org/wiki/Bogon_filtering
+   */
+  }
 #endif
 
   /* Restore trace-level
