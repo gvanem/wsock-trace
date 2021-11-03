@@ -1589,7 +1589,7 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
   if (level == SOL_SOCKET && opt_len == sizeof(*tv) && (opt == SO_RCVTIMEO || opt == SO_SNDTIMEO))
   {
     tv = (struct timeval*) opt_val;
-    snprintf (buf, sizeof(buf), "{tv=%ld:%06lds}", tv->tv_sec, tv->tv_usec);
+    snprintf (buf, sizeof(buf), "{tv=%ld.%06lds}", tv->tv_sec, tv->tv_usec);
     return (buf);
   }
 

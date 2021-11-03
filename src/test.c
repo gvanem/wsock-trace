@@ -482,7 +482,7 @@ static fd_set fd1, fd2;
 
 static void test_select_1 (void)
 {
-  struct timeval  tv = { 1, 1 };
+  struct timeval tv = { 1, 1 };
   int    i;
 
   FD_ZERO (&fd1);
