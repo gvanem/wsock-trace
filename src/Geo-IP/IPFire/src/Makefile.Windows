@@ -417,6 +417,27 @@ py3_vclean:
 vclean realclean: clean py3_vclean
 	rm -f $(TARGETS) .depend.Windows
 
+man_doc:  ../man/location.8
+html_doc: ../man/location.html
+
+../man/location.xml: ../man/location.txt ../man/asciidoc.conf
+	asciidoc -f ../man/asciidoc.conf -d manpage -b docbook -o $@ $<
+
+XSLTPROC_FLAGS = --stringparam man.output.quietly 1            \
+                 --stringparam funcsynopsis.style ansi         \
+                 --stringparam man.th.extra1.suppress 1        \
+                 --stringparam man.authors.section.enabled 1   \
+                 --stringparam man.copyright.section.enabled 1 \
+                 --nonet
+
+XSLTPROC_FLAGS += http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
+
+../man/location.8: ../man/location.xml
+	xsltproc.exe -o $@ $(XSLTPROC_FLAGS) $<
+
+../man/location.html: ../man/location.txt ../man/asciidoc.conf
+	asciidoc.exe -f ../man/asciidoc.conf -b html5 -a icons -a theme=flask -o $@ $<
+
 #
 # GNU-make macro:
 #
