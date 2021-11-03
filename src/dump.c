@@ -1562,6 +1562,7 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
 const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
 {
   static  char buf[50];
+  struct timeval *tv;
   DWORD   val;
   ULONG64 val64;
 
@@ -1583,6 +1584,13 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
 
     if (opt == IPV6_MULTICAST_IF && opt_len == sizeof(ULONG))
        return dump_ipv6_multicast_if (buf, sizeof(buf), opt_val);
+  }
+
+  if (level == SOL_SOCKET && opt_len == sizeof(*tv) && (opt == SO_RCVTIMEO || opt == SO_SNDTIMEO))
+  {
+    tv = (struct timeval*) opt_val;
+    snprintf (buf, sizeof(buf), "{tv=%ld:%06lds}", tv->tv_sec, tv->tv_usec);
+    return (buf);
   }
 
   switch (opt_len)
