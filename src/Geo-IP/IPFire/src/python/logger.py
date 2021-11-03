@@ -30,17 +30,20 @@ handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 log.addHandler(handler)
 
-# Log to syslog
+# Log to 'stdout' on Windows and to syslog otherwise
 
-if sys.platform != 'win32':
+if sys.platform == 'win32':
+  handler = logging.StreamHandler(sys.stdout)
+else:
   handler = logging.handlers.SysLogHandler(address="/dev/log",
                 facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-  handler.setLevel(logging.INFO)
-  log.addHandler(handler)
+
+handler.setLevel(logging.INFO)
+log.addHandler(handler)
 
   # Format syslog messages
-  formatter = logging.Formatter("%(message)s")
-  handler.setFormatter(formatter)
+formatter = logging.Formatter("%(message)s")
+handler.setFormatter(formatter)
 
 def set_level(level):
 	"""

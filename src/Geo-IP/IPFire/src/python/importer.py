@@ -47,6 +47,11 @@ WHOIS_SOURCES = {
 	#	"https://ftp.arin.net/pub/rr/arin.db"
 	# ],
 
+	# Japan Network Information Center
+	"JPNIC": [
+		"https://ftp.nic.ad.jp/jpirr/jpirr.db.gz"
+		],
+
 	# Latin America and Caribbean Network Information Centre
 	# XXX ???
 
