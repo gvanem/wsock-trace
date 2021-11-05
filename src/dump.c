@@ -1730,6 +1730,15 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
     char prefix[30];
 
     snprintf (prefix, sizeof(prefix), "iov %d: ", i);
+
+    /* In case some code does a cast from 'struct iovec *' to 'WSABUF *',
+     * the below 'dump_data_internal()' would crash.
+     */
+    if (IsBadReadPtr(bufs->buf, sizeof(bufs->buf)))
+    {
+      trace_printf ("~4%s, bad: %p~0", prefix, bufs->buf);
+      break;
+    }
     total += dump_data_internal (bufs->buf, bufs->len, prefix);
     if (total >= (UINT)g_cfg.max_data)
        break;
