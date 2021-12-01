@@ -1139,6 +1139,7 @@ static void set_colour (int col)
   else if (use_wincon == 1)
   {
     fflush (stdout);
+    FlushFileBuffers (c_hnd);
     if (col == 0)
          SetConsoleTextAttribute (c_hnd, c_info.wAttributes);
     else SetConsoleTextAttribute (c_hnd, (c_info.wAttributes & ~7) + col);

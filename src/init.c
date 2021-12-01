@@ -1802,7 +1802,10 @@ WORD set_color (const WORD *col)
   }
 
   if (attr != last_attr)
-     SetConsoleTextAttribute (console_hnd, attr);
+  {
+    FlushFileBuffers (console_hnd);
+    SetConsoleTextAttribute (console_hnd, attr);
+  }
 
   if (last_attr == (WORD)-1)
        rc = console_info.wAttributes;
