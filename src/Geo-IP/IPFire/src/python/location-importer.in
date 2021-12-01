@@ -37,6 +37,14 @@ from location.i18n import _
 log = logging.getLogger("location.importer")
 log.propagate = 1
 
+# Define constants
+VALID_ASN_RANGES = (
+	(1, 23455),
+	(23457, 64495),
+	(131072, 4199999999),
+)
+
+
 class CLI(object):
 	def parse_cli(self):
 		parser = argparse.ArgumentParser(
@@ -574,6 +582,19 @@ class CLI(object):
 		# be suitable for libloc consumption...
 		return True
 
+	def _check_parsed_asn(self, asn):
+		"""
+			Assistive function to filter Autonomous System Numbers not being suitable
+			for adding to our database. Returns False in such cases, and True otherwise.
+		"""
+
+		for start, end in VALID_ASN_RANGES:
+			if start <= asn and end >= asn:
+				return True
+
+		log.info("Supplied ASN %s out of publicly routable ASN ranges" % asn)
+		return False
+
 	def _parse_block(self, block, source_key, validcountries = None):
 		# Get first line to find out what type of block this is
 		line = block[0]
@@ -829,8 +850,8 @@ class CLI(object):
 					log.debug("Skipping ARIN AS names line not containing an integer for ASN")
 					continue
 
-				if not ((1 <= asn and asn <= 23455) or (23457 <= asn and asn <= 64495) or (131072 <= asn and asn <= 4199999999)):
-					log.debug("Skipping ARIN AS names line not containing a valid ASN: %s" % asn)
+				# Filter invalid ASNs...
+				if not self._check_parsed_asn(asn):
 					continue
 
 				# Skip any AS name that appears to be a placeholder for a different RIR or entity...
@@ -1059,6 +1080,9 @@ class CLI(object):
 			# network allocation lists in a machine-readable format...
 			self._update_overrides_for_aws()
 
+			# Update overrides for Spamhaus DROP feeds...
+			self._update_overrides_for_spamhaus_drop()
+
 			for file in ns.files:
 				log.info("Reading %s..." % file)
 
@@ -1242,6 +1266,113 @@ class CLI(object):
 					is_anycast,
 				)
 
+
+	def _update_overrides_for_spamhaus_drop(self):
+		downloader = location.importer.Downloader()
+
+		ip_urls = [
+					"https://www.spamhaus.org/drop/drop.txt",
+					"https://www.spamhaus.org/drop/edrop.txt",
+					"https://www.spamhaus.org/drop/dropv6.txt"
+				]
+
+		asn_urls = [
+					"https://www.spamhaus.org/drop/asndrop.txt"
+				]
+
+		for url in ip_urls:
+			try:
+				with downloader.request(url, return_blocks=False) as f:
+					fcontent = f.body.readlines()
+			except Exception as e:
+				log.error("Unable to download Spamhaus DROP URL %s: %s" % (url, e))
+				return
+
+			# Iterate through every line, filter comments and add remaining networks to
+			# the override table in case they are valid...
+			with self.db.transaction():
+				for sline in fcontent:
+
+					# The response is assumed to be encoded in UTF-8...
+					sline = sline.decode("utf-8")
+
+					# Comments start with a semicolon...
+					if sline.startswith(";"):
+						continue
+
+					# Extract network and ignore anything afterwards...
+					try:
+						network = ipaddress.ip_network(sline.split()[0], strict=False)
+					except ValueError:
+						log.error("Unable to parse line: %s" % sline)
+						continue
+
+					# Sanitize parsed networks...
+					if not self._check_parsed_network(network):
+						log.warning("Skipping bogus network found in Spamhaus DROP URL %s: %s" % \
+							(url, network))
+						continue
+
+					# Conduct SQL statement...
+					self.db.execute("""
+						INSERT INTO network_overrides(
+							network,
+							source,
+							is_drop
+						) VALUES (%s, %s, %s)
+						ON CONFLICT (network) DO NOTHING""",
+						"%s" % network,
+						"Spamhaus DROP lists",
+						True
+					)
+
+		for url in asn_urls:
+			try:
+				with downloader.request(url, return_blocks=False) as f:
+					fcontent = f.body.readlines()
+			except Exception as e:
+				log.error("Unable to download Spamhaus DROP URL %s: %s" % (url, e))
+				return
+
+			# Iterate through every line, filter comments and add remaining ASNs to
+			# the override table in case they are valid...
+			with self.db.transaction():
+				for sline in fcontent:
+
+					# The response is assumed to be encoded in UTF-8...
+					sline = sline.decode("utf-8")
+
+					# Comments start with a semicolon...
+					if sline.startswith(";"):
+						continue
+
+					# Throw away anything after the first space...
+					sline = sline.split()[0]
+
+					# ... strip the "AS" prefix from it ...
+					sline = sline.strip("AS")
+
+					# ... and convert it into an integer. Voila.
+					asn = int(sline)
+
+					# Filter invalid ASNs...
+					if not self._check_parsed_asn(asn):
+						log.warning("Skipping bogus ASN found in Spamhaus DROP URL %s: %s" % \
+							(url, asn))
+						continue
+
+					# Conduct SQL statement...
+					self.db.execute("""
+						INSERT INTO autnum_overrides(
+							number,
+							source,
+							is_drop
+						) VALUES (%s, %s, %s)
+						ON CONFLICT (number) DO NOTHING""",
+						"%s" % asn,
+						"Spamhaus ASN-DROP list",
+						True
+					)
 
 	@staticmethod
 	def _parse_bool(block, key):
