@@ -138,10 +138,14 @@ time_t timegm (struct tm *tm)
  * We do not implement alternate representations. However, we always
  * check whether a given modifier is allowed for a certain conversion.
  */
-#define ALT_E           0x01
-#define ALT_O           0x02
-#define LEGAL_ALT(x)    do { if (alt_format & ~(x)) return (0); } while (0)
-#define TM_YEAR_BASE    1900
+#define ALT_E          0x01
+#define ALT_O          0x02
+#define TM_YEAR_BASE   1900
+
+#define LEGAL_ALT(x)   do {                     \
+                         if (alt_format & ~(x)) \
+                            return (0);         \
+                       } while (0)
 
 static int conv_num (const char **buf, int *dest, int llim, int ulim);
 

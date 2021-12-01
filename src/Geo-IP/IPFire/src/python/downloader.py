@@ -175,7 +175,7 @@ class Downloader(object):
 						t.truncate()
 						continue
 
-					# Make the file readable for everyone. On 'win32' this creates a read-only file.
+					# Make the file readable for everyone. On 'win32' this would create a read-only file.
 					if sys.platform != "win32":
 						os.chmod(t.name, stat.S_IRUSR|stat.S_IRGRP|stat.S_IROTH)
 

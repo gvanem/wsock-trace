@@ -160,7 +160,8 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
 LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
                                             unsigned int version, time_t* t)
 {
-  DNS_RECORD *resource_rec, *data_rec = NULL;
+  DNS_RECORD *resource_rec;
+  DNS_RECORD *data_rec = NULL;
   DNS_STATUS  rc;
   BOOL   found = FALSE;
   DWORD  opt = DNS_QUERY_NO_NETBT |     /* no NetBT names */
@@ -170,11 +171,12 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
 
   /*
    * E.g. a:
-   *   adig -t txt _v1._db.location.ipfire.org
+   *   dig @10.0.0.1 -t TXT _v1._db.location.ipfire.org
    *
    * returns things like:
-   *   Answers:
-   *     _v1._db.location.ipfire.org.    300    TXT  Fri, 16 Oct 2020 07:54:08 GMT
+   *   ...
+   *   ;; ANSWER SECTION:
+   *   _v1._db.location.ipfire.org. 300 IN     TXT     "Wed, 01 Dec 2021 05:59:49 GMT"
    */
   snprintf (domain, sizeof(domain), LOC_DATABASE_DOMAIN, version);
 
@@ -183,7 +185,7 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
   DEBUG(ctx, "Querying %s, DnsQuery_A: data_rec %p: %ld\n", domain, data_rec, rc);
 
   if (rc != ERROR_SUCCESS || !data_rec)
-     return (-1);
+     return -1;
 
   for (resource_rec = data_rec; resource_rec && !found; resource_rec = resource_rec->pNext)
   {
@@ -199,7 +201,8 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
       found = TRUE;
     }
   }
-  DnsFree (resource_rec, DnsFreeRecordList);
+
+  DnsFree (data_rec, DnsFreeRecordList);
 
   if (!found)
   {

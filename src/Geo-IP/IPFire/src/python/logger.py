@@ -31,8 +31,7 @@ handler.setLevel(logging.DEBUG)
 log.addHandler(handler)
 
 # Log to 'stdout' on Windows and to syslog otherwise
-
-if sys.platform == 'win32':
+if sys.platform == "win32":
   handler = logging.StreamHandler(sys.stdout)
 else:
   handler = logging.handlers.SysLogHandler(address="/dev/log",
@@ -41,7 +40,7 @@ else:
 handler.setLevel(logging.INFO)
 log.addHandler(handler)
 
-  # Format syslog messages
+# Format syslog messages
 formatter = logging.Formatter("%(message)s")
 handler.setFormatter(formatter)
 
