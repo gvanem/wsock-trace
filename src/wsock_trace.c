@@ -1049,7 +1049,8 @@ EXPORT INT WINAPI WSAStringToAddressA (char              *address_str,
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAStringToAddressA (\"%s\"). --> %s", address_str, get_error(rc, 0));
+  WSTRACE ("WSAStringToAddressA (\"%s\", %s, ...). --> %s",
+           address_str, socket_family(address_fam), get_error(rc, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -1068,7 +1069,8 @@ EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *address_str,
 
   ENTER_CRIT();
 
-  WSTRACE ("WSAStringToAddressW (L\"%" WCHAR_FMT "\"). --> %s", address_str, get_error(rc, 0));
+  WSTRACE ("WSAStringToAddressW (L\"%" WCHAR_FMT "\", %s, ...). --> %s",
+           address_str, socket_family(address_fam), get_error(rc, 0));
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
