@@ -271,6 +271,7 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 # syntax (no sane '%'-pattern rules in Nmake).
 #
 LIBLOC_CFLAGS = -DENABLE_DEBUG                  \
+                -DUSE_WSOCK_TRACE               \
                 -I$(LIBLOC_ROOT)/libloc/windows \
                 -I$(LIBLOC_ROOT)/fake-OpenSSL   \
                 -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c

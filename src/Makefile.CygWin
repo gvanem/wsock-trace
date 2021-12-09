@@ -146,6 +146,7 @@ LIBLOC_CFLAGS = -I.                             \
                 -I$(LIBLOC_ROOT)/fake-OpenSSL   \
                 -I$(LIBLOC_ROOT)/libloc/windows \
                 -DENABLE_DEBUG                  \
+                -DUSE_WSOCK_TRACE               \
                 --include $(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
 all: message $(OBJ_DIR) $(WSOCK_LIB) ws_tool.exe
