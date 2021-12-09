@@ -1736,7 +1736,7 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
      */
     if (IsBadReadPtr(bufs->buf, sizeof(bufs->buf)))
     {
-      trace_printf ("~4%s, bad: %p~0", prefix, bufs->buf);
+      trace_printf ("~4%s, bad: 0x%p~0", prefix, bufs->buf);
       break;
     }
     total += dump_data_internal (bufs->buf, bufs->len, prefix);
