@@ -34,9 +34,11 @@ USE_CRT_DEBUG ?= 0
 USE_WSOCK_TRACE ?= 0
 
 #
-# Use OpenSSL?  Otherwise just fake it in a non-obstructive way:
-#   any macro in 'fake-OpenSSL/openssl/fake-it.h' will cause a
-#   signature operation to fail.
+# Use OpenSSL?
+#
+# Otherwise just fake it in a non-obstructive way:
+# any macro in 'fake-OpenSSL/openssl/fake-it.h' will cause a
+# signature operation (test-signature.exe) to fail.
 #
 USE_OPENSSL  ?= 0
 OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
@@ -51,6 +53,11 @@ USE_CLANG_FORMATER ?= 1
 # Otherwise link to '$(IMPORT_LIB)'.
 #
 USE_STATIC_LIBLOC ?= 1
+
+#
+# Warn on undefined variables.
+#
+MAKEFLAGS += --warn-undefined-variables
 
 define Usage
 
@@ -80,6 +87,8 @@ else ifeq ($(CC),clang-cl)
 else
   $(error $(Usage))
 endif
+
+PY_D =
 
 ifeq ($(CC),gcc)
   CFLAGS  = -m32 -O2 -g
@@ -112,7 +121,8 @@ else
   ifeq ($(USE_CRT_DEBUG),1)
     CFLAGS += -MDd -RTCu -RTCs    \
               -D_CRTDBG_MAP_ALLOC \
-              -FIcrtdbg.h      # -DENABLE_DEBUG
+              -DENABLE_DEBUG      \
+              -FIcrtdbg.h
     PY_D    = _d
   else
     CFLAGS += -MD -Ot
@@ -134,7 +144,8 @@ CFLAGS += -I. -I./libloc/windows          \
           -DVERSION=\"$(VERSION)\"
 
 ifeq ($(USE_OPENSSL),1)
-  CFLAGS += -I$(OPENSSL_ROOT)/include
+  CFLAGS += -I$(OPENSSL_ROOT)/include \
+            -DUSE_OPENSSL
 else
   CFLAGS += -I../../.. -I./fake-OpenSSL
 endif
@@ -175,15 +186,17 @@ else
   endif
 endif
 
-ifeq ($(USE_WSOCK_TRACE),0)
-  CFLAGS += -DUSE_Winsock2
+ifeq ($(USE_WSOCK_TRACE),1)
+  CFLAGS += -DUSE_WSOCK_TRACE
 endif
 
 DNS_LIB = $(call select, -ldnsapi, dnsapi.lib)
 
 ifeq ($(USE_OPENSSL),1)
-  OPENSSL_LIB = $(call select, $(OPENSSL_ROOT)/lib32/libcrypto.dll.a, \
-                               $(OPENSSL_ROOT)/lib32/libcrypto_imp.lib)
+  OPENSSL_LIBS = $(call select, $(OPENSSL_ROOT)/lib32/libcrypto.dll.a, \
+                                $(OPENSSL_ROOT)/lib32/libcrypto_imp.lib)
+else
+  OPENSSL_LIBS =
 endif
 
 LIBLOC_SRC = as.c           \
@@ -240,9 +253,9 @@ $(IMPORT_LIB): libloc.dll
 
 libloc.dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
 ifeq ($(CC),gcc)
-	$(call link_DLL, $@, $^ $(OPENSSL_LIB) $(DNS_LIB), $(IMPORT_LIB))
+	$(call link_DLL, $@, $^ $(OPENSSL_LIBS) $(DNS_LIB), $(IMPORT_LIB))
 else
-	$(call link_DLL, $@, -def:$^ $(OPENSSL_LIB) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
+	$(call link_DLL, $@, -def:$^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 endif
 
 libloc/version.h: $(THIS_FILE)
@@ -319,11 +332,11 @@ $(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
 
 ifeq ($(USE_STATIC_LIBLOC),1)
   test-%.exe: $(OBJ_DIR)/test-%.$(O) $(STATIC_LIB)
-	$(call link_EXE, $@, $^ $(OPENSSL_LIB) $(WS2_32))
+	$(call link_EXE, $@, $^ $(OPENSSL_LIBS) $(WS2_32))
 
 else
   test-%.exe: $(OBJ_DIR)/test-%.$(O) $(IMPORT_LIB)
-	$(call link_EXE, $@, $^)
+	$(call link_EXE, $@, $^ $(WS2_32))
 endif
 
 runtests: $(TEST_PROGS)
@@ -423,12 +436,11 @@ html_doc: ../man/location.html
 ../man/location.xml: ../man/location.txt ../man/asciidoc.conf
 	asciidoc -f ../man/asciidoc.conf -d manpage -b docbook -o $@ $<
 
-XSLTPROC_FLAGS = --stringparam man.output.quietly 1            \
-                 --stringparam funcsynopsis.style ansi         \
-                 --stringparam man.th.extra1.suppress 1        \
-                 --stringparam man.authors.section.enabled 1   \
-                 --stringparam man.copyright.section.enabled 1 \
-                 --nonet
+XSLTPROC_FLAGS = --stringparam man.output.quietly 1          \
+                 --stringparam funcsynopsis.style ansi       \
+                 --stringparam man.th.extra1.suppress 1      \
+                 --stringparam man.authors.section.enabled 1 \
+                 --stringparam man.copyright.section.enabled 1
 
 XSLTPROC_FLAGS += http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
 
