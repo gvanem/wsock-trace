@@ -388,8 +388,11 @@ void ASN_update_file (const char *db_file, BOOL force_update)
    * Force a download, XZ-decompress and copy to the final `db_file`.
    */
   downloaded = INET_util_download_file (db_xz_temp_file, ASN_get_url());
-  TRACE (1, "Downloaded '%s' -> '%s'. %s\n",
-         ASN_get_url(), db_xz_temp_file, downloaded > 0 ? "OK" : "Failed");
+
+  TRACE (1, "Downloaded:\n"
+         "            %s -> %s. %s\n"
+         "            %s bytes.\n",
+         ASN_get_url(), db_xz_temp_file, downloaded > 0 ? "OK" : "Failed", dword_str(downloaded));
 
   if (downloaded > 0)  /* If download succeeded */
      ASN_xz_decompress (db_xz_temp_file, db_temp_file, db_file);
