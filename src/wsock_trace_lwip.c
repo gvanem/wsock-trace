@@ -14,11 +14,16 @@
 #include "common.h"
 #include "init.h"
 
-// #include "wsock_trace_lwip.h"
+/* Redeclared in '$(LWIP_ROOT)/contrib/ports/win32/cfg_file.h'
+ */
+#undef ENTER_CRIT
+#undef LEAVE_CRIT
 
 #include <lwip/init.h>
 #include <lwip/netif.h>
-#include <ports/win32/pcapif.h>
+#include <lwip/tcpip.h>
+#include <contrib/ports/win32/pcapif.h>
+#include <contrib/ports/win32/cfg_file.h>
 
 static struct netif netif;
 
@@ -26,6 +31,7 @@ void ws_lwip_init (void)
 {
   ip4_addr_t ipaddr, netmask, gw;
 
+  lwip_cfg_init();
   lwip_init();
 
   ip4_addr_set_zero (&gw);
@@ -38,6 +44,6 @@ void ws_lwip_init (void)
     netif_set_default (netif_add(&netif, &ipaddr, &netmask, &gw, NULL, pcapif_init, tcpip_input));
   #endif
 }
+#endif /* USE_LWIP */
 
-#endif
 
