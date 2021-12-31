@@ -44,6 +44,10 @@ CONSOLE_SCREEN_BUFFER_INFO console_info;
 
 static HANDLE console_hnd = INVALID_HANDLE_VALUE;
 
+/* The "Thread Local Storage" index used per thread to internal data.
+ */
+DWORD ws_Tls_index = TLS_OUT_OF_INDEXES; /* == DWORD_MAX */
+
 /* Signal we're called via DllMain()
  */
 BOOL ws_from_dll_main;
@@ -145,8 +149,11 @@ static void set_time_format (TS_TYPE *ret, const char *val)
   TRACE (4, "val: %s -> TS_TYPE: %d\n", val, *ret);
 }
 
-/*
+/**
  * Return the preferred time-stamp string.
+ *
+ * \todo the below `buf[]` should be a "Thread Local" variable.
+ * \ref  https://docs.microsoft.com/en-us/windows/win32/dlls/using-thread-local-storage-in-a-dynamic-link-library
  */
 const char *get_timestamp (void)
 {
@@ -180,8 +187,11 @@ const char *get_timestamp (void)
 
            strcpy (buf, sec);
            p = strchr (buf, '\0');
-           *p++ = '.';
-           _utoa10w (dec, 6, p);
+           if (p) /* could be NULL due to another thread calling this function */
+           {
+             *p++ = '.';
+             _utoa10w (dec, 6, p);
+           }
            strcat (buf, " sec: ");
          }
          else
@@ -193,8 +203,11 @@ const char *get_timestamp (void)
 
            strcpy (buf, sec);
            p = strchr (buf, '\0');
-           *p++ = '.';
-           _utoa10w (dec, 3, p);
+           if (p)  /* could be NULL due to another thread calling this function */
+           {
+             *p++ = '.';
+             _utoa10w (dec, 3, p);
+           }
            strcat (buf, " sec: ");
          }
          return (buf);
@@ -1264,7 +1277,8 @@ static void trace_report (void)
  */
 void wsock_trace_exit (void)
 {
-  int i;
+  int  i;
+  BOOL rc;
 
   set_color (NULL);
 
@@ -1300,6 +1314,9 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
     fw_exit();
   }
+
+  rc = TlsFree (ws_Tls_index);
+  TRACE (1, "TlsFree (%lu) -> %d.\n", ws_Tls_index, rc);
 
   common_exit();
 
@@ -1575,6 +1592,11 @@ void wsock_trace_init (void)
   if (g_cfg.use_sema)
      TRACE (2, "ws_sema: 0x%" ADDR_FMT ", ws_sema_inherited: %d\n",
             ADDR_CAST(ws_sema), ws_sema_inherited);
+
+  ws_Tls_index = TlsAlloc();
+  if (ws_Tls_index == TLS_OUT_OF_INDEXES)
+       TRACE (1, "TlsAlloc() -> TLS_OUT_OF_INDEXES! GetLastError(): %lu.\n", GetLastError());
+  else TRACE (1, "TlsAlloc() -> %d.\n", ws_Tls_index);
 
   if (!g_cfg.stdout_redirected)
   {
