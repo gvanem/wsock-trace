@@ -93,7 +93,6 @@ src/Geo-IP/IPFire/compile-database.py
 src/Geo-IP/IPFire/debian/
 src/Geo-IP/IPFire/examples/
 src/Geo-IP/IPFire/m4/
-src/Geo-IP/IPFire/man/
 src/Geo-IP/IPFire/po/
 src/Geo-IP/IPFire/src/.gitignore
 src/Geo-IP/IPFire/src/clang_obj/

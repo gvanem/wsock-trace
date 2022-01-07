@@ -1,0 +1,31 @@
+= loc_database_get_as(3)
+
+== Name
+
+loc_database_get_as - Fetch an AS from the database
+
+== Synopsis
+[verse]
+
+#include <libloc/database.h>
+
+int loc_database_get_as(struct loc_database{empty}* db, struct loc_as{empty}*{empty}* as,
+	uint32_t number);
+
+== Description
+
+This function retrieves an Autonomous System with the matching _number_ from the database
+and stores it in _as_.
+
+== Return Value
+
+On success, zero is returned. Otherwise non-zero is being returned and _errno_ is set
+accordingly.
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer

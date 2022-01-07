@@ -1,0 +1,28 @@
+= loc_get_log_priority(3)
+
+== Name
+
+loc_get_log_priority - Fetches the log level of a libloc context
+
+== Synopsis
+[verse]
+
+#include <libloc/libloc.h>
+
+int loc_get_log_priority(struct loc_ctx{empty}* ctx);
+
+== Description
+
+Returns the log priority of the given context.
+
+The returned integer is a valid syslog log level as defined in syslog(3).
+
+The default value is LOG_ERR.
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer

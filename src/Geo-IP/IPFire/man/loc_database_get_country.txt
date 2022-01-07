@@ -1,0 +1,29 @@
+= loc_database_get_country(3)
+
+== Name
+
+loc_database_get_country - Fetch country information from the database
+
+== Synopsis
+
+#include <libloc/database.h>
+
+int loc_database_get_country(struct loc_database{empty}* db,
+	struct loc_country{empty}*{empty}* country, const char{empty}* code);
+
+== Description
+
+This function fetches information about the country with the matching _code_.
+
+== Return Value
+
+On success, zero is returned. Otherwise non-zero is being returned and _errno_ is set
+accordingly.
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer

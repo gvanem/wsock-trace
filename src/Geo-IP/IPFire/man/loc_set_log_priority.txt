@@ -1,0 +1,25 @@
+= loc_set_log_priority(3)
+
+== Name
+
+loc_set_log_priority - Sets the log level of a libloc context
+
+== Synopsis
+[verse]
+
+#include <libloc/libloc.h>
+
+void loc_set_log_priority(struct loc_ctx{empty}* ctx, int priority)
+
+== Description
+
+Sets the log priority of the given context. See loc_get_log_priority(3) for more details.
+
+== See Also
+
+link:libloc[3]
+link:loc_set_log_fn(3)
+
+== Authors
+
+Michael Tremer

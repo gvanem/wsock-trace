@@ -1,0 +1,29 @@
+= loc_set_log_fn(3)
+
+== Name
+
+loc_set_log_fn - Sets the log callback function
+
+== Synopsis
+[verse]
+
+#include <libloc/libloc.h>
+
+void loc_set_log_fn(struct loc_ctx{empty}* ctx,
+	void ({empty}*log_fn)(struct loc_ctx{empty}* ctx, int priority,
+	const char{empty}* file, int line, const char{empty}* fn, const char{empty}* format,
+	va_list args)
+
+== Description
+
+libloc can use the calling application's logging system by setting this callback.
+
+It will be called once for each log message according to the configured log level.
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer

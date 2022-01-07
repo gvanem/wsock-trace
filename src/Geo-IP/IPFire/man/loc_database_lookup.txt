@@ -1,0 +1,37 @@
+= loc_database_lookup(3)
+
+== Name
+
+loc_database_lookup - Lookup a network from the database
+
+== Synopsis
+
+#include <libloc/database.h>
+
+int loc_database_lookup(struct loc_database{empty}* db,
+	const struct in6_addr{empty}* address, struct loc_network{empty}*{empty}* network);
+
+int loc_database_lookup_from_string(struct loc_database{empty}* db,
+	const char{empty}* string, struct loc_network{empty}*{empty}* network);
+
+== Description
+
+The lookup functions try finding a network in the database.
+
+_loc_database_lookup_ takes the IP address as _struct in6_addr_ format which can either
+be a regular IPv6 address or a mapped IPv4 address.
+
+_loc_database_lookup_string_ takes the IP address as string and will parse it automatically.
+
+== Return Value
+
+On success, zero is returned. Otherwise non-zero is being returned and _errno_ is set
+accordingly.
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer

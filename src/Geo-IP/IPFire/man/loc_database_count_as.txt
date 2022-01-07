@@ -1,0 +1,24 @@
+= loc_database_count_as(3)
+
+== Name
+
+loc_database_count_as - Return the number of ASes in the database
+
+== Synopsis
+[verse]
+
+#include <libloc/database.h>
+
+size_t loc_database_count_as(struct loc_database{empty}* db);
+
+== Description
+
+Returns the total number of ASes in the database.
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer

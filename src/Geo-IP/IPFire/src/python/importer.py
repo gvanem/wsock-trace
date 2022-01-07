@@ -53,7 +53,9 @@ WHOIS_SOURCES = {
 		],
 
 	# Latin America and Caribbean Network Information Centre
-	# XXX ???
+	"LACNIC": [
+		"https://ftp.lacnic.net/lacnic/dbase/lacnic.db.gz"
+		],
 
 	# Réseaux IP Européens
 	"RIPE": [
