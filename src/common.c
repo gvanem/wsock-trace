@@ -1648,15 +1648,14 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
 
 int _ws_setenv (const char *env, const char *val, int overwrite)
 {
-#if defined(__CYGWIN__)
-  int rc = setenv (env,  val, overwrite);
+  int rc;
 
-  TRACE (3, "getenv(env): '%s'.\n", getenv(env));
-  return (rc);
+#if defined(__CYGWIN__)
+  rc = setenv (env,  val, overwrite);
 
 #else
   size_t len, i = 0;
-  char *e, value [_MAX_PATH] = { "?" };
+  char  *e, value [MAX_ENV_VAR] = { "?" };
 
   if (strchr(env, '='))
   {
@@ -1701,12 +1700,12 @@ int _ws_setenv (const char *env, const char *val, int overwrite)
 #endif
     _environ[i] = e;
   }
-
   SetEnvironmentVariable (env, e);
+  rc = 0;
+#endif  /* __CYGWIN__ */
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
-  return (0);
-#endif  /* __CYGWIN__ */
+  return (rc);
 }
 
 /*

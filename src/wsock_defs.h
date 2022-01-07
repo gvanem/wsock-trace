@@ -53,6 +53,14 @@
 #define TOUPPER(c)      toupper ((int)(c))
 #define ARGSUSED(foo)   (void)foo
 
+/*
+ * According to:
+ *  http://msdn.microsoft.com/en-us/library/windows/desktop/ms683188(v=vs.85).aspx
+ */
+#ifndef MAX_ENV_VAR
+#define MAX_ENV_VAR   32767
+#endif
+
 #ifndef MAX_HOST_LEN
 #define MAX_HOST_LEN  256
 #endif
