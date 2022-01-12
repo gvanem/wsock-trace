@@ -1316,7 +1316,7 @@ void wsock_trace_exit (void)
   }
 
   rc = TlsFree (ws_Tls_index);
-  TRACE (1, "TlsFree (%lu) -> %d.\n", ws_Tls_index, rc);
+  TRACE (2, "TlsFree (%lu) -> %d.\n", ws_Tls_index, rc);
 
   common_exit();
 
@@ -1596,7 +1596,7 @@ void wsock_trace_init (void)
   ws_Tls_index = TlsAlloc();
   if (ws_Tls_index == TLS_OUT_OF_INDEXES)
        TRACE (1, "TlsAlloc() -> TLS_OUT_OF_INDEXES! GetLastError(): %lu.\n", GetLastError());
-  else TRACE (1, "TlsAlloc() -> %d.\n", ws_Tls_index);
+  else TRACE (2, "TlsAlloc() -> %d.\n", ws_Tls_index);
 
   if (!g_cfg.stdout_redirected)
   {
