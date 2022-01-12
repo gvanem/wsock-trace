@@ -61,6 +61,7 @@
 #include <shellapi.h>
 
 #include "common.h"
+#include "init.h"
 #include "getopt.h"
 
 #define PRINT_ERROR ((opterr) && (*options != ':'))
@@ -375,6 +376,8 @@ static int getopt_internal (int nargc, char * const *nargv,
   optarg = NULL;
 
 start:
+  TRACE (2, "nargv[%d]: '%s'\n", optind, nargv[optind]);
+
   if (!*place)              /* update scanning pointer */
   {
     if (optind >= nargc)    /* end of argument vector */
@@ -434,7 +437,7 @@ start:
     }
 
     if (nonopt_start != -1 && nonopt_end == -1)
-      nonopt_end = optind;
+       nonopt_end = optind;
 
     /* If we have "-" do nothing, if "--" we are done.
      */
