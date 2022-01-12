@@ -204,9 +204,14 @@ static const char *CSV_get_next_field (struct CSV_context *ctx)
     if (new_state != old_state)
        TRACE (3, "%s -> %s\n", state_name(old_state), state_name(new_state));
 
-    if (new_state == STATE_STOP && ctx->delimiter == ' ')
+    if (new_state == STATE_STOP && (isspace(ctx->delimiter) || iscntrl(ctx->delimiter)))
     {
-      while ((ctx->c_in = fgetc (ctx->file)) == ' ') ;
+      while (1)
+      {
+        ctx->c_in = fgetc (ctx->file);
+        if (ctx->c_in != ' ' && ctx->c_in != ctx->delimiter)
+           break;
+      }
       ungetc (ctx->c_in, ctx->file);
     }
 
@@ -386,7 +391,7 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
 static int show_help (void)
 {
   printf ("Usage: %s [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
-          "       -f: set field delimiter (default is ',').\n"
+          "       -f: set field delimiter. Use '\\t' for a <TAB> or '\\s for a <SPACE> delimiter (default is ',').\n"
           "       -m: max number of records to handle.\n"
           "       -n: number of fields in CSV-records.\n", program_name);
   return (0);
@@ -404,7 +409,18 @@ int csv_main (int argc, char **argv)
      switch (ch)
      {
        case 'f':
-            ctx.delimiter = optarg[0];
+            if (!strcmp(optarg, "'") || !strcmp(optarg, "\\s"))
+            {
+              ctx.delimiter = ' ';
+              TRACE (1, "Using <space> as field-delimiter.\n");
+            }
+            else if (!strcmp(optarg, "\\t"))
+            {
+              ctx.delimiter = '\t';
+              TRACE (1, "Using <TAB> as field-delimiter.\n");
+            }
+            else
+              ctx.delimiter = optarg[0];
             break;
        case 'm':
             ctx.rec_max = atoi (optarg);
@@ -417,6 +433,7 @@ int csv_main (int argc, char **argv)
        default:
             return show_help();
   }
+
   argv += optind;
   if (!*argv)
      return show_help();
