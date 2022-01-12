@@ -848,7 +848,10 @@ static int __ASN_libloc_print (const char            *intro,
 
 int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func print_func)
 {
-  return __ASN_libloc_print (intro, ip4, ip6, print_func ? print_func : trace_puts);
+  if (!print_func)
+     print_func = trace_puts;
+
+  return __ASN_libloc_print (intro, ip4, ip6, print_func);
 }
 
 /**

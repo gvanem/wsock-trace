@@ -2650,12 +2650,16 @@ static int
 dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
 {
   char ASN_intro [100];
+  int  rc;
 
   if (a_single_addr)
        snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN:    ", g_cfg.trace_indent+2, "");
   else snprintf (ASN_intro, sizeof(ASN_intro), "%*sASN(%d):  ", g_cfg.trace_indent+2, "", num);
 
-  return ASN_libloc_print (ASN_intro, ia4, ia6, NULL);
+  rc = ASN_libloc_print (ASN_intro, ia4, ia6, NULL);
+  if (rc > 0)
+     trace_putc ('\n');
+  return (rc);
 }
 
 /*
