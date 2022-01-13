@@ -116,6 +116,7 @@
     <ClCompile Include="ip2loc.c" />
     <ClCompile Include="non-export.c" />
     <ClCompile Include="overlap.c" />
+    <ClCompile Include="services.c" />
     <ClCompile Include="smartlist.c" />
     <ClCompile Include="stkwalk.c" />
     <ClCompile Include="vm_dump.c" />

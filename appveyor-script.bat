@@ -48,6 +48,7 @@ echo   max_data               = 5000                                         >> 
 echo   max_displacement       = 1000                                         >> wsock_trace.appveyor
 echo   exclude                = htons,htonl,inet_addr                        >> wsock_trace.appveyor
 echo   hosts_file             = %CD%\appveyor-hosts                          >> wsock_trace.appveyor
+echo   services_file          = %CD%\appveyor-services                       >> wsock_trace.appveyor
 echo   use_winhttp            = 0                                            >> wsock_trace.appveyor
 echo   nice_numbers           = 1                                            >> wsock_trace.appveyor
 

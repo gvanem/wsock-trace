@@ -59,8 +59,19 @@
   #
   hook_extensions = 0
 
-  hosts_file = %WINDIR%\system32\drivers\etc\hosts  # The standard location of the 'hosts' file.
-                                                    # Change to suite.
+  #
+  # The standard location of the 'hosts' file. Change to suite.
+  # Up to 3 hosts files are supported.
+  #
+  hosts_file = %WINDIR%\system32\drivers\etc\hosts
+
+  #
+  # Support for up to 3 'service' files.
+  # Currently only on WireShark format.
+  #
+  # services_file = %WIRESHARK_DIR%\services
+  # services_file = %WINDIR%\system32\drivers\etc\services
+
   #
   # For testing too fast programs:
   #   delay all receive, transmit, select() and WSAPoll() calls the

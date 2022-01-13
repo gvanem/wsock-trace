@@ -28,6 +28,7 @@
 #include "stkwalk.h"
 #include "overlap.h"
 #include "hosts.h"
+#include "services.h"
 #include "firewall.h"
 #include "cpu.h"
 #include "asn.h"
@@ -788,6 +789,11 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
     if (g_cfg.num_hosts_files < DIM(g_cfg.hosts_file))
        g_cfg.hosts_file [g_cfg.num_hosts_files++] = strdup (val);
   }
+  else if (!stricmp(key, "services_file"))
+  {
+    if (g_cfg.num_services_files < DIM(g_cfg.services_file))
+       g_cfg.services_file [g_cfg.num_services_files++] = strdup (val);
+  }
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
               fname, line, key, val);
@@ -1297,6 +1303,7 @@ void wsock_trace_exit (void)
   StackWalkExit();
   overlap_exit();
   hosts_file_exit();
+  services_file_exit();
 
 #if 0
   if (g_cfg.trace_level >= 3)
@@ -1328,6 +1335,9 @@ void wsock_trace_exit (void)
 
   for (i = 0; i < DIM(g_cfg.hosts_file); i++)
       FREE (g_cfg.hosts_file[i]);
+
+  for (i = 0; i < DIM(g_cfg.services_file); i++)
+      FREE (g_cfg.services_file[i]);
 
   g_cfg.trace_file_okay = FALSE;
   g_cfg.trace_stream = g_cfg.PCAP.dump_stream = NULL;
@@ -1596,7 +1606,7 @@ void wsock_trace_init (void)
   ws_Tls_index = TlsAlloc();
   if (ws_Tls_index == TLS_OUT_OF_INDEXES)
        TRACE (1, "TlsAlloc() -> TLS_OUT_OF_INDEXES! GetLastError(): %lu.\n", GetLastError());
-  else TRACE (2, "TlsAlloc() -> %d.\n", ws_Tls_index);
+  else TRACE (2, "TlsAlloc() -> %lu.\n", ws_Tls_index);
 
   if (!g_cfg.stdout_redirected)
   {
@@ -1652,6 +1662,7 @@ void wsock_trace_init (void)
 
   load_ws2_funcs();
   hosts_file_init();
+  services_file_init();
 
 #if defined(USE_BFD)
   BFD_init();

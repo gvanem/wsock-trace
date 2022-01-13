@@ -84,6 +84,7 @@ SOURCES = asn.c             \
           init.c            \
           ip2loc.c          \
           overlap.c         \
+          services.c        \
           smartlist.c       \
           stkwalk.c         \
           wsock_trace.c     \
@@ -112,6 +113,7 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 inet_util.o            \
                 ip2loc.o               \
                 overlap.o              \
+                services.o             \
                 smartlist.o            \
                 stkwalk.o              \
                 test.o                 \
