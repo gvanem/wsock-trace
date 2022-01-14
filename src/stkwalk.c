@@ -1984,6 +1984,9 @@ BOOL StackWalkInit (void)
 
 /*****************************************************************************************/
 
+/**
+ * \todo Use "Thread Local Storage" for this
+ */
 static char ret_buf [MAX_NAMELEN+100];
 
 #if defined(__GNUC__)
