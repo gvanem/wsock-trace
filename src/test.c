@@ -291,6 +291,8 @@ static void test_IDNA_functions (void)
  * ```
  *   `%SystemRoot\system32\drivers\etc\services`
  * ```
+ *
+ * And possibly a user-specified `services_file`.
  */
 static void test_getservbyname (void)
 {
@@ -299,7 +301,27 @@ static void test_getservbyname (void)
 
 static void test_getservbyport (void)
 {
-  TEST_CONDITION (!= 0, getservbyport (htons(80), "tcp"));
+  const struct servent *se;
+  uint16_t port = htons (80);
+
+  TEST_CONDITION (!= 0, (se = getservbyport(port, "tcp")));
+
+  if (g_cfg.num_services_files > 0)
+  {
+    port = htons (179);
+
+    TEST_CONDITION (!= 0, (se = getservbyport(port, NULL)));
+    if (se)
+    {
+      TEST_CONDITION (== 0, strcmp(se->s_name, "bgp"));
+      TEST_CONDITION (== 0, strcmp(se->s_proto, "tcp"));
+    }
+    else
+    {
+      last_result = 0;
+      test_condition (0, "getservbyport()");
+    }
+  }
 }
 
 static void test_getnameinfo (void)
@@ -1072,7 +1094,6 @@ static void test_ptr_or_error64 (void)
 
 /**
  * \todo Also test if the output of the tracing is sensible.
- * \todo print in color (OKAY=green, FAIL=red).
  */
 static void test_condition (int okay, const char *function)
 {
