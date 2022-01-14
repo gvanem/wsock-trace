@@ -27,15 +27,16 @@
 #include "getopt.h"
 #include "wsock_trace_lua.h"
 
-extern int asn_main       (int argc, char **argv);
-extern int backtrace_main (int argc, char **argv);
-extern int csv_main       (int argc, char **argv);
-extern int dnsbl_main     (int argc, char **argv);
-extern int firewall_main  (int argc, char **argv);
-extern int geoip_main     (int argc, char **argv);
-extern int iana_main      (int argc, char **argv);
-extern int idna_main      (int argc, char **argv);
-extern int test_main      (int argc, char **argv);
+extern int asn_main           (int argc, char **argv);
+extern int backtrace_main     (int argc, char **argv);
+extern int csv_main           (int argc, char **argv);
+extern int dnsbl_main         (int argc, char **argv);
+extern int firewall_main      (int argc, char **argv);
+extern int geoip_main         (int argc, char **argv);
+extern int iana_main          (int argc, char **argv);
+extern int idna_main          (int argc, char **argv);
+extern int services_file_main (int argc, char **argv);
+extern int test_main          (int argc, char **argv);
 
 /* Prevent MinGW + Cygwin from globbing the cmd-line.
  */
@@ -45,15 +46,16 @@ static const struct {
        int (*main_func) (int, char**);
        char *main_name;
      } sub_commands[] = {
-       { asn_main,       "asn"       },
-       { backtrace_main, "backtrace" },
-       { csv_main,       "csv"       },
-       { dnsbl_main,     "dnsbl"     },
-       { firewall_main,  "firewall"  },
-       { geoip_main,     "geoip"     },
-       { iana_main,      "iana"      },
-       { idna_main,      "idna"      },
-       { test_main,      "test"      }
+       { asn_main,           "asn"       },
+       { backtrace_main,     "backtrace" },
+       { csv_main,           "csv"       },
+       { dnsbl_main,         "dnsbl"     },
+       { firewall_main,      "firewall"  },
+       { geoip_main,         "geoip"     },
+       { iana_main,          "iana"      },
+       { idna_main,          "idna"      },
+       { services_file_main, "services"  },
+       { test_main,          "test"      }
      };
 
 static void show_help (const char *extra);

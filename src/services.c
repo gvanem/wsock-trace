@@ -11,6 +11,7 @@
 #include "smartlist.h"
 #include "csv.h"
 #include "wsock_trace.h"
+#include "getopt.h"
 #include "services.h"
 
 /**
@@ -93,6 +94,11 @@ static smartlist_t *services_list;
  * In range `[0 ... DIM(g_cfg.services_file)-1]` == [0 ... 2].
  */
 static int current_services_file;
+
+/**
+ * Duplicates found by 'smartlist_make_uniq()'.
+ */
+static int services_duplicates;
 
 /**
  * The filled structure from `fill_servent()`.
@@ -261,11 +267,11 @@ static int services_CSV_add (struct CSV_context *ctx, const char *value)
 /**
  * Print some statistics and the details of the `services_list`.
  */
-static void services_file_dump (int max, int duplicates)
+static void services_file_dump (void)
 {
-  int i;
+  int i, max = services_list ? smartlist_len (services_list) : 0;
 
-  trace_printf ("\nDuplicates: %d. A total of %d entries in these file(s):\n", duplicates, max);
+  trace_printf ("\nDuplicates: %d. A total of %d entries in these file(s):\n", services_duplicates, max);
 
   for (i = 0; g_cfg.services_file[i]; i++)
       trace_printf ("  %d: \"%s\"\n", i, g_cfg.services_file[i]);
@@ -289,63 +295,6 @@ static void services_file_dump (int max, int duplicates)
   }
 }
 
-struct test_table {
-       const char *service;
-       uint16_t    port;
-       const char *protocol;
-       void       *expect;
-     };
-
-/**
- * Test `ws_getservbyport()` with these service entries:
- * ```
- *  bgp   179/tcp/udp/sctp         # Border Gateway Protocol
- *  exp2  1022/udp/tcp/dccp/sctp   # RFC3692-style Experiment 2
- * ```
- */
-static const struct test_table tests[] = {
-                 { "bgp",   179,  "tcp",  &ret_fill_servent },
-                 { "bgp",   179,  "udp",  &ret_fill_servent },
-                 { "bgp",   179,  "sctp", &ret_fill_servent },
-                 { "bgp",   179,  "dccp", NULL              },
-                 { "bgp",   179,  NULL,   &ret_fill_servent },   /* the ANY protocol case */
-                 { "bgp",   179,  "geek", NULL              },   /* the unknown protocol case */
-                 { "exp2", 1022,  "udp",  &ret_fill_servent },
-                 { "exp2", 1022,  "tcp",  &ret_fill_servent },
-                 { "exp2", 1022,  "dccp", &ret_fill_servent },
-                 { "exp2", 1022,  "sctp", &ret_fill_servent },
-                 { "exp2", 1022,  NULL,   &ret_fill_servent }
-               };
-
-static void services_run_tests (void)
-{
-  BOOL fallback;
-  int  i;
-
-  trace_puts ("\nRunning 'tests[]':\n");
-
-  if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
-       fallback = TRUE;
-  else fallback = FALSE;
-
-  for (i = 0; i < DIM(tests); i++)
-  {
-    const struct servent *se = ws_getservbyport (swap16(tests[i].port),
-                                                 tests[i].protocol, fallback, TRUE);
-
-    BOOL match = (se == tests[i].expect);
-
-    trace_printf ("%2d: %-4s/%5s: %s\n", i,
-                  tests[i].service,
-                  tests[i].protocol ? tests[i].protocol : "NULL",
-                  match ? "OKAY" : "FAIL");
-    if (se)
-         trace_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
-    else trace_puts   ("    NULL\n");
-  }
-  trace_putc ('\n');
-}
-
 /**
  * Free the memory in `services_list` and free the list itself.
  */
@@ -365,7 +314,6 @@ void services_file_exit (void)
 void services_file_init (void)
 {
   struct CSV_context ctx;
-  int    duplicates;
 
   assert (services_list == NULL);
   services_list = smartlist_new();
@@ -378,21 +326,24 @@ void services_file_init (void)
     memset (&ctx, '\0', sizeof(ctx));
     ctx.file_name  = g_cfg.services_file [current_services_file];
     ctx.num_fields = 2;
+
+#if 0
+    /* \todo
+     * fopen() and check a line for a Nmap style services-file.
+     * Like:
+     *   # Fields in this file are: Service name, portnum/protocol, open-frequency, optional comments
+     *   #
+     *   tcpmux  1/tcp   0.001995
+     */
+#endif
+
     ctx.delimiter  = '\t';
     ctx.callback   = services_CSV_add;
     CSV_open_and_parse_file (&ctx);
   }
 
   smartlist_sort (services_list, services_compare_port_proto);
-  duplicates = smartlist_make_uniq (services_list, services_compare_port_proto, free);
-
-  if (g_cfg.trace_level >= 2)
-  {
-    int max = smartlist_len (services_list);
-
-    services_file_dump (max, duplicates);
-    services_run_tests();
-  }
+  services_duplicates = smartlist_make_uniq (services_list, services_compare_port_proto, free);
 }
 
 /**
@@ -463,4 +414,121 @@ const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOO
        trace_level_save_restore (1);
   }
   return (ret);
+}
+
+
+struct test_table {
+       const char *service;
+       uint16_t    port;
+       const char *protocol;
+       void       *expect;
+     };
+
+/**
+ * Test `ws_getservbyport()` with these service entries:
+ * ```
+ *  bgp   179/tcp/udp/sctp         # Border Gateway Protocol
+ *  exp2  1022/udp/tcp/dccp/sctp   # RFC3692-style Experiment 2
+ * ```
+ */
+static const struct test_table tests[] = {
+                 { "bgp",   179,  "tcp",  &ret_fill_servent },
+                 { "bgp",   179,  "udp",  &ret_fill_servent },
+                 { "bgp",   179,  "sctp", &ret_fill_servent },
+                 { "bgp",   179,  "dccp", NULL              },
+                 { "bgp",   179,  NULL,   &ret_fill_servent },   /* the ANY protocol case */
+                 { "bgp",   179,  "geek", NULL              },   /* the unknown protocol case */
+                 { "exp2", 1022,  "udp",  &ret_fill_servent },
+                 { "exp2", 1022,  "tcp",  &ret_fill_servent },
+                 { "exp2", 1022,  "dccp", &ret_fill_servent },
+                 { "exp2", 1022,  "sctp", &ret_fill_servent },
+                 { "exp2", 1022,  NULL,   &ret_fill_servent }
+               };
+
+static void services_run_tests (void)
+{
+  BOOL fallback;
+  int  i;
+
+  trace_puts ("\nRunning 'tests[]':\n");
+
+  if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
+       fallback = TRUE;
+  else fallback = FALSE;
+
+  for (i = 0; i < DIM(tests); i++)
+  {
+    const struct servent *se = ws_getservbyport (swap16(tests[i].port),
+                                                 tests[i].protocol, fallback, TRUE);
+
+    BOOL match = (se == tests[i].expect);
+
+    trace_printf ("%2d: %-4s/%5s: %s\n", i,
+                  tests[i].service,
+                  tests[i].protocol ? tests[i].protocol : "NULL",
+                  match ? "OKAY" : "FAIL");
+    if (se)
+         trace_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
+    else trace_puts   ("    NULL\n");
+  }
+  trace_putc ('\n');
+}
+
+/*
+ * A small test for services-files.
+ */
+static int show_help (void)
+{
+  printf ("Usage: %s [-Dt] [services-file]\n"
+          "       -D:  run 'services_file_dump()' to dump the services list.\n"
+          "       -t:  run 'services_run_tests()' for a simple test.\n"
+          " If a 'services-file' is specified, use this instead of they configured one.\n",
+          program_name);
+  return (0);
+}
+
+int services_file_main (int argc, char **argv)
+{
+  int i, ch, do_dump = 0, do_test = 0;
+
+  set_program_name (argv[0]);
+
+  while ((ch = getopt(argc, argv, "Dftuh?")) != EOF)
+     switch (ch)
+     {
+       case 'D':
+            do_dump = 1;
+            break;
+       case 't':
+            do_test = 1;
+            break;
+       case '?':
+       case 'h':
+       default:
+            return show_help();
+  }
+
+  if (do_dump + do_test == 0)
+     return show_help();
+
+  argv += optind;
+  if (*argv)
+  {
+    services_file_exit();
+    for (i = 0; i < DIM(g_cfg.services_file); i++)
+    {
+      free (g_cfg.services_file[i]);
+      g_cfg.services_file[i] = NULL;
+    }
+    g_cfg.services_file[0] = strdup (argv[0]);
+    services_file_init();
+  }
+
+  if (do_dump)
+     services_file_dump();
+
+  if (do_test)
+     services_run_tests();
+
+  return (0);
 }
