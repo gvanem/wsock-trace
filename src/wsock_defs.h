@@ -147,7 +147,7 @@
    *
    * Funny enough, 'WSAConnectByNameW()' doesn't want a 'const wide-string'.
    */
-  #if defined(_MSC_VER) // && defined(_CRT_BEGIN_C_HEADER)
+  #if defined(_MSC_VER)
     #define CONST_LPSTR  LPCSTR
   #else
     #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
@@ -193,7 +193,7 @@
     #define ADDR_CAST(x)  ((unsigned __int64)(x))
 
   #else
-    #error Help me!
+    #error "Help me!"
   #endif
 
   #define IS_WIN64 1
@@ -220,15 +220,14 @@
 
 #if !defined(__CYGWIN__)
   #if !defined(__MINGW32__)
-  #define __LONG32  long  /* Several <winsock2.h> functions for CygWin uses this */
+  #define __LONG32  long   /* Several <winsock2.h> functions for CygWin uses this */
   #endif
 
   #define __ms_u_long  u_long
 
-#elif defined(__i386__) // && (CYGWIN_VERSION_DLL_COMBINED <= 2882000)
+#elif defined(__i386__)
    /*
-    * Not sure about the above CYGWIN_VERSION_DLL_COMBINED value.
-    * Never mind this shit. Add it for all 32-bit CygWin.
+    * Add this for all 32-bit CygWin.
     */
   #define __ms_u_long  u_long
 #endif
@@ -254,6 +253,15 @@
   #ifndef _fileno
   #define _fileno(fil)            fileno (fil)
   #endif
+
+  #ifndef _popen
+  #define _popen(cmd, mode)       popen (cmd, mode)
+  #endif
+
+  #ifndef _pclose
+  #define _pclose(fil)            pclose (fil)
+  #endif
+
   #define _atoi64(str)            strtoull (str, NULL, 10)
   #define stricmp(str1, str2)     strcasecmp (str1, str2)
   #define strnicmp(str1, str2, n) strncasecmp (str1, str2, n)
