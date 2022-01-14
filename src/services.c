@@ -6,11 +6,6 @@
  *
  * By Gisle Vanem <gvanem@yahoo.no> 2022.
  */
-#include <intrin.h>
-#if defined(_MSC_VER)
-#pragma intrinsic (_byteswap_ushort)
-#endif
-
 #include "common.h"
 #include "init.h"
 #include "smartlist.h"
@@ -18,19 +13,38 @@
 #include "wsock_trace.h"
 #include "services.h"
 
-#define MAX_SERV_LEN   20
-#define MAX_PROTO_LEN  20
-
-/*
- * Supported max protocols length like "/tcp/udp/sctp/dccp"
+/**
+ * \def MAX_SERV_LEN
+ * Maximum length of a service entry.
+ * In WireShark's `services` file, the longest is `"subntbcst-tftp"`.
+ * 15 characters.
  */
-#define MAX_PROTOS_LEN 40
+#define MAX_SERV_LEN   20
 
 /**
- * \def PROTO_UDP The bitvalue for "udp"
- * \def PROTO_TCP The bitvalue for "tcp"
- * \def PROTO_DCCP The bitvalue for "dccp" (Datagram Congestion Control Protocol)
- * \def PROTO_SCTP The bitvalue for "sctp" (Stream Control Transmission Protocol)
+ * \def MAX_PROTO_LEN
+ * Maximum length of a protocol name. Currently `"sctp"`.
+ */
+#define MAX_PROTO_LEN  10
+
+/**
+ * \def MAX_PROTOS_LEN
+ * Maximum combined protocols length. Like `"/tcp/udp/sctp/dccp"`.
+ */
+#define MAX_PROTOS_LEN 30
+
+/**
+ * \def PROTO_UDP
+ * The bitvalue for `udp`
+ *
+ * \def PROTO_TCP
+ * The bitvalue for `tcp`
+ *
+ * \def PROTO_DCCP
+ * The bitvalue for `dccp` (Datagram Congestion Control Protocol)
+ *
+ * \def PROTO_SCTP
+ * The bitvalue for `sctp` (Stream Control Transmission Protocol)
  */
 #define PROTO_UNKNOWN 0x01
 #define PROTO_UDP     0x02
@@ -50,9 +64,12 @@ static const struct search_list protocol_list[] = {
                  };
 
 /*
- * \todo:
+ * \todo
  * Support a download and parsing of this too:
  *   http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.csv
+ *
+ * \todo
+ * Handle other line formats besides Wireshark's format in parse_port_proto
  */
 
 /**
@@ -61,13 +78,21 @@ static const struct search_list protocol_list[] = {
  */
 struct service_entry {
        char        name [MAX_SERV_LEN];  /**< name of `services` entry */
-       uint16_t    port;       /**< the port (host order) */
-       int         proto;      /**< A bitset of `PROTO_UDP`, `PROTO_TCP` etc. */
-       const char *file;       /**< which `g_cfg.services_file[]` is this entry from? */
+       uint16_t    port;                 /**< the port on host order */
+       int         proto;                /**< A bitset of PROTO_UDP, PROTO_TCP etc. */
+       const char *file;                 /**< which `g_cfg.services_file[]` is this entry from? */
      };
 
+/**
+ * The smartlist of services entries.
+ */
 static smartlist_t *services_list;
-static int          current_services_file;
+
+/**
+ * The current services file we are parsing. <br>
+ * In range `[0 ... DIM(g_cfg.services_file)-1]` == [0 ... 2].
+ */
+static int current_services_file;
 
 /**
  * The filled structure from `fill_servent()`.
@@ -77,7 +102,7 @@ static struct servent ret_fill_servent;
 /**
  * Add an entry to the given `smartlist_t` that becomes `services_list`.
  */
-static void add_entry (struct service_entry *se)
+static void add_entry (const struct service_entry *se)
 {
   struct service_entry *copy = calloc (1, sizeof(*copy));
 
@@ -90,7 +115,7 @@ static void add_entry (struct service_entry *se)
 }
 
 /**
- * Decode a `protocol` into a string. Like `PROTO_UDP | _PROTO_TCP` -> "udp|tcp"
+ * Decode a protocol into a string. Like `(PROTO_UDP | _PROTO_TCP)` -> `udp|tcp`.
  */
 static const char *decode_proto_str (int protocol)
 {
@@ -98,11 +123,11 @@ static const char *decode_proto_str (int protocol)
 }
 
 /**
- * Encode a `proto` string into a bitvalue. The opposite of the above.
+ * Encode a `proto_str` value into a bitvalue. The opposite of decode_proto_str().
  *
  * \param[in] proto_str     the protocol string to parse.
- * \param[in] multi_fields  if TRUE, parse a string like "udp/tcp" recurively into
- *                          a bitvalue as `PROTO_UDP | PROTO_TCP`.
+ * \param[in] multi_fields  if TRUE, parse a string like `udp/tcp` recursively into
+ *                          a bitvalue as `(PROTO_UDP | PROTO_TCP)`.
  */
 static int encode_proto_str (const char *proto_str, BOOL multi_fields)
 {
@@ -138,9 +163,9 @@ static int encode_proto_str (const char *proto_str, BOOL multi_fields)
 
 /**
  * Compare 2 protocol bitvalues.
- * Return 0 if bit in `proto_a` matches bit in `proto_b`.
- * Return -1 if `proto_a` contains fewer protocols than `proto_b`.
- * Return +1 if `proto_a` contains more protocols than `proto_b`.
+ * \retval 0  if bit in `proto_a` matches bit in `proto_b`.
+ * \retval -1 if `proto_a` contains fewer protocols than `proto_b`.
+ * \retval +1 if `proto_a` contains more protocols than `proto_b`.
  *
  * Hence TCP gets higher rank than UDP.
  */
@@ -192,7 +217,7 @@ static int services_bsearch_port_proto (const void *key, const void **member)
 #define _STR(x)  _STR2(x)
 
 /*
- * Parse a Wireshark style port/protocol string like `"1/tcp/udp"`
+ * Parse a Wireshark style port/protocol string like `1/tcp/udp`
  * and encode the parts into a bitfield of `PROTO_x`. \see PROTO_UDP above.
  */
 static int parse_port_proto (struct service_entry *se, const char *value)
@@ -208,14 +233,12 @@ static int parse_port_proto (struct service_entry *se, const char *value)
        se->proto &= ~PROTO_UNKNOWN;  /* clear this bit */
     return (1);
   }
-  /** \todo Handle other line formats besides Wireshark's format
-   */
   return (0);
 }
 
 /**
- * Handle field 0 which is the service name.
- * Handle field 1 which is the port / protocol field. Like "1/tcp/udp".
+ * \li Handle field 0 which is the service name.
+ * \li Handle field 1 which is the port / protocol field. Like `1/tcp/udp`.
  */
 static int services_CSV_add (struct CSV_context *ctx, const char *value)
 {
@@ -236,7 +259,7 @@ static int services_CSV_add (struct CSV_context *ctx, const char *value)
 }
 
 /**
- * Print the details of the `services_list` and some additional statistics.
+ * Print some statistics and the details of the `services_list`.
  */
 static void services_file_dump (int max, int duplicates)
 {
@@ -296,13 +319,19 @@ static const struct test_table tests[] = {
 
 static void services_run_tests (void)
 {
+  BOOL fallback;
   int  i;
 
   trace_puts ("\nRunning 'tests[]':\n");
+
+  if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
+       fallback = TRUE;
+  else fallback = FALSE;
+
   for (i = 0; i < DIM(tests); i++)
   {
-    const struct servent *se = ws_getservbyport (_byteswap_ushort(tests[i].port),
-                                                 tests[i].protocol, FALSE);
+    const struct servent *se = ws_getservbyport (swap16(tests[i].port),
+                                                 tests[i].protocol, fallback, TRUE);
 
     BOOL match = (se == tests[i].expect);
 
@@ -311,7 +340,7 @@ static void services_run_tests (void)
                   tests[i].protocol ? tests[i].protocol : "NULL",
                   match ? "OKAY" : "FAIL");
     if (se)
-         trace_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, _byteswap_ushort(se->s_port), se->s_proto ? se->s_proto : "NULL");
+         trace_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
     else trace_puts   ("    NULL\n");
   }
   trace_putc ('\n');
@@ -379,12 +408,12 @@ static __inline const struct servent *fill_servent (const struct service_entry *
 
   if (protocol == PROTO_UNKNOWN)
        proto_ret = NULL;
-  else proto_ret = _strlcpy (proto, decode_proto_str(protocol), sizeof(proto));
+  else proto_ret = _strlcpy (proto, list_lookup_name(protocol, protocol_list, DIM(protocol_list)), sizeof(proto));
 
   ret_fill_servent.s_name    = _strlcpy (name, se->name, sizeof(name));
   ret_fill_servent.s_proto   = (char*) proto_ret;
   ret_fill_servent.s_aliases = null_aliases;
-  ret_fill_servent.s_port    = _byteswap_ushort (se->port);
+  ret_fill_servent.s_port    = swap16 (se->port);
   return (&ret_fill_servent);
 }
 
@@ -397,20 +426,26 @@ static __inline const struct servent *fill_servent (const struct service_entry *
  * \param[in] fallback  call the Winsock function `getservbyport()` if this
  *                      function fails to find a match.
  */
-const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOOL fallback)
+const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOOL fallback, BOOL do_wstrace)
 {
   const struct servent *ret = NULL;
   const struct service_entry *se = NULL;
   struct service_entry lookup;
 
-  lookup.port  = _byteswap_ushort (port);
+  lookup.port  = swap16 (port);
   lookup.proto = protocol ? encode_proto_str(protocol, FALSE) : PROTO_UNKNOWN;
 
-  /* We're asked to lookup a service-name for a protocol we do not support.
-   * Give up, but possibly ask Winsock about it.
+  /**
+   * Give up if:
+   *  \li We're asked to lookup a service-name for a protocol we do not support.
+   *  \li Or `services_list == NULL` (malloc failed) or no services file.
+   *
+   *  but possibly ask Winsock about it.
    */
   if (protocol && lookup.proto == PROTO_UNKNOWN)
-      TRACE (2, "Unknown protocol: '%s'.\n", protocol);
+      TRACE (3, "Unknown protocol: '%s'.\n", protocol);
+  else if (!services_list || g_cfg.num_services_files == 0)
+       TRACE (3, "No services file(s).\n");
   else se = smartlist_bsearch (services_list, &lookup, services_bsearch_port_proto);
 
   if (se)
@@ -418,13 +453,14 @@ const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOO
 
   /* if not found, do the fallback to `getservbyport()`?
    * But we cannot call it after a `WSACleanup()` has been done.
-   * Otherwise, disable the use of `WSTRACE()` in `getservbyport()`.
    */
   if (!se && fallback && !cleaned_up)
   {
-    trace_level_save_restore (0);
+    if (!do_wstrace)
+       trace_level_save_restore (0);
     ret = getservbyport (port, protocol);
-    trace_level_save_restore (1);
+    if (!do_wstrace)
+       trace_level_save_restore (1);
   }
   return (ret);
 }
