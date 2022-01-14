@@ -6,7 +6,7 @@
  * \addtogroup IANA      IANA Registry
  * \addtogroup ASN       Autonomous System Number
  * \addtogroup Geoip     IP-address to location support
- * \addtogroup inet_util IP-address utilities
+ * \addtogroup inet_util Address & Protocol utilities
  * \addtogroup Lua       Lua script support
  * \addtogroup Main      Wsock-trace core functions
  * \addtogroup Misc      Various support functions
@@ -27,7 +27,7 @@ PDB-symbols (GNU-debugger instead relies on the archaic <b>BFD</b> library). So 
 the MinGW, CygWin and OpenWatcom targets will only show raw addresses for the traced
 functions.
 
-\image html screenshot_ahost-msdn-com-win10.png
+\image html screenshot_ahost-msdn-com.png
 
 <h2>Options & Features</h2>
 

@@ -782,6 +782,7 @@ INPUT = main_page.dox            \
        ../src/miniz.c            \
        ../src/non-export.c       \
        ../src/overlap.c          \
+       ../src/services.c         \
        ../src/smartlist.c        \
        ../src/stkwalk.c          \
        ../src/vm_dump.c          \
@@ -802,6 +803,7 @@ INPUT = main_page.dox            \
        ../src/init.h             \
        ../src/in_addr.h          \
        ../src/overlap.h          \
+       ../src/services.h         \
        ../src/smartlist.h        \
        ../src/stkwalk.h          \
        ../src/vm_dump.h          \
