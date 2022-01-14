@@ -67,6 +67,7 @@
 #include "asn.h"
 #include "iana.h"
 #include "inet_util.h"
+#include "services.h"
 #include "wsock_trace.h"
 #include "firewall.h"
 
@@ -99,9 +100,6 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 #if defined(__CYGWIN__)
   #include <errno.h>
   #include <wctype.h>
-
-  #define _popen(cmd, mode)  popen (cmd, mode)
-  #define _pclose(fil)       pclose (fil)
 
  /*
   * These are prototyped in '<w32api/intrin.h>', but found nowhere.
@@ -3733,7 +3731,6 @@ static BOOL fw_dump_events (void)
 {
   HANDLE  fw_enum_handle = INVALID_HANDLE_VALUE;
   UINT32  i, num_in, num_out;
-  BOOL    show_all = FALSE;
   DWORD   rc;
   int     api_level = fw_api;
   void   *entries = NULL;
@@ -3764,7 +3761,6 @@ static BOOL fw_dump_events (void)
   if (g_cfg.FIREWALL.show_all)
   {
     p_event_template = NULL;
-    show_all = TRUE;
   }
   else
   {
@@ -4116,32 +4112,18 @@ static BOOL print_DNSBL_info (const struct in_addr *ia4, const struct in6_addr *
 
 static void get_port (const _FWPM_NET_EVENT_HEADER3 *header, WORD port, char *port_str)
 {
-  struct servent *se = NULL;
-
-  /* If called when wsock_trace.dll is active, we might get "late events".
-   * Hence we cannot call `getservbyport()` after a `WSACleanup()`.
-   * Just return the port-number as a string.
-   */
-  if (cleaned_up)
-  {
-    _itoa (port, port_str, 10);
-    return;
-  }
-
-  /* Do not use 'WSTRACE()' on 'getservbyport()' here.
-   */
-  trace_level_save_restore (0);
+  const struct servent *se;
 
   if (header->ipProtocol == IPPROTO_TCP)
-     se = getservbyport (_byteswap_ushort(port), "tcp");
+     se = ws_getservbyport (_byteswap_ushort(port), "tcp", FALSE, FALSE);
   else if (header->ipProtocol == IPPROTO_UDP)
-     se = getservbyport (_byteswap_ushort(port), "udp");
+     se = ws_getservbyport (_byteswap_ushort(port), "udp", FALSE, FALSE);
+  else
+     se = NULL;
 
   if (se && se->s_name)
        snprintf (port_str, PORT_STR_SIZE, "%d (%s)", port, se->s_name);
   else _itoa (port, port_str, 10);
-
-  trace_level_save_restore (1);
 }
 
 static const char *get_ports (const _FWPM_NET_EVENT_HEADER3 *header, BOOL direction_in)
