@@ -132,6 +132,12 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 #define FW_FUNC_ERROR  ERROR_FUNCTION_FAILED
 
 /**
+ * \def FW_FUNC_ENOSYS
+ *  The error-code (120) to use if `g_cfg.FIREWALL.enable == FALSE`.
+ */
+#define FW_FUNC_ENOSYS  ERROR_CALL_NOT_IMPLEMENTED
+
+/**
  * \def TIME_STRING_FMT_1
  * The `fw_buf_add()` format for a `get_time_string()` result to use when called from `firewall_main()`.
  * Uses colour-code '~1' for the time-value.
@@ -1917,7 +1923,10 @@ BOOL fw_init (void)
   ULONG  user_len;
 
   if (!g_cfg.FIREWALL.enable)
-     return (FALSE);
+  {
+    fw_errno = FW_FUNC_ENOSYS;
+    return (FALSE);
+  }
 
   /**
    * \todo
@@ -1939,7 +1948,7 @@ BOOL fw_init (void)
   else fw_acp = CP_ACP;
 
   if (g_cfg.FIREWALL.api_level > 0)
-    fw_api = g_cfg.FIREWALL.api_level;
+     fw_api = g_cfg.FIREWALL.api_level;
 
   user_len = sizeof(fw_logged_on_user);
   GetUserName (fw_logged_on_user, &user_len);
@@ -2496,7 +2505,7 @@ static char *add_app (const char *app, BOOL *exist, BOOL *is_native)
 #endif
 }
 
-/*
+/**
  * Break apart the `rule` and extract the `Action`, `Dir`, the program-name. etc.
  *
  * Look only for lines that looks like:
@@ -2614,9 +2623,9 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
 
   if (r->protocol == 0)
        strcpy (proto_str, "Any");
-  else if (r->protocol == 6)
+  else if (r->protocol == IPPROTO_TCP)     /* == 6 */
        strcpy (proto_str, "TCP");
-  else if (r->protocol == 17)
+  else if (r->protocol == IPPROTO_UDP)     /* == 17 */
        strcpy (proto_str, "UDP");
   else _itoa (r->protocol, proto_str, 10); /* \todo use 'getprotobynumber()' */
 
@@ -4908,6 +4917,8 @@ int firewall_main (int argc, char **argv)
     }
 
   program = set_net_program (argc-optind, argv+optind);
+
+  g_cfg.FIREWALL.enable = TRUE; /* should be redundant */
 
   if (dump_events || dump_rules || dump_callouts || log_file)
      g_cfg.FIREWALL.sound.enable = FALSE;
