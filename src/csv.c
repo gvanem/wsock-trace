@@ -286,6 +286,47 @@ quit:
 }
 
 /**
+ * Try to auto-detect the number of fields in the CSV-file.
+ *
+ * Open and parse the first line and count the number of delimiters.
+ * If this line ends in a newline, this should count as the last field.
+ * Hence increment by 1.
+ *
+ * \param[in]  ctx  the CSV context to work with.
+ * \retval     0 on failure. 1 on success.
+ */
+static int CSV_autodetect_num_fields (struct CSV_context *ctx)
+{
+  unsigned num_fields = 0;
+  const char *delim, *next;
+
+  ctx->file = fopen (ctx->file_name, "rt");
+  if (!ctx->file)
+     return (0);
+
+  if (!fgets(ctx->parse_buf, ctx->line_size, ctx->file))
+     return (0);
+
+  delim = ctx->parse_buf;
+  while (*delim)
+  {
+    next = strchr (delim, ctx->delimiter);
+    if (!next)
+    {
+      if (strchr(delim, '\r') || strchr(delim, '\n'))
+         num_fields++;
+      break;
+    }
+    delim = next + 1;
+    num_fields++;
+  }
+  ctx->num_fields = num_fields;
+  fseek (ctx->file, 0, SEEK_SET);
+  TRACE (1, "Auto-detected num_field %u.\n", num_fields);
+  return (1);
+}
+
+/**
  * Check for unset members of the CSV-context. <br>
  * Set the field-delimiter to `,` if not already done.
  *
@@ -294,12 +335,6 @@ quit:
  */
 static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
 {
-  if (ctx->num_fields == 0)
-  {
-    TRACE (0, "'ctx->num_fields' must be > 0.\n");
-    return (0);
-  }
-
   if (!ctx->delimiter)
      ctx->delimiter = ',';
 
@@ -308,7 +343,7 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     TRACE (0, "Illegal field delimiter '%c'.\n", ctx->delimiter);
     return (0);
   }
-  TRACE (3, "Using field-delimiter: '%c'.\n", ctx->delimiter);
+  TRACE (2, "Using field-delimiter: '%c'.\n", ctx->delimiter);
 
   if (ctx->rec_max == 0)
      ctx->rec_max = UINT_MAX;
@@ -318,6 +353,7 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     TRACE (0, "'ctx->callback' must be set.\n");
     return (0);
   }
+
   if (!ctx->file_name)
   {
     TRACE (0, "'ctx->file_name' must be set.\n");
@@ -331,6 +367,12 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
   if (!ctx->parse_buf)
   {
     TRACE (1, "Allocation of 'parse_buf' failed.\n");
+    return (0);
+  }
+
+  if (ctx->num_fields == 0 && !CSV_autodetect_num_fields(ctx))
+  {
+    free (ctx->parse_buf);
     return (0);
   }
 
@@ -400,7 +442,7 @@ static int show_help (void)
 int csv_main (int argc, char **argv)
 {
   struct CSV_context ctx;
-  int    ch;
+  int    ch, rc;
 
   set_program_name (argv[0]);
   memset (&ctx, '\0', sizeof(ctx));
@@ -440,6 +482,9 @@ int csv_main (int argc, char **argv)
 
   ctx.file_name = argv[0];
   ctx.callback  = csv_callback;
-  return CSV_open_and_parse_file (&ctx) > 0 ? 0 : 1;
+  rc = CSV_open_and_parse_file (&ctx);
+  if (!rc)
+     puts ("CSV_open_and_parse_file() failed!");
+  return (rc == 0 ? 1 : 0);
 }
 
