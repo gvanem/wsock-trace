@@ -78,10 +78,10 @@ static const struct search_list protocol_list[] = {
  * The structure for service-entries we read from a file.
  */
 struct service_entry {
-       char        name [MAX_SERV_LEN];  /**< name of `services` entry */
-       uint16_t    port;                 /**< the port on host order */
-       int         proto;                /**< A bitset of PROTO_UDP, PROTO_TCP etc. */
-       const char *file;                 /**< which `g_cfg.services_file[]` is this entry from? */
+       char      name [MAX_SERV_LEN];  /**< name of `services` entry */
+       uint16_t  port;                 /**< the port on host order */
+       int       proto;                /**< A bitset of PROTO_UDP, PROTO_TCP etc. */
+       uint16_t  file_bits;            /**< which `g_cfg.services_file[]` is this entry from? */
      };
 
 /**
@@ -94,6 +94,11 @@ static smartlist_t *services_list;
  * In range `[0 ... DIM(g_cfg.services_file)-1]` == [0 ... 2].
  */
 static int current_services_file;
+
+/**
+ * Copy the `se->file_bits` over in the compare function
+ */
+static BOOL copy_file_bits = FALSE;
 
 /**
  * Duplicates found by 'smartlist_make_uniq()'.
@@ -115,7 +120,7 @@ static void add_entry (const struct service_entry *se)
   if (copy)
   {
     *copy = *se;
-    copy->file = g_cfg.services_file [current_services_file];
+    copy->file_bits = (1 << current_services_file);
     smartlist_add (services_list, copy);
   }
 }
@@ -198,6 +203,12 @@ static int services_compare_port_proto (const void **_a, const void **_b)
 
   if (rc == 0)
      rc = compare_proto (a->proto, b->proto);
+
+  if (rc == 0 && copy_file_bits)
+  {
+    struct service_entry *aa = (struct service_entry*) *_a;
+    aa->file_bits |= b->file_bits;
+  }
   return (rc);
 }
 
@@ -257,7 +268,8 @@ static int services_CSV_add (struct CSV_context *ctx, const char *value)
          break;
     case 1:
          if (parse_port_proto(&se, value))
-            add_entry (&se);
+              add_entry (&se);
+         else TRACE (2, "se.port: ??\n");
          memset (&se, '\0', sizeof(se));
          break;
   }
@@ -269,7 +281,7 @@ static int services_CSV_add (struct CSV_context *ctx, const char *value)
  */
 static void services_file_dump (void)
 {
-  int i, max = services_list ? smartlist_len (services_list) : 0;
+  int i, j, max = services_list ? smartlist_len (services_list) : 0;
 
   trace_printf ("\nDuplicates: %d. A total of %d entries in these file(s):\n", services_duplicates, max);
 
@@ -277,21 +289,28 @@ static void services_file_dump (void)
       trace_printf ("  %d: \"%s\"\n", i, g_cfg.services_file[i]);
 
   trace_puts ("\nService entries sorted on port:\n"
-              "Idx - Service ------------- Port / proto ------------------------ Services-file\n");
+              "Idx - Service ------------- Port / proto ------------------------ Services-file(s)\n");
 
   for (i = 0; i < max; i++)
   {
     const struct service_entry *se = smartlist_get (services_list, i);
     char  buf [100];
-    int   file_idx;
+    char  files_bits [20] = "?";
+    char *p = files_bits;
 
-    for (file_idx = 0; g_cfg.services_file [file_idx]; file_idx++)
+    for (j = 0; g_cfg.services_file[j]; j++)
     {
-      if (se->file == g_cfg.services_file[file_idx])
-         break;
+      if (se->file_bits & (1 << j))
+      {
+        *p++ = '0' + j;
+        *p++ = '+';
+        *p = '\0';
+      }
     }
+    if (p > files_bits)
+       p[-1] = '\0';
     snprintf (buf, sizeof(buf), "%5u / %-30s", se->port, decode_proto_str(se->proto));
-    trace_printf ("%4d: %-20s %-20s %d\n", i, se->name, buf, file_idx);
+    trace_printf ("%4d: %-20s %-20s %s\n", i, se->name, buf, files_bits);
   }
 }
 
@@ -324,7 +343,7 @@ void services_file_init (void)
        current_services_file++)
   {
     memset (&ctx, '\0', sizeof(ctx));
-    ctx.file_name  = g_cfg.services_file [current_services_file];
+    ctx.file_name = g_cfg.services_file [current_services_file];
     ctx.num_fields = 2;
 
 #if 0
@@ -337,13 +356,15 @@ void services_file_init (void)
      */
 #endif
 
-    ctx.delimiter  = '\t';
-    ctx.callback   = services_CSV_add;
+    ctx.delimiter = '\t';
+    ctx.callback  = services_CSV_add;
     CSV_open_and_parse_file (&ctx);
   }
 
   smartlist_sort (services_list, services_compare_port_proto);
+  copy_file_bits = TRUE;
   services_duplicates = smartlist_make_uniq (services_list, services_compare_port_proto, free);
+  copy_file_bits = FALSE;
 }
 
 /**
@@ -515,7 +536,7 @@ int services_file_main (int argc, char **argv)
   if (*argv)
   {
     services_file_exit();
-    for (i = 0; i < DIM(g_cfg.services_file); i++)
+    for (i = 0; i < DIM(g_cfg.services_file)-1; i++)
     {
       free (g_cfg.services_file[i]);
       g_cfg.services_file[i] = NULL;
