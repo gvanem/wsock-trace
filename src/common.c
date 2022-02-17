@@ -109,7 +109,7 @@ void sock_list_remove (SOCKET sock)
   {
     struct sock_list_entry *se = smartlist_get (sock_list, i);
 
-    if (sock == se->sock);
+    if (sock == se->sock)
     {
       free (se);
       smartlist_del (sock_list, i);
