@@ -1216,6 +1216,7 @@ static void trace_report (void)
     trace_printf ("  DLL attach %" U64_FMT " times.\n", g_cfg.counts.dll_attach);
     trace_printf ("  DLL detach %" U64_FMT " times.\n", g_cfg.counts.dll_detach);
   }
+  trace_puts ("~0");
 
 #if 0
   {
@@ -1245,7 +1246,7 @@ static void trace_report (void)
   g_cfg.counts.send_errors = 20000;
 #endif
 
-  trace_printf ("~0\n"
+  trace_printf ("\n"
                 "  Statistics:\n"
                 "    Recv bytes:   %15s",               qword_str(g_cfg.counts.recv_bytes));
   trace_printf ("  Recv errors:  %15s\n",               qword_str(g_cfg.counts.recv_errors));
