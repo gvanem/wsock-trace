@@ -786,12 +786,12 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 
   else if (!stricmp(key, "hosts_file"))
   {
-    if (g_cfg.num_hosts_files < DIM(g_cfg.hosts_file))
+    if (g_cfg.num_hosts_files < DIM(g_cfg.hosts_file)-1)
        g_cfg.hosts_file [g_cfg.num_hosts_files++] = strdup (val);
   }
   else if (!stricmp(key, "services_file"))
   {
-    if (g_cfg.num_services_files < DIM(g_cfg.services_file))
+    if (g_cfg.num_services_files < DIM(g_cfg.services_file)-1)
        g_cfg.services_file [g_cfg.num_services_files++] = strdup (val);
   }
 
@@ -2180,7 +2180,7 @@ static void __cdecl invalid_parameter_handler (const wchar_t *expression,
 }
 #endif
 
-int inv_handler_set = 0;
+static int inv_handler_set = 0;
 
 static void set_invalid_handler (void)
 {
