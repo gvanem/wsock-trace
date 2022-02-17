@@ -1566,7 +1566,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
   overlap_remove (s);
   sock_list_remove (s);
 
-  if (g_cfg.dump_tcpinfo)
+  if (g_cfg.dump_tcpinfo && rc2 != -1)
      dump_tcp_info_v0 (&info, rc2);
 
   LEAVE_CRIT (!exclude_this);
