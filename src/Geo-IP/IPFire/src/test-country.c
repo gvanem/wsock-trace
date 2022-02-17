@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
 	// Create a test network
 	err = loc_network_new_from_string(ctx, &network, "2001:db8::/64");
 	if (err) {
-		fprintf(stderr, "Could not create network: %m\n");
+		fprintf(stderr, "Could not create network: %s\n", strerror(-err));
 		exit(EXIT_FAILURE);
 	}
 
