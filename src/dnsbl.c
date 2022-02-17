@@ -322,6 +322,7 @@ int DNSBL_test (void)
 {
   int    i;
   BOOL   rc;
+  WORD   save1, save4, save5;
   static const struct test_list tests[] = {
                     { AF_INET,  "192.219.208.2", "103496" },  /* in drop.txt */
                     { AF_INET,  "24.233.0.21",   "210084" },
@@ -335,13 +336,22 @@ int DNSBL_test (void)
                   };
   const struct test_list *test = tests;
 
+  /* Save some colors and temporary change them
+   */
+  save1 = g_cfg.color_trace;
+  save4 = g_cfg.color_data;
+  save5 = g_cfg.color_func;
+  get_color ("bright white", &g_cfg.color_trace);
+  get_color ("bright green", &g_cfg.color_data);
+  get_color ("bright red", &g_cfg.color_func);
+
   if (g_cfg.DNSBL.drop_file && file_exists(g_cfg.DNSBL.drop_file))
      INET_util_test_mask4();
 
   if (g_cfg.DNSBL.dropv6_file && file_exists(g_cfg.DNSBL.dropv6_file))
      INET_util_test_mask6();
 
-  trace_puts ("DNSBL_test():\n");
+  trace_puts ("Running ~2DNSBL_test():~0\n");
   for (i = rc = 0; i < DIM(tests); i++, test++)
   {
     union {
@@ -372,7 +382,7 @@ int DNSBL_test (void)
 
     if (!strcmp(sbl_ref, test->sbl_ref))
          okay = "~4success";
-    else okay = "~3failed ";
+    else okay = "~5failed ";
 
     if (res)
        rc++;
@@ -380,6 +390,9 @@ int DNSBL_test (void)
     trace_printf ("~1%-15s~0 -> %d, ~1SBL%-7s~0 %s~0  country: %s, location: %s~0\n",
                   test->addr, res, sbl_ref, okay, country_code, location);
   }
+  g_cfg.color_trace = save1;
+  g_cfg.color_data  = save4;
+  g_cfg.color_func  = save5;
   return (rc);
 }
 
@@ -437,15 +450,7 @@ void DNSBL_init (void)
 
 void DNSBL_exit (void)
 {
-  struct DNSBL_info *dnsbl;
-  int    i, max = DNSBL_list ? smartlist_len(DNSBL_list) : 0;
-
-  for (i = 0; i < max; i++)
-  {
-    dnsbl = smartlist_get (DNSBL_list, i);
-    free (dnsbl);
-  }
-  smartlist_free (DNSBL_list);
+  smartlist_wipe (DNSBL_list, free);
   DNSBL_list = NULL;
 }
 

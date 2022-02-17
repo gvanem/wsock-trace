@@ -319,8 +319,7 @@ static void services_file_dump (void)
  */
 void services_file_exit (void)
 {
-  if (services_list)
-     smartlist_wipe (services_list, free);
+  smartlist_wipe (services_list, free);
   services_list = NULL;
 }
 
@@ -469,9 +468,17 @@ static const struct test_table tests[] = {
 static void services_run_tests (void)
 {
   BOOL fallback;
+  WORD save4, save5;
   int  i;
 
-  trace_puts ("\nRunning 'tests[]':\n");
+  /* Ensure "bright green" and "bright red" colors for "OKAY" and "FAIL".
+   */
+  save4 = g_cfg.color_data;
+  save5 = g_cfg.color_func;
+  get_color ("bright green", &g_cfg.color_data);
+  get_color ("bright red", &g_cfg.color_func);
+
+  trace_puts ("\nRunning ~2tests[]~0:\n");
 
   if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
        fallback = TRUE;
@@ -481,17 +488,19 @@ static void services_run_tests (void)
   {
     const struct servent *se = ws_getservbyport (swap16(tests[i].port),
                                                  tests[i].protocol, fallback, TRUE);
-
     BOOL match = (se == tests[i].expect);
 
-    trace_printf ("%2d: %-4s/%5s: %s\n", i,
+    trace_printf ("~2%2d~0: %-4s/%5s: %s~0\n", i,
                   tests[i].service,
                   tests[i].protocol ? tests[i].protocol : "NULL",
-                  match ? "OKAY" : "FAIL");
+                  match ? "~4OKAY" : "~5FAIL");
     if (se)
          trace_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
     else trace_puts   ("    NULL\n");
   }
+
+  g_cfg.color_data = save4;
+  g_cfg.color_func = save5;
   trace_putc ('\n');
 }
 
