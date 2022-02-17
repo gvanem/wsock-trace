@@ -90,7 +90,8 @@ class IpsetOutputWriter(OutputWriter):
 	suffix = "ipset"
 
 	def _write_header(self):
-		self.f.write("create %s hash:net family inet hashsize 1024 maxelem 65536\n" % self.prefix)
+		self.f.write("create %s hash:net family inet hashsize 1024 maxelem 65536 -exist\n" % self.prefix)
+		self.f.write("flush %s\n" % self.prefix)
 
 	def write(self, network):
 		self.f.write("add %s %s\n" % (self.prefix, network))

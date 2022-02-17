@@ -687,7 +687,7 @@ class CLI(object):
 						start_address = ipaddress.ip_network(start_address, strict=False)
 					except ValueError:
 						start_address = start_address.split("/")
-						ldigits = len(start_address[0].split("."))
+						ldigits = start_address[0].count(".")
 
 						# How many octets do we need to add?
 						# (LACNIC does not seem to have a /8 or greater assigned, so the following should suffice.)
@@ -1228,6 +1228,7 @@ class CLI(object):
 				"eu-south-2": "ES",
 				"eu-west-3": "FR",
 				"eu-north-1": "SE",
+				"il-central-1": "IL", # XXX: This one is not documented anywhere except for ip-ranges.json itself
 				"me-central-1": "AE",
 				"me-south-1": "BH",
 				"sa-east-1": "BR"
