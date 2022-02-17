@@ -347,7 +347,7 @@ static int CSV_autodetect_num_fields (struct CSV_context *ctx)
   ctx->num_fields = num_fields;
   fclose (ctx->file);
   ctx->file = NULL;
-  TRACE (1, "Auto-detected num_field %u. BOM found: %d\n", num_fields, ctx->BOM_found);
+  TRACE (2, "Auto-detected num_field %u. BOM found: %d\n", num_fields, ctx->BOM_found);
   return (1);
 }
 
