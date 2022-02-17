@@ -5,7 +5,6 @@
 # 'Wsock_trace' file from these places in this order:
 #  - The file pointed to by %WSOCK_TRACE%.
 #  - The current directory.
-#  - The '%HOME' directory.
 #  - Then finally the '%APPDATA' directory.
 #
 # The keywords here are not case sensitive.
