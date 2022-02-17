@@ -77,6 +77,7 @@ static const char *socket_number (SOCKET s);
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 static void        get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err);
+static void        get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err);
 static void        wstrace_printf (BOOL first_line,
                                    _Printf_format_string_ const char *fmt, ...)
                                    ATTR_PRINTF (2, 3);
@@ -1554,7 +1555,14 @@ EXPORT int WINAPI closesocket (SOCKET s)
   int  rc, rc2 = -1;
 
   if (p_WSAIoctl && g_cfg.dump_tcpinfo && sock_list_type(s, NULL, NULL) == SOCK_STREAM)
-     get_tcp_info_v0 (s, &info, &rc2);
+  {
+   /**
+    * \todo
+    * Check for Win-10 Build 20348 (or newer) before calling
+    * `get_tcp_info_v1()` instead.
+    */
+    get_tcp_info_v0 (s, &info, &rc2);
+  }
 
   CHECK_PTR (p_closesocket);
   rc = (*p_closesocket) (s);
@@ -3404,19 +3412,46 @@ EXPORT PCWSTR WINAPI InetNtopW (int af, const void *addr, PWSTR res_buf, size_t 
 
 /****************** Internal utility functions **********************************/
 
-static void get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err)
+static void get_tcp_info_v01 (SOCKET s, TCP_INFO_v0 *info_0, TCP_INFO_v1 *info_1, int *err)
 {
   DWORD size_ret = 0;
-  DWORD ver = 0;       /* Only version 0 is supported at this moment */
+  DWORD ver, size;
+  void *info;
   int   rc;
 
   ENTER_CRIT();
-  memset (info, '\0', sizeof(*info));
-  rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, sizeof(*info), &size_ret, NULL, NULL);
+  if (info_0)
+  {
+    memset (info_0, '\0', sizeof(*info_0));
+    ver = 0;
+    info = info_0;
+    size = sizeof(*info_0);
+  }
+  else if (info_1)
+  {
+    memset (info_1, '\0', sizeof(*info_1));
+    ver = 1;
+    info = info_1;
+    size = sizeof(*info_1);
+  }
+  else
+    return;
+
+  rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, size, &size_ret, NULL, NULL);
   if (rc == SOCKET_ERROR)
        *err = (*g_WSAGetLastError)();
   else *err = NO_ERROR;
   LEAVE_CRIT (0);
+}
+
+static void get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err)
+{
+  get_tcp_info_v01 (s, info, NULL, err);
+}
+
+static void get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err)
+{
+  get_tcp_info_v01 (s, NULL, info, err);
 }
 
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
