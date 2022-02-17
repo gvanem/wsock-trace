@@ -421,7 +421,6 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
      return (TRUE);
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
-
   for (i = 0; i < max; i++)
   {
     struct exclude *ex = smartlist_get (exclude_list, i);
@@ -438,11 +437,8 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
 
 BOOL exclude_list_free (void)
 {
-  if (exclude_list)
-  {
-    smartlist_wipe (exclude_list, free);
-    exclude_list = NULL;
-  }
+  smartlist_wipe (exclude_list, free);
+  exclude_list = NULL;
   return (TRUE);
 }
 
@@ -1179,7 +1175,6 @@ static void trace_report (void)
   trace_puts ("\n  Exclusions:~5");
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
-
   for (i = 0; i < max; i++)
   {
     ex = smartlist_get (exclude_list, i);

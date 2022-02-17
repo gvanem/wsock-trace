@@ -843,8 +843,7 @@ static void module_free (void *m)
  */
 static void modules_list_free (void)
 {
-  if (g_modules_list)
-     smartlist_wipe (g_modules_list, module_free);
+  smartlist_wipe (g_modules_list, module_free);
   g_modules_list = NULL;
 }
 
@@ -865,8 +864,7 @@ static void symbols_free (void *s)
  */
 static void symbols_list_free (void)
 {
-  if (g_symbols_list)
-     smartlist_wipe (g_symbols_list, symbols_free);
+  smartlist_wipe (g_symbols_list, symbols_free);
   g_symbols_list = NULL;
 }
 

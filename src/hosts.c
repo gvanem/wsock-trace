@@ -189,8 +189,7 @@ static void hosts_file_dump (int max, int duplicates, const struct CSV_context *
  */
 void hosts_file_exit (void)
 {
-  if (hosts_list)
-     smartlist_wipe (hosts_list, free);
+  smartlist_wipe (hosts_list, free);
   hosts_list = NULL;
 }
 

@@ -180,13 +180,10 @@ void iana_dump (void)
  */
 void iana_exit (void)
 {
-  if (iana_entries_ip4)
-     smartlist_wipe (iana_entries_ip4, free);
-
-  if (iana_entries_ip6)
-     smartlist_wipe (iana_entries_ip6, free);
-
+  smartlist_wipe (iana_entries_ip4, free);
+  smartlist_wipe (iana_entries_ip6, free);
   iana_entries_ip4 = iana_entries_ip6 = NULL;
+
   free (g_cfg.IANA.ip4_file);
   free (g_cfg.IANA.ip6_file);
   g_cfg.IANA.ip4_file = g_cfg.IANA.ip6_file = NULL;
