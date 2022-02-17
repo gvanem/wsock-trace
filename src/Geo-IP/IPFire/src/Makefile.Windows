@@ -1,16 +1,16 @@
 #
 # GNU Makefile for libloc. Supporting MinGW, MSVC or clang-cl.
 #
-# By G. Vanem <gvanem@yahoo.no> 2020 - 2021.
+# By G. Vanem <gvanem@yahoo.no> 2020 - 2022.
 #
 # Ref: https://git.ipfire.org/pub/git/location/libloc.git
 #      https://location.ipfire.org/how-to-use
 #
-# I've hard-coded these here for now.
+# From 'configure.ac':
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 9
+LIBLOC_MICRO = 10
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 DATE_STAMP = $(shell date.exe +%d-%B-%Y)
@@ -316,7 +316,7 @@ cpp_filter.py: $(THIS_FILE)
 # Use an explicit '.exe' filename to avoid a 'python3' link from e.g. Cygwin to interfere.
 # And with 'USE_CRT_DEBUG = 1', use the debug-version of Python3.
 #
-PYTHON  = python3$(PY_D).exe
+PYTHON ?= python3$(PY_D).exe
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
 $(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py
@@ -414,20 +414,13 @@ py3_install/location/__init__.py: python/__init__.py.in
 	sed -e 's|@VERSION@|$(VERSION)|' < $< >> $@
 	@echo
 
-clean: py3_clean
-	rm -f *.pdb *.map link.tmp cpp_filter.py $(OBJ_DIR)/* libloc/version.h
-	- rmdir $(OBJ_DIR)
+clean:
+	rm -f *.pdb *.map link.tmp cpp_filter.py libloc/version.h
+	rm -fr $(OBJ_DIR)
 	@echo
 
-py3_clean:
-	rm -f $(OBJ_DIR)/py/*
-	- rmdir $(OBJ_DIR)/py
-
-py3_vclean:
-	rm -fR py3_install/*
-	- rmdir py3_install
-
-vclean realclean: clean py3_vclean
+vclean realclean: clean
+	rm -fr py3_install
 	rm -f $(TARGETS) .depend.Windows
 
 man_doc:  ../man/location.8
