@@ -46,6 +46,7 @@ typedef struct CSV_context {
         csv_state_t state_func;
         CSV_STATE   state;
         int         c_in;
+        BOOL        BOM_found;
       } CSV_context;
 
 unsigned CSV_open_and_parse_file (struct CSV_context *ctx);

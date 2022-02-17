@@ -81,7 +81,7 @@ static void state_quoted (struct CSV_context *ctx)
     case '"':
          ctx->state = STATE_NORMAL;
          break;
-    case '\r':     /* ignore, but should not occur since `fopen (file, "rt")` was used */
+    case '\r':     /* ignore */
          break;
     case '\n':     /* add a space in this field */
          PUTC (' ');
@@ -136,6 +136,8 @@ static void state_comment (struct CSV_context *ctx)
          TRACE (3, "%s() reached EOF at rec: %u, line: %u, field: %u.\n",
                 __FUNCTION__, ctx->rec_num, ctx->line_num, ctx->field_num);
          ctx->state = STATE_EOF;
+         break;
+    case '\r':
          break;
     case '\n':
          ctx->line_num++;
@@ -288,7 +290,7 @@ quit:
 /**
  * Try to auto-detect the number of fields in the CSV-file.
  *
- * Open and parse the first line and count the number of delimiters.
+ * Open and parse the first non-comment line and count the number of delimiters.
  * If this line ends in a newline, this should count as the last field.
  * Hence increment by 1.
  *
@@ -297,15 +299,37 @@ quit:
  */
 static int CSV_autodetect_num_fields (struct CSV_context *ctx)
 {
-  unsigned num_fields = 0;
+  unsigned    num_fields = 0;
+  unsigned    line = 0;
+  uint32_t    BOM = 0;
   const char *delim, *next;
 
-  ctx->file = fopen (ctx->file_name, "rt");
+  ctx->file = fopen (ctx->file_name, "rb");
   if (!ctx->file)
      return (0);
 
-  if (!fgets(ctx->parse_buf, ctx->line_size, ctx->file))
-     return (0);
+  while (1)
+  {
+    if (!fgets(ctx->parse_buf, ctx->line_size, ctx->file))
+       return (0);
+
+    line++;
+
+    /* Handle an UTF-8 BOM at line 1
+     */
+    if (line == 1)
+    {
+      BOM = (BYTE)ctx->parse_buf[2] + ((BYTE)ctx->parse_buf[1] << 8) + ((BYTE)ctx->parse_buf[0] << 16);
+      TRACE (2, "BOM: 0x%06X.\n", BOM);
+      if (BOM == 0xEFBBEF || BOM == 0xEFBBBF)
+         ctx->BOM_found = TRUE;
+    }
+
+    /* Ignore comment lines
+     */
+    if (!strchr(ctx->parse_buf, '#'))
+       break;
+  }
 
   delim = ctx->parse_buf;
   while (*delim)
@@ -321,8 +345,9 @@ static int CSV_autodetect_num_fields (struct CSV_context *ctx)
     num_fields++;
   }
   ctx->num_fields = num_fields;
-  fseek (ctx->file, 0, SEEK_SET);
-  TRACE (1, "Auto-detected num_field %u.\n", num_fields);
+  fclose (ctx->file);
+  ctx->file = NULL;
+  TRACE (1, "Auto-detected num_field %u. BOM found: %d\n", num_fields, ctx->BOM_found);
   return (1);
 }
 
@@ -335,6 +360,8 @@ static int CSV_autodetect_num_fields (struct CSV_context *ctx)
  */
 static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
 {
+  ctx->BOM_found = FALSE;
+
   if (!ctx->delimiter)
      ctx->delimiter = ',';
 
@@ -370,13 +397,14 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     return (0);
   }
 
+  TRACE (2, "Opening file \"%s\".\n", ctx->file_name);
+
   if (ctx->num_fields == 0 && !CSV_autodetect_num_fields(ctx))
   {
     free (ctx->parse_buf);
     return (0);
   }
 
-  TRACE (2, "Opening file \"%s\".\n", ctx->file_name);
   ctx->file = fopen (ctx->file_name, "rt");
   if (!ctx->file)
   {
@@ -385,7 +413,7 @@ static int CSV_check_and_fill_ctx (struct CSV_context *ctx)
     return (0);
   }
 
-  if (setvbuf (ctx->file, NULL, _IOFBF, 2*ctx->line_size))
+  if (setvbuf(ctx->file, NULL, _IOFBF, 2*ctx->line_size))
      TRACE (1, "Failed to call 'setvbuf()' on \"%s\", errno: %d\n", ctx->file_name, errno);
 
   ctx->state_func = state_illegal;
