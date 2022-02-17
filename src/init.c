@@ -1746,12 +1746,12 @@ void get_color (const char *val, WORD *col)
     return;
   }
 
-  if (!strnicmp(val,"bright ",7))
+  if (!strnicmp(val, "bright ", 7))
   {
     fg |= FOREGROUND_INTENSITY;
     val += 7;
   }
-  else if (!strnicmp(val,"bold ",5))
+  else if (!strnicmp(val, "bold ", 5))
   {
     fg |= FOREGROUND_INTENSITY;
     val += 5;
