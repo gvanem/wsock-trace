@@ -70,6 +70,81 @@ static int __stdcall dummy_WSAGetLastError (void)
 void (__stdcall *g_WSASetLastError) (int err) = dummy_WSASetLastError;
 int  (__stdcall *g_WSAGetLastError) (void)    = dummy_WSAGetLastError;
 
+/**
+ * Keep a cache of socket-values and their associated data
+ * from `socket()` and `accept()`.
+ */
+static smartlist_t *sock_list = NULL;
+
+struct sock_list_entry {
+       SOCKET sock;
+       int    family;
+       int    type;
+       int    protocol;
+     };
+
+void sock_list_add (SOCKET sock, int family, int type, int protocol)
+{
+  struct sock_list_entry *se;
+
+  if (!sock_list)
+     return;
+
+  se = malloc (sizeof(*se));
+  if (!se)
+     return;
+
+  se->sock     = sock;
+  se->family   = family;
+  se->type     = type;
+  se->protocol = protocol;
+  smartlist_add (sock_list, se);
+}
+
+void sock_list_remove (SOCKET sock)
+{
+  int i, max = sock_list ? smartlist_len (sock_list) : 0;
+
+  for (i = 0; i < max; i++)
+  {
+    struct sock_list_entry *se = smartlist_get (sock_list, i);
+
+    if (sock == se->sock);
+    {
+      free (se);
+      smartlist_del (sock_list, i);
+      break;
+    }
+  }
+}
+
+static void sock_list_remove_all (void)
+{
+  if (sock_list)
+     smartlist_wipe (sock_list, free);
+  sock_list = NULL;
+}
+
+int sock_list_type (SOCKET sock, int *family, int *protocol)
+{
+  int i, max = sock_list ? smartlist_len (sock_list) : 0;
+
+  for (i = 0; i < max; i++)
+  {
+    const struct sock_list_entry *se = smartlist_get (sock_list, i);
+
+    if (sock == se->sock)
+    {
+      if (family)
+         *family = se->family;
+      if (protocol)
+         *protocol = se->protocol;
+      return (se->type);
+    }
+  }
+  return (-1);
+}
+
 /*
  * A cache of file-names with true casing as returned from
  * 'GetLongPathName()'. Use a 32-bit CRC value to lookup an
@@ -104,6 +179,7 @@ void common_init (void)
   tilde_escape = TRUE;
   trace_ptr = trace_buf;
   trace_end = trace_ptr + TRACE_BUF_SIZE - 1;
+  sock_list = smartlist_new();
 }
 
 void common_exit (void)
@@ -112,6 +188,7 @@ void common_exit (void)
      fname_cache_dump();
 
   fname_cache_free();
+  sock_list_remove_all();
   trace_ptr = trace_end = NULL;
 }
 

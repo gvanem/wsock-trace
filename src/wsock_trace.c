@@ -917,6 +917,9 @@ EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
 
   ENTER_CRIT();
 
+  if (rc != INVALID_SOCKET)
+     sock_list_add (rc, af, type, protocol);
+
   WSTRACE ("WSASocketA (%s, %s, %s, 0x%p, %d, %s) --> %s",
            socket_family(af), socket_type(type), protocol_name(protocol),
            proto_info, group, wsasocket_flags_decode(flags),
@@ -937,6 +940,9 @@ EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol,
 
   CHECK_PTR (p_WSASocketW);
   rc = (*p_WSASocketW) (af, type, protocol, proto_info, group, flags);
+
+  if (rc != INVALID_SOCKET)
+     sock_list_add (rc, af, type, protocol);
 
   ENTER_CRIT();
 
@@ -1461,12 +1467,20 @@ int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
 
 EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
 {
+  int    family, type, protocol;
   SOCKET rc;
 
   CHECK_PTR (p_accept);
   rc = (*p_accept) (s, addr, addr_len);
 
   ENTER_CRIT();
+
+  if (rc != INVALID_SOCKET)
+  {
+    type = sock_list_type (s, &family, &protocol);
+    if (type != -1)
+       sock_list_add (rc, family, type, protocol);
+  }
 
   WSTRACE ("accept (%s, %s) --> %s",
            socket_number(s),
@@ -1539,7 +1553,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
   TCP_INFO_v0 info;
   int  rc, rc2 = -1;
 
-  if (p_WSAIoctl && g_cfg.dump_tcpinfo)
+  if (p_WSAIoctl && g_cfg.dump_tcpinfo && sock_list_type(s, NULL, NULL) == SOCK_STREAM)
      get_tcp_info (s, &info, &rc2);
 
   CHECK_PTR (p_closesocket);
@@ -1550,6 +1564,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
   WSTRACE ("closesocket (%s) --> %s", socket_number(s), get_error(rc, 0));
 
   overlap_remove (s);
+  sock_list_remove (s);
 
   if (g_cfg.dump_tcpinfo)
      dump_tcp_info (&info, rc2);
@@ -2698,6 +2713,9 @@ EXPORT SOCKET WINAPI socket (int family, int type, int protocol)
   rc = (*p_socket) (family, type, protocol);
 
   ENTER_CRIT();
+
+  if (rc != INVALID_SOCKET)
+     sock_list_add (rc, family, type, protocol);
 
   WSTRACE ("socket (%s, %s, %s) --> %s",
            socket_family(family), socket_type(type), protocol_name(protocol),

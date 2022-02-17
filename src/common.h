@@ -206,6 +206,10 @@ extern const char *get_dll_short_name (void);
 extern const char *get_dll_build_date (void);
 extern const char *get_builder (BOOL show_dbg_rel);
 
+extern void sock_list_add (SOCKET sock, int family, int type, int protocol);
+extern void sock_list_remove (SOCKET sock);
+extern int  sock_list_type (SOCKET sock, int *family, int *protocol);
+
 #if defined(__CYGWIN__)
   extern char *_itoa (int value, char *buf, int radix);
   extern char *_ultoa (unsigned long value, char *buf, int radix);
