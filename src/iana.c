@@ -241,7 +241,6 @@ static void iana_load_and_parse (int family, const char *file, const char *cfg_s
 
   memset (&ctx, '\0', sizeof(ctx));
   ctx.file_name  = file;
-  ctx.num_fields = 7;
   ctx.delimiter  = ',';
   ctx.callback   = family == AF_INET ? iana_CSV_add4 : iana_CSV_add6;
   ctx.rec_max = rec_max;

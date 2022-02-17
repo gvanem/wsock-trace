@@ -128,7 +128,7 @@ void ASN_init (void)
  * \param[in] file  the CSV file to read and parse.
  *
  * \note The `ASN_entries` is *not* sorted on IPv4 low/high range since
- *       the .CSV-file the records are read from, is assumed to be sorted.
+ *       the .CSV-records are assumed to be already sorted.
  */
 static size_t ASN_load_CSV_file (const char *file)
 {
@@ -147,7 +147,6 @@ static size_t ASN_load_CSV_file (const char *file)
 
   memset (&ctx, '\0', sizeof(ctx));
   ctx.file_name  = file;
-  ctx.num_fields = 5;
   ctx.callback   = ASN_CSV_add;
 
   return CSV_open_and_parse_file (&ctx);
@@ -355,8 +354,8 @@ void ASN_update_file (const char *db_file, BOOL force_update)
     if (st.st_size && st.st_mtime > expiry)
     {
       when = now + g_cfg.ASN.max_days * 24 * 3600;
-      TRACE (0, "Update of \"%s\" not needed until \"%.24s\"\n"
-                "            Use option '-f' to force an update\n",
+      TRACE (0, "Update of \"%s\" not needed until \"%.24s\".\n"
+                "            Use option '-f' to force an update.\n",
              db_file, ctime(&when));
       return;
     }
@@ -903,7 +902,7 @@ void ASN_dump (void)
 
   if (!ASN_entries)
   {
-    trace_printf ("[asn:asn_csv_file] seems to be missing?!\n");
+    trace_puts ("[asn:asn_csv_file] seems to be missing?!\n");
     return;
   }
 
