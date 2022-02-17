@@ -401,7 +401,7 @@ void ASN_update_file (const char *db_file, BOOL force_update)
  * Check for latest version of the `libloc` database
  * using a `TXT _v1._db.location.ipfire.org` DNS query.
  */
-static int ASN_check_database (const char *local_db)
+static int ASN_check_database (const char *local_db, int from_v_cmd)
 {
   struct stat st;
   time_t time_local_db = 0;
@@ -412,7 +412,7 @@ static int ASN_check_database (const char *local_db)
 
   if (loc_discover_latest_version(libloc.ctx, LOC_DATABASE_VERSION_LATEST, &time_remote_db) != 0)
   {
-    TRACE (1, "Could not check IPFire's database time-stamp.\n");
+    TRACE (1 - from_v_cmd, "Could not check IPFire's database time-stamp.\n");
     return (0);
   }
 
@@ -429,18 +429,19 @@ static int ASN_check_database (const char *local_db)
     }
   }
 
-  TRACE (1, "IPFire's latest database time-stamp: %.24s (UTC)\n"
-            "            It should be at: %s\n"
-            "            Your local database is %sup-to-date.%s\n",
-            ctime(&time_remote_db), ASN_get_url(), older ? "not " : "", days_behind);
+  TRACE (1 - from_v_cmd,
+         "IPFire's latest database time-stamp: %.24s (UTC)\n"
+         "            It should be at: %s\n"
+         "            Your local database is %sup-to-date.%s\n",
+         ctime(&time_remote_db), ASN_get_url(), older ? "not " : "", days_behind);
 
   time_local_db += _timezone;
 
 #if defined(__CYGWIN__) /* Cygwin doesn't always set '_tzname[0]' */
-  TRACE (1, "local time-stamp: %.24s\n", ctime(&time_local_db));
+  TRACE (1 - from_v_cmd, "local time-stamp: %.24s\n", ctime(&time_local_db));
   ARGSUSED (zone);
 #else
-  TRACE (1, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
+  TRACE (1 - from_v_cmd, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
 #endif
   return (1);
 }
@@ -559,7 +560,7 @@ static size_t ASN_load_bin_file (const char *file)
   if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_FOLDER"))
   {
     ASN_print_libloc_version();
-    ASN_check_database (file);
+    ASN_check_database (file, 0);
   }
 
   err = loc_database_new (libloc.ctx, &libloc.db, libloc.file);
@@ -1006,7 +1007,7 @@ int asn_main (int argc, char **argv)
   else if (do_version)
   {
     ASN_print_libloc_version();
-    ASN_check_database (g_cfg.ASN.asn_bin_file);
+    ASN_check_database (g_cfg.ASN.asn_bin_file, 1);
   }
   else
     show_help();
