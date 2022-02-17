@@ -1358,7 +1358,7 @@ static const struct search_list wsapollfd_flgs[] = {
                   };
 
 /**
- * For `dump_tcp_info()`:
+ * For `dump_tcp_info_v0()`:
  */
 static const struct search_list tcp_states[] = {
            {  0, "CLOSED"      },
@@ -1762,7 +1762,7 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
 /**
  * Print the `TCP_INFO_v0` structure obtained in `closesocket()`.
  */
-void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
+void dump_tcp_info_v0 (const TCP_INFO_v0 *info, int err_code)
 {
   trace_printf ("%*s~4TCP_INFO: ", g_cfg.trace_indent+2, "");
 
@@ -1802,6 +1802,21 @@ void dump_tcp_info (const TCP_INFO_v0 *info, int err_code)
                 dword_str(info->FastRetrans),
                 dword_str(info->TimeoutEpisodes),
                 info->SynRetrans);
+}
+
+/**
+ * \todo
+ * Print the `TCP_INFO_v1` structure obtained in `closesocket()`.
+ *
+ * Windows 10, build 20348 (or newer) is needed to obtain a
+ * `TCP_INFO_v1` structure.
+ *
+ * Ref: https://docs.microsoft.com/en-us/windows/win32/api/mstcpip/ns-mstcpip-tcp_info_v1#requirements
+ */
+void dump_tcp_info_v1 (const TCP_INFO_v1 *info, int err_code)
+{
+  ARGSUSED (info);
+  ARGSUSED (err_code);
 }
 
 static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out, int *added_p)
