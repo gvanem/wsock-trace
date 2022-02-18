@@ -292,6 +292,45 @@ static void DNSBL_dump (void)
   }
 }
 
+/**
+ * Test a single IPv4/6 address for DNSBL-membership.
+ */
+static int DNSBL_test_single (const char *addr_str)
+{
+  char addr_buf [MAX_IP6_SZ+3];
+  union {
+    struct in_addr  ip4;
+    struct in6_addr ip6;
+  } addr;
+  const char *sbl_ref = NULL;
+  const char *remark;
+  int   special, rc;
+
+  snprintf (addr_buf, sizeof(addr_buf), "\"%s\"", addr_str);
+  if (ws_inet_pton(AF_INET, addr_str, &addr.ip4, NULL) == 1)
+  {
+    special = INET_util_addr_is_special (&addr.ip4, NULL, &remark);
+    rc = DNSBL_check_common (&addr.ip4, NULL, &sbl_ref);
+  }
+  else if (ws_inet_pton(AF_INET6, addr_str, &addr.ip6, NULL) == 1)
+  {
+    special = INET_util_addr_is_special (NULL, &addr.ip6, &remark);
+    rc = DNSBL_check_common (NULL, &addr.ip6, &sbl_ref);
+  }
+  else
+  {
+    C_printf ("Invalid address: %s.\n", addr_buf);
+    return (0);
+  }
+
+  if (special)
+     C_printf ("Address: %s is special; %s.\n", addr_buf, remark);
+  else if (sbl_ref)
+       C_printf ("Address: %s is listed as %s.\n", addr_buf, sbl_ref);
+  else C_printf ("Address: %s is not listed in any block-list.\n", addr_buf);
+  return (rc);
+}
+
 /*
  * Test some lines from drop.txt:
  *   108.166.224.0/19 ; SBL235333
@@ -318,7 +357,7 @@ struct test_list {
        const char *sbl_ref;
      };
 
-int DNSBL_test (void)
+static int DNSBL_test (const char *addr_str)
 {
   int    i;
   BOOL   rc;
@@ -335,6 +374,9 @@ int DNSBL_test (void)
                     { AF_INET6, "2607:d100::1",  "347495" }
                   };
   const struct test_list *test = tests;
+
+  if (addr_str)
+     return DNSBL_test_single (addr_str);
 
   /* Save some colors and temporary change them
    */
@@ -637,10 +679,11 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
  */
 static int show_help (void)
 {
-  printf ("Usage: %s [-Dftu]\n"
+  printf ("Usage: %s [-Dftu] <address>\n"
           "       -D:  run 'DNSBL_dump()' to dump the DNSBL list.\n"
           "       -f:  force an update with the '-u' option.\n"
           "       -t:  run 'DNSBL_test()' for a simple test.\n"
+          "            if an <address> is specified, test that.\n"
           "       -u:  update the SpamHaus' 'DROP.txt', 'DROPv6.txt' and 'EDROP.txt' files.\n",
           program_name);
   return (0);
@@ -673,21 +716,20 @@ int dnsbl_main (int argc, char **argv)
             return show_help();
   }
 
+  if (do_test || do_dump || do_update)
+     g_cfg.DNSBL.enable = 1;
+
+  argc -= optind;
+  argv += optind;
+
   if (do_test)
-  {
-    g_cfg.DNSBL.enable = 1;
-    DNSBL_test();
-  }
+     DNSBL_test (*argv);
   else if (do_dump)
-  {
-    g_cfg.DNSBL.enable = 1;
-    DNSBL_dump();
-  }
+     DNSBL_dump();
   else if (do_update)
   {
     int save = g_cfg.trace_level;
 
-    g_cfg.DNSBL.enable = 1;
     g_cfg.trace_level = 2;
     DNSBL_update_files (do_force);
     g_cfg.trace_level = save;
