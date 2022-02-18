@@ -23,7 +23,7 @@ struct ASN_addr6 {
 struct ASN_record {
        int    family;           /**< The address-family of this node. Only `AF_INET` supported at the moment */
        int    prefix;           /**< The network prefix for this block */
-       u_long as_number;        /**< The AS-number of this node */
+       u_long as_number;        /**< The AS-number of this node (0 means unknown) */
        char   as_name[100];     /**< The AS-name of this node */
        union {
          struct ASN_addr4 ipv4; /**< The IPv4 address of this node */
@@ -36,7 +36,6 @@ typedef int (*str_put_func) (const char *str);
 extern void ASN_init   (void);
 extern void ASN_exit   (void);
 extern void ASN_report (void);
-extern void ASN_dump   (void);
 extern void ASN_print  (const char *intro, const struct IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6);
 extern int  ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func func);
 extern void ASN_update_file  (const char *db_file, BOOL force_update);

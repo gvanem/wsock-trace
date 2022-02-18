@@ -9,6 +9,8 @@
  *
  * asn.c - Part of Wsock-Trace.
  */
+#include <math.h>
+
 #include "common.h"
 #include "csv.h"
 #include "getopt.h"
@@ -22,6 +24,7 @@
 
 #if defined(__CYGWIN__)
   #include <sys/cygwin.h>
+  #include <fnmatch.h>
 
   #ifndef _WIN32
   #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/libloc/libloc.h' only */
@@ -893,19 +896,27 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
                  iana->status);
 }
 
+static BOOL ASN_match (const struct ASN_record *rec, const char *spec)
+{
+  char AS_num_str [20];
+
+  if (!spec || (rec->as_number == 0 && !strcmp(spec, "0"))) /* match all or the unknowns */
+     return (TRUE);
+
+  _ultoa (rec->as_number, AS_num_str, 10);
+  return (fnmatch(spec, AS_num_str, FNM_NOESCAPE) == 0);
+}
+
 /*
  * Handles only IPv4 addresses now.
  */
-void ASN_dump (void)
+static void ASN_dump (const char *spec)
 {
-  int i, num;
+  int   i, max = ASN_entries ? smartlist_len (ASN_entries) : 0;
+  int   width = (max > 0) ? (int)log10 ((double)max) : 3;
+  DWORD no_match = 0;
 
-  num = ASN_entries ? smartlist_len (ASN_entries) : 0;
-
-  C_printf ("\nParsed %s records from \"%s\":\n"
-            "  Num.  Low              High             Pfx     ASN  Name\n"
-            "-------------------------------------------------------------------\n",
-            dword_str(num), g_cfg.ASN.asn_csv_file ? g_cfg.ASN.asn_csv_file : "<none>");
+  C_printf ("Dumping AS numbers matching \"%s\".\n", spec ? spec : "all");
 
   if (!ASN_entries)
   {
@@ -913,21 +924,35 @@ void ASN_dump (void)
     return;
   }
 
-  for (i = 0; i < num; i++)
+  C_printf ("\nParsed %s records from \"%s\":\n"
+            "%*sNum.  Low              High             Pfx     ASN  Name\n"
+            "--------------------------------------------------------------------------\n",
+            dword_str(max), g_cfg.ASN.asn_csv_file ? g_cfg.ASN.asn_csv_file : "<none>",
+            width-1, "");
+
+  for (i = 0; i < max; i++)
   {
     const struct ASN_record *rec = smartlist_get (ASN_entries, i);
     char  low_str [MAX_IP4_SZ];
     char  high_str[MAX_IP4_SZ];
 
-    if (ws_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
-        ws_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
+    if (!ASN_match(rec, spec))
     {
-      C_printf ("  %3d:  %-14.14s - %-14.14s    %2d  ", i, low_str, high_str, rec->prefix);
+      no_match++;
+      continue;
+    }
+
+    if (ws_inet_ntop(AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
+        ws_inet_ntop(AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
+    {
+      C_printf ("  %*d:  %-14.14s - %-14.14s    %2d  ", width, i, low_str, high_str, rec->prefix);
       C_printf ("%6lu  %s\n", rec->as_number, rec->as_name);
     }
     else
-      C_printf ("  %3d: <bogus>\n", i);
+      C_printf ("  %*d: <bogus>\n", width, i);
   }
+  if (no_match > 0)
+     C_printf ("  %lu matches for \"%s\" out of %d.\n", (DWORD)max - no_match, spec, max);
 }
 
 /**
@@ -963,12 +988,12 @@ void ASN_report (void)
  */
 static int show_help (void)
 {
-  printf ("Usage: %s [-Dftuv]\n"
-          "       -D:  run 'ASN_dump()' to dump the list of AS'es.\n"
-          "       -f:  force an update with the '-u' option.\n"
-          "       -u:  update the IPFire database-file.\n"
-          "       -v:  show version of IPFire database and libloc library version.\n",
-          program_name);
+  printf ("Usage: %s [-D <spec>] [-ftuv]\n"
+          "       -D <spec>: dump the list of AS'es. Or only those matching <spec>.\n"
+          "       -f:        force an update with the '-u' option.\n"
+          "       -u:        update the IPFire database-file.\n"
+          "       -v:        show version of IPFire database and libloc library version.\n"
+          "  Option '-D' accepts a range. E.g. 'ws_tool asn -D 10[2-4]*'\n", program_name);
   return (0);
 }
 
@@ -999,10 +1024,13 @@ int asn_main (int argc, char **argv)
             return show_help();
   }
 
+  argc -= optind;
+  argv += optind;
+
   if (do_dump)
   {
     g_cfg.ASN.enable = 1;
-    ASN_dump();
+    ASN_dump (*argv);
   }
   else if (do_update)
   {

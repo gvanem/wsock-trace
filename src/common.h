@@ -215,6 +215,16 @@ extern int  sock_list_type (SOCKET sock, int *family, int *protocol);
   extern char *_ultoa (unsigned long value, char *buf, int radix);
   extern int   _kbhit (void);
   extern int   _getch (void);
+#else
+  /*
+   * fnmatch() for non-Cygwin:
+   */
+  #define FNM_NOMATCH   1
+  #define FNM_NOESCAPE  0x01
+  #define FNM_PATHNAME  0x02
+  #define FNM_CASEFOLD  0x04
+
+  extern int fnmatch (const char *pattern, const char *string, int flags);
 #endif
 
 #ifndef AF_UNIX

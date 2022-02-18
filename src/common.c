@@ -546,7 +546,7 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
     }
     return (0);
   }
-#endif
+#endif /* __CYGWIN__ */
 
 /*
  * 'unsigned int' to string with leading zeros specified in 'width'.
@@ -1784,6 +1784,161 @@ int ws_setenv (const char *env, const char *val, int overwrite)
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
   return (rc);
 }
+
+#if !defined(__CYGWIN__)
+/**
+ * Find the first slash in a file-name.
+ * \param[in] s the file-name to search in.
+ */
+static const char *find_slash (const char *s)
+{
+  while (*s)
+  {
+    if (IS_SLASH(*s))
+       return (s);
+    s++;
+  }
+  return (NULL);
+}
+
+/**
+ * Test a character `test` for match of a `pattern`.
+ * For a `pattern == "!x"`, check if `test != x`.
+ */
+static const char *range_match (const char *pattern, char test, int nocase)
+{
+  char c, c2;
+  int  negate, ok;
+
+  negate = (*pattern == '!');
+  if (negate)
+     ++pattern;
+
+  for (ok = 0; (c = *pattern++) != ']'; )
+  {
+    if (c == 0)
+       return (0);    /* illegal pattern */
+
+    if (*pattern == '-' && (c2 = pattern[1]) != 0 && c2 != ']')
+    {
+      if (c <= test && test <= c2)
+         ok = 1;
+      if (nocase &&
+          TOUPPER(c)    <= TOUPPER(test) &&
+          TOUPPER(test) <= TOUPPER(c2))
+         ok = 1;
+      pattern += 2;
+    }
+    else if (c == test)
+      ok = 1;
+    else if (nocase && (TOUPPER(c) == TOUPPER(test)))
+      ok = 1;
+  }
+  return (ok == negate ? NULL : pattern);
+}
+
+/**
+ * File-name match.
+ * Match a `string` against a `pattern` for a match.
+ */
+int fnmatch (const char *pattern, const char *string, int flags)
+{
+  char c, test;
+
+  while (1)
+  {
+    c = *pattern++;
+
+    switch (c)
+    {
+      case 0:
+           return (*string == 0 ? 0 : FNM_NOMATCH);
+
+      case '?':
+           test = *string++;
+           if (test == 0 || (IS_SLASH(test) && (flags & FNM_PATHNAME)))
+              return (FNM_NOMATCH);
+           break;
+
+      case '*':
+           c = *pattern;
+           /* collapse multiple stars */
+           while (c == '*')
+               c = *(++pattern);
+
+           /* optimize for pattern with '*' at end or before '/' */
+           if (c == 0)
+           {
+             if (flags & FNM_PATHNAME)
+                return (find_slash(string) ? FNM_NOMATCH : 0);
+             return (0);
+           }
+           if (IS_SLASH(c) && (flags & FNM_PATHNAME))
+           {
+             string = find_slash (string);
+             if (!string)
+                return (FNM_NOMATCH);
+             break;
+           }
+
+           /* general case, use recursion */
+           while ((test = *string) != '\0')
+           {
+             if (fnmatch(pattern, string, flags) == 0)
+                return (0);
+             if (IS_SLASH(test) && (flags & FNM_PATHNAME))
+                break;
+             ++string;
+           }
+           return (FNM_NOMATCH);
+
+      case '[':
+           test = *string++;
+           if (!test || (IS_SLASH(test) && (flags & FNM_PATHNAME)))
+              return (FNM_NOMATCH);
+           pattern = range_match (pattern, test, flags | FNM_CASEFOLD);
+           if (!pattern)
+              return (FNM_NOMATCH);
+           break;
+
+      case '\\':
+           if (!(flags & FNM_NOESCAPE) && pattern[1] && strchr("*?[\\", pattern[1]))
+           {
+             c = *pattern++;
+             if (c == 0)
+             {
+               c = '\\';
+               --pattern;
+             }
+             if (c != *string++)
+                return (FNM_NOMATCH);
+             break;
+           }
+           #if defined(__clang__) && (__clang_major__ >= 10)
+           __attribute__((fallthrough));
+           #endif
+
+      default:
+           if (IS_SLASH(c) && IS_SLASH(*string))
+           {
+             string++;
+             break;
+           }
+           if (flags & FNM_CASEFOLD)
+           {
+             if (TOUPPER(c) != TOUPPER(*string++))
+                return (FNM_NOMATCH);
+           }
+           else
+           {
+             if (c != *string++)
+                return (FNM_NOMATCH);
+           }
+           break;
+    } /* switch (c) */
+  }   /* while (1) */
+}
+#endif /* __CYGWIN__ */
 
 /*
  * These CRC functions are derived from code in chapter 19 of the book
