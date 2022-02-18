@@ -2940,7 +2940,7 @@ void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out
   _dump_events (TRUE, out_events);
 }
 
-void dump_DNSBL (int type, const char **addresses)
+void dump_DNSBL (int family, const char **addresses)
 {
   int num;
 
@@ -2950,9 +2950,9 @@ void dump_DNSBL (int type, const char **addresses)
     const struct in6_addr *ia6 = (const struct in6_addr*) addresses[num];
     const char            *sbl_ref = NULL;
 
-    if (type == AF_INET)
+    if (family == AF_INET)
          DNSBL_check_ipv4 (ia4, &sbl_ref);
-    else if (type == AF_INET6)
+    else if (family == AF_INET6)
          DNSBL_check_ipv6 (ia6, &sbl_ref);
     if (sbl_ref)
        C_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
