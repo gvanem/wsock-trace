@@ -451,7 +451,7 @@ struct test_table {
  *  exp2  1022/udp/tcp/dccp/sctp   # RFC3692-style Experiment 2
  * ```
  */
-static const struct test_table tests[] = {
+static const struct test_table services_tests[] = {
                  { "bgp",   179,  "tcp",  &ret_fill_servent },
                  { "bgp",   179,  "udp",  &ret_fill_servent },
                  { "bgp",   179,  "sctp", &ret_fill_servent },
@@ -478,21 +478,21 @@ static void services_run_tests (void)
   get_color ("bright green", &g_cfg.color_data);
   get_color ("bright red", &g_cfg.color_func);
 
-  C_puts ("\nRunning ~2tests[]~0:\n");
+  C_puts ("\nRunning ~2services_tests[]~0:\n");
 
   if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
        fallback = TRUE;
   else fallback = FALSE;
 
-  for (i = 0; i < DIM(tests); i++)
+  for (i = 0; i < DIM(services_tests); i++)
   {
-    const struct servent *se = ws_getservbyport (swap16(tests[i].port),
-                                                 tests[i].protocol, fallback, TRUE);
-    BOOL match = (se == tests[i].expect);
+    const struct servent *se = ws_getservbyport (swap16(services_tests[i].port),
+                                                 services_tests[i].protocol, fallback, TRUE);
+    BOOL match = (se == services_tests[i].expect);
 
     C_printf ("~2%2d~0: %-4s/%5s: %s~0\n", i,
-              tests[i].service,
-              tests[i].protocol ? tests[i].protocol : "NULL",
+              services_tests[i].service,
+              services_tests[i].protocol ? services_tests[i].protocol : "NULL",
               match ? "~4OKAY" : "~5FAIL");
     if (se)
          C_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
