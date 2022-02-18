@@ -168,17 +168,17 @@ static DWORD crc_bytes (const char *buf, size_t len);
 
 /* \todo: these should be "Thread Local" variables.
  */
-static char *trace_ptr, *trace_end;
-static char  trace_buf [TRACE_BUF_SIZE];
+static char *C_ptr, *C_end;
+static char  C_buf [TRACE_BUF_SIZE];
 
-static BOOL tilde_escape = TRUE;
-static BOOL trace_get_color = FALSE;
+static BOOL C_tilde_escape = TRUE;
+static BOOL C_get_color = FALSE;
 
 void common_init (void)
 {
-  tilde_escape = TRUE;
-  trace_ptr = trace_buf;
-  trace_end = trace_ptr + TRACE_BUF_SIZE - 1;
+  C_tilde_escape = TRUE;
+  C_ptr = C_buf;
+  C_end = C_ptr + TRACE_BUF_SIZE - 1;
   sock_list = smartlist_new();
 }
 
@@ -189,7 +189,7 @@ void common_exit (void)
 
   fname_cache_free();
   sock_list_remove_all();
-  trace_ptr = trace_end = NULL;
+  C_ptr = C_end = NULL;
 }
 
 #define ADD_VALUE(code,str) { code, #code, str }
@@ -1192,10 +1192,10 @@ static void fname_cache_dump (void)
   {
     const struct file_name_entry *fn = smartlist_get (fname_list, i);
 
-    trace_printf ("%2d: orig: '%s'\n"
-                  "    real: '%s',   CRC32: 0x%08lX\n",
-                  i, fn->orig_name, fn->real_name,
-                  DWORD_CAST(fn->crc32));
+    C_printf ("%2d: orig: '%s'\n"
+              "    real: '%s',   CRC32: 0x%08lX\n",
+              i, fn->orig_name, fn->real_name,
+              DWORD_CAST(fn->crc32));
   }
 }
 
@@ -1234,10 +1234,10 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   g_cfg.trace_indent = 0;
 
   if (g_cfg.show_caller && file)
-     trace_printf ("%s(%u): ", basename(file), line);
+     C_printf ("%s(%u): ", basename(file), line);
 
   va_start (args, fmt);
-  trace_vprintf (fmt, args);
+  C_vprintf (fmt, args);
   va_end (args);
 
   g_cfg.trace_raw    = save1;
@@ -1248,21 +1248,21 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 /**
  * Indent a printed line to `indent` spaces.
  */
-int trace_indent (size_t indent)
+int C_indent (size_t indent)
 {
   int rc = 0;
 
   while (indent--)
-    rc += trace_putc_raw (' ');
+    rc += C_putc_raw (' ');
   return (rc);
 }
 
 /**
  * Write out the trace-buffer.
  */
-size_t trace_flush (void)
+size_t C_flush (void)
 {
-  size_t len = trace_ptr - trace_buf;
+  size_t len = C_ptr - C_buf;
   size_t written = len;
 
   assert (len <= TRACE_BUF_SIZE);
@@ -1271,8 +1271,8 @@ size_t trace_flush (void)
 
   if (g_cfg.trace_use_ods)
   {
-    *trace_ptr = '\0';
-    OutputDebugStringA (trace_buf);
+    *C_ptr = '\0';
+    OutputDebugStringA (C_buf);
   }
   else if (g_cfg.trace_stream)
   {
@@ -1280,15 +1280,15 @@ size_t trace_flush (void)
      * Use 'fwrite()' (a bit slower than '_write()') so the Lua-output
      * written using 'io.write()' is in sync with our trace-output.
      */
-    written = (int) fwrite (trace_buf, 1, (size_t)len, g_cfg.trace_stream);
+    written = (int) fwrite (C_buf, 1, (size_t)len, g_cfg.trace_stream);
   }
-  trace_ptr = trace_buf;   /* restart buffer */
+  C_ptr = C_buf;   /* restart buffer */
 
   ws_sema_release();
   return (written);
 }
 
-int trace_printf (const char *fmt, ...)
+int C_printf (const char *fmt, ...)
 {
   char    buf [2000];
   int     l1, l2;
@@ -1297,51 +1297,51 @@ int trace_printf (const char *fmt, ...)
   va_start (args, fmt);
 
 #if 0  /* todo ? */
-  l2 = vsnprintf (trace_ptr, trace_end - trace_ptr - 1, fmt, args);
-  l1 = trace_puts (trace_ptr);
-  trace_ptr += l2;
+  l2 = vsnprintf (C_ptr, C_end - C_ptr - 1, fmt, args);
+  l1 = C_puts (C_ptr);
+  C_ptr += l2;
 #else
   l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
-  l1 = trace_puts (buf);
+  l1 = C_puts (buf);
 #endif
 
   if (l1 < l2)
-    FATAL ("l1: %d, l2: %d. trace_buf: '%.*s',\nbuf: '%s'\n",
-           l1, l2, (int)(trace_ptr - trace_buf), trace_buf, buf);
+    FATAL ("l1: %d, l2: %d. C_buf: '%.*s',\nbuf: '%s'\n",
+           l1, l2, (int)(C_ptr - C_buf), C_buf, buf);
 
   va_end (args);
   return (l2);
 }
 
-int trace_vprintf (const char *fmt, va_list args)
+int C_vprintf (const char *fmt, va_list args)
 {
   char buf [2000];
   int  l1, l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
 
-  l1 = trace_puts (buf);
+  l1 = C_puts (buf);
   if (l1 < l2)
-    FATAL ("l1: %d, l2: %d. trace_buf: '%.*s',\nbuf: '%s'\n",
-           l1, l2, (int)(trace_ptr - trace_buf), trace_buf, buf);
+    FATAL ("l1: %d, l2: %d. C_buf: '%.*s',\nbuf: '%s'\n",
+           l1, l2, (int)(C_ptr - C_buf), C_buf, buf);
 
   return (l2);
 }
 
-int trace_putc (int ch)
+int C_putc (int ch)
 {
   int rc = 0;
 
-  if (!trace_ptr || !trace_end)
+  if (!C_ptr || !C_end)
      return (0);
 
-  assert (trace_ptr >= trace_buf);
-  assert (trace_ptr < trace_end-1);
+  assert (C_ptr >= C_buf);
+  assert (C_ptr < C_end-1);
 
-  if (tilde_escape && trace_get_color && !g_cfg.trace_raw)
+  if (C_tilde_escape && C_get_color && !g_cfg.trace_raw)
   {
     const WORD *color;
     int         col_idx;
 
-    trace_get_color = FALSE;
+    C_get_color = FALSE;
 
     /* If we got "~~", print a single "~"
     */
@@ -1383,73 +1383,73 @@ int trace_putc (int ch)
            if (ch == ' ')
               return (1);
 #endif
-           trace_flush();
-           FATAL ("Illegal color index %d ('%c'/0x%02X) in trace_buf: '%.*s'\n",
-                  col_idx, ch, ch, (int)(trace_ptr - trace_buf), trace_buf);
+           C_flush();
+           FATAL ("Illegal color index %d ('%c'/0x%02X) in C_buf: '%.*s'\n",
+                  col_idx, ch, ch, (int)(C_ptr - C_buf), C_buf);
            break;
     }
 
     if (!g_cfg.trace_use_ods)
     {
-      trace_flush();
+      C_flush();
       set_color (color);
     }
     return (1);
   }
 
-  if (tilde_escape && ch == '~' && !g_cfg.trace_raw)
+  if (C_tilde_escape && ch == '~' && !g_cfg.trace_raw)
   {
-    trace_get_color = TRUE;
+    C_get_color = TRUE;
     return (1);
   }
 
   if (ch == '\n' && (g_cfg.trace_binmode || g_cfg.trace_use_ods))
   {
-    if ((trace_ptr == trace_buf) ||
-        (trace_ptr > trace_buf && trace_ptr[-1] != '\r'))
+    if ((C_ptr == C_buf) ||
+        (C_ptr > C_buf && C_ptr[-1] != '\r'))
     {
-      *trace_ptr++ = '\r';
+      *C_ptr++ = '\r';
       rc++;
     }
   }
 
 put_it:
-  *trace_ptr++ = ch;
+  *C_ptr++ = ch;
   rc++;
 
-  if (ch == '\n' || trace_ptr >= trace_end)
-     trace_flush();
+  if (ch == '\n' || C_ptr >= C_end)
+     C_flush();
   return (rc);
 }
 
-int trace_putc_raw (int ch)
+int C_putc_raw (int ch)
 {
   int  rc;
-  BOOL save = tilde_escape;
+  BOOL save = C_tilde_escape;
 
-  tilde_escape = FALSE;
-  rc = trace_putc (ch);
-  tilde_escape = save;
+  C_tilde_escape = FALSE;
+  rc = C_putc (ch);
+  C_tilde_escape = save;
   return (rc);
 }
 
-int trace_puts_raw (const char *str)
+int C_puts_raw (const char *str)
 {
   int  rc;
-  BOOL save = tilde_escape;
+  BOOL save = C_tilde_escape;
 
-  tilde_escape = FALSE;
-  rc = trace_puts (str);
-  tilde_escape = save;
+  C_tilde_escape = FALSE;
+  rc = C_puts (str);
+  C_tilde_escape = save;
   return (rc);
 }
 
-int trace_puts (const char *str)
+int C_puts (const char *str)
 {
   int ch, rc = 0;
 
   for (rc = 0; (ch = *str) != '\0'; str++)
-      rc += trace_putc (ch);
+      rc += C_putc (ch);
   return (rc);
 }
 
@@ -1460,7 +1460,7 @@ int trace_puts (const char *str)
  *
  * Used e.g. when firewall.c calls `getservbyport()` to prevent a `WSTRACE()` for it.
  */
-int trace_level_save_restore (int pop)
+int C_level_save_restore (int pop)
 {
   static int val = 0;
 

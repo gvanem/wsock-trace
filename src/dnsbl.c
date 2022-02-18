@@ -266,8 +266,8 @@ static void DNSBL_dump (void)
   const char *head_fmt = "%4s  SBL%-6s  %-20s %-20s %s\n";
   const char *line_fmt = "%4d: SBL%-6s  %-20s %-20s %s\n";
 
-  trace_puts ("DNSBL_dump():\n");
-  trace_printf (head_fmt, "Num", "-ref", "Network", "Mask", "Type");
+  C_puts ("DNSBL_dump():\n");
+  C_printf (head_fmt, "Num", "-ref", "Network", "Mask", "Type");
 
   for (i = 0; i < max; i++)
   {
@@ -287,8 +287,8 @@ static void DNSBL_dump (void)
       _wsock_trace_inet_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask, sizeof(mask), NULL);
     }
     snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->bits);
-    trace_printf (line_fmt, i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>",
-                  cidr, mask, DNSBL_type_name(dnsbl->type));
+    C_printf (line_fmt, i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>",
+              cidr, mask, DNSBL_type_name(dnsbl->type));
   }
 }
 
@@ -351,7 +351,7 @@ int DNSBL_test (void)
   if (g_cfg.DNSBL.dropv6_file && file_exists(g_cfg.DNSBL.dropv6_file))
      INET_util_test_mask6();
 
-  trace_puts ("Running ~2DNSBL_test():~0\n");
+  C_puts ("Running ~2DNSBL_test():~0\n");
   for (i = rc = 0; i < DIM(tests); i++, test++)
   {
     union {
@@ -387,8 +387,8 @@ int DNSBL_test (void)
     if (res)
        rc++;
 
-    trace_printf ("~1%-15s~0 -> %d, ~1SBL%-7s~0 %s~0  country: %s, location: %s~0\n",
-                  test->addr, res, sbl_ref, okay, country_code, location);
+    C_printf ("~1%-15s~0 -> %d, ~1SBL%-7s~0 %s~0  country: %s, location: %s~0\n",
+              test->addr, res, sbl_ref, okay, country_code, location);
   }
   g_cfg.color_trace = save1;
   g_cfg.color_data  = save4;

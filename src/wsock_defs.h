@@ -271,7 +271,7 @@
 #elif defined(__MINGW32__)
   /*
    * I want the MSVC version of vsnprintf() since there is some trouble
-   * with MinGW's version in trace_printf(). No idea what.
+   * with MinGW's version in C_printf(). No idea what.
    */
   #define vsnprintf _vsnprintf
 #endif

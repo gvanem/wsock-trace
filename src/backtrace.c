@@ -323,7 +323,7 @@ struct thread_arg {
         {                                                         \
           struct thread_arg args = *(struct thread_arg*) a;       \
                                                                   \
-          trace_printf ("%s() called from line %u.\n",            \
+          C_printf ("%s() called from line %u.\n",                \
                         __FUNCTION__, args.line);                 \
           args.line = __LINE__; /* since this macro is 1 line! */ \
           foo_##_next (&args);                                    \
@@ -336,7 +336,7 @@ DWORD WINAPI foo_last (void *arg)
   char  *rc;
   int    i, err;
 
-  trace_printf ("%s() called from line %u.\n", __FUNCTION__, ta.line);
+  C_printf ("%s() called from line %u.\n", __FUNCTION__, ta.line);
 
   if (test_vm_bug)
   {
@@ -354,13 +354,13 @@ DWORD WINAPI foo_last (void *arg)
      free (rc);
 #endif
 
-  trace_puts ("Call-stack:\n");
+  C_puts ("Call-stack:\n");
   fflush (stdout);
 
   for (i = 1; i < 12; i++)
   {
     rc = get_caller (i, &err);
-    trace_printf ("  %s\n", rc);
+    C_printf ("  %s\n", rc);
 #if USE_STRDUP2
     if (use_sym_list && err == 0)
        free (rc);
@@ -389,7 +389,7 @@ DWORD WINAPI foo_first (void *arg)
 {
   struct thread_arg ta = *(struct thread_arg*) arg;
 
-  trace_printf ("%s() called from line %u.\n", __FUNCTION__, ta.line);
+  C_printf ("%s() called from line %u.\n", __FUNCTION__, ta.line);
 
   if (ta.depth < recursion_depth)
   {

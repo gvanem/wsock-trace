@@ -1657,46 +1657,46 @@ static UINT dump_data_internal (const void *data_p, unsigned data_len, const cha
   if (data_len == 0)
      return (0);
 
-  trace_puts ("~4");
+  C_puts ("~4");
 
   for (ofs = 0; ofs < data_len; ofs += 16)
   {
-    trace_indent (g_cfg.trace_indent+2);
+    C_indent (g_cfg.trace_indent+2);
 
     if (prefix)
     {
       if (ofs == 0)
-           trace_puts (prefix);
-      else trace_indent (strlen(prefix));
+           C_puts (prefix);
+      else C_indent (strlen(prefix));
     }
-    trace_puts (str_hex_word(ofs));
-    trace_puts (": ");
+    C_puts (str_hex_word(ofs));
+    C_puts (": ");
 
     for (i = j = 0; i < 16 && i+ofs < data_len; i++)
     {
-      trace_puts (str_hex_byte(data[i+ofs]));
-      trace_putc (' ');
+      C_puts (str_hex_byte(data[i+ofs]));
+      C_putc (' ');
       j = i;
       if (CHECK_MAX_DATA(ofs+i))
          break;
     }
 
     for ( ; j < 15; j++)     /* pad line to 16 positions */
-        trace_puts ("   ");
-    trace_putc (' ');
+        C_puts ("   ");
+    C_putc (' ');
 
     for (i = 0; i < 16 && i+ofs < data_len; i++)
     {
       int ch = data[i+ofs];
 
       if (ch < ' ' || ch == 0x7F)    /* non-printable */
-           trace_putc ('.');
-      else trace_putc_raw (ch);
+           C_putc ('.');
+      else C_putc_raw (ch);
 
       if (CHECK_MAX_DATA(ofs+i))
          break;
     }
-    trace_putc ('\n');
+    C_putc ('\n');
 
     if (CHECK_MAX_DATA(ofs+i))
        break;
@@ -1704,10 +1704,10 @@ static UINT dump_data_internal (const void *data_p, unsigned data_len, const cha
 
   if (ofs + i < data_len - 1)
   {
-    trace_indent (g_cfg.trace_indent+2);
-    trace_printf ("<%d more bytes...>\n", data_len-1 - ofs - i);
+    C_indent (g_cfg.trace_indent+2);
+    C_printf ("<%d more bytes...>\n", data_len-1 - ofs - i);
   }
-  trace_puts ("~0");
+  C_puts ("~0");
   return (ofs + i);
 }
 
@@ -1736,7 +1736,7 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
      */
     if (IsBadReadPtr(bufs->buf, sizeof(bufs->buf)))
     {
-      trace_printf ("~4%s, bad: 0x%p~0", prefix, bufs->buf);
+      C_printf ("~4%s, bad: 0x%p~0", prefix, bufs->buf);
       break;
     }
     total += dump_data_internal (bufs->buf, bufs->len, prefix);
@@ -1750,10 +1750,10 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
   if (!msg)
      return;
 
-  trace_printf ("%*sremote: %s, dwFlags: 0x%04lX\n",
-                g_cfg.trace_indent+2, "",
-                sockaddr_str2(msg->name, &msg->namelen),
-                DWORD_CAST(msg->dwFlags));
+  C_printf ("%*sremote: %s, dwFlags: 0x%04lX\n",
+            g_cfg.trace_indent+2, "",
+            sockaddr_str2(msg->name, &msg->namelen),
+            DWORD_CAST(msg->dwFlags));
 
   if (rc == NO_ERROR && g_cfg.dump_data)
      dump_wsabuf (msg->lpBuffers, msg->dwBufferCount);
@@ -1764,44 +1764,44 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
  */
 void dump_tcp_info_v0 (const TCP_INFO_v0 *info, int err_code)
 {
-  trace_printf ("%*s~4TCP_INFO: ", g_cfg.trace_indent+2, "");
+  C_printf ("%*s~4TCP_INFO: ", g_cfg.trace_indent+2, "");
 
   if (err_code != NO_ERROR)
   {
     char buf[150];
 
-    trace_printf ("%s~0\n", ws_strerror(err_code, buf, sizeof(buf)));
+    C_printf ("%s~0\n", ws_strerror(err_code, buf, sizeof(buf)));
     return;
   }
 
-  trace_printf ("State: %s, Mss: %u, ConnectionTime: %s msec, RTT: %s usec,\n",
-                list_lookup_name(info->State, tcp_states, DIM(tcp_states)),
-                info->Mss,
-                qword_str(info->ConnectionTimeMs),
-                dword_str(info->RttUs));
+  C_printf ("State: %s, Mss: %u, ConnectionTime: %s msec, RTT: %s usec,\n",
+            list_lookup_name(info->State, tcp_states, DIM(tcp_states)),
+            info->Mss,
+            qword_str(info->ConnectionTimeMs),
+            dword_str(info->RttUs));
 
-  trace_printf ("%*sTSenabled: %d, BytesInFlight: %s, Cwnd: %s, DupAcksIn: %s,\n",
-                g_cfg.trace_indent+12, "",
-                info->TimestampsEnabled,
-                dword_str(info->BytesInFlight),
-                dword_str(info->Cwnd),
-                dword_str(info->DupAcksIn));
+  C_printf ("%*sTSenabled: %d, BytesInFlight: %s, Cwnd: %s, DupAcksIn: %s,\n",
+            g_cfg.trace_indent+12, "",
+            info->TimestampsEnabled,
+            dword_str(info->BytesInFlight),
+            dword_str(info->Cwnd),
+            dword_str(info->DupAcksIn));
 
-  trace_printf ("%*sSndWnd: %s, RcvWnd: %s, RcvBuf: %s, BytesOut: %s, BytesIn: %s,\n",
-                g_cfg.trace_indent+12, "",
-                dword_str(info->SndWnd),
-                dword_str(info->RcvWnd),
-                qword_str(info->RcvBuf),
-                qword_str(info->BytesOut),
-                qword_str(info->BytesIn));
+  C_printf ("%*sSndWnd: %s, RcvWnd: %s, RcvBuf: %s, BytesOut: %s, BytesIn: %s,\n",
+            g_cfg.trace_indent+12, "",
+            dword_str(info->SndWnd),
+            dword_str(info->RcvWnd),
+            qword_str(info->RcvBuf),
+            qword_str(info->BytesOut),
+            qword_str(info->BytesIn));
 
-  trace_printf ("%*sBytesReordered: %s, BytesRetrans: %s, FastRetrans: %s, TimeoutEpisodes: %s, SynRetrans: %d.~0\n",
-                g_cfg.trace_indent+12, "",
-                dword_str(info->BytesReordered),
-                dword_str(info->BytesRetrans),
-                dword_str(info->FastRetrans),
-                dword_str(info->TimeoutEpisodes),
-                info->SynRetrans);
+  C_printf ("%*sBytesReordered: %s, BytesRetrans: %s, FastRetrans: %s, TimeoutEpisodes: %s, SynRetrans: %d.~0\n",
+            g_cfg.trace_indent+12, "",
+            dword_str(info->BytesReordered),
+            dword_str(info->BytesRetrans),
+            dword_str(info->FastRetrans),
+            dword_str(info->TimeoutEpisodes),
+            info->SynRetrans);
 }
 
 /**
@@ -1883,16 +1883,16 @@ void print_long_flags (const char *start, size_t indent, int brk_ch)
          next = strchr (c+1, '\0');
       if (left <= 2 || (left <= next - c))
       {
-        trace_printf ("%c\n%*c", *c++, (int)indent, ' ');
+        C_printf ("%c\n%*c", *c++, (int)indent, ' ');
         left  = (int)(g_cfg.screen_width - indent);
         start = c;
         continue;
       }
     }
-    trace_putc (*c++);
+    C_putc (*c++);
     left--;
   }
-  trace_putc ('\n');
+  C_putc ('\n');
 }
 
 const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
@@ -1934,25 +1934,24 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
     const int  *addr_len;
     const char *comment;
 
-    trace_indent (g_cfg.trace_indent+2);
-    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
-                  ai_flags_decode(ai->ai_flags),
-                  socket_family(ai->ai_family),
-                  socket_type(ai->ai_socktype),
-                  protocol_name(ai->ai_protocol));
+    C_indent (g_cfg.trace_indent+2);
+    C_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
+              ai_flags_decode(ai->ai_flags),
+              socket_family(ai->ai_family),
+              socket_type(ai->ai_socktype),
+              protocol_name(ai->ai_protocol));
 
     if (hosts_file_check_addrinfo(name, ai) > 0)
          comment = " (in 'hosts' file)";
     else comment = "";
 
-    trace_indent (g_cfg.trace_indent+2);
+    C_indent (g_cfg.trace_indent+2);
     addr_len = (const int*)&ai->ai_addrlen;
 
-    trace_printf ("ai_canonname: %s, ai_addr: %s%s\n",
-                  ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len),
-                  comment);
+    C_printf ("ai_canonname: %s, ai_addr: %s%s\n",
+              ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len), comment);
   }
-  trace_puts ("~0");
+  C_puts ("~0");
 }
 
 void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
@@ -1962,25 +1961,24 @@ void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
     const int  *addr_len;
     const char *comment;
 
-    trace_indent (g_cfg.trace_indent+2);
-    trace_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
-                  ai_flags_decode(ai->ai_flags),
-                  socket_family(ai->ai_family),
-                  socket_type(ai->ai_socktype),
-                  protocol_name(ai->ai_protocol));
+    C_indent (g_cfg.trace_indent+2);
+    C_printf ("~4ai_flags: %s, ai_family: %s, ai_socktype: %s, ai_protocol: %s\n",
+              ai_flags_decode(ai->ai_flags),
+              socket_family(ai->ai_family),
+              socket_type(ai->ai_socktype),
+              protocol_name(ai->ai_protocol));
 
     if (hosts_file_check_addrinfoW(name, ai) > 0)
          comment = " (in 'hosts' file)";
     else comment = "";
 
-    trace_indent (g_cfg.trace_indent+2);
+    C_indent (g_cfg.trace_indent+2);
     addr_len = (const int*)&ai->ai_addrlen;
 
-    trace_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
-                  ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len),
-                  comment);
+    C_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
+              ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len), comment);
   }
-  trace_puts ("~0");
+  C_puts ("~0");
 }
 
 /*
@@ -2058,34 +2056,34 @@ static void dump_one_fd_set (const fd_set *fd, int indent)
 
     _itoa ((int)fd->fd_array[i], buf, 10);
     max_len = (u_int) (g_cfg.screen_width - strlen(buf) - 1);
-    trace_puts (buf);
+    C_puts (buf);
 
     if (i < s_limit-1)
     {
-      trace_putc (',');
+      C_putc (',');
       len += (u_int) strlen(buf) + 1;
     }
     else if (i == s_limit-1 && i < s_max-1)
     {
-      trace_puts ("...\n");
+      C_puts ("...\n");
       break;
     }
     else
     {
-      trace_putc ('\n');
+      C_putc ('\n');
       len = indent;
     }
 
     if (len >= max_len)
     {
-      trace_putc ('\n');
+      C_putc ('\n');
       for (j = 0; j < indent; j++)
-          trace_putc (' ');
+          C_putc (' ');
       len = indent;
     }
   }
   if (i == 0)
-     trace_puts ("<no fds>\n");
+     C_puts ("<no fds>\n");
 }
 
 void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent)
@@ -2106,13 +2104,13 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
 
   for (i = 0; i < DIM(info); i++)
   {
-    trace_puts (info[i].which);
+    C_puts (info[i].which);
     if (info[i].fd)
          dump_one_fd_set (info[i].fd, indent+5);
-    else trace_puts ( "<not set>\n");
+    else C_puts ( "<not set>\n");
 
     if (i < DIM(info)-1)
-       trace_indent (indent);
+       C_indent (indent);
   }
 }
 
@@ -2143,22 +2141,22 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
     if (fd->fd == INVALID_SOCKET)
        continue;
 
-    trace_printf ("%*sfd: %4u, fd->events: %s, fd->revents: %s\n",
-                  line > 0 ? indent : 0, "", (unsigned)fd->fd,
-                  wsapollfd_event_decode(fd->events,ev_buf1),
-                  wsapollfd_event_decode(fd->revents,ev_buf2));
+    C_printf ("%*sfd: %4u, fd->events: %s, fd->revents: %s\n",
+              line > 0 ? indent : 0, "", (unsigned)fd->fd,
+              wsapollfd_event_decode(fd->events,ev_buf1),
+              wsapollfd_event_decode(fd->revents,ev_buf2));
     line++;
   }
   if (line == 0)
-     trace_puts ("<None>\n");
+     C_puts ("<None>\n");
 }
 
 static const char *proto_padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
 
 void dump_one_proto_info (const char *prefix, const char *buf)
 {
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("%s%s\n", prefix ? prefix : proto_padding, buf);
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("%s%s\n", prefix ? prefix : proto_padding, buf);
 }
 
 void dump_one_proto_infof (_Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (1,2);
@@ -2168,9 +2166,9 @@ void dump_one_proto_infof (const char *fmt, ...)
   va_list args;
 
   va_start (args, fmt);
-  trace_indent (g_cfg.trace_indent+2);
-  trace_puts (proto_padding);
-  trace_vprintf (fmt, args);
+  C_indent (g_cfg.trace_indent+2);
+  C_puts (proto_padding);
+  C_vprintf (fmt, args);
   va_end (args);
 }
 
@@ -2225,8 +2223,8 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
 
   snprintf (buf2, sizeof(buf2), "dwServiceFlags1:    %s", flags_str);
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_puts (buf1);
+  C_indent (g_cfg.trace_indent+2);
+  C_puts (buf1);
   print_long_flags (buf2, g_cfg.trace_indent + strlen(buf1) + sizeof("dwServiceFlags1:   "), '|');
 
   dump_one_proto_infof ("dwServiceFlags2:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags2));
@@ -2283,7 +2281,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
          dump_provider_path (&pi_a->ProviderId, provider_path_func);
     else dump_provider_path (&pi_w->ProviderId, provider_path_func);
   }
-  trace_puts ("~0");
+  C_puts ("~0");
 }
 
 /*
@@ -2377,10 +2375,10 @@ static BOOL        cc_equal  = FALSE;
 static BOOL        loc_equal = FALSE;
 static BOOL        pos_equal = FALSE;
 
-static int trace_printf_cc (const char            *country_code,
-                            const char            *location,
-                            const struct in_addr  *a4,
-                            const struct in6_addr *a6)
+static int C_printf_cc (const char            *country_code,
+                        const char            *location,
+                        const struct in_addr  *a4,
+                        const struct in6_addr *a6)
 {
   const char *remark = NULL;
 
@@ -2399,11 +2397,11 @@ static int trace_printf_cc (const char            *country_code,
      */
     cc_equal = (cc_last && !strcmp(country_code, cc_last));
     if (!cc_equal)
-       trace_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
+       C_printf ("%s - %s", country_code, geoip_get_long_name_by_A2(country_code));
 
     loc_equal = (location && loc_last && !strcmp(location, loc_last));
     if (location && !loc_equal)
-       trace_printf (", %s", location);
+       C_printf (", %s", location);
 
     if (g_cfg.GEOIP.show_position || g_cfg.GEOIP.show_map_url)
     {
@@ -2417,12 +2415,12 @@ static int trace_printf_cc (const char            *country_code,
       if (pos && !pos_equal)
       {
         if (g_cfg.GEOIP.show_position)
-           trace_printf (", Pos: %.3f%c, %.3f%c",
+           C_printf (", Pos: %.3f%c, %.3f%c",
                          fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
                          fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
 
         if (g_cfg.GEOIP.show_map_url)
-           trace_printf ("\n%*s        URL: https://www.google.com/maps/@%.5f,%.5f,10z",
+           C_printf ("\n%*s        URL: https://www.google.com/maps/@%.5f,%.5f,10z",
                          g_cfg.trace_indent+2, "", pos->latitude, pos->longitude);
       }
       if (pos)
@@ -2435,19 +2433,19 @@ static int trace_printf_cc (const char            *country_code,
   }
   else if (INET_util_addr_is_special(a4, a6, &remark))
   {
-    trace_puts ("Special");
+    C_puts ("Special");
     if (remark)
-       trace_printf (" (%s)", remark);
+       C_printf (" (%s)", remark);
   }
   else if (country_code && country_code[0] == '-' && country_code[1] != '-')
-       trace_puts ("Private");
+       C_puts ("Private");
   else if (INET_util_addr_is_zero(a4, a6))
-       trace_puts ("NULL-addr");
+       C_puts ("NULL-addr");
   else if (INET_util_addr_is_multicast(a4, a6))
-       trace_puts ("Multicast");
+       C_puts ("Multicast");
   else if (!INET_util_addr_is_global(a4, a6))
-       trace_puts ("Not global");
-  else trace_puts ("None");
+       C_puts ("Not global");
+  else C_puts ("None");
 
   return (!cc_equal && !loc_equal && !pos_equal);
 }
@@ -2471,14 +2469,14 @@ static void check_and_dump_idna (const char *name)
   if (!g_cfg.IDNA.enable || !name || !strstr(name,"xn--"))
      return;
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_puts ("from ACE: ");
+  C_indent (g_cfg.trace_indent+2);
+  C_puts ("from ACE: ");
 
   _strlcpy (buf, name, sizeof(buf));
   size = strlen (buf);
   if (IDNA_convert_from_ACE(buf, &size))
-       trace_printf ("%s\n", buf);
-  else trace_printf ("failed for %s: %s\n", name, IDNA_strerror(_idna_errno));
+       C_printf ("%s\n", buf);
+  else C_printf ("failed for %s: %s\n", name, IDNA_strerror(_idna_errno));
 }
 
 void dump_countries (int type, const char **addresses)
@@ -2490,8 +2488,8 @@ void dump_countries (int type, const char **addresses)
 
   WSAERROR_PUSH();
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4geo-IP: ");
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4geo-IP: ");
   cc_info_reset();
 
   for (num = 0; addresses && addresses[num]; num++)
@@ -2515,17 +2513,17 @@ void dump_countries (int type, const char **addresses)
     }
     else
     {
-      trace_printf ("Unknown family: %d", type);
+      C_printf ("Unknown family: %d", type);
       break;
     }
-    if (trace_printf_cc(cc, loc, ia4, ia6) && addresses[num+1])
-       trace_puts (", ");  /** \todo if `ai->ai_next` has a `loc_equal` or `pos_equal` to this `ai`, drop the comma */
+    if (C_printf_cc(cc, loc, ia4, ia6) && addresses[num+1])
+       C_puts (", ");  /** \todo if `ai->ai_next` has a `loc_equal` or `pos_equal` to this `ai`, drop the comma */
   }
   cc_info_reset();
 
   if (num == 0)
-     trace_puts ("None!?");
-  trace_puts ("~0\n");
+     C_puts ("None!?");
+  C_puts ("~0\n");
 
   WSAERROR_POP();
 }
@@ -2572,8 +2570,8 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
 
   WSAERROR_PUSH();
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4geo-IP: ");
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4geo-IP: ");
   cc_info_reset();
 
   for (num = 0; ai; ai = ai->ai_next, num++)
@@ -2601,17 +2599,17 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
     }
     else
     {
-      trace_printf ("Unknown family: %d", ai->ai_family);
+      C_printf ("Unknown family: %d", ai->ai_family);
       break;
     }
-    if (trace_printf_cc(cc, loc, ia4, ia6) && ai->ai_next)
-       trace_puts (", ");  /** \todo if `ai->ai_next` has a `loc_equal` or `pos_equal` to this `ai`, drop the comma */
+    if (C_printf_cc(cc, loc, ia4, ia6) && ai->ai_next)
+       C_puts (", ");  /** \todo if `ai->ai_next` has a `loc_equal` or `pos_equal` to this `ai`, drop the comma */
   }
   cc_info_reset();
 
   if (num == 0)
-     trace_puts ("None!?");
-  trace_puts ("~0\n");
+     C_puts ("None!?");
+  C_puts ("~0\n");
 
   WSAERROR_POP();
 }
@@ -2673,7 +2671,7 @@ dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_sin
 
   rc = ASN_libloc_print (ASN_intro, ia4, ia6, NULL);
   if (rc > 0)
-     trace_putc ('\n');
+     C_putc ('\n');
   return (rc);
 }
 
@@ -2687,7 +2685,7 @@ void dump_IANA_addresses (int family, const char **addresses)
   if (g_cfg.trace_level <= 0)
      return;
 
-  trace_puts ("~4");
+  C_puts ("~4");
   a_single_addr = (addresses && addresses[1] == NULL);
 
   for (num = 0; addresses && addresses[num]; num++)
@@ -2701,8 +2699,8 @@ void dump_IANA_addresses (int family, const char **addresses)
        dump_IANA_info (NULL, ia6, a_single_addr, num);
   }
   if (num == 0)
-     trace_puts ("None!?");
-  trace_puts ("~0");
+     C_puts ("None!?");
+  C_puts ("~0");
   iana_info_reset();
 }
 
@@ -2741,7 +2739,7 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
   if (g_cfg.trace_level <= 0)
      return;
 
-  trace_puts ("~4");
+  C_puts ("~4");
   a_single_addr = (ai && !ai->ai_next);
 
   for (num = 0; ai; ai = ai->ai_next, num++)
@@ -2757,14 +2755,14 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
 #if 0
     if (ai->ai_next)  /* add a newline if there is another address after this */
     {
-      trace_putc ('\n');
-      trace_indent (g_cfg.trace_indent + 2 + strlen("IANA:   "));
+      C_putc ('\n');
+      C_indent (g_cfg.trace_indent + 2 + strlen("IANA:   "));
     }
 #endif
   }
   if (num == 0)
-     trace_puts ("None!?");
-  trace_puts ("~0");
+     C_puts ("None!?");
+  C_puts ("~0");
   iana_info_reset();
 }
 
@@ -2778,7 +2776,7 @@ void dump_ASN_addresses (int family, const char **addresses)
   if (g_cfg.trace_level <= 0)
      return;
 
-  trace_puts ("~4");
+  C_puts ("~4");
   a_single_addr = (addresses && addresses[1] == NULL);
 
   for (num = 0; addresses && addresses[num]; num++)
@@ -2792,8 +2790,8 @@ void dump_ASN_addresses (int family, const char **addresses)
        dump_ASN_info (NULL, ia6, a_single_addr, num);
   }
   if (num == 0)
-     trace_puts ("None!?");
-  trace_puts ("~0");
+     C_puts ("None!?");
+  C_puts ("~0");
 }
 
 void dump_ASN_sockaddr (const struct sockaddr *sa)
@@ -2828,7 +2826,7 @@ void dump_ASN_addrinfo  (const struct addrinfo *ai)
   if (g_cfg.trace_level <= 0)
      return;
 
-  trace_puts ("~4");
+  C_puts ("~4");
   a_single_addr = (ai && !ai->ai_next);
 
   for (num = 0; ai; ai = ai->ai_next, num++)
@@ -2843,14 +2841,14 @@ void dump_ASN_addrinfo  (const struct addrinfo *ai)
 
   }
   if (num == 0)
-     trace_puts ("None!?");
-  trace_puts ("~0");
+     C_puts ("None!?");
+  C_puts ("~0");
 }
 
 void dump_nameinfo (const char *host, const char *serv, DWORD flags)
 {
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4name: %s, serv: %s~0\n",
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4name: %s, serv: %s~0\n",
                 host ? host : "NULL", serv ? serv : "NULL");
   check_and_dump_idna (host);
   ARGSUSED (flags);
@@ -2865,34 +2863,34 @@ void dump_hostent (const char *name, const struct hostent *host)
        comment = " (in a 'hosts' file)";
   else comment = "";
 
-  trace_indent (g_cfg.trace_indent+2);
-  column = trace_printf ("~4name: %s, addrtype: %s, ", host->h_name, socket_family(host->h_addrtype));
+  C_indent (g_cfg.trace_indent+2);
+  column = C_printf ("~4name: %s, addrtype: %s, ", host->h_name, socket_family(host->h_addrtype));
   column += sizeof("addr_list: ") - 1;
-  trace_printf ("addr_list: %s%s\n", dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list, g_cfg.trace_indent+2, column), comment);
+  C_printf ("addr_list: %s%s\n", dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list, g_cfg.trace_indent+2, column), comment);
 
   check_and_dump_idna (host->h_name);
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("aliases: %s~0\n", dump_aliases(host->h_aliases));
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("aliases: %s~0\n", dump_aliases(host->h_aliases));
 }
 
 void dump_servent (const struct servent *serv)
 {
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4name: %s, port: %d, proto: %s\n",
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4name: %s, port: %d, proto: %s\n",
                 serv->s_name, swap16(serv->s_port), serv->s_proto);
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("aliases: %s~0\n", dump_aliases(serv->s_aliases));
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("aliases: %s~0\n", dump_aliases(serv->s_aliases));
 }
 
 void dump_protoent (const struct protoent *proto)
 {
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4name: %s, proto: %d\n", proto->p_name, proto->p_proto);
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4name: %s, proto: %d\n", proto->p_name, proto->p_proto);
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("aliases: %s~0\n", dump_aliases(proto->p_aliases));
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("aliases: %s~0\n", dump_aliases(proto->p_aliases));
 }
 
 static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
@@ -2900,16 +2898,16 @@ static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
   int  i;
   long ev;
 
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4%s", out ? "out: " : "in:  ");
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4%s", out ? "out: " : "in:  ");
   if (!events)
   {
-    trace_puts ("NULL~0");
+    C_puts ("NULL~0");
     return;
   }
 
   ev = events->lNetworkEvents;
-  trace_puts ("lNetworkEvents: ");
+  C_puts ("lNetworkEvents: ");
 
   /*
    * Print this like:
@@ -2925,11 +2923,11 @@ static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
     {
       const char *ev_bit = list_lookup_name (ev & (1 << i), wsa_events_flgs, DIM(wsa_events_flgs));
 
-      trace_indent (g_cfg.trace_indent+4);
-      trace_printf ("iErrorCode [%s_BIT]: %08X\n", ev_bit, events->iErrorCode[i]);
+      C_indent (g_cfg.trace_indent+4);
+      C_printf ("iErrorCode [%s_BIT]: %08X\n", ev_bit, events->iErrorCode[i]);
     }
   }
-  trace_puts ("~0");
+  C_puts ("~0");
 }
 
 void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events)
@@ -2957,7 +2955,7 @@ void dump_DNSBL (int type, const char **addresses)
     else if (type == AF_INET6)
          DNSBL_check_ipv6 (ia6, &sbl_ref);
     if (sbl_ref)
-       trace_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+       C_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }
 }
 
@@ -3007,7 +3005,7 @@ void dump_DNSBL_addrinfo (const struct addrinfo *ai)
       DNSBL_check_ipv6 (&sa6->sin6_addr, &sbl_ref);
     }
     if (sbl_ref)
-       trace_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
+       C_printf ("%*s~4DNSBL:  SBL%s~0\n", g_cfg.trace_indent+2, "", sbl_ref);
   }
 }
 
@@ -3083,8 +3081,8 @@ void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
       break;
     }
   }
-  trace_indent (g_cfg.trace_indent+2);
-  trace_printf ("~4GUID %s -> %s (0x%p)~0\n", get_guid_string(in_guid), name, out_buf);
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4GUID %s -> %s (0x%p)~0\n", get_guid_string(in_guid), name, out_buf);
 }
 
 static const struct search_list test_list_1[] = {
@@ -3108,16 +3106,16 @@ report_check_err (const struct search_list *tab, const char *name, int rc, int i
   switch (rc)
   {
     case -1:
-         trace_printf ("%s[%d]: name == NULL.\n", name, idx1);
+         C_printf ("%s[%d]: name == NULL.\n", name, idx1);
          break;
     case -2:
-         trace_printf ("%s[%d]: name[0] == 0.\n", name, idx1);
+         C_printf ("%s[%d]: name[0] == 0.\n", name, idx1);
          break;
     case -3:
-         trace_printf ("%s[%d]: value == UINT_MAX.\n", name, idx1);
+         C_printf ("%s[%d]: value == UINT_MAX.\n", name, idx1);
          break;
     case -4:
-         trace_printf ("%s[%d+%d]: Duplicated values: '%s'=%u and '%s'=%u.\n",
+         C_printf ("%s[%d+%d]: Duplicated values: '%s'=%u and '%s'=%u.\n",
                        name, idx1, idx2, tab[idx1].name, tab[idx1].value,
                        tab[idx2].name, tab[idx2].value);
          break;

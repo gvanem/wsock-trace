@@ -1454,12 +1454,12 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
    */
   IPv6_leading_zeroes = 1;
 
-  trace_printf (head_fmt,       "bit",
-                cidr_width,     "CIDR",
-                start_ip_width, "start_ip",
-                ip_width,       "end_ip",
-                ip_width,       "mask",
-                total_str);
+  C_printf (head_fmt,       "bit",
+            cidr_width,     "CIDR",
+            start_ip_width, "start_ip",
+            ip_width,       "end_ip",
+            ip_width,       "mask",
+            total_str);
 
   _wsock_trace_inet_pton (AF_INET, IP4_NET, &network4, NULL);
   _wsock_trace_inet_pton (AF_INET6, IP6_NET, &network6, NULL);
@@ -1541,12 +1541,12 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
     else total_str = qword_str (total_ips);
 
     snprintf (cidr_str, sizeof(cidr_str), "%s/%u", network_str, bits);
-    trace_printf (line_fmt, bits,
-                  cidr_width, cidr_str,
-                  start_ip_width, start_ip_str,
-                  ip_width, end_ip_str,
-                  ip_width, mask_str,
-                  total_str);
+    C_printf (line_fmt, bits,
+              cidr_width, cidr_str,
+              start_ip_width, start_ip_str,
+              ip_width, end_ip_str,
+              ip_width, mask_str,
+              total_str);
   }
   IPv6_leading_zeroes = 0;
 }
@@ -1559,7 +1559,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
  */
 void INET_util_test_mask4 (void)
 {
-  trace_puts ("\nINET_util_test_mask4():\n");
+  C_puts ("\nINET_util_test_mask4():\n");
   test_mask (AF_INET, (int)strlen(IP4_NET), (int)strlen("255.255.255.255"), (int)strlen(IP4_NET "/32"));
 }
 
@@ -1571,7 +1571,7 @@ void INET_util_test_mask4 (void)
  */
 void INET_util_test_mask6 (void)
 {
-  trace_puts ("\nINET_util_test_mask6():\n");
+  C_puts ("\nINET_util_test_mask6():\n");
   test_mask (AF_INET6, (int)strlen(IP6_NET), MAX_IP6_SZ-7, (int)strlen(IP6_NET "/128"));
 }
 

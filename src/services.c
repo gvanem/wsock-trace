@@ -283,13 +283,13 @@ static void services_file_dump (void)
 {
   int i, j, max = services_list ? smartlist_len (services_list) : 0;
 
-  trace_printf ("\nDuplicates: %d. A total of %d entries in these file(s):\n", services_duplicates, max);
+  C_printf ("\nDuplicates: %d. A total of %d entries in these file(s):\n", services_duplicates, max);
 
   for (i = 0; g_cfg.services_file[i]; i++)
-      trace_printf ("  %d: \"%s\"\n", i, g_cfg.services_file[i]);
+      C_printf ("  %d: \"%s\"\n", i, g_cfg.services_file[i]);
 
-  trace_puts ("\nService entries sorted on port:\n"
-              "Idx - Service ------------- Port / proto ------------------------ Services-file(s)\n");
+  C_puts ("\nService entries sorted on port:\n"
+          "Idx - Service ------------- Port / proto ------------------------ Services-file(s)\n");
 
   for (i = 0; i < max; i++)
   {
@@ -310,7 +310,7 @@ static void services_file_dump (void)
     if (p > files_bits)
        p[-1] = '\0';
     snprintf (buf, sizeof(buf), "%5u / %-30s", se->port, decode_proto_str(se->proto));
-    trace_printf ("%4d: %-20s %-20s %s\n", i, se->name, buf, files_bits);
+    C_printf ("%4d: %-20s %-20s %s\n", i, se->name, buf, files_bits);
   }
 }
 
@@ -428,10 +428,10 @@ const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOO
   if (!se && fallback && !cleaned_up)
   {
     if (!do_wstrace)
-       trace_level_save_restore (0);
+       C_level_save_restore (0);
     ret = getservbyport (port, protocol);
     if (!do_wstrace)
-       trace_level_save_restore (1);
+       C_level_save_restore (1);
   }
   return (ret);
 }
@@ -478,7 +478,7 @@ static void services_run_tests (void)
   get_color ("bright green", &g_cfg.color_data);
   get_color ("bright red", &g_cfg.color_func);
 
-  trace_puts ("\nRunning ~2tests[]~0:\n");
+  C_puts ("\nRunning ~2tests[]~0:\n");
 
   if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
        fallback = TRUE;
@@ -490,18 +490,18 @@ static void services_run_tests (void)
                                                  tests[i].protocol, fallback, TRUE);
     BOOL match = (se == tests[i].expect);
 
-    trace_printf ("~2%2d~0: %-4s/%5s: %s~0\n", i,
-                  tests[i].service,
-                  tests[i].protocol ? tests[i].protocol : "NULL",
-                  match ? "~4OKAY" : "~5FAIL");
+    C_printf ("~2%2d~0: %-4s/%5s: %s~0\n", i,
+              tests[i].service,
+              tests[i].protocol ? tests[i].protocol : "NULL",
+              match ? "~4OKAY" : "~5FAIL");
     if (se)
-         trace_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
-    else trace_puts   ("    NULL\n");
+         C_printf ("    name: %-5s port: %4u, proto: %s\n", se->s_name, swap16(se->s_port), se->s_proto ? se->s_proto : "NULL");
+    else C_puts   ("    NULL\n");
   }
 
   g_cfg.color_data = save4;
   g_cfg.color_func = save5;
-  trace_putc ('\n');
+  C_putc ('\n');
 }
 
 /*

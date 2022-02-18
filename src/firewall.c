@@ -1659,7 +1659,7 @@ static void fw_buf_flush (void)
   if (len > 0)
   {
     *fw_ptr = '\0';
-    trace_puts (fw_buf);
+    C_puts (fw_buf);
   }
   fw_buf_reset();
 }
@@ -1738,10 +1738,10 @@ static void fw_add_long_line (const char *start, size_t indent, int brk_ch)
           if (event)                                                                                         \
           {                                                                                                  \
             if (g_cfg.trace_level >= 3)                                                                      \
-               trace_printf ("\n------------------------------------------"                                  \
-                             "-----------------------------------------\n"                                   \
-                             "%s(): thr-id: %lu.\n",                                                         \
-                             __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));                                \
+               C_printf ("\n------------------------------------------"                                      \
+                         "-----------------------------------------\n"                                       \
+                         "%s(): thr-id: %lu.\n",                                                             \
+                         __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));                                    \
             fw_event_callback (event->type,                                                                  \
                                (const _FWPM_NET_EVENT_HEADER3*) &event->header,                              \
                                                                                                              \
@@ -2042,9 +2042,9 @@ void fw_exit (void)
  */
 void fw_report (void)
 {
-  trace_printf ("\n  Firewall statistics:\n"
-                "    Got %lu events, %lu ignored.\n",
-                DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
+  C_printf ("\n  Firewall statistics:\n"
+            "    Got %lu events, %lu ignored.\n",
+            DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
 
   if (fw_num_events > 0UL || fw_num_ignored > 0UL)
   {
@@ -2057,20 +2057,20 @@ void fw_report (void)
     geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);
 
     if (g_cfg.FIREWALL.show_ipv4)
-       trace_printf ("    Unique IPv4 countries: %lu.\n", DWORD_CAST(num_ip4));
+       C_printf ("    Unique IPv4 countries: %lu.\n", DWORD_CAST(num_ip4));
     if (g_cfg.FIREWALL.show_ipv6)
-       trace_printf ("    Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
+       C_printf ("    Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
 
     max = smartlist_len (SBL_entries);
     if (max == 0)
-       trace_puts ("    No remote addresses found in DNSBL block lists.\n");
+       C_puts ("    No remote addresses found in DNSBL block lists.\n");
     else
     {
-      trace_printf ("    %d unique remote addresses found in DNSBL block lists. Goto:\n", max);
+      C_printf ("    %d unique remote addresses found in DNSBL block lists. Goto:\n", max);
       for (i = 0; i < max; i++)
-          trace_printf ("    ~2%s/SBL%s~0\n",
-                        SpamHaus_URL, (const char*)smartlist_get(SBL_entries, i));
-      trace_puts ("    for more information.\n");
+          C_printf ("    ~2%s/SBL%s~0\n",
+                    SpamHaus_URL, (const char*)smartlist_get(SBL_entries, i));
+      C_puts ("    for more information.\n");
     }
   }
 }
@@ -2462,15 +2462,15 @@ static void SID_dump (const SID *sid)
   const BYTE *data;
   UINT  i;
 
-  trace_printf ("SID->Revision:            %d\n", sid->Revision);
+  C_printf ("SID->Revision:            %d\n", sid->Revision);
   data = (const BYTE*) &sid->IdentifierAuthority;
-  trace_printf ("SID->IdentifierAuthority: %02X %02X %02X %02X %02X %02X\n",
-                data[0], data[1], data[2], data[3], data[4], data[5]);
+  C_printf ("SID->IdentifierAuthority: %02X %02X %02X %02X %02X %02X\n",
+            data[0], data[1], data[2], data[3], data[4], data[5]);
 
-  trace_printf ("SID->SubAuthority[%u]:     ", sid->SubAuthorityCount);
+  C_printf ("SID->SubAuthority[%u]:     ", sid->SubAuthorityCount);
   for (i = 0; i < sid->SubAuthorityCount; i++)
-      trace_printf ("%lu ", DWORD_CAST(sid->SubAuthority[i]));
-  trace_putc ('\n');
+      C_printf ("%lu ", DWORD_CAST(sid->SubAuthority[i]));
+  C_putc ('\n');
 }
 
 /*
@@ -2613,13 +2613,13 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
   char proto_str [10];
 
   if (++fw_num_rules == 1)
-     trace_puts ("Firewall ACTIVE program rules from Registry:\n");
+     C_puts ("Firewall ACTIVE program rules from Registry:\n");
 
   if (RA4_only && !r->RA4.s_addr)
      return;
 
-  trace_printf ("%4lu: Action:   %s\n", DWORD_CAST(fw_num_rules), r->action);
-  trace_printf ("      Dir:      %s\n", r->dir);
+  C_printf ("%4lu: Action:   %s\n", DWORD_CAST(fw_num_rules), r->action);
+  C_printf ("      Dir:      %s\n", r->dir);
 
   if (r->protocol == 0)
        strcpy (proto_str, "Any");
@@ -2629,22 +2629,22 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
        strcpy (proto_str, "UDP");
   else _itoa (r->protocol, proto_str, 10); /* \todo use 'getprotobynumber()' */
 
-  trace_printf ("      Protocol: %s\n", proto_str);
+  C_printf ("      Protocol: %s\n", proto_str);
 
   if (r->app)
   {
-    trace_printf ("      App:      %s%s%s\n",
-                  r->app, r->app_exist ? "" : " (does not exist)",
-                  r->app_native ? " (native file)" : "");
+    C_printf ("      App:      %s%s%s\n",
+              r->app, r->app_exist ? "" : " (does not exist)",
+              r->app_native ? " (native file)" : "");
     if (!r->app_exist)
        smartlist_add (rule_orphans, strdup(r->app));
   }
 
   if (r->embed_ctxt)
-     trace_printf ("      Context:  %s\n", r->embed_ctxt);
+     C_printf ("      Context:  %s\n", r->embed_ctxt);
 
   if (r->app_pkg_id)
-     trace_printf ("      PkgId:    %s\n", r->app_pkg_id);
+     C_printf ("      PkgId:    %s\n", r->app_pkg_id);
 
   if (r->RA4.s_addr)
   {
@@ -2655,13 +2655,13 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
     _wsock_trace_inet_ntop (AF_INET, &r->RA4, RA4_addr, sizeof(RA4_addr), NULL);
     if (r->RA4_cidr_len > 0 && r->RA4_cidr_len < 32)
        snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA4_addr, r->RA4_cidr_len);
-    trace_printf ("      RA4:      %s\n", CIDR[0] ? CIDR : RA4_addr);
+    C_printf ("      RA4:      %s\n", CIDR[0] ? CIDR : RA4_addr);
 
     cc  = geoip_get_country_by_ipv4 (&r->RA4);
     loc = geoip_get_location_by_ipv4 (&r->RA4);
 
     if (cc && cc[0] != '-')
-       trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
+       C_printf ("      GeoIP:    %s, %s\n", cc, loc);
     print_ASN_info (&r->RA4, NULL, 6, NULL);
   }
   else if (r->RA6.s6_addr[0])
@@ -2673,25 +2673,25 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
     _wsock_trace_inet_ntop (AF_INET6, &r->RA6, RA6_addr, sizeof(RA6_addr), NULL);
     if (r->RA6_cidr_len > 0 && r->RA6_cidr_len < 128)
        snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA6_addr, r->RA6_cidr_len);
-    trace_printf ("      RA6:      %s\n", CIDR[0] ? CIDR : RA6_addr);
+    C_printf ("      RA6:      %s\n", CIDR[0] ? CIDR : RA6_addr);
 
     cc  = geoip_get_country_by_ipv6 (&r->RA6);
     loc = geoip_get_location_by_ipv6 (&r->RA6);
 
     if (cc && cc[0] != '-')
-       trace_printf ("      GeoIP:    %s, %s\n", cc, loc);
+       C_printf ("      GeoIP:    %s, %s\n", cc, loc);
     print_ASN_info (NULL, &r->RA6, 6, NULL);
   }
   if (r->se)
-       trace_printf ("      SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
-  else trace_printf ("      SidEntry: <none>\n");
+       C_printf ("      SidEntry: %s\n", r->se->account[0] ? r->se->account : "?");
+  else C_printf ("      SidEntry: <none>\n");
 
   if (g_cfg.FIREWALL.show_all)
   {
-    trace_printf ("      RegValue: %s\n", r->value);
-    trace_printf ("      RegData:  %s\n", r->data);
+    C_printf ("      RegValue: %s\n", r->value);
+    C_printf ("      RegData:  %s\n", r->data);
   }
-  trace_putc ('\n');
+  C_putc ('\n');
 }
 
 /**
@@ -2787,7 +2787,7 @@ static int fw_enumerate_programs (BOOL RA4_only)
                      0, KEY_READ, &key);
 
   if (rc != ERROR_SUCCESS)
-     trace_printf ("RegOpenKeyEx() failed: %s\n", win_strerror(rc));
+     C_printf ("RegOpenKeyEx() failed: %s\n", win_strerror(rc));
 
   for (num = 0; rc == ERROR_SUCCESS; num++)
   {
@@ -2821,16 +2821,16 @@ static int fw_enumerate_programs (BOOL RA4_only)
     print_program_rule (r, RA4_only);
   }
 
-  trace_printf ("Found %d program-rules. ", max);
+  C_printf ("Found %d program-rules. ", max);
 
   smartlist_sort (rule_orphans, rule_compare_name);
   smartlist_make_uniq (rule_orphans, rule_compare_name, NULL);
   num = smartlist_len (rule_orphans);
   if (num > 0)
   {
-    trace_printf ("Found %lu orphaned programs (run CCleaner):\n", DWORD_CAST(num));
+    C_printf ("Found %lu orphaned programs (run CCleaner):\n", DWORD_CAST(num));
     for (i = 0; i < (int)num; i++)
-        trace_printf (" %s\n", (const char*) smartlist_get(rule_orphans, i));
+        C_printf (" %s\n", (const char*) smartlist_get(rule_orphans, i));
   }
   return (max);
 }
@@ -2853,7 +2853,7 @@ static int fw_enumerate_rules (void)
 
   FW_PROFILE_TYPE profile = (g_cfg.FIREWALL.show_all ? FW_PROFILE_TYPE_ALL : FW_PROFILE_TYPE_CURRENT);
 
-  trace_puts ("Firewall rules from FWEnumFirewallRules():\n");
+  C_puts ("Firewall rules from FWEnumFirewallRules():\n");
   if (!p_FWEnumFirewallRules)
   {
     TRACE (0, "FWEnumFirewallRules() not found.\n");
@@ -4566,7 +4566,7 @@ static void CALLBACK
    * of `exclude_list_get (address_str, EXCL_ADDRESS)` before deciding to print anything.
    * The same goes for `exclude_list_get (appId, EXCL_PROGRAM)`.
    *
-   * If all `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `trace_puts()`.
+   * If all `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `C_puts()`.
    */
   event_name = list_lookup_name (event_type, events, DIM(events));
 
@@ -4774,7 +4774,7 @@ static int show_help (void)
 static void sig_handler (int sig)
 {
   quit = 1;
-  trace_puts ("~1Quitting.~0\n");
+  C_puts ("~1Quitting.~0\n");
   (void) sig;
 }
 
@@ -4835,8 +4835,8 @@ static int run_program (const char *program)
          g_cfg.FIREWALL.show_ipv4 && !g_cfg.FIREWALL.show_ipv6 ? "IPv4 "   :
         !g_cfg.FIREWALL.show_ipv4 &&  g_cfg.FIREWALL.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ";
 
-  trace_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
-                program ? program : "no program", what);
+  C_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
+            program ? program : "no program", what);
 
   if (!program)
      return (1);
@@ -4850,10 +4850,10 @@ static int run_program (const char *program)
 
   while (fgets(p_buf, sizeof(p_buf)-1, p) && !quit)
   {
-    trace_puts ("~1program: ");
-    trace_puts_raw (p_buf);
-    trace_puts ("~0");
-    trace_flush();
+    C_puts ("~1program: ");
+    C_puts_raw (p_buf);
+    C_puts ("~0");
+    C_flush();
   }
   _pclose (p);
   return (0);

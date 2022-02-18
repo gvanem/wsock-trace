@@ -99,7 +99,7 @@ static int hosts_bsearch_name (const void *key, const void **member)
  *
  * \note
  * The Windows `hosts` file support both `AF_INET` and `AF_INET6` addresses. <br>
- * That's the reason we use the internal `_wsock_trace_pton()`.
+ * That's the reason we use the internal `_wsock_trace_inet_pton()`.
  */
 static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
 {
@@ -157,16 +157,16 @@ static void hosts_file_dump (int max, int duplicates, const struct CSV_context *
 {
   int i;
 
-  trace_printf ("\nA total of %d entries in these files:\n", max);
+  C_printf ("\nA total of %d entries in these files:\n", max);
   for (i = 0; g_cfg.hosts_file[i]; i++)
-      trace_printf ("  %d: \"%s\"\n", i, g_cfg.hosts_file[i]);
+      C_printf ("  %d: \"%s\"\n", i, g_cfg.hosts_file[i]);
 
-  trace_printf ("  duplicates: %d, num_af_inet: %u, num_af_inet6: %u.\n"
-                "  ctx->rec_num: %u, ctx->line_num: %u, ctx->parse_errors: %u, ctx->comment_lines: %u.\n\n",
-                duplicates, num_af_inet, num_af_inet6, ctx->rec_num, ctx->line_num,
-                ctx->parse_errors, ctx->comment_lines);
+  C_printf ("  duplicates: %d, num_af_inet: %u, num_af_inet6: %u.\n"
+            "  ctx->rec_num: %u, ctx->line_num: %u, ctx->parse_errors: %u, ctx->comment_lines: %u.\n\n",
+            duplicates, num_af_inet, num_af_inet6, ctx->rec_num, ctx->line_num,
+            ctx->parse_errors, ctx->comment_lines);
 
-  trace_puts ("Entries sorted on name:\n");
+  C_puts ("Entries sorted on name:\n");
   for (i = 0; i < max; i++)
   {
     const struct host_entry *he = smartlist_get (hosts_list, i);
@@ -179,8 +179,8 @@ static void hosts_file_dump (int max, int duplicates, const struct CSV_context *
          break;
     }
     _wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf), NULL);
-    trace_printf ("%3d: %-70s %-20s (hosts-file: %d)\n",
-                  i, he->host_name, buf, file_idx);
+    C_printf ("%3d: %-70s %-20s (hosts-file: %d)\n",
+              i, he->host_name, buf, file_idx);
   }
 }
 

@@ -8,11 +8,11 @@
 -- end
 
 if ws.get_trace_level() >= 1 then
-  ws.trace_puts (string.format("  Bye from ~1%s~0 at line %d\n", ws.__FILE__(), ws.__LINE__()))
+  ws.C_puts (string.format("  Bye from ~1%s~0 at line %d\n", ws.__FILE__(), ws.__LINE__()))
 end
 
 if package.loaded ["jit.profile"] then
-  ws.trace_puts ("Stopping profiler\n")
+  ws.C_puts ("Stopping profiler\n")
   profile.stop()
 end
 

@@ -1110,7 +1110,7 @@ static int parse_config_file (FILE *file)
              */
 #if 0
              if (console_hnd != INVALID_HANDLE_VALUE && console_info.dwCursorPosition.X > 0
-                trace_putc ('\n');
+                C_putc ('\n');
 #endif
              TRACE (1, "Parsing config-file \"%s\"\n"
                        "              for \"%s, %s\".\n",
@@ -1172,7 +1172,7 @@ static void trace_report (void)
 
   g_cfg.trace_report = FALSE;
 
-  trace_puts ("\n  Exclusions:~5");
+  C_puts ("\n  Exclusions:~5");
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
   for (i = 0; i < max; i++)
@@ -1186,7 +1186,7 @@ static void trace_report (void)
        max_digits = len;
   }
   if (i == 0)
-     trace_puts (" None.\n");
+     C_puts (" None.\n");
   else
   {
     for (i = 0; i < max; i++)
@@ -1196,22 +1196,21 @@ static void trace_report (void)
       len = strlen (ex->name);
 
       if (ex->which == EXCL_FUNCTION)
-           trace_printf ("%s%s():%*s ", indent, ex->name, (int)(max_len-len), "");
-      else trace_printf ("%s%s:%*s   ", indent, ex->name, (int)(max_len-len), "");
-      trace_printf ("%*s times.\n", (int)max_digits, qword_str(ex->num_excludes));
+           C_printf ("%s%s():%*s ", indent, ex->name, (int)(max_len-len), "");
+      else C_printf ("%s%s:%*s   ", indent, ex->name, (int)(max_len-len), "");
+      C_printf ("%*s times.\n", (int)max_digits, qword_str(ex->num_excludes));
     }
   }
 
   if (g_cfg.reentries > 0)
-     trace_printf ("  get_caller() reentered %lu times.\n",
-                   DWORD_CAST(g_cfg.reentries));
+     C_printf ("  get_caller() reentered %lu times.\n", DWORD_CAST(g_cfg.reentries));
 
-// if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
+//if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
   {
-    trace_printf ("  DLL attach %" U64_FMT " times.\n", g_cfg.counts.dll_attach);
-    trace_printf ("  DLL detach %" U64_FMT " times.\n", g_cfg.counts.dll_detach);
+    C_printf ("  DLL attach %" U64_FMT " times.\n", g_cfg.counts.dll_attach);
+    C_printf ("  DLL detach %" U64_FMT " times.\n", g_cfg.counts.dll_detach);
   }
-  trace_puts ("~0");
+  C_puts ("~0");
 
 #if 0
   {
@@ -1221,7 +1220,7 @@ static void trace_report (void)
       const struct thread_info *thr = smartlist_get (thread_list, i);
       HANDLE hnd = OpenThread (THREAD_QUERY_INFORMATION, FALSE, thr->id);
 
-      trace_printf (" tid: %lu, alive: %d:\n", thr->id, thr->alive);
+      C_printf (" tid: %lu, alive: %d:\n", thr->id, thr->alive);
       print_thread_times (hnd);
     }
   }
@@ -1241,27 +1240,27 @@ static void trace_report (void)
   g_cfg.counts.send_errors = 20000;
 #endif
 
-  trace_printf ("\n"
-                "  Statistics:\n"
-                "    Recv bytes:   %15s",               qword_str(g_cfg.counts.recv_bytes));
-  trace_printf ("  Recv errors:  %15s\n",               qword_str(g_cfg.counts.recv_errors));
-  trace_printf ("    Recv bytes:   %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
-  trace_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
-  trace_printf ("  Send errors:  %15s\n",               qword_str(g_cfg.counts.send_errors));
+  C_printf ("\n"
+            "  Statistics:\n"
+            "    Recv bytes:   %15s",               qword_str(g_cfg.counts.recv_bytes));
+  C_printf ("  Recv errors:  %15s\n",               qword_str(g_cfg.counts.recv_errors));
+  C_printf ("    Recv bytes:   %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
+  C_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
+  C_printf ("  Send errors:  %15s\n",               qword_str(g_cfg.counts.send_errors));
 
   if (g_cfg.use_sema)
-     trace_printf ("    Semaphore wait: %13s\n",        qword_str(g_cfg.counts.sema_waits));
+     C_printf ("    Semaphore wait: %13s\n",        qword_str(g_cfg.counts.sema_waits));
 
   if (g_cfg.GEOIP.enable)
   {
     DWORD num_ip4, num_ip6, num_ip2loc4, num_ip2loc6;
 
     geoip_num_unique_countries (&num_ip4, &num_ip6, &num_ip2loc4, &num_ip2loc6);
-    trace_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n",
-                  DWORD_CAST(num_ip4), DWORD_CAST(num_ip2loc4));
+    C_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n",
+              DWORD_CAST(num_ip4), DWORD_CAST(num_ip2loc4));
 
-    trace_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n",
-                  DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
+    C_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n",
+              DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
   }
 
   if (g_cfg.IANA.enable)
@@ -1542,9 +1541,9 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_level > 0 &&
       (g_cfg.trace_use_ods || (!g_cfg.trace_file_device && g_cfg.trace_file_okay)))
-    trace_printf ("\n------- Trace started at %s --------"
-                  "------ %s, %s. Build-date: %s.\n",
-                  now, get_builder(TRUE), get_dll_short_name(), get_dll_build_date());
+    C_printf ("\n------- Trace started at %s --------"
+              "------ %s, %s. Build-date: %s.\n",
+             now, get_builder(TRUE), get_dll_short_name(), get_dll_build_date());
 
   memset (&console_info, 0, sizeof(console_info));
 

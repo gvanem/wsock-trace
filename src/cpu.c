@@ -134,16 +134,16 @@ void print_thread_times (HANDLE thread)
   if (life_span < 0.0)
      life_span = -life_span;
 
-  trace_printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
-                FILETIME_to_sec(&ktime), FILETIME_to_sec(&utime), life_span);
+  C_printf ("  kernel-time: %.6fs, user-time: %.6fs, life-span: %.6fs",
+            FILETIME_to_sec(&ktime), FILETIME_to_sec(&utime), life_span);
 
   if (p_QueryThreadCycleTime)
   {
     ULONG64 cycle_time;
 
     if (!(*p_QueryThreadCycleTime) (thread, &cycle_time))
-         trace_printf (", cycle-time: <failed>");
-    else trace_printf (", cycle-time: %s clocks", qword_str(cycle_time));
+         C_printf (", cycle-time: <failed>");
+    else C_printf (", cycle-time: %s clocks", qword_str(cycle_time));
   }
 
   if (p_NtQueryInformationThread)
@@ -154,10 +154,10 @@ void print_thread_times (HANDLE thread)
                       sizeof(perf_count), NULL);
 
     if (rc != STATUS_SUCCESS)
-         trace_printf (", perf-count: <fail %ld>", (long)rc);
-    else trace_printf (", perf-count: %s", qword_str(perf_count.QuadPart));
+         C_printf (", perf-count: <fail %ld>", (long)rc);
+    else C_printf (", perf-count: %s", qword_str(perf_count.QuadPart));
   }
-  trace_putc ('\n');
+  C_putc ('\n');
 }
 
 /**
@@ -186,8 +186,8 @@ void print_process_times (void)
     /* 'exit_time' is not printed since the process has not exited yet.
      * Therefore it is zero.
      */
-    trace_printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
-                  time_str, fract_t, FILETIME_to_sec(&krnl_time), FILETIME_to_sec(&usr_time));
+    C_printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
+              time_str, fract_t, FILETIME_to_sec(&krnl_time), FILETIME_to_sec(&usr_time));
   }
   CloseHandle (proc);
 }
@@ -271,22 +271,22 @@ void print_perf_times (void)
   {
     ULONG64 x;
 
-    trace_printf ("CPU %lu:%s", (u_long)i, (i == 0) ? "\t\t\t  CPU clocks\n" : "\n");
+    C_printf ("CPU %lu:%s", (u_long)i, (i == 0) ? "\t\t\t  CPU clocks\n" : "\n");
 
     x = info[i].KernelTime.QuadPart - info[i].IdleTime.QuadPart;
-    trace_printf ("  KernelTime:     %18s\n", qword_str(x));
+    C_printf ("  KernelTime:     %18s\n", qword_str(x));
 
     x = info[i].IdleTime.QuadPart;
-    trace_printf ("  IdleTime:       %18s\n", qword_str(x));
+    C_printf ("  IdleTime:       %18s\n", qword_str(x));
 
     x = info[i].UserTime.QuadPart;
-    trace_printf ("  UserTime:       %18s\n", qword_str(x));
+    C_printf ("  UserTime:       %18s\n", qword_str(x));
 
     x = info[i].DpcTime.QuadPart;
-    trace_printf ("  DpcTime:        %18s\n", qword_str(x));
+    C_printf ("  DpcTime:        %18s\n", qword_str(x));
 
     x = info[i].InterruptTime.QuadPart;
-    trace_printf ("  InterruptTime:  %18s\n", qword_str(x));
-    trace_printf ("  InterruptCount: %18s\n", dword_str(info[i].InterruptCount));
+    C_printf ("  InterruptTime:  %18s\n", qword_str(x));
+    C_printf ("  InterruptCount: %18s\n", dword_str(info[i].InterruptCount));
   }
 }

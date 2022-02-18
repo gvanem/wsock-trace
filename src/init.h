@@ -135,6 +135,7 @@ struct config_table {
        BOOL    trace_file_device;
        BOOL    trace_file_commit;
        BOOL    trace_use_ods;
+       BOOL    trace_raw;
        int     trace_level;
        int     trace_overlap;
        int     trace_indent;
@@ -147,7 +148,6 @@ struct config_table {
        UINT    max_fd_sets;
        int     max_displacement;
        BOOL    use_sema;
-       BOOL    trace_raw;
        BOOL    start_new_line;
        BOOL    extra_new_line;
        BOOL    dump_data;
@@ -261,7 +261,7 @@ extern CRITICAL_SECTION crit_sect;
 #define ENTER_CRIT()           EnterCriticalSection (&crit_sect)
 #define LEAVE_CRIT(extra_nl)   do {                                    \
                                  if (extra_nl && g_cfg.extra_new_line) \
-                                    trace_putc ('\n');                 \
+                                    C_putc ('\n');                     \
                                  LeaveCriticalSection (&crit_sect);    \
                                } while (0)
 #endif

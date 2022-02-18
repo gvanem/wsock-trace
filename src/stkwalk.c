@@ -1214,11 +1214,11 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   if (do_pdb)
      dash_len += strlen (pdb_hdr);
 
-  trace_printf ("  %-*s %-*s Size%s\n  %s\n",
-                (int)mod_len, "Module",
-                16+8*IS_WIN64, "Baseaddr",
-                do_pdb ? pdb_hdr : "",
-                 _strrepeat('-', dash_len));
+  C_printf ("  %-*s %-*s Size%s\n  %s\n",
+            (int)mod_len, "Module",
+            16+8*IS_WIN64, "Baseaddr",
+            do_pdb ? pdb_hdr : "",
+            _strrepeat('-', dash_len));
 
   /* Make a sorted copy before printing the module-list.
    * Sort on Baseaddr
@@ -1239,17 +1239,17 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   {
     const struct ModuleEntry *me = smartlist_get (g_modules_list, i);
 
-    trace_printf ("  %-*s 0x%" ADDR_FMT " %7s kB",
-                  (int)mod_len, shorten_path2(me->module_name, mod_len),
-                  ADDR_CAST(me->base_addr),
-                  dword_str(me->size/1024));
+    C_printf ("  %-*s 0x%" ADDR_FMT " %7s kB",
+              (int)mod_len, shorten_path2(me->module_name, mod_len),
+              ADDR_CAST(me->base_addr),
+              dword_str(me->size/1024));
     if (do_pdb)
     {
-      trace_printf ("      %5lu %5lu %5lu %5lu",
-                    DWORD_CAST(me->stat.num_syms),
-                    DWORD_CAST(me->stat.num_data_syms),
-                    DWORD_CAST(me->stat.num_cpp_syms),
-                    DWORD_CAST(me->stat.num_junk_syms));
+      C_printf ("      %5lu %5lu %5lu %5lu",
+                DWORD_CAST(me->stat.num_syms),
+                DWORD_CAST(me->stat.num_data_syms),
+                DWORD_CAST(me->stat.num_cpp_syms),
+                DWORD_CAST(me->stat.num_junk_syms));
       total_text += me->stat.num_syms;
       total_data += me->stat.num_data_syms;
       total_cpp  += me->stat.num_cpp_syms;
@@ -1260,14 +1260,14 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
     {
       SYMSRV_INDEX_INFO si;
 
-      trace_puts ("  ");
+      C_puts ("  ");
       memset (&si, '\0', sizeof(si));
       si.sizeofstruct = sizeof(SYMSRV_INDEX_INFO);
       if (!(*p_SymSrvGetFileIndexInfo) (me->module_name, &si, 0))
-           trace_printf ("SymSrvGetFileIndexInfo() failed: %s", get_error());
-      else trace_printf ("%-25s: %s", basename(si.pdbfile), get_guid_path_string(&si.guid));
+           C_printf ("SymSrvGetFileIndexInfo() failed: %s", get_error());
+      else C_printf ("%-25s: %s", basename(si.pdbfile), get_guid_path_string(&si.guid));
     }
-    trace_putc ('\n');
+    C_putc ('\n');
   }
 
   if (orig_modules)
@@ -1277,15 +1277,15 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   }
 
   if (do_pdb)
-     trace_printf ("%*s  %s\n"
-                   "%*s  = %5lu %5lu %5lu %5lu\n",
-                   26 + (int)mod_len + 8*IS_WIN64, "",
-                   _strrepeat('-',  25),
-                   26 + (int)mod_len + 8*IS_WIN64, "",
-                   DWORD_CAST(total_text),
-                   DWORD_CAST(total_data),
-                   DWORD_CAST(total_cpp),
-                   DWORD_CAST(total_junk));
+     C_printf ("%*s  %s\n"
+               "%*s  = %5lu %5lu %5lu %5lu\n",
+               26 + (int)mod_len + 8*IS_WIN64, "",
+               _strrepeat('-',  25),
+               26 + (int)mod_len + 8*IS_WIN64, "",
+               DWORD_CAST(total_text),
+               DWORD_CAST(total_data),
+               DWORD_CAST(total_cpp),
+               DWORD_CAST(total_junk));
 }
 
 /*
@@ -1473,9 +1473,9 @@ static int find_module_index (const char *module, ULONG64 base_addr)
   return (-1);
 }
 
-static int (*_trace_printf) (const char *, ...);
+static int (*_C_printf) (const char *, ...);
 
-static int null_printf (const char *fmt, ...)
+static int null_C_printf (const char *fmt, ...)
 {
   ARGSUSED (fmt);
   return (0);
@@ -1565,7 +1565,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   if (!(ok_flags && ok_tag))
      return (TRUE);
 
-  (*_trace_printf) ("  %" ADDR_FMT " ", ADDR_CAST(sym->Address));
+  (*_C_printf) ("  %" ADDR_FMT " ", ADDR_CAST(sym->Address));
 
   len = min (sym->NameLen+1, MAX_NAMELEN);
 
@@ -1608,7 +1608,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
     if (is_gnu_cpp && BFD_demangle(module, raw_name, und_name, sizeof(und_name)))
     {
       me->stat.num_cpp_syms++;
-      (*_trace_printf) (name_fmt, und_name);
+      (*_C_printf) (name_fmt, und_name);
     }
     else
 #endif
@@ -1617,22 +1617,22 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
       if (!strncmp(und_name, "`string", 7))
          goto junk_sym;
       me->stat.num_cpp_syms++;
-      (*_trace_printf) (name_fmt, und_name);
+      (*_C_printf) (name_fmt, und_name);
     }
   }
 
   /* Not a C++ symbol or C++ demangle failed; print the raw-name.
    */
   if (und_name[0] == '\0')
-     (*_trace_printf) (name_fmt, raw_name);
+     (*_C_printf) (name_fmt, raw_name);
 
-  (*_trace_printf) ("tag: %s", sym_tag_decode(sym->Tag));
+  (*_C_printf) ("tag: %s", sym_tag_decode(sym->Tag));
 
   if (sym->Flags)
-     (*_trace_printf) (", %s", sym_flags_decode(sym->Flags));
+     (*_C_printf) (", %s", sym_flags_decode(sym->Flags));
 
   if (is_cv_cpp || is_gnu_cpp)
-     (*_trace_printf) (", C++");
+     (*_C_printf) (", C++");
 
   /*
    * dbghelp.dll will only return line-information from our own module(s).
@@ -1646,14 +1646,14 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   {
     fname = shorten_path (Line.FileName);
     Line.LineNumber--;
-    (*_trace_printf) ("\n    %s (%lu", fname, Line.LineNumber);
+    (*_C_printf) ("\n    %s (%lu", fname, Line.LineNumber);
     if (ofs_from_line)
-       (*_trace_printf) ("+%lu", ofs_from_line);
-    (*_trace_printf) (")");
+       (*_C_printf) ("+%lu", ofs_from_line);
+    (*_C_printf) (")");
     me->stat.num_syms_lines++;
   }
 
-  (*_trace_printf) ("\n");
+  (*_C_printf) ("\n");
 
   name = und_name[0] ? und_name : raw_name;
   se = calloc (1, sizeof(*se));
@@ -1679,7 +1679,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
 junk_sym:
   assert (me);
   me->stat.num_junk_syms++;
-  (*_trace_printf) ("<junk>\n");
+  (*_C_printf) ("<junk>\n");
   return (TRUE);
 }
 
@@ -1844,7 +1844,7 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
     return (0);
   }
 
-  _trace_printf = verbose ? trace_printf : null_printf;
+  _C_printf = verbose ? C_printf : null_C_printf;
 
   save = g_cfg.trace_raw;
   g_cfg.trace_raw = 1;
@@ -2119,7 +2119,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   left = end - str;
 
   /* If 'undec_name[]' contains a "~" (a C++ destructor),
-   * replace that with "~~" since 'trace_putc()' gets confused otherwise.
+   * replace that with "~~" since 'C_putc()' gets confused otherwise.
    */
   for (p = undec_name; *p && left > 2; p++)
   {

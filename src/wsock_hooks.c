@@ -189,8 +189,8 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
 
   if (!exclude_this)
   {
-    trace_printf ("%*src: %ld, msg->lpBuffers: 0x%p, msg->dwBufferCount: %lu\n",
-                  g_cfg.trace_indent+2, "", (long)rc, msg->lpBuffers, DWORD_CAST(msg->dwBufferCount));
+    C_printf ("%*src: %ld, msg->lpBuffers: 0x%p, msg->dwBufferCount: %lu\n",
+              g_cfg.trace_indent+2, "", (long)rc, msg->lpBuffers, DWORD_CAST(msg->dwBufferCount));
     dump_wsamsg (msg, rc);
   }
 

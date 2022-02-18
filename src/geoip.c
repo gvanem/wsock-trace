@@ -1052,14 +1052,14 @@ static void make_c_list (struct country_list **list_p,
   qsort (list, DIM(c_list), sizeof(c_list[0]), compare);
   if (g_cfg.trace_level >= 3)
   {
-    trace_printf ("\n%s:\n    #    Num  XX  Continent   long-name\n"
-                  "  ------------------------------------------------------------\n",
-                  list_name);
+    C_printf ("\n%s:\n    #    Num  XX  Continent   long-name\n"
+              "  ------------------------------------------------------------\n",
+              list_name);
     for (i = 0; i < DIM(c_list); i++, list++)
-        trace_printf ("  %3u: %5d  %c%c  %-10s  %s\n",
-                      (UINT)i, list->country_number,
-                      toupper(list->short_name[0]), toupper(list->short_name[1]),
-                      geoip_get_continent_name(list->continent), list->long_name);
+        C_printf ("  %3u: %5d  %c%c  %-10s  %s\n",
+                  (UINT)i, list->country_number,
+                  toupper(list->short_name[0]), toupper(list->short_name[1]),
+                   geoip_get_continent_name(list->continent), list->long_name);
   }
 }
 
@@ -1519,19 +1519,19 @@ static int check_ipv4_unallocated (int dump_cidr,
   if (diff > 1)
   {
     addr.s_addr = swap32 (last->high+1);
-    trace_printf ("    **: ");
+    C_printf ("    **: ");
     if (dump_cidr)
     {
       char low[25] = "?";
       int  nw_len = network_len32 (last->high+1, entry->low-1);
 
       _wsock_trace_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
-      len = trace_printf ("%s/%d", low, nw_len);
+      len = C_printf ("%s/%d", low, nw_len);
     }
     else
     {
-      trace_printf ("%10lu  %10lu %8ld",
-                    DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
+      C_printf ("%10lu  %10lu %8ld",
+                DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
       len = 22;
     }
 
@@ -1539,12 +1539,12 @@ static int check_ipv4_unallocated (int dump_cidr,
     mcast   = INET_util_addr_is_multicast (&addr, NULL);
     global  = INET_util_addr_is_global (&addr, NULL);
 
-    trace_printf ("%*sUnallocated block%s%s%s %s\n",
-                  24-len, "",
-                  special ? ", Special"   : "",
-                  mcast   ? ", Multicast" : "",
-                  !global ? ", !Global"   : "",
-                  remark  ? remark        : "");
+    C_printf ("%*sUnallocated block%s%s%s %s\n",
+              24-len, "",
+              special ? ", Special"   : "",
+              mcast   ? ", Multicast" : "",
+              !global ? ", !Global"   : "",
+              remark  ? remark        : "");
 
     *diff_p = 0;
     if (special)
@@ -1563,10 +1563,10 @@ static void dump_ipv4_entries (int dump_cidr)
   long  diff = 0;
   const struct ipv4_node *last = NULL;
 
-  trace_puts ("IPv4 entries:\n Index: ");
+  C_puts ("IPv4 entries:\n Index: ");
   if (dump_cidr)
-       trace_puts ("CIDR                    Country\n");
-  else trace_puts ("  IP-low      IP-high      Diff  Country\n");
+       C_puts ("CIDR                    Country\n");
+  else C_puts ("  IP-low      IP-high      Diff  Country\n");
 
   max = geoip_ipv4_entries ? smartlist_len (geoip_ipv4_entries) : 0;
   for (i = 0; i < max; i++)
@@ -1587,20 +1587,20 @@ static void dump_ipv4_entries (int dump_cidr)
       DWORD addr   = swap32 (entry->low);
 
       _wsock_trace_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
-      len = trace_printf ("%6d: %s/%d", i, low, nw_len);
+      len = C_printf ("%6d: %s/%d", i, low, nw_len);
     }
     else
     {
-      trace_printf ("%6d: %10lu  %10lu %8ld",
-                    i, DWORD_CAST(entry->low), DWORD_CAST(entry->high),
-                    (long)(entry->high - entry->low));
+      C_printf ("%6d: %10lu  %10lu %8ld",
+                i, DWORD_CAST(entry->low), DWORD_CAST(entry->high),
+                (long)(entry->high - entry->low));
       len = 30;
     }
-    trace_printf (" %*s %2.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
+    C_printf (" %*s %2.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
   }
 
-  trace_printf ("%s missing blocks ", dword_str(missing_blocks));
-  trace_printf ("totalling %s missing IPv4 addresses.\n", dword_str(missing_addr));
+  C_printf ("%s missing blocks ", dword_str(missing_blocks));
+  C_printf ("totalling %s missing IPv4 addresses.\n", dword_str(missing_addr));
 }
 
 static int check_ipv6_unallocated (int dump_cidr, const struct ipv6_node *entry, const struct ipv6_node *last, uint64 *diff_p)
@@ -1611,7 +1611,7 @@ static int check_ipv6_unallocated (int dump_cidr, const struct ipv6_node *entry,
 
   if (diff > 1)
   {
-    trace_puts ("    **: ");
+    C_puts ("    **: ");
     if (dump_cidr)
     {
       char  low[25] = "?";
@@ -1619,14 +1619,14 @@ static int check_ipv6_unallocated (int dump_cidr, const struct ipv6_node *entry,
       DWORD addr   = swap32 (last->high+1);
 
       _wsock_trace_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
-      len = trace_printf ("%s/%d", low, nw_len);
+      len = C_printf ("%s/%d", low, nw_len);
     }
     else
     {
-      trace_printf ("%10lu  %10lu %8ld", DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
+      C_printf ("%10lu  %10lu %8ld", DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
       len = 22;
     }
-    trace_printf ("%*sUnallocated block\n", 24-len, "");
+    C_printf ("%*sUnallocated block\n", 24-len, "");
     *diff_p = diff;
     return (1);
   }
@@ -1647,11 +1647,11 @@ static void dump_ipv6_entries (int dump_cidr)
   uint64 diff;
   const struct ipv6_node *last = NULL;
 
-  trace_puts ("IPv6 entries:\nIndex: ");
+  C_puts ("IPv6 entries:\nIndex: ");
 
   if (dump_cidr)
-       trace_printf ("%-*s Country\n", (int)(MAX_IP6_SZ-5), "CIDR");
-  else trace_printf ("%-*s %-*s Country\n", (int)(MAX_IP6_SZ-4), "IP-low", (int)(MAX_IP6_SZ-5), "IP-high");
+       C_printf ("%-*s Country\n", (int)(MAX_IP6_SZ-5), "CIDR");
+  else C_printf ("%-*s %-*s Country\n", (int)(MAX_IP6_SZ-4), "IP-low", (int)(MAX_IP6_SZ-5), "IP-high");
 
   max = geoip_ipv6_entries ? smartlist_len (geoip_ipv6_entries) : 0;
   for (i = 0; i < max; i++)
@@ -1681,18 +1681,18 @@ static void dump_ipv6_entries (int dump_cidr)
          end[-2] = '\0';
 #endif
       nw_len = network_len128 (&entry->high, &entry->low);
-      len = trace_printf ("%5d: %s/%d ", i, low, nw_len);
+      len = C_printf ("%5d: %s/%d ", i, low, nw_len);
     }
     else
     {
-      trace_printf ("%5d: %-*s %-*s", i, (int)(MAX_IP6_SZ-4), low, (int)(MAX_IP6_SZ-4), high);
+      C_printf ("%5d: %-*s %-*s", i, (int)(MAX_IP6_SZ-4), low, (int)(MAX_IP6_SZ-4), high);
       len = 50;
     }
-    trace_printf ("%*.2s - %s\n", 51-len, entry->country, geoip_get_long_name_by_A2(entry->country));
+    C_printf ("%*.2s - %s\n", 51-len, entry->country, geoip_get_long_name_by_A2(entry->country));
   }
 
-  trace_printf ("%s missing blocks ", qword_str(missing_blocks));
-  trace_printf ("totalling %s missing IPv6 addresses.\n", qword_str(missing_addr));
+  C_printf ("%s missing blocks ", qword_str(missing_blocks));
+  C_printf ("totalling %s missing IPv6 addresses.\n", qword_str(missing_addr));
 }
 
 static void dump_num_ip_blocks_by_country (void)
@@ -1705,8 +1705,8 @@ static void dump_num_ip_blocks_by_country (void)
   memset (counts4, 0, sizeof(*counts4) * num_c);
   memset (counts6, 0, sizeof(*counts6) * num_c);
 
-  trace_puts ("IPv4/6 blocks by countries:\n"
-              " Idx: Country                           IPv4   IPv6\n");
+  C_puts ("IPv4/6 blocks by countries:\n"
+          " Idx: Country                           IPv4   IPv6\n");
 
   if (geoip_ipv4_entries)
      for (i = 0; i < num_c; i++, list++)
@@ -1742,10 +1742,10 @@ static void dump_num_ip_blocks_by_country (void)
   list = c_list + 0;
 
   for (i = 0; i < num_c; i++, list++)
-      trace_printf (" %3d: %c%c, %-28.28s %5u  %5u\n",
-                    (int)i, TOUPPER(list->short_name[0]), TOUPPER(list->short_name[1]),
-                    list->long_name, (unsigned)counts4[i], (unsigned)counts6[i]);
-  trace_putc ('\n');
+      C_printf (" %3d: %c%c, %-28.28s %5u  %5u\n",
+                (int)i, TOUPPER(list->short_name[0]), TOUPPER(list->short_name[1]),
+                list->long_name, (unsigned)counts4[i], (unsigned)counts6[i]);
+  C_putc ('\n');
 }
 
 /**
@@ -1842,7 +1842,7 @@ static void test_addr_common (const char            *addr_str,
       }
       else if (a6 && !stricmp(remark, "IPv4 compatible"))
       {
-        trace_printf ("Recursing for a \"%s\" address.\n", remark);
+        C_printf ("Recursing for a \"%s\" address.\n", remark);
         test_addr_common (addr_str, (const struct in_addr*)&a6->s6_words[6], NULL, use_ip2loc);
         return;
       }
@@ -1859,7 +1859,7 @@ static void test_addr_common (const char            *addr_str,
     else strcpy (buf2, "??");
   }
 
-  trace_printf ("%-*.*s: %s %s\n", ip_width, ip_width, addr_str, buf1, buf2);
+  C_printf ("%-*.*s: %s %s\n", ip_width, ip_width, addr_str, buf1, buf2);
 
   if (g_cfg.GEOIP.show_position)
   {
@@ -1870,15 +1870,15 @@ static void test_addr_common (const char            *addr_str,
        snprintf (pos_buf, sizeof(pos_buf), "%.3f%c, %.3f%c",
                  fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
                  fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
-    trace_printf ("  Pos:  %s\n", pos_buf);
+    C_printf ("  Pos:  %s\n", pos_buf);
 
     if (g_cfg.GEOIP.show_map_url)
     {
       const char *zoom = "10z";
 
       if (pos)
-           trace_printf ("  URL:  https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
-      else trace_printf ("  URL:  <none>\n");
+           C_printf ("  URL:  https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
+      else C_printf ("  URL:  <none>\n");
     }
   }
 
@@ -1918,7 +1918,7 @@ static void test_addr_common (const char            *addr_str,
     if (rc)
     {
       _wsock_trace_inet_ntop (AF_INET, a4, addr, sizeof(addr), NULL);
-      trace_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
+      C_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
   else if (INET_util_addr_is_global(NULL, a6))
@@ -1932,10 +1932,10 @@ static void test_addr_common (const char            *addr_str,
     if (rc)
     {
       _wsock_trace_inet_ntop (AF_INET6, a6, addr, sizeof(addr), NULL);
-      trace_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
+      C_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
-  trace_printf ("  %.0f usec\n", get_timestamp_now() - ts_now);
+  C_printf ("  %.0f usec\n", get_timestamp_now() - ts_now);
 }
 
 static struct addrinfo *resolve_addr_or_name (const char *addr_or_host, int af)
@@ -1962,7 +1962,7 @@ static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
     freeaddrinfo (ai);
   }
   else
-    trace_printf ("Error: %s.\n", get_ws_error());
+    C_printf ("Error: %s.\n", get_ws_error());
 }
 
 static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
@@ -1977,7 +1977,7 @@ static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
     freeaddrinfo (ai);
   }
   else
-    trace_printf ("Error: %s.\n", get_ws_error());
+    C_printf ("Error: %s.\n", get_ws_error());
 }
 
 /**
@@ -2042,15 +2042,15 @@ static void test_addr_list (smartlist_t *list, BOOL use_ip2loc, test_func func)
   {
     (*func) (smartlist_get(list, i), use_ip2loc);
     if (i < max-1)
-       trace_putc ('\n'); /* Add an extra newline after each test (except the last) */
+       C_putc ('\n'); /* Add an extra newline after each test (except the last) */
   }
   if (max > 1)
   {
     if (func == test_addr4)
          geoip_num_unique_countries (&num, NULL, NULL, NULL);
     else geoip_num_unique_countries (NULL, &num, NULL, NULL);
-    trace_printf ("# of unique IPv%c countries: %lu\n",
-                  (func == test_addr4 ? '4' : '6'), DWORD_CAST(num));
+    C_printf ("# of unique IPv%c countries: %lu\n",
+              (func == test_addr4 ? '4' : '6'), DWORD_CAST(num));
   }
 }
 
@@ -2069,10 +2069,10 @@ static void rand_test_addr4 (int loops, BOOL use_ip2loc)
     make_random_addr (&addr, NULL);
     _wsock_trace_inet_ntop (AF_INET, &addr, addr_buf, sizeof(addr_buf), NULL);
     test_addr4 (addr_buf, use_ip2loc);
-    trace_putc ('\n');
+    C_putc ('\n');
   }
   geoip_num_unique_countries (&num_ip4, NULL, NULL, NULL);
-  trace_printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num_ip4));
+  C_printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num_ip4));
 }
 
 static void rand_test_addr6 (int loops, BOOL use_ip2loc)
@@ -2090,10 +2090,10 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
     make_random_addr (NULL, &addr);
     _wsock_trace_inet_ntop (AF_INET6, &addr, addr_buf, sizeof(addr_buf), NULL);
     test_addr6 (addr_buf, use_ip2loc);
-    trace_putc ('\n');
+    C_putc ('\n');
   }
   geoip_num_unique_countries (NULL, &num_ip6, NULL, NULL);
-  trace_printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num_ip6));
+  C_printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num_ip6));
 }
 
 /**
@@ -2156,17 +2156,17 @@ static int check_requirements (void)
 {
   if (!g_cfg.GEOIP.ip4_file || !file_exists(g_cfg.GEOIP.ip4_file))
   {
-    trace_printf ("'[geoip::ip4_file]' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip4_file);
+    C_printf ("'[geoip::ip4_file]' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip4_file);
     return (0);
   }
   if (!g_cfg.GEOIP.ip6_file || !file_exists(g_cfg.GEOIP.ip6_file))
   {
-    trace_printf ("'[geoip::ip6_file]' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip6_file);
+    C_printf ("'[geoip::ip6_file]' file '%s' not found. This is needed for these tests.\n", g_cfg.GEOIP.ip6_file);
     return (0);
   }
   if (!g_cfg.GEOIP.enable)
   {
-    trace_printf ("'[geoip]' section must have 'enable=1' in %s to use this option.\n", config_file_name());
+    C_printf ("'[geoip]' section must have 'enable=1' in %s to use this option.\n", config_file_name());
     return (0);
   }
   return (1);

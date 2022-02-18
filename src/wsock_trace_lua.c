@@ -38,24 +38,24 @@
 #define va_copy(dst, src) ((dst) = (src))
 #endif
 
-#define LUA_TRACE(level, fmt, ...)                  \
-        do {                                        \
-          if (g_cfg.LUA.trace_level >= level) {     \
-             ENTER_CRIT();                          \
-             trace_printf ("~8%s(%u): ~9" fmt "~0", \
-                           __FILE__, __LINE__,      \
-                           ## __VA_ARGS__);         \
-             LEAVE_CRIT (0);                        \
-             trace_flush();                         \
-          }                                         \
+#define LUA_TRACE(level, fmt, ...)              \
+        do {                                    \
+          if (g_cfg.LUA.trace_level >= level) { \
+             ENTER_CRIT();                      \
+             C_printf ("~8%s(%u): ~9" fmt "~0", \
+                       __FILE__, __LINE__,      \
+                       ## __VA_ARGS__);         \
+             LEAVE_CRIT (0);                    \
+             C_flush();                         \
+          }                                     \
         } while (0)
 
-#define LUA_WARNING(fmt, ...)                 \
-        do {                                  \
-          ENTER_CRIT();                       \
-          trace_printf ("~8LUA: ~9" fmt "~0", \
-                        ## __VA_ARGS__);      \
-          LEAVE_CRIT (0);                     \
+#define LUA_WARNING(fmt, ...)             \
+        do {                              \
+          ENTER_CRIT();                   \
+          C_printf ("~8LUA: ~9" fmt "~0", \
+                    ## __VA_ARGS__);      \
+          LEAVE_CRIT (0);                 \
         } while (0)
 
 /* There is only one Lua-state variable.
@@ -291,9 +291,9 @@ static int wslua_register_hook (lua_State *l)
   return (1);
 }
 
-static int wslua_trace_puts (lua_State *l)
+static int wslua_C_puts (lua_State *l)
 {
-  trace_puts (lua_tostring(l,1));
+  C_puts (lua_tostring(l,1));
   return (1);
 }
 
@@ -302,7 +302,7 @@ static int wslua_trace_puts (lua_State *l)
  * This function is broken.
  * Accepts only strings passed from Lua-land.
  */
-static int wslua_trace_printf (lua_State *l)
+static int wslua_C_printf (lua_State *l)
 {
   va_list    args1, args2;
   const char *fmt = lua_tostring (l, 1);
@@ -319,7 +319,7 @@ static int wslua_trace_printf (lua_State *l)
   }
 
   va_start (args1, fmt);
-  trace_vprintf (fmt, args1);
+  C_vprintf (fmt, args1);
   va_end (args2);
   return (n);
 }
@@ -363,22 +363,22 @@ static void wslua_print_stack (void)
   while (lua_getstack(L, level++, &ar))
   {
     lua_getinfo (L, "Snl", &ar);
-    trace_printf ("  %s:", ar.short_src);
+    C_printf ("  %s:", ar.short_src);
     if (ar.currentline > 0)
-       trace_printf ("%d:", ar.currentline);
+       C_printf ("%d:", ar.currentline);
     if (*ar.namewhat != '\0')    /* is there a name? */
-       trace_printf (" in function " LUA_QS, ar.name);
+       C_printf (" in function " LUA_QS, ar.name);
     else
     {
       if (*ar.what == 'm')       /* main? */
-           trace_puts (" in main chunk");
+           C_puts (" in main chunk");
       else if (*ar.what == 'C' || *ar.what == 't')
-           trace_puts (" ?");   /* C function or tail call */
-      else trace_printf (" in function <%s:%d>", ar.short_src, ar.linedefined);
+           C_puts (" ?");   /* C function or tail call */
+      else C_printf (" in function <%s:%d>", ar.short_src, ar.linedefined);
     }
-    trace_putc ('\n');
+    C_putc ('\n');
   }
-//trace_printf ("LuaJIT stack depth: %d.\n", level-1);
+//C_printf ("LuaJIT stack depth: %d.\n", level-1);
 }
 
 static int wstrace_lua_panic (lua_State *l)
@@ -400,13 +400,13 @@ static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
   switch (_ld->event)
   {
     case LUA_HOOKCALL:
-         trace_printf ("~9LUA_HOOKCALL");
+         C_printf ("~9LUA_HOOKCALL");
          break;
     case LUA_HOOKRET:
-         trace_printf ("~9LUA_HOOKRET");
+         C_printf ("~9LUA_HOOKRET");
          break;
     case LUA_HOOKLINE:
-         trace_printf ("~9LUA_HOOKLINE at %d", _ld->currentline);
+         C_printf ("~9LUA_HOOKLINE at %d", _ld->currentline);
          break;
   }
 
@@ -417,12 +417,12 @@ static void wstrace_lua_hook (lua_State *l, lua_Debug *_ld)
 
     memset (&ld, '\0', sizeof(ld));
     lua_getinfo (l, ">nl", &ld);
-    trace_printf (": ld.name: %s, ld.short_src: %s", ld.name, ld.short_src);
+    C_printf (": ld.name: %s, ld.short_src: %s", ld.name, ld.short_src);
   }
 #else
   ARGSUSED (l);
 #endif
-  trace_puts ("~0\n");
+  C_puts ("~0\n");
 }
 
 /**
@@ -553,8 +553,8 @@ static void wslua_set_path (const char *full_name)
 
 static const struct luaL_Reg wslua_table[] = {
   { "register_hook",       wslua_register_hook },
-  { "trace_puts",          wslua_trace_puts },
-//{ "trace_printf",        wslua_trace_printf },
+  { "C_puts",              wslua_C_puts },
+//{ "C_printf",            wslua_C_printf },
   { "get_dll_full_name",   wslua_get_dll_full_name },
   { "get_dll_short_name",  wslua_get_dll_short_name },
   { "get_builder",         wslua_get_builder },

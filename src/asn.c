@@ -849,7 +849,7 @@ static int __ASN_libloc_print (const char            *intro,
 int ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func print_func)
 {
   if (!print_func)
-     print_func = trace_puts;
+     print_func = C_puts;
 
   return __ASN_libloc_print (intro, ip4, ip6, print_func);
 }
@@ -869,10 +869,10 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
   if (ip6 || !ASN_entries)
      return;
 
-  trace_puts (intro);
+  C_puts (intro);
   if (!stricmp(iana->status, "RESERVED"))
   {
-    trace_puts ("<reserved>\n");
+    C_puts ("<reserved>\n");
     return;
   }
 
@@ -881,10 +881,10 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
   TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
 
   if (!rec)
-       trace_puts ("<no data>\n");
-  else trace_printf ("%lu, %s (status: %s)\n",
-                     rec->as_number, rec->as_name[0] ? rec->as_name : "<unknown>" ,
-                     iana->status);
+       C_puts ("<no data>\n");
+  else C_printf ("%lu, %s (status: %s)\n",
+                 rec->as_number, rec->as_name[0] ? rec->as_name : "<unknown>" ,
+                 iana->status);
 }
 
 /*
@@ -896,14 +896,14 @@ void ASN_dump (void)
 
   num = ASN_entries ? smartlist_len (ASN_entries) : 0;
 
-  trace_printf ("\nParsed %s records from \"%s\":\n"
-                "  Num.  Low              High             Pfx     ASN  Name\n"
-                "-------------------------------------------------------------------\n",
-                dword_str(num), g_cfg.ASN.asn_csv_file ? g_cfg.ASN.asn_csv_file : "<none>");
+  C_printf ("\nParsed %s records from \"%s\":\n"
+            "  Num.  Low              High             Pfx     ASN  Name\n"
+            "-------------------------------------------------------------------\n",
+            dword_str(num), g_cfg.ASN.asn_csv_file ? g_cfg.ASN.asn_csv_file : "<none>");
 
   if (!ASN_entries)
   {
-    trace_puts ("[asn:asn_csv_file] seems to be missing?!\n");
+    C_puts ("[asn:asn_csv_file] seems to be missing?!\n");
     return;
   }
 
@@ -916,11 +916,11 @@ void ASN_dump (void)
     if (_wsock_trace_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
         _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
     {
-      trace_printf ("  %3d:  %-14.14s - %-14.14s    %2d  ", i, low_str, high_str, rec->prefix);
-      trace_printf ("%6lu  %s\n", rec->as_number, rec->as_name);
+      C_printf ("  %3d:  %-14.14s - %-14.14s    %2d  ", i, low_str, high_str, rec->prefix);
+      C_printf ("%6lu  %s\n", rec->as_number, rec->as_name);
     }
     else
-      trace_printf ("  %3d: <bogus>\n", i);
+      C_printf ("  %3d: <bogus>\n", i);
   }
 }
 
@@ -948,8 +948,8 @@ void ASN_exit (void)
  */
 void ASN_report (void)
 {
-  trace_printf ("\n  ASN statistics:\n"
-                "    Got %lu ASN-numbers, %lu AS-names.\n", g_num_asn, g_num_as_names);
+  C_printf ("\n  ASN statistics:\n"
+            "    Got %lu ASN-numbers, %lu AS-names.\n", g_num_asn, g_num_as_names);
 }
 
 /*

@@ -91,15 +91,15 @@
 extern void debug_printf (const char *file, unsigned line,
                           _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (3,4);
 
-extern int    trace_printf   (_Printf_format_string_ const char *fmt, ...)          ATTR_PRINTF (1,2);
-extern int    trace_vprintf  (_Printf_format_string_ const char *fmt, va_list args) ATTR_PRINTF (1,0);
-extern int    trace_puts     (const char *str);
-extern int    trace_puts_raw (const char *str);
-extern int    trace_putc     (int ch);
-extern int    trace_putc_raw (int ch);
-extern int    trace_indent   (size_t indent);
-extern size_t trace_flush    (void);
-extern int    trace_level_save_restore (int pop);
+extern int    C_printf   (_Printf_format_string_ const char *fmt, ...)          ATTR_PRINTF (1,2);
+extern int    C_vprintf  (_Printf_format_string_ const char *fmt, va_list args) ATTR_PRINTF (1,0);
+extern int    C_puts     (const char *str);
+extern int    C_puts_raw (const char *str);
+extern int    C_putc     (int ch);
+extern int    C_putc_raw (int ch);
+extern int    C_indent   (size_t indent);
+extern size_t C_flush    (void);
+extern int    C_level_save_restore (int pop);
 
 /* Init/exit functions for stuff in common.c.
  */

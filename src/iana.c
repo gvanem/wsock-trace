@@ -126,16 +126,16 @@ void iana_print_rec (const char *intro, const IANA_record *rec)
   switch (rec->family)
   {
     case AF_INET:
-         trace_printf ("%s%s\n", intro, iana_format_rec4(rec, FALSE));
+         C_printf ("%s%s\n", intro, iana_format_rec4(rec, FALSE));
          break;
     case AF_INET6:
-         trace_printf ("%s%s\n", intro, iana_format_rec6(rec, FALSE));
+         C_printf ("%s%s\n", intro, iana_format_rec6(rec, FALSE));
          break;
     case -1:
-         trace_printf ("%s%s\n", intro, "<no data>");
+         C_printf ("%s%s\n", intro, "<no data>");
          break;
     default:
-         trace_printf ("%s%s\n", intro, "<wrong AF>");
+         C_printf ("%s%s\n", intro, "<wrong AF>");
          break;
   }
 }
@@ -152,25 +152,25 @@ void iana_dump (void)
   for (i = 0; i < max4; i++)
   {
     if (i == 0)
-       trace_printf ("Dumping %d IANA IPv4 records:\n"
-                     "   #  Net/mask misc                 date     whois                url"
-                     "                     status\n", max4);
+       C_printf ("Dumping %d IANA IPv4 records:\n"
+                 "   #  Net/mask misc                 date     whois                url"
+                 "                     status\n", max4);
 
     rec = smartlist_get (iana_entries_ip4, i);
-    trace_printf (" %3d: %s\n", i, iana_format_rec4(rec, TRUE));
+    C_printf (" %3d: %s\n", i, iana_format_rec4(rec, TRUE));
   }
 
   max6 = iana_entries_ip6 ? smartlist_len (iana_entries_ip6) : 0;
   for (i = 0; i < max6; i++)
   {
     if (i == 0)
-       trace_printf ("%sDumping %d IANA IPv6 records:\n"
-                     "   #  Net/mask         misc             date         whois"
-                     "                url                   status\n",
-                     max4 > 0 ? "\n" : "", max6);
+       C_printf ("%sDumping %d IANA IPv6 records:\n"
+                 "   #  Net/mask         misc             date         whois"
+                 "                url                   status\n",
+                 max4 > 0 ? "\n" : "", max6);
 
     rec = smartlist_get (iana_entries_ip6, i);
-    trace_printf (" %3d: %s\n", i, iana_format_rec6(rec, TRUE));
+    C_printf (" %3d: %s\n", i, iana_format_rec6(rec, TRUE));
   }
 }
 
@@ -195,9 +195,9 @@ void iana_exit (void)
  */
 void iana_report (void)
 {
-  trace_printf ("\n  IANA statistics:\n"
-                "    Got %lu IPv4 records, %lu IPv6 records.\n",
-                DWORD_CAST(g_num_ipv4), DWORD_CAST(g_num_ipv6));
+  C_printf ("\n  IANA statistics:\n"
+            "    Got %lu IPv4 records, %lu IPv6 records.\n",
+            DWORD_CAST(g_num_ipv4), DWORD_CAST(g_num_ipv6));
 }
 
 /**

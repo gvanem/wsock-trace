@@ -602,18 +602,18 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
      * That would give 2 empty lines in the trace.
      */
     if ((add_nl || g_cfg.trace_file_okay) && !g_cfg.extra_new_line)
-       trace_putc ('\n');
+       C_putc ('\n');
 
-    trace_indent (g_cfg.trace_indent);
+    C_indent (g_cfg.trace_indent);
   }
   else if (!first_line && !g_cfg.compact)
   {
-    trace_putc ('\n');
-    trace_indent (g_cfg.trace_indent+2);
+    C_putc ('\n');
+    C_indent (g_cfg.trace_indent+2);
   }
 
   va_start (args, fmt);
-  trace_vprintf (fmt, args);
+  C_vprintf (fmt, args);
   va_end (args);
 
   SetLastError (err);  /* restore error status */
@@ -1754,14 +1754,14 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
 
     if (g_cfg.dump_select)
     {
-      trace_indent (g_cfg.trace_indent+2);
-      trace_puts ("~4" FD_INPUT);
+      C_indent (g_cfg.trace_indent+2);
+      C_puts ("~4" FD_INPUT);
       dump_select (rd_copy, wr_copy, ex_copy, g_cfg.trace_indent + 1 + sizeof(FD_OUTPUT));
 
-      trace_indent (g_cfg.trace_indent+2);
-      trace_puts (FD_OUTPUT);
+      C_indent (g_cfg.trace_indent+2);
+      C_puts (FD_OUTPUT);
       dump_select (rd_fd, wr_fd, ex_fd, g_cfg.trace_indent + 1 + sizeof(FD_OUTPUT));
-      trace_puts ("~0");
+      C_puts ("~0");
     }
   }
 
@@ -2451,8 +2451,8 @@ EXPORT int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_in
   {
     for (i = 0; i < rc; i++)
     {
-      trace_indent (g_cfg.trace_indent+2);
-      trace_printf ("~1Provider Entry # %d:\n", i);
+      C_indent (g_cfg.trace_indent+2);
+      C_printf ("~1Provider Entry # %d:\n", i);
       dump_wsaprotocol_info ('A', proto_info + i, p_WSCGetProviderPath);
     }
   }
@@ -2484,8 +2484,8 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
   {
     for (i = 0; i < rc; i++)
     {
-      trace_indent (g_cfg.trace_indent+2);
-      trace_printf ("~1Provider Entry # %d\n", i);
+      C_indent (g_cfg.trace_indent+2);
+      C_printf ("~1Provider Entry # %d\n", i);
       dump_wsaprotocol_info ('W', proto_info + i, p_WSCGetProviderPath);
     }
   }
@@ -2558,18 +2558,18 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
     wstrace_printf (FALSE, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s",
                     ADDR_CAST(fd_array), DWORD_CAST(fds), ms_buf, socket_or_error(rc));
 
-    trace_indent (g_cfg.trace_indent+2);
-    trace_puts ("~4" FD_INPUT " ");
+    C_indent (g_cfg.trace_indent+2);
+    C_puts ("~4" FD_INPUT " ");
     if (fd_in)
          dump_wsapollfd (fd_in, fds, g_cfg.trace_indent + 2 + sizeof(FD_INPUT));
-    else trace_puts ("None!\n");
+    else C_puts ("None!\n");
 
-    trace_indent (g_cfg.trace_indent+2);
-    trace_puts (FD_OUTPUT " ");
+    C_indent (g_cfg.trace_indent+2);
+    C_puts (FD_OUTPUT " ");
     if (fd_array)
          dump_wsapollfd (fd_array, fds, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT));
-    else trace_puts ("None!\n");
-    trace_puts ("~0");
+    else C_puts ("None!\n");
+    C_puts ("~0");
   }
 
   LEAVE_CRIT (!exclude_this);
