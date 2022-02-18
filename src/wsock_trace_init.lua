@@ -110,7 +110,7 @@ if ws.get_trace_level() >= 1 then
   --              "  arg2 = ~1%s~0.\n", who_am_I, ws.os_details())
 
   ws.C_puts (string.format("  Hello from:         ~1%s~0.\n", who_am_I))
-  ws.C__puts (string.format("  Version:            ~1%s~0.\n", ws.os_details()))
+  ws.C_puts (string.format("  Version:            ~1%s~0.\n", ws.os_details()))
   ws.C_puts (string.format("  This is line:       ~1%d~0.\n", ws.__LINE__()))
 
   ws.C_puts ("  package.path[]:     ~1" .. package.path .. "~0.\n")
