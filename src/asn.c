@@ -310,12 +310,6 @@ void ASN_update_file (const char *db_file, BOOL force_update)
   BOOL   db_dir_ok, need_update;
   DWORD  downloaded;
 
-  if (g_cfg.ASN.xz_decompress <= 0)
-  {
-    TRACE (1, "Nothing to do for '%s' file with XZ-decompression disabled.\n", db_file);
-    return;
-  }
-
   db_dir = dirname (db_file);
   db_dir_ok = (db_dir && file_exists(db_dir));   /* Target .db directory okay? */
   free (db_dir);
@@ -328,6 +322,12 @@ void ASN_update_file (const char *db_file, BOOL force_update)
   snprintf (db_temp_file, sizeof(db_temp_file)-3, "%s\\location.db", getenv("TEMP"));
   strcpy (db_xz_temp_file, db_temp_file);  /* == `%TEMP%/location.db` */
   strcat (db_xz_temp_file, ".xz");         /* == `%TEMP%/location.db.xz` */
+
+  if (g_cfg.ASN.xz_decompress <= 0)
+  {
+    TRACE (1, "Nothing to do for '%s' file with XZ-decompression disabled.\n", db_xz_temp_file);
+    return;
+  }
 
   memset (&st, '\0', sizeof(st));
   stat (db_temp_file, &st);
@@ -401,7 +401,7 @@ void ASN_update_file (const char *db_file, BOOL force_update)
  * Check for latest version of the `libloc` database
  * using a `TXT _v1._db.location.ipfire.org` DNS query.
  */
-static int ASN_check_database (const char *local_db, int from_v_cmd)
+static int ASN_check_database (const char *local_db, int trace_level)
 {
   struct stat st;
   time_t time_local_db = 0;
@@ -412,14 +412,16 @@ static int ASN_check_database (const char *local_db, int from_v_cmd)
 
   if (loc_discover_latest_version(libloc.ctx, LOC_DATABASE_VERSION_LATEST, &time_remote_db) != 0)
   {
-    TRACE (1 - from_v_cmd, "Could not check IPFire's database time-stamp.\n");
+    TRACE (trace_level, "Could not check IPFire's database time-stamp.\n");
     return (0);
   }
 
   if (stat(local_db, &st) == 0)
   {
+    time_t slack = g_cfg.ASN.max_days * 24 * 3600;
+
     time_local_db = st.st_mtime - _timezone;
-    older = (time_local_db < time_remote_db);
+    older = (time_local_db + slack < time_remote_db);
     if (older)
     {
       double day_diff = (double) (time_remote_db - time_local_db);
@@ -429,7 +431,7 @@ static int ASN_check_database (const char *local_db, int from_v_cmd)
     }
   }
 
-  TRACE (1 - from_v_cmd,
+  TRACE (trace_level,
          "IPFire's latest database time-stamp: %.24s (UTC)\n"
          "            It should be at: %s\n"
          "            Your local database is %sup-to-date.%s\n",
@@ -438,10 +440,10 @@ static int ASN_check_database (const char *local_db, int from_v_cmd)
   time_local_db += _timezone;
 
 #if defined(__CYGWIN__) /* Cygwin doesn't always set '_tzname[0]' */
-  TRACE (1 - from_v_cmd, "local time-stamp: %.24s\n", ctime(&time_local_db));
+  TRACE (trace_level, "local time-stamp: %.24s\n", ctime(&time_local_db));
   ARGSUSED (zone);
 #else
-  TRACE (1 - from_v_cmd, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
+  TRACE (trace_level, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
 #endif
   return (1);
 }
@@ -505,6 +507,10 @@ static void ASN_libloc_logger_ods (struct loc_ctx *ctx,
   ARGSUSED (function);
 }
 
+/**
+ * Load the binary ASN .db-file specified in the
+ * `[asn::asn_bin_file]` config-section.
+ */
 static size_t ASN_load_bin_file (const char *file)
 {
   const char *descr, *licence, *vendor;
@@ -560,7 +566,7 @@ static size_t ASN_load_bin_file (const char *file)
   if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_FOLDER"))
   {
     ASN_print_libloc_version();
-    ASN_check_database (file, 0);
+    ASN_check_database (file, 1);
   }
 
   err = loc_database_new (libloc.ctx, &libloc.db, libloc.file);
@@ -903,7 +909,7 @@ void ASN_dump (void)
 
   if (!ASN_entries)
   {
-    C_puts ("[asn:asn_csv_file] seems to be missing?!\n");
+    fputs ("[asn:asn_csv_file] seems to be missing?!\n", stderr);
     return;
   }
 
@@ -1001,13 +1007,13 @@ int asn_main (int argc, char **argv)
   else if (do_update)
   {
     ASN_bin_close();
-    g_cfg.ASN.enable = g_cfg.ASN.xz_decompress = 1;
+    g_cfg.ASN.enable = 1;
     ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
   }
   else if (do_version)
   {
     ASN_print_libloc_version();
-    ASN_check_database (g_cfg.ASN.asn_bin_file, 1);
+    ASN_check_database (g_cfg.ASN.asn_bin_file, 0);
   }
   else
     show_help();
