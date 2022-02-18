@@ -1723,7 +1723,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
   return (rc);
 }
 
-int _ws_setenv (const char *env, const char *val, int overwrite)
+int ws_setenv (const char *env, const char *val, int overwrite)
 {
   int rc;
 

@@ -547,7 +547,7 @@ static void wslua_set_path (const char *full_name)
     _strlcpy (p, env, left-1);
   }
 
-  _ws_setenv ("LUA_CPATH", lua_cpath, 1);
+  ws_setenv ("LUA_CPATH", lua_cpath, 1);
   LUA_TRACE (1, "LUA_CPATH: %s.\n", lua_cpath);
 }
 
