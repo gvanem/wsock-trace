@@ -991,7 +991,7 @@ int test_main (int argc, char **argv)
   argc -= optind;
   argv += optind;
 
-#ifndef __CYGWIN__
+#if !defined(__CYGWIN__)
   setvbuf (stdout, NULL, _IONBF, 0);
 #endif
 
@@ -1134,7 +1134,7 @@ static void set_colour (int col)
 
   if (use_SGR == -1 && use_wincon == -1)  /* Do this once */
   {
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__)
     use_SGR = 1;
 #else
     use_SGR = on_appveyor ? 1: 0;
