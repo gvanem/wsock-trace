@@ -740,7 +740,7 @@ const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
   if (sa4->sin_family == AF_INET6)
   {
     buf[0] = '[';
-    _wsock_trace_inet_ntop (AF_INET6, &sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
+    ws_inet_ntop (AF_INET6, &sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
     end = strchr (buf, '\0');
     *end++ = ']';
     *end++ = ':';
@@ -775,7 +775,7 @@ static const char *inet_ntop2 (const char *addr, int family)
   if (!rc)
      return get_error (-1, 0);
 #else
-  rc = _wsock_trace_inet_ntop (family, addr, buf, sizeof(buf), NULL);
+  rc = ws_inet_ntop (family, addr, buf, sizeof(buf), NULL);
   if (!rc)
      strcpy (buf, "??");
 #endif
@@ -3315,7 +3315,7 @@ EXPORT INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, siz
 
   if (p_inet_ntop)
        ret = (*p_inet_ntop) (af, src, dst, size);
-  else ret = _wsock_trace_inet_ntop (af, src, dst, size, &err);
+  else ret = ws_inet_ntop (af, src, dst, size, &err);
 
   ENTER_CRIT();
 
@@ -3335,7 +3335,7 @@ EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
 
   if (p_inet_pton)
        ret = (*p_inet_pton) (af, src, dst);
-  else ret = _wsock_trace_inet_pton (af, src, dst, &err);
+  else ret = ws_inet_pton (af, src, dst, &err);
 
   ENTER_CRIT();
 

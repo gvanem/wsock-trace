@@ -99,7 +99,7 @@ static int hosts_bsearch_name (const void *key, const void **member)
  *
  * \note
  * The Windows `hosts` file support both `AF_INET` and `AF_INET6` addresses. <br>
- * That's the reason we use the internal `_wsock_trace_inet_pton()`.
+ * That's the reason we use the internal `ws_inet_pton()`.
  */
 static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
 {
@@ -115,12 +115,12 @@ static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
            TRACE (3, "Ignoring scoped addr: '%s'\n", value);
            family = -1;
          }
-         else if (_wsock_trace_inet_pton(AF_INET, value, &ip4, NULL) == 1)
+         else if (ws_inet_pton(AF_INET, value, &ip4, NULL) == 1)
          {
            TRACE (3, "AF_INET: addr: '%s'\n", value);
            family = AF_INET;
          }
-         else if (_wsock_trace_inet_pton(AF_INET6, value, &ip6, NULL) == 1)
+         else if (ws_inet_pton(AF_INET6, value, &ip6, NULL) == 1)
          {
            TRACE (3, "AF_INET6: addr: '%s'\n", value);
            family = AF_INET6;
@@ -178,7 +178,7 @@ static void hosts_file_dump (int max, int duplicates, const struct CSV_context *
       if (he->file == g_cfg.hosts_file [file_idx])
          break;
     }
-    _wsock_trace_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf), NULL);
+    ws_inet_ntop (he->addr_type, he->addr, buf, sizeof(buf), NULL);
     C_printf ("%3d: %-70s %-20s (hosts-file: %d)\n",
               i, he->host_name, buf, file_idx);
   }

@@ -57,10 +57,10 @@ static const char hex_chars[] = "0123456789abcdef";
 
 /* These are now locals:
  */
-static char *_wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err);
-static char *_wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err);
-static int   _wsock_trace_inet_pton4 (const char *src, u_char *dst, int *err);
-static int   _wsock_trace_inet_pton6 (const char *src, u_char *dst, int *err);
+static char *_ws_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err);
+static char *_ws_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err);
+static int   _ws_inet_pton4 (const char *src, u_char *dst, int *err);
+static int   _ws_inet_pton6 (const char *src, u_char *dst, int *err);
 
 /**
  * Check if `str` is simply an IPv4 address.
@@ -82,7 +82,7 @@ static BOOL is_ip4_addr (const char *str)
  * This function is for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t result_size, int *err)
+char *ws_inet_ntop (int family, const void *addr, char *result, size_t result_size, int *err)
 {
   int err2;
 
@@ -91,9 +91,9 @@ char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t
   *err = 0;
 
   if (family == AF_INET)
-      return _wsock_trace_inet_ntop4 (addr, result, result_size, err);
+      return _ws_inet_ntop4 (addr, result, result_size, err);
   if (family == AF_INET6)
-      return _wsock_trace_inet_ntop6 (addr, result, result_size, err);
+      return _ws_inet_ntop6 (addr, result, result_size, err);
 
   *err = WSAEAFNOSUPPORT;
   return (NULL);
@@ -103,7 +103,7 @@ char *_wsock_trace_inet_ntop (int family, const void *addr, char *result, size_t
  * This function is for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-int _wsock_trace_inet_pton (int family, const char *addr, void *result, int *err)
+int ws_inet_pton (int family, const char *addr, void *result, int *err)
 {
   int err2;
 
@@ -112,9 +112,9 @@ int _wsock_trace_inet_pton (int family, const char *addr, void *result, int *err
   *err = 0;
 
   if (family == AF_INET)
-      return _wsock_trace_inet_pton4 (addr, result, err);
+      return _ws_inet_pton4 (addr, result, err);
   if (family == AF_INET6)
-      return _wsock_trace_inet_pton6 (addr, result, err);
+      return _ws_inet_pton6 (addr, result, err);
 
   *err = WSAEAFNOSUPPORT;
   return (0);
@@ -130,7 +130,7 @@ int _wsock_trace_inet_pton (int family, const char *addr, void *result, int *err
  *
  * \author Paul Vixie, 1996.
  */
-static char *_wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err)
+static char *_ws_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err)
 {
   char tmp [sizeof("255.255.255.255")];
 
@@ -148,7 +148,7 @@ static char *_wsock_trace_inet_ntop4 (const u_char *src, char *dst, size_t size,
  * \author
  *  Paul Vixie, 1996.
  */
-static char *_wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err)
+static char *_ws_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err)
 {
   /*
    * Note that int32_t and int16_t need only be "at least" large enough
@@ -228,7 +228,7 @@ static char *_wsock_trace_inet_ntop6 (const u_char *src, char *dst, size_t size,
     if (i == 6 && best.base == 0 &&
         (best.len == 6 || (best.len == 5 && words[5] == 0xffff)))
     {
-      if (!_wsock_trace_inet_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp), err))
+      if (!_ws_inet_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp), err))
          goto inval;
       tp += strlen (tp);
       break;
@@ -266,7 +266,7 @@ inval:
  * \author
  *   Paul Vixie, 1996.
  */
-static int _wsock_trace_inet_pton4 (const char *src, u_char *dst, int *err)
+static int _ws_inet_pton4 (const char *src, u_char *dst, int *err)
 {
   static const char digits[] = "0123456789";
   int    saw_digit, octets, ch;
@@ -328,7 +328,7 @@ inval:
  * \author Paul Vixie, 1996.
  * \n\b credit: inspired by Mark Andrews.
  */
-static int _wsock_trace_inet_pton6 (const char *src, u_char *dst, int *err)
+static int _ws_inet_pton6 (const char *src, u_char *dst, int *err)
 {
   u_char  tmp [IN6ADDRSZ];
   u_char *endp, *colonp, *tp = tmp;
@@ -387,11 +387,11 @@ static int _wsock_trace_inet_pton6 (const char *src, u_char *dst, int *err)
       continue;
     }
     if (ch == '.' && ((tp + INADDRSZ) <= endp) &&
-        _wsock_trace_inet_pton4(curtok, tp, err) > 0)
+        _ws_inet_pton4(curtok, tp, err) > 0)
     {
       tp += INADDRSZ;
       saw_xdigit = 0;
-      break;     /* '\0' was seen by _wsock_trace_inet_pton4(). */
+      break;     /* '\0' was seen by _ws_inet_pton4(). */
     }
     goto inval;
   }

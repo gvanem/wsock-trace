@@ -95,7 +95,7 @@ static const char *iana_format_rec6 (const IANA_record *rec, BOOL aligned)
   if (rec->family != AF_INET6)
      return ("Illegal");
 
-  _wsock_trace_inet_ntop (AF_INET6, &rec->net_num.ip6, addr_buf1, sizeof(addr_buf1), NULL);
+  ws_inet_ntop (AF_INET6, &rec->net_num.ip6, addr_buf1, sizeof(addr_buf1), NULL);
   snprintf (addr_buf2, sizeof(addr_buf2), "%s/%-2d", addr_buf1, rec->mask);
 
   snprintf (print_buf, sizeof(print_buf), fmt[aligned],
@@ -337,7 +337,7 @@ static int iana_CSV_add6 (struct CSV_context *ctx, const char *value)
   {
     case 0:
          sscanf (value, "%50[^/]/%d", ip6_addr, &rec.mask);
-         _wsock_trace_inet_pton (AF_INET6, ip6_addr, &rec.net_num.ip6, NULL);
+         ws_inet_pton (AF_INET6, ip6_addr, &rec.net_num.ip6, NULL);
          break;
     case 1:
          _strlcpy (rec.misc, value, sizeof(rec.misc));
@@ -462,7 +462,7 @@ static int iana_compare_on_netnum_prefix_ip4 (const void *key, const void **memb
   g_num_compares++;
 
   rc = INET_util_range4cmp (ip4, &rec->net_num.ip4, rec->mask);
-  _wsock_trace_inet_ntop (AF_INET, ip4, ip4_buf, sizeof(ip4_buf), NULL);
+  ws_inet_ntop (AF_INET, ip4, ip4_buf, sizeof(ip4_buf), NULL);
 
   TRACE (2, "key: %s, net_num: %lu, mask: %d, rc: %d\n",
          ip4_buf, (unsigned long)rec->net_num.ip4.s_addr, rec->mask, rc);
@@ -487,8 +487,8 @@ static int iana_compare_on_netnum_prefix_ip6 (const void *key, const void **memb
 
   rc = INET_util_range6cmp (ip6, &rec->net_num.ip6, rec->mask);
 
-  _wsock_trace_inet_ntop (AF_INET6, &rec->net_num.ip6, net6_buf, sizeof(net6_buf), NULL);
-  _wsock_trace_inet_ntop (AF_INET6, ip6, ip6_buf, sizeof(ip6_buf), NULL);
+  ws_inet_ntop (AF_INET6, &rec->net_num.ip6, net6_buf, sizeof(net6_buf), NULL);
+  ws_inet_ntop (AF_INET6, ip6, ip6_buf, sizeof(ip6_buf), NULL);
 
   TRACE (2, "key: %s, net_num: %-12s prefix: %2d mask: %-12s rc: %d\n",
          ip6_buf, net6_buf, rec->mask, INET_util_in6_mask_str(&mask), rc);
@@ -718,7 +718,7 @@ int iana_main (int argc, char **argv)
 
     if (test_addr[i].family == AF_INET)
     {
-      _wsock_trace_inet_ntop (AF_INET, &test_addr[i].ip4, ip4_buf, sizeof(ip4_buf), NULL);
+      ws_inet_ntop (AF_INET, &test_addr[i].ip4, ip4_buf, sizeof(ip4_buf), NULL);
       printf ("\ntest_ip4_address (\"%s\"):\n", ip4_buf);
       if (iana_find_by_ip4_address(&test_addr[i].ip4, &rec))
       {
@@ -729,7 +729,7 @@ int iana_main (int argc, char **argv)
     }
     else
     {
-      _wsock_trace_inet_ntop (AF_INET6, &test_addr[i].ip6, ip6_buf, sizeof(ip6_buf), NULL);
+      ws_inet_ntop (AF_INET6, &test_addr[i].ip6, ip6_buf, sizeof(ip6_buf), NULL);
       printf ("\ntest_ip6_address (\"%s\"):\n", ip6_buf);
       if (iana_find_by_ip6_address(&test_addr[i].ip6, &rec))
       {

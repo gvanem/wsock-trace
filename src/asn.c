@@ -645,7 +645,7 @@ static int libloc_handle_net (struct loc_network    *net,
   if (ip4)
      _prefix -= 96;
 
-  _wsock_trace_inet_ntop (AF_INET6, &_net->first_address, _net_name, sizeof(_net_name), NULL);
+  ws_inet_ntop (AF_INET6, &_net->first_address, _net_name, sizeof(_net_name), NULL);
   strcat (_net_name, "/");
   strcat (_net_name, _itoa(_prefix, _prefix_str, 10));
 
@@ -773,13 +773,13 @@ static int __ASN_libloc_print (const char            *intro,
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
     *(u_long*) &addr.s6_words[6] = ip4->s_addr;
     if (g_cfg.trace_level >= 2)
-       _wsock_trace_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
+       ws_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
   }
   else if (ip6)
   {
     memcpy (&addr, ip6, sizeof(addr));
     if (g_cfg.trace_level >= 2)
-       _wsock_trace_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
+       ws_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
   }
   else
     return (0);
@@ -913,8 +913,8 @@ void ASN_dump (void)
     char  low_str [MAX_IP4_SZ];
     char  high_str[MAX_IP4_SZ];
 
-    if (_wsock_trace_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
-        _wsock_trace_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
+    if (ws_inet_ntop (AF_INET, &rec->ipv4.low, low_str, sizeof(low_str), NULL) &&
+        ws_inet_ntop (AF_INET, &rec->ipv4.high, high_str, sizeof(high_str), NULL))
     {
       C_printf ("  %3d:  %-14.14s - %-14.14s    %2d  ", i, low_str, high_str, rec->prefix);
       C_printf ("%6lu  %s\n", rec->as_number, rec->as_name);

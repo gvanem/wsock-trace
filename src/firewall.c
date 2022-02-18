@@ -2652,7 +2652,7 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
     char  CIDR [100] = "";
     const char *cc, *loc;
 
-    _wsock_trace_inet_ntop (AF_INET, &r->RA4, RA4_addr, sizeof(RA4_addr), NULL);
+    ws_inet_ntop (AF_INET, &r->RA4, RA4_addr, sizeof(RA4_addr), NULL);
     if (r->RA4_cidr_len > 0 && r->RA4_cidr_len < 32)
        snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA4_addr, r->RA4_cidr_len);
     C_printf ("      RA4:      %s\n", CIDR[0] ? CIDR : RA4_addr);
@@ -2670,7 +2670,7 @@ static void print_program_rule (struct rule_entry *r, BOOL RA4_only)
     char  CIDR [INET6_ADDRSTRLEN+20] = "";
     const char *cc, *loc;
 
-    _wsock_trace_inet_ntop (AF_INET6, &r->RA6, RA6_addr, sizeof(RA6_addr), NULL);
+    ws_inet_ntop (AF_INET6, &r->RA6, RA6_addr, sizeof(RA6_addr), NULL);
     if (r->RA6_cidr_len > 0 && r->RA6_cidr_len < 128)
        snprintf (CIDR, sizeof(CIDR), "CIDR: %s/%d", RA6_addr, r->RA6_cidr_len);
     C_printf ("      RA6:      %s\n", CIDR[0] ? CIDR : RA6_addr);
@@ -4181,7 +4181,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET)
   {
     ia4_loc.s_addr = _byteswap_ulong (*(DWORD*)&header->localAddrV4);
-    _wsock_trace_inet_ntop (AF_INET, &ia4_loc, local_addr, sizeof(local_addr), NULL);
+    ws_inet_ntop (AF_INET, &ia4_loc, local_addr, sizeof(local_addr), NULL);
   }
   else
     strcpy (local_addr, "-");
@@ -4189,7 +4189,7 @@ static BOOL print_addresses_ipv4 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     ia4_rem.s_addr = _byteswap_ulong (*(DWORD*)&header->remoteAddrV4);
-    _wsock_trace_inet_ntop (AF_INET, &ia4_rem, remote_addr, sizeof(remote_addr), NULL);
+    ws_inet_ntop (AF_INET, &ia4_rem, remote_addr, sizeof(remote_addr), NULL);
   }
   else
     strcpy (remote_addr, "-");
@@ -4247,7 +4247,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET)
   {
     memcpy (&ia6_loc, &header->localAddrV6, sizeof(ia6_loc));
-    _wsock_trace_inet_ntop (AF_INET6, &ia6_loc, local_addr, sizeof(local_addr), NULL);
+    ws_inet_ntop (AF_INET6, &ia6_loc, local_addr, sizeof(local_addr), NULL);
   }
   else
     strcpy (local_addr, "-");
@@ -4255,7 +4255,7 @@ static BOOL print_addresses_ipv6 (const _FWPM_NET_EVENT_HEADER3 *header, BOOL di
   if (header->flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET)
   {
     memcpy (&ia6_rem, &header->remoteAddrV6, sizeof(ia6_rem));
-    _wsock_trace_inet_ntop (AF_INET6, &ia6_rem, remote_addr, sizeof(remote_addr), NULL);
+    ws_inet_ntop (AF_INET6, &ia6_rem, remote_addr, sizeof(remote_addr), NULL);
   }
   else
     strcpy (remote_addr, "-");

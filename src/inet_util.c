@@ -1305,7 +1305,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
   if (dash)
      *dash = '\0';
 
-  if (_wsock_trace_inet_pton(AF_INET, copy, &a4_low, NULL) != 1)
+  if (ws_inet_pton(AF_INET, copy, &a4_low, NULL) != 1)
      return (FALSE);
 
   if (!dash)
@@ -1313,7 +1313,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
     *ip4 = a4_low;
     return (TRUE);
   }
-  if (_wsock_trace_inet_pton(AF_INET, dash+1, &a4_high, NULL) != 1)
+  if (ws_inet_pton(AF_INET, dash+1, &a4_high, NULL) != 1)
      return (FALSE);
 
   *ip4 = a4_low;
@@ -1356,7 +1356,7 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
   if (dash)
      *dash = '\0';
 
-  if (_wsock_trace_inet_pton(AF_INET6, copy, &a6, NULL) != 1)
+  if (ws_inet_pton(AF_INET6, copy, &a6, NULL) != 1)
      return (FALSE);
 
   *ip6 = a6;
@@ -1461,10 +1461,10 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
             ip_width,       "mask",
             total_str);
 
-  _wsock_trace_inet_pton (AF_INET, IP4_NET, &network4, NULL);
-  _wsock_trace_inet_pton (AF_INET6, IP6_NET, &network6, NULL);
-  _wsock_trace_inet_ntop (family, (family == AF_INET6) ? (const void*)&network6 : (const void*)&network4,
-                          network_str, sizeof(network_str), NULL);
+  ws_inet_pton (AF_INET, IP4_NET, &network4, NULL);
+  ws_inet_pton (AF_INET6, IP6_NET, &network6, NULL);
+  ws_inet_ntop (family, (family == AF_INET6) ? (const void*)&network6 : (const void*)&network4,
+                network_str, sizeof(network_str), NULL);
 
   for (bits = 0; bits <= max_bits; bits++)
   {
@@ -1503,9 +1503,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
       }
 
-      _wsock_trace_inet_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
-      _wsock_trace_inet_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
-      _wsock_trace_inet_ntop (AF_INET6, &mask, mask_str, sizeof(mask_str), NULL);
+      ws_inet_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+      ws_inet_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+      ws_inet_ntop (AF_INET6, &mask, mask_str, sizeof(mask_str), NULL);
     }
     else
     {
@@ -1529,9 +1529,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         total_ips = swap32 (end_ip.s_addr) - swap32 (start_ip.s_addr) + 1;
       }
 
-      _wsock_trace_inet_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
-      _wsock_trace_inet_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
-      _wsock_trace_inet_ntop (AF_INET, &mask, mask_str, sizeof(mask_str), NULL);
+      ws_inet_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+      ws_inet_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+      ws_inet_ntop (AF_INET, &mask, mask_str, sizeof(mask_str), NULL);
     }
 
     if (lshift_prob)

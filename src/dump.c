@@ -1528,8 +1528,8 @@ static const char *dump_ip_add_membership (char *buf, size_t buf_sz, const char 
 
   assert (buf_sz > sizeof(addr) + sizeof(iface) + 5);
 
-  _wsock_trace_inet_ntop (AF_INET, &mreq->imr_multiaddr.s_addr, addr, sizeof(addr), NULL);
-  _wsock_trace_inet_ntop (AF_INET, &mreq->imr_interface.s_addr, iface, sizeof(iface), NULL);
+  ws_inet_ntop (AF_INET, &mreq->imr_multiaddr.s_addr, addr, sizeof(addr), NULL);
+  ws_inet_ntop (AF_INET, &mreq->imr_interface.s_addr, iface, sizeof(iface), NULL);
   snprintf (buf, buf_sz, "{%s, %s}", addr, iface);
   return (buf);
 }
@@ -1538,7 +1538,7 @@ static const char *dump_ip_multicast_if (char *buf, size_t buf_sz, const char *o
 {
   char addr [MAX_IP4_SZ];
 
-  _wsock_trace_inet_ntop (AF_INET, (const void*) opt_val, addr, sizeof(addr), NULL);
+  ws_inet_ntop (AF_INET, (const void*) opt_val, addr, sizeof(addr), NULL);
   snprintf (buf, buf_sz, "{%s}", addr);
   return (buf);
 }
@@ -1554,7 +1554,7 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
   const struct ipv6_mreq *mreq6 = (const struct ipv6_mreq*) opt_val;
   char  addr [MAX_IP6_SZ];
 
-  _wsock_trace_inet_ntop (AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr, addr, sizeof(addr), NULL);
+  ws_inet_ntop (AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr, addr, sizeof(addr), NULL);
   snprintf (buf, buf_sz, "{%s%%%d}", addr, mreq6->ipv6mr_interface);
   return (buf);
 }
@@ -2301,7 +2301,7 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
   for (num = 0; addresses && addresses[num] && left > 0; num++)
   {
     char  buf [MAX_IP6_SZ+1];
-    char *addr = _wsock_trace_inet_ntop (type, addresses[num], buf, sizeof(buf), NULL);
+    char *addr = ws_inet_ntop (type, addresses[num], buf, sizeof(buf), NULL);
 
     if (!addr)
        addr = "<??>";

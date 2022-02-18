@@ -70,8 +70,8 @@ extern int IPv6_leading_zeroes;
  * `inet_ntop()` and `inet_pton()` for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-extern char *_wsock_trace_inet_ntop (int family, const void *addr, char *dst, size_t size, int *err);
-extern int   _wsock_trace_inet_pton (int family, const char *addr, void *dst, int *err);
+extern char *ws_inet_ntop (int family, const void *addr, char *dst, size_t size, int *err);
+extern int   ws_inet_pton (int family, const char *addr, void *dst, int *err);
 
 #endif
 
