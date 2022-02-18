@@ -91,9 +91,9 @@ char *ws_inet_ntop (int family, const void *addr, char *result, size_t result_si
   *err = 0;
 
   if (family == AF_INET)
-      return _ws_inet_ntop4 (addr, result, result_size, err);
+     return _ws_inet_ntop4 (addr, result, result_size, err);
   if (family == AF_INET6)
-      return _ws_inet_ntop6 (addr, result, result_size, err);
+     return _ws_inet_ntop6 (addr, result, result_size, err);
 
   *err = WSAEAFNOSUPPORT;
   return (NULL);
@@ -112,9 +112,9 @@ int ws_inet_pton (int family, const char *addr, void *result, int *err)
   *err = 0;
 
   if (family == AF_INET)
-      return _ws_inet_pton4 (addr, result, err);
+     return _ws_inet_pton4 (addr, result, err);
   if (family == AF_INET6)
-      return _ws_inet_pton6 (addr, result, err);
+     return _ws_inet_pton6 (addr, result, err);
 
   *err = WSAEAFNOSUPPORT;
   return (0);

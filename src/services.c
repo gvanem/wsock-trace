@@ -509,10 +509,10 @@ static void services_run_tests (void)
  */
 static int show_help (void)
 {
-  printf ("Usage: %s [-Dt] [services-file]\n"
+  printf ("Usage: %s [-Dt] <services-file>\n"
           "       -D:  run 'services_file_dump()' to dump the services list.\n"
           "       -t:  run 'services_run_tests()' for a simple test.\n"
-          " If a 'services-file' is specified, use this instead of they configured one.\n",
+          " If a <services-file> is specified, use this instead of they configured one.\n",
           program_name);
   return (0);
 }

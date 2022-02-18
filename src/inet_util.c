@@ -1250,7 +1250,7 @@ void INET_util_get_mask6 (struct in6_addr *out, int bits)
 
 /**
  * Return a hex-string for an `in6_addr *mask`.
- * Should return the same as `wsock_trace_inet_ntop6()` without
+ * Should return the same as `ws_inet_ntop6()` without
  * the `::` shorthanding.
  */
 const char *INET_util_in6_mask_str (const struct in6_addr *mask)
