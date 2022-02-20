@@ -3415,33 +3415,36 @@ EXPORT PCWSTR WINAPI InetNtopW (int af, const void *addr, PWSTR res_buf, size_t 
 static void get_tcp_info_v01 (SOCKET s, TCP_INFO_v0 *info_0, TCP_INFO_v1 *info_1, int *err)
 {
   DWORD size_ret = 0;
-  DWORD ver, size;
+  DWORD ver, size = 0;
   void *info;
   int   rc;
 
-  ENTER_CRIT();
   if (info_0)
   {
     memset (info_0, '\0', sizeof(*info_0));
-    ver = 0;
+    ver  = 0;
     info = info_0;
     size = sizeof(*info_0);
   }
   else if (info_1)
   {
     memset (info_1, '\0', sizeof(*info_1));
-    ver = 1;
+    ver  = 1;
     info = info_1;
     size = sizeof(*info_1);
   }
-  else
-    return;
 
-  rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, size, &size_ret, NULL, NULL);
-  if (rc == SOCKET_ERROR)
-       *err = (*g_WSAGetLastError)();
-  else *err = NO_ERROR;
-  LEAVE_CRIT (0);
+  if (size > 0)
+  {
+    ENTER_CRIT();
+
+    rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, size, &size_ret, NULL, NULL);
+    if (rc == SOCKET_ERROR)
+         *err = (*g_WSAGetLastError)();
+    else *err = NO_ERROR;
+
+    LEAVE_CRIT (0);
+  }
 }
 
 static void get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err)
