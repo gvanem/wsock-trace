@@ -566,7 +566,7 @@ static size_t ASN_load_bin_file (const char *file)
   if (g_cfg.trace_level == 0)
      SetEnvironmentVariable ("LOC_LOG", NULL);  /* Clear the 'libloc' internal trace-level */
 
-  if (g_cfg.trace_level >= 2 || getenv("APPVEYOR_BUILD_FOLDER"))
+  if (g_cfg.trace_level >= 2)
   {
     ASN_print_libloc_version();
     ASN_check_database (file, 1);
@@ -952,7 +952,7 @@ static void ASN_dump (const char *spec)
       C_printf ("  %*d: <bogus>\n", width, i);
   }
   if (no_match > 0)
-     C_printf ("  %lu matches for \"%s\" out of %d.\n", (DWORD)max - no_match, spec, max);
+     C_printf ("  %lu matches for \"%s\" out of %d.\n", DWORD_CAST(max - no_match), spec, max);
 }
 
 /**
