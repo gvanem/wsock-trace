@@ -17,7 +17,8 @@ BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
 
 CC      = gcc
-CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS -fmax-errors=5 -Wno-pragmas
+CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS \
+          -fmax-errors=5 -Wno-pragmas -Wno-unused-function -Wno-unused-variable
 LDFLAGS = -Wl,--print-map,--sort-common -t
 RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
 OBJ_DIR = Cygwin_obj
@@ -51,7 +52,7 @@ else
 endif
 
 ifeq ($(USE_BFD),1)
-  CFLAGS  += -DUSE_BFD -Wno-unused-but-set-variable -Wno-unused-variable
+  CFLAGS  += -DUSE_BFD -Wno-unused-but-set-variable
   EX_LIBS += -lbfd -liberty -lintl -lz
 endif
 
