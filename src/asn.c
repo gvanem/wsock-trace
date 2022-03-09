@@ -713,7 +713,7 @@ static int libloc_handle_net (struct loc_network    *net,
   if (is_hostile)
      strcat (attributes, ", Hostile");
 
-  snprintf (print_buf, sizeof(print_buf), "%u, name: %.*s, net: %s%s\n",
+  snprintf (print_buf, sizeof(print_buf), "%u, name: %.*s, net: %s%s",
             AS_num, ASN_MAX_NAME-30, AS_name, net_name, attributes);
   (*func) (print_buf);
 
