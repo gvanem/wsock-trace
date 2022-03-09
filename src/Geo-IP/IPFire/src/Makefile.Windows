@@ -10,7 +10,7 @@
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 10
+LIBLOC_MICRO = 11
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 DATE_STAMP = $(shell date.exe +%d-%B-%Y)
@@ -67,7 +67,8 @@ define Usage
   Specify CC=clang-cl for clang-cl
 endef
 
-TEST_PROGS = test-as.exe           \
+TEST_PROGS = test-address.exe      \
+             test-as.exe           \
              test-country.exe      \
              test-database.exe     \
              test-libloc.exe       \
@@ -100,7 +101,7 @@ ifeq ($(CC),gcc)
   IMPORT_LIB = libloc.dll.a
 
 else
-  CFLAGS = -nologo -Zi                \
+  CFLAGS = -nologo -Zi -GS-           \
            -D_CRT_SECURE_NO_WARNINGS  \
            -D_CRT_NONSTDC_NO_WARNINGS \
            -D_CRT_OBSOLETE_NO_WARNINGS
@@ -167,7 +168,14 @@ else ifeq ($(CC),clang-cl)
             -Wno-missing-field-initializers \
             -Wno-incompatible-pointer-types
 else
-  CFLAGS += -W3 -wd4146 -wd4133 -wd4244 -wd4267
+  CFLAGS += -W4 -wd4100 -wd4115 -wd4146 -wd4189 -wd4244 -wd4267
+
+  #
+  # For warnings such as:
+  #   python/database.c(633): warning C4232: nonstandard extension used: 'tp_iter':
+  #   address of dllimport 'PyObject_SelfIter' is not static, identity not guaranteed
+  #
+  CFLAGS += -wd4232
 endif
 
 #
@@ -199,7 +207,8 @@ else
   OPENSSL_LIBS =
 endif
 
-LIBLOC_SRC = as.c           \
+LIBLOC_SRC = address.c      \
+             as.c           \
              as-list.c      \
              country.c      \
              country-list.c \
@@ -236,7 +245,8 @@ epilogue:
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
 
-.SECONDARY: $(OBJ_DIR)/test-as.$(O)           \
+.SECONDARY: $(OBJ_DIR)/test-address.$(O)      \
+            $(OBJ_DIR)/test-as.$(O)           \
             $(OBJ_DIR)/test-country.$(O)      \
             $(OBJ_DIR)/test-database.$(O)     \
             $(OBJ_DIR)/test-libloc.$(O)       \
@@ -313,10 +323,12 @@ cpp_filter.py: $(THIS_FILE)
 
 #
 # Must use Python3.
-# Use an explicit '.exe' filename to avoid a 'python3' link from e.g. Cygwin to interfere.
+# Use the Python launcher to find the default version 3 Python.
+# (which hopefully is not a Cygwin Python that could interfere).
+#
 # And with 'USE_CRT_DEBUG = 1', use the debug-version of Python3.
 #
-PYTHON ?= python3$(PY_D).exe
+PYTHON ?= py -3
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
 $(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py

@@ -109,25 +109,20 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	while (as && err == 0) {
-		struct loc_as* as_next;
-
+	while (as) {
 		printf("Found AS%d: %s\n", loc_as_get_number(as), loc_as_get_name(as));
-		fflush(stdout);
 
-		loc_as_unref(as);
-		err = loc_database_enumerator_next_as(enumerator, &as_next);
-		as = as_next;
+		err = loc_database_enumerator_next_as(enumerator, &as);
+		if (err) {
+			fprintf(stderr, "Could not enumerate next AS\n");
+			exit(EXIT_FAILURE);
+		}
 	}
+
 	loc_database_enumerator_unref(enumerator);
 	loc_database_unref(db);
 	loc_unref(ctx);
 	fclose(f);
-
-	if (err) {
-		fprintf(stderr, "Could not enumerate next AS\n");
-		exit(EXIT_FAILURE);
-	}
 
 	return EXIT_SUCCESS;
 }

@@ -93,6 +93,7 @@ MMDB_SRC = $(addprefix GeoipMMDB/, \
              maxminddb.c)
 
 IPFIRE_SRC = $(addprefix IPFire/src/, \
+               address.c              \
                as.c                   \
                as-list.c              \
                country.c              \

@@ -31,7 +31,6 @@ static int   mmap_forget (void *map, struct mmap_info *info);
 void *mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset)
 {
   void     *map = NULL;
-  void     *rval = NULL;
   HANDLE    handle = INVALID_HANDLE_VALUE;
   intptr_t  h = _get_osfhandle (fd);
   DWORD     access = 0;
@@ -73,9 +72,8 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
        map = MAP_FAILED;
   }
 
-  SetLastError (0); /* clear any possible error from above */
-  rval = mmap_remember (map, poffset, handle);
-  return (rval);
+  SetLastError (0);   /* clear any possible error from above */
+  return mmap_remember (map, poffset, handle);
 }
 
 int munmap (void *map, size_t length)
@@ -83,7 +81,7 @@ int munmap (void *map, size_t length)
   struct mmap_info info;
   int    rc = 0;
 
-  if (mmap_forget(map, &info))
+  if (!mmap_forget(map, &info))
   {
     errno = EINVAL;
     rc = -1;
@@ -144,9 +142,9 @@ static int mmap_forget (void *map, struct mmap_info *info)
       if (handle && handle != INVALID_HANDLE_VALUE)
          CloseHandle (handle);
       SetLastError (0);
-      return (0);
+      return (1);
     }
   }
-  return (-1);  /* not found! */
+  return (0);  /* not found! */
 }
 

@@ -17,12 +17,16 @@
 #                                                                             #
 ###############################################################################
 
+import functools
 import io
 import ipaddress
 import logging
+import math
 import os
 import socket
+import sys
 
+from .i18n import _
 import _location
 
 # Initialise logging
@@ -40,23 +44,52 @@ class OutputWriter(object):
 	suffix = "networks"
 	mode = "w"
 
-	def __init__(self, f, prefix=None):
-		self.f, self.prefix = f, prefix
+	# Enable network flattening (i.e. networks cannot overlap)
+	flatten = False
+
+	def __init__(self, name, family=None, directory=None, f=None):
+		self.name = name
+		self.family = family
+		self.directory = directory
+
+		# Open output file
+		if f:
+			self.f = f
+		elif self.directory:
+			self.f = open(self.filename, self.mode)
+		elif "b" in self.mode:
+			self.f = io.BytesIO()
+		else:
+			self.f = io.StringIO()
+
+		# Call any custom initialization
+		self.init()
 
 		# Immediately write the header
 		self._write_header()
 
-	@classmethod
-	def open(cls, filename, **kwargs):
+	def init(self):
 		"""
-			Convenience function to open a file
+			To be overwritten by anything that inherits from this
 		"""
-		f = open(filename, cls.mode)
-
-		return cls(f, **kwargs)
+		pass
 
 	def __repr__(self):
-		return "<%s f=%s>" % (self.__class__.__name__, self.f)
+		return "<%s %s f=%s>" % (self.__class__.__name__, self, self.f)
+
+	@functools.cached_property
+	def tag(self):
+		families = {
+			socket.AF_INET6 : "6",
+			socket.AF_INET  : "4",
+		}
+
+		return "%sv%s" % (self.name, families.get(self.family, "?"))
+
+	@functools.cached_property
+	def filename(self):
+		if self.directory:
+			return os.path.join(self.directory, "%s.%s" % (self.tag, self.suffix))
 
 	def _write_header(self):
 		"""
@@ -79,8 +112,22 @@ class OutputWriter(object):
 		"""
 		self._write_footer()
 
-		# Close the file
-		self.f.close()
+		# Flush all output
+		self.f.flush()
+
+	def print(self):
+		"""
+			Prints the entire output line by line
+		"""
+		if isinstance(self.f, io.BytesIO):
+			raise TypeError(_("Won't write binary output to stdout"))
+
+		# Go back to the beginning
+		self.f.seek(0)
+
+		# Iterate over everything line by line
+		for line in self.f:
+			sys.stdout.write(line)
 
 
 class IpsetOutputWriter(OutputWriter):
@@ -89,12 +136,57 @@ class IpsetOutputWriter(OutputWriter):
 	"""
 	suffix = "ipset"
 
+	# The value is being used if we don't know any better
+	DEFAULT_HASHSIZE = 64
+
+	# We aim for this many networks in a bucket on average. This allows us to choose
+	# how much memory we want to sacrifice to gain better performance. The lower the
+	# factor, the faster a lookup will be, but it will use more memory.
+	# We will aim for only using three quarters of all buckets to avoid any searches
+	# through the linked lists.
+	HASHSIZE_FACTOR = 0.75
+
+	def init(self):
+		# Count all networks
+		self.networks = 0
+
+	@property
+	def hashsize(self):
+		"""
+			Calculates an optimized hashsize
+		"""
+		# Return the default value if we don't know the size of the set
+		if not self.networks:
+			return self.DEFAULT_HASHSIZE
+
+		# Find the nearest power of two that is larger than the number of networks
+		# divided by the hashsize factor.
+		exponent = math.log(self.networks / self.HASHSIZE_FACTOR, 2)
+
+		# Return the size of the hash (the minimum is 64)
+		return max(2 ** math.ceil(exponent), 64)
+
 	def _write_header(self):
-		self.f.write("create %s hash:net family inet hashsize 1024 maxelem 65536 -exist\n" % self.prefix)
-		self.f.write("flush %s\n" % self.prefix)
+		# This must have a fixed size, because we will write the header again in the end
+		self.f.write("create %s hash:net family inet%s" % (
+			self.tag,
+			"6" if self.family == socket.AF_INET6 else ""
+		))
+		self.f.write(" hashsize %8d maxelem 1048576 -exist\n" % self.hashsize)
+		self.f.write("flush %s\n" % self.tag)
 
 	def write(self, network):
-		self.f.write("add %s %s\n" % (self.prefix, network))
+		self.f.write("add %s %s\n" % (self.tag, network))
+
+		# Increment network counter
+		self.networks += 1
+
+	def _write_footer(self):
+		# Jump back to the beginning of the file
+		self.f.seek(0)
+
+		# Rewrite the header with better configuration
+		self._write_header()
 
 
 class NftablesOutputWriter(OutputWriter):
@@ -104,7 +196,7 @@ class NftablesOutputWriter(OutputWriter):
 	suffix = "set"
 
 	def _write_header(self):
-		self.f.write("define %s = {\n" % self.prefix)
+		self.f.write("define %s = {\n" % self.tag)
 
 	def _write_footer(self):
 		self.f.write("}\n")
@@ -118,8 +210,16 @@ class XTGeoIPOutputWriter(OutputWriter):
 		Formats the output in that way, that it can be loaded by
 		the xt_geoip kernel module from xtables-addons.
 	"""
-	suffix = "iv"
 	mode = "wb"
+	flatten = True
+
+	@property
+	def tag(self):
+		return self.name
+
+	@property
+	def suffix(self):
+		return "iv%s" % ("6" if self.family == socket.AF_INET6 else "4")
 
 	def write(self, network):
 		self.f.write(network._first_address)
@@ -145,19 +245,11 @@ class Exporter(object):
 
 			# Create writers for countries
 			for country_code in countries:
-				filename = self._make_filename(
-					directory, prefix=country_code, suffix=self.writer.suffix, family=family,
-				)
-
-				writers[country_code] = self.writer.open(filename, prefix="CC_%s" % country_code)
+				writers[country_code] = self.writer(country_code, family=family, directory=directory)
 
 			# Create writers for ASNs
 			for asn in asns:
-				filename = self._make_filename(
-					directory, "AS%s" % asn, suffix=self.writer.suffix, family=family,
-				)
-
-				writers[asn] = self.writer.open(filename, prefix="AS%s" % asn)
+				writers[asn] = self.writer("AS%s" % asn, family=family, directory=directory)
 
 			# Filter countries from special country codes
 			country_codes = [
@@ -166,7 +258,7 @@ class Exporter(object):
 
 			# Get all networks that match the family
 			networks = self.db.search_networks(family=family,
-				country_codes=country_codes, asns=asns, flatten=True)
+				country_codes=country_codes, asns=asns, flatten=self.writer.flatten)
 
 			# Walk through all networks
 			for network in networks:
@@ -197,9 +289,7 @@ class Exporter(object):
 			for writer in writers.values():
 				writer.finish()
 
-	def _make_filename(self, directory, prefix, suffix, family):
-		filename = "%s.%s%s" % (
-			prefix, suffix, "6" if family == socket.AF_INET6 else "4"
-		)
-
-		return os.path.join(directory, filename)
+			# Print to stdout
+			if not directory:
+				for writer in writers.values():
+					writer.print()

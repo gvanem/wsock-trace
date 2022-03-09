@@ -21,6 +21,7 @@
   #include <sys/types.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>
+  #include <windns.h>
   #include <libloc/compat.h>
 
 #else

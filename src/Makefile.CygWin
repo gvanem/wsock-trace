@@ -132,6 +132,7 @@ WS_TOOL_OBJ += $(OBJ_DIR)/ws_tool.res
 # doesn't work in 'libloc'. Do not ask me why.
 #
 LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
+               address.o              \
                as.o                   \
                as-list.o              \
                country.o              \

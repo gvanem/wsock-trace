@@ -19,7 +19,6 @@
 
 #ifdef LIBLOC_PRIVATE
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <libloc/libloc.h>
@@ -64,25 +63,6 @@ void loc_log(struct loc_ctx *ctx,
 	int priority, const char *file, int line, const char *fn,
 	const char *format, ...) __attribute__((format(printf, 6, 7)));
 
-static inline int in6_addr_cmp(const struct in6_addr* a1, const struct in6_addr* a2) {
-	for (unsigned int i = 0; i < 16; i++) {
-		if (a1->s6_addr[i] > a2->s6_addr[i])
-			return 1;
-
-		else if (a1->s6_addr[i] < a2->s6_addr[i])
-			return -1;
-	}
-
-	return 0;
-}
-
-static inline int in6_addr_get_bit(const struct in6_addr* address, unsigned int i) {
-	return ((address->s6_addr[i / 8] >> (7 - (i % 8))) & 1);
-}
-
-static inline void in6_addr_set_bit(struct in6_addr* address, unsigned int i, unsigned int val) {
-	address->s6_addr[i / 8] ^= (-val ^ address->s6_addr[i / 8]) & (1 << (7 - (i % 8)));
-}
 
 static inline void hexdump(struct loc_ctx* ctx, const void* addr, size_t len) {
 	char buffer_hex[16 * 3 + 6];
@@ -127,19 +107,5 @@ static inline void hexdump(struct loc_ctx* ctx, const void* addr, size_t len) {
 	// And print the final bit
 	DEBUG(ctx, "  %s %s\n", buffer_hex, buffer_ascii);
 }
-
-#if defined(_MSC_VER) && !defined(__clang__)
-/*
- * Ripped from:
- *   https://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code
- */
-static __inline uint32_t __builtin_ctz(uint32_t value)
-{
-	DWORD trailing_zeroes = 0;
-	_BitScanForward (&trailing_zeroes, value);
-	return (trailing_zeroes);
-}
-#endif
-
 #endif
 #endif

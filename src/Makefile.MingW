@@ -142,6 +142,7 @@ WS_TOOL_OBJ += $(OBJ_DIR)/ws_tool.res
 # .c and .o-files for '$(LIBLOC_LIB).
 #
 LIBLOC_SRC = $(addprefix $(LIBLOC_ROOT)/, \
+               address.c                  \
                as.c                       \
                as-list.c                  \
                country.c                  \

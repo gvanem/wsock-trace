@@ -215,9 +215,8 @@ int main(int argc, char** argv) {
 		if (!network)
 			break;
 
-		char* s = loc_network_str(network);
+		const char* s = loc_network_str(network);
 		printf("Got network: %s\n", s);
-		free(s);
 	}
 
 	// Free the enumerator

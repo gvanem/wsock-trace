@@ -24,6 +24,7 @@
 #include <ctype.h>
 
 #include <libloc/libloc.h>
+#include <libloc/address.h>
 #include <libloc/compat.h>
 #include <libloc/private.h>
 
@@ -170,17 +171,10 @@ LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct
 		DEBUG(ctx, "%s is an IPv4 address\n", string);
 
 		// Convert to IPv6-mapped address
-#ifdef _WIN32
-		*(u_long*) &address->s6_words[0] = 0;
-		*(u_long*) &address->s6_words[2] = 0;
-		*(u_long*) &address->s6_words[4] = 0xffff;
-		*(u_long*) &address->s6_words[6] = ipv4_address.s_addr;
-#else
-		address->s6_addr32[0] = htonl(0x0000);
-		address->s6_addr32[1] = htonl(0x0000);
-		address->s6_addr32[2] = htonl(0xffff);
-		address->s6_addr32[3] = ipv4_address.s_addr;
-#endif
+		IN6_DWORD(address, 0) = 0;
+		IN6_DWORD(address, 1) = 0;
+		IN6_DWORD(address, 2) = htonl(0xffff);
+		IN6_DWORD(address, 3) = ipv4_address.s_addr;
 
 		return 0;
 	}

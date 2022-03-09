@@ -3,7 +3,7 @@
 #                                                                             #
 # libloc - A library to determine the location of someone on the Internet     #
 #                                                                             #
-# Copyright (C) 2020-2021 IPFire Development Team <info@ipfire.org>           #
+# Copyright (C) 2020-2022 IPFire Development Team <info@ipfire.org>           #
 #                                                                             #
 # This library is free software; you can redistribute it and/or               #
 # modify it under the terms of the GNU Lesser General Public                  #
@@ -691,9 +691,9 @@ class CLI(object):
 
 						# How many octets do we need to add?
 						# (LACNIC does not seem to have a /8 or greater assigned, so the following should suffice.)
-						if ldigits == 2:
+						if ldigits == 1:
 							start_address = start_address[0] + ".0.0/" + start_address[1]
-						elif ldigits == 3:
+						elif ldigits == 2:
 							start_address = start_address[0] + ".0/" + start_address[1]
 						else:
 							log.warning("Could not recover IPv4 address from line in LACNIC DB format: %s" % line)
@@ -978,26 +978,73 @@ class CLI(object):
 
 	def _handle_update_announcements_from_bird(self, server):
 		# Pre-compile the regular expression for faster searching
-		route = re.compile(b"^\s(.+?)\s+.+?\[AS(.*?).\]$")
+		route = re.compile(b"^\s(.+?)\s+.+?\[(?:AS(.*?))?.\]$")
 
 		log.info("Requesting routing table from Bird (%s)" % server)
+
+		aggregated_networks = []
 
 		# Send command to list all routes
 		for line in self._bird_cmd(server, "show route"):
 			m = route.match(line)
 			if not m:
-				log.debug("Could not parse line: %s" % line.decode())
+				# Skip empty lines
+				if not line:
+					pass
+
+				# Ignore any header lines with the name of the routing table
+				elif line.startswith(b"Table"):
+					pass
+
+				# Log anything else
+				else:
+					log.debug("Could not parse line: %s" % line.decode())
+
 				continue
 
 			# Fetch the extracted network and ASN
 			network, autnum = m.groups()
 
+			# Decode into strings
+			if network:
+				network = network.decode()
+			if autnum:
+				autnum = autnum.decode()
+
+			# Collect all aggregated networks
+			if not autnum:
+				log.debug("%s is an aggregated network" % network)
+				aggregated_networks.append(network)
+				continue
+
 			# Insert it into the database
 			self.db.execute("INSERT INTO announcements(network, autnum) \
 				VALUES(%s, %s) ON CONFLICT (network) DO \
 				UPDATE SET autnum = excluded.autnum, last_seen_at = CURRENT_TIMESTAMP",
-				network.decode(), autnum.decode(),
+				network, autnum,
 			)
+
+		# Process any aggregated networks
+		for network in aggregated_networks:
+			log.debug("Processing aggregated network %s" % network)
+
+			# Run "show route all" for each network
+			for line in self._bird_cmd(server, "show route %s all" % network):
+				# Try finding the path
+				m = re.match(b"\s+BGP\.as_path:.* (\d+) {\d+}$", line)
+				if m:
+					# Select the last AS number in the path
+					autnum = m.group(1).decode()
+
+					# Insert it into the database
+					self.db.execute("INSERT INTO announcements(network, autnum) \
+						VALUES(%s, %s) ON CONFLICT (network) DO \
+						UPDATE SET autnum = excluded.autnum, last_seen_at = CURRENT_TIMESTAMP",
+						network, autnum,
+					)
+
+					# We don't need to process any more
+					break
 
 	def _handle_update_announcements_from_telnet(self, server):
 		# Pre-compile regular expression for routes
@@ -1073,6 +1120,8 @@ class CLI(object):
 		# Allocate some buffer
 		buffer = b""
 
+		log.debug("Sending Bird command: %s" % command)
+
 		# Send the command
 		s.send(b"%s\n" % command.encode())
 
@@ -1094,9 +1143,19 @@ class CLI(object):
 				# Split the line we want and keep the rest in buffer
 				line, buffer = buffer[:pos], buffer[pos:]
 
-				# Look for the end-of-output indicator
-				if line == b"0000 \n":
-					return
+				# Try parsing any status lines
+				if len(line) > 4 and line[:4].isdigit() and line[4] in (32, 45):
+					code, delim, line = int(line[:4]), line[4], line[5:]
+
+					log.debug("Received response code %s from bird" % code)
+
+					# End of output
+					if code == 0:
+						return
+
+					# Ignore hello line
+					elif code == 1:
+						continue
 
 				# Otherwise return the line
 				yield line

@@ -19,6 +19,7 @@
 #include <time.h>
 
 #include <libloc/libloc.h>
+#include <libloc/address.h>
 #include <libloc/network.h>
 #include <libloc/private.h>
 
@@ -112,15 +113,12 @@ LOC_EXPORT void loc_network_list_clear(struct loc_network_list* list) {
 
 LOC_EXPORT void loc_network_list_dump(struct loc_network_list* list) {
 	struct loc_network* network;
-	char* s;
 
 	for (unsigned int i = 0; i < list->size; i++) {
 		network = list->elements[i];
 
-		s = loc_network_str(network);
-
-		INFO(list->ctx, "%4d: %s\n", i, s);
-		free(s);
+		INFO(list->ctx, "%4d: %s\n",
+			i, loc_network_str(network));
 	}
 }
 
@@ -307,59 +305,79 @@ int loc_network_list_summarize(struct loc_ctx* ctx,
 		return 1;
 	}
 
-	int family = loc_address_family(first);
+	DEBUG(ctx, "Summarizing %s - %s\n", loc_address_str(first), loc_address_str(last));
 
-	// Families must match
-	if (family != loc_address_family(last)) {
+	const int family1 = loc_address_family(first);
+	const int family2 = loc_address_family(last);
+
+	// Check if address families match
+	if (family1 != family2) {
 		ERROR(ctx, "Address families do not match\n");
 		errno = EINVAL;
 		return 1;
 	}
 
 	// Check if the last address is larger than the first address
-	if (in6_addr_cmp(first, last) >= 0) {
+	if (loc_address_cmp(first, last) >= 0) {
 		ERROR(ctx, "The first address must be smaller than the last address\n");
 		errno = EINVAL;
 		return 1;
 	}
 
 	struct loc_network* network = NULL;
-
 	struct in6_addr start = *first;
-	const struct in6_addr* end = NULL;
 
-	while (in6_addr_cmp(&start, last) <= 0) {
-		// Guess the prefix
-		int prefix = 128 - loc_address_count_trailing_zero_bits(&start);
+	const int family_bit_length = loc_address_family_bit_length(family1);
 
-		while (1) {
-			// Create a new network object
-			r = loc_network_new(ctx, &network, &start, prefix);
-			if (r)
-				return r;
+	while (loc_address_cmp(&start, last) <= 0) {
+		struct in6_addr num;
+		int bits1;
 
-			// Is this network within bounds?
-			end = loc_network_get_last_address(network);
-			if (in6_addr_cmp(last, end) <= 0)
-				break;
-
-			// Drop network and decrease prefix
-			loc_network_unref(network);
-			prefix--;
+		// Find the number of trailing zeroes of the start address
+		if (loc_address_all_zeroes(&start))
+			bits1 = family_bit_length;
+		else {
+			bits1 = loc_address_count_trailing_zero_bits(&start);
+			if (bits1 > family_bit_length)
+				bits1 = family_bit_length;
 		}
 
-		// Push it on the list
+		// Subtract the start address from the last address and add one
+		// (i.e. how many addresses are in this network?)
+		r = loc_address_sub(&num, last, &start);
+		if (r)
+			return r;
+
+		loc_address_increment(&num);
+
+		// How many bits do we need to represent this address?
+		int bits2 = loc_address_bit_length(&num) - 1;
+
+		// Select the smaller one
+		int bits = (bits1 > bits2) ? bits2 : bits1;
+
+		// Create a network
+		r = loc_network_new(ctx, &network, &start, family_bit_length - bits);
+		if (r)
+			return r;
+
+		DEBUG(ctx, "Found network %s\n", loc_network_str(network));
+
+		// Push network on the list
 		r = loc_network_list_push(*list, network);
 		if (r) {
 			loc_network_unref(network);
 			return r;
 		}
 
-		// Reset addr to the next start address
-		start = address_increment(end);
+		// The next network starts right after this one
+		start = *loc_network_get_last_address(network);
 
-		// Cleanup
-		loc_network_unref(network);
+		// If we have reached the end of possible IP addresses, we stop
+		if (loc_address_all_ones(&start))
+			break;
+
+		loc_address_increment(&start);
 	}
 
 	return 0;

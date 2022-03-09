@@ -40,6 +40,7 @@
 #include <openssl/pem.h>
 
 #include <libloc/libloc.h>
+#include <libloc/address.h>
 #include <libloc/as.h>
 #include <libloc/as-list.h>
 #include <libloc/compat.h>
@@ -127,7 +128,10 @@ struct loc_database_enumerator {
 
 	// For subnet search and bogons
 	struct loc_network_list* stack;
-	struct loc_network* last_network;
+
+	// For bogons
+	struct in6_addr gap6_start;
+	struct in6_addr gap4_start;
 };
 
 static int loc_database_read_magic(struct loc_database* db) {
@@ -757,13 +761,8 @@ static int loc_database_fetch_network(struct loc_database* db, struct loc_networ
 			return -1;
 	}
 
-#ifdef ENABLE_DEBUG
-	if (r == 0) {
-		char* string = loc_network_str(*network);
-		DEBUG(db->ctx, "Got network %s\n", string);
-		free(string);
-	}
-#endif
+	if (r == 0)
+		DEBUG(db->ctx, "Got network %s\n", loc_network_str(*network));
 
 	return r;
 }
@@ -772,6 +771,13 @@ static int __loc_database_node_is_leaf(const struct loc_database_network_node_v1
 	return (node->network != htobe32(0xffffffff));
 }
 
+#if defined(_MSC_VER) && !defined(__clang__) && 0
+ /*
+  * Disable '-GS' here.
+  * Ref: https://docs.microsoft.com/en-us/cpp/cpp/safebuffers?view=msvc-170
+  */
+  __declspec(safebuffers)
+#endif
 static int __loc_database_lookup_handle_leaf(struct loc_database* db, const struct in6_addr* address,
 		struct loc_network** network, struct in6_addr* network_address, unsigned int prefix,
 		const struct loc_database_network_node_v1* node) {
@@ -808,8 +814,8 @@ static int __loc_database_lookup(struct loc_database* db, const struct in6_addr*
 	off_t node_index;
 
 	// Follow the path
-	int bit = in6_addr_get_bit(address, level);
-	in6_addr_set_bit(network_address, level, bit);
+	int bit = loc_address_get_bit(address, level);
+	loc_address_set_bit(network_address, level, bit);
 
 	if (bit == 0)
 		node_index = be32toh(node->zero);
@@ -988,9 +994,6 @@ static void loc_database_enumerator_free(struct loc_database_enumerator* enumera
 	if (enumerator->stack)
 		loc_network_list_unref(enumerator->stack);
 
-	if (enumerator->last_network)
-		loc_network_unref(enumerator->last_network);
-
 	free(enumerator);
 }
 
@@ -1020,6 +1023,10 @@ LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enum
 		return r;
 	}
 
+	// Initialize bogon search
+	loc_address_reset(&e->gap6_start, AF_INET6);
+	loc_address_reset(&e->gap4_start, AF_INET);
+
 	DEBUG(e->ctx, "Database enumerator object allocated at %p\n", e);
 
 	*enumerator = e;
@@ -1047,7 +1054,7 @@ LOC_EXPORT int loc_database_enumerator_set_string(struct loc_database_enumerator
 	enumerator->string = strdup(string);
 
 	// Make the string lowercase
-	for (char *p = enumerator->string; *p; p++)
+	for (char *p = enumerator->string; p && *p; p++)
 		*p = tolower(*p);
 
 	return 0;
@@ -1163,41 +1170,45 @@ static int loc_database_enumerator_stack_push_node(
 	return 0;
 }
 
-static int loc_database_enumerator_filter_network(
+static int loc_database_enumerator_match_network(
 		struct loc_database_enumerator* enumerator, struct loc_network* network) {
-	// Skip if the family does not match
+	// If family is set, it must match
 	if (enumerator->family && loc_network_address_family(network) != enumerator->family) {
 		DEBUG(enumerator->ctx, "Filtered network %p because of family not matching\n", network);
-		return 1;
+		return 0;
 	}
 
-	// Skip if the country code does not match
+	// Match if no filter criteria is configured
+	if (!enumerator->countries && !enumerator->asns && !enumerator->flags)
+		return 1;
+
+	// Check if the country code matches
 	if (enumerator->countries && !loc_country_list_empty(enumerator->countries)) {
 		const char* country_code = loc_network_get_country_code(network);
 
-		if (!loc_country_list_contains_code(enumerator->countries, country_code)) {
-			DEBUG(enumerator->ctx, "Filtered network %p because of country code not matching\n", network);
+		if (loc_country_list_contains_code(enumerator->countries, country_code)) {
+			DEBUG(enumerator->ctx, "Matched network %p because of its country code\n", network);
 			return 1;
 		}
 	}
 
-	// Skip if the ASN does not match
+	// Check if the ASN matches
 	if (enumerator->asns && !loc_as_list_empty(enumerator->asns)) {
 		uint32_t asn = loc_network_get_asn(network);
 
-		if (!loc_as_list_contains_number(enumerator->asns, asn)) {
-			DEBUG(enumerator->ctx, "Filtered network %p because of ASN not matching\n", network);
+		if (loc_as_list_contains_number(enumerator->asns, asn)) {
+			DEBUG(enumerator->ctx, "Matched network %p because of its ASN\n", network);
 			return 1;
 		}
 	}
 
-	// Skip if flags do not match
-	if (enumerator->flags && !loc_network_has_flag(network, enumerator->flags)) {
-		DEBUG(enumerator->ctx, "Filtered network %p because of flags not matching\n", network);
+	// Check if flags match
+	if (enumerator->flags && loc_network_has_flag(network, enumerator->flags)) {
+		DEBUG(enumerator->ctx, "Matched network %p because of its flags\n", network);
 		return 1;
 	}
 
-	// Do not filter
+	// Not a match
 	return 0;
 }
 
@@ -1211,15 +1222,13 @@ static int __loc_database_enumerator_next_network(
 		if (!*network)
 			break;
 
-		// Throw away any networks by filter
-		if (filter && loc_database_enumerator_filter_network(enumerator, *network)) {
-			loc_network_unref(*network);
-			*network = NULL;
-			continue;
-		}
+		// Return everything if filter isn't enabled, or only return matches
+		if (!filter || loc_database_enumerator_match_network(enumerator, *network))
+			return 0;
 
-		// Return result
-		return 0;
+		// Throw away anything that doesn't match
+		loc_network_unref(*network);
+		*network = NULL;
 	}
 
 	DEBUG(enumerator->ctx, "Called with a stack of %u nodes\n",
@@ -1239,7 +1248,7 @@ static int __loc_database_enumerator_next_network(
 		}
 
 		// Mark the bits on the path correctly
-		in6_addr_set_bit(&enumerator->network_address,
+		loc_address_set_bit(&enumerator->network_address,
 			(node->depth > 0) ? node->depth - 1 : 0, node->i);
 
 		DEBUG(enumerator->ctx, "Looking at node %jd\n", (intmax_t)node->offset);
@@ -1276,19 +1285,13 @@ static int __loc_database_enumerator_next_network(
 			if (r)
 				return r;
 
-			// Return all networks when the filter is disabled
-			if (!filter)
+			// Return all networks when the filter is disabled, or check for match
+			if (!filter || loc_database_enumerator_match_network(enumerator, *network))
 				return 0;
 
-			// Check if we are interested in this network
-			if (loc_database_enumerator_filter_network(enumerator, *network)) {
-				loc_network_unref(*network);
-				*network = NULL;
-
-				continue;
-			}
-
-			return 0;
+			// Does not seem to be a match, so we cleanup and move on
+			loc_network_unref(*network);
+			*network = NULL;
 		}
 	}
 
@@ -1404,23 +1407,6 @@ static int __loc_database_enumerator_next_network_flattened(
 /*
 	This function finds all bogons (i.e. gaps) between the input networks
 */
-static int __loc_database_enumerator_find_bogons(struct loc_ctx* ctx,
-		struct loc_network* first, struct loc_network* second, struct loc_network_list* bogons) {
-	// We do not need to check if first < second because the graph is always ordered
-
-	// The last address of the first network + 1 is the start of the gap
-	struct in6_addr first_address = address_increment(loc_network_get_last_address(first));
-
-	// The first address of the second network - 1 is the end of the gap
-	struct in6_addr last_address = address_decrement(loc_network_get_first_address(second));
-
-	// If first address is now greater than last address, there is no gap
-	if (in6_addr_cmp(&first_address, &last_address) >= 0)
-		return 0;
-
-	return loc_network_list_summarize(ctx, &first_address, &last_address, &bogons);
-}
-
 static int __loc_database_enumerator_next_bogon(
 		struct loc_database_enumerator* enumerator, struct loc_network** bogon) {
 	int r;
@@ -1438,26 +1424,76 @@ static int __loc_database_enumerator_next_bogon(
 	}
 
 	struct loc_network* network = NULL;
+	struct in6_addr* gap_start = NULL;
+	struct in6_addr gap_end = IN6ADDR_ANY_INIT;
 
 	while (1) {
 		r = __loc_database_enumerator_next_network(enumerator, &network, 1);
 		if (r)
-			goto ERROR;
+			return r;
 
+		// We have read the last network
 		if (!network)
+			goto FINISH;
+
+		const char* country_code = loc_network_get_country_code(network);
+
+		/*
+			Skip anything that does not have a country code
+
+			Even if a network is part of the routing table, and the database provides
+			an ASN, this does not mean that this is a legitimate announcement.
+		*/
+		if (country_code && !*country_code) {
+			loc_network_unref(network);
+			continue;
+		}
+
+		// Determine the network family
+		int family = loc_network_address_family(network);
+
+		switch (family) {
+			case AF_INET6:
+				gap_start = &enumerator->gap6_start;
+				break;
+
+			case AF_INET:
+				gap_start = &enumerator->gap4_start;
 			break;
 
-		if (enumerator->last_network && loc_network_address_family(enumerator->last_network) == loc_network_address_family(network)) {
-			r = __loc_database_enumerator_find_bogons(enumerator->ctx,
-				enumerator->last_network, network, enumerator->stack);
+			default:
+				ERROR(enumerator->ctx, "Unsupported network family %d\n", family);
+				errno = ENOTSUP;
+				return 1;
+		}
+
+		const struct in6_addr* first_address = loc_network_get_first_address(network);
+		const struct in6_addr* last_address = loc_network_get_last_address(network);
+
+		// Skip if this network is a subnet of a former one
+		if (loc_address_cmp(gap_start, last_address) >= 0) {
+			loc_network_unref(network);
+			continue;
+		}
+
+		// Search where the gap could end
+		gap_end = *first_address;
+		loc_address_decrement(&gap_end);
+
+		// There is a gap
+		if (loc_address_cmp(gap_start, &gap_end) <= 0) {
+			r = loc_network_list_summarize(enumerator->ctx,
+				gap_start, &gap_end, &enumerator->stack);
 			if (r) {
 				loc_network_unref(network);
-				goto ERROR;
+				return r;
 			}
 		}
 
-		// Remember network for next iteration
-		enumerator->last_network = loc_network_ref(network);
+		// The gap now starts after this network
+		*gap_start = *last_address;
+		loc_address_increment(gap_start);
+
 		loc_network_unref(network);
 
 		// Try to return something
@@ -1466,19 +1502,57 @@ static int __loc_database_enumerator_next_bogon(
 			break;
 	}
 
-ERROR:
-	return r;
+	return 0;
+
+FINISH:
+
+	if (!loc_address_all_zeroes(&enumerator->gap6_start)) {
+		r = loc_address_reset_last(&gap_end, AF_INET6);
+		if (r)
+			return r;
+
+		if (loc_address_cmp(&enumerator->gap6_start, &gap_end) <= 0) {
+			r = loc_network_list_summarize(enumerator->ctx,
+				&enumerator->gap6_start, &gap_end, &enumerator->stack);
+			if (r)
+				return r;
+		}
+
+		// Reset start
+		loc_address_reset(&enumerator->gap6_start, AF_INET6);
+	}
+
+	if (!loc_address_all_zeroes(&enumerator->gap4_start)) {
+		r = loc_address_reset_last(&gap_end, AF_INET);
+		if (r)
+			return r;
+
+		if (loc_address_cmp(&enumerator->gap4_start, &gap_end) <= 0) {
+			r = loc_network_list_summarize(enumerator->ctx,
+				&enumerator->gap4_start, &gap_end, &enumerator->stack);
+			if (r)
+				return r;
+		}
+
+		// Reset start
+		loc_address_reset(&enumerator->gap4_start, AF_INET);
+	}
+
+	// Try to return something
+	*bogon = loc_network_list_pop_first(enumerator->stack);
+
+	return 0;
 }
 
 LOC_EXPORT int loc_database_enumerator_next_network(
 		struct loc_database_enumerator* enumerator, struct loc_network** network) {
 	switch (enumerator->mode) {
 		case LOC_DB_ENUMERATE_NETWORKS:
-		// Flatten output?
-		if (enumerator->flatten)
-			return __loc_database_enumerator_next_network_flattened(enumerator, network);
+			// Flatten output?
+			if (enumerator->flatten)
+				return __loc_database_enumerator_next_network_flattened(enumerator, network);
 
-		return __loc_database_enumerator_next_network(enumerator, network, 1);
+			return __loc_database_enumerator_next_network(enumerator, network, 1);
 
 		case LOC_DB_ENUMERATE_BOGONS:
 			return __loc_database_enumerator_next_bogon(enumerator, network);

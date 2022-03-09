@@ -14,14 +14,12 @@
 	Lesser General Public License for more details.
 */
 
-#ifdef _WIN32
-#  include <winsock2.h>
-#  include <windns.h>
-#else
+#ifndef _WIN32
 #  include <arpa/nameser.h>
 #  include <arpa/nameser_compat.h>
 #  include <resolv.h>
 #endif
+
 #include <string.h>
 #include <time.h>
 

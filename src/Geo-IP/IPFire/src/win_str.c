@@ -49,7 +49,8 @@ char *strsep (char **stringp, const char *delim)
         *stringp = s;
         return (tok);
       }
-    } while (sc != 0);
+    }
+    while (sc != 0);
   }
   return (NULL);
 }
@@ -82,12 +83,12 @@ time_t timegm (struct tm *tm)
   ULARGE_INTEGER uli;
 
   memset (&st, '\0', sizeof(st));
-  st.wYear   = tm->tm_year + 1900;
-  st.wMonth  = tm->tm_mon + 1;
-  st.wDay    = tm->tm_mday;
-  st.wHour   = tm->tm_hour;
-  st.wMinute = tm->tm_min;
-  st.wSecond = tm->tm_sec;
+  st.wYear   = (WORD) (tm->tm_year + 1900);
+  st.wMonth  = (WORD) (tm->tm_mon + 1);
+  st.wDay    = (WORD) tm->tm_mday;
+  st.wHour   = (WORD) tm->tm_hour;
+  st.wMinute = (WORD) tm->tm_min;
+  st.wSecond = (WORD) tm->tm_sec;
 
   SystemTimeToFileTime (&st, &ft);
   uli.LowPart  = ft.dwLowDateTime;

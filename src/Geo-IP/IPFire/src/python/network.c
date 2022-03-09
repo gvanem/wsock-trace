@@ -20,6 +20,7 @@
 #include <limits.h>
 
 #include <libloc/libloc.h>
+#include <libloc/address.h>
 #include <libloc/network.h>
 #include <libloc/network-list.h>
 
@@ -83,21 +84,15 @@ static int Network_init(NetworkObject* self, PyObject* args, PyObject* kwargs) {
 }
 
 static PyObject* Network_repr(NetworkObject* self) {
-	char* network = loc_network_str(self->network);
+	const char* network = loc_network_str(self->network);
 
-	PyObject* obj = PyUnicode_FromFormat("<location.Network %s>", network);
-	free(network);
-
-	return obj;
+	return PyUnicode_FromFormat("<location.Network %s>", network);
 }
 
 static PyObject* Network_str(NetworkObject* self) {
-	char* network = loc_network_str(self->network);
+	const char* network = loc_network_str(self->network);
 
-	PyObject* obj = PyUnicode_FromString(network);
-	free(network);
-
-	return obj;
+	return PyUnicode_FromString(network);
 }
 
 static PyObject* Network_get_country_code(NetworkObject* self) {
@@ -216,12 +211,9 @@ static PyObject* Network_get_family(NetworkObject* self) {
 }
 
 static PyObject* Network_get_first_address(NetworkObject* self) {
-	char* address = loc_network_format_first_address(self->network);
+	const char* address = loc_network_format_first_address(self->network);
 
-	PyObject* obj = PyUnicode_FromString(address);
-	free(address);
-
-	return obj;
+	return PyUnicode_FromString(address);
 }
 
 static PyObject* PyBytes_FromAddress(const struct in6_addr* address6) {
@@ -229,11 +221,7 @@ static PyObject* PyBytes_FromAddress(const struct in6_addr* address6) {
 
 	// Convert IPv4 addresses to struct in_addr
 	if (IN6_IS_ADDR_V4MAPPED(address6)) {
-#ifdef _WIN32
-		address4.s_addr = *(u_long*) &address6->s6_words[6];
-#else
-		address4.s_addr = address6->s6_addr32[3];
-#endif
+		address4.s_addr = IN6_DWORD(address6, 3);
 
 		return PyBytes_FromStringAndSize((const char*)&address4, sizeof(address4));
 	}
@@ -249,12 +237,9 @@ static PyObject* Network_get__first_address(NetworkObject* self) {
 }
 
 static PyObject* Network_get_last_address(NetworkObject* self) {
-	char* address = loc_network_format_last_address(self->network);
+	const char* address = loc_network_format_last_address(self->network);
 
-	PyObject* obj = PyUnicode_FromString(address);
-	free(address);
-
-	return obj;
+	return PyUnicode_FromString(address);
 }
 
 static PyObject* Network_get__last_address(NetworkObject* self) {

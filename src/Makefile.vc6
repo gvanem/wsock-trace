@@ -177,7 +177,8 @@ WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             \
 #
 # .obj-files for 'libloc$(X_SUFFIX)$(_D).lib'.
 #
-LIBLOC_OBJ = $(OBJ_DIR)\as.obj           \
+LIBLOC_OBJ = $(OBJ_DIR)\address.obj      \
+             $(OBJ_DIR)\as.obj           \
              $(OBJ_DIR)\as-list.obj      \
              $(OBJ_DIR)\country.obj      \
              $(OBJ_DIR)\country-list.obj \
