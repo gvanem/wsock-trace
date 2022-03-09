@@ -166,7 +166,8 @@ static DWORD crc_bytes (const char *buf, size_t len);
 
 #define TRACE_BUF_SIZE (2*1024)
 
-/* \todo: these should be "Thread Local" variables.
+/*
+ * \todo These should be "Thread Local Storage" variables.
  */
 static char *C_ptr, *C_end;
 static char  C_buf [TRACE_BUF_SIZE];

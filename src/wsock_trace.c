@@ -61,7 +61,8 @@
 /**
  * Keep track of number of calls to `WSAStartup()` and `WSACleanup()`.
  *
- * \todo: these (and the statics below) should be "Thread Local" variables.
+ * \todo
+ * These (and the statics below) should be "Thread Local Storage" variables.
  */
 int volatile cleaned_up = 0;
 int volatile startup_count = 0;
@@ -623,10 +624,12 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
  * Save and restore WSA error-state:
  * \param[in]  pop  if = 0: return value from `WSAGetLastError()`.
  *                  if = 1: calls `WSASetLastError (err)`.
+ *
+ * \todo The `err` value should be a "Thread Local Storage" variable.
  */
 int WSAError_save_restore (int pop)
 {
-  static int err = 0;  /**\todo This should be a "Thread Local" variable */
+  static int err = 0;
 
   if (pop)
        (*p_WSASetLastError) (err);

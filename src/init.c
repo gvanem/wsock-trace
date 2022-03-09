@@ -153,7 +153,7 @@ static void set_time_format (TS_TYPE *ret, const char *val)
 /**
  * Return the preferred time-stamp string.
  *
- * \todo the below `buf[]` should be a "Thread Local" variable.
+ * \todo the below `buf[]` should be a "Thread Local Storage" variable.
  * \ref  https://docs.microsoft.com/en-us/windows/win32/dlls/using-thread-local-storage-in-a-dynamic-link-library
  */
 const char *get_timestamp (void)
@@ -1721,6 +1721,7 @@ static const struct search_list colors[] = {
  *
  * Returns foreground in lower 8 bits of '*col'.
  *     and background in upper 8 bits of '*col'.
+ *
  * Sets upper 8 bits in '*col' to -1 if "on bg" is missing.
  * I.e. using default background in set_color().
  */
@@ -1732,7 +1733,7 @@ void get_color (const char *val, WORD *col)
   const char *orig = val;
   char        fg_str [20] = "";
   char        bg_str [20] = "";
-  int         num1, num2;
+  int         num1, num2, bright = 0;
 
   if (!val)
   {
@@ -1744,11 +1745,13 @@ void get_color (const char *val, WORD *col)
   {
     fg |= FOREGROUND_INTENSITY;
     val += 7;
+    bright = 1;
   }
   else if (!strnicmp(val, "bold ", 5))
   {
     fg |= FOREGROUND_INTENSITY;
     val += 5;
+    bright = 1;
   }
 
   num1 = sscanf (val, "%20s", fg_str);
@@ -1760,8 +1763,8 @@ void get_color (const char *val, WORD *col)
     return;
   }
 
-  TRACE (5, "num1: %d, num2: %d, fg_str: '%s', bg_str: '%s'\n",
-         num1, num2, fg_str, bg_str);
+  TRACE (5, "num1: %d, num2: %d, fg_str: '%s' (bright: %d), bg_str: '%s'\n",
+         num1, num2, fg_str, bright, bg_str);
 
   x = list_lookup_value (fg_str, colors, DIM(colors));
   if (x == UINT_MAX)

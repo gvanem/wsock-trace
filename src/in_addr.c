@@ -39,7 +39,9 @@
 #include "in_addr.h"
 
 /**
- * \todo: these publics should be "Thread Local" variables.
+ * \todo
+ * The `IPv6_leading_zeroes` variable should be a
+ * "Thread Local Storage" variable.
  *
  * Print an IPv6 address with leading zeros in each 16-bit chunk. Like:
  * ```
