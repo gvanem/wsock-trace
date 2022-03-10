@@ -2960,7 +2960,7 @@ EXPORT int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
   CHECK_PTR (p_WSAHtonl);
   rc = (*p_WSAHtonl) (s, value, result);
   ENTER_CRIT();
-  WSTRACE ("WSAHtonl (%u, %lu, %lu) --> %s", s, value, *result, get_error(rc, 0));
+  WSTRACE ("WSAHtonl (%u, %lu, %lu) --> %s", (u_int)s, value, *result, get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -2972,7 +2972,7 @@ EXPORT int WINAPI WSANtohl (SOCKET s, u_long value, u_long *result)
   CHECK_PTR (p_WSANtohl);
   rc = (*p_WSANtohl) (s, value, result);
   ENTER_CRIT();
-  WSTRACE ("WSANtohl (%u, %lu, %lu) --> %s", s, value, *result, get_error(rc, 0));
+  WSTRACE ("WSANtohl (%u, %lu, %lu) --> %s", (u_int)s, value, *result, get_error(rc, 0));
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
@@ -3419,7 +3419,7 @@ static void get_tcp_info_v01 (SOCKET s, TCP_INFO_v0 *info_0, TCP_INFO_v1 *info_1
 {
   DWORD size_ret = 0;
   DWORD ver, size = 0;
-  void *info;
+  void *info = NULL;
   int   rc;
 
   if (info_0)
