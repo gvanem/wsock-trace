@@ -46,7 +46,7 @@ char prog_dir  [MAX_PATH] = { '\0' };
 HINSTANCE ws_trace_base;        /* Our base-address */
 char     *program_name;         /* For getopt.c and 'xx_main()' functions */
 
-char *set_program_name (char *argv0)
+char *set_program_name (const char *argv0)
 {
   static char ret [_MAX_PATH];
   char   my_name [_MAX_PATH];

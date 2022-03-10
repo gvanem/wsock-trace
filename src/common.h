@@ -152,7 +152,7 @@ extern HINSTANCE   ws_trace_base;        /* Our base-address */
 /* For getopt.c
  */
 extern char *program_name;
-extern char *set_program_name (char *argv0);
+extern char *set_program_name (const char *argv0);
 
 extern void (__stdcall *g_WSASetLastError) (int err);
 extern int  (__stdcall *g_WSAGetLastError) (void);
