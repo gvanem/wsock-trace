@@ -453,17 +453,19 @@ static int csv_callback (struct CSV_context *ctx, const char *value)
 
   if (ctx->rec_num > rec_num)
      puts ("");
-  TRACE (0, "rec: %u, line: %u, field: %u, value: '%s'.\n", ctx->rec_num, ctx->line_num, ctx->field_num, value);
+  TRACE (0, "rec: %u, field: %u, value: '%s'.\n", ctx->rec_num, ctx->field_num, value);
   rec_num = ctx->rec_num;
   return (1);
 }
 
 static int show_help (void)
 {
-  printf ("Usage: %s [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
-          "       -f: set field delimiter. Use '\\t' for a <TAB> or '\\s for a <SPACE> delimiter (default is ',').\n"
-          "       -m: max number of records to handle.\n"
-          "       -n: number of fields in CSV-records.\n", program_name);
+  printf ("Usage:\n"
+          "  %s [-f field-delimiter] [-m records] <-n number-of-fields> <file.csv>\n"
+          "    -f: set field delimiter. Use '\\t' for a <TAB> or '\\s for a <SPACE> delimiter (default is ',').\n"
+          "    -m: max number of records to handle.\n"
+          "    -n: number of fields in CSV-records. Default is found by auto-detection.\n",
+          program_name);
   return (0);
 }
 
