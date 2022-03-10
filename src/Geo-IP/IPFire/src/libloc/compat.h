@@ -65,9 +65,17 @@
   #endif
 
   #if defined(LIBLOC_PRIVATE)
+    /*
+     * Cygwin exposes these prototypes only if `__XSI_VISIBLE` and
+     * `__GNU_VISIBLE` is set.
+     */
+    extern char *strcasestr (const char *haystack, const char *needle);
+    extern char *strptime (const char *buf, const char *format, struct tm *tm);
+
+    /*
+     * Cygwin always exposes these prototypes in it's <time.h>
+     */
     #if !defined(__CYGWIN__)
-      extern char *strcasestr (const char *haystack, const char *needle);
-      extern char *strptime (const char *buf, const char *format, struct tm *tm);
       extern char  *strsep  (char **stringp, const char *delim);
       extern time_t timegm (struct tm *tm);
     #endif
