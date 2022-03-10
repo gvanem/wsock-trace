@@ -55,6 +55,10 @@ char *strsep (char **stringp, const char *delim)
   return (NULL);
 }
 
+/**
+ * Case-insensitive search for substring (`needle`) in
+ * string `haystack`.
+ */
 char *strcasestr (const char *hay_stack, const char *needle)
 {
   int i, lhay_stack, lneedle;
@@ -69,12 +73,17 @@ char *strcasestr (const char *hay_stack, const char *needle)
   return (NULL);
 }
 
-/*
+/**
+ * \def DELTA_EPOCH_SEC
  * Number of seconds from start of the Windows epoch
  * (Jan. 1, 1601) and to the Unix epoch (Jan. 1, 1970).
  */
 #define DELTA_EPOCH_SEC  11644473600
 
+/**
+ * Return a Unix timestamp from a `struct tm`;
+ * the inverse of function `gmtime()`.
+ */
 time_t timegm (struct tm *tm)
 {
   time_t         ret;
