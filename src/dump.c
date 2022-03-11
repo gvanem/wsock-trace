@@ -971,7 +971,7 @@ static const struct search_list tcp_options[] = {
                     ADD_VALUE (TCP_DELAY_FIN_ACK),
                     ADD_VALUE (TCP_OFFLOAD_NO_PREFERENCE),
                     ADD_VALUE (TCP_OFFLOAD_NOT_PREFERRED),
-                    ADD_VALUE (TCP_OFFLOAD_PREFERRED),
+                 // ADD_VALUE (TCP_OFFLOAD_PREFERRED),   /* Ignore; same value as 'TCP_EXPEDITED_1122' above */
                     ADD_VALUE (TCP_MAXRTMS),
                     ADD_VALUE (TCP_FASTOPEN),
                     ADD_VALUE (TCP_KEEPCNT),
