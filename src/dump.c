@@ -40,6 +40,14 @@
 /**
  * Handle printing of option names
  */
+#ifndef TCP_OFFLOAD_NO_PREFERENCE
+#define TCP_OFFLOAD_NO_PREFERENCE 0
+#endif
+
+#ifndef TCP_OFFLOAD_NOT_PREFERRED
+#define TCP_OFFLOAD_NOT_PREFERRED  1
+#endif
+
 #ifndef TCP_EXPEDITED_1122
 #define TCP_EXPEDITED_1122  2
 #endif
@@ -86,6 +94,34 @@
 
 #ifndef TCP_DELAY_FIN_ACK
 #define TCP_DELAY_FIN_ACK 13
+#endif
+
+#ifndef TCP_MAXRTMS
+#define TCP_MAXRTMS 14
+#endif
+
+#ifndef TCP_FASTOPEN
+#define TCP_FASTOPEN 15
+#endif
+
+#ifndef TCP_KEEPCNT
+#define TCP_KEEPCNT 16
+#endif
+
+#ifndef TCP_KEEPINTVL
+#define TCP_KEEPINTVL 17
+#endif
+
+#ifndef TCP_FAIL_CONNECT_ON_ICMP_ERROR
+#define TCP_FAIL_CONNECT_ON_ICMP_ERROR 18
+#endif
+
+#ifndef TCP_ICMP_ERROR_INFO
+#define TCP_ICMP_ERROR_INFO  19
+#endif
+
+#ifndef TCP_BSDURGENT
+#define TCP_BSDURGENT 0x7000  /* Enabled by default */
 #endif
 
 #ifndef UDP_NOCHECKSUM
@@ -915,6 +951,9 @@ static const struct search_list sol_options[] = {
 
 /**
  * The options and their names used in `setsockopt (s, IPPROTO_TCP, opt, ...)` etc.
+ *
+ * Some options are listed here:
+ *   https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options#windows-support-for-ipproto_tcp-options
  */
 static const struct search_list tcp_options[] = {
                     ADD_VALUE (TCP_NODELAY),
@@ -930,6 +969,16 @@ static const struct search_list tcp_options[] = {
                     ADD_VALUE (TCP_OFFLOAD_PREFERENCE),
                     ADD_VALUE (TCP_CONGESTION_ALGORITHM),
                     ADD_VALUE (TCP_DELAY_FIN_ACK),
+                    ADD_VALUE (TCP_OFFLOAD_NO_PREFERENCE),
+                    ADD_VALUE (TCP_OFFLOAD_NOT_PREFERRED),
+                    ADD_VALUE (TCP_OFFLOAD_PREFERRED),
+                    ADD_VALUE (TCP_MAXRTMS),
+                    ADD_VALUE (TCP_FASTOPEN),
+                    ADD_VALUE (TCP_KEEPCNT),
+                    ADD_VALUE (TCP_KEEPINTVL),
+                    ADD_VALUE (TCP_FAIL_CONNECT_ON_ICMP_ERROR),
+                    ADD_VALUE (TCP_ICMP_ERROR_INFO),
+                    ADD_VALUE (TCP_BSDURGENT)
                   };
 
 /**
