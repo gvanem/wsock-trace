@@ -126,6 +126,7 @@ static void test_WSAStringToAddressW (void);
 static void test_WSAEnumProtocols (void);
 static void test_WSAIoctl_1 (void);
 static void test_WSAIoctl_2 (void);
+static void test_WSAIoctl_3 (void);
 static void test_IDNA_functions (void);
 
 /*
@@ -175,6 +176,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAEnumProtocols),
                     ADD_TEST (WSAIoctl_1),
                     ADD_TEST (WSAIoctl_2),
+                    ADD_TEST (WSAIoctl_3),
                     ADD_TEST (WSACleanup)
                   };
 
@@ -772,6 +774,22 @@ static void test_WSAIoctl_2 (void)
 
   if (last_result == 0 && verbose >= 1)
      printf ("  TCP_INFO_v0: State: %d.\n", info.State);
+}
+
+static void test_WSAIoctl_3 (void)
+{
+  GUID   g = { 0x25a207b9, 0xddf3, 0x4660, {0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e } }; /* WSAID_CONNECTEX */
+  DWORD  ret;
+  void  *func = NULL;   /* A 'LPFN_CONNECTEX' func-ptr. Does not matter here */
+
+  TEST_CONDITION ( == 0, WSAIoctl (s2, SIO_GET_EXTENSION_FUNCTION_POINTER, &g, sizeof(g),
+                                   &func, sizeof(void*), &ret, NULL, NULL));
+  if (verbose >= 1)
+  {
+    if (last_result == 0)
+         printf ("  ConnectEx(): 0x%p.\n", func);
+    else printf ("  ConnectEx(): failed with %d.\n", WSAGetLastError());
+  }
 }
 
 static void test_inet_pton (void)
