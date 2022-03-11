@@ -154,7 +154,7 @@ LIBLOC_CFLAGS = -I.                             \
                 --include $(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
 all: message $(OBJ_DIR) $(WSOCK_LIB) ws_tool.exe
-	$(call green_msg, Welcome to Wsock_trace library and example.)
+	$(call green_msg, Welcome to Wsock_trace library and ws_tool.exe program.)
 
 comma := ,
 
@@ -181,13 +181,21 @@ ws_tool.exe: $(WS_TOOL_OBJ) $(LIBLOC_LIB) $(LUAJIT_LIB)
 	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) -lws2_32 > ws_tool.map
 	@echo
 
-$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c
-	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -o $@ $<
+$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c | $(CC).args
+	$(CC) @$(CC).args $(LIBLOC_CFLAGS) -o $@ $<
 	@echo
 
-$(OBJ_DIR)/%.o: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+$(OBJ_DIR)/%.o: %.c | $(CC).args
+	$(CC) @$(CC).args -o $@ $<
 	@echo
+
+$(OBJ_DIR)/%.res: %.rc
+	windres $(RCFLAGS) -o $@ $<
+	@echo
+
+$(CC).args::
+	$(call yellow_msg, All CFLAGS are in $@.)
+	$(call create_resp_file, $@, -c $(CFLAGS))
 
 run_test: ws_tool.exe
 	ws_tool.exe -dd test
@@ -225,7 +233,7 @@ else
 endif
 
 clean: clean_lua
-	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res
+	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res $(CC).args
 
 vclean realclean: clean
 	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map \
@@ -248,7 +256,7 @@ endif
 $(OBJ_DIR)/ws_tool.o: csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c
 
 #
-# The following codes used in macro 'colour_msg' uses Cygwin's echo with colour support.
+# The following needs a Cygwin/Msys 'echo' with colour support.
 #
 BRIGHT_GREEN  = \e[1;32m
 BRIGHT_YELLOW = \e[1;33m
@@ -257,9 +265,14 @@ colour_msg = @echo -e "$(1)\e[0m"
 green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
 yellow_msg = $(call colour_msg,$(BRIGHT_YELLOW)$(strip $(1)))
 
-$(OBJ_DIR)/%.res: %.rc
-	windres $(RCFLAGS) -o $@ $<
-	@echo
+#
+# Create a response file $(1).
+# One word from $(2) per line.
+#
+define create_resp_file
+  $(file > $(1))
+  $(foreach f, $(2), $(file >> $(1),$(strip $(f))) )
+endef
 
 DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 
