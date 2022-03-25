@@ -20,19 +20,25 @@ set CI_DIR=C:\projects\wsock-trace\CI-temp
 md %CI_DIR% 2> NUL
 cd %CI_DIR%
 
-if not exist IP46-COUNTRY.BIN (
+if exist IP46-COUNTRY.BIN (
+  echo 'IP46-COUNTRY.BIN' already exist.
+) else (
   echo Downloading and decompressing 'IP46-COUNTRY.BIN.xz'
   curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
   7z x IP46-COUNTRY.BIN.xz > NUL
 )
 
-if not exist IP4-ASN.CSV (
+if exist IP4-ASN.CSV (
+  echo 'IP4-ASN.CSV' already exist.
+) else (
   echo Downloading and decompressing 'IP4-ASN.CSV.xz'
   curl -O -# http://www.watt-32.net/CI/IP4-ASN.CSV.xz
   7z x IP4-ASN.CSV.xz > NUL
 )
 
-if not exist IP6-ASN.CSV (
+if exist IP6-ASN.CSV (
+  echo 'IP6-ASN.CSV' already exist.
+) else (
   echo Downloading and decompressing 'IP6-ASN.CSV.xz'
   curl -O -# http://www.watt-32.net/CI/IP6-ASN.CSV.xz
   7z x IP6-ASN.CSV.xz > NUL
