@@ -69,6 +69,7 @@
 #include "inet_util.h"
 #include "services.h"
 #include "wsock_trace.h"
+#include "_ipproto.h"
 #include "firewall.h"
 
 typedef LONG NTSTATUS;
@@ -1312,46 +1313,6 @@ static const struct search_list directions[] = {
                     ADD_VALUE (FORWARD),
                     ADD_VALUE (FORWARD2)
                   };
-
-/*
- * Copied from dump.c:
- */
-#define _IPPROTO_HOPOPTS               0
-#define _IPPROTO_ICMP                  1
-#define _IPPROTO_IGMP                  2
-#define _IPPROTO_GGP                   3
-#define _IPPROTO_IPV4                  4
-#define _IPPROTO_ST                    5
-#define _IPPROTO_TCP                   6
-#define _IPPROTO_CBT                   7
-#define _IPPROTO_EGP                   8
-#define _IPPROTO_IGP                   9
-#define _IPPROTO_PUP                   12
-#define _IPPROTO_UDP                   17
-#define _IPPROTO_IDP                   22
-#define _IPPROTO_RDP                   27
-#define _IPPROTO_IPV6                  41
-#define _IPPROTO_ROUTING               43
-#define _IPPROTO_FRAGMENT              44
-#define _IPPROTO_ESP                   50
-#define _IPPROTO_AH                    51
-#define _IPPROTO_ICMPV6                58
-#define _IPPROTO_NONE                  59
-#define _IPPROTO_DSTOPTS               60
-#define _IPPROTO_ND                    77
-#define _IPPROTO_ICLFXBM               78
-#define _IPPROTO_PIM                   103
-#define _IPPROTO_PGM                   113
-#define _IPPROTO_RM                    113
-#define _IPPROTO_L2TP                  115
-#define _IPPROTO_SCTP                  132
-#define _IPPROTO_RAW                   255
-#define _IPPROTO_MAX                   256
-#define _IPPROTO_RESERVED_RAW          257
-#define _IPPROTO_RESERVED_IPSEC        258
-#define _IPPROTO_RESERVED_IPSECOFFLOAD 259
-#define _IPPROTO_RESERVED_WNV          260
-#define _IPPROTO_RESERVED_MAX          261
 
 /*
  * Add a `_IPPROTO_X` value and it's name to the `protocols[]` array.
@@ -4691,7 +4652,7 @@ static void CALLBACK
        fw_play_sound (&g_cfg.FIREWALL.sound.beep.event_drop);
 
     if (from_firewall_main)
-        fw_console_stats();
+       fw_console_stats();
   }
   else
   {
@@ -4725,7 +4686,7 @@ static int quit;
  */
 static char *set_net_program (int argc, char **argv)
 {
-  char   *prog = NULL;
+  char  *prog = NULL;
   size_t len, i;
 
   for (i = len = 0; i < (size_t)argc; i++)
@@ -4748,7 +4709,7 @@ static char *set_net_program (int argc, char **argv)
 static int show_help (void)
 {
   printf ("Simple Windows ICF Firewall monitor test program.\n"
-          "Usage: %s [-aN] [-A] [-c] [-e] [-f] [-lfile] [-p] [-r] [-R] [-v] [program]\n"
+          "Usage: %s [-aN] [-A] [-c] [-e] [-f] [-lfile] [-p] [-r] [-R] [-s] [-v] [program]\n"
           "       -aN:    the API-level to use (%d-%d, default: %d).\n"
           "       -A:     show timestamps on absolute time.\n"
           "       -c:     only dump the callout rules.\n"
@@ -4758,6 +4719,7 @@ static int show_help (void)
           "       -p:     print events for the below program only (implies your \"user-activity\" only).\n"
           "       -r:     only dump the firewall rules and programs.\n"
           "       -R:     with option '-r', only show program-rules with an IPv4/6 address.\n"
+          "       -s:     silent; no beeping sounds.\n"
           "       -v:     sets \"g_cfg.FIREWALL.show_all = 1\".\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
@@ -4765,7 +4727,7 @@ static int show_help (void)
           "    Examples:\n"
           "      %s pause\n"
           "      %s ping -n 10 www.google.com\n"
-          "      %s \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
+          "      %s -f \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
           program_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT,
           program_name, program_name, program_name);
   return (0);
@@ -4835,8 +4797,8 @@ static int run_program (const char *program)
          g_cfg.FIREWALL.show_ipv4 && !g_cfg.FIREWALL.show_ipv6 ? "IPv4 "   :
         !g_cfg.FIREWALL.show_ipv4 &&  g_cfg.FIREWALL.show_ipv6 ? "IPv6 "   : "non-IPv4/IPv6 ";
 
-  C_printf ("Executing ~1%s~0 while listening for %sFilter events.\n",
-            program ? program : "no program", what);
+  C_printf ("Executing ~1%s~0 while listening for %sFilter events. API-level: %d.\n",
+            program ? program : "no program", what, fw_api);
 
   if (!program)
      return (1);
@@ -4867,7 +4829,7 @@ int firewall_main (int argc, char **argv)
   int     dump_events = 0;
   int     RA4_only = 0;
   int     program_only = 0;  /* Capture 'appId' matching program or 'userId' matching logged-on user only. */
-  char   *program;
+  char   *program  = NULL;
   char   *log_file = NULL;
   FILE   *log_f    = NULL;
   WSADATA wsa;
@@ -4875,10 +4837,15 @@ int firewall_main (int argc, char **argv)
 
   set_program_name (argv[0]);
 
-  while ((ch = getopt(argc, argv, "a:Afh?cel:prRtv")) != EOF)
+  while ((ch = getopt(argc, argv, "a:Afh?cel:prRstv")) != EOF)
     switch (ch)
     {
       case 'a':
+           if (!isdigit(*optarg))
+           {
+             printf ("argument to option '-a' is not numeric ('%s')\n", optarg);
+             goto quit;
+           }
            fw_api = atoi (optarg);
            break;
       case 'A':
@@ -4904,6 +4871,9 @@ int firewall_main (int argc, char **argv)
            break;
       case 'R':
            RA4_only = 1;
+           break;
+      case 's':
+           g_cfg.FIREWALL.sound.enable = FALSE;
            break;
       case 't':
            test_SID();
