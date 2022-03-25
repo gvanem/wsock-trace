@@ -34,12 +34,6 @@ matrix:
   allow_failures:
      - BUILDER: cygwin
 
-#
-# todo: Get better version string.
-#
-cache:
-  - wsock-trace-%APPVEYOR_BUILD_NUMBER%
-
 before_build:
   #
   # Download IP+ASN Databases and decompress using '7z'.
@@ -114,3 +108,9 @@ test_script:
 #
 cache:
   - 'C:\projects\wsock-trace\CI-temp'
+
+#
+# todo: Get better version string.
+#
+# cache:
+#  - wsock-trace-%APPVEYOR_BUILD_NUMBER%
