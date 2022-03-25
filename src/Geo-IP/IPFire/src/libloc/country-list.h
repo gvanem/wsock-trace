@@ -40,4 +40,6 @@ int loc_country_list_contains(
 int loc_country_list_contains_code(
 	struct loc_country_list* list, const char* code);
 
+void loc_country_list_sort(struct loc_country_list* list);
+
 #endif

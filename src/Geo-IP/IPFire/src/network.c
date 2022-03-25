@@ -63,7 +63,7 @@ LOC_EXPORT int loc_network_new(struct loc_ctx* ctx, struct loc_network** network
 
 	// Validate the prefix
 	if (!loc_address_valid_prefix(address, prefix)) {
-		ERROR(ctx, "Invalid prefix: %u\n", prefix);
+		ERROR(ctx, "Invalid prefix in %s: %u\n", loc_address_str(address), prefix);
 		errno = EINVAL;
 		return 1;
 	}
@@ -98,52 +98,20 @@ LOC_EXPORT int loc_network_new(struct loc_ctx* ctx, struct loc_network** network
 	return 0;
 }
 
-LOC_EXPORT int loc_network_new_from_string(struct loc_ctx* ctx, struct loc_network** network,
-		const char* address_string) {
-	struct in6_addr first_address;
-	char* prefix_string;
-	unsigned int prefix = 128;
-	int r = -EINVAL;
+LOC_EXPORT int loc_network_new_from_string(struct loc_ctx* ctx,
+		struct loc_network** network, const char* string) {
+	struct in6_addr address;
+	unsigned int prefix;
 
-	DEBUG(ctx, "Attempting to parse network %s\n", address_string);
-
-	// Make a copy of the string to work on it
-	char* buffer = strdup(address_string);
-	address_string = prefix_string = buffer;
-
-	// Split address and prefix
-	address_string = strsep(&prefix_string, "/");
-
-	DEBUG(ctx, "  Split into address = %s, prefix = %s\n", address_string, prefix_string);
-
-	// Parse the address
-	r = loc_parse_address(ctx, address_string, &first_address);
+	// Parse the input
+	int r = loc_address_parse(&address, &prefix, string);
 	if (r) {
-		DEBUG(ctx, "The address could not be parsed\n");
-		goto FAIL;
-	}
-
-	// If a prefix was given, we will try to parse it
-	if (prefix_string) {
-		// Convert prefix to integer
-		prefix = strtol(prefix_string, NULL, 10);
-
-		if (!prefix) {
-			DEBUG(ctx, "The prefix was not parsable: %s\n", prefix_string);
-			goto FAIL;
-		}
-	}
-
-FAIL:
-	// Free temporary buffer
-	free(buffer);
-
-	// Exit if the parsing was unsuccessful
-	if (r)
+		ERROR(ctx, "Could not parse network %s: %m\n", string);
 		return r;
+	}
 
 	// Create a new network
-	return loc_network_new(ctx, network, &first_address, prefix);
+	return loc_network_new(ctx, network, &address, prefix);
 }
 
 LOC_EXPORT struct loc_network* loc_network_ref(struct loc_network* network) {
@@ -574,8 +542,7 @@ LOC_EXPORT struct loc_network_list* loc_network_exclude_list(
 			// If it is strictly smaller, we can continue the search from here next
 			// time because all networks that are to be checked can only be larger
 			// than this one.
-			}
-			else if (r < 0) {
+			} else if (r < 0) {
 				smallest_subnet = i;
 			}
 

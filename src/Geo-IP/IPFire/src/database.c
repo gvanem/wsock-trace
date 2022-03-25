@@ -771,13 +771,6 @@ static int __loc_database_node_is_leaf(const struct loc_database_network_node_v1
 	return (node->network != htobe32(0xffffffff));
 }
 
-#if defined(_MSC_VER) && !defined(__clang__) && 0
- /*
-  * Disable '-GS' here.
-  * Ref: https://docs.microsoft.com/en-us/cpp/cpp/safebuffers?view=msvc-170
-  */
-  __declspec(safebuffers)
-#endif
 static int __loc_database_lookup_handle_leaf(struct loc_database* db, const struct in6_addr* address,
 		struct loc_network** network, struct in6_addr* network_address, unsigned int prefix,
 		const struct loc_database_network_node_v1* node) {
@@ -886,7 +879,7 @@ LOC_EXPORT int loc_database_lookup_from_string(struct loc_database* db,
 		const char* string, struct loc_network** network) {
 	struct in6_addr address;
 
-	int r = loc_parse_address(db->ctx, string, &address);
+	int r = loc_address_parse(&address, NULL, string);
 	if (r)
 		return r;
 
@@ -1459,7 +1452,7 @@ static int __loc_database_enumerator_next_bogon(
 
 			case AF_INET:
 				gap_start = &enumerator->gap4_start;
-			break;
+				break;
 
 			default:
 				ERROR(enumerator->ctx, "Unsupported network family %d\n", family);

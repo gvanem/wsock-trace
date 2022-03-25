@@ -47,10 +47,6 @@ void loc_set_log_fn(struct loc_ctx* ctx,
 int loc_get_log_priority(struct loc_ctx* ctx);
 void loc_set_log_priority(struct loc_ctx* ctx, int priority);
 
-#ifdef LIBLOC_PRIVATE
-int loc_parse_address(struct loc_ctx* ctx, const char* string, struct in6_addr* address);
-#endif
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

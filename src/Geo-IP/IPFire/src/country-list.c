@@ -31,7 +31,11 @@ struct loc_country_list {
 	size_t size;
 };
 
-static int loc_country_list_grow(struct loc_country_list* list, size_t size) {
+static int loc_country_list_grow(struct loc_country_list* list) {
+	size_t size = list->elements_size * 2;
+	if (size < 1024)
+		size = 1024;
+
 	DEBUG(list->ctx, "Growing country list %p by %zu to %zu\n",
 		list, size, list->elements_size + size);
 
@@ -124,7 +128,7 @@ LOC_EXPORT int loc_country_list_append(
 
 	// Check if we have space left
 	if (list->size >= list->elements_size) {
-		int r = loc_country_list_grow(list, 64);
+		int r = loc_country_list_grow(list);
 		if (r)
 			return r;
 	}
@@ -163,4 +167,13 @@ LOC_EXPORT int loc_country_list_contains_code(
 	loc_country_unref(country);
 
 	return r;
+}
+
+static int __loc_country_cmp(const void* country1, const void* country2) {
+	return loc_country_cmp(*(struct loc_country**)country1, *(struct loc_country**)country2);
+}
+
+LOC_EXPORT void loc_country_list_sort(struct loc_country_list* list) {
+	// Sort everything
+	qsort(list->elements, list->size, sizeof(*list->elements), __loc_country_cmp);
 }

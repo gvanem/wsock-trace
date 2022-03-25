@@ -152,33 +152,3 @@ LOC_EXPORT void loc_set_log_priority(struct loc_ctx* ctx, int priority) {
 	ctx->log_priority = priority;
 }
 
-LOC_EXPORT int loc_parse_address(struct loc_ctx* ctx, const char* string, struct in6_addr* address) {
-	DEBUG(ctx, "Parsing IP address %s\n", string);
-
-	// Try parsing this as an IPv6 address
-	int r = inet_pton(AF_INET6, string, address);
-
-	// If inet_pton returns one it has been successful
-	if (r == 1) {
-		DEBUG(ctx, "%s is an IPv6 address\n", string);
-		return 0;
-	}
-
-	// Try parsing this as an IPv4 address
-	struct in_addr ipv4_address;
-	r = inet_pton(AF_INET, string, &ipv4_address);
-	if (r == 1) {
-		DEBUG(ctx, "%s is an IPv4 address\n", string);
-
-		// Convert to IPv6-mapped address
-		IN6_DWORD(address, 0) = 0;
-		IN6_DWORD(address, 1) = 0;
-		IN6_DWORD(address, 2) = htonl(0xffff);
-		IN6_DWORD(address, 3) = ipv4_address.s_addr;
-
-		return 0;
-	}
-
-	DEBUG(ctx, "%s is not an valid IP address\n", string);
-	return -EINVAL;
-}

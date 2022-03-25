@@ -254,6 +254,35 @@ class CLI(object):
 
 		# Select all known networks
 		rows = self.db.query("""
+			WITH known_networks AS (
+				SELECT network FROM announcements
+				UNION
+				SELECT network FROM networks
+				UNION
+				SELECT network FROM network_overrides
+			),
+
+			ordered_networks AS (
+				SELECT
+					known_networks.network AS network,
+					announcements.autnum AS autnum,
+					networks.country AS country,
+
+					-- Must be part of returned values for ORDER BY clause
+					masklen(announcements.network) AS sort_a,
+					masklen(networks.network) AS sort_b
+				FROM
+					known_networks
+				LEFT JOIN
+					announcements ON known_networks.network <<= announcements.network
+				LEFT JOIN
+					networks ON known_networks.network <<= networks.network
+				ORDER BY
+					known_networks.network,
+					sort_a DESC,
+					sort_b DESC
+			)
+
 			-- Return a list of those networks enriched with all
 			-- other information that we store in the database
 			SELECT
@@ -329,31 +358,8 @@ class CLI(object):
 					),
 					FALSE
 				) AS is_drop
-			FROM (
-				SELECT
-					known_networks.network AS network,
-					announcements.autnum AS autnum,
-					networks.country AS country,
-
-					-- Must be part of returned values for ORDER BY clause
-					masklen(announcements.network) AS sort_a,
-					masklen(networks.network) AS sort_b
-				FROM (
-						SELECT network FROM announcements
-					UNION ALL
-						SELECT network FROM networks
-					UNION ALL
-						SELECT network FROM network_overrides
-					) known_networks
-				LEFT JOIN
-					announcements ON known_networks.network <<= announcements.network
-				LEFT JOIN
-					networks ON known_networks.network <<= networks.network
-				ORDER BY
-					known_networks.network,
-					sort_a DESC,
-					sort_b DESC
-			) networks
+			FROM
+				ordered_networks networks
 		""")
 
 		for row in rows:

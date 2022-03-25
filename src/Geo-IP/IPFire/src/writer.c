@@ -33,6 +33,7 @@
 
 #include <libloc/libloc.h>
 #include <libloc/as.h>
+#include <libloc/as-list.h>
 #include <libloc/compat.h>
 #include <libloc/country.h>
 #include <libloc/database.h>
@@ -60,13 +61,10 @@ struct loc_writer {
 	char signature2[LOC_SIGNATURE_MAX_LENGTH];
 	size_t signature2_length;
 
-	struct loc_as** as;
-	size_t as_count;
-
-	struct loc_country** countries;
-	size_t countries_count;
-
 	struct loc_network_tree* networks;
+
+	struct loc_as_list* as_list;
+	struct loc_country_list* country_list;
 };
 
 static int parse_private_key(struct loc_writer* writer, EVP_PKEY** private_key, FILE* f) {
@@ -110,6 +108,20 @@ LOC_EXPORT int loc_writer_new(struct loc_ctx* ctx, struct loc_writer** writer,
 		return r;
 	}
 
+	// Initialize AS list
+	r = loc_as_list_new(ctx, &w->as_list);
+	if (r) {
+		loc_writer_unref(w);
+		return r;
+	}
+
+	// Initialize countries list
+	r = loc_country_list_new(ctx, &w->country_list);
+	if (r) {
+		loc_writer_unref(w);
+		return r;
+	}
+
 	// Load the private keys to sign databases
 	if (fkey1) {
 		r = parse_private_key(w, &w->private_key1, fkey1);
@@ -147,20 +159,12 @@ static void loc_writer_free(struct loc_writer* writer) {
 		EVP_PKEY_free(writer->private_key2);
 
 	// Unref all AS
-	if (writer->as) {
-		for (unsigned int i = 0; i < writer->as_count; i++) {
-			loc_as_unref(writer->as[i]);
-		}
-		free(writer->as);
-	}
+	if (writer->as_list)
+		loc_as_list_unref(writer->as_list);
 
 	// Unref all countries
-	if (writer->countries) {
-		for (unsigned int i = 0; i < writer->countries_count; i++) {
-			loc_country_unref(writer->countries[i]);
-		}
-		free(writer->countries);
-	}
+	if (writer->country_list)
+		loc_country_list_unref(writer->country_list);
 
 	// Release network tree
 	if (writer->networks)
@@ -224,30 +228,14 @@ LOC_EXPORT int loc_writer_set_license(struct loc_writer* writer, const char* lic
 	return 0;
 }
 
-static int __loc_as_cmp(const void* as1, const void* as2) {
-	return loc_as_cmp(*(struct loc_as**)as1, *(struct loc_as**)as2);
-}
-
 LOC_EXPORT int loc_writer_add_as(struct loc_writer* writer, struct loc_as** as, uint32_t number) {
+	// Create a new AS object
 	int r = loc_as_new(writer->ctx, as, number);
 	if (r)
 		return r;
 
-	// We have a new AS to add
-	writer->as_count++;
-
-	// Make space
-	writer->as = realloc(writer->as, sizeof(*writer->as) * writer->as_count);
-	if (!writer->as)
-		return -ENOMEM;
-
-	// Add as last element
-	writer->as[writer->as_count - 1] = loc_as_ref(*as);
-
-	// Sort everything
-	qsort(writer->as, writer->as_count, sizeof(*writer->as), __loc_as_cmp);
-
-	return 0;
+	// Append it to the list
+	return loc_as_list_append(writer->as_list, *as);
 }
 
 LOC_EXPORT int loc_writer_add_network(struct loc_writer* writer, struct loc_network** network, const char* string) {
@@ -262,30 +250,14 @@ LOC_EXPORT int loc_writer_add_network(struct loc_writer* writer, struct loc_netw
 	return loc_network_tree_add_network(writer->networks, *network);
 }
 
-static int __loc_country_cmp(const void* country1, const void* country2) {
-	return loc_country_cmp(*(struct loc_country**)country1, *(struct loc_country**)country2);
-}
-
 LOC_EXPORT int loc_writer_add_country(struct loc_writer* writer, struct loc_country** country, const char* country_code) {
+	// Allocate a new country
 	int r = loc_country_new(writer->ctx, country, country_code);
 	if (r)
 		return r;
 
-	// We have a new country to add
-	writer->countries_count++;
-
-	// Make space
-	writer->countries = realloc(writer->countries, sizeof(*writer->countries) * writer->countries_count);
-	if (!writer->countries)
-		return -ENOMEM;
-
-	// Add as last element
-	writer->countries[writer->countries_count - 1] = loc_country_ref(*country);
-
-	// Sort everything
-	qsort(writer->countries, writer->countries_count, sizeof(*writer->countries), __loc_country_cmp);
-
-	return 0;
+	// Append it to the list
+	return loc_country_list_append(writer->country_list, *country);
 }
 
 static void make_magic(struct loc_writer* writer, struct loc_database_magic* magic,
@@ -325,20 +297,32 @@ static int loc_database_write_as_section(struct loc_writer* writer,
 	DEBUG(writer->ctx, "AS section starts at %jd bytes\n", (intmax_t)*offset);
 	header->as_offset = htobe32(*offset);
 
-	size_t as_length = 0;
+	// Sort the AS list first
+	loc_as_list_sort(writer->as_list);
 
-	struct loc_database_as_v1 as;
-	for (unsigned int i = 0; i < writer->as_count; i++) {
+	const size_t as_count = loc_as_list_size(writer->as_list);
+
+	struct loc_database_as_v1 block;
+	size_t block_length = 0;
+
+	for (unsigned int i = 0; i < as_count; i++) {
+		struct loc_as* as = loc_as_list_get(writer->as_list, i);
+		if (!as)
+			return 1;
+
 		// Convert AS into database format
-		loc_as_to_database_v1(writer->as[i], writer->pool, &as);
+		loc_as_to_database_v1(as, writer->pool, &block);
 
 		// Write to disk
-		*offset += fwrite(&as, 1, sizeof(as), f);
-		as_length += sizeof(as);
+		*offset += fwrite(&block, 1, sizeof(block), f);
+		block_length += sizeof(block);
+
+		// Unref AS
+		loc_as_unref(as);
 	}
 
-	DEBUG(writer->ctx, "AS section has a length of %zu bytes\n", as_length);
-	header->as_length = htobe32(as_length);
+	DEBUG(writer->ctx, "AS section has a length of %zu bytes\n", block_length);
+	header->as_length = htobe32(block_length);
 
 	align_page_boundary(offset, f);
 
@@ -525,20 +509,24 @@ static int loc_database_write_countries(struct loc_writer* writer,
 	DEBUG(writer->ctx, "Countries section starts at %jd bytes\n", (intmax_t)*offset);
 	header->countries_offset = htobe32(*offset);
 
-	size_t countries_length = 0;
+	const size_t countries_count = loc_country_list_size(writer->country_list);
 
-	struct loc_database_country_v1 country;
-	for (unsigned int i = 0; i < writer->countries_count; i++) {
+	struct loc_database_country_v1 block;
+	size_t block_length = 0;
+
+	for (unsigned int i = 0; i < countries_count; i++) {
+		struct loc_country* country = loc_country_list_get(writer->country_list, i);
+
 		// Convert country into database format
-		loc_country_to_database_v1(writer->countries[i], writer->pool, &country);
+		loc_country_to_database_v1(country, writer->pool, &block);
 
 		// Write to disk
-		*offset += fwrite(&country, 1, sizeof(country), f);
-		countries_length += sizeof(country);
+		*offset += fwrite(&block, 1, sizeof(block), f);
+		block_length += sizeof(block);
 	}
 
-	DEBUG(writer->ctx, "Countries section has a length of %zu bytes\n", countries_length);
-	header->countries_length = htobe32(countries_length);
+	DEBUG(writer->ctx, "Countries section has a length of %zu bytes\n", block_length);
+	header->countries_length = htobe32(block_length);
 
 	align_page_boundary(offset, f);
 

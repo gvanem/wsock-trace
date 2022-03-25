@@ -38,4 +38,6 @@ int loc_as_list_contains(
 int loc_as_list_contains_number(
 	struct loc_as_list* list, uint32_t number);
 
+void loc_as_list_sort(struct loc_as_list* list);
+
 #endif

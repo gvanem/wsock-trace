@@ -31,7 +31,11 @@ struct loc_as_list {
 	size_t size;
 };
 
-static int loc_as_list_grow(struct loc_as_list* list, size_t size) {
+static int loc_as_list_grow(struct loc_as_list* list) {
+	size_t size = list->elements_size * 2;
+	if (size < 1024)
+		size = 1024;
+
 	DEBUG(list->ctx, "Growing AS list %p by %zu to %zu\n",
 		list, size, list->elements_size + size);
 
@@ -124,7 +128,7 @@ LOC_EXPORT int loc_as_list_append(
 
 	// Check if we have space left
 	if (list->size >= list->elements_size) {
-		int r = loc_as_list_grow(list, 64);
+		int r = loc_as_list_grow(list);
 		if (r)
 			return r;
 	}
@@ -158,4 +162,13 @@ LOC_EXPORT int loc_as_list_contains_number(
 	loc_as_unref(as);
 
 	return r;
+}
+
+static int __loc_as_cmp(const void* as1, const void* as2) {
+	return loc_as_cmp(*(struct loc_as**)as1, *(struct loc_as**)as2);
+}
+
+LOC_EXPORT void loc_as_list_sort(struct loc_as_list* list) {
+	// Sort everything
+	qsort(list->elements, list->size, sizeof(*list->elements), __loc_as_cmp);
 }

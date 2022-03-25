@@ -33,7 +33,11 @@ struct loc_network_list {
 	size_t size;
 };
 
-static int loc_network_list_grow(struct loc_network_list* list, size_t size) {
+static int loc_network_list_grow(struct loc_network_list* list) {
+	size_t size = list->elements_size * 2;
+	if (size < 1024)
+		size = 1024;
+
 	DEBUG(list->ctx, "Growing network list %p by %zu to %zu\n",
 		list, size, list->elements_size + size);
 
@@ -221,7 +225,7 @@ LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_n
 
 	// Check if we have space left
 	if (list->size >= list->elements_size) {
-		int r = loc_network_list_grow(list, 64);
+		int r = loc_network_list_grow(list);
 		if (r)
 			return r;
 	}
@@ -230,7 +234,7 @@ LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_n
 	list->size++;
 
 	// Move all elements out of the way
-	for (unsigned int i = list->size - 1; i > (unsigned int)index; i--)
+	for (unsigned int i = list->size - 1; i > index; i--)
 		list->elements[i] = list->elements[i - 1];
 
 	// Add the new element at the right place

@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
 	// Try adding an invalid network
 	struct loc_network* network;
 	err = loc_writer_add_network(writer, &network, "xxxx:xxxx::/32");
-	if (err != -EINVAL) {
+	if (!err) {
 		fprintf(stderr, "It was possible to add an invalid network (err = %d)\n", err);
 		exit(EXIT_FAILURE);
 	}

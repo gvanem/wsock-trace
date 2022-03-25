@@ -59,6 +59,7 @@ static inline uint32_t __builtin_ctz(unsigned long value)
 */
 
 const char* loc_address_str(const struct in6_addr* address);
+int loc_address_parse(struct in6_addr* address, unsigned int* prefix, const char* string);
 
 static inline int loc_address_family(const struct in6_addr* address) {
 	if (IN6_IS_ADDR_V4MAPPED(address))
