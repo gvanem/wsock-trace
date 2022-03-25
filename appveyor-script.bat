@@ -14,6 +14,30 @@ exit /b 1
 
 :init
 ::
+:: Download stuff to here if not cached:
+::
+set CI_DIR=c:\projects\wsock-trace\CI-temp
+md %CI_DIR% 2> NUL
+cd %CI_DIR%
+
+if not exist IP46-COUNTRY.BIN (
+  curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  7z x IP46-COUNTRY.BIN.xz > NUL
+)
+
+if not exist IP4-ASN.CSV (
+  curl -O -# http://www.watt-32.net/CI/IP4-ASN.CSV.xz
+  7z x IP4-ASN.CSV.xz > NUL
+)
+
+if not exist IP6-ASN.CSV (
+  curl -O -# http://www.watt-32.net/CI/IP6-ASN.CSV.xz
+  7z x IP6-ASN.CSV.xz > NUL
+)
+
+cd ..
+
+::
 :: The "CPU" and "BUILDER" agnostic init-stage.
 ::
 echo Generating %CD%\wsock_trace.appveyor...
@@ -59,12 +83,12 @@ echo   show_map_url           = 1                                            >> 
 echo   max_days               = 10                                           >> wsock_trace.appveyor
 echo   ip4_file               = %CD%\GeoIP.csv                               >> wsock_trace.appveyor
 echo   ip6_file               = %CD%\GeoIP6.csv                              >> wsock_trace.appveyor
-echo   ip2location_bin_file   = %CD%\IP46-COUNTRY.BIN                        >> wsock_trace.appveyor
+echo   ip2location_bin_file   = %CI_DIR%\IP46-COUNTRY.BIN                    >> wsock_trace.appveyor
 
 echo [asn]                                                                   >> wsock_trace.appveyor
 echo   enable       = 1                                                      >> wsock_trace.appveyor
-echo  #asn_csv_file = %CD%\IP4-ASN.CSV                                       >> wsock_trace.appveyor
-echo  #asn_csv_file = %CD%\IP6-ASN.CSV                                       >> wsock_trace.appveyor
+echo  #asn_csv_file = %CI_DIR%\IP4-ASN.CSV                                   >> wsock_trace.appveyor
+echo  #asn_csv_file = %CI_DIR%\IP6-ASN.CSV                                   >> wsock_trace.appveyor
 echo   asn_bin_file = %CD%\IPFire-database.db                                >> wsock_trace.appveyor
 echo   asn_bin_url  = https://location.ipfire.org/databases/1/location.db.xz >> wsock_trace.appveyor
 echo   xz_decompress = 1                                                     >> wsock_trace.appveyor
@@ -135,6 +159,7 @@ exit /b 0
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
-del /Q IP46-COUNTRY.BIN xz.exe wsock_trace.appveyor appveyor-hosts 2> NUL
+del /Q %CI_DIR%\IP46-COUNTRY.BIN %CI_DIR%\IP4-ASN.CSV %CI_DIR%\IP6-ASN.CSV 2> NUL
+del /Q wsock_trace.appveyor appveyor-hosts 2> NUL
 echo Cleaning done.
 exit /b 0

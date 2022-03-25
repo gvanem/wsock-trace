@@ -46,12 +46,12 @@ before_build:
   # But do not download and decompress 'location.db.xz'.
   # Let 'ASN_check_and_update()' do it at run-time.
   #
-  - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
-  - cmd: curl -O -# http://www.watt-32.net/CI/IP4-ASN.CSV.xz
-  - cmd: curl -O -# http://www.watt-32.net/CI/IP6-ASN.CSV.xz
-  - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
-  - cmd: 7z x IP4-ASN.CSV.xz      > NUL
-  - cmd: 7z x IP6-ASN.CSV.xz      > NUL
+  # - cmd: curl -O -# http://www.watt-32.net/CI/IP46-COUNTRY.BIN.xz
+  # - cmd: curl -O -# http://www.watt-32.net/CI/IP4-ASN.CSV.xz
+  # - cmd: curl -O -# http://www.watt-32.net/CI/IP6-ASN.CSV.xz
+  # - cmd: 7z x IP46-COUNTRY.BIN.xz > NUL
+  # - cmd: 7z x IP4-ASN.CSV.xz      > NUL
+  # - cmd: 7z x IP6-ASN.CSV.xz      > NUL
 
 install:
   #
@@ -109,3 +109,8 @@ test_script:
 #   - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
 #     name: Wsock-Trace
 
+#
+# Try to preserve previously downloaded stuff in 'CI-temp'.
+#
+cache:
+  - 'C:\projects\wsock-trace\CI-temp'
