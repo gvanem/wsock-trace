@@ -15,6 +15,9 @@
  *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
  *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe -l wsock_trace -i
  * ```
+ *
+ * A nice intro to Lua embedding:
+ *   https://lucasklassmann.com/blog/2019-02-02-how-to-embeddeding-lua-in-c/
  */
 #include "common.h"
 
