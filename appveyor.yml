@@ -107,10 +107,5 @@ test_script:
 # Try to preserve previously downloaded stuff in 'CI-temp'.
 #
 cache:
-  - 'C:\projects\wsock-trace\CI-temp'
+  - 'c:\projects\wsock-trace\CI-temp'
 
-#
-# todo: Get better version string.
-#
-# cache:
-#  - wsock-trace-%APPVEYOR_BUILD_NUMBER%
