@@ -107,5 +107,5 @@ test_script:
 # Try to preserve previously downloaded stuff in 'CI-temp'.
 #
 cache:
-  - 'c:\projects\wsock-trace\CI-temp'
+  - 'C:\projects\wsock-trace\CI-temp'
 

@@ -16,7 +16,7 @@ exit /b 1
 ::
 :: Download stuff to here if not cached:
 ::
-set CI_DIR=c:\projects\wsock-trace\CI-temp
+set CI_DIR=C:\projects\wsock-trace\CI-temp
 md %CI_DIR% 2> NUL
 cd %CI_DIR%
 
