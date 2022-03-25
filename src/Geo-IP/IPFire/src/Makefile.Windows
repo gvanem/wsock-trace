@@ -38,7 +38,7 @@ USE_WSOCK_TRACE ?= 0
 #
 # Otherwise just fake it in a non-obstructive way:
 # any macro in 'fake-OpenSSL/openssl/fake-it.h' will cause a
-# signature operation (test-signature.exe) to fail.
+# signature operation in 'test-signature.exe' to fail.
 #
 USE_OPENSSL  ?= 0
 OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
@@ -77,14 +77,19 @@ TEST_PROGS = test-address.exe      \
              test-signature.exe    \
              test-stringpool.exe
 
+export CL=
 
 ifeq ($(CC),gcc)
-  OBJ_DIR = MinGW_obj
+  OBJ_DIR   = MinGW_obj
+  MSVC_TYPE = 0
+
 else ifeq ($(CC),cl)
-  OBJ_DIR = MSVC_obj
+  OBJ_DIR   = MSVC_obj
+  MSVC_TYPE = 1
+
 else ifeq ($(CC),clang-cl)
-  OBJ_DIR = clang_obj
-  export CL=
+  OBJ_DIR   = clang_obj
+  MSVC_TYPE = 1
 else
   $(error $(Usage))
 endif
@@ -155,9 +160,11 @@ endif
 # Warning control.
 #
 ifeq ($(CC),gcc)
-  CFLAGS += -Wall       \
-            -Wno-format \
-            -Wno-format-extra-args
+  CFLAGS += -Wall                  \
+            -Wno-format            \
+            -Wno-format-extra-args \
+            -Wno-strict-aliasing   \
+            -Wno-unused-variable
 
 else ifeq ($(CC),clang-cl)
   CFLAGS += -W4                             \
@@ -179,11 +186,12 @@ else
 endif
 
 #
-# External lib(s) to use for libloc.dll
-# (and possibly 'test-*.exe' if 'USE_STATIC_LIBLOC = 1')
+# External lib(s) to use for 'libloc.dll'.
+# And possibly 'test-*.exe' if 'USE_STATIC_LIBLOC = 1'.
 #
 ifeq ($(CC),gcc)
   select = $(1)
+  WS2_32 = -lws2_32
 else
   select = $(2)
 
@@ -259,14 +267,14 @@ $(STATIC_LIB): $(OBJ_DIR) $(LIBLOC_OBJ)
 	lib -nologo -out:$@ $(LIBLOC_OBJ)
 	@echo
 
+ifeq ($(MSVC_TYPE),1)
+  DEF_ARG = -def:
+endif
+
 $(IMPORT_LIB): libloc.dll
 
 libloc.dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
-ifeq ($(CC),gcc)
-	$(call link_DLL, $@, $^ $(OPENSSL_LIBS) $(DNS_LIB), $(IMPORT_LIB))
-else
-	$(call link_DLL, $@, -def:$^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
-endif
+	$(call link_DLL, $@, $(DEF_ARG)$^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 
 libloc/version.h: $(THIS_FILE)
 	$(call Generate, $@, //)
@@ -487,17 +495,18 @@ endef
 #
 define link_EXE
   $(call green_msg, Linking $(1))
-  $(call link_EXE_$(CC), $(1), $(2))
+  $(call link_EXE_$(MSVC_TYPE), $(1), $(2))
   @echo
 endef
 
-link_EXE_gcc      = $(CC) $(LDFLAGS) -o $(1) $(2) > $(1:.exe=.map)
-link_EXE_clang-cl = $(call link_EXE_cl, $(1), $(2))
+define link_EXE_0
+  $(CC) $(LDFLAGS) -o $(1) $(2) > $(1:.exe=.map)
+endef
 
 #
 # Remove the .lib/.exp-files due to the pesky 'OPENSSL_Applink' export symbol.
 #
-define link_EXE_cl
+define link_EXE_1
   link $(LDFLAGS) -out:$(strip $(1)) $(2) > link.tmp
   @cat link.tmp >> $(1:.exe=.map)
   @rm -f $(1:.exe=.lib) $(1:.exe=.exp)
@@ -511,14 +520,15 @@ endef
 #
 define link_DLL
   $(call green_msg, Linking $(1))
-  $(call link_DLL_$(CC), $(1), $(2), $(3))
+  $(call link_DLL_$(MSVC_TYPE), $(1), $(2), $(3))
   @echo
 endef
 
-link_DLL_gcc      = $(CC) $(LDFLAGS) -shared -o $(1) -Wl,--out-implib,$(strip $(3)) $(2) > $(1:.dll=.map)
-link_DLL_clang-cl = $(call link_DLL_cl, $(1), $(2), $(3))
+define link_DLL_0
+  $(CC) $(LDFLAGS) -shared -o $(1) -Wl,--out-implib,$(strip $(3)) $(2) > $(1:.dll=.map)
+endef
 
-define link_DLL_cl
+define link_DLL_1
   link $(LDFLAGS) -dll -out:$(strip $(1)) -implib:$(strip $(3)) $(2) > link.tmp
   @cat link.tmp >> $(1:.dll=.map)
   @rm -f $(3:.lib=.exp)
@@ -531,28 +541,27 @@ endef
 #
 define link_PYD
   $(call green_msg, Linking $@)
-  $(call link_PYD_$(CC), $(1), $(2))
+  $(call link_PYD_$(MSVC_TYPE), $(1), $(2))
   @echo
 endef
 
-link_PYD_gcc      = $(CC) $(LDFLAGS) -shared -o $(1) $(2) > $(1:.pyd=.map)
-link_PYD_clang-cl = $(call link_PYD_cl, $(1), $(2))
+define link_PYD_0
+  $(CC) $(LDFLAGS) -shared -o $(1) $(2) > $(1:.pyd=.map)
+endef
 
-define link_PYD_cl
+define link_PYD_1
   link $(LDFLAGS) -libpath:$(PY_ROOT)/libs -dll -out:$(strip $(1)) $(2) > link.tmp
   @cat link.tmp >> $(1:.pyd=.map)
   @rm -f $(1:.pyd=.lib) $(1:.pyd=.exp)
 endef
 
 define make_res
-  $(call make_res_$(CC), $(1), $(2))
+  $(call make_res_$(MSVC_TYPE), $(1), $(2))
   @echo
 endef
 
-make_res_gcc      = windres $(RCFLAGS) -o $(1) -i $(2)
-make_res_cl       = rc $(RCFLAGS) -Fo $(1) $(2)
-make_res_clang-cl = $(call make_res_cl, $(1), $(2))
-
+make_res_0 = windres $(RCFLAGS) -o $(1) -i $(2)
+make_res_1 = rc $(RCFLAGS) -Fo $(1) $(2)
 
 ifeq ($(USE_CLANG_FORMATER),1)
   C_FORMATER = | clang-format -style=Mozilla -assume-filename=c
