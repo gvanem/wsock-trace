@@ -21,7 +21,11 @@ It's task would be to show additional information for an IPv4/IPv6 address:
  * IANA information.
  * Position (with a GoogleMap link).
  * *Autonomous System Number* information.
- * Various attributes like: *Satelitte provider*, *Anonymous Proxy*, *Anycast*, *Tor exit node* etc.
+ * Various attributes like: *Satelitte provider*,
+   [*Anonymous Proxy*](https://en.wikipedia.org/wiki/Anonymous_proxy),
+   [*Anycast*](https://en.wikipedia.org/wiki/Anycast),
+   [*Tor exit node*](https://en.wikipedia.org/wiki/Tor_(network)#Tor_exit_node_block),
+   [*Bogons*](https://en.wikipedia.org/wiki/Bogon_filtering) etc.
  * And perhaps support for various block-lists. Like:
     * **[Spamhaus DROP](https://www.spamhaus.org/drop/)** (already supported, but move it here).
     * **[Spamhaus ASN-DROP](https://www.spamhaus.org/drop/)**.
@@ -34,7 +38,7 @@ Ideas for the public interface to a unified "Geo-IP" library:
 
 ### INIT PHASE:
 
-```
+```c
   const struct geoip_provider_st mmdb_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_MMDB_FILE,
     .files  = [ "DB-IP/dbip-country-lite-2020-03.mmdb", NULL ],
@@ -53,7 +57,7 @@ Ideas for the public interface to a unified "Geo-IP" library:
     .update = geoip_libloc_update  // update the local '.files[0]' from '.url'
   };
 
-  struct geoip_provider_st asn_handler1 = {
+  const struct geoip_provider_st asn_handler1 = {
     .flags  = GEOIP_ASN_FILE | GEOIP_MMDB_FILE,
     .files  = [ "DB-IP/dbip-asn-lite-2020-10.mmdb", NULL ],
     .init   = geoip_ASN_init,
@@ -61,7 +65,7 @@ Ideas for the public interface to a unified "Geo-IP" library:
     .lookup = geoip_ASN_lookup
   };
 
-  struct geoip_provider_st asn_handler2 = {
+  const struct geoip_provider_st asn_handler2 = {
     .flags  = GEOIP_ASN_FILE | GEOIP_CSV_FILE,
     .files  = [ "IP4-ASN.CSV", NULL ],
     .init   = geoip_ASN_init,
@@ -69,7 +73,7 @@ Ideas for the public interface to a unified "Geo-IP" library:
     .lookup = geoip_ASN_lookup
   };
 
-  struct geoip_provider_st drop_handler = {
+  const struct geoip_provider_st drop_handler = {
     .flags  = GEOIP_DROP | GEOIP_TXT_FILES,
     .files  = [ "DROP.txt", "DROPv6.txt", "EDROP.txt", NULL ],
     .init   = geoip_DROP_init,
@@ -81,7 +85,7 @@ Ideas for the public interface to a unified "Geo-IP" library:
 (unset fields above is assumed to be `NULL`).
 Add the above provider back-ends in an internal structure for later use:
 
-```
+```c
   geoip_add_provider (&mmdb_handler);
   geoip_add_provider (&libloc_handler);
   geoip_add_provider (&asn_handler1);
@@ -96,8 +100,8 @@ Add the above provider back-ends in an internal structure for later use:
   Some precedence could be used or simply look for a flags-match in the order back-ends were added?
 
 
-  ```
-  struct in_addr ia4 = ...;
+  ```c
+  const struct in_addr ia4 = ...;
   const struct geoip_data_rec *rec = geoip_lookup (&ia4, GEOIP_IPV4_ADDR | GEOIP_ASN_FILE);
 
   if (rec)
@@ -112,6 +116,6 @@ Add the above provider back-ends in an internal structure for later use:
 
   Remove all added providers, close open files and free the memory used in **INIT PHASE**:
 
-  ```
+  ```c
   geoip_del_providers();
   ```
