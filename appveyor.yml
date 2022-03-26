@@ -67,7 +67,8 @@ test_script:
   - cmd: set WSOCK_TRACE_LEVEL=0 & set USE_LUAJIT=0
 
   #
-  # Delete '..\IPFire-database.db' to force a download and decompression.
+  # Delete '..\IPFire-database.db' to force a download and decompression
+  # in the 'ws_tool.exe asn -u' command.
   #
   - cmd: del /Q ..\IPFire-database.db
   - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe asn -u
