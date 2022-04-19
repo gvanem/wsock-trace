@@ -2558,7 +2558,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
     wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
                     ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
 
-    wstrace_printf (FALSE, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s",
+    wstrace_printf (FALSE, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s\n",
                     ADDR_CAST(fd_array), DWORD_CAST(fds), ms_buf, socket_or_error(rc));
 
     C_indent (g_cfg.trace_indent+2);
