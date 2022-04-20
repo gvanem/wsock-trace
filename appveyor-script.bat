@@ -59,6 +59,7 @@ echo   trace_level            = %%WSOCK_TRACE_LEVEL%%                        >> 
 echo   trace_indent           = 2                                            >> wsock_trace.appveyor
 echo   trace_caller           = 1                                            >> wsock_trace.appveyor
 echo   trace_report           = 0                                            >> wsock_trace.appveyor
+echo   trace_binmode          = 1                                            >> wsock_trace.appveyor
 echo   trace_time             = relative                                     >> wsock_trace.appveyor
 echo   trace_time_usec        = 1                                            >> wsock_trace.appveyor
 echo   trace_max_len          = %%COLUMNS%%                                  >> wsock_trace.appveyor
