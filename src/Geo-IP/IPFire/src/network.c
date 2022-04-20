@@ -322,11 +322,14 @@ LOC_EXPORT int loc_network_subnets(struct loc_network* network,
 	*subnet2 = NULL;
 
 	// New prefix length
-	unsigned int prefix = network->prefix + 1;
+	unsigned int prefix = loc_network_prefix(network) + 1;
 
 	// Check if the new prefix is valid
-	if (!loc_address_valid_prefix(&network->first_address, prefix))
-		return -1;
+	if (!loc_address_valid_prefix(&network->first_address, prefix)) {
+		ERROR(network->ctx, "Invalid prefix: %d\n", prefix);
+		errno = EINVAL;
+		return 1;
+	}
 
 	// Create the first half of the network
 	r = loc_network_new(network->ctx, subnet1, &network->first_address, prefix);
@@ -412,6 +415,9 @@ ERROR:
 
 	if (subnet2)
 		loc_network_unref(subnet2);
+
+	if (r)
+		DEBUG(network->ctx, "%s has failed with %d\n", __FUNCTION__, r);
 
 	return r;
 }
@@ -891,4 +897,3 @@ int loc_network_tree_node_is_leaf(struct loc_network_tree_node* node) {
 struct loc_network* loc_network_tree_node_get_network(struct loc_network_tree_node* node) {
 	return loc_network_ref(node->network);
 }
-

@@ -107,5 +107,6 @@ static inline void hexdump(struct loc_ctx* ctx, const void* addr, size_t len) {
 	// And print the final bit
 	DEBUG(ctx, "  %s %s\n", buffer_hex, buffer_ascii);
 }
+
 #endif
 #endif

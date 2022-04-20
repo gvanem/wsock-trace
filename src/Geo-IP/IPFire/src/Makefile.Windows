@@ -10,7 +10,7 @@
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 12
+LIBLOC_MICRO = 13
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 DATE_STAMP = $(shell date.exe +%d-%B-%Y)
@@ -283,6 +283,7 @@ libloc/version.h: $(THIS_FILE)
 	$(file >> $@, #define LIBLOC_MAJOR_VER  $(LIBLOC_MAJOR))
 	$(file >> $@, #define LIBLOC_MINOR_VER  $(LIBLOC_MINOR))
 	$(file >> $@, #define LIBLOC_MICRO_VER  $(LIBLOC_MICRO))
+	$(file >> $@, #define PACKAGE_VERSION  "$(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)")
 	$(file >> $@, #endif)
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
@@ -371,22 +372,22 @@ runtests: $(TEST_PROGS)
 #
 # Rules for building the Python3 module.
 #
-# Note: there is no 'make install'. So copy manually from './py3_install' to
-#       where-ever you like.
+# Note: there is no 'make install'. So manually copy from './py3_install'
+#       to where-ever you like.
 #
-PY_FILES = $(addprefix python/, \
-             database.py        \
-             downloader.py      \
-             export.py          \
-             i18n.py            \
-             importer.py        \
+PY_FILES = $(addprefix python/location/, \
+             __init__.py                 \
+             database.py                 \
+             downloader.py               \
+             export.py                   \
+             i18n.py                     \
+             importer.py                 \
              logger.py)
 
 PY_GEN_FILES = $(addprefix py3_install/, \
                  _location.pyd           \
                  location.py             \
-                 location-importer.py    \
-                 location/__init__.py)
+                 location-importer.py)
 
 $(PY_GEN_FILES): $(THIS_FILE)
 
@@ -419,23 +420,18 @@ endif
 py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install
 	$(call link_PYD, $@, $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res $(PY_LIB))
 
-py3_install/location.py: python/location.in
+py3_install/location.py: scripts/location.in
 	$(call green_msg, Generating $@)
 	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< > $@
 	@echo
 
-py3_install/location-importer.py: python/location-importer.in
+py3_install/location-importer.py: scripts/location-importer.in
 	$(call green_msg, Generating $@)
 	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< > $@
-	@echo
-
-py3_install/location/__init__.py: python/__init__.py.in
-	$(call green_msg, Generating $@)
-	sed -e 's|@VERSION@|$(VERSION)|' < $< >> $@
 	@echo
 
 clean:
-	rm -f *.pdb *.map link.tmp cpp_filter.py libloc/version.h
+	rm -f *.pdb *.map link.tmp cpp_filter.py libloc/version.h ../man/location.8 ../man/location.html
 	rm -fr $(OBJ_DIR)
 	@echo
 
@@ -576,9 +572,9 @@ endef
 
 define RC_COMMON
   #include <winver.h>
+  #include <libloc/version.h>
 
-  #define VER_STRING "$(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)"
-  #define RC_VERSION  $(LIBLOC_MAJOR),$(LIBLOC_MINOR),$(LIBLOC_MICRO),0
+  #define RC_VERSION  LIBLOC_MAJOR_VER, LIBLOC_MINOR_VER, LIBLOC_MICRO_VER, 0
 
   #ifndef RC_FILENAME
   #error "Add a 'RC_FILENAME' first"
@@ -618,13 +614,13 @@ define RC_COMMON
       BEGIN
         VALUE "CompanyName",      "https://git.ipfire.org/pub/git/location/libloc.git"
         VALUE "FileDescription",  RC_DESCRIPTION
-        VALUE "FileVersion",      VER_STRING
+        VALUE "FileVersion",      PACKAGE_VERSION
         VALUE "InternalName",     "libloc"
         VALUE "LegalCopyright",   "CC BY-SA 4.0."
         VALUE "LegalTrademarks",  "http://www.gnu.org/licenses/"
         VALUE "OriginalFilename", RC_FILENAME
         VALUE "ProductName",      RC_FILENAME
-        VALUE "ProductVersion",   VER_STRING " (" CC_STRING ", " DBG_STRING ")"
+        VALUE "ProductVersion",   PACKAGE_VERSION " (" CC_STRING ", " DBG_STRING ")"
         VALUE "PrivateBuild",     ""
         VALUE "SpecialBuild",     ""
         VALUE "Comments",         "Built at $(DATE_STAMP)"

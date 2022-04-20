@@ -1,0 +1,1535 @@
+#!/usr/bin/python3
+###############################################################################
+#                                                                             #
+# libloc - A library to determine the location of someone on the Internet     #
+#                                                                             #
+# Copyright (C) 2020-2022 IPFire Development Team <info@ipfire.org>           #
+#                                                                             #
+# This library is free software; you can redistribute it and/or               #
+# modify it under the terms of the GNU Lesser General Public                  #
+# License as published by the Free Software Foundation; either                #
+# version 2.1 of the License, or (at your option) any later version.          #
+#                                                                             #
+# This library is distributed in the hope that it will be useful,             #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of              #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU           #
+# Lesser General Public License for more details.                             #
+#                                                                             #
+###############################################################################
+
+import argparse
+import ipaddress
+import json
+import logging
+import math
+import re
+import socket
+import sys
+import telnetlib
+
+# Load our location module
+import location
+import location.database
+import location.importer
+from location.i18n import _
+
+# Initialise logging
+log = logging.getLogger("location.importer")
+log.propagate = 1
+
+# Define constants
+VALID_ASN_RANGES = (
+	(1, 23455),
+	(23457, 64495),
+	(131072, 4199999999),
+)
+
+
+class CLI(object):
+	def parse_cli(self):
+		parser = argparse.ArgumentParser(
+			description=_("Location Importer Command Line Interface"),
+		)
+		subparsers = parser.add_subparsers()
+
+		# Global configuration flags
+		parser.add_argument("--debug", action="store_true",
+			help=_("Enable debug output"))
+		parser.add_argument("--quiet", action="store_true",
+			help=_("Enable quiet mode"))
+
+		# version
+		parser.add_argument("--version", action="version",
+			version="%(prog)s @VERSION@")
+
+		# Database
+		parser.add_argument("--database-host", required=True,
+			help=_("Database Hostname"), metavar=_("HOST"))
+		parser.add_argument("--database-name", required=True,
+			help=_("Database Name"), metavar=_("NAME"))
+		parser.add_argument("--database-username", required=True,
+			help=_("Database Username"), metavar=_("USERNAME"))
+		parser.add_argument("--database-password", required=True,
+			help=_("Database Password"), metavar=_("PASSWORD"))
+
+		# Write Database
+		write = subparsers.add_parser("write", help=_("Write database to file"))
+		write.set_defaults(func=self.handle_write)
+		write.add_argument("file", nargs=1, help=_("Database File"))
+		write.add_argument("--signing-key", nargs="?", type=open, help=_("Signing Key"))
+		write.add_argument("--backup-signing-key", nargs="?", type=open, help=_("Backup Signing Key"))
+		write.add_argument("--vendor", nargs="?", help=_("Sets the vendor"))
+		write.add_argument("--description", nargs="?", help=_("Sets a description"))
+		write.add_argument("--license", nargs="?", help=_("Sets the license"))
+		write.add_argument("--version", type=int, help=_("Database Format Version"))
+
+		# Update WHOIS
+		update_whois = subparsers.add_parser("update-whois", help=_("Update WHOIS Information"))
+		update_whois.set_defaults(func=self.handle_update_whois)
+
+		# Update announcements
+		update_announcements = subparsers.add_parser("update-announcements",
+			help=_("Update BGP Annoucements"))
+		update_announcements.set_defaults(func=self.handle_update_announcements)
+		update_announcements.add_argument("server", nargs=1,
+			help=_("Route Server to connect to"), metavar=_("SERVER"))
+
+		# Update overrides
+		update_overrides = subparsers.add_parser("update-overrides",
+			help=_("Update overrides"),
+		)
+		update_overrides.add_argument(
+			"files", nargs="+", help=_("Files to import"),
+		)
+		update_overrides.set_defaults(func=self.handle_update_overrides)
+
+		# Import countries
+		import_countries = subparsers.add_parser("import-countries",
+			help=_("Import countries"),
+		)
+		import_countries.add_argument("file", nargs=1, type=argparse.FileType("r"),
+			help=_("File to import"))
+		import_countries.set_defaults(func=self.handle_import_countries)
+
+		args = parser.parse_args()
+
+		# Configure logging
+		if args.debug:
+			location.logger.set_level(logging.DEBUG)
+		elif args.quiet:
+			location.logger.set_level(logging.WARNING)
+
+		# Print usage if no action was given
+		if not "func" in args:
+			parser.print_usage()
+			sys.exit(2)
+
+		return args
+
+	def run(self):
+		# Parse command line arguments
+		args = self.parse_cli()
+
+		# Initialise database
+		self.db = self._setup_database(args)
+
+		# Call function
+		ret = args.func(args)
+
+		# Return with exit code
+		if ret:
+			sys.exit(ret)
+
+		# Otherwise just exit
+		sys.exit(0)
+
+	def _setup_database(self, ns):
+		"""
+			Initialise the database
+		"""
+		# Connect to database
+		db = location.database.Connection(
+			host=ns.database_host, database=ns.database_name,
+			user=ns.database_username, password=ns.database_password,
+		)
+
+		with db.transaction():
+			db.execute("""
+				-- announcements
+				CREATE TABLE IF NOT EXISTS announcements(network inet, autnum bigint,
+					first_seen_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+					last_seen_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP);
+				CREATE UNIQUE INDEX IF NOT EXISTS announcements_networks ON announcements(network);
+				CREATE INDEX IF NOT EXISTS announcements_family ON announcements(family(network));
+				CREATE INDEX IF NOT EXISTS announcements_search ON announcements USING GIST(network inet_ops);
+
+				-- autnums
+				CREATE TABLE IF NOT EXISTS autnums(number bigint, name text NOT NULL);
+				ALTER TABLE autnums ADD COLUMN IF NOT EXISTS source text;
+				CREATE UNIQUE INDEX IF NOT EXISTS autnums_number ON autnums(number);
+
+				-- countries
+				CREATE TABLE IF NOT EXISTS countries(
+					country_code text NOT NULL, name text NOT NULL, continent_code text NOT NULL);
+				CREATE UNIQUE INDEX IF NOT EXISTS countries_country_code ON countries(country_code);
+
+				-- networks
+				CREATE TABLE IF NOT EXISTS networks(network inet, country text);
+				ALTER TABLE networks ADD COLUMN IF NOT EXISTS original_countries text[];
+				ALTER TABLE networks ADD COLUMN IF NOT EXISTS source text;
+				CREATE UNIQUE INDEX IF NOT EXISTS networks_network ON networks(network);
+				CREATE INDEX IF NOT EXISTS networks_family ON networks USING BTREE(family(network));
+				CREATE INDEX IF NOT EXISTS networks_search ON networks USING GIST(network inet_ops);
+
+				-- overrides
+				CREATE TABLE IF NOT EXISTS autnum_overrides(
+					number bigint NOT NULL,
+					name text,
+					country text,
+					is_anonymous_proxy boolean,
+					is_satellite_provider boolean,
+					is_anycast boolean
+				);
+				CREATE UNIQUE INDEX IF NOT EXISTS autnum_overrides_number
+					ON autnum_overrides(number);
+				ALTER TABLE autnum_overrides ADD COLUMN IF NOT EXISTS source text;
+				ALTER TABLE autnum_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
+
+				CREATE TABLE IF NOT EXISTS network_overrides(
+					network inet NOT NULL,
+					country text,
+					is_anonymous_proxy boolean,
+					is_satellite_provider boolean,
+					is_anycast boolean
+				);
+				CREATE UNIQUE INDEX IF NOT EXISTS network_overrides_network
+					ON network_overrides(network);
+				CREATE INDEX IF NOT EXISTS network_overrides_search
+					ON network_overrides USING GIST(network inet_ops);
+				ALTER TABLE network_overrides ADD COLUMN IF NOT EXISTS source text;
+				ALTER TABLE network_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
+			""")
+
+		return db
+
+	def handle_write(self, ns):
+		"""
+			Compiles a database in libloc format out of what is in the database
+		"""
+		# Allocate a writer
+		writer = location.Writer(ns.signing_key, ns.backup_signing_key)
+
+		# Set all metadata
+		if ns.vendor:
+			writer.vendor = ns.vendor
+
+		if ns.description:
+			writer.description = ns.description
+
+		if ns.license:
+			writer.license = ns.license
+
+		# Add all Autonomous Systems
+		log.info("Writing Autonomous Systems...")
+
+		# Select all ASes with a name
+		rows = self.db.query("""
+			SELECT
+				autnums.number AS number,
+				COALESCE(
+					(SELECT overrides.name FROM autnum_overrides overrides
+						WHERE overrides.number = autnums.number),
+					autnums.name
+				) AS name
+				FROM autnums
+				WHERE name <> %s ORDER BY number
+			""", "")
+
+		for row in rows:
+			a = writer.add_as(row.number)
+			a.name = row.name
+
+		# Add all networks
+		log.info("Writing networks...")
+
+		# Select all known networks
+		rows = self.db.query("""
+			WITH known_networks AS (
+				SELECT network FROM announcements
+				UNION
+				SELECT network FROM networks
+				UNION
+				SELECT network FROM network_overrides
+			),
+
+			ordered_networks AS (
+				SELECT
+					known_networks.network AS network,
+					announcements.autnum AS autnum,
+					networks.country AS country,
+
+					-- Must be part of returned values for ORDER BY clause
+					masklen(announcements.network) AS sort_a,
+					masklen(networks.network) AS sort_b
+				FROM
+					known_networks
+				LEFT JOIN
+					announcements ON known_networks.network <<= announcements.network
+				LEFT JOIN
+					networks ON known_networks.network <<= networks.network
+				ORDER BY
+					known_networks.network,
+					sort_a DESC,
+					sort_b DESC
+			)
+
+			-- Return a list of those networks enriched with all
+			-- other information that we store in the database
+			SELECT
+				DISTINCT ON (network)
+				network,
+				autnum,
+
+				-- Country
+				COALESCE(
+					(
+						SELECT country FROM network_overrides overrides
+							WHERE networks.network <<= overrides.network
+							ORDER BY masklen(overrides.network) DESC
+							LIMIT 1
+					),
+					(
+						SELECT country FROM autnum_overrides overrides
+							WHERE networks.autnum = overrides.number
+					),
+					networks.country
+				) AS country,
+
+				-- Flags
+				COALESCE(
+					(
+						SELECT is_anonymous_proxy FROM network_overrides overrides
+							WHERE networks.network <<= overrides.network
+							ORDER BY masklen(overrides.network) DESC
+							LIMIT 1
+					),
+					(
+						SELECT is_anonymous_proxy FROM autnum_overrides overrides
+							WHERE networks.autnum = overrides.number
+					),
+					FALSE
+				) AS is_anonymous_proxy,
+				COALESCE(
+					(
+						SELECT is_satellite_provider FROM network_overrides overrides
+							WHERE networks.network <<= overrides.network
+							ORDER BY masklen(overrides.network) DESC
+							LIMIT 1
+					),
+					(
+						SELECT is_satellite_provider FROM autnum_overrides overrides
+							WHERE networks.autnum = overrides.number
+					),
+					FALSE
+				) AS is_satellite_provider,
+				COALESCE(
+					(
+						SELECT is_anycast FROM network_overrides overrides
+							WHERE networks.network <<= overrides.network
+							ORDER BY masklen(overrides.network) DESC
+							LIMIT 1
+					),
+					(
+						SELECT is_anycast FROM autnum_overrides overrides
+							WHERE networks.autnum = overrides.number
+					),
+					FALSE
+				) AS is_anycast,
+				COALESCE(
+					(
+						SELECT is_drop FROM network_overrides overrides
+							WHERE networks.network <<= overrides.network
+							ORDER BY masklen(overrides.network) DESC
+							LIMIT 1
+					),
+					(
+						SELECT is_drop FROM autnum_overrides overrides
+							WHERE networks.autnum = overrides.number
+					),
+					FALSE
+				) AS is_drop
+			FROM
+				ordered_networks networks
+		""")
+
+		for row in rows:
+			network = writer.add_network(row.network)
+
+			# Save country
+			if row.country:
+				network.country_code = row.country
+
+			# Save ASN
+			if row.autnum:
+				network.asn = row.autnum
+
+			# Set flags
+			if row.is_anonymous_proxy:
+				network.set_flag(location.NETWORK_FLAG_ANONYMOUS_PROXY)
+
+			if row.is_satellite_provider:
+				network.set_flag(location.NETWORK_FLAG_SATELLITE_PROVIDER)
+
+			if row.is_anycast:
+				network.set_flag(location.NETWORK_FLAG_ANYCAST)
+
+			if row.is_drop:
+				network.set_flag(location.NETWORK_FLAG_DROP)
+
+		# Add all countries
+		log.info("Writing countries...")
+		rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+
+		for row in rows:
+			c = writer.add_country(row.country_code)
+			c.continent_code = row.continent_code
+			c.name = row.name
+
+		# Write everything to file
+		log.info("Writing database to file...")
+		for file in ns.file:
+			writer.write(file)
+
+	def handle_update_whois(self, ns):
+		downloader = location.importer.Downloader()
+
+		# Download all sources
+		with self.db.transaction():
+			# Create some temporary tables to store parsed data
+			self.db.execute("""
+				CREATE TEMPORARY TABLE _autnums(number integer NOT NULL, organization text NOT NULL, source text NOT NULL)
+					ON COMMIT DROP;
+				CREATE UNIQUE INDEX _autnums_number ON _autnums(number);
+
+				CREATE TEMPORARY TABLE _organizations(handle text NOT NULL, name text NOT NULL, source text NOT NULL)
+					ON COMMIT DROP;
+				CREATE UNIQUE INDEX _organizations_handle ON _organizations(handle);
+
+				CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL, original_countries text[] NOT NULL, source text NOT NULL)
+					ON COMMIT DROP;
+				CREATE INDEX _rirdata_search ON _rirdata USING BTREE(family(network), masklen(network));
+				CREATE UNIQUE INDEX _rirdata_network ON _rirdata(network);
+			""")
+
+			# Remove all previously imported content
+			self.db.execute("""
+				TRUNCATE TABLE networks;
+			""")
+
+			# Fetch all valid country codes to check parsed networks aganist...
+			rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+			validcountries = []
+
+			for row in rows:
+				validcountries.append(row.country_code)
+
+			for source_key in location.importer.WHOIS_SOURCES:
+				for single_url in location.importer.WHOIS_SOURCES[source_key]:
+					with downloader.request(single_url, return_blocks=True) as f:
+						for block in f:
+							self._parse_block(block, source_key, validcountries)
+
+			# Process all parsed networks from every RIR we happen to have access to,
+			# insert the largest network chunks into the networks table immediately...
+			families = self.db.query("SELECT DISTINCT family(network) AS family FROM _rirdata ORDER BY family(network)")
+
+			for family in (row.family for row in families):
+				smallest = self.db.get("SELECT MIN(masklen(network)) AS prefix FROM _rirdata WHERE family(network) = %s", family)
+
+				self.db.execute("INSERT INTO networks(network, country, original_countries, source) \
+					SELECT network, country, original_countries, source FROM _rirdata WHERE masklen(network) = %s AND family(network) = %s", smallest.prefix, family)
+
+				# ... determine any other prefixes for this network family, ...
+				prefixes = self.db.query("SELECT DISTINCT masklen(network) AS prefix FROM _rirdata \
+					WHERE family(network) = %s ORDER BY masklen(network) ASC OFFSET 1", family)
+
+				# ... and insert networks with this prefix in case they provide additional
+				# information (i. e. subnet of a larger chunk with a different country)
+				for prefix in (row.prefix for row in prefixes):
+					self.db.execute("""
+						WITH candidates AS (
+							SELECT
+								_rirdata.network,
+								_rirdata.country,
+								_rirdata.original_countries,
+								_rirdata.source
+							FROM
+								_rirdata
+							WHERE
+								family(_rirdata.network) = %s
+							AND
+								masklen(_rirdata.network) = %s
+						),
+						filtered AS (
+							SELECT
+								DISTINCT ON (c.network)
+								c.network,
+								c.country,
+								c.original_countries,
+								c.source,
+								masklen(networks.network),
+								networks.country AS parent_country
+							FROM
+								candidates c
+							LEFT JOIN
+								networks
+							ON
+								c.network << networks.network
+							ORDER BY
+								c.network,
+								masklen(networks.network) DESC NULLS LAST
+						)
+						INSERT INTO
+							networks(network, country, original_countries, source)
+						SELECT
+							network,
+							country,
+							original_countries,
+							source
+						FROM
+							filtered
+						WHERE
+							parent_country IS NULL
+						OR
+							country <> parent_country
+						ON CONFLICT DO NOTHING""",
+						family, prefix,
+					)
+
+			self.db.execute("""
+				INSERT INTO autnums(number, name, source)
+					SELECT _autnums.number, _organizations.name, _organizations.source FROM _autnums
+						JOIN _organizations ON _autnums.organization = _organizations.handle
+				ON CONFLICT (number) DO UPDATE SET name = excluded.name;
+			""")
+
+		# Download all extended sources
+		for source_key in location.importer.EXTENDED_SOURCES:
+			for single_url in location.importer.EXTENDED_SOURCES[source_key]:
+				with self.db.transaction():
+					# Download data
+					with downloader.request(single_url) as f:
+						for line in f:
+							self._parse_line(line, source_key, validcountries)
+
+		# Download and import (technical) AS names from ARIN
+		self._import_as_names_from_arin()
+
+	def _check_parsed_network(self, network):
+		"""
+			Assistive function to detect and subsequently sort out parsed
+			networks from RIR data (both Whois and so-called "extended sources"),
+			which are or have...
+
+			(a) not globally routable (RFC 1918 space, et al.)
+			(b) covering a too large chunk of the IP address space (prefix length
+				is < 7 for IPv4 networks, and < 10 for IPv6)
+			(c) "0.0.0.0" or "::" as a network address
+			(d) are too small for being publicly announced (we have decided not to
+				process them at the moment, as they significantly enlarge our
+				database without providing very helpful additional information)
+
+			This unfortunately is necessary due to brain-dead clutter across
+			various RIR databases, causing mismatches and eventually disruptions.
+
+			We will return False in case a network is not suitable for adding
+			it to our database, and True otherwise.
+		"""
+
+		if not network or not (isinstance(network, ipaddress.IPv4Network) or isinstance(network, ipaddress.IPv6Network)):
+			return False
+
+		if not network.is_global:
+			log.debug("Skipping non-globally routable network: %s" % network)
+			return False
+
+		if network.version == 4:
+			if network.prefixlen < 7:
+				log.debug("Skipping too big IP chunk: %s" % network)
+				return False
+
+			if network.prefixlen > 24:
+				log.debug("Skipping network too small to be publicly announced: %s" % network)
+				return False
+
+			if str(network.network_address) == "0.0.0.0":
+				log.debug("Skipping network based on 0.0.0.0: %s" % network)
+				return False
+
+		elif network.version == 6:
+			if network.prefixlen < 10:
+				log.debug("Skipping too big IP chunk: %s" % network)
+				return False
+
+			if network.prefixlen > 48:
+				log.debug("Skipping network too small to be publicly announced: %s" % network)
+				return False
+
+			if str(network.network_address) == "::":
+				log.debug("Skipping network based on '::': %s" % network)
+				return False
+
+		else:
+			# This should not happen...
+			log.warning("Skipping network of unknown family, this should not happen: %s" % network)
+			return False
+
+		# In case we have made it here, the network is considered to
+		# be suitable for libloc consumption...
+		return True
+
+	def _check_parsed_asn(self, asn):
+		"""
+			Assistive function to filter Autonomous System Numbers not being suitable
+			for adding to our database. Returns False in such cases, and True otherwise.
+		"""
+
+		for start, end in VALID_ASN_RANGES:
+			if start <= asn and end >= asn:
+				return True
+
+		log.info("Supplied ASN %s out of publicly routable ASN ranges" % asn)
+		return False
+
+	def _parse_block(self, block, source_key, validcountries = None):
+		# Get first line to find out what type of block this is
+		line = block[0]
+
+		# aut-num
+		if line.startswith("aut-num:"):
+			return self._parse_autnum_block(block, source_key)
+
+		# inetnum
+		if line.startswith("inet6num:") or line.startswith("inetnum:"):
+			return self._parse_inetnum_block(block, source_key, validcountries)
+
+		# organisation
+		elif line.startswith("organisation:"):
+			return self._parse_org_block(block, source_key)
+
+	def _parse_autnum_block(self, block, source_key):
+		autnum = {}
+		for line in block:
+			# Split line
+			key, val = split_line(line)
+
+			if key == "aut-num":
+				m = re.match(r"^(AS|as)(\d+)", val)
+				if m:
+					autnum["asn"] = m.group(2)
+
+			elif key == "org":
+				autnum[key] = val.upper()
+
+			elif key == "descr":
+				# Save the first description line as well...
+				if not key in autnum:
+					autnum[key] = val
+
+		# Skip empty objects
+		if not autnum or not "asn" in autnum:
+			return
+
+		# Insert a dummy organisation handle into our temporary organisations
+		# table in case the AS does not have an organisation handle set, but
+		# has a description (a quirk often observed in APNIC area), so we can
+		# later display at least some string for this AS.
+		if not "org" in autnum:
+			if "descr" in autnum:
+				autnum["org"] = "LIBLOC-%s-ORGHANDLE" % autnum.get("asn")
+
+				self.db.execute("INSERT INTO _organizations(handle, name, source) \
+					VALUES(%s, %s, %s) ON CONFLICT (handle) DO NOTHING",
+					autnum.get("org"), autnum.get("descr"), source_key,
+				)
+			else:
+				log.warning("ASN %s neither has an organisation handle nor a description line set, omitting" % \
+						autnum.get("asn"))
+				return
+
+		# Insert into database
+		self.db.execute("INSERT INTO _autnums(number, organization, source) \
+			VALUES(%s, %s, %s) ON CONFLICT (number) DO UPDATE SET \
+				organization = excluded.organization",
+			autnum.get("asn"), autnum.get("org"), source_key,
+		)
+
+	def _parse_inetnum_block(self, block, source_key, validcountries = None):
+		log.debug("Parsing inetnum block:")
+
+		inetnum = {}
+		for line in block:
+			log.debug(line)
+
+			# Split line
+			key, val = split_line(line)
+
+			# Filter any inetnum records which are only referring to IP space
+			# not managed by that specific RIR...
+			if key == "netname":
+				if re.match(r"^(ERX-NETBLOCK|(AFRINIC|ARIN|LACNIC|RIPE)-CIDR-BLOCK|IANA-NETBLOCK-\d{1,3}|NON-RIPE-NCC-MANAGED-ADDRESS-BLOCK|STUB-[\d-]{3,}SLASH\d{1,2})", val.strip()):
+					log.debug("Skipping record indicating historic/orphaned data: %s" % val.strip())
+					return
+
+			if key == "inetnum":
+				start_address, delim, end_address = val.partition("-")
+
+				# Strip any excess space
+				start_address, end_address = start_address.rstrip(), end_address.strip()
+
+				# Handle "inetnum" formatting in LACNIC DB (e.g. "24.152.8/22" instead of "24.152.8.0/22")
+				if start_address and not (delim or end_address):
+					try:
+						start_address = ipaddress.ip_network(start_address, strict=False)
+					except ValueError:
+						start_address = start_address.split("/")
+						ldigits = start_address[0].count(".")
+
+						# How many octets do we need to add?
+						# (LACNIC does not seem to have a /8 or greater assigned, so the following should suffice.)
+						if ldigits == 1:
+							start_address = start_address[0] + ".0.0/" + start_address[1]
+						elif ldigits == 2:
+							start_address = start_address[0] + ".0/" + start_address[1]
+						else:
+							log.warning("Could not recover IPv4 address from line in LACNIC DB format: %s" % line)
+							return
+
+						try:
+							start_address = ipaddress.ip_network(start_address, strict=False)
+						except ValueError:
+							log.warning("Could not parse line in LACNIC DB format: %s" % line)
+							return
+
+					# Enumerate first and last IP address of this network
+					end_address = start_address[-1]
+					start_address = start_address[0]
+
+				else:
+					# Convert to IP address
+					try:
+						start_address = ipaddress.ip_address(start_address)
+						end_address   = ipaddress.ip_address(end_address)
+					except ValueError:
+						log.warning("Could not parse line: %s" % line)
+						return
+
+				inetnum["inetnum"] = list(ipaddress.summarize_address_range(start_address, end_address))
+
+			elif key == "inet6num":
+				inetnum[key] = [ipaddress.ip_network(val, strict=False)]
+
+			elif key == "country":
+				val = val.upper()
+
+				# Catch RIR data objects with more than one country code...
+				if not key in inetnum:
+					inetnum[key] = []
+				else:
+					if val in inetnum.get("country"):
+						# ... but keep this list distinct...
+						continue
+
+				# When people set country codes to "UK", they actually mean "GB"
+				if val == "UK":
+					val = "GB"
+
+				inetnum[key].append(val)
+
+		# Skip empty objects
+		if not inetnum or not "country" in inetnum:
+			return
+
+		# Prepare skipping objects with unknown country codes...
+		invalidcountries = [singlecountry for singlecountry in inetnum.get("country") if singlecountry not in validcountries]
+
+		# Iterate through all networks enumerated from above, check them for plausibility and insert
+		# them into the database, if _check_parsed_network() succeeded
+		for single_network in inetnum.get("inet6num") or inetnum.get("inetnum"):
+			if self._check_parsed_network(single_network):
+
+				# Skip objects with unknown country codes if they are valid to avoid log spam...
+				if validcountries and invalidcountries:
+					log.warning("Skipping network with bogus countr(y|ies) %s (original countries: %s): %s" % \
+						(invalidcountries, inetnum.get("country"), inetnum.get("inet6num") or inetnum.get("inetnum")))
+					break
+
+				# Everything is fine here, run INSERT statement...
+				self.db.execute("INSERT INTO _rirdata(network, country, original_countries, source) \
+					VALUES(%s, %s, %s, %s) ON CONFLICT (network) DO UPDATE SET country = excluded.country",
+					"%s" % single_network, inetnum.get("country")[0], inetnum.get("country"), source_key,
+				)
+
+	def _parse_org_block(self, block, source_key):
+		org = {}
+		for line in block:
+			# Split line
+			key, val = split_line(line)
+
+			if key == "organisation":
+				org[key] = val.upper()
+			elif key == "org-name":
+				org[key] = val
+
+		# Skip empty objects
+		if not org:
+			return
+
+		self.db.execute("INSERT INTO _organizations(handle, name, source) \
+			VALUES(%s, %s, %s) ON CONFLICT (handle) DO \
+			UPDATE SET name = excluded.name",
+			org.get("organisation"), org.get("org-name"), source_key,
+		)
+
+	def _parse_line(self, line, source_key, validcountries = None):
+		# Skip version line
+		if line.startswith("2"):
+			return
+
+		# Skip comments
+		if line.startswith("#"):
+			return
+
+		try:
+			registry, country_code, type, line = line.split("|", 3)
+		except:
+			log.warning("Could not parse line: %s" % line)
+			return
+
+		# Skip any lines that are for stats only or do not have a country
+		# code at all (avoids log spam below)
+		if not country_code or country_code == '*':
+			return
+
+		# Skip objects with unknown country codes
+		if validcountries and country_code not in validcountries:
+			log.warning("Skipping line with bogus country '%s': %s" % \
+				(country_code, line))
+			return
+
+		if type in ("ipv6", "ipv4"):
+			return self._parse_ip_line(country_code, type, line, source_key)
+
+	def _parse_ip_line(self, country, type, line, source_key):
+		try:
+			address, prefix, date, status, organization = line.split("|")
+		except ValueError:
+			organization = None
+
+			# Try parsing the line without organization
+			try:
+				address, prefix, date, status = line.split("|")
+			except ValueError:
+				log.warning("Unhandled line format: %s" % line)
+				return
+
+		# Skip anything that isn't properly assigned
+		if not status in ("assigned", "allocated"):
+			return
+
+		# Cast prefix into an integer
+		try:
+			prefix = int(prefix)
+		except:
+			log.warning("Invalid prefix: %s" % prefix)
+			return
+
+		# Fix prefix length for IPv4
+		if type == "ipv4":
+			prefix = 32 - int(math.log(prefix, 2))
+
+		# Try to parse the address
+		try:
+			network = ipaddress.ip_network("%s/%s" % (address, prefix), strict=False)
+		except ValueError:
+			log.warning("Invalid IP address: %s" % address)
+			return
+
+		if not self._check_parsed_network(network):
+			return
+
+		self.db.execute("INSERT INTO networks(network, country, original_countries, source) \
+			VALUES(%s, %s, %s, %s) ON CONFLICT (network) DO \
+			UPDATE SET country = excluded.country",
+			"%s" % network, country, [country], source_key,
+		)
+
+	def _import_as_names_from_arin(self):
+		downloader = location.importer.Downloader()
+
+		# XXX: Download AS names file from ARIN (note that these names appear to be quite
+		# technical, not intended for human consumption, as description fields in
+		# organisation handles for other RIRs are - however, this is what we have got,
+		# and in some cases, it might be still better than nothing)
+		with downloader.request("https://ftp.arin.net/info/asn.txt", return_blocks=False) as f:
+			for line in f:
+				# Convert binary line to string...
+				line = str(line)
+
+				# ... valid lines start with a space, followed by the number of the Autonomous System ...
+				if not line.startswith(" "):
+					continue
+
+				# Split line and check if there is a valid ASN in it...
+				asn, name = line.split()[0:2]
+
+				try:
+					asn = int(asn)
+				except ValueError:
+					log.debug("Skipping ARIN AS names line not containing an integer for ASN")
+					continue
+
+				# Filter invalid ASNs...
+				if not self._check_parsed_asn(asn):
+					continue
+
+				# Skip any AS name that appears to be a placeholder for a different RIR or entity...
+				if re.match(r"^(ASN-BLK|)(AFCONC|AFRINIC|APNIC|ASNBLK|DNIC|LACNIC|RIPE|IANA)(?:\d?$|\-)", name):
+					continue
+
+				# Bail out in case the AS name contains anything we do not expect here...
+				if re.search(r"[^a-zA-Z0-9-_]", name):
+					log.debug("Skipping ARIN AS name for %s containing invalid characters: %s" % \
+							(asn, name))
+
+				# Things look good here, run INSERT statement and skip this one if we already have
+				# a (better?) name for this Autonomous System...
+				self.db.execute("""
+					INSERT INTO autnums(
+						number,
+						name,
+						source
+					) VALUES (%s, %s, %s)
+					ON CONFLICT (number) DO NOTHING""",
+					asn,
+					name,
+					"ARIN",
+				)
+
+	def handle_update_announcements(self, ns):
+		server = ns.server[0]
+
+		with self.db.transaction():
+			if server.startswith("/"):
+				self._handle_update_announcements_from_bird(server)
+			else:
+				self._handle_update_announcements_from_telnet(server)
+
+			# Purge anything we never want here
+			self.db.execute("""
+				-- Delete default routes
+				DELETE FROM announcements WHERE network = '::/0' OR network = '0.0.0.0/0';
+
+				-- Delete anything that is not global unicast address space
+				DELETE FROM announcements WHERE family(network) = 6 AND NOT network <<= '2000::/3';
+
+				-- DELETE "current network" address space
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '0.0.0.0/8';
+
+				-- DELETE local loopback address space
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '127.0.0.0/8';
+
+				-- DELETE RFC 1918 address space
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '10.0.0.0/8';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '172.16.0.0/12';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '192.168.0.0/16';
+
+				-- DELETE test, benchmark and documentation address space
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '192.0.0.0/24';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '192.0.2.0/24';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '198.18.0.0/15';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '198.51.100.0/24';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '203.0.113.0/24';
+
+				-- DELETE CGNAT address space (RFC 6598)
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '100.64.0.0/10';
+
+				-- DELETE link local address space
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '169.254.0.0/16';
+
+				-- DELETE IPv6 to IPv4 (6to4) address space (RFC 3068)
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '192.88.99.0/24';
+				DELETE FROM announcements WHERE family(network) = 6 AND network <<= '2002::/16';
+
+				-- DELETE multicast and reserved address space
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '224.0.0.0/4';
+				DELETE FROM announcements WHERE family(network) = 4 AND network <<= '240.0.0.0/4';
+
+				-- Delete networks that are too small to be in the global routing table
+				DELETE FROM announcements WHERE family(network) = 6 AND masklen(network) > 48;
+				DELETE FROM announcements WHERE family(network) = 4 AND masklen(network) > 24;
+
+				-- Delete any non-public or reserved ASNs
+				DELETE FROM announcements WHERE NOT (
+					(autnum >= 1 AND autnum <= 23455)
+					OR
+					(autnum >= 23457 AND autnum <= 64495)
+					OR
+					(autnum >= 131072 AND autnum <= 4199999999)
+				);
+
+				-- Delete everything that we have not seen for 14 days
+				DELETE FROM announcements WHERE last_seen_at <= CURRENT_TIMESTAMP - INTERVAL '14 days';
+			""")
+
+	def _handle_update_announcements_from_bird(self, server):
+		# Pre-compile the regular expression for faster searching
+		route = re.compile(b"^\s(.+?)\s+.+?\[(?:AS(.*?))?.\]$")
+
+		log.info("Requesting routing table from Bird (%s)" % server)
+
+		aggregated_networks = []
+
+		# Send command to list all routes
+		for line in self._bird_cmd(server, "show route"):
+			m = route.match(line)
+			if not m:
+				# Skip empty lines
+				if not line:
+					pass
+
+				# Ignore any header lines with the name of the routing table
+				elif line.startswith(b"Table"):
+					pass
+
+				# Log anything else
+				else:
+					log.debug("Could not parse line: %s" % line.decode())
+
+				continue
+
+			# Fetch the extracted network and ASN
+			network, autnum = m.groups()
+
+			# Decode into strings
+			if network:
+				network = network.decode()
+			if autnum:
+				autnum = autnum.decode()
+
+			# Collect all aggregated networks
+			if not autnum:
+				log.debug("%s is an aggregated network" % network)
+				aggregated_networks.append(network)
+				continue
+
+			# Insert it into the database
+			self.db.execute("INSERT INTO announcements(network, autnum) \
+				VALUES(%s, %s) ON CONFLICT (network) DO \
+				UPDATE SET autnum = excluded.autnum, last_seen_at = CURRENT_TIMESTAMP",
+				network, autnum,
+			)
+
+		# Process any aggregated networks
+		for network in aggregated_networks:
+			log.debug("Processing aggregated network %s" % network)
+
+			# Run "show route all" for each network
+			for line in self._bird_cmd(server, "show route %s all" % network):
+				# Try finding the path
+				m = re.match(b"\s+BGP\.as_path:.* (\d+) {\d+}$", line)
+				if m:
+					# Select the last AS number in the path
+					autnum = m.group(1).decode()
+
+					# Insert it into the database
+					self.db.execute("INSERT INTO announcements(network, autnum) \
+						VALUES(%s, %s) ON CONFLICT (network) DO \
+						UPDATE SET autnum = excluded.autnum, last_seen_at = CURRENT_TIMESTAMP",
+						network, autnum,
+					)
+
+					# We don't need to process any more
+					break
+
+	def _handle_update_announcements_from_telnet(self, server):
+		# Pre-compile regular expression for routes
+		route = re.compile(b"^\*[\s\>]i([^\s]+).+?(\d+)\si\r\n", re.MULTILINE|re.DOTALL)
+
+		with telnetlib.Telnet(server) as t:
+			# Enable debug mode
+			#if ns.debug:
+			#	t.set_debuglevel(10)
+
+			# Wait for console greeting
+			greeting = t.read_until(b"> ", timeout=30)
+			if not greeting:
+				log.error("Could not get a console prompt")
+				return 1
+
+			# Disable pagination
+			t.write(b"terminal length 0\n")
+
+			# Wait for the prompt to return
+			t.read_until(b"> ")
+
+			# Fetch the routing tables
+			for protocol in ("ipv6", "ipv4"):
+				log.info("Requesting %s routing table" % protocol)
+
+				# Request the full unicast routing table
+				t.write(b"show bgp %s unicast\n" % protocol.encode())
+
+				# Read entire header which ends with "Path"
+				t.read_until(b"Path\r\n")
+
+				while True:
+					# Try reading a full entry
+					# Those might be broken across multiple lines but ends with i
+					line = t.read_until(b"i\r\n", timeout=5)
+					if not line:
+						break
+
+					# Show line for debugging
+					#log.debug(repr(line))
+
+					# Try finding a route in here
+					m = route.match(line)
+					if m:
+						network, autnum = m.groups()
+
+						# Convert network to string
+						network = network.decode()
+
+						# Append /24 for IPv4 addresses
+						if not "/" in network and not ":" in network:
+							network = "%s/24" % network
+
+						# Convert AS number to integer
+						autnum = int(autnum)
+
+						log.info("Found announcement for %s by %s" % (network, autnum))
+
+						self.db.execute("INSERT INTO announcements(network, autnum) \
+							VALUES(%s, %s) ON CONFLICT (network) DO \
+							UPDATE SET autnum = excluded.autnum, last_seen_at = CURRENT_TIMESTAMP",
+							network, autnum,
+						)
+
+				log.info("Finished reading the %s routing table" % protocol)
+
+	def _bird_cmd(self, socket_path, command):
+		# Connect to the socket
+		s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+		s.connect(socket_path)
+
+		# Allocate some buffer
+		buffer = b""
+
+		log.debug("Sending Bird command: %s" % command)
+
+		# Send the command
+		s.send(b"%s\n" % command.encode())
+
+		while True:
+			# Fill up the buffer
+			buffer += s.recv(4096)
+
+			while True:
+				# Search for the next newline
+				pos = buffer.find(b"\n")
+
+				# If we cannot find one, we go back and read more data
+				if pos <= 0:
+					break
+
+				# Cut after the newline character
+				pos += 1
+
+				# Split the line we want and keep the rest in buffer
+				line, buffer = buffer[:pos], buffer[pos:]
+
+				# Try parsing any status lines
+				if len(line) > 4 and line[:4].isdigit() and line[4] in (32, 45):
+					code, delim, line = int(line[:4]), line[4], line[5:]
+
+					log.debug("Received response code %s from bird" % code)
+
+					# End of output
+					if code == 0:
+						return
+
+					# Ignore hello line
+					elif code == 1:
+						continue
+
+				# Otherwise return the line
+				yield line
+
+	def handle_update_overrides(self, ns):
+		with self.db.transaction():
+			# Drop all data that we have
+			self.db.execute("""
+				TRUNCATE TABLE autnum_overrides;
+				TRUNCATE TABLE network_overrides;
+			""")
+
+			# Update overrides for various cloud providers big enough to publish their own IP
+			# network allocation lists in a machine-readable format...
+			self._update_overrides_for_aws()
+
+			# Update overrides for Spamhaus DROP feeds...
+			self._update_overrides_for_spamhaus_drop()
+
+			for file in ns.files:
+				log.info("Reading %s..." % file)
+
+				with open(file, "rb") as f:
+					for type, block in location.importer.read_blocks(f):
+						if type == "net":
+							network = block.get("net")
+							# Try to parse and normalise the network
+							try:
+								network = ipaddress.ip_network(network, strict=False)
+							except ValueError as e:
+								log.warning("Invalid IP network: %s: %s" % (network, e))
+								continue
+
+							# Prevent that we overwrite all networks
+							if network.prefixlen == 0:
+								log.warning("Skipping %s: You cannot overwrite default" % network)
+								continue
+
+							self.db.execute("""
+								INSERT INTO network_overrides(
+									network,
+									country,
+									source,
+									is_anonymous_proxy,
+									is_satellite_provider,
+									is_anycast,
+									is_drop
+								) VALUES (%s, %s, %s, %s, %s, %s, %s)
+								ON CONFLICT (network) DO NOTHING""",
+								"%s" % network,
+								block.get("country"),
+								"manual",
+								self._parse_bool(block, "is-anonymous-proxy"),
+								self._parse_bool(block, "is-satellite-provider"),
+								self._parse_bool(block, "is-anycast"),
+								self._parse_bool(block, "drop"),
+							)
+
+						elif type == "aut-num":
+							autnum = block.get("aut-num")
+
+							# Check if AS number begins with "AS"
+							if not autnum.startswith("AS"):
+								log.warning("Invalid AS number: %s" % autnum)
+								continue
+
+							# Strip "AS"
+							autnum = autnum[2:]
+
+							self.db.execute("""
+								INSERT INTO autnum_overrides(
+									number,
+									name,
+									country,
+									source,
+									is_anonymous_proxy,
+									is_satellite_provider,
+									is_anycast,
+									is_drop
+								) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)
+								ON CONFLICT DO NOTHING""",
+								autnum,
+								block.get("name"),
+								block.get("country"),
+								"manual",
+								self._parse_bool(block, "is-anonymous-proxy"),
+								self._parse_bool(block, "is-satellite-provider"),
+								self._parse_bool(block, "is-anycast"),
+								self._parse_bool(block, "drop"),
+							)
+
+						else:
+							log.warning("Unsupported type: %s" % type)
+
+	def _update_overrides_for_aws(self):
+		# Download Amazon AWS IP allocation file to create overrides...
+		downloader = location.importer.Downloader()
+
+		try:
+			with downloader.request("https://ip-ranges.amazonaws.com/ip-ranges.json", return_blocks=False) as f:
+				aws_ip_dump = json.load(f.body)
+		except Exception as e:
+			log.error("unable to preprocess Amazon AWS IP ranges: %s" % e)
+			return
+
+		# XXX: Set up a dictionary for mapping a region name to a country. Unfortunately,
+		# there seems to be no machine-readable version available of this other than
+		# https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
+		# (worse, it seems to be incomplete :-/ ); https://www.cloudping.cloud/endpoints
+		# was helpful here as well.
+		aws_region_country_map = {
+				"af-south-1": "ZA",
+				"ap-east-1": "HK",
+				"ap-south-1": "IN",
+				"ap-south-2": "IN",
+				"ap-northeast-3": "JP",
+				"ap-northeast-2": "KR",
+				"ap-southeast-1": "SG",
+				"ap-southeast-2": "AU",
+				"ap-southeast-3": "MY",
+				"ap-southeast-4": "AU",
+				"ap-northeast-1": "JP",
+				"ca-central-1": "CA",
+				"eu-central-1": "DE",
+				"eu-central-2": "CH",
+				"eu-west-1": "IE",
+				"eu-west-2": "GB",
+				"eu-south-1": "IT",
+				"eu-south-2": "ES",
+				"eu-west-3": "FR",
+				"eu-north-1": "SE",
+				"il-central-1": "IL", # XXX: This one is not documented anywhere except for ip-ranges.json itself
+				"me-central-1": "AE",
+				"me-south-1": "BH",
+				"sa-east-1": "BR"
+				}
+
+		# Fetch all valid country codes to check parsed networks aganist...
+		rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+		validcountries = []
+
+		for row in rows:
+			validcountries.append(row.country_code)
+
+		with self.db.transaction():
+			for snetwork in aws_ip_dump["prefixes"] + aws_ip_dump["ipv6_prefixes"]:
+				try:
+					network = ipaddress.ip_network(snetwork.get("ip_prefix") or snetwork.get("ipv6_prefix"), strict=False)
+				except ValueError:
+					log.warning("Unable to parse line: %s" % snetwork)
+					continue
+
+				# Sanitize parsed networks...
+				if not self._check_parsed_network(network):
+					continue
+
+				# Determine region of this network...
+				region = snetwork["region"]
+				cc = None
+				is_anycast = False
+
+				# Any region name starting with "us-" will get "US" country code assigned straight away...
+				if region.startswith("us-"):
+					cc = "US"
+				elif region.startswith("cn-"):
+					# ... same goes for China ...
+					cc = "CN"
+				elif region == "GLOBAL":
+					# ... funny region name for anycast-like networks ...
+					is_anycast = True
+				elif region in aws_region_country_map:
+					# ... assign looked up country code otherwise ...
+					cc = aws_region_country_map[region]
+				else:
+					# ... and bail out if we are missing something here
+					log.warning("Unable to determine country code for line: %s" % snetwork)
+					continue
+
+				# Skip networks with unknown country codes
+				if not is_anycast and validcountries and cc not in validcountries:
+					log.warning("Skipping Amazon AWS network with bogus country '%s': %s" % \
+						(cc, network))
+					return
+
+				# Conduct SQL statement...
+				self.db.execute("""
+					INSERT INTO network_overrides(
+						network,
+						country,
+						source,
+						is_anonymous_proxy,
+						is_satellite_provider,
+						is_anycast
+					) VALUES (%s, %s, %s, %s, %s, %s)
+					ON CONFLICT (network) DO NOTHING""",
+					"%s" % network,
+					cc,
+					"Amazon AWS IP feed",
+					None,
+					None,
+					is_anycast,
+				)
+
+
+	def _update_overrides_for_spamhaus_drop(self):
+		downloader = location.importer.Downloader()
+
+		ip_urls = [
+					"https://www.spamhaus.org/drop/drop.txt",
+					"https://www.spamhaus.org/drop/edrop.txt",
+					"https://www.spamhaus.org/drop/dropv6.txt"
+				]
+
+		asn_urls = [
+					"https://www.spamhaus.org/drop/asndrop.txt"
+				]
+
+		for url in ip_urls:
+			try:
+				with downloader.request(url, return_blocks=False) as f:
+					fcontent = f.body.readlines()
+			except Exception as e:
+				log.error("Unable to download Spamhaus DROP URL %s: %s" % (url, e))
+				return
+
+			# Iterate through every line, filter comments and add remaining networks to
+			# the override table in case they are valid...
+			with self.db.transaction():
+				for sline in fcontent:
+
+					# The response is assumed to be encoded in UTF-8...
+					sline = sline.decode("utf-8")
+
+					# Comments start with a semicolon...
+					if sline.startswith(";"):
+						continue
+
+					# Extract network and ignore anything afterwards...
+					try:
+						network = ipaddress.ip_network(sline.split()[0], strict=False)
+					except ValueError:
+						log.error("Unable to parse line: %s" % sline)
+						continue
+
+					# Sanitize parsed networks...
+					if not self._check_parsed_network(network):
+						log.warning("Skipping bogus network found in Spamhaus DROP URL %s: %s" % \
+							(url, network))
+						continue
+
+					# Conduct SQL statement...
+					self.db.execute("""
+						INSERT INTO network_overrides(
+							network,
+							source,
+							is_drop
+						) VALUES (%s, %s, %s)
+						ON CONFLICT (network) DO UPDATE SET is_drop = True""",
+						"%s" % network,
+						"Spamhaus DROP lists",
+						True
+					)
+
+		for url in asn_urls:
+			try:
+				with downloader.request(url, return_blocks=False) as f:
+					fcontent = f.body.readlines()
+			except Exception as e:
+				log.error("Unable to download Spamhaus DROP URL %s: %s" % (url, e))
+				return
+
+			# Iterate through every line, filter comments and add remaining ASNs to
+			# the override table in case they are valid...
+			with self.db.transaction():
+				for sline in fcontent:
+
+					# The response is assumed to be encoded in UTF-8...
+					sline = sline.decode("utf-8")
+
+					# Comments start with a semicolon...
+					if sline.startswith(";"):
+						continue
+
+					# Throw away anything after the first space...
+					sline = sline.split()[0]
+
+					# ... strip the "AS" prefix from it ...
+					sline = sline.strip("AS")
+
+					# ... and convert it into an integer. Voila.
+					asn = int(sline)
+
+					# Filter invalid ASNs...
+					if not self._check_parsed_asn(asn):
+						log.warning("Skipping bogus ASN found in Spamhaus DROP URL %s: %s" % \
+							(url, asn))
+						continue
+
+					# Conduct SQL statement...
+					self.db.execute("""
+						INSERT INTO autnum_overrides(
+							number,
+							source,
+							is_drop
+						) VALUES (%s, %s, %s)
+						ON CONFLICT (number) DO UPDATE SET is_drop = True""",
+						"%s" % asn,
+						"Spamhaus ASN-DROP list",
+						True
+					)
+
+	@staticmethod
+	def _parse_bool(block, key):
+		val = block.get(key)
+
+		# There is no point to proceed when we got None
+		if val is None:
+			return
+
+		# Convert to lowercase
+		val = val.lower()
+
+		# True
+		if val in ("yes", "1"):
+			return True
+
+		# False
+		if val in ("no", "0"):
+			return False
+
+		# Default to None
+		return None
+
+	def handle_import_countries(self, ns):
+		with self.db.transaction():
+			# Drop all data that we have
+			self.db.execute("TRUNCATE TABLE countries")
+
+			for file in ns.file:
+				for line in file:
+					line = line.rstrip()
+
+					# Ignore any comments
+					if line.startswith("#"):
+						continue
+
+					try:
+						country_code, continent_code, name = line.split(maxsplit=2)
+					except:
+						log.warning("Could not parse line: %s" % line)
+						continue
+
+					self.db.execute("INSERT INTO countries(country_code, name, continent_code) \
+						VALUES(%s, %s, %s) ON CONFLICT DO NOTHING", country_code, name, continent_code)
+
+
+def split_line(line):
+	key, colon, val = line.partition(":")
+
+	# Strip any excess space
+	key = key.strip()
+	val = val.strip()
+
+	return key, val
+
+def main():
+	# Run the command line interface
+	c = CLI()
+	c.run()
+
+main()

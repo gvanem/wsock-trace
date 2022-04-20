@@ -36,6 +36,7 @@
 #include <libloc/as-list.h>
 #include <libloc/compat.h>
 #include <libloc/country.h>
+#include <libloc/country-list.h>
 #include <libloc/database.h>
 #include <libloc/format.h>
 #include <libloc/network.h>

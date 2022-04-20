@@ -19,6 +19,7 @@
 
 #include <libloc/format.h>
 #include <libloc/resolv.h>
+#include <libloc/version.h>
 
 #include "locationmodule.h"
 #include "as.h"
@@ -115,6 +116,10 @@ PyMODINIT_FUNC PyInit__location(void) {
 
 	PyObject* m = PyModule_Create(&location_module);
 	if (!m)
+		return NULL;
+
+	// Version
+	if (PyModule_AddStringConstant(m, "__version__", PACKAGE_VERSION))
 		return NULL;
 
 	// AS

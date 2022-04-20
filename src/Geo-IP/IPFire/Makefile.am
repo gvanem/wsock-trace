@@ -34,7 +34,7 @@ AM_LDFLAGS = ${my_LDFLAGS}
  endif
 
 LIBLOC_CURRENT=1
-LIBLOC_REVISION=1
+LIBLOC_REVISION=2
 LIBLOC_AGE=0
 
 DISTCHECK_CONFIGURE_FLAGS = \
@@ -175,21 +175,13 @@ CLEANFILES += \
 	src/libloc.pc
 
 dist_pkgpython_PYTHON = \
-	src/python/database.py \
-	src/python/downloader.py \
-	src/python/export.py \
-	src/python/i18n.py \
-	src/python/importer.py \
-	src/python/logger.py
-
-pkgpython_PYTHON = \
-	src/python/__init__.py
-
-EXTRA_DIST += \
-	src/python/__init__.py.in
-
-CLEANFILES += \
-	src/python/__init__.py
+	src/python/location/__init__.py \
+	src/python/location/database.py \
+	src/python/location/downloader.py \
+	src/python/location/export.py \
+	src/python/location/i18n.py \
+	src/python/location/importer.py \
+	src/python/location/logger.py
 
 pyexec_LTLIBRARIES = \
 	src/python/_location.la
@@ -275,16 +267,16 @@ uninstall-perl:
 		$(DESTDIR)/$(prefix)/man/man3/Location.3pm
 
 bin_SCRIPTS = \
-	src/python/location \
-	src/python/location-importer
+	src/scripts/location \
+	src/scripts/location-importer
 
 EXTRA_DIST += \
-	src/python/location.in \
-	src/python/location-importer.in
+	src/scripts/location.in \
+	src/scripts/location-importer.in
 
 CLEANFILES += \
-	src/python/location \
-	src/python/location-importer
+	src/scripts/location \
+	src/scripts/location-importer
 
 # ------------------------------------------------------------------------------
 
@@ -320,23 +312,27 @@ TESTS_LDADD = \
 	src/libloc.la \
 	src/libloc-internal.la
 
+TESTS_ENVIRONMENT = \
+	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
+	TEST_DATA_DIR="$(abs_top_srcdir)/tests/data"
+
 TESTS = \
-	src/test-libloc \
-	src/test-stringpool \
-	src/test-database \
-	src/test-as \
-	src/test-network \
-	src/test-country \
-	src/test-signature \
-	src/test-address
+	$(check_PROGRAMS) \
+	$(dist_check_SCRIPTS)
+
+EXTRA_DIST += \
+	tests/data/location-2022-03-30.db
 
 CLEANFILES += \
 	testdata.db
 
 testdata.db: examples/python/create-database.py
-	PYTHONPATH=$(abs_builddir)/src/python/.libs \
+	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
 	ABS_SRCDIR="$(abs_srcdir)" \
 		$(PYTHON) $< $@
+
+dist_check_SCRIPTS = \
+	tests/python/test-export.py
 
 check_PROGRAMS = \
 	src/test-libloc \
