@@ -76,6 +76,16 @@ CFLAGS += $(CCDEBUG) $(CCOPT)
 #
 CFLAGS += -Wno-format
 
+#
+# And this warning:
+#  dump.c:1605:26: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
+#   1605 |         _strlcpy (buf, "<??>", buf_sz);
+#
+CFLAGS += -Wno-trigraphs
+
+gcc @gcc.args -o MinGW_obj/firewall.o firewall.c
+CFLAGS += -Wno-trigraphs
+
 ifeq ($(USE_BFD),1)
   CFLAGS += -DUSE_BFD -DBFD_ARCH_SIZE=$(BITS)
   EX_LIBS = -lbfd -liberty -lintl -lz
