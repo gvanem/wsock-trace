@@ -83,9 +83,6 @@ CFLAGS += -Wno-format
 #
 CFLAGS += -Wno-trigraphs
 
-gcc @gcc.args -o MinGW_obj/firewall.o firewall.c
-CFLAGS += -Wno-trigraphs
-
 ifeq ($(USE_BFD),1)
   CFLAGS += -DUSE_BFD -DBFD_ARCH_SIZE=$(BITS)
   EX_LIBS = -lbfd -liberty -lintl -lz
