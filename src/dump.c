@@ -1639,18 +1639,23 @@ static const char *dump_csaddr (char *buf, size_t buf_sz, const char *opt_val)
 static const char *dump_sol_socket (char *buf, size_t buf_sz, int opt, const char *opt_val, int opt_len)
 {
   const struct timeval *tv;
+  DWORD val;
 
   if (opt_len == sizeof(*tv) && (opt == SO_RCVTIMEO || opt == SO_SNDTIMEO))
   {
     tv = (struct timeval*) opt_val;
-    snprintf (buf, sizeof(buf), "{tv=%ld.%06lds}", tv->tv_sec, tv->tv_usec);
+    snprintf (buf, buf_sz, "{tv=%ld.%06lds}", tv->tv_sec, tv->tv_usec);
     return (buf);
   }
-  if (opt == SO_OPENTYPE && opt_len == sizeof(DWORD))
-     return list_lookup_name (*(DWORD*)opt_val, opentypes, DIM(opentypes));
 
-  if (opt == SO_BSP_STATE && opt_len == sizeof(CSADDR_INFO))
-     return dump_csaddr (buf, sizeof(buf), opt_val);
+  if (opt == SO_OPENTYPE && opt_len == sizeof(DWORD))
+  {
+    val = *(DWORD*)opt_val;
+    return _strlcpy (buf, list_lookup_name(val, opentypes, DIM(opentypes)), buf_sz);
+  }
+
+  if (opt == SO_BSP_STATE && opt_len >= sizeof(CSADDR_INFO))
+     return dump_csaddr (buf, buf_sz, opt_val);
 
   return (NULL);
 }
