@@ -16,8 +16,12 @@
 #include "common.h"
 #include "init.h"
 
-#if !defined(s6_bytes)  /* mingw.org */
-  #define s6_bytes _s6_bytes
+#ifndef s6_bytes     /* mingw.org */
+#define s6_bytes     _s6_bytes
+#endif
+
+#ifndef SO_OPENTYPE  /* Normally in 'MSWSock.h' */
+#define SO_OPENTYPE  0x7008
 #endif
 
 #if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
@@ -106,6 +110,7 @@ static void test_getaddrinfo (void);
 static void test_gai_strerror (void);
 static void test_socket (void);
 static void test_socket_unix (void);
+static void test_getsockopt (void);
 static void test_ioctlsocket (void);
 static void test_connect (void);
 static void test_select_1 (void);
@@ -162,6 +167,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (select_1),
                     ADD_TEST (select_2),
                     ADD_TEST (send),
+                    ADD_TEST (getsockopt),
                     ADD_TEST (inet_ntop),
                     ADD_TEST (inet_pton),
                     ADD_TEST (InetPtonW),
@@ -466,6 +472,18 @@ static void test_socket_unix (void)
   s2_unix = socket (AF_UNIX, SOCK_DGRAM, 0);
   TEST_CONDITION (== INVALID_SOCKET, s2_unix);    /* AF_UNIX on SOCK_DGRAM is unsupported */
   TEST_CONDITION (== WSAEAFNOSUPPORT, WSAGetLastError());
+}
+
+static void test_getsockopt (void)
+{
+  CSADDR_INFO csaddr;
+  DWORD  opentype = (DWORD) -1;
+  int    len = sizeof(csaddr);
+
+  memset (&csaddr, '\0', len);
+  TEST_CONDITION (== 0, getsockopt(s1, SOL_SOCKET, SO_BSP_STATE, (char*)&csaddr, &len));
+  len = sizeof(opentype);
+  TEST_CONDITION (== 0, getsockopt(s1, SOL_SOCKET, SO_OPENTYPE, (char*)&opentype, &len));
 }
 
 static void test_ioctlsocket (void)
