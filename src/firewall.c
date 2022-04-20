@@ -4841,7 +4841,7 @@ int firewall_main (int argc, char **argv)
     switch (ch)
     {
       case 'a':
-           if (!isdigit(*optarg))
+           if (!isdigit((int)*optarg))
            {
              printf ("argument to option '-a' is not numeric ('%s')\n", optarg);
              goto quit;
