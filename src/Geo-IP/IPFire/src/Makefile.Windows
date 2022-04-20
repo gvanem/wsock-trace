@@ -248,7 +248,7 @@ all: $(OBJ_DIR) libloc/version.h $(TARGETS) py3_module epilogue
 
 epilogue:
 	$(call white_msg, \nWelcome to libloc library and test programs.)
-	$(call white_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests $(BRIGHT_WHITE)too.)
+	$(call white_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests | run_export_test $(BRIGHT_WHITE)too.)
 
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
@@ -368,6 +368,11 @@ runtests: $(TEST_PROGS)
 			echo -e "\e[1;31mFailed!\e[0m" ;    \
 		fi ;                                    \
 	done
+
+run_export_test: py3_module
+	export PYTHONPATH=$(realpath py3_install)      ; \
+	export TEST_DATA_DIR=$(realpath ../tests/data) ; \
+	$(PYTHON) ../tests/python/test-export.py
 
 #
 # Rules for building the Python3 module.
