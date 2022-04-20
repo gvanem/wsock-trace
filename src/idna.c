@@ -167,11 +167,11 @@ UINT IDNA_GetCodePage (void)
   CPINFOEX CPinfo;
   UINT     CP = 0;
 
-  TRACE (3, "OEM codepage %u\n", GetOEMCP());
+  TRACE (2, "OEM codepage %u\n", GetOEMCP());
   CP = GetACP();
 
   if (GetCPInfoEx(CP, 0, &CPinfo))
-     TRACE (3, "ACP-name %s\n", CPinfo.CodePageName);
+     TRACE (2, "ACP-name %s\n", CPinfo.CodePageName);
   return (CP);
 }
 
@@ -225,7 +225,7 @@ BOOL IDNA_CheckCodePage (UINT cp)
   smartlist_sort (cp_list, cp_compare);
   max = smartlist_len (cp_list);
 
-  TRACE (3, "%d built-in CodePages:\n", max);
+  TRACE (2, "%d built-in CodePages:\n", max);
 
   for (i = 0; i < max; i++)
   {
@@ -238,8 +238,8 @@ BOOL IDNA_CheckCodePage (UINT cp)
       cp_found = TRUE;
     }
     if (cp_info->name[0])
-         TRACE (3, "%cCP-name: %s\n", mark, cp_info->name);
-    else TRACE (3, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
+         TRACE (2, "%cCP-name: %s\n", mark, cp_info->name);
+    else TRACE (2, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
   }
 
   /* And now free the content and the 'cp_list' itself.
@@ -291,7 +291,7 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
     return (FALSE);
   }
   cur_cp = cp;
-  TRACE (3, "IDNA_init: Using codepage %u\n", cp);
+  TRACE (2, "IDNA_init: Using codepage %u\n", cp);
   return (TRUE);
 }
 
@@ -1123,7 +1123,7 @@ static int do_test (WORD cp, const char *host)
 
 int idna_main (int argc, char **argv)
 {
-  WORD cp = 0;
+  WORD cp = CP_ACP;  /* == 0 */
   int  ch, rc = 0;
 
   set_program_name (argv[0]);
