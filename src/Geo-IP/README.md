@@ -41,7 +41,9 @@ Ideas for the public interface to a unified "Geo-IP" library:
 ```c
   const struct geoip_provider_st mmdb_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_MMDB_FILE,
-    .files  = [ "DB-IP/dbip-country-lite-2020-03.mmdb", NULL ],
+    .files  = [ "DB-IP/dbip-country-lite-2020-03.mmdb", NULL ],  
+    .url    = "https://updates.maxmind.com/app/update_getfilename?product_id=GeoLite2-Country/update?db_md5=a456ade...",
+    .config = "$(APPDATA)/GeoIP.conf",                     // for using the 'geoipupdate' program
     .init   = geoip_MMDB_init,
     .close  = geoip_MMDB_close,
     .lookup = geoip_MMDB_lookup
