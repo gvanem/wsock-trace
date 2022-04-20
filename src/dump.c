@@ -1662,7 +1662,7 @@ static const char *dump_sol_socket (char *buf, size_t buf_sz, int opt, const cha
 
 const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
 {
-  static  char buf [100];
+  static  char buf [500];
   DWORD   val;
   ULONG64 val64;
 
