@@ -3545,7 +3545,9 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       a = strdup (ret);
       b = strdup (StackWalkShow (thr, &ctx));
       ret = malloc (strlen(a)+strlen(b)+50);
-      sprintf (ret, "%s\n               %s", a, b);
+      if (g_cfg.trace_time_usec)
+          sprintf (ret, "%s\n                  %s", a, b);
+     else sprintf (ret, "%s\n               %s", a, b);
     }
 #endif
   }
