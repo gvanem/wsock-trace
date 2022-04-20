@@ -20,6 +20,10 @@
 #define s6_bytes     _s6_bytes
 #endif
 
+#ifndef SO_BSP_STATE /* Normally in 'ws2def.h' */
+#define SO_BSP_STATE 0x1009
+#endif
+
 #ifndef SO_OPENTYPE  /* Normally in 'MSWSock.h' */
 #define SO_OPENTYPE  0x7008
 #endif
@@ -477,12 +481,15 @@ static void test_socket_unix (void)
 static void test_getsockopt (void)
 {
   CSADDR_INFO csaddr;
-  DWORD  opentype = (DWORD) -1;
-  int    len = sizeof(csaddr);
+  DWORD  opentype;
+  int    len;
 
+  len = sizeof(csaddr);
   memset (&csaddr, '\0', len);
   TEST_CONDITION (== 0, getsockopt(s1, SOL_SOCKET, SO_BSP_STATE, (char*)&csaddr, &len));
+
   len = sizeof(opentype);
+  opentype = (DWORD) -1;
   TEST_CONDITION (== 0, getsockopt(s1, SOL_SOCKET, SO_OPENTYPE, (char*)&opentype, &len));
 }
 
