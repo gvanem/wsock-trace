@@ -854,6 +854,14 @@
 #define SIO_GET_ATM_CONNECTION_ID                    0x50160004
 #endif
 
+#ifndef SO_SYNCHRONOUS_ALERT
+#define SO_SYNCHRONOUS_ALERT       0x10
+#endif
+
+#ifndef SO_SYNCHRONOUS_NONALERT
+#define SO_SYNCHRONOUS_NONALERT    0x20
+#endif
+
 /**
  * The options and their names used in `setsockopt (s, SOL_SOCKET, opt, ...)` etc.
  */
@@ -1027,6 +1035,15 @@ static const struct search_list ip6_options[] = {
                     ADD_VALUE (IPV6_TCLASS),
                     ADD_VALUE (IPV6_RECVTCLASS),
                     ADD_VALUE (IPV6_MTU)
+                  };
+
+/**
+ * For printing `opt == SO_OPENTYPE`
+ */
+static const struct search_list opentypes[] = {
+                    { 0,      "N/A" },
+                    ADD_VALUE (SO_SYNCHRONOUS_ALERT),
+                    ADD_VALUE (SO_SYNCHRONOUS_NONALERT)
                   };
 
 /**
@@ -1566,10 +1583,81 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
   return (buf);
 }
 
+/**
+ * Print a `SOCKET_ADDRESS` to given buffer.
+ */
+static const char *socket_addr_str (char *buf, size_t buf_sz, const SOCKET_ADDRESS *sa)
+{
+  const char *addr;
+  int   af;
+
+  if (sa->iSockaddrLength == 0)
+     _strlcpy (buf, "<None>", buf_sz);
+  else
+  {
+    af = sa->lpSockaddr->sa_family;
+    if (af != AF_INET && af != AF_INET6)
+       snprintf (buf, buf_sz, "AF %d??", af);
+    else
+    {
+      addr = ws_inet_ntop (af, &sa->lpSockaddr->sa_data, buf, buf_sz, NULL);
+      if (!addr)
+        _strlcpy (buf, "<??>", buf_sz);
+    }
+  }
+  return (buf);
+}
+
+/**
+ * For dumping a `CSADDR_INFO` record used in the `SO_BSP_STATE` option:
+ * ```
+ * typedef struct _CSADDR_INFO {
+ *    SOCKET_ADDRESS  LocalAddr;
+ *    SOCKET_ADDRESS  RemoteAddr;
+ *    INT             iSocketType;
+ *    INT             iProtocol;
+ *  } CSADDR_INFO;
+ * ```
+ */
+static const char *dump_csaddr (char *buf, size_t buf_sz, const char *opt_val)
+{
+  const CSADDR_INFO *csaddr = (const CSADDR_INFO*) opt_val;
+  char  local [MAX_IP6_SZ+1];
+  char  remote [MAX_IP6_SZ+1];
+
+  socket_addr_str (local, sizeof(local), &csaddr->LocalAddr);
+  socket_addr_str (remote, sizeof(remote), &csaddr->RemoteAddr);
+
+  snprintf (buf, buf_sz, "{csaddr=local:%s, remote:%s, type:%s, protocol:%s}",
+            local, remote, socket_type(csaddr->iSocketType), protocol_name(csaddr->iProtocol));
+  return (buf);
+}
+
+/**
+ * For dumping more details for some `SOL_SOCKET` options:
+ */
+static const char *dump_sol_socket (char *buf, size_t buf_sz, int opt, const char *opt_val, int opt_len)
+{
+  const struct timeval *tv;
+
+  if (opt_len == sizeof(*tv) && (opt == SO_RCVTIMEO || opt == SO_SNDTIMEO))
+  {
+    tv = (struct timeval*) opt_val;
+    snprintf (buf, sizeof(buf), "{tv=%ld.%06lds}", tv->tv_sec, tv->tv_usec);
+    return (buf);
+  }
+  if (opt == SO_OPENTYPE && opt_len == sizeof(DWORD))
+     return list_lookup_name (*(DWORD*)opt_val, opentypes, DIM(opentypes));
+
+  if (opt == SO_BSP_STATE && opt_len == sizeof(CSADDR_INFO))
+     return dump_csaddr (buf, sizeof(buf), opt_val);
+
+  return (NULL);
+}
+
 const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
 {
-  static  char buf[50];
-  struct timeval *tv;
+  static  char buf [100];
   DWORD   val;
   ULONG64 val64;
 
@@ -1593,12 +1681,8 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
        return dump_ipv6_multicast_if (buf, sizeof(buf), opt_val);
   }
 
-  if (level == SOL_SOCKET && opt_len == sizeof(*tv) && (opt == SO_RCVTIMEO || opt == SO_SNDTIMEO))
-  {
-    tv = (struct timeval*) opt_val;
-    snprintf (buf, sizeof(buf), "{tv=%ld.%06lds}", tv->tv_sec, tv->tv_usec);
-    return (buf);
-  }
+  if (level == SOL_SOCKET && dump_sol_socket(buf, sizeof(buf), opt, opt_val, opt_len))
+     return (buf);
 
   switch (opt_len)
   {
