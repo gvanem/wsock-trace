@@ -2012,10 +2012,10 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
    * find the line and return the proper displacement.
    */
   char    undec_name [MAX_NAMELEN];             /* undecorated name */
-  DWORD   displacement    = 0;
-  DWORD   temp_disp       = 0;
-  DWORD   max_displ       = 100;
-  DWORD   flags           = UNDNAME_NAME_ONLY;  /* show procedure info */
+  DWORD   displacement     = 0;
+  DWORD   temp_dispacement = 0;
+  DWORD   max_displacement = 100;
+  DWORD   flags            = UNDNAME_NAME_ONLY;  /* show procedure info */
   DWORD64 addr;
   DWORD64 ofs_from_symbol = 0;                  /* How far from the symbol we were */
   DWORD   ofs_from_line   = 0;                  /* How far from the line we were */
@@ -2031,7 +2031,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   BOOL have_PDB_info = TRUE;
 
   if (g_cfg.max_displacement > 0)
-     max_displ = g_cfg.max_displacement;
+     max_displacement = g_cfg.max_displacement;
 
   if (g_cfg.cpp_demangle)
      flags = UNDNAME_COMPLETE;
@@ -2100,18 +2100,18 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
   memset (&Line, '\0', sizeof(Line));
   Line.SizeOfStruct = sizeof(Line);
 
-  while (temp_disp < max_displ &&
-         !(*p_SymGetLineFromAddr64)(g_proc, addr - temp_disp, &ofs_from_line, &Line))
-       ++temp_disp;
+  while (temp_dispacement < max_displacement &&
+         !(*p_SymGetLineFromAddr64)(g_proc, addr - temp_dispacement, &ofs_from_line, &Line))
+       ++temp_dispacement;
 
-  if (temp_disp >= max_displ)
+  if (temp_dispacement >= max_displacement)
      return (5);
 
   /* It was found and the source line information is correct so
    * change the displacement if it was looked up multiple times.
    */
-  if (temp_disp < max_displ && temp_disp != 0)
-     displacement = temp_disp;
+  if (temp_dispacement < max_displacement && temp_dispacement != 0)
+     displacement = temp_dispacement;
 
   str += snprintf (str, left, "~2%s(%lu)~1 (",
                    shorten_path(Line.FileName),
