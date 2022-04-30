@@ -388,8 +388,8 @@ char *str_ltrim (char *s)
  */
 char *win_strerror (DWORD err)
 {
-  static  char buf[512+20];
-  char    err_buf[512], *p;
+  static  char buf [512+20];
+  char    err_buf [512], *p;
   HRESULT hr = 0;
 
   if (HRESULT_SEVERITY(err))
@@ -576,7 +576,7 @@ char *_utoa10w (int value, int width, char *buf)
  */
 const char *list_lookup_name (unsigned value, const struct search_list *list, int num)
 {
-  static char buf[10];
+  static char buf [10];
 
   while (num > 0 && list->name)
   {
@@ -605,7 +605,7 @@ unsigned list_lookup_value (const char *name, const struct search_list *list, in
 
 const char *flags_decode (DWORD flags, const struct search_list *list, int num)
 {
-  static char buf[400];
+  static char buf [400];
   char  *ret  = buf;
   char  *end  = buf + sizeof(buf) - 1;
   size_t left = end - ret;
@@ -1533,7 +1533,7 @@ int use_win_locale = 0;
 
 const char *qword_str (unsigned __int64 val)
 {
-  static char buf[8][30];
+  static char buf [8][30];
   static int  idx = 0;
   char   tmp[30];
   char  *rc = buf [idx++];
@@ -2023,7 +2023,7 @@ int file_exists (const char *fname)
 {
   DWORD attr = GetFileAttributes (fname);
 
-  return (attr != INVALID_FILE_ATTRIBUTES || access(fname,0) == 0);
+  return (attr != INVALID_FILE_ATTRIBUTES || access(fname, 0) == 0);
 }
 
 /**
@@ -2082,7 +2082,11 @@ const char *get_dll_short_name (void)
 
 const char *get_dll_build_date (void)
 {
+#ifdef BUILD_DATE  /* from 'date +%d-%B-%Y' */
+  return (BUILD_DATE);
+#else
   return (__DATE__);
+#endif
 }
 
 /**
