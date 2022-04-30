@@ -106,8 +106,9 @@
   dump_servent   = 1                 # Dump the 'servent' structure returned in getservbyport() and getservbyname().
   dump_nameinfo  = 1                 # Dump the data returned from getnameinfo().
 
-  dump_wsaprotocol_info  = 1         # Dump the WSAPROTOCOL_INFO[A|W] structure in e.g. WSASocketA() and WSADuplicateSocketA().
-  dump_wsanetwork_events = 1         # Dump the WSAEVENT array from WSAEnumNetworkEvents().
+  dump_wsaprotocol_info    = 1       # Dump the WSAPROTOCOL_INFO[A|W] structure in e.g. WSASocketA() and WSADuplicateSocketA().
+  dump_wsanetwork_events   = 1       # Dump the WSAEVENT array from WSAEnumNetworkEvents().
+  dump_namespace_providers = 1       # Dump WSAEnumNameSpaceProviders() and WSAEnumNameSpaceProvidersEx() information.
 
   #
   # For tracing the TCP-information prior to a 'closesocket()'.

@@ -8,6 +8,11 @@ EXPORTS
  _WSASetLastError@4
  _WSAEnumProtocolsA@12
  _WSAEnumProtocolsW@12
+ _WSAEnumNameSpaceProvidersA@8
+ _WSAEnumNameSpaceProvidersW@8
+ _WSAEnumNameSpaceProvidersExA@8
+ _WSAEnumNameSpaceProvidersExW@8
+ _WSAEnumNetworkEvents@12
  _WSASocketA@24
  _WSASocketW@24
  _WSADuplicateSocketA@12
@@ -38,7 +43,6 @@ EXPORTS
  _WSAConnectByNameA@36
  _WSAConnectByNameW@36
  _WSAGetOverlappedResult@20
- _WSAEnumNetworkEvents@12
  _WSACancelBlockingCall@0
  _WSAWaitForMultipleEvents@20
  _WSAPoll@12
@@ -96,8 +100,6 @@ EXPORTS
 ;
 ;   WPUCompleteOverlappedRequest@20
 ;   WSApSetPostRoutine@4
-;   WSAEnumNameSpaceProvidersA@8
-;   WSAEnumNameSpaceProvidersW@8
 ;   WSAGetQOSByName@12
 ;   WSAGetServiceClassInfoA@16
 ;   WSAGetServiceClassInfoW@16

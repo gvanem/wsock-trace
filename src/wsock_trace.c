@@ -408,6 +408,18 @@ DEF_FUNC (int, WSAEnumProtocolsW, (int               *protocols,
                                    WSAPROTOCOL_INFOW *proto_info,
                                    DWORD             *buf_len));
 
+DEF_FUNC (int, WSAEnumNameSpaceProvidersA, (DWORD              *buf_len,
+                                            WSANAMESPACE_INFOA *buf));
+
+DEF_FUNC (int, WSAEnumNameSpaceProvidersW, (DWORD              *buf_len,
+                                            WSANAMESPACE_INFOW *buf));
+
+DEF_FUNC (int, WSAEnumNameSpaceProvidersExA, (DWORD                *buf_len,
+                                              WSANAMESPACE_INFOEXA *buf));
+
+DEF_FUNC (int, WSAEnumNameSpaceProvidersExW, (DWORD                *buf_len,
+                                              WSANAMESPACE_INFOEXW *buf));
+
 DEF_FUNC (DWORD, WSAWaitForMultipleEvents, (DWORD           num_ev,
                                             const WSAEVENT *ev,
                                             BOOL            wait_all,
@@ -500,6 +512,10 @@ static struct LoadTable dyn_funcs [] = {
               ADD_VALUE (0, "ws2_32.dll", WSAEnumNetworkEvents),
               ADD_VALUE (1, "ws2_32.dll", WSAEnumProtocolsA),
               ADD_VALUE (1, "ws2_32.dll", WSAEnumProtocolsW),
+              ADD_VALUE (1, "ws2_32.dll", WSAEnumNameSpaceProvidersA),
+              ADD_VALUE (1, "ws2_32.dll", WSAEnumNameSpaceProvidersW),
+              ADD_VALUE (1, "ws2_32.dll", WSAEnumNameSpaceProvidersExA),
+              ADD_VALUE (1, "ws2_32.dll", WSAEnumNameSpaceProvidersExW),
               ADD_VALUE (0, "ws2_32.dll", WSACancelBlockingCall),
               ADD_VALUE (1, "ws2_32.dll", WSAWaitForMultipleEvents),
               ADD_VALUE (1, "ws2_32.dll", WSCGetProviderPath),
@@ -2494,6 +2510,66 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
   }
 
   LEAVE_CRIT (!exclude_this);
+  return (rc);
+}
+
+EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA *buf)
+{
+  int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+
+  CHECK_PTR (p_WSAEnumNameSpaceProvidersA);
+  rc = (*p_WSAEnumNameSpaceProvidersA) (buf_len, buf);
+
+  ENTER_CRIT();
+  WSTRACE ("WSAEnumNameSpaceProvidersA() --> %d", rc);
+  LEAVE_CRIT (!exclude_this);
+
+  ARGSUSED (do_it);
+  return (rc);
+}
+
+EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW *buf)
+{
+  int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+
+  CHECK_PTR (p_WSAEnumNameSpaceProvidersW);
+  rc = (*p_WSAEnumNameSpaceProvidersW) (buf_len, buf);
+
+  ENTER_CRIT();
+  WSTRACE ("WSAEnumNameSpaceProvidersW() --> %d", rc);
+  LEAVE_CRIT (!exclude_this);
+
+  ARGSUSED (do_it);
+  return (rc);
+}
+
+EXPORT int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INFOEXA *buf)
+{
+  int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+
+  CHECK_PTR (p_WSAEnumNameSpaceProvidersExA);
+  rc = (*p_WSAEnumNameSpaceProvidersExA) (buf_len, buf);
+
+  ENTER_CRIT();
+  WSTRACE ("WSAEnumNameSpaceProvidersExA() --> %d", rc);
+  LEAVE_CRIT (!exclude_this);
+
+  ARGSUSED (do_it);
+  return (rc);
+}
+
+EXPORT int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INFOEXW *buf)
+{
+  int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+
+  CHECK_PTR (p_WSAEnumNameSpaceProvidersExW);
+  rc = (*p_WSAEnumNameSpaceProvidersExW) (buf_len, buf);
+
+  ENTER_CRIT();
+  WSTRACE ("WSAEnumNameSpaceProvidersExW() --> %d", rc);
+  LEAVE_CRIT (!exclude_this);
+
+  ARGSUSED (do_it);
   return (rc);
 }
 

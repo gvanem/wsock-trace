@@ -747,6 +747,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "dump_wsanetwork_events"))
      g_cfg.dump_wsanetwork_events = atoi (val);
 
+  else if (!stricmp(key, "dump_namespace_providers"))
+     g_cfg.dump_namespace_providers = atoi (val);
+
   else if (!stricmp(key, "dump_tcpinfo"))
      g_cfg.dump_tcpinfo = atoi (val);
 
