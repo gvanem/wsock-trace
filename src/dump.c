@@ -2405,7 +2405,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
         C_indent (g_cfg.trace_indent+2);                                                                   \
         C_printf ("Active:     %d\n", info->fActive);                                                      \
         C_indent (g_cfg.trace_indent+2);                                                                   \
-        C_printf ("Version:    %lu\n", info->dwVersion);                                                   \
+        C_printf ("Version:    %lu\n", DWORD_CAST(info->dwVersion));                                       \
         C_indent (g_cfg.trace_indent+2);                                                                   \
         C_printf ("Identifier: %" fmt "~0\n", info->lpszIdentifier);                                       \
       } while (0)
