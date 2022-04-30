@@ -86,7 +86,7 @@ will use a IP2Location LITE [**database**](https://lite.ip2location.com). To mak
 do this:
   * Sign-up for an [**account**](https://lite.ip2location.com/sign-up) and download a free
     IP2Location LITE [**database**](https://lite.ip2location.com/database/ip-country-region-city).
-    Or in case you have an account, go [**here**](https://lite.ip2location.com/file-download).
+    Or in case you have an account, go [**here**](https://lite.ip2location.com/database-download).
   * Download and use a file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`. <br>
     Such a file contains both IPv4 and IPv6 records.
   * Copy `IP2LOCATION-LITE-DBx.IPV6.BIN` into your `%APPDATA%` directory and edit the keyword in
@@ -394,7 +394,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2020.
+G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2022.
 
 ### Footnotes:
 
