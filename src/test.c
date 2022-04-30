@@ -651,7 +651,7 @@ static void test_WSAAddressToStringA (void)
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   WSAAddressToStringA ((SOCKADDR*)&sa4, sizeof(sa4), NULL, (LPTSTR)&data, &size);
 
-  TEST_CONDITION (== 0, strcmp(data, "127.0.0.1"));
+  TEST_CONDITION (== 0, strcmp (data, "127.0.0.1"));
   TEST_CONDITION (== 1, (size == sizeof("127.0.0.1")));
 }
 
@@ -671,7 +671,7 @@ static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
   if (verbose >= 1)
      printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
 
-  TEST_CONDITION (== 0, wcscmp(data, L"127.0.0.1"));
+  TEST_CONDITION (== 0, wcscmp (data, L"127.0.0.1"));
   TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1")/2));
 }
 
@@ -752,9 +752,9 @@ static void test_WSAEnumNameSpaceProvidersA (void)
   WSANAMESPACE_INFOA *info = NULL;
   DWORD               len = 0;
 
-  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersA(&len, NULL));
+  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersA (&len, NULL));
   info = alloca (len);
-  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersA(&len, info));
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersA (&len, info));
 }
 
 static void test_WSAEnumNameSpaceProvidersW (void)
@@ -762,9 +762,9 @@ static void test_WSAEnumNameSpaceProvidersW (void)
   WSANAMESPACE_INFOW *info = NULL;
   DWORD               len = 0;
 
-  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersW(&len, NULL));
+  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersW (&len, NULL));
   info = alloca (2*len);
-  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersW(&len, info));
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersW (&len, info));
 }
 
 static void test_WSAEnumNameSpaceProvidersExA (void)
@@ -772,9 +772,9 @@ static void test_WSAEnumNameSpaceProvidersExA (void)
   WSANAMESPACE_INFOEXA *info = NULL;
   DWORD                 len = 0;
 
-  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersExA(&len, NULL));
+  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersExA (&len, NULL));
   info = alloca (len);
-  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExA(&len, info));
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExA (&len, info));
 }
 
 static void test_WSAEnumNameSpaceProvidersExW (void)
@@ -782,9 +782,9 @@ static void test_WSAEnumNameSpaceProvidersExW (void)
   WSANAMESPACE_INFOEXW *info = NULL;
   DWORD                 len = 0;
 
-  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersExW(&len, NULL));
+  TEST_CONDITION ( == -1, WSAEnumNameSpaceProvidersExW (&len, NULL));
   info = alloca (2*len);
-  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExW(&len, info));
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExW (&len, info));
 }
 
 static const char *get_addr_str (const sockaddr_gen *sa)
@@ -928,10 +928,10 @@ static void test_InetNtopW (void)
  * Per-thread data given to `thread_worker()` in it's `arg` parameter.
  */
 struct thr_data {
-       char              t_name[20];
-       DWORD             t_id;
-       HANDLE            t_hnd;
-       int               t_err;   /* per-thread error-code */
+       char   t_name[20];
+       DWORD  t_id;
+       HANDLE t_hnd;
+       int    t_err;   /* per-thread error-code */
      };
 
 /**

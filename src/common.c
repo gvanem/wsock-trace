@@ -905,7 +905,7 @@ const char *get_path (const char    *apath,
   int     save;
 
   if (exist)
-     *exist = TRUE;       /* assume the 'wpath' exists */
+     *exist = TRUE;       /* assume the 'apath' or 'wpath' exists */
 
   if (is_native)
      *is_native = FALSE;  /* assume it's not a native file */
