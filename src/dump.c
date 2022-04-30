@@ -2380,6 +2380,34 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   C_puts ("~0");
 }
 
+dump_wsanamespace_infoA (const WSANAMESPACE_INFOA *info, int index)
+{
+  /**\todo */
+ ARGSUSED (info);
+ ARGSUSED (index);
+}
+
+dump_wsanamespace_infoW   (const WSANAMESPACE_INFOW   *info, int index)
+{
+  /**\todo */
+ ARGSUSED (info);
+ ARGSUSED (index);
+}
+
+dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index)
+{
+  /**\todo */
+ ARGSUSED (info);
+ ARGSUSED (index);
+}
+
+dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
+{
+  /**\todo */
+ ARGSUSED (info);
+ ARGSUSED (index);
+}
+
 /*
  * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
  *                  addr = "<??>";
