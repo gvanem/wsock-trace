@@ -29,7 +29,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
   from [`QueryPerformanceCounter()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms644904(v=vs.85).aspx).<br>
   The timestamp is controlled by `trace_time` in the
-  [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L31)
+  [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
   config-file.
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
@@ -40,8 +40,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *IP-Country* information thanks to the **[MaxMind](https://www.maxmind.com/en/geoip2-services-and-databases)**
   Lite databases. Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
-  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L164)
-  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L165)
+  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L208)
+  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L209)
   are always enabled).
 
 * *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
@@ -62,7 +62,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 * *Slowdown*; For testing *too fast programs*, all receive, transmit, `select()` and `WSAPoll()`
   calls can be delayed a number of milli-seconds. E.g. slowing down a `recv()` call is
-  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L66)
+  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L81)
   config-file.
 
 * *Firewall* activity; report activity causing events from the *Window Filtering Platform* (the *Internet Connection Firewall*; ICF).
