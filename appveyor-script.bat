@@ -55,45 +55,46 @@ echo # This file was generated from %0.                                      >> 
 echo # DO NOT EDIT!                                                          >> wsock_trace.appveyor
 echo #                                                                       >> wsock_trace.appveyor
 echo [core]                                                                  >> wsock_trace.appveyor
-echo   trace_level            = %%WSOCK_TRACE_LEVEL%%                        >> wsock_trace.appveyor
-echo   trace_indent           = 2                                            >> wsock_trace.appveyor
-echo   trace_caller           = 1                                            >> wsock_trace.appveyor
-echo   trace_report           = 0                                            >> wsock_trace.appveyor
-echo   trace_binmode          = 1                                            >> wsock_trace.appveyor
-echo   trace_time             = relative                                     >> wsock_trace.appveyor
-echo   trace_time_usec        = 1                                            >> wsock_trace.appveyor
-echo   trace_max_len          = %%COLUMNS%%                                  >> wsock_trace.appveyor
-echo   callee_level           = 1                                            >> wsock_trace.appveyor
-echo   cpp_demangle           = 1                                            >> wsock_trace.appveyor
-echo   short_errors           = 1                                            >> wsock_trace.appveyor
-echo   use_full_path          = 1                                            >> wsock_trace.appveyor
-echo   use_toolhlp32          = 1                                            >> wsock_trace.appveyor
-echo   dump_modules           = 0                                            >> wsock_trace.appveyor
-echo   dump_select            = 1                                            >> wsock_trace.appveyor
-echo   dump_hostent           = 1                                            >> wsock_trace.appveyor
-echo   dump_protoent          = 1                                            >> wsock_trace.appveyor
-echo   dump_servent           = 1                                            >> wsock_trace.appveyor
-echo   dump_nameinfo          = 1                                            >> wsock_trace.appveyor
-echo   dump_wsaprotocol_info  = 1                                            >> wsock_trace.appveyor
-echo   dump_wsanetwork_events = 1                                            >> wsock_trace.appveyor
-echo   dump_data              = 1                                            >> wsock_trace.appveyor
-echo   dump_tcpinfo           = 1                                            >> wsock_trace.appveyor
-echo   max_data               = 5000                                         >> wsock_trace.appveyor
-echo   max_displacement       = 1000                                         >> wsock_trace.appveyor
-echo   exclude                = htons,htonl,inet_addr                        >> wsock_trace.appveyor
-echo   hosts_file             = %CD%\appveyor-hosts                          >> wsock_trace.appveyor
-echo   services_file          = %CD%\appveyor-services                       >> wsock_trace.appveyor
-echo   use_winhttp            = 0                                            >> wsock_trace.appveyor
-echo   nice_numbers           = 1                                            >> wsock_trace.appveyor
+echo   trace_level              = %%WSOCK_TRACE_LEVEL%%                      >> wsock_trace.appveyor
+echo   trace_indent             = 2                                          >> wsock_trace.appveyor
+echo   trace_caller             = 1                                          >> wsock_trace.appveyor
+echo   trace_report             = 0                                          >> wsock_trace.appveyor
+echo   trace_binmode            = 1                                          >> wsock_trace.appveyor
+echo   trace_time               = relative                                   >> wsock_trace.appveyor
+echo   trace_time_usec          = 1                                          >> wsock_trace.appveyor
+echo   trace_max_len            = %%COLUMNS%%                                >> wsock_trace.appveyor
+echo   callee_level             = 1                                          >> wsock_trace.appveyor
+echo   cpp_demangle             = 1                                          >> wsock_trace.appveyor
+echo   short_errors             = 1                                          >> wsock_trace.appveyor
+echo   use_full_path            = 1                                          >> wsock_trace.appveyor
+echo   use_toolhlp32            = 1                                          >> wsock_trace.appveyor
+echo   dump_modules             = 0                                          >> wsock_trace.appveyor
+echo   dump_select              = 1                                          >> wsock_trace.appveyor
+echo   dump_hostent             = 1                                          >> wsock_trace.appveyor
+echo   dump_protoent            = 1                                          >> wsock_trace.appveyor
+echo   dump_servent             = 1                                          >> wsock_trace.appveyor
+echo   dump_nameinfo            = 1                                          >> wsock_trace.appveyor
+echo   dump_wsaprotocol_info    = 1                                          >> wsock_trace.appveyor
+echo   dump_wsanetwork_events   = 1                                          >> wsock_trace.appveyor
+echo   dump_namespace_providers = 1                                          >> wsock_trace.appveyor
+echo   dump_data                = 1                                          >> wsock_trace.appveyor
+echo   dump_tcpinfo             = 1                                          >> wsock_trace.appveyor
+echo   max_data                 = 5000                                       >> wsock_trace.appveyor
+echo   max_displacement         = 1000                                       >> wsock_trace.appveyor
+echo   exclude                  = htons,htonl,inet_addr                      >> wsock_trace.appveyor
+echo   hosts_file               = %CD%\appveyor-hosts                        >> wsock_trace.appveyor
+echo   services_file            = %CD%\appveyor-services                     >> wsock_trace.appveyor
+echo   use_winhttp              = 0                                          >> wsock_trace.appveyor
+echo   nice_numbers             = 1                                          >> wsock_trace.appveyor
 
 echo [geoip]                                                                 >> wsock_trace.appveyor
-echo   enable                 = 1                                            >> wsock_trace.appveyor
-echo   show_position          = 1                                            >> wsock_trace.appveyor
-echo   show_map_url           = 1                                            >> wsock_trace.appveyor
-echo   max_days               = 10                                           >> wsock_trace.appveyor
-echo   ip4_file               = %CD%\GeoIP.csv                               >> wsock_trace.appveyor
-echo   ip6_file               = %CD%\GeoIP6.csv                              >> wsock_trace.appveyor
-echo   ip2location_bin_file   = %CI_DIR%\IP46-COUNTRY.BIN                    >> wsock_trace.appveyor
+echo   enable                   = 1                                          >> wsock_trace.appveyor
+echo   show_position            = 1                                          >> wsock_trace.appveyor
+echo   show_map_url             = 1                                          >> wsock_trace.appveyor
+echo   max_days                 = 10                                         >> wsock_trace.appveyor
+echo   ip4_file                 = %CD%\GeoIP.csv                             >> wsock_trace.appveyor
+echo   ip6_file                 = %CD%\GeoIP6.csv                            >> wsock_trace.appveyor
+echo   ip2location_bin_file     = %CI_DIR%\IP46-COUNTRY.BIN                  >> wsock_trace.appveyor
 
 echo [asn]                                                                   >> wsock_trace.appveyor
 echo   enable       = 1                                                      >> wsock_trace.appveyor
