@@ -25,7 +25,7 @@ USE_DEF_FILE = 1
 # But we cannot mix objects compiled with both '-MDd' and '-MD'.
 #
 !if "$(USE_LUAJIT)" == "1"
-LUAJIT_ROOT = ..\LuaJIT
+LUAJIT_ROOT = LuaJIT
 
 !if "$(USE_CRT_DEBUG)" == "1"
 !error "Cannot have 'USE_LUAJIT=1' with 'USE_CRT_DEBUG=1'."

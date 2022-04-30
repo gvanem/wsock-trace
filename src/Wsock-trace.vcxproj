@@ -56,13 +56,13 @@
       <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
       <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;..\LuaJit\src\luajit_static32.lib</AdditionalDependencies>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;LuaJit\src\luajit_static32.lib</AdditionalDependencies>
       <ManifestFile />
       <EnableUAC>false</EnableUAC>
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /DUSE_WSOCK_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /DUSE_WSOCK_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -79,13 +79,13 @@
       <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
       <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;..\LuaJit\src\luajit_static32.lib</AdditionalDependencies>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;LuaJit\src\luajit_static32.lib</AdditionalDependencies>
       <ManifestFile />
       <EnableUAC>false</EnableUAC>
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /DUSE_WSOCK_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I../LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /DUSE_WSOCK_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>

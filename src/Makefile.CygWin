@@ -11,7 +11,7 @@ USE_BFD       ?= 0
 # If you want LuaJIT-script support, set 'USE_LUAJIT = 1':
 #
 USE_LUAJIT ?= 1
-LUAJIT_ROOT = ../LuaJIT
+LUAJIT_ROOT = LuaJIT
 
 BIN_TARGET = /usr/bin
 LIB_TARGET = /usr/lib
