@@ -226,6 +226,7 @@
   #
   # Ref. https://github.com/chrislim2888/IP2Location-C-Library
   #      http://lite.ip2location.com
+  #      https://lite.ip2location.com/database-download   -- download URL for this .BIN file
   #
   # The above 'show_position' and 'show_map_url' depends on an up-to-date
   # version of this file.
