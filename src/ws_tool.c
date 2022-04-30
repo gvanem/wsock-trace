@@ -19,7 +19,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <signal.h>
-#include <tchar.h>
 
 #include "common.h"
 #include "init.h"
