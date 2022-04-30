@@ -751,13 +751,9 @@ static void test_WSAEnumNameSpaceProvidersA (void)
 {
   WSANAMESPACE_INFOA *info = NULL;
   DWORD               num, len = 0;
-  int                 err;
 
   TEST_CONDITION ( == -1, num = WSAEnumNameSpaceProvidersA(&len, NULL));
-  err = WSAGetLastError();
-  if (err == WSAEFAULT && len != 0)
-     info = alloca (len);
-
+  info = alloca (len);
   TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersA(&len, info));
 }
 
@@ -765,13 +761,9 @@ static void test_WSAEnumNameSpaceProvidersW (void)
 {
   WSANAMESPACE_INFOW *info = NULL;
   DWORD               num, len = 0;
-  int                 err;
 
   TEST_CONDITION ( == -1, num = WSAEnumNameSpaceProvidersW(&len, NULL));
-  err = WSAGetLastError();
-  if (err == WSAEFAULT && len != 0)
-     info = alloca (2*len);
-
+  info = alloca (2*len);
   TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersW(&len, info));
 }
 
@@ -779,13 +771,9 @@ static void test_WSAEnumNameSpaceProvidersExA (void)
 {
   WSANAMESPACE_INFOEXA *info = NULL;
   DWORD                 num, len = 0;
-  int                   err;
 
   TEST_CONDITION ( == -1,  num = WSAEnumNameSpaceProvidersExA(&len, NULL));
-  err = WSAGetLastError();
-  if (err == WSAEFAULT && len != 0)
-     info = alloca (len);
-
+  info = alloca (len);
   TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExA(&len, info));
 }
 
@@ -793,13 +781,9 @@ static void test_WSAEnumNameSpaceProvidersExW (void)
 {
   WSANAMESPACE_INFOEXW *info = NULL;
   DWORD                 num, len = 0;
-  int                   err;
 
   TEST_CONDITION ( == -1, num = WSAEnumNameSpaceProvidersExW(&len, NULL));
-  err = WSAGetLastError();
-  if (err == WSAEFAULT && len != 0)
-     info = alloca (2*len);
-
+  info = alloca (2*len);
   TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExW(&len, info));
 }
 
