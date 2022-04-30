@@ -28,10 +28,10 @@ extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, c
 extern void dump_events           (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events);
 extern void dump_extension_funcs  (const GUID *guid, const void *out_buf);
 
-extern dump_wsanamespace_infoA   (const WSANAMESPACE_INFOA   *info, int index);
-extern dump_wsanamespace_infoW   (const WSANAMESPACE_INFOW   *info, int index);
-extern dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index);
-extern dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index);
+extern void dump_wsanamespace_infoA   (const WSANAMESPACE_INFOA   *info, int index);
+extern void dump_wsanamespace_infoW   (const WSANAMESPACE_INFOW   *info, int index);
+extern void dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index);
+extern void dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index);
 
 extern void dump_countries          (int family, const char **addresses);
 extern void dump_countries_sockaddr (const struct sockaddr *sa);

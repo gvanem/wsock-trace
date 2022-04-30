@@ -2515,10 +2515,12 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
 
 EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA *provider_buf)
 {
-  char buf[50], *p = buf;
-  int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+  char  buf [50], *p = buf;
+  DWORD buf_len_in = buf_len ? *buf_len : 0;
+  int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersA);
+  exclude_this = TRUE;
   rc = (*p_WSAEnumNameSpaceProvidersA) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2528,26 +2530,27 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA
     if (rc > 0)
          snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
     else p = (char*) get_error (rc, 0);
+
+    WSTRACE ("WSAEnumNameSpaceProvidersA (%lu, 0x%p) --> %s", DWORD_CAST(buf_len_in), provider_buf, p);
+
+    if (rc != SOCKET_ERROR && rc > 0 && !exclude_this)
+    {
+      for (i = 0; i < rc; i++)
+          dump_wsanamespace_infoA (provider_buf, i);
+    }
   }
-
-  WSTRACE ("WSAEnumNameSpaceProvidersA() --> %s", p);
-
-  if (do_it && rc != SOCKET_ERROR && rc > 0 && !exclude_this)
-  {
-    for (i = 0; i < rc; i++)
-        dump_wsanamespace_infoA (provider_buf, i);
-  }
-
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
 
 EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW *provider_buf)
 {
-  char buf[50], *p = buf;
-  int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+  char  buf [50], *p = buf;
+  DWORD buf_len_in = buf_len ? *buf_len : 0;
+  int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersW);
+  exclude_this = TRUE;
   rc = (*p_WSAEnumNameSpaceProvidersW) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2557,28 +2560,27 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW
     if (rc > 0)
          snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
     else p = (char*) get_error (rc, 0);
+
+    WSTRACE ("WSAEnumNameSpaceProvidersW (%lu, 0x%p) --> %s", DWORD_CAST(buf_len_in), provider_buf, p);
+
+    if (rc != SOCKET_ERROR && rc > 0 && !exclude_this)
+    {
+      for (i = 0; i < rc; i++)
+          dump_wsanamespace_infoW (provider_buf, i);
+    }
   }
-
-  WSTRACE ("WSAEnumNameSpaceProvidersW() --> %s", p);
-
-  if (do_it && rc != SOCKET_ERROR && rc > 0 && !exclude_this)
-  {
-    for (i = 0; i < rc; i++)
-        dump_wsanamespace_infoW (provider_buf, i);
-  }
-
   LEAVE_CRIT (!exclude_this);
-
-  ARGSUSED (do_it);
   return (rc);
 }
 
 EXPORT int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INFOEXA *provider_buf)
 {
-  char buf[50], *p = buf;
-  int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+  char  buf [50], *p = buf;
+  DWORD buf_len_in = buf_len ? *buf_len : 0;
+  int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersExA);
+  exclude_this = TRUE;
   rc = (*p_WSAEnumNameSpaceProvidersExA) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2588,28 +2590,27 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INF
     if (rc > 0)
          snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
     else p = (char*) get_error (rc, 0);
+
+    WSTRACE ("WSAEnumNameSpaceProvidersExA (%lu, 0x%p) --> %s", DWORD_CAST(buf_len_in), provider_buf, p);
+
+    if (rc != SOCKET_ERROR && rc > 0 && !exclude_this)
+    {
+      for (i = 0; i < rc; i++)
+          dump_wsanamespace_infoExA (provider_buf, i);
+    }
   }
-
-  WSTRACE ("WSAEnumNameSpaceProvidersExA() --> %s", p);
-
-  if (do_it && rc != SOCKET_ERROR && rc > 0 && !exclude_this)
-  {
-    for (i = 0; i < rc; i++)
-        dump_wsanamespace_infoExA (provider_buf, i);
-  }
-
   LEAVE_CRIT (!exclude_this);
-
-  ARGSUSED (do_it);
   return (rc);
 }
 
 EXPORT int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INFOEXW *provider_buf)
 {
-  char buf[50], *p = buf;
-  int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+  char  buf [50], *p = buf;
+  DWORD buf_len_in = buf_len ? *buf_len : 0;
+  int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersExW);
+  exclude_this = TRUE;
   rc = (*p_WSAEnumNameSpaceProvidersExW) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2619,19 +2620,16 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INF
     if (rc > 0)
          snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
     else p = (char*) get_error (rc, 0);
+
+    WSTRACE ("WSAEnumNameSpaceProvidersExW (%lu, 0x%p) --> %s", DWORD_CAST(buf_len_in), provider_buf, p);
+
+    if (rc != SOCKET_ERROR && rc > 0 && !exclude_this)
+    {
+      for (i = 0; i < rc; i++)
+          dump_wsanamespace_infoExW (provider_buf, i);
+    }
   }
-
-  WSTRACE ("WSAEnumNameSpaceProvidersExW() --> %s", p);
-
-  if (do_it && rc != SOCKET_ERROR && rc > 0 && !exclude_this)
-  {
-    for (i = 0; i < rc; i++)
-        dump_wsanamespace_infoExW (provider_buf, i);
-  }
-
   LEAVE_CRIT (!exclude_this);
-
-  ARGSUSED (do_it);
   return (rc);
 }
 

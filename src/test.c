@@ -63,11 +63,11 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
   int WSAAPI inet_pton (int Family, PCSTR pszAddrString, void *pAddrBuf);
 #endif
 
-typedef void (*test_func2) (void);
+typedef void (*test_func) (void);
 
 struct test_struct {
        const char *name;
-       test_func2   func;
+       test_func   func;
      };
 
 static int verbose = 0;
@@ -133,6 +133,10 @@ static void test_WSAAddressToStringWP (void);
 static void test_WSAStringToAddressA (void);
 static void test_WSAStringToAddressW (void);
 static void test_WSAEnumProtocols (void);
+static void test_WSAEnumNameSpaceProvidersA (void);
+static void test_WSAEnumNameSpaceProvidersW (void);
+static void test_WSAEnumNameSpaceProvidersExA (void);
+static void test_WSAEnumNameSpaceProvidersExW (void);
 static void test_WSAIoctl_1 (void);
 static void test_WSAIoctl_2 (void);
 static void test_WSAIoctl_3 (void);
@@ -184,6 +188,10 @@ static const struct test_struct tests[] = {
                     ADD_TEST (WSAStringToAddressA),
                     ADD_TEST (WSAStringToAddressW),
                     ADD_TEST (WSAEnumProtocols),
+                    ADD_TEST (WSAEnumNameSpaceProvidersA),
+                    ADD_TEST (WSAEnumNameSpaceProvidersW),
+                    ADD_TEST (WSAEnumNameSpaceProvidersExA),
+                    ADD_TEST (WSAEnumNameSpaceProvidersExW),
                     ADD_TEST (WSAIoctl_1),
                     ADD_TEST (WSAIoctl_2),
                     ADD_TEST (WSAIoctl_3),
@@ -737,6 +745,62 @@ static void test_WSAEnumProtocols (void)
      p_info = alloca (len);
 
   TEST_CONDITION ( > 0, WSAEnumProtocols (NULL, p_info, &len));
+}
+
+static void test_WSAEnumNameSpaceProvidersA (void)
+{
+  WSANAMESPACE_INFOA *info = NULL;
+  DWORD               num, len = 0;
+  int                 err;
+
+  TEST_CONDITION ( == -1, num = WSAEnumNameSpaceProvidersA(&len, NULL));
+  err = WSAGetLastError();
+  if (err == WSAEFAULT && len != 0)
+     info = alloca (len);
+
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersA(&len, info));
+}
+
+static void test_WSAEnumNameSpaceProvidersW (void)
+{
+  WSANAMESPACE_INFOW *info = NULL;
+  DWORD               num, len = 0;
+  int                 err;
+
+  TEST_CONDITION ( == -1, num = WSAEnumNameSpaceProvidersW(&len, NULL));
+  err = WSAGetLastError();
+  if (err == WSAEFAULT && len != 0)
+     info = alloca (2*len);
+
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersW(&len, info));
+}
+
+static void test_WSAEnumNameSpaceProvidersExA (void)
+{
+  WSANAMESPACE_INFOEXA *info = NULL;
+  DWORD                 num, len = 0;
+  int                   err;
+
+  TEST_CONDITION ( == -1,  num = WSAEnumNameSpaceProvidersExA(&len, NULL));
+  err = WSAGetLastError();
+  if (err == WSAEFAULT && len != 0)
+     info = alloca (len);
+
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExA(&len, info));
+}
+
+static void test_WSAEnumNameSpaceProvidersExW (void)
+{
+  WSANAMESPACE_INFOEXW *info = NULL;
+  DWORD                 num, len = 0;
+  int                   err;
+
+  TEST_CONDITION ( == -1, num = WSAEnumNameSpaceProvidersExW(&len, NULL));
+  err = WSAGetLastError();
+  if (err == WSAEFAULT && len != 0)
+     info = alloca (2*len);
+
+  TEST_CONDITION ( > 0, WSAEnumNameSpaceProvidersExW(&len, info));
 }
 
 static const char *get_addr_str (const sockaddr_gen *sa)

@@ -1398,6 +1398,21 @@ static const struct search_list tcp_states[] = {
            { 10, "TIME_WAIT"   }
          };
 
+/**
+ * For `dump_wsanamespace_info*()`:
+ */
+static const struct search_list name_spaces[] = {
+                  { NS_DNS,       "Domain Name System (NS_DNS)"               },
+                  { NS_WINS,      "Windows Internet Naming Service (NS_WINS)" },
+                  { NS_NETBT,     "NetBIOS (NS_NETBT)"                        },
+                  { NS_NTDS,      "Windows NT Directory Services (NS_NTDS)"   },
+                  { NS_NLA,       "Network Location Awareness (NS_NLA)"       },
+                  { NS_BTH,       "Bluetooth (NS_BTH)"                        },
+                  { NS_EMAIL,     "Email (NS_EMAIL)"                          },
+                  { NS_PNRPNAME,  "Peer-to-peer (NS_PNRPNAME)"                },
+                  { NS_PNRPCLOUD, "Peer-to-peer collection (NS_PNRPCLOUD)"    }
+                };
+
 const char *socket_family (int family)
 {
   return list_lookup_name (family, families, DIM(families));
@@ -2380,33 +2395,46 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   C_puts ("~0");
 }
 
-dump_wsanamespace_infoA (const WSANAMESPACE_INFOA *info, int index)
+#define DUMP_WSANAMESPACE_INFO(info, index, fmt) do {                                                      \
+        C_indent (g_cfg.trace_indent+2);                                                                   \
+        C_printf ("~1Namespace Entry # %d:\n~4", index);                                                   \
+        C_indent (g_cfg.trace_indent+2);                                                                   \
+        C_printf ("Namespace:  %s\n", list_lookup_name(info->dwNameSpace, name_spaces, DIM(name_spaces))); \
+        C_indent (g_cfg.trace_indent+2);                                                                   \
+        C_printf ("ProviderId: %s\n", get_guid_string(&info->NSProviderId));                               \
+        C_indent (g_cfg.trace_indent+2);                                                                   \
+        C_printf ("Active:     %lu\n", info->fActive);                                                     \
+        C_indent (g_cfg.trace_indent+2);                                                                   \
+        C_printf ("Version:    %lu\n", info->dwVersion);                                                   \
+        C_indent (g_cfg.trace_indent+2);                                                                   \
+        C_printf ("Identifier: %" fmt "~0\n", info->lpszIdentifier);                                       \
+      } while (0)
+
+void dump_wsanamespace_infoA (const WSANAMESPACE_INFOA *info, int index)
 {
-  /**\todo */
- ARGSUSED (info);
- ARGSUSED (index);
+  DUMP_WSANAMESPACE_INFO (info, index, "s");
 }
 
-dump_wsanamespace_infoW   (const WSANAMESPACE_INFOW   *info, int index)
+void dump_wsanamespace_infoW (const WSANAMESPACE_INFOW *info, int index)
 {
-  /**\todo */
- ARGSUSED (info);
- ARGSUSED (index);
+  DUMP_WSANAMESPACE_INFO (info, index, WCHAR_FMT);
 }
 
-dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index)
+void dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index)
 {
-  /**\todo */
- ARGSUSED (info);
- ARGSUSED (index);
+  DUMP_WSANAMESPACE_INFO (info, index, "s");
+  C_indent (g_cfg.trace_indent+2);                                                                   \
+  C_printf ("~4Specifics:  0x%p~0\n", info->ProviderSpecific);
 }
 
-dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
+void dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
 {
-  /**\todo */
- ARGSUSED (info);
- ARGSUSED (index);
+  DUMP_WSANAMESPACE_INFO (info, index, WCHAR_FMT);
+  C_indent (g_cfg.trace_indent+2);                                                                   \
+  C_printf ("~4Specifics:  0x%p~0\n", info->ProviderSpecific);
 }
+
+#undef DUMP_WSANAMESPACE_INFO
 
 /*
  * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
