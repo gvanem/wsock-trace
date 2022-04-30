@@ -2512,12 +2512,11 @@ static int C_printf_cc (const char            *country_code,
       {
         if (g_cfg.GEOIP.show_position)
            C_printf (", Pos: %.3f%c, %.3f%c",
-                         fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
-                         fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
+                     fabsf(pos->latitude), (pos->latitude  >= 0.0) ? 'N' : 'S',
+                     fabsf(pos->longitude), (pos->longitude >= 0.0) ? 'E' : 'W');
 
         if (g_cfg.GEOIP.show_map_url)
-           C_printf ("\n%*s        URL: https://www.google.com/maps/@%.5f,%.5f,10z",
-                         g_cfg.trace_indent+2, "", pos->latitude, pos->longitude);
+           C_printf ("\n%*s        URL: %s", g_cfg.trace_indent+2, "", geoip_get_map_url(pos));
       }
       if (pos)
            memcpy (&pos_last, pos, sizeof(pos_last));

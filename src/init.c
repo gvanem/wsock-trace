@@ -839,6 +839,12 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   else if (!stricmp(key, "show_map_url"))
        g_cfg.GEOIP.show_map_url = atoi (val);
 
+  else if (!stricmp(key, "openstreetmap"))
+       g_cfg.GEOIP.openstreetmap = atoi (val);
+
+  else if (!stricmp(key, "map_zoom"))
+       g_cfg.GEOIP.map_zoom = atoi (val);
+
   else if (!stricmp(key, "ip4_file"))
        g_cfg.GEOIP.ip4_file = strdup (val);
 

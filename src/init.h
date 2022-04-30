@@ -88,6 +88,8 @@ struct GEOIP_cfg {
        BOOL    enable;
        BOOL    show_position;
        BOOL    show_map_url;
+       BOOL    openstreetmap;
+       UINT    map_zoom;
        int     max_days;
        char   *ip4_file;
        char   *ip6_file;

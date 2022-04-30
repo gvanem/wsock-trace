@@ -193,6 +193,17 @@
   max_days      = 10   # max allowed days old before forcing an update
   show_position = 0    # Show latitude/longitude for IP-position (if available).
   show_map_url  = 0    # Show Google Maps URL for IP-position (if available).
+  openstreetmap = 1    # Use OpenStreeMap URL instead.
+  map_zoom      = 10   # With zoom-level in the URL:
+                       #   https://www.google.com/maps/@59.91273,10.74609,10z
+                       #                                |        |        |
+                       #                                |        |        |___ map_zoom
+                       #                                |        |____________ longitude
+                       #                                |_____________________ latitude
+                       #
+                       # Or if above 'openstreetmap = 1':
+                       #  https://www.openstreetmap.org/#map=10/59.91273/10.74609
+                       #
 
   ip4_file = %APPDATA%\GeoIP.csv
   ip6_file = %APPDATA%\GeoIP6.csv

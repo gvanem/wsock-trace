@@ -1767,6 +1767,42 @@ static const char *get_location (void)
 }
 
 /**
+ * Return the GoogleMap or OpenStreeMap URL for the given position.
+ *
+ * Example for Los Angles (California):
+ *   https://www.google.com/maps/@34.05223,-118.24368,10z
+ *                                |         |         |
+ *                                |         |         |___ map_zoom
+ *                                |         |____________ longitude
+ *                                |_____________________ latitude
+ *
+ *
+ * With OpenStreeMap, the position becomes:
+ *  https://www.openstreetmap.org/#map=10/34.05223/-118.24368
+ */
+const char *geoip_get_map_url (const position *pos)
+{
+  UINT   default_zoom = 10;
+  UINT   zoom;
+  static char buf [500];
+
+  if (!pos)
+     return ("<none>");
+
+  if (g_cfg.GEOIP.map_zoom)
+       zoom = g_cfg.GEOIP.map_zoom;
+  else zoom = default_zoom;
+
+  if (g_cfg.GEOIP.openstreetmap)
+       snprintf (buf, sizeof(buf), "https://www.openstreetmap.org/#map=%uz/%.5f/%.5f",
+                 zoom, pos->latitude, pos->longitude);
+
+  else snprintf (buf, sizeof(buf), "https://www.google.com/maps/@%.5f,%.5f,%uz",
+                 pos->latitude, pos->longitude, zoom);
+  return (buf);
+}
+
+/**
  * Common code for testing an IPv4 or IPv6 address.
  */
 static void test_addr_common (const char            *addr_str,
@@ -1873,13 +1909,7 @@ static void test_addr_common (const char            *addr_str,
     C_printf ("  Pos:  %s\n", pos_buf);
 
     if (g_cfg.GEOIP.show_map_url)
-    {
-      const char *zoom = "10z";
-
-      if (pos)
-           C_printf ("  URL:  https://www.google.com/maps/@%.5f,%.5f,%s\n", pos->latitude, pos->longitude, zoom);
-      else C_printf ("  URL:  <none>\n");
-    }
+       C_printf ("  URL:  %s\n", geoip_get_map_url(pos));
   }
 
   /* If this wasn't already done in dump.c for the trace of `getaddrinfo()`,

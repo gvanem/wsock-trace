@@ -58,6 +58,7 @@ const position    *geoip_get_position_by_ipv4 (const struct in_addr  *ip4);
 const position    *geoip_get_position_by_ipv6 (const struct in6_addr *ip6);
 const char        *geoip_get_short_name_by_idx (int idx);
 const char        *geoip_get_continent_name (int continent);
+const char        *geoip_get_map_url (const position *pos);
 
 extern uint64      geoip_get_stats_by_idx    (int idx);
 extern uint64      geoip_get_stats_by_number (int number);
