@@ -1794,7 +1794,7 @@ const char *geoip_get_map_url (const position *pos)
   else zoom = default_zoom;
 
   if (g_cfg.GEOIP.openstreetmap)
-       snprintf (buf, sizeof(buf), "https://www.openstreetmap.org/#map=%uz/%.5f/%.5f",
+       snprintf (buf, sizeof(buf), "https://www.openstreetmap.org/#map=%u/%.5f/%.5f",
                  zoom, pos->latitude, pos->longitude);
 
   else snprintf (buf, sizeof(buf), "https://www.google.com/maps/@%.5f,%.5f,%uz",
