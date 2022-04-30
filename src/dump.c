@@ -2403,7 +2403,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
         C_indent (g_cfg.trace_indent+2);                                                                   \
         C_printf ("ProviderId: %s\n", get_guid_string(&info->NSProviderId));                               \
         C_indent (g_cfg.trace_indent+2);                                                                   \
-        C_printf ("Active:     %lu\n", info->fActive);                                                     \
+        C_printf ("Active:     %d\n", info->fActive);                                                      \
         C_indent (g_cfg.trace_indent+2);                                                                   \
         C_printf ("Version:    %lu\n", info->dwVersion);                                                   \
         C_indent (g_cfg.trace_indent+2);                                                                   \
@@ -2423,15 +2423,15 @@ void dump_wsanamespace_infoW (const WSANAMESPACE_INFOW *info, int index)
 void dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index)
 {
   DUMP_WSANAMESPACE_INFO (info, index, "s");
-  C_indent (g_cfg.trace_indent+2);                                                                   \
-  C_printf ("~4Specifics:  0x%p~0\n", info->ProviderSpecific);
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4Specifics:  0x%p~0\n", (const void*) &info->ProviderSpecific);
 }
 
 void dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
 {
   DUMP_WSANAMESPACE_INFO (info, index, WCHAR_FMT);
-  C_indent (g_cfg.trace_indent+2);                                                                   \
-  C_printf ("~4Specifics:  0x%p~0\n", info->ProviderSpecific);
+  C_indent (g_cfg.trace_indent+2);
+  C_printf ("~4Specifics:  0x%p~0\n", (const void*) &info->ProviderSpecific);
 }
 
 #undef DUMP_WSANAMESPACE_INFO
