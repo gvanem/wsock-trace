@@ -1762,8 +1762,8 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
      * Not the timestamp for when select() returned. Hence do not
      * use the WSTRACE() macro here.
      */
-    wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
-                    ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+    wstrace_printf (TRUE, "~1* ~3%s%s~5%s: ~1",
+                    get_threadid(), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
     ts_now = NULL;
 
     wstrace_printf (FALSE, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
@@ -2693,8 +2693,8 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
      * Not the timestamp for when WSAPoll() returned. Hence do not
      * use the WSTRACE() macro here.
      */
-    wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",
-                    ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+    wstrace_printf (TRUE, "~1* ~3%s%s~5%s: ~1",
+                    get_threadid(), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
 
     wstrace_printf (FALSE, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s\n",
                     ADDR_CAST(fd_array), DWORD_CAST(fds), ms_buf, socket_or_error(rc));
@@ -3821,19 +3821,18 @@ static void test_get_caller (const void *from)
  *
  * The 'DLL_x' events happens rought like this:
  *
- *   DLL_PROCESS_ATTACH. instDLL: 0x642B0000,  thr-id: 7892   Our program start
- *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  thr-id: 9896   A new thread in our program starts
- *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  thr-id: 9896   This thread exits
- *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  thr-id: 6648   We're back to our program main thread
- *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  thr-id: 6648   Our program exits
- *   DLL_PROCESS_DETACH. instDLL: 0x642B0000,  thr-id: ??     Program gone; we'll never get this
+ *   DLL_PROCESS_ATTACH. instDLL: 0x642B0000,  tid: 7892   Our program start
+ *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  tid: 9896   A new thread in our program starts
+ *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  tid: 9896   This thread exits
+ *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  tid: 6648   We're back to our program main thread
+ *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  tid: 6648   Our program exits
+ *   DLL_PROCESS_DETACH. instDLL: 0x642B0000,  tid: ??     Program gone; we'll never get this
  */
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
   const char *reason_str = NULL;
   DWORD tid = 0;
   BOOL  rc = TRUE;
-  int   at_level = 2;
 
   /* If we're called from DllMain(), we cannot use WinHTTP in inet_util.c etc.
    */
@@ -3901,12 +3900,15 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   }
 
 #if !defined(__CYGWIN__)
-  if (g_cfg.show_tid)
-     at_level = 1;
-
   if (reason_str)
-     TRACE (at_level, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", thr-id: %lu, ws_sema_inherited: %d.\n",
-            rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
+  {
+    if (g_cfg.show_tid)
+         wstrace_printf (TRUE, "~1* ~3%-16s %sinstDLL: 0x%" ADDR_FMT ".~0\n",
+                         reason_str, get_threadid(), ADDR_CAST(instDLL));
+
+    else TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", tid: %lu, ws_sema_inherited: %d.\n",
+                rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
+  }
 #else
   ARGSUSED (reason_str);
 #endif

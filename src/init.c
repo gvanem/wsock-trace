@@ -1638,6 +1638,7 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_level <= 0)
   {
+    g_cfg.show_tid               = FALSE;
     g_cfg.dump_data              = FALSE;
     g_cfg.dump_hostent           = FALSE;
     g_cfg.dump_servent           = FALSE;
