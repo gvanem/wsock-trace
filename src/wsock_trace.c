@@ -76,6 +76,7 @@ static fd_set *last_ex_fd = NULL;
 
 static const char *socket_number (SOCKET s);
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
+static const char *get_threadid (void);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 static void        get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err);
 static void        get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err);
@@ -117,7 +118,8 @@ static void        wstrace_printf (BOOL first_line,
               !exclude_list_get (fmt, EXCL_FUNCTION))            \
           {                                                      \
             exclude_this = FALSE;                                \
-            wstrace_printf (TRUE, "~1* ~3%s~5%s: ~1",            \
+            wstrace_printf (TRUE, "~1* ~3%s%s~5%s ~1",           \
+                            get_threadid(),                      \
                             ts_now ? ts_now : get_timestamp(),   \
                             get_caller (GET_RET_ADDR(),          \
                                         get_EBP()) );            \
@@ -3596,6 +3598,21 @@ static void get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err)
   get_tcp_info_v01 (s, NULL, info, err);
 }
 
+static const char *get_threadid (void)
+{
+  static char buf [30];
+  int   comma = ',';
+
+  if (!g_cfg.show_tid)
+     return ("");
+
+  if (g_cfg.trace_time_format == TS_NONE)
+     comma = ':';
+
+  snprintf (buf, sizeof(buf), "tid: %lu%c ", GetCurrentThreadId(), comma);
+  return (buf);
+}
+
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 {
   static int reentry = 0;
@@ -3816,6 +3833,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   const char *reason_str = NULL;
   DWORD tid = 0;
   BOOL  rc = TRUE;
+  int   at_level = 2;
 
   /* If we're called from DllMain(), we cannot use WinHTTP in inet_util.c etc.
    */
@@ -3883,8 +3901,11 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   }
 
 #if !defined(__CYGWIN__)
+  if (g_cfg.show_tid)
+     at_level = 1;
+
   if (reason_str)
-     TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", thr-id: %lu, ws_sema_inherited: %d.\n",
+     TRACE (at_level, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", thr-id: %lu, ws_sema_inherited: %d.\n",
             rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
 #else
   ARGSUSED (reason_str);

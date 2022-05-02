@@ -654,6 +654,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "show_caller"))
      g_cfg.show_caller = atoi (val);
 
+  else if (!stricmp(key, "show_tid"))
+     g_cfg.show_tid = atoi (val);
+
   else if (!stricmp(key, "demangle") || !stricmp(key, "cpp_demangle"))
      g_cfg.cpp_demangle = atoi (val);
 
@@ -1223,7 +1226,7 @@ static void trace_report (void)
 
 #if 0
   {
-    max = thread_list ? smartlist_len(thread_list) : 0;
+    max = thread_list ? smartlist_len (thread_list) : 0;
     for (i = 0; i < max; i++)
     {
       const struct thread_info *thr = smartlist_get (thread_list, i);
@@ -1413,7 +1416,7 @@ void wsock_trace_init (void)
   if (env && isdigit((int)*env))
   {
     g_cfg.trace_level = (*env - '0');
-    g_cfg.show_caller = 1;
+    g_cfg.show_caller = TRUE;
   }
   else
     g_cfg.trace_level = 1;

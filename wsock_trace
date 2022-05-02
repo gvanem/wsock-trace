@@ -98,6 +98,7 @@
   start_new_line = 0                 # Always start tracing on column 1.
   extra_new_line = 0                 # Add an extra newline after each traced function.
   show_caller    = 0                 # Internal: show file/line where TRACE() was called.
+  show_tid       = 0                 # show the thread-id in start of WSTRACE().
 
   compact        = 0                 # Compact or detailed dump (not yet).
   dump_select    = 1                 # Dump the 'fd_set's in select(). Do it before and after select() modifies them.

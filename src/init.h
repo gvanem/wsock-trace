@@ -143,7 +143,8 @@ struct config_table {
        int     trace_indent;
        int     trace_max_len;
        int     line_buffered;
-       int     show_caller;
+       BOOL    show_tid;
+       BOOL    show_caller;
        int     callee_level;
        int     cpp_demangle;
        int     max_data;
