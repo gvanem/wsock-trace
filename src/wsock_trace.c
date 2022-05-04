@@ -3606,7 +3606,7 @@ static const char *get_threadid (BOOL add_space)
   if (!g_cfg.show_tid)
      return ("");
 
-  snprintf (buf, sizeof(buf), "tid: %u", GetCurrentThreadId());
+  p += snprintf (buf, sizeof(buf), "tid: %u", GetCurrentThreadId());
   if (add_space)
   {
     *p++ = (g_cfg.trace_time_format == TS_NONE) ? ':' : ',';
