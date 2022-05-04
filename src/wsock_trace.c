@@ -76,7 +76,7 @@ static fd_set *last_ex_fd = NULL;
 
 static const char *socket_number (SOCKET s);
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
-static const char *get_threadid (void);
+static const char *get_threadid (BOOL add_space);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 static void        get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err);
 static void        get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err);
@@ -119,7 +119,7 @@ static void        wstrace_printf (BOOL first_line,
           {                                                      \
             exclude_this = FALSE;                                \
             wstrace_printf (TRUE, "~1* ~3%s%s~5%s ~1",           \
-                            get_threadid(),                      \
+                            get_threadid (TRUE),                 \
                             ts_now ? ts_now : get_timestamp(),   \
                             get_caller (GET_RET_ADDR(),          \
                                         get_EBP()) );            \
@@ -1763,7 +1763,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
      * use the WSTRACE() macro here.
      */
     wstrace_printf (TRUE, "~1* ~3%s%s~5%s: ~1",
-                    get_threadid(), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+                    get_threadid(TRUE), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
     ts_now = NULL;
 
     wstrace_printf (FALSE, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
@@ -2694,7 +2694,7 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
      * use the WSTRACE() macro here.
      */
     wstrace_printf (TRUE, "~1* ~3%s%s~5%s: ~1",
-                    get_threadid(), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+                    get_threadid(TRUE), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
 
     wstrace_printf (FALSE, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s\n",
                     ADDR_CAST(fd_array), DWORD_CAST(fds), ms_buf, socket_or_error(rc));
@@ -3598,18 +3598,21 @@ static void get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err)
   get_tcp_info_v01 (s, NULL, info, err);
 }
 
-static const char *get_threadid (void)
+static const char *get_threadid (BOOL add_space)
 {
   static char buf [30];
-  int   comma = ',';
+  char  *p = buf;
 
   if (!g_cfg.show_tid)
      return ("");
 
-  if (g_cfg.trace_time_format == TS_NONE)
-     comma = ':';
-
-  snprintf (buf, sizeof(buf), "tid: %lu%c ", GetCurrentThreadId(), comma);
+  snprintf (buf, sizeof(buf), "tid: %u", GetCurrentThreadId());
+  if (add_space)
+  {
+    *p++ = (g_cfg.trace_time_format == TS_NONE) ? ':' : ',';
+    *p++ = ' ';
+    *p = '\0';
+  }
   return (buf);
 }
 
@@ -3903,9 +3906,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   if (reason_str)
   {
     if (g_cfg.show_tid)
-         wstrace_printf (TRUE, "~1* ~3%-16s %sinstDLL: 0x%" ADDR_FMT ".~0\n",
-                         reason_str, get_threadid(), ADDR_CAST(instDLL));
-
+         wstrace_printf (TRUE, "~1* ~3%s, %s%s~0\n", get_threadid(FALSE), get_timestamp(), reason_str);
     else TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", tid: %lu, ws_sema_inherited: %d.\n",
                 rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
   }
