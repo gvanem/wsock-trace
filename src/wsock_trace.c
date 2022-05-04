@@ -3829,7 +3829,7 @@ static void test_get_caller (const void *from)
  *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  tid: 9896   This thread exits
  *   DLL_THREAD_ATTACH.  instDLL: 0x642B0000,  tid: 6648   We're back to our program main thread
  *   DLL_THREAD_DETACH.  instDLL: 0x642B0000,  tid: 6648   Our program exits
- *   DLL_PROCESS_DETACH. instDLL: 0x642B0000,  tid: ??     Program gone; we'll never get this
+ *   DLL_PROCESS_DETACH. instDLL: 0x642B0000,  tid: 7892   Program gone
  */
 BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 {
@@ -3863,6 +3863,9 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 #if defined(USE_LUAJIT)
          wslua_DllMain (instDLL, reason);
 #endif
+         if (g_cfg.show_tid)
+            wstrace_printf (TRUE, "~1* ~3%s, %s%s~0\n",
+                            get_threadid(FALSE), get_timestamp(), "DLL_PROCESS_DETACH");
          wsock_trace_exit();
          crtdbg_exit();
          break;
