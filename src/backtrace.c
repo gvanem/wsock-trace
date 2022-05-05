@@ -1,4 +1,4 @@
-/** \file   backtrace.c
+/** \file    backtrace.c
  *  \ingroup Misc
  *
  *  \brief
@@ -247,7 +247,8 @@ static char *search_symbols_list (ULONG_PTR addr)
   char  mod[40] = { '\0' };
   char  displacement [20];
   char  file_line [_MAX_PATH+10] = { '\0' };
-  int   diff = 0, found = 0, idx;
+  int   diff = 0;
+  int   found = 0, idx;
 
   idx = smartlist_bsearch_idx (symbols_list, &addr, compare_addr, &found);
 
@@ -292,7 +293,7 @@ static char *search_symbols_list (ULONG_PTR addr)
 }
 
 /*
- * Test-code for this modules called from 'ws_tool.c'
+ * Test-code for this module called from 'ws_tool.c'
  */
 static int threaded        = 0;
 static int test_vm_bug     = 0;
@@ -410,7 +411,7 @@ static int show_help (void)
   printf ("Usage: %s [-abstv] [-r <depth>]\n"
           "       -a:   test vm_bug_abort_handler().\n"
           "       -b:   test vm_bug_list().\n"
-          "       -s:   test symbol-list and not StackWalkShow().\n"
+          "       -s:   test symbol-list and not 'StackWalkShow()'.\n"
           "       -t:   run threaded test.\n"
           "       -v:   sets 'vm_bug_debug' value.\n"
           "       -r #: sets 'foo_first()' recursion-level.\n", program_name);
