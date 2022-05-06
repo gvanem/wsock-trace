@@ -8,7 +8,7 @@
  * Copyright (C) 2004-2007 Koichi Sasada
  *
  * Heavily modified version of the Ruby crash-handler at:
- *   https://opensource.apple.com/source/ruby/ruby-104/ruby/vm_dump.c
+ *   https://github.com/ruby/ruby/blob/master/vm_dump.c
  */
 
 #include <stdio.h>
