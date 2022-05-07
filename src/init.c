@@ -675,6 +675,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "pdb_report"))
      g_cfg.pdb_report = atoi (val);
 
+  else if (!stricmp(key, "pdb_symsrv"))
+     g_cfg.pdb_symsrv = atoi (val);
+
   else if (!stricmp(key, "use_sema"))
      g_cfg.use_sema = atoi (val);
 

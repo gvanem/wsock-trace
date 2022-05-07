@@ -38,7 +38,8 @@
   trace_time_usec = 0                # Use micro-second precision if "trace_time = relative" or "trace_time = delta"
 
   dump_modules = 0                   # Dump information on all process modules.
-  pdb_report  = 1                    # Report PDB-symbols information found in all modules.
+  pdb_report  = 0                    # Report PDB-symbols information found in all modules. This takes time!
+  pdb_symsrv  = 0                    # Call 'SymSrvGetFileIndexInfo()' on each module when 'dump_modules = 1'.
   use_sema = 0
   no_buffering  = 0
 
