@@ -58,9 +58,18 @@
   #define BITNESS 64
 #endif
 
-#if defined(BITNESS) && (BITNESS == 64)
+#if defined(_ARM)
+  #define RC_BITNESS     "ARM 32-bit"
+  #define RC_CPU_SUFFIX  "_arm"
+
+#elif defined(_ARM64)
+  #define RC_BITNESS     "ARM 64-bit"
+  #define RC_CPU_SUFFIX  "_arm64"
+
+#elif defined(BITNESS) && (BITNESS == 64)
   #define RC_BITNESS     "64-bit"
   #define RC_CPU_SUFFIX  "_x64"
+
 #else
   #define RC_BITNESS     "32-bit"
   #define RC_CPU_SUFFIX  ""

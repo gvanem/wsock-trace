@@ -46,6 +46,99 @@
   #include <crtdbg.h>
 #endif
 
+/*
+ * Checks for compilers and CPU artitecture.
+ * Refs:
+ *   https://sourceforge.net/p/predef/wiki/Compilers
+ *   https://sourceforge.net/p/predef/wiki/Architectures
+ */
+#if defined(_MSC_VER)   /* This includes 'clang-cl' and Intel's 'icx' too */
+  #if defined(_M_IX86)
+    #define WS_TRACE_I386
+
+  #elif defined(_M_AMD64)
+    #define WS_TRACE_AMD64
+
+  #elif defined(_M_IA64)
+    #define WS_TRACE_IA64
+
+  #elif defined(_M_ARM)
+    #define WS_TRACE_ARM
+
+  #elif defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC)
+    #define WS_TRACE_ARM64
+
+  #else
+    #error "Unsupported CPU"
+  #endif
+
+#elif defined(_GNUC__)
+  #if defined(__i386__)
+    #define WS_TRACE_I386
+
+  #elif defined(__amd64__)
+    #define WS_TRACE_AMD64
+
+  #elif defined(__ia64__)
+    #define WS_TRACE_IA64
+
+  #elif defined(__arm__)
+    #define WS_TRACE_ARM
+
+  #elif defined(__aarch64__)
+    #define WS_TRACE_ARM64
+
+  #else
+    #error "Unsupported CPU"
+  #endif
+#endif
+
+#if defined(WS_TRACE_I386)
+  #define WS_TRACE_IMAGE_TYPE  IMAGE_FILE_MACHINE_I386
+
+#elif defined(WS_TRACE_AMD64)
+  #define WS_TRACE_IMAGE_TYPE  IMAGE_FILE_MACHINE_AMD64
+
+#elif defined(WS_TRACE_IA64)
+  #define WS_TRACE_IMAGE_TYPE  IMAGE_FILE_MACHINE_IA64
+
+#elif defined(WS_TRACE_ARM)
+  #define WS_TRACE_IMAGE_TYPE  IMAGE_FILE_MACHINE_ARM
+
+#elif defined(WS_TRACE_ARM64)
+  #define WS_TRACE_IMAGE_TYPE  IMAGE_FILE_MACHINE_ARM64
+
+#else
+  #error "Unknown 'WS_TRACE_IMAGE_TYPE'."
+#endif
+
+extern uintptr_t dummy_reg;
+
+#if defined(WS_TRACE_AMD64)
+  #define REG_EBP(ctx)  (ctx)->Rbp
+  #define REG_ESP(ctx)  (ctx)->Rsp
+  #define REG_EIP(ctx)  (ctx)->Rip
+  #define REG_BSP(ctx)  dummy_reg
+
+#elif defined(WS_TRACE_IA64)
+  #define REG_EBP(ctx)  (ctx)->Rbp
+  #define REG_ESP(ctx)  (ctx)->IntSp
+  #define REG_EIP(ctx)  (ctx)->StIIP
+  #define REG_BSP(ctx)  (ctx)->RsBSP
+
+#elif defined(WS_TRACE_ARM) || defined(WS_TRACE_ARM64)
+  #define REG_EBP(ctx)  dummy_reg
+  #define REG_ESP(ctx)  (ctx)->Sp
+  #define REG_EIP(ctx)  (ctx)->Pc
+  #define REG_BSP(ctx)  dummy_reg
+
+#else
+  #define REG_EBP(ctx)  (ctx)->Ebp
+  #define REG_ESP(ctx)  (ctx)->Esp
+  #define REG_EIP(ctx)  (ctx)->Eip
+  #define REG_BSP(ctx)  dummy_reg
+#endif
+
 #define loBYTE(w)       (BYTE)(w)
 #define hiBYTE(w)       (BYTE)((WORD)(w) >> 8)
 #define DIM(x)          (int) (sizeof(x) / sizeof((x)[0]))
@@ -318,7 +411,7 @@ typedef struct local_TCP_INFO_v0 {
       } local_TCP_INFO_v0;
 
 /*
- * Typedefined in the SDK `<shared/mstcpip.h>` as `TCP_INFO_v1` when
+ * Type-defined in the SDK `<shared/mstcpip.h>` as `TCP_INFO_v1` when
  * `NTDDI_VERSION >= NTDDI_WIN10_RS5`. Hence keep a private typedef here.
  *
  * Besides it's only usable on Win-10, Build 20348 or later.

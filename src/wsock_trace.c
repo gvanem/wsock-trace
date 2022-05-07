@@ -134,8 +134,11 @@ static void        wstrace_printf (BOOL first_line,
   #define GET_RET_ADDR()  0
 #endif
 
+uintptr_t dummy_reg = 0;
+
 #if (defined(_MSC_VER) && defined(_M_X64)) || \
-    (defined(__GNUC__) && !defined(__i386__))
+    (defined(__GNUC__) && !defined(__i386__)) || \
+    defined(WS_TRACE_ARM) || defined(WS_TRACE_ARM64)
   #define get_EBP() 0
 
 #elif defined(_MSC_VER) && defined(_X86_)
@@ -874,6 +877,10 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
      startup_count++;
 
   ENTER_CRIT();
+
+#if defined(USE_BFD) || defined(__clang__)
+  // test_get_caller (&WSAStartup);
+#endif
 
   WSTRACE ("WSAStartup (%u.%u) --> %s",
            loBYTE(data->wVersion), hiBYTE(data->wVersion), get_error(rc, 0));
@@ -2953,16 +2960,8 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
 
   ENTER_CRIT();
 
-#if defined(USE_BFD)
-  // test_get_caller (&gethostbyaddr);
-#endif
-
   WSTRACE ("gethostbyaddr (%s, %d, %s) --> %s",
            inet_ntop2(addr, type), len, socket_family(type), ptr_or_error(rc));
-
-#if defined(__clang__)
-  // test_get_caller (&gethostbyaddr);
-#endif
 
   if (!exclude_this)
   {
@@ -3677,14 +3676,8 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
      * (for MSVC/PDB files) should be at frames[2]. For gcc, the RtlCaptureStackBackTrace()
      * doesn't work. I've had to use __builtin_return_addres(0) (='ret_addr').
      */
-#ifdef _WIN64
-    ctx.Rip = ret_addr;
-    ctx.Rbp = ebp;       /* = 0 */
-#else
-    ctx.Eip = ret_addr;
-    ctx.Ebp = ebp;
-#endif
-
+    REG_EIP (&ctx) = ret_addr;
+    REG_EBP (&ctx) = ebp;
     ret = StackWalkShow (thr, &ctx);
 
 #if !defined(USE_BFD)
@@ -3692,12 +3685,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     {
       char *a, *b;
 
-#ifdef _WIN64
-      ctx.Rip = (ULONG_PTR) frames [3];
-#else
-      ctx.Eip = (ULONG_PTR) frames [3];
-#endif
-
+      REG_EIP (&ctx) = (ULONG_PTR) frames [3];
       a = strdup (ret);
       b = strdup (StackWalkShow (thr, &ctx));
       ret = malloc (strlen(a)+strlen(b)+50);
@@ -3708,7 +3696,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
 #endif
   }
 
-#ifndef USE_BFD /* Avoid a '-Wunused-label' warning */
+#ifndef USE_BFD   /* Avoid a '-Wunused-label' warning */
 quit:
 #endif
 
@@ -3773,7 +3761,7 @@ static void test_get_caller (const void *from)
 {
   CONTEXT     ctx;
   HANDLE      thr = GetCurrentThread();
-  void       *frames [5];
+  void       *frames [10];
   const char *ret;
   int         i, num;
 
@@ -3782,19 +3770,10 @@ static void test_get_caller (const void *from)
 
   for (i = 0; i < num; i++)
   {
-    ret = "<none>";
-    if (i == 0)
-    {
-#ifdef _WIN64
-      ctx.Rip = (ULONG_PTR) frames [i];
-      ctx.Rbp = 0;
-#else
-      ctx.Eip = (DWORD) frames[i];
-      ctx.Ebp = 0;
-#endif
-      ret = StackWalkShow (thr, &ctx);
-    }
-    TRACE (1, "frames[%d]: 0x%" ADDR_FMT ", ret: %s\n", i, ADDR_CAST(frames[i]), ret);
+    REG_EIP (&ctx) = (ULONG_PTR) frames [i];
+    REG_EBP (&ctx) = 0;
+    ret = StackWalkShow (thr, &ctx);
+    C_printf ("~4frames[%d]: 0x%" ADDR_FMT ", ret: %s~0\n", i, ADDR_CAST(frames[i]), ret);
   }
   ARGSUSED (from);
 
@@ -3805,16 +3784,16 @@ static void test_get_caller (const void *from)
   memset (&ctx, '\0', sizeof(ctx));
   ctx.ContextFlags = CONTEXT_FULL;
   GetThreadContext (thr, &ctx);
-  ctx.Eip = (DWORD) from;
-  ctx.Ebp = 0;
+  REG_EIP (&ctx) = (DWORD) from;
+  REG_EBP (&ctx) = 0;
   ret = StackWalkShow2 (thr, &ctx, &stk_p);
   TRACE (1, "from: 0x%" ADDR_FMT ", ret: %s\n", ADDR_CAST(from), ret);
 
   stk = (STACKFRAME64*) stk_p;
-  ctx.Eip = stk->AddrPC.Offset;
-  ctx.Ebp = 0;
+  REG_EIP (&ctx) = (ULONG_PTR) stk->AddrPC.Offset;
+  REG_EBP (&ctx) = 0;
   ret = StackWalkShow2 (thr, &ctx, &stk_p);
-  TRACE (1, "from: 0x%" ADDR_FMT ", ret: %s\n", ADDR_CAST(from), ret);
+  C_printf ("from: 0x%" ADDR_FMT ", ret: %s\n", ADDR_CAST(from), ret);
 #endif
 }
 #endif  /* USE_BFD */

@@ -50,14 +50,6 @@ static smartlist_t *symbols_list = NULL;  /* A 'smartlist' of symbols in all mod
 static char *strdup2 (const char *s1, const char *s2);
 static char *search_symbols_list (ULONG_PTR addr);
 
-#ifdef _WIN64
-  #define REG_EBP(ctx) ctx.Rbp
-  #define REG_EIP(ctx) ctx.Rip
-#else
-  #define REG_EBP(ctx) ctx.Ebp
-  #define REG_EIP(ctx) ctx.Eip
-#endif
-
 #if defined(_MSC_VER) && !defined(__clang__)
   #pragma optimize("y", off)   /* Disable "elimination of frame pointer generation"; 'cl -Oy-' */
 #endif
@@ -120,7 +112,7 @@ static char *get_caller (int frame_num, int *err)
     memset (&ctx, '\0', sizeof(ctx));
   }
 
-  REG_EIP (ctx) = ret_addr;
+  REG_EIP (&ctx) = ret_addr;
 
   if (use_sym_list)
   {

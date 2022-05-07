@@ -180,7 +180,6 @@ static DWORD WINAPI dump_thread (void *arg)
   HANDLE       proc, thr = NULL;
   CONTEXT      context;
   STACKFRAME64 frame;
-  DWORD        mac;
   int          rec_count = 0;
 
   func_SymInitialize        p_SymInitialize;
@@ -236,34 +235,16 @@ static DWORD WINAPI dump_thread (void *arg)
   }
 
   memset (&frame, 0, sizeof(frame));
-
-#if defined(_M_AMD64) || defined(__x86_64__)
-  mac                    = IMAGE_FILE_MACHINE_AMD64;
-  frame.AddrPC.Mode      = AddrModeFlat;
-  frame.AddrPC.Offset    = context.Rip;
-  frame.AddrFrame.Mode   = AddrModeFlat;
-  frame.AddrFrame.Offset = context.Rbp;
-  frame.AddrStack.Mode   = AddrModeFlat;
-  frame.AddrStack.Offset = context.Rsp;
-#elif defined(_M_IA64) || defined(__ia64__)
-  mac                     = IMAGE_FILE_MACHINE_IA64;
   frame.AddrPC.Mode       = AddrModeFlat;
-  frame.AddrPC.Offset     = context.StIIP;
-  frame.AddrBStore.Mode   = AddrModeFlat;
-  frame.AddrBStore.Offset = context.RsBSP;
+  frame.AddrFrame.Mode    = AddrModeFlat;
   frame.AddrStack.Mode    = AddrModeFlat;
-  frame.AddrStack.Offset  = context.IntSp;
-#else   /* i386 */
-  mac                    = IMAGE_FILE_MACHINE_I386;
-  frame.AddrPC.Mode      = AddrModeFlat;
-  frame.AddrPC.Offset    = context.Eip;
-  frame.AddrFrame.Mode   = AddrModeFlat;
-  frame.AddrFrame.Offset = context.Ebp;
-  frame.AddrStack.Mode   = AddrModeFlat;
-  frame.AddrStack.Offset = context.Esp;
-#endif
+  frame.AddrBStore.Mode   = AddrModeFlat;
+  frame.AddrPC.Offset     = REG_EIP (&context);
+  frame.AddrFrame.Offset  = REG_EBP (&context);
+  frame.AddrStack.Offset  = REG_ESP (&context);
+  frame.AddrBStore.Offset = REG_BSP (&context);
 
-  while ((*p_StackWalk64)(mac, proc, thr, &frame, &context, NULL, NULL, NULL, NULL))
+  while ((*p_StackWalk64)(WS_TRACE_IMAGE_TYPE, proc, thr, &frame, &context, NULL, NULL, NULL, NULL))
   {
     DWORD64 addr      = frame.AddrPC.Offset;
     BOOL    recursion = (addr == frame.AddrReturn.Offset);
@@ -291,7 +272,7 @@ static DWORD WINAPI dump_thread (void *arg)
        */
       TRACE (3, "stack-base:  0x%p\n"
                 "                stack-limit: 0x%p (%s bytes)\n",
-            tib->StackBase, tib->StackLimit, dword_str(stk_len));
+             tib->StackBase, tib->StackLimit, dword_str(stk_len));
     }
 
     if (recursion || addr == 0 || frame.AddrReturn.Offset == 0)
@@ -304,6 +285,7 @@ static DWORD WINAPI dump_thread (void *arg)
              recursion ? rec_buf     : "",
              ADDR_CAST(frame.AddrPC.Offset),
              ADDR_CAST(frame.AddrReturn.Offset));
+
       if (!recursion || rec_count >= args.max_recursion)
          break;
     }

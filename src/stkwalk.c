@@ -88,6 +88,7 @@
 static HANDLE       g_proc;
 static DWORD        g_proc_id;
 static char         g_module [_MAX_PATH];  /* The .exe we're linked to */
+static char         g_sym_dir[_MAX_PATH];
 static smartlist_t *g_modules_list;        /* List of all modules in our program */
 static smartlist_t *g_symbols_list;
 static int          g_quit_count = 0;
@@ -136,7 +137,7 @@ static const char *get_error (void);
 #endif
 
 /*
- * 'API_VERSION_NUMBER' defined in <imagehlp.h>
+ * 'API_VERSION_NUMBER' defined in '<imagehlp.h>'
  *
  * Here I have included the API-Version 9 declarations, so it will also compile on systems,
  * where the new 'Platform SDK' is not installed.
@@ -280,94 +281,88 @@ typedef DWORD64 (WINAPI *PTRANSLATE_ADDRESS_ROUTINE64) (
 
 #endif  /* API_VERSION_NUMBER < 9 */
 
+/**
+ * \def DEF_FUNC
+ *
+ * Handy macro to both define and declare the function-pointer for
+ * `WinInet.dll` and `WinHttp.dll` functions.
+ */
+#define DEF_WIN_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                    static func_##f p_##f = NULL
 
-typedef BOOL (WINAPI *func_SymCleanup) (IN HANDLE process);
+/**
+ * \def DEF_PY_FUNC
+ *
+ * Similarily for Python function which are always CDECL.
+ */
+#define DEF_PY_FUNC(ret, f, args)  typedef ret (__cdecl *func_##f) args; \
+                                   static func_##f p_##f = NULL
 
-typedef DWORD (WINAPI *func_SymGetOptions) (VOID);
+DEF_WIN_FUNC (BOOL,  SymCleanup, (IN HANDLE process));
+DEF_WIN_FUNC (DWORD, SymGetOptions, (VOID));
+DEF_WIN_FUNC (DWORD, SymSetOptions, (IN DWORD SymOptions));
 
-typedef DWORD (WINAPI *func_SymSetOptions) (IN DWORD SymOptions);
+DEF_WIN_FUNC (PVOID, SymFunctionTableAccess64, (IN HANDLE process,
+                                                IN DWORD64 AddrBase));
 
-typedef PVOID (WINAPI *func_SymFunctionTableAccess64) (IN HANDLE  process,
-                                                       IN DWORD64 AddrBase);
+DEF_WIN_FUNC (BOOL,  SymGetLineFromAddr64, (IN  HANDLE           process,
+                                            IN  DWORD64          addr,
+                                            OUT DWORD           *displacement,
+                                            OUT IMAGEHLP_LINE64 *Line));
 
-typedef BOOL (WINAPI *func_SymGetLineFromAddr64) (IN  HANDLE           process,
-                                                  IN  DWORD64          addr,
-                                                  OUT DWORD           *displacement,
-                                                  OUT IMAGEHLP_LINE64 *Line);
+DEF_WIN_FUNC (DWORD64, SymGetModuleBase64, (IN HANDLE  process,
+                                            IN DWORD64 addr));
 
-typedef DWORD64 (WINAPI *func_SymGetModuleBase64) (IN HANDLE  process,
-                                                   IN DWORD64 addr);
+DEF_WIN_FUNC (BOOL,    SymGetModuleInfo64, (IN  HANDLE             process,
+                                            IN  DWORD64            addr,
+                                            OUT IMAGEHLP_MODULE64 *ModuleInfo));
 
-typedef BOOL (WINAPI *func_SymGetModuleInfo64) (IN  HANDLE             process,
-                                                IN  DWORD64            addr,
-                                                OUT IMAGEHLP_MODULE64 *ModuleInfo);
+DEF_WIN_FUNC (BOOL,    SymGetSymFromAddr64, (IN  HANDLE             process,
+                                             IN  DWORD64            addr,
+                                             OUT DWORD64           *displacement,
+                                             OUT IMAGEHLP_SYMBOL64 *Symbol));
 
-typedef BOOL (WINAPI *func_SymGetSymFromAddr64) (IN  HANDLE             process,
-                                                 IN  DWORD64            addr,
-                                                 OUT DWORD64           *displacement,
-                                                 OUT IMAGEHLP_SYMBOL64 *Symbol);
+DEF_WIN_FUNC (BOOL,    SymFromAddr,         (IN     HANDLE       process,
+                                             IN     DWORD64      addr,
+                                             OUT    DWORD64     *displacement,
+                                             IN OUT SYMBOL_INFO *Symbol));
 
-typedef BOOL (WINAPI *func_SymFromAddr) (IN     HANDLE       process,
-                                         IN     DWORD64      addr,
-                                         OUT    DWORD64     *displacement,
-                                         IN OUT SYMBOL_INFO *Symbol);
+DEF_WIN_FUNC (BOOL,    SymInitialize,       (IN HANDLE process,
+                                             IN PCSTR  UserSearchPath,
+                                             IN BOOL   invadeProcess));
 
-typedef BOOL (WINAPI *func_SymInitialize) (IN HANDLE process,
-                                           IN PCSTR  UserSearchPath,
-                                           IN BOOL   invadeProcess);
+DEF_WIN_FUNC (DWORD,   SymLoadModule64,     (IN HANDLE  process,
+                                             IN HANDLE  file,
+                                             IN PCSTR   ImageName,
+                                             IN PCSTR   ModuleName,
+                                             IN DWORD64 BaseOfDll,
+                                             IN DWORD   SizeOfDll));
 
-typedef DWORD (WINAPI *func_SymLoadModule64) (IN HANDLE  process,
-                                              IN HANDLE  file,
-                                              IN PCSTR   ImageName,
-                                              IN PCSTR   ModuleName,
-                                              IN DWORD64 BaseOfDll,
-                                              IN DWORD   SizeOfDll);
+DEF_WIN_FUNC (BOOL,    StackWalk64,         (IN     DWORD                            MachineType,
+                                             IN     HANDLE                           process,
+                                             IN     HANDLE                           thread,
+                                             IN OUT STACKFRAME64                    *StackFrame,
+                                             IN OUT VOID                            *ContextRecord,
+                                             IN     PREAD_PROCESS_MEMORY_ROUTINE64   ReadMemoryRoutine,
+                                             IN     PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine,
+                                             IN     PGET_MODULE_BASE_ROUTINE64       GetModuleBaseRoutine,
+                                             IN     PTRANSLATE_ADDRESS_ROUTINE64     TranslateAddress));
 
-typedef BOOL (WINAPI *func_StackWalk64) (IN     DWORD                            MachineType,
-                                         IN     HANDLE                           process,
-                                         IN     HANDLE                           thread,
-                                         IN OUT STACKFRAME64                    *StackFrame,
-                                         IN OUT VOID                            *ContextRecord,
-                                         IN     PREAD_PROCESS_MEMORY_ROUTINE64   ReadMemoryRoutine,
-                                         IN     PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine,
-                                         IN     PGET_MODULE_BASE_ROUTINE64       GetModuleBaseRoutine,
-                                         IN     PTRANSLATE_ADDRESS_ROUTINE64     TranslateAddress);
-
-typedef DWORD (WINAPI *func_UnDecorateSymbolName) (IN  PCSTR DecoratedName,
-                                                   OUT PSTR  UnDecoratedName,
-                                                   IN  DWORD UndecoratedLength,
-                                                   IN  DWORD Flags);
-
+DEF_WIN_FUNC (DWORD,   UnDecorateSymbolName, (IN  PCSTR DecoratedName,
+                                              OUT PSTR  UnDecoratedName,
+                                              IN  DWORD UndecoratedLength,
+                                              IN  DWORD Flags));
 #if USE_SymEnumSymbolsEx
-  typedef BOOL (WINAPI *func_SymEnumSymbolsEx) (IN     HANDLE                         hProcess,
-                                                IN     ULONG64                        BaseOfDll,
-                                                IN_OPT const char                    *Mask,
-                                                IN     PSYM_ENUMERATESYMBOLS_CALLBACK EnumSymbolsCallback,
-                                                IN_OPT VOID                           *UserContext,
-                                                IN     DWORD                          Options);
+  DEF_WIN_FUNC (BOOL, SymEnumSymbolsEx,      (IN     HANDLE                         hProcess,
+                                              IN     ULONG64                        BaseOfDll,
+                                              IN_OPT const char                    *Mask,
+                                              IN     PSYM_ENUMERATESYMBOLS_CALLBACK EnumSymbolsCallback,
+                                              IN_OPT VOID                           *UserContext,
+                                              IN     DWORD                          Options));
 
-  typedef BOOL (WINAPI *func_SymSrvGetFileIndexInfo) (IN  PCTSTR             File,
-                                                      OUT PSYMSRV_INDEX_INFO Info,
-                                                      IN  DWORD              Flags);
-#endif
-
-static func_SymCleanup                p_SymCleanup = NULL;
-static func_SymFunctionTableAccess64  p_SymFunctionTableAccess64 = NULL;
-static func_SymGetLineFromAddr64      p_SymGetLineFromAddr64 = NULL;
-static func_SymGetModuleBase64        p_SymGetModuleBase64 = NULL;
-static func_SymGetModuleInfo64        p_SymGetModuleInfo64 = NULL;
-static func_SymGetOptions             p_SymGetOptions = NULL;
-static func_SymGetSymFromAddr64       p_SymGetSymFromAddr64 = NULL;
-static func_SymFromAddr               p_SymFromAddr = NULL;
-static func_SymInitialize             p_SymInitialize = NULL;
-static func_SymLoadModule64           p_SymLoadModule64 = NULL;
-static func_SymSetOptions             p_SymSetOptions = NULL;
-static func_StackWalk64               p_StackWalk64 = NULL;
-static func_UnDecorateSymbolName      p_UnDecorateSymbolName = NULL;
-
-#if USE_SymEnumSymbolsEx
-  static func_SymEnumSymbolsEx        p_SymEnumSymbolsEx = NULL;
-  static func_SymSrvGetFileIndexInfo  p_SymSrvGetFileIndexInfo = NULL;
+  DEF_WIN_FUNC (BOOL, SymSrvGetFileIndexInfo, (IN  PCTSTR             File,
+                                               OUT PSYMSRV_INDEX_INFO Info,
+                                               IN  DWORD              Flags));
 #endif
 
 /*
@@ -538,7 +533,7 @@ static const char *sym_tag_decode (unsigned tag)
 #if USE_PythonHook
 /**
  * Special hacks for tracing Python scripts:
- * If a module-list is like (starting with module 0 == python.exe' or 'python3.exe' etc.):
+ * If a module-list is like (starting with module 0 == 'python.exe' or 'python3.exe' etc.):
  * ```
  *   c:\ProgramFiles\Python39\src\python.exe                0x1CED0000     104 kB
  *   c:\gv\VC_2019\bin\wsock_trace.dll                      0x644D0000     624 kB
@@ -580,8 +575,10 @@ typedef struct PyModuleDef {
         const char      *m_doc;
       } PyModuleDef;
 
-typedef PyObject *(*func_PyModule_Create2) (PyModuleDef *m_def, int api_ver);
-typedef PyObject *(*func_PyModule_New) (const char *module);
+#if USE_Py_inject_code
+  DEF_PY_FUNC (PyObject*, PyModule_Create2, (PyModuleDef *m_def, int api_ver));
+  DEF_PY_FUNC (PyObject*, PyModule_New,     (const char *module));
+#endif
 
 /**
  * This requires that a `python*.dll` is in the same directory as `python*exe'.
@@ -618,10 +615,7 @@ static BOOL is_python_dll (const char *fname)
 }
 
 #if USE_Py_inject_code
-static func_PyModule_Create2 *g_PyModule_Create2 = NULL;
-static func_PyModule_New     *g_PyModule_New = NULL;
-static INT_PTR                addr_to_patch;
-static INT_PTR                addr_to_unpatch;
+static INT_PTR addr_to_patch, addr_to_unpatch;
 
 static void unpatch_python_dll (void);
 
@@ -633,7 +627,7 @@ static PyObject *our_PyModule_Create2 (PyModuleDef *m_def, int api_ver)
 
   unpatch_python_dll();
 
-  ret = (*g_PyModule_Create2) (m_def, api_ver);
+  ret = (*p_PyModule_Create2) (m_def, api_ver);
 
   TRACE (1, "ret: 0x%p.\n", ret);
   return (ret);
@@ -647,7 +641,7 @@ static PyObject *our_PyModule_New (const char *m_name)
 
   unpatch_python_dll();
 
-  ret = (*g_PyModule_New) (m_name);
+  ret = (*p_PyModule_New) (m_name);
 
   TRACE (1, "ret: 0x%p.\n", ret);
   return (ret);
@@ -658,7 +652,7 @@ static PyObject *our_PyModule_New (const char *m_name)
  *  https://wiki.skullsecurity.org/.dll_Injection_and_Patching
  *
  * Except it's triggering a 'APPLICATION_FAULT_SOFTWARE_NX_FAULT' when
- * the following 'str*[]' array are in the data-segment. Hence use
+ * the following 'str*[]' array is in the data-segment. Hence use
  * `VirtualAlloc()`.
  */
 
@@ -758,10 +752,10 @@ static void patch_python_dll (void)
 
   if (g_py_major_ver == 3)
   {
-    g_PyModule_Create2 = (func_PyModule_Create2*) GetProcAddress (g_py_hnd, "PyModule_Create2");
-    addr_to_patch   = (INT_PTR) g_PyModule_Create2;
+    p_PyModule_Create2 = (func_PyModule_Create2*) GetProcAddress (g_py_hnd, "PyModule_Create2");
+    addr_to_patch   = (INT_PTR) p_PyModule_Create2;
     addr_to_unpatch = (INT_PTR) our_PyModule_Create2;
-    if (!g_PyModule_Create2)
+    if (!p_PyModule_Create2)
     {
       TRACE (1, "Did not find \"PyModule_Create2\" in \"%s\".\n", g_py_dll);
       goto failed;
@@ -769,10 +763,10 @@ static void patch_python_dll (void)
   }
   else
   {
-    g_PyModule_New = (func_PyModule_New*) GetProcAddress (g_py_hnd, "PyModule_New");
-    addr_to_patch   = (INT_PTR) g_PyModule_New;
+    p_PyModule_New = (func_PyModule_New*) GetProcAddress (g_py_hnd, "PyModule_New");
+    addr_to_patch   = (INT_PTR) p_PyModule_New;
     addr_to_unpatch = (INT_PTR) our_PyModule_New;
-    if (!g_PyModule_New)
+    if (!p_PyModule_New)
     {
       TRACE (1, "Did not find \"PyModule_New\" in \"%s\".\n", g_py_dll);
       goto failed;
@@ -886,7 +880,7 @@ static DWORD enum_and_load_symbols (const char *module)
   TRACE (2, "num: %5lu, sym_len: %5d, num+sym_len: %5lu.\n",
          DWORD_CAST(num), sym_len, DWORD_CAST(num+sym_len));
 
- // assert (num + len == smartlist_len(g_symbols_list));
+//assert (num + len == smartlist_len(g_symbols_list));
 
   return (num);     /* # of symbols added for this module */
 }
@@ -1198,7 +1192,7 @@ static char *shorten_path2 (const char *str, size_t max_len)
  * Show the retrieved information on all our modules;
  * PDB symbols etc.
  */
-static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL do_sort)
+static void print_modules_and_pdb_info (BOOL do_sort)
 {
   DWORD        total_text = 0;
   DWORD        total_data = 0;
@@ -1211,13 +1205,13 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
   size_t       dash_len = mod_len + 22 + 8*IS_WIN64;
   int          i, max = smartlist_len (g_modules_list);
 
-  if (do_pdb)
+  if (g_cfg.pdb_report)
      dash_len += strlen (pdb_hdr);
 
   C_printf ("  %-*s %-*s Size%s\n  %s\n",
             (int)mod_len, "Module",
             16+8*IS_WIN64, "Baseaddr",
-            do_pdb ? pdb_hdr : "",
+            g_cfg.pdb_report ? pdb_hdr : "",
             _strrepeat('-', dash_len));
 
   /* Make a sorted copy before printing the module-list.
@@ -1231,7 +1225,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
     smartlist_sort (modules_copy, compare_on_baseaddr);
     TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
     g_num_compares = 0;
-    orig_modules = g_modules_list;
+    orig_modules   = g_modules_list;
     g_modules_list = modules_copy;
   }
 
@@ -1243,7 +1237,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
               (int)mod_len, shorten_path2(me->module_name, mod_len),
               ADDR_CAST(me->base_addr),
               dword_str(me->size/1024));
-    if (do_pdb)
+    if (g_cfg.pdb_report)
     {
       C_printf ("      %5lu %5lu %5lu %5lu",
                 DWORD_CAST(me->stat.num_syms),
@@ -1256,7 +1250,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
       total_junk += me->stat.num_junk_syms;
     }
 
-    if (do_symsrv_info && p_SymSrvGetFileIndexInfo)
+    if (g_cfg.pdb_symsrv && p_SymSrvGetFileIndexInfo)
     {
       SYMSRV_INDEX_INFO si;
 
@@ -1264,8 +1258,28 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
       memset (&si, '\0', sizeof(si));
       si.sizeofstruct = sizeof(SYMSRV_INDEX_INFO);
       if (!(*p_SymSrvGetFileIndexInfo) (me->module_name, &si, 0))
-           C_printf ("SymSrvGetFileIndexInfo() failed: %s", get_error());
-      else C_printf ("%-25s: %s", basename(si.pdbfile), get_guid_path_string(&si.guid));
+         C_printf ("\n    SymSrvGetFileIndexInfo() failed: %s", get_error());
+      else
+      {
+        char        pdb_fullname [_MAX_PATH] = { "" };
+        const char *pdb_base = basename (si.pdbfile);
+
+        /**
+         * \todo
+         * Call `SymFindFileInPath()` to locate the true .PDB-file for a `si.guid`.
+         * For now, just guess it's under `c:\\Windows\\symbols\\<pdb-file>\\<si.guid>1\\<pdb-file>`.
+         *
+         * E.g. the symbol-file `wwin32u.pdb` with `si.guid == D3CAE32F6C9D443362C27D4D4FF51E151`
+         * should be this file:
+         * ```
+         *   c:\Windows\symbols\wwin32u.pdb\D3CAE32F6C9D443362C27D4D4FF51E151\wwin32u.pdb
+         * ```
+         */
+        snprintf (pdb_fullname, sizeof(pdb_fullname), "%s\\%s\\%s1\\%s",
+                  g_sym_dir, pdb_base, get_guid_path_string(&si.guid), pdb_base);
+
+        C_printf ("\n    %s%s", pdb_fullname, file_exists(pdb_fullname) ? "" : " not found");
+      }
     }
     C_putc ('\n');
   }
@@ -1276,7 +1290,7 @@ static void print_modules_and_pdb_info (BOOL do_pdb, BOOL do_symsrv_info, BOOL d
     g_modules_list = orig_modules;
   }
 
-  if (do_pdb)
+  if (g_cfg.pdb_report)
      C_printf ("%*s  %s\n"
                "%*s  = %5lu %5lu %5lu %5lu\n",
                26 + (int)mod_len + 8*IS_WIN64, "",
@@ -1352,7 +1366,7 @@ static void enum_and_load_modules (void)
 #endif
 
 #if USE_SymEnumSymbolsEx
-    if (g_cfg.pdb_report || g_cfg.trace_level >= 4)
+    if (g_cfg.pdb_report)
        enum_and_load_symbols (me->module_name);
 #endif
   }
@@ -1932,7 +1946,8 @@ BOOL StackWalkInit (void)
 #endif
                           ADD_VALUE (0, UnDecorateSymbolName),
                         };
-  BOOL ok = (load_dynamic_table(dbghelp_funcs, DIM(dbghelp_funcs)) == DIM(dbghelp_funcs));
+  BOOL  ok = (load_dynamic_table(dbghelp_funcs, DIM(dbghelp_funcs)) == DIM(dbghelp_funcs));
+  char *p;
 
   g_modules_list = smartlist_new();
   g_symbols_list = smartlist_new();
@@ -1941,7 +1956,11 @@ BOOL StackWalkInit (void)
   g_proc_id = GetCurrentProcessId();
 
   GetModuleFileName (NULL, g_module, sizeof(g_module));
-  TRACE (2, "g_module: %s\n", g_module);
+  if (GetSystemDirectory (g_sym_dir, DIM(g_sym_dir)) && (p = strrchr(g_sym_dir, '\\')) != NULL)
+       _strlcpy (p+1, "symbols", p - g_sym_dir - 1);
+  else _strlcpy (g_sym_dir, "c:\\Windows\\symbols", sizeof(g_sym_dir));
+
+  TRACE (1, "g_module: %s, g_sym_dir: %s\n", g_module, g_sym_dir);
 
 #if defined(_MSC_VER)
   #ifdef SCRT_IS_UCRT_DLL_IN_USE
@@ -1949,6 +1968,7 @@ BOOL StackWalkInit (void)
   #elif defined(_MT)
     g_long_CPP_syms = TRUE;
   #endif
+
   TRACE (2, "g_long_CPP_syms: %d\n", g_long_CPP_syms);
 #endif
 
@@ -1973,7 +1993,7 @@ BOOL StackWalkInit (void)
 
 #if USE_SymEnumSymbolsEx
   if (g_cfg.dump_modules)
-     print_modules_and_pdb_info (g_cfg.pdb_report, FALSE, TRUE);
+     print_modules_and_pdb_info (TRUE);
 #endif
 
   TRACE (2, "\n");
@@ -1992,8 +2012,7 @@ static char ret_buf [MAX_NAMELEN+100];
   #pragma GCC diagnostic ignored  "-Wunused-but-set-variable"
 #endif
 
-static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
-                                     STACKFRAME64 *stk, CONTEXT *ctx)
+static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *ctx)
 {
   struct {
 #if USE_SymFromAaddr
@@ -2042,9 +2061,9 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
    * if this returns ERROR_INVALID_ADDRESS (487) or ERROR_NOACCESS (998), you can
    * assume that either you are done, or that the stack is so hosed that the next
    * deeper frame could not be found.
-   * CONTEXT need not to be supplied if image_type is IMAGE_FILE_MACHINE_I386!
+   * CONTEXT need not to be supplied if 'WS_TRACE_IMAGE_TYPE' is 'IMAGE_FILE_MACHINE_I386'!
    */
-  if (!(*p_StackWalk64)(image_type, g_proc, thread, stk, ctx, NULL,
+  if (!(*p_StackWalk64)(WS_TRACE_IMAGE_TYPE, g_proc, thread, stk, ctx, NULL,
                         p_SymFunctionTableAccess64, p_SymGetModuleBase64, NULL))
      return (1);
 
@@ -2151,7 +2170,6 @@ static DWORD decode_one_stack_frame (HANDLE thread, DWORD image_type,
 
 char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
 {
-  DWORD        image_type;
   DWORD        err  = 0;
   size_t       left = sizeof(ret_buf);
   char        *str  = ret_buf;
@@ -2163,25 +2181,15 @@ char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
   /* init STACKFRAME.
    * Notes: AddrModeFlat is just an assumption.
    */
-#ifdef _WIN64
-  image_type = IMAGE_FILE_MACHINE_AMD64;
-
-  stk.AddrPC.Offset    = ctx->Rip;
-  stk.AddrFrame.Offset = ctx->Rbp;
-  stk.AddrStack.Offset = ctx->Rsp;
-#else
-  image_type = IMAGE_FILE_MACHINE_I386;
-
-  stk.AddrPC.Offset    = ctx->Eip;
-  stk.AddrFrame.Offset = ctx->Ebp;
-  stk.AddrStack.Offset = ctx->Esp;
-#endif
+  stk.AddrPC.Offset    = REG_EIP (ctx);
+  stk.AddrFrame.Offset = REG_EBP (ctx);
+  stk.AddrStack.Offset = REG_ESP (ctx);
 
   stk.AddrPC.Mode    = AddrModeFlat;
   stk.AddrFrame.Mode = AddrModeFlat;
   stk.AddrStack.Mode = AddrModeFlat;
 
-  err = decode_one_stack_frame (thread, image_type, &stk, ctx);
+  err = decode_one_stack_frame (thread, &stk, ctx);
   if (err == 0)
      return (ret_buf);
 
