@@ -90,6 +90,14 @@
 #define MHOOKS_MAX_CODE_BYTES   32
 #define MHOOKS_MAX_RIPS          4
 
+#if defined(_M_IX86)
+  static ARCHITECTURE_TYPE  g_arch = ARCH_X86;
+#elif defined(_M_IA64) || defined(_M_AMD64)
+  static ARCHITECTURE_TYPE  g_arch = ARCH_X64;
+#else
+  #error "Unsupported CPU"
+#endif
+
 //
 // The trampoline structure - stores every bit of info about a hook
 //
@@ -153,7 +161,7 @@ static DWORD              g_num_thread_handles = 0;
 // A private more detailed version of
 // 'SYSTEM_PROCESS_INFORMATION'
 //
-#define SYSTEM_PROCESS_INFORMATION SYSTEM_PROCESS_INFORMATION_priv
+#define SYSTEM_PROCESS_INFORMATION   SYSTEM_PROCESS_INFORMATION_priv
 
 typedef struct SYSTEM_PROCESS_INFORMATION {
         ULONG          NextEntryOffset;
@@ -197,10 +205,10 @@ typedef struct SYSTEM_PROCESS_INFORMATION {
 // ZwQuerySystemInformation definitions
 //
 typedef NTSTATUS (NTAPI *func_ZwQuerySystemInformation) (
-                           __in      SYSTEM_INFORMATION_CLASS system_information_class,
-                           __inout   void                    *system_information,
-                           __in      ULONG                    system_information_length,
-                           __out_opt ULONG                   *return_length);
+                         __in      SYSTEM_INFORMATION_CLASS system_information_class,
+                         __inout   void                    *system_information,
+                         __in      ULONG                    system_information_length,
+                         __out_opt ULONG                   *return_length);
 
 #ifndef STATUS_INFO_LENGTH_MISMATCH
 #define STATUS_INFO_LENGTH_MISMATCH      ((NTSTATUS)0xC0000004L)
@@ -876,13 +884,7 @@ static DWORD DisassembleAndSkip (void *function, DWORD min_len, MHOOKS_PATCHDATA
   data->limit_up   = 0;
   data->rip_count  = 0;
 
-#ifdef _M_IX86
-  ARCHITECTURE_TYPE arch = ARCH_X86;
-#else
-  ARCHITECTURE_TYPE arch = ARCH_X64;
-#endif
-
-  if (InitDisassembler(&dis, arch))
+  if (InitDisassembler(&dis, g_arch))
   {
     INSTRUCTION *instruction = NULL;
     uint8_t     *location = (uint8_t*) function;
@@ -1006,13 +1008,7 @@ static BOOL IsInstructionPresentInFirstFiveByte (void *function, INSTRUCTION_TYP
   DWORD ret = 0;
   DISASSEMBLER dis;
 
-#if defined(_M_IX86)
-  ARCHITECTURE_TYPE arch = ARCH_X86;
-#else
-  ARCHITECTURE_TYPE arch = ARCH_X64;
-#endif
-
-  if (InitDisassembler(&dis, arch))
+  if (InitDisassembler(&dis, g_arch))
   {
     INSTRUCTION *instruction = NULL;
     uint8_t     *location = (uint8_t*) function;
@@ -1035,13 +1031,7 @@ static BYTE *PatchRelative (BYTE *code_trampoline, void *system_function)
   DISASSEMBLER dis;
   DWORD        ret = 0;
 
-#ifdef _M_IX86
-  ARCHITECTURE_TYPE arch = ARCH_X86;
-#else
-  ARCHITECTURE_TYPE arch = ARCH_X64;
-#endif
-
-  if (InitDisassembler (&dis, arch))
+  if (InitDisassembler(&dis, g_arch))
   {
     INSTRUCTION *instruction = NULL;
     uint8_t     *location = (uint8_t*) code_trampoline;

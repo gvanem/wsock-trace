@@ -417,7 +417,7 @@ typedef enum _INSTRUCTION_TYPE {
 // Architectures
 //
 typedef enum _ARCHITECTURE_TYPE {
-    ARCH_UNKNOWN=0,
+    ARCH_UNKNOWN = 0,
 
     // x86-based
     ARCH_X86,    // 32-bit x86
@@ -589,7 +589,7 @@ typedef struct _ARCHITECTURE_FORMAT {
 #define OPTYPE_REG_xAX_BIG (OP_REG + 0x0B)
 
 typedef enum _CPU_TYPE {
-    CPU_UNKNOWN=0,
+    CPU_UNKNOWN = 0,
 
     //
     // 1st generation
@@ -834,7 +834,7 @@ typedef enum _X86_REGISTER {
     X86_REG_TR15,
 
     // Control registers
-    X86_REG_CR0=X86_CONTROL_OFFSET,
+    X86_REG_CR0 = X86_CONTROL_OFFSET,
     X86_REG_CR1,
     X86_REG_CR2,
     X86_REG_CR3,
@@ -852,7 +852,7 @@ typedef enum _X86_REGISTER {
     X86_REG_CR15,
 
     // Debug registers
-    X86_REG_DR0=X86_DEBUG_OFFSET,
+    X86_REG_DR0 = X86_DEBUG_OFFSET,
     X86_REG_DR1,
     X86_REG_DR2,
     X86_REG_DR3,
@@ -870,7 +870,7 @@ typedef enum _X86_REGISTER {
     X86_REG_DR15,
 
     // FPU registers
-    X86_REG_ST0=X86_FPU_OFFSET,
+    X86_REG_ST0 = X86_FPU_OFFSET,
     X86_REG_ST1,
     X86_REG_ST2,
     X86_REG_ST3,
@@ -880,7 +880,7 @@ typedef enum _X86_REGISTER {
     X86_REG_ST7,
 
     // MMX registers
-    X86_REG_MM0=X86_MMX_OFFSET,
+    X86_REG_MM0 = X86_MMX_OFFSET,
     X86_REG_MM1,
     X86_REG_MM2,
     X86_REG_MM3,
@@ -890,7 +890,7 @@ typedef enum _X86_REGISTER {
     X86_REG_MM7,
 
     // XMM registers
-    X86_REG_XMM0=X86_XMM_OFFSET,
+    X86_REG_XMM0 = X86_XMM_OFFSET,
     X86_REG_XMM1,
     X86_REG_XMM2,
     X86_REG_XMM3,
@@ -900,7 +900,7 @@ typedef enum _X86_REGISTER {
     X86_REG_XMM7,
 
     // 8-bit registers
-    X86_REG_AL=X86_8BIT_OFFSET,
+    X86_REG_AL = X86_8BIT_OFFSET,
     X86_REG_CL,
     X86_REG_DL,
     X86_REG_BL,
@@ -910,7 +910,7 @@ typedef enum _X86_REGISTER {
     X86_REG_BH,
 
     // 16-bit registers
-    X86_REG_AX=X86_16BIT_OFFSET,
+    X86_REG_AX = X86_16BIT_OFFSET,
     X86_REG_CX,
     X86_REG_DX,
     X86_REG_BX,
@@ -920,7 +920,7 @@ typedef enum _X86_REGISTER {
     X86_REG_DI,
 
     // 32-bit registers
-    X86_REG_EAX=X86_32BIT_OFFSET,
+    X86_REG_EAX = X86_32BIT_OFFSET,
     X86_REG_ECX,
     X86_REG_EDX,
     X86_REG_EBX,
@@ -930,7 +930,7 @@ typedef enum _X86_REGISTER {
     X86_REG_EDI,
 
     // AMD64 8-bit registers
-    AMD64_REG_AL=AMD64_8BIT_OFFSET,
+    AMD64_REG_AL = AMD64_8BIT_OFFSET,
     AMD64_REG_CL,
     AMD64_REG_DL,
     AMD64_REG_BL,
@@ -948,7 +948,7 @@ typedef enum _X86_REGISTER {
     AMD64_REG_R15B,
 
     // AMD64 16-bit registers
-    AMD64_REG_AX=AMD64_16BIT_OFFSET,
+    AMD64_REG_AX = AMD64_16BIT_OFFSET,
     AMD64_REG_CX,
     AMD64_REG_DX,
     AMD64_REG_BX,
@@ -966,7 +966,7 @@ typedef enum _X86_REGISTER {
     AMD64_REG_R15W,
 
     // AMD64 32-bit registers
-    AMD64_REG_EAX=AMD64_32BIT_OFFSET,
+    AMD64_REG_EAX = AMD64_32BIT_OFFSET,
     AMD64_REG_ECX,
     AMD64_REG_EDX,
     AMD64_REG_EBX,
@@ -984,7 +984,7 @@ typedef enum _X86_REGISTER {
     AMD64_REG_R15D,
 
     // AMD64 64-bit registers
-    AMD64_REG_RAX=AMD64_64BIT_OFFSET,
+    AMD64_REG_RAX = AMD64_64BIT_OFFSET,
     AMD64_REG_RCX,
     AMD64_REG_RDX,
     AMD64_REG_RBX,
@@ -1003,7 +1003,7 @@ typedef enum _X86_REGISTER {
 } X86_REGISTER;
 
 typedef enum _X86_TEST_REGISTER {
-    REG_TR0=0,
+    REG_TR0 = 0,
     REG_TR1,
     REG_TR2,
     REG_TR3,
