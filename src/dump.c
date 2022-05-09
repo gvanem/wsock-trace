@@ -1598,6 +1598,12 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
   return (buf);
 }
 
+/*
+ * dump.c: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
+ *         _strlcpy (buf, "<??>", buf_sz);
+ */
+GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
+
 /**
  * Print a `SOCKET_ADDRESS` to given buffer.
  */
@@ -2435,12 +2441,6 @@ void dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
 }
 
 #undef DUMP_WSANAMESPACE_INFO
-
-/*
- * dump.c:1106:17: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
- *                  addr = "<??>";
- */
-GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
 
 static const char *dump_addr_list (int type, const char **addresses, int indent, int column)
 {

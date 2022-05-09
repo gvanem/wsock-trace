@@ -1280,7 +1280,7 @@ static void print_modules_and_pdb_info (BOOL do_sort)
          C_printf ("\n    SymSrvGetFileIndexInfo() failed: %s", get_error());
       else
       {
-        char        pdb_fullname [_MAX_PATH] = { "" };
+        char        pdb_fullname [2*_MAX_PATH] = { "" };
         const char *pdb_base = basename (si.pdbfile);
 
         /**
