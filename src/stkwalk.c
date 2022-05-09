@@ -4,10 +4,7 @@
  *    StackWalker (simple backtrace) for Win32 (MSVC, clang-cl and MinGW)
  */
 
-/*
- * File:
- *    stkwalk.c
- *
+/**
  * Author:
  *    Jochen Kalmbach, Germany
  *    (c) 2002-2004 (Freeware)
@@ -37,7 +34,7 @@
  *
  */
 
-/*
+/**
  * Aug 2011   Adapted for Wsock_trace - G. Vanem (gvanem@yahoo.no)
  *            No longer Unicode aware.
  *            Simplified and rewritten from C++ to pure C.
@@ -63,7 +60,7 @@
 #include "stkwalk.h"
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(__clang__)
- /*
+ /**
   * With the Universal CRT in Windows/MSVC and with 'cl' CFLAGS:
   *  '-MD' or '-MDd' -> __scrt_is_ucrt_dll_in_use() = 1.
   *  '-MT' or '-MTd' -> __scrt_is_ucrt_dll_in_use() = 0.
@@ -75,7 +72,7 @@
   #define SCRT_IS_UCRT_DLL_IN_USE() __scrt_is_ucrt_dll_in_use()
 #endif
 
-/*
+/**
  * Check if the <imagehlp.h> / <dbghelp.h> API is good enough for
  * using 'SymEnumSymbolsEx()' etc.
  */
@@ -85,14 +82,25 @@
   #define USE_SymEnumSymbolsEx 0
 #endif
 
-static HANDLE       g_proc;
-static DWORD        g_proc_id;
-static char         g_module [_MAX_PATH];  /* The .exe we're linked to */
-static char         g_sym_dir[_MAX_PATH];
-static smartlist_t *g_modules_list;        /* List of all modules in our program */
-static smartlist_t *g_symbols_list;
-static int          g_quit_count = 0;
-static DWORD        g_num_compares;
+/**
+ * \def USE_SymFromAaddr
+ *  Use `(*p_SymFromAddr)()` to decode a single stack-frame
+ *
+ * \def USE_CreateToolhelp32Snapshot
+ *  When using the ToolHelp32 API, call `(*p_CreateToolhelp32Snapshot)()`
+ *  to get a thread snapshot. But it's not used for anything yet.
+ */
+#define USE_SymFromAaddr             1
+#define USE_CreateToolhelp32Snapshot 1
+
+static HANDLE       g_proc;                /**< Value from `GetCurrentProcess()` */
+static DWORD        g_proc_id;             /**< Value from `GetCurrentProcessId()` */
+static char         g_module [_MAX_PATH];  /**< The .exe we're linked to */
+static char         g_sym_dir[_MAX_PATH];  /**< The `%WinDir\\symbols` directory */
+static smartlist_t *g_modules_list;        /**< List of all modules in our program */
+static smartlist_t *g_symbols_list;        /**< List of all symbols when `g_cfg.pdb_report == TRUE` */
+static int          g_quit_count = 0;      /**< Count of `q` or `ESC` keypresses in the `enum_symbols_proc()` callback */
+static DWORD        g_num_compares;        /** Number of compares in `print_modules_and_pdb_info()`. Just for tracing */
 
 static const char *get_error (void);
 
@@ -108,7 +116,7 @@ static const char *get_error (void);
 #endif
 
 #if USE_Py_mhook_code && (defined(_M_IX86) || defined(_M_X64))
-  #include "mhook/mhook.h"
+  #include "mhook/mhook.h" /* MSVC/clang-cl only */
 #else
   #undef  USE_Py_mhook_code
   #define USE_Py_mhook_code 0
@@ -118,8 +126,6 @@ static const char *get_error (void);
   static BOOL  g_long_CPP_syms = FALSE;
   static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose);
 #endif
-
-#define USE_SymFromAaddr 1
 
 #define MAX_NAMELEN  1024        /* max name length for found symbols */
 #define TBUF_LEN     1024        /* for a temp buffers */
@@ -282,10 +288,10 @@ typedef DWORD64 (WINAPI *PTRANSLATE_ADDRESS_ROUTINE64) (
 #endif  /* API_VERSION_NUMBER < 9 */
 
 /**
- * \def DEF_FUNC
+ * \def DEF_WIN_FUNC
  *
  * Handy macro to both define and declare the function-pointer for
- * `WinInet.dll` and `WinHttp.dll` functions.
+ * `dbghelp.dll`, `psapi.dll`, `tlhelp32.dll` and `kernel32.dll` functions.
  */
 #define DEF_WIN_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
                                     static func_##f p_##f = NULL
@@ -293,7 +299,7 @@ typedef DWORD64 (WINAPI *PTRANSLATE_ADDRESS_ROUTINE64) (
 /**
  * \def DEF_PY_FUNC
  *
- * Similarily for Python function which are always CDECL.
+ * Similarily for Python function which are always `__cdecl`.
  */
 #define DEF_PY_FUNC(ret, f, args)  typedef ret (__cdecl *func_##f) args; \
                                    static func_##f p_##f = NULL
@@ -366,6 +372,71 @@ DEF_WIN_FUNC (DWORD,   UnDecorateSymbolName, (IN  PCSTR DecoratedName,
 #endif
 
 /*
+ * For `tlhelp32.dll` functions:
+ */
+DEF_WIN_FUNC (HANDLE, CreateToolhelp32Snapshot, (DWORD dwFlags, DWORD PID));
+DEF_WIN_FUNC (BOOL,   Module32First, (HANDLE snap, MODULEENTRY32 *me));
+DEF_WIN_FUNC (BOOL,   Module32Next, (HANDLE snap, MODULEENTRY32 *me));
+DEF_WIN_FUNC (BOOL,   Thread32First, (HANDLE snap, THREADENTRY32 *te));
+DEF_WIN_FUNC (BOOL,   Thread32Next, (HANDLE snap, THREADENTRY32 *te));
+
+#define ADD_VALUE(opt, dll, func)  { opt, NULL, dll, #func, (void**)&p_##func }
+
+static struct LoadTable tlhelp32_funcs[] = {
+              ADD_VALUE (0, "kernel32.dll", CreateToolhelp32Snapshot),
+              ADD_VALUE (0, "kernel32.dll", Module32First),
+              ADD_VALUE (0, "kernel32.dll", Module32Next),
+              ADD_VALUE (0, "kernel32.dll", Thread32First),
+              ADD_VALUE (0, "kernel32.dll", Thread32Next),
+              ADD_VALUE (1, "tlhelp32.dll", CreateToolhelp32Snapshot), /* (1) */
+              ADD_VALUE (1, "tlhelp32.dll", Module32First),            /* (1) */
+              ADD_VALUE (1, "tlhelp32.dll", Module32Next)              /* (1) */
+            };
+            /* (1): tlhelp32.dll is present on Win9x/ME. On Win-NT+ these functions are in kernel32.dll.
+             */
+
+/*
+ * For `psapi.dll` and `kernel32.dll` functions:
+ */
+DEF_WIN_FUNC (BOOL,  EnumProcessModules,   (HANDLE process, HMODULE *module, DWORD cb, DWORD *needed));
+DEF_WIN_FUNC (DWORD, GetModuleFileNameExA, (HANDLE process, HMODULE module, LPSTR lpFilename, DWORD nSize));
+DEF_WIN_FUNC (BOOL,  GetModuleInformation, (HANDLE process, HMODULE module, MODULEINFO *pmi, DWORD nSize));
+
+static struct LoadTable psapi_funcs[] = {
+              ADD_VALUE (1, "kernel32.dll", EnumProcessModules),   /* (1) */
+              ADD_VALUE (1, "kernel32.dll", GetModuleFileNameExA), /* (1) */
+              ADD_VALUE (1, "kernel32.dll", GetModuleInformation), /* (1) */
+              ADD_VALUE (0, "psapi.dll",    EnumProcessModules),
+              ADD_VALUE (0, "psapi.dll",    GetModuleFileNameExA),
+              ADD_VALUE (0, "psapi.dll",    GetModuleInformation)
+             };
+            /* (1) = These are in Kernel32.dll in Win-7+ Win-Server 2008 R2.
+             */
+
+/*
+ * For `dbghelp.dll` functions:
+ */
+static struct LoadTable dbghelp_funcs[] = {
+                        ADD_VALUE (0, "dbghelp.dll", SymCleanup),
+                        ADD_VALUE (0, "dbghelp.dll", SymFunctionTableAccess64),
+                        ADD_VALUE (0, "dbghelp.dll", SymGetLineFromAddr64),
+                        ADD_VALUE (0, "dbghelp.dll", SymGetModuleBase64),
+                        ADD_VALUE (0, "dbghelp.dll", SymGetModuleInfo64),
+                        ADD_VALUE (0, "dbghelp.dll", SymGetOptions),
+                        ADD_VALUE (0, "dbghelp.dll", SymGetSymFromAddr64),
+                        ADD_VALUE (0, "dbghelp.dll", SymFromAddr),
+                        ADD_VALUE (0, "dbghelp.dll", SymInitialize),
+                        ADD_VALUE (0, "dbghelp.dll", SymSetOptions),
+                        ADD_VALUE (0, "dbghelp.dll", StackWalk64),
+                        ADD_VALUE (0, "dbghelp.dll", SymLoadModule64),
+#if USE_SymEnumSymbolsEx
+                        ADD_VALUE (0, "dbghelp.dll", SymEnumSymbolsEx),
+                        ADD_VALUE (1, "dbghelp.dll", SymSrvGetFileIndexInfo),
+#endif
+                        ADD_VALUE (0, "dbghelp.dll", UnDecorateSymbolName),
+                      };
+
+/*
  * For decoding 'struct _SYMBOL_INFO::Flags'.
  *
  * Ref: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680686(v=vs.85).aspx
@@ -405,32 +476,31 @@ DEF_WIN_FUNC (DWORD,   UnDecorateSymbolName, (IN  PCSTR DecoratedName,
 #define SYMFLAG_PUBLIC_CODE        0x00400000
 #endif
 
-#define ADD_VALUE(v)  { v, #v }
-
 #if USE_SymEnumSymbolsEx
+#define ADD_FLAG_VALUE(v)  { v, #v }
 
 static const struct search_list symbol_info_flags[] = {
-                                ADD_VALUE (SYMFLAG_CLR_TOKEN),
-                                ADD_VALUE (SYMFLAG_CONSTANT),
-                                ADD_VALUE (SYMFLAG_EXPORT),
-                                ADD_VALUE (SYMFLAG_FORWARDER),
-                                ADD_VALUE (SYMFLAG_FRAMEREL),
-                                ADD_VALUE (SYMFLAG_FUNCTION),
-                                ADD_VALUE (SYMFLAG_ILREL),
-                                ADD_VALUE (SYMFLAG_LOCAL),
-                                ADD_VALUE (SYMFLAG_METADATA),
-                                ADD_VALUE (SYMFLAG_PARAMETER),
-                                ADD_VALUE (SYMFLAG_REGISTER),
-                                ADD_VALUE (SYMFLAG_REGREL),
-                                ADD_VALUE (SYMFLAG_SLOT),
-                                ADD_VALUE (SYMFLAG_THUNK),
-                                ADD_VALUE (SYMFLAG_TLSREL),
-                                ADD_VALUE (SYMFLAG_VALUEPRESENT),
-                                ADD_VALUE (SYMFLAG_VIRTUAL),
-                                ADD_VALUE (SYMFLAG_NULL),
-                                ADD_VALUE (SYMFLAG_FUNC_NO_RETURN),
-                                ADD_VALUE (SYMFLAG_SYNTHETIC_ZEROBASE),
-                                ADD_VALUE (SYMFLAG_PUBLIC_CODE)
+                                ADD_FLAG_VALUE (SYMFLAG_CLR_TOKEN),
+                                ADD_FLAG_VALUE (SYMFLAG_CONSTANT),
+                                ADD_FLAG_VALUE (SYMFLAG_EXPORT),
+                                ADD_FLAG_VALUE (SYMFLAG_FORWARDER),
+                                ADD_FLAG_VALUE (SYMFLAG_FRAMEREL),
+                                ADD_FLAG_VALUE (SYMFLAG_FUNCTION),
+                                ADD_FLAG_VALUE (SYMFLAG_ILREL),
+                                ADD_FLAG_VALUE (SYMFLAG_LOCAL),
+                                ADD_FLAG_VALUE (SYMFLAG_METADATA),
+                                ADD_FLAG_VALUE (SYMFLAG_PARAMETER),
+                                ADD_FLAG_VALUE (SYMFLAG_REGISTER),
+                                ADD_FLAG_VALUE (SYMFLAG_REGREL),
+                                ADD_FLAG_VALUE (SYMFLAG_SLOT),
+                                ADD_FLAG_VALUE (SYMFLAG_THUNK),
+                                ADD_FLAG_VALUE (SYMFLAG_TLSREL),
+                                ADD_FLAG_VALUE (SYMFLAG_VALUEPRESENT),
+                                ADD_FLAG_VALUE (SYMFLAG_VIRTUAL),
+                                ADD_FLAG_VALUE (SYMFLAG_NULL),
+                                ADD_FLAG_VALUE (SYMFLAG_FUNC_NO_RETURN),
+                                ADD_FLAG_VALUE (SYMFLAG_SYNTHETIC_ZEROBASE),
+                                ADD_FLAG_VALUE (SYMFLAG_PUBLIC_CODE)
                               };
 
 static const char *sym_flags_decode (DWORD flags)
@@ -483,44 +553,46 @@ static const char *sym_flags_decode (DWORD flags)
      };
 #endif
 
+#define ADD_TAG_VALUE(v)  { v, #v }
+
 static const struct search_list symbol_tags[] = {
-                                ADD_VALUE (SymTagNull),
-                                ADD_VALUE (SymTagExe),
-                                ADD_VALUE (SymTagCompiland),
-                                ADD_VALUE (SymTagCompilandDetails),
-                                ADD_VALUE (SymTagCompilandEnv),
-                                ADD_VALUE (SymTagFunction),
-                                ADD_VALUE (SymTagBlock),
-                                ADD_VALUE (SymTagData),
-                                ADD_VALUE (SymTagAnnotation),
-                                ADD_VALUE (SymTagLabel),
-                                ADD_VALUE (SymTagPublicSymbol),
-                                ADD_VALUE (SymTagUDT),
-                                ADD_VALUE (SymTagEnum),
-                                ADD_VALUE (SymTagFunctionType),
-                                ADD_VALUE (SymTagPointerType),
-                                ADD_VALUE (SymTagArrayType),
-                                ADD_VALUE (SymTagBaseType),
-                                ADD_VALUE (SymTagTypedef),
-                                ADD_VALUE (SymTagBaseClass),
-                                ADD_VALUE (SymTagFriend),
-                                ADD_VALUE (SymTagFunctionArgType),
-                                ADD_VALUE (SymTagFuncDebugStart),
-                                ADD_VALUE (SymTagFuncDebugEnd),
-                                ADD_VALUE (SymTagUsingNamespace),
-                                ADD_VALUE (SymTagVTableShape),
-                                ADD_VALUE (SymTagVTable),
-                                ADD_VALUE (SymTagCustom),
-                                ADD_VALUE (SymTagThunk),
-                                ADD_VALUE (SymTagCustomType),
-                                ADD_VALUE (SymTagManagedType),
-                                ADD_VALUE (SymTagDimension),
-                                ADD_VALUE (SymTagCallSite),
-                                ADD_VALUE (SymTagInlineSite),
-                                ADD_VALUE (SymTagBaseInterface),
-                                ADD_VALUE (SymTagVectorType),
-                                ADD_VALUE (SymTagMatrixType),
-                                ADD_VALUE (SymTagHLSLType)
+                                ADD_TAG_VALUE (SymTagNull),
+                                ADD_TAG_VALUE (SymTagExe),
+                                ADD_TAG_VALUE (SymTagCompiland),
+                                ADD_TAG_VALUE (SymTagCompilandDetails),
+                                ADD_TAG_VALUE (SymTagCompilandEnv),
+                                ADD_TAG_VALUE (SymTagFunction),
+                                ADD_TAG_VALUE (SymTagBlock),
+                                ADD_TAG_VALUE (SymTagData),
+                                ADD_TAG_VALUE (SymTagAnnotation),
+                                ADD_TAG_VALUE (SymTagLabel),
+                                ADD_TAG_VALUE (SymTagPublicSymbol),
+                                ADD_TAG_VALUE (SymTagUDT),
+                                ADD_TAG_VALUE (SymTagEnum),
+                                ADD_TAG_VALUE (SymTagFunctionType),
+                                ADD_TAG_VALUE (SymTagPointerType),
+                                ADD_TAG_VALUE (SymTagArrayType),
+                                ADD_TAG_VALUE (SymTagBaseType),
+                                ADD_TAG_VALUE (SymTagTypedef),
+                                ADD_TAG_VALUE (SymTagBaseClass),
+                                ADD_TAG_VALUE (SymTagFriend),
+                                ADD_TAG_VALUE (SymTagFunctionArgType),
+                                ADD_TAG_VALUE (SymTagFuncDebugStart),
+                                ADD_TAG_VALUE (SymTagFuncDebugEnd),
+                                ADD_TAG_VALUE (SymTagUsingNamespace),
+                                ADD_TAG_VALUE (SymTagVTableShape),
+                                ADD_TAG_VALUE (SymTagVTable),
+                                ADD_TAG_VALUE (SymTagCustom),
+                                ADD_TAG_VALUE (SymTagThunk),
+                                ADD_TAG_VALUE (SymTagCustomType),
+                                ADD_TAG_VALUE (SymTagManagedType),
+                                ADD_TAG_VALUE (SymTagDimension),
+                                ADD_TAG_VALUE (SymTagCallSite),
+                                ADD_TAG_VALUE (SymTagInlineSite),
+                                ADD_TAG_VALUE (SymTagBaseInterface),
+                                ADD_TAG_VALUE (SymTagVectorType),
+                                ADD_TAG_VALUE (SymTagMatrixType),
+                                ADD_TAG_VALUE (SymTagHLSLType)
                               };
 
 static const char *sym_tag_decode (unsigned tag)
@@ -853,7 +925,7 @@ static void symbols_free (void *s)
   free (se);
 }
 
-/*
+/**
  * Free and delete the contents of 'g_symbols_list'.
  */
 static void symbols_list_free (void)
@@ -917,7 +989,6 @@ DWORD StackWalkSymbols (smartlist_t **sl_p)
       enum_and_load_symbols (me->module_name);
     }
   }
-
   num = smartlist_len (g_symbols_list);
 #endif
 
@@ -984,42 +1055,11 @@ static const char *get_error (void)
   return win_strerror (err);
 }
 
-/**************************************** ToolHelp32 *************************/
-
-typedef HANDLE (WINAPI *func_CreateToolhelp32Snapshot) (DWORD dwFlags, DWORD PID);
-typedef BOOL   (WINAPI *func_Module32First) (HANDLE snap, MODULEENTRY32 *me);
-typedef BOOL   (WINAPI *func_Module32Next) (HANDLE snap, MODULEENTRY32 *me);
-typedef BOOL   (WINAPI *func_Thread32First) (HANDLE snap, THREADENTRY32 *te);
-typedef BOOL   (WINAPI *func_Thread32Next) (HANDLE snap, THREADENTRY32 *te);
-
-static func_CreateToolhelp32Snapshot p_CreateToolhelp32Snapshot = NULL;
-static func_Module32First            p_Module32First = NULL;
-static func_Module32Next             p_Module32Next  = NULL;
-static func_Thread32First            p_Thread32First = NULL;
-static func_Thread32Next             p_Thread32Next  = NULL;
-
-#undef  ADD_VALUE
-#define ADD_VALUE(opt, dll, func)  { opt, NULL, dll, #func, (void**)&p_##func }
-#define ADD_THREAD_SNAPSHOT        1
-
-static struct LoadTable th32_funcs[] = {
-              ADD_VALUE (0, "kernel32.dll", CreateToolhelp32Snapshot),
-              ADD_VALUE (0, "kernel32.dll", Module32First),
-              ADD_VALUE (0, "kernel32.dll", Module32Next),
-              ADD_VALUE (0, "kernel32.dll", Thread32First),
-              ADD_VALUE (0, "kernel32.dll", Thread32Next),
-              ADD_VALUE (1, "tlhelp32.dll", CreateToolhelp32Snapshot), /* (1) */
-              ADD_VALUE (1, "tlhelp32.dll", Module32First),            /* (1) */
-              ADD_VALUE (1, "tlhelp32.dll", Module32Next)              /* (1) */
-            };
-            /* (1): tlhelp32.dll is present on Win9x/ME. On Win-NT+ these functions are in kernel32.dll.
-             */
-
-static int GetModuleListTH32 (void)
+static int GetModuleList_TLHELP32 (void)
 {
   HANDLE        snap = INVALID_HANDLE_VALUE;
   MODULEENTRY32 me;
-  BOOL          okay = (load_dynamic_table(th32_funcs, DIM(th32_funcs)) >= 3);
+  BOOL          okay = (load_dynamic_table(tlhelp32_funcs, DIM(tlhelp32_funcs)) >= 3);
   int           i;
 
   if (!okay)
@@ -1037,7 +1077,7 @@ static int GetModuleListTH32 (void)
        break;
   }
 
-#if ADD_THREAD_SNAPSHOT
+#if USE_CreateToolhelp32Snapshot
   if (p_Thread32First && p_Thread32Next)
   {
     HANDLE thr_snap = (*p_CreateToolhelp32Snapshot) (TH32CS_SNAPTHREAD, g_proc_id);
@@ -1047,12 +1087,12 @@ static int GetModuleListTH32 (void)
       THREADENTRY32 te;
 
       te.dwSize = sizeof(te);
-      for (i = 0, (*p_Thread32First)(thr_snap,&te);; i++)
+      for (i = 0, (*p_Thread32First)(thr_snap, &te);; i++)
       {
         if (te.th32OwnerProcessID == g_proc_id)
-           TRACE (4, "  %d: thread-info for this process: TID: %lu, PID: %lu\n",
+           TRACE (1, "  %d: thread-info for this process: TID: %lu, PID: %lu\n",
                   i, DWORD_CAST(te.th32ThreadID), DWORD_CAST(te.th32OwnerProcessID));
-        if (!(*p_Thread32Next)(thr_snap,&te))
+        if (!(*p_Thread32Next)(thr_snap, &te))
            break;
       }
       CloseHandle (thr_snap);
@@ -1064,33 +1104,12 @@ cleanup:
   if (snap != INVALID_HANDLE_VALUE)
      CloseHandle (snap);
 
-  unload_dynamic_table (th32_funcs, DIM(th32_funcs));
+  unload_dynamic_table (tlhelp32_funcs, DIM(tlhelp32_funcs));
 
   return smartlist_len (g_modules_list);
 }
 
-/**************************************** PSAPI ************************/
-
-typedef BOOL  (WINAPI *func_EnumProcessModules) (HANDLE process, HMODULE *module, DWORD cb, DWORD *needed);
-typedef DWORD (WINAPI *func_GetModuleFileNameExA) (HANDLE process, HMODULE module, LPSTR lpFilename, DWORD nSize);
-typedef BOOL  (WINAPI *func_GetModuleInformation) (HANDLE process, HMODULE module, MODULEINFO *pmi, DWORD nSize);
-
-static func_EnumProcessModules   p_EnumProcessModules;
-static func_GetModuleFileNameExA p_GetModuleFileNameExA;
-static func_GetModuleInformation p_GetModuleInformation;
-
-static struct LoadTable psapi_funcs[] = {
-              ADD_VALUE (1, "kernel32.dll", EnumProcessModules),   /* (1) */
-              ADD_VALUE (1, "kernel32.dll", GetModuleFileNameExA), /* (1) */
-              ADD_VALUE (1, "kernel32.dll", GetModuleInformation), /* (1) */
-              ADD_VALUE (0, "psapi.dll",    EnumProcessModules),
-              ADD_VALUE (0, "psapi.dll",    GetModuleFileNameExA),
-              ADD_VALUE (0, "psapi.dll",    GetModuleInformation)
-             };
-            /* (1) = These are in Kernel32.dll in Win-7+ Win-Server 2008 R2.
-             */
-
-static int GetModuleListPSAPI (void)
+static int GetModuleList_PSAPI (void)
 {
   DWORD    i, needed, num_modules;
   HMODULE *mods;
@@ -1302,7 +1321,7 @@ static void print_modules_and_pdb_info (BOOL do_sort)
                DWORD_CAST(total_junk));
 }
 
-/*
+/**
  * Just a simple 'q' / ESC-handler to force 'SymEnumSymbolsEx()' to quit
  * calling the callback 'enum_symbols_proc()'.
  *
@@ -1329,10 +1348,10 @@ static void enum_and_load_modules (void)
   int    i, max, rc = 0;
 
   if (g_cfg.use_toolhlp32)
-     rc = GetModuleListTH32();     /* Try ToolHelp32 API */
+     rc = GetModuleList_TLHELP32();   /* Try `tlhelp32.dll` API */
 
   if (rc == 0)
-     rc = GetModuleListPSAPI();    /* if not okay, then try PSAPI */
+     rc = GetModuleList_PSAPI();      /* if not okay, then try `psapi.dll` API */
 
   max = smartlist_len (g_modules_list);
 
@@ -1495,7 +1514,7 @@ static int null_C_printf (const char *fmt, ...)
   return (0);
 }
 
-/*
+/**
  * This callback called from 'SymEnumSymbolsEx()' should be called only for
  * modules possibly containing PDB-symbols. I.e. in a MinGW compiled program
  * 'test.exe', this should never look for symbols in 'test.pdb'.
@@ -1835,8 +1854,9 @@ static int compare_on_addr (const void **_a, const void **_b)
   return (0);
 }
 
-/*
+/**
  * Enumerate all PDB symbols for a module.
+ *
  * The callback 'enum_symbols_proc()' adds the 'SymbolEntry' to the smartlist 'sl'.
  */
 static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose)
@@ -1919,33 +1939,11 @@ check_mingw_map_file:
 }
 #endif /* USE_SymEnumSymbolsEx */
 
-#undef  ADD_VALUE
-#define ADD_VALUE(opt, func)  { opt, NULL, "dbghelp.dll", #func, (void**)&p_##func }
-
 /*
  * The user of StackWalkShow() must call StackWalkInit() first.
  */
 BOOL StackWalkInit (void)
 {
-  static struct LoadTable dbghelp_funcs[] = {
-                          ADD_VALUE (0, SymCleanup),
-                          ADD_VALUE (0, SymFunctionTableAccess64),
-                          ADD_VALUE (0, SymGetLineFromAddr64),
-                          ADD_VALUE (0, SymGetModuleBase64),
-                          ADD_VALUE (0, SymGetModuleInfo64),
-                          ADD_VALUE (0, SymGetOptions),
-                          ADD_VALUE (0, SymGetSymFromAddr64),
-                          ADD_VALUE (0, SymFromAddr),
-                          ADD_VALUE (0, SymInitialize),
-                          ADD_VALUE (0, SymSetOptions),
-                          ADD_VALUE (0, StackWalk64),
-                          ADD_VALUE (0, SymLoadModule64),
-#if USE_SymEnumSymbolsEx
-                          ADD_VALUE (0, SymEnumSymbolsEx),
-                          ADD_VALUE (1, SymSrvGetFileIndexInfo),
-#endif
-                          ADD_VALUE (0, UnDecorateSymbolName),
-                        };
   BOOL  ok = (load_dynamic_table(dbghelp_funcs, DIM(dbghelp_funcs)) == DIM(dbghelp_funcs));
   char *p;
 
@@ -1956,7 +1954,7 @@ BOOL StackWalkInit (void)
   g_proc_id = GetCurrentProcessId();
 
   GetModuleFileName (NULL, g_module, sizeof(g_module));
-  if (GetSystemDirectory (g_sym_dir, DIM(g_sym_dir)) && (p = strrchr(g_sym_dir, '\\')) != NULL)
+  if (GetSystemDirectory(g_sym_dir, DIM(g_sym_dir)) && (p = strrchr(g_sym_dir, '\\')) != NULL)
        _strlcpy (p+1, "symbols", p - g_sym_dir - 1);
   else _strlcpy (g_sym_dir, "c:\\Windows\\symbols", sizeof(g_sym_dir));
 
@@ -1999,8 +1997,6 @@ BOOL StackWalkInit (void)
   TRACE (2, "\n");
   return (ok);
 }
-
-/*****************************************************************************************/
 
 /**
  * \todo Use "Thread Local Storage" for this
