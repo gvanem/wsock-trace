@@ -72,7 +72,7 @@
     #error "Unsupported CPU"
   #endif
 
-#elif defined(_GNUC__)
+#elif defined(__GNUC__)
   #if defined(__i386__)
     #define WS_TRACE_I386
 
