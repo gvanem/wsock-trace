@@ -3684,14 +3684,19 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
     if (g_cfg.callee_level > 1 && num_frames > 2 && frames[3])
     {
       char *a, *b;
+      int   indent = 16;
 
       REG_EIP (&ctx) = (ULONG_PTR) frames [3];
       a = strdup (ret);
       b = strdup (StackWalkShow (thr, &ctx));
-      ret = malloc (strlen(a)+strlen(b)+50);
+
       if (g_cfg.trace_time_usec)
-          sprintf (ret, "%s\n                  %s", a, b);
-     else sprintf (ret, "%s\n               %s", a, b);
+         indent += 3;
+      if (g_cfg.show_tid)
+         indent += strlen (get_threadid(TRUE)) - 1;  /* just need it's length */
+
+      ret = malloc (strlen(a) + strlen(b) + indent);
+      sprintf (ret, "%s\n%*s%s", a, indent, "", b);
     }
 #endif
   }
