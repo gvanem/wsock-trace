@@ -51,36 +51,58 @@ int vm_bug_debug = 0;
   #define NtCurrentTeb() _NtCurrentTeb()
 #endif
 
-typedef DWORD   (WINAPI *func_SymSetOptions) (IN DWORD options);
+/**
+ * \def DEF_WIN_FUNC
+ *
+ * Handy macro to both define and declare the function-pointer for
+ * `dbghelp.dll`, `psapi.dll`, `tlhelp32.dll` and `kernel32.dll` functions.
+ */
+#define DEF_WIN_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
+                                    static func_##f p_##f = NULL
 
-typedef BOOL    (WINAPI *func_SymInitialize) (IN HANDLE process,
-                                              IN PCSTR  UserSearchPath,
-                                              IN BOOL   invadeProcess);
 
-typedef BOOL    (WINAPI *func_SymCleanup) (IN HANDLE process);
+DEF_WIN_FUNC (DWORD,   SymSetOptions, (IN DWORD options));
 
-typedef DWORD64 (WINAPI *func_SymGetModuleBase64) (IN HANDLE  process,
-                                                   IN DWORD64 addr);
+DEF_WIN_FUNC (BOOL,    SymInitialize, (IN HANDLE process,
+                                       IN PCSTR  UserSearchPath,
+                                       IN BOOL   invadeProcess));
 
-typedef BOOL    (WINAPI *func_SymFromAddr) (IN     HANDLE       process,
-                                            IN     DWORD64      addr,
-                                            OUT    DWORD64     *displacement,
-                                            IN OUT SYMBOL_INFO *Symbol);
+DEF_WIN_FUNC (BOOL,    SymCleanup, (IN HANDLE process));
 
-typedef BOOL    (WINAPI *func_SymGetLineFromAddr64) (IN  HANDLE           process,
-                                                     IN  DWORD64          addr,
-                                                     OUT DWORD           *displacement,
-                                                     OUT IMAGEHLP_LINE64 *Line);
+DEF_WIN_FUNC (DWORD64, SymGetModuleBase64, (IN HANDLE  process,
+                                            IN DWORD64 addr));
 
-typedef BOOL    (WINAPI *func_StackWalk64) (IN     DWORD                            MachineType,
-                                            IN     HANDLE                           process,
-                                            IN     HANDLE                           thread,
-                                            IN OUT STACKFRAME64                    *StackFrame,
-                                            IN OUT VOID                            *ContextRecord,
-                                            IN     PREAD_PROCESS_MEMORY_ROUTINE64   ReadMemoryRoutine,
-                                            IN     PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine,
-                                            IN     PGET_MODULE_BASE_ROUTINE64       GetModuleBaseRoutine,
-                                            IN     PTRANSLATE_ADDRESS_ROUTINE64     TranslateAddress);
+DEF_WIN_FUNC (BOOL,    SymFromAddr, (IN     HANDLE       process,
+                                     IN     DWORD64      addr,
+                                     OUT    DWORD64     *displacement,
+                                     IN OUT SYMBOL_INFO *Symbol));
+
+DEF_WIN_FUNC (BOOL,    SymGetLineFromAddr64, (IN  HANDLE           process,
+                                              IN  DWORD64          addr,
+                                              OUT DWORD           *displacement,
+                                              OUT IMAGEHLP_LINE64 *Line));
+
+DEF_WIN_FUNC (BOOL,    StackWalk64, (IN     DWORD                            MachineType,
+                                     IN     HANDLE                           process,
+                                     IN     HANDLE                           thread,
+                                     IN OUT STACKFRAME64                    *StackFrame,
+                                     IN OUT VOID                            *ContextRecord,
+                                     IN     PREAD_PROCESS_MEMORY_ROUTINE64   ReadMemoryRoutine,
+                                     IN     PFUNCTION_TABLE_ACCESS_ROUTINE64 FunctionTableAccessRoutine,
+                                     IN     PGET_MODULE_BASE_ROUTINE64       GetModuleBaseRoutine,
+                                     IN     PTRANSLATE_ADDRESS_ROUTINE64     TranslateAddress));
+
+#define ADD_VALUE(func)  { 0, NULL, "dbghelp.dll", #func, (void**)&p_##func }
+
+static struct LoadTable sym_funcs[] = {
+              ADD_VALUE (SymInitialize),
+              ADD_VALUE (SymCleanup),
+              ADD_VALUE (SymGetModuleBase64),
+              ADD_VALUE (SymFromAddr),
+              ADD_VALUE (SymGetLineFromAddr64),
+              ADD_VALUE (SymSetOptions),
+              ADD_VALUE (StackWalk64)
+            };
 
 typedef struct thread_args {
         DWORD                     tid;
@@ -185,27 +207,7 @@ static DWORD WINAPI dump_thread (void *arg)
   CONTEXT      context;
   STACKFRAME64 frame;
   int          rec_count = 0;
-
-  func_SymInitialize        p_SymInitialize;
-  func_SymCleanup           p_SymCleanup;
-  func_SymGetModuleBase64   p_SymGetModuleBase64;
-  func_SymFromAddr          p_SymFromAddr;
-  func_SymGetLineFromAddr64 p_SymGetLineFromAddr64;
-  func_SymSetOptions        p_SymSetOptions;
-  func_StackWalk64          p_StackWalk64;
-
-#define ADD_VALUE(func)  { 0, NULL, "dbghelp.dll", #func, (void**)&p_##func }
-
-  struct LoadTable funcs[] = {
-         ADD_VALUE (SymInitialize),
-         ADD_VALUE (SymCleanup),
-         ADD_VALUE (SymGetModuleBase64),
-         ADD_VALUE (SymFromAddr),
-         ADD_VALUE (SymGetLineFromAddr64),
-         ADD_VALUE (SymSetOptions),
-         ADD_VALUE (StackWalk64)
-       };
-  BOOL okay = (load_dynamic_table(funcs, DIM(funcs)) == DIM(funcs));
+  BOOL         okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
 
   if (!okay)
   {
@@ -327,7 +329,7 @@ sym_cleanup:
   (*p_SymCleanup) (proc);
 
 quit:
-  unload_dynamic_table (funcs, DIM(funcs));
+  unload_dynamic_table (sym_funcs, DIM(sym_funcs));
   return (0);
 }
 
