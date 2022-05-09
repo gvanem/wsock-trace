@@ -98,6 +98,10 @@ static char our_module [_MAX_PATH];
 
 static void (*orig_abort_handler)(int) = SIG_DFL;
 
+/* For some `REG_BSP()` etc. macros.
+ */
+static uintptr_t dummy_reg = 0;
+
 static void print_one_address (thread_args *args, DWORD64 addr)
 {
   SYMBOL_INFO    *info;

@@ -134,7 +134,10 @@ static void        wstrace_printf (BOOL first_line,
   #define GET_RET_ADDR()  0
 #endif
 
-uintptr_t dummy_reg = 0;
+/* For some `REG_x()` macros.
+ * Used when the architecture has no such `x` register.
+ */
+static uintptr_t dummy_reg = 0;
 
 #if (defined(_MSC_VER) && defined(_M_X64)) || \
     (defined(__GNUC__) && !defined(__i386__)) || \
@@ -3695,7 +3698,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       if (g_cfg.show_tid)
          indent += strlen (get_threadid(TRUE)) - 1;  /* just need it's length */
 
-      ret = malloc (strlen(a) + strlen(b) + indent);
+      ret = malloc (strlen(a) + strlen(b) + indent + 3);
       sprintf (ret, "%s\n%*s%s", a, indent, "", b);
     }
 #endif

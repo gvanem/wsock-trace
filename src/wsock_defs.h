@@ -112,8 +112,10 @@
   #error "Unknown 'WS_TRACE_IMAGE_TYPE'."
 #endif
 
-extern uintptr_t dummy_reg;
-
+/*
+ * A `uintptr_t dummy_reg = 0;` must be defined in each module
+ * using these `REG_x()` macros:
+ */
 #if defined(WS_TRACE_AMD64)
   #define REG_EBP(ctx)  (ctx)->Rbp
   #define REG_ESP(ctx)  (ctx)->Rsp
