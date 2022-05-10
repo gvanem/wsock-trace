@@ -3904,7 +3904,7 @@ static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
   return (fe);
 }
 
-NO_INLINE static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
+static NO_INLINE BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
                                          const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
   FWPM_LAYER0 *layer_item = NULL;
@@ -3923,7 +3923,7 @@ NO_INLINE static BOOL print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *
   return (id != 0);
 }
 
-NO_INLINE static BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+static NO_INLINE BOOL print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
                                          const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
   const char *capability_id_str   = "?";

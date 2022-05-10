@@ -17,9 +17,11 @@
 #endif
 
 #ifdef _MSC_VER
-  #define NO_INLINE  __declspec(noinline)
+  #define NO_INLINE     __declspec(noinline)
+  #define THREAD_LOCAL  __declspec(thread)
 #else
-  #define NO_INLINE
+  #define NO_INLINE     __attribute__((noinline))
+  #define THREAD_LOCAL  __thread
 #endif
 
 #if defined(IN_WSOCK_TRACE_C) && (defined(UNICODE) || defined(_UNICODE))
