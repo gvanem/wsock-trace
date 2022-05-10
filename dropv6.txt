@@ -1,7 +1,7 @@
-; Spamhaus IPv6 DROP List 2022/04/20 - (c) 2022 The Spamhaus Project
+; Spamhaus IPv6 DROP List 2022/05/10 - (c) 2022 The Spamhaus Project
 ; https://www.spamhaus.org/drop/dropv6.txt
 ; Last-Modified: Fri, 11 Mar 2022 12:31:22 GMT
-; Expires: Wed, 20 Apr 2022 11:26:52 GMT
+; Expires: Tue, 10 May 2022 09:00:05 GMT
 2a09:ac80::/29 ; SBL494347
 2a0d:e7c7:ffff::/48 ; SBL494346
 2a0b:4ec0::/29 ; SBL494345
