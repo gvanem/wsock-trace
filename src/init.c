@@ -1473,7 +1473,9 @@ void wsock_trace_init (void)
     else ws_sema_inherited = FALSE;
   }
 
-  set_invalid_handler();
+#if !defined(USE_ASAN)
+  set_invalid_handler();  /* ASAN hs issues with this */
+#endif
 
   if ((g_cfg.msvc_only   && !is_msvc)  ||
       (g_cfg.mingw_only  && !is_mingw) ||
@@ -2198,7 +2200,6 @@ static int inv_handler_set = 0;
 static void set_invalid_handler (void)
 {
 #if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800)
-
   if (g_cfg.trace_level >= 1 && !inv_handler_set)
   {
     _set_invalid_parameter_handler (invalid_parameter_handler);
