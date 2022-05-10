@@ -69,36 +69,6 @@ typedef struct smartlist_t {
   #define ASSERT_VAL(x) (void) 0
 #endif
 
-#if defined(_MSC_VER) && 0
-  #define USE_VM_ABORTER
-
-  static void (*orig_aborter)(int) = SIG_DFL;
-
-  static void abort_handler (int sig)
-  {
-    fflush (stderr);
-    fflush (stdout);
-
-    fatal_error = 1;
-    vm_bug_debug = 2;
-    vm_bug_list (10, NULL);
-
-    ExitProcess (GetCurrentProcessId());
-  }
-
-  static void init_aborter (void)
-  {
-    if (orig_aborter != SIG_DFL)
-       return;
-    orig_aborter = signal (SIGABRT, abort_handler);
-    _set_abort_behavior (0, _WRITE_ABORT_MSG);
-  }
-
-#elif defined(_MSC_VER) && !defined(_NDEBUG) && 0
-  #undef  assert
-  #define assert(x) VM_ASSERT(x)
-#endif
-
 #if defined(_CRTDBG_MAP_ALLOC)
   /**
    * Allocate and return an empty smartlist.
@@ -139,10 +109,6 @@ typedef struct smartlist_t {
   {
     smartlist_t *sl = malloc (sizeof(*sl));
 
-  #ifdef USE_VM_ABORTER
-    init_aborter();
-  #endif
-
     if (sl)
     {
       unsigned i;
@@ -171,10 +137,6 @@ typedef struct smartlist_t {
   smartlist_t *smartlist_new (void)
   {
     smartlist_t *sl = malloc (sizeof(*sl));
-
-  #ifdef USE_VM_ABORTER
-    init_aborter();
-  #endif
 
     if (sl)
     {
