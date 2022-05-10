@@ -26,6 +26,10 @@
   #include <sys/cygwin.h>
   #include <fnmatch.h>
 
+  #ifndef FNM_CASEFOLD
+  #define FNM_CASEFOLD  0x10  /* Needs `__GNU_VISIBLE` to be set */
+  #endif
+
   #ifndef _WIN32
   #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/libloc/libloc.h' only */
   #endif
