@@ -209,7 +209,8 @@ static DWORD WINAPI dump_thread (void *arg)
   HANDLE       proc, thr = NULL;
   CONTEXT      context;
   STACKFRAME64 frame;
-  int          save, rec_count = 0;
+  int          save = g_cfg.trace_level;
+  int          rec_count = 0;
   BOOL         okay;
 
 #ifdef USE_ASAN
@@ -217,7 +218,6 @@ static DWORD WINAPI dump_thread (void *arg)
    * Using ASAN could insert some trampoline function.
    * Let us see their values.
    */
-  save = g_cfg.trace_level;
   g_cfg.trace_level = 4;
 #endif
 
