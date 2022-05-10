@@ -349,6 +349,9 @@ static void init (void)
 {
   char *end;
 
+  if (!vm_bug_stream)
+     vm_bug_stream = stdout;
+
   GetModuleFileName (NULL, our_module, sizeof(our_module));
 
   if (prog_dir[0])
