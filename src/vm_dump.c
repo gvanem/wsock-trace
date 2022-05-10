@@ -22,14 +22,20 @@
 #include "cpu.h"
 #include "vm_dump.h"
 
-int vm_bug_debug = 0;
+int   vm_bug_debug  = 0;
+int   vm_bug_indent = 0;
+FILE *vm_bug_stream;
+
+#define VM_BUG_INDENT   vm_bug_indent, ""
 
 #undef  TRACE
-#define TRACE(level, fmt, ...)                           \
-        do {                                             \
-          if (vm_bug_debug >= level)                     \
-             printf ("%s(%u): " fmt, __FILE__, __LINE__, \
-                     ## __VA_ARGS__);                    \
+#define TRACE(level, fmt, ...)                                        \
+        do {                                                          \
+          if (vm_bug_debug >= level) {                                \
+            fprintf (vm_bug_stream, "%*s%s(%u): ", vm_bug_indent, "", \
+                     __FILE__, __LINE__);                             \
+            fprintf (vm_bug_stream, fmt, ## __VA_ARGS__);             \
+          }                                                           \
         } while (0)
 
 #ifndef SYMOPT_DEBUG
@@ -105,15 +111,12 @@ static struct LoadTable sym_funcs[] = {
             };
 
 typedef struct thread_args {
-        DWORD                     tid;
-        HANDLE                    proc;
-        void                     *list;
-        int                       max_frames;      /* How many addresses to trace */
-        int                       max_recursion;   /* How many recursive calls to trace */
-        int                       skip_frames;     /* How many initial frames to NOT trace */
-        func_SymFromAddr          p_SymFromAddr;
-        func_SymGetModuleBase64   p_SymGetModuleBase64;
-        func_SymGetLineFromAddr64 p_SymGetLineFromAddr64;
+        DWORD   tid;
+        HANDLE  proc;
+        void   *list;
+        int     max_frames;      /* How many addresses to trace */
+        int     max_recursion;   /* How many recursive calls to trace */
+        int     skip_frames;     /* How many initial frames NOT to trace */
       } thread_args;
 
 static char our_module [_MAX_PATH];
@@ -124,7 +127,7 @@ static void (*orig_abort_handler)(int) = SIG_DFL;
  */
 static uintptr_t dummy_reg = 0;
 
-static void print_one_address (thread_args *args, DWORD64 addr)
+static NO_INLINE void print_one_address (thread_args *args, DWORD64 addr)
 {
   SYMBOL_INFO    *info;
   char            buf [sizeof(*info) + MAX_SYM_NAME];
@@ -140,7 +143,7 @@ static void print_one_address (thread_args *args, DWORD64 addr)
    */
   BOOL have_PDB_info = TRUE;
 
-  printf ( "0x%" ADDR_FMT ": ", ADDR_CAST(addr));
+  fprintf (vm_bug_stream, "%*s0x%" ADDR_FMT ": ", vm_bug_indent, "", ADDR_CAST(addr));
 
   memset (buf, 0, sizeof(buf));
   info = (SYMBOL_INFO*) buf;
@@ -167,10 +170,10 @@ static void print_one_address (thread_args *args, DWORD64 addr)
   }
 #endif
 
-  base = (*args->p_SymGetModuleBase64) (args->proc, addr);
+  base = (*p_SymGetModuleBase64) (args->proc, addr);
 
   if (GetModuleFileName((HANDLE)(uintptr_t)base, path, sizeof(path)))
-     printf ("%-15s", shorten_path(path));
+     fprintf (vm_bug_stream, "%-15s", shorten_path(path));
 
 #if !defined(_MSC_VER)
   if (path[0] && !stricmp(our_module, path))
@@ -180,24 +183,24 @@ static void print_one_address (thread_args *args, DWORD64 addr)
    */
 #endif
 
-  if (have_PDB_info && (*args->p_SymFromAddr)(args->proc, addr, &displacement, info))
-     printf (" (%s+%lu)", info->Name, DWORD_CAST((DWORD)displacement));
+  if (have_PDB_info && (*p_SymFromAddr)(args->proc, addr, &displacement, info))
+     fprintf (vm_bug_stream, " (%s+%lu)", info->Name, DWORD_CAST((DWORD)displacement));
 
   if (have_PDB_info)
   {
     memset (&line, 0, sizeof(line));
     line.SizeOfStruct = sizeof(line);
-    if ((*args->p_SymGetLineFromAddr64)(args->proc, addr, &tmp, &line))
-       printf ("  %s(%lu)", shorten_path(line.FileName), DWORD_CAST(line.LineNumber));
+    if ((*p_SymGetLineFromAddr64)(args->proc, addr, &tmp, &line))
+       fprintf (vm_bug_stream, "  %s(%lu)", shorten_path(line.FileName), DWORD_CAST(line.LineNumber));
   }
   else
   {
-    printf (" <No PDB>");
+    fprintf (vm_bug_stream, " <No PDB>");
 #if !defined(_MSC_VER)
      /* look in map_file_list */
 #endif
   }
-  putchar ('\n');
+  fputc ('\n', vm_bug_stream);
 }
 
 static DWORD WINAPI dump_thread (void *arg)
@@ -206,8 +209,20 @@ static DWORD WINAPI dump_thread (void *arg)
   HANDLE       proc, thr = NULL;
   CONTEXT      context;
   STACKFRAME64 frame;
-  int          rec_count = 0;
-  BOOL         okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
+  int          save, rec_count = 0;
+  BOOL         okay;
+
+#ifdef USE_ASAN
+  /*
+   * Using ASAN could insert some trampoline function.
+   * Let us see their values.
+   */
+  save = g_cfg.trace_level;
+  g_cfg.trace_level = 4;
+#endif
+
+  okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
+  g_cfg.trace_level = save;
 
   if (!okay)
   {
@@ -222,13 +237,13 @@ static DWORD WINAPI dump_thread (void *arg)
   thr = OpenThread (THREAD_SUSPEND_RESUME|THREAD_GET_CONTEXT, FALSE, args.tid);
   if (!thr)
   {
-    TRACE (1, "Failed in OpenThread(): %s.\n", win_strerror(GetLastError()));
+    TRACE (1, "OpenThread() failed: %s.\n", win_strerror(GetLastError()));
     goto sym_cleanup;
   }
 
   if (SuspendThread(thr) == (DWORD)-1)
   {
-    TRACE (1, "Failed in SuspendThread(): %s.\n", win_strerror(GetLastError()));
+    TRACE (1, "SuspendThread() failed: %s.\n", win_strerror(GetLastError()));
     goto close_thread;
   }
 
@@ -236,7 +251,7 @@ static DWORD WINAPI dump_thread (void *arg)
   context.ContextFlags = CONTEXT_FULL;
   if (!GetThreadContext(thr, &context))
   {
-    TRACE (1, "Failed in GetThreadContext(): %s.\n", win_strerror(GetLastError()));
+    TRACE (1, "GetThreadContext() failed: %s.\n", win_strerror(GetLastError()));
     goto resume_thread;
   }
 
@@ -277,20 +292,21 @@ static DWORD WINAPI dump_thread (void *arg)
        * And what bad could happen then?
        */
       TRACE (3, "stack-base:  0x%p\n"
-                "                stack-limit: 0x%p (%s bytes)\n",
-             tib->StackBase, tib->StackLimit, dword_str(stk_len));
+                "%*s                stack-limit: 0x%p (%s bytes)\n",
+             tib->StackBase,
+             vm_bug_indent, "", tib->StackLimit, dword_str(stk_len));
     }
 
     if (recursion || addr == 0 || frame.AddrReturn.Offset == 0)
     {
       TRACE (2, "addr:                    0x%" ADDR_FMT " %s%s\n"
-                "                frame.AddrPC.Offset:     0x%" ADDR_FMT "\n"
-                "                frame.AddrReturn.Offset: 0x%" ADDR_FMT ".\n",
+                "%*s                frame.AddrPC.Offset:     0x%" ADDR_FMT "\n"
+                "%*s                frame.AddrReturn.Offset: 0x%" ADDR_FMT ".\n",
              ADDR_CAST(addr),
              recursion ? "recursion" : "",
              recursion ? rec_buf     : "",
-             ADDR_CAST(frame.AddrPC.Offset),
-             ADDR_CAST(frame.AddrReturn.Offset));
+             vm_bug_indent, "", ADDR_CAST(frame.AddrPC.Offset),
+             vm_bug_indent, "", ADDR_CAST(frame.AddrReturn.Offset));
 
       if (!recursion || rec_count >= args.max_recursion)
          break;
@@ -311,11 +327,7 @@ static DWORD WINAPI dump_thread (void *arg)
      * line. We're not so much interested in the 'return address'.
      */
     addr -= 1 + sizeof(void*);
-
-    args.p_SymFromAddr          = p_SymFromAddr;
-    args.p_SymGetModuleBase64   = p_SymGetModuleBase64;
-    args.p_SymGetLineFromAddr64 = p_SymGetLineFromAddr64;
-    args.proc                   = proc;
+    args.proc = proc;
     print_one_address (&args, addr);
   }
 
@@ -385,7 +397,13 @@ void vm_bug_list (int skip_frames, void *list)
   {
     WaitForSingleObject (th, INFINITE);
     if (vm_bug_debug >= 2)
-       print_thread_times (th);
+    {
+      FILE *save = g_cfg.trace_stream;
+
+      g_cfg.trace_stream = vm_bug_stream;
+      print_thread_times (th);
+      g_cfg.trace_stream = save;
+    }
     CloseHandle (th);
   }
   else
@@ -394,8 +412,8 @@ void vm_bug_list (int skip_frames, void *list)
 #if 0
   if (!arg.list)
   {
-    puts ("");
-    fflush (stdout);
+    fputs ("\n", vm_bug_stream);
+    fflush (vm_bug_stream);
   }
 #endif
 }
@@ -407,15 +425,33 @@ void vm_bug_report (void)
 
 static void abort_handler (int sig)
 {
-  fflush (stderr);
-
-#if 0
-  vm_bug_list (4, NULL);   /* First traced function should become raise() in the CRT */
-#else
+  /*
+   * For MSVC / clang-cl, all frames should look like this for a
+   * `ws_tool.exe backtrace -a` command:
+   *   Frame Address     Module (Function + displacement) etc.
+   *   --------------------------------------------------------------------------------------------------
+   *   0     0x77E629D7: c:/Windows/System32/ntdll.dll (NtWaitForSingleObject+7)
+   *   1     0x77AF1F44: c:/Windows/System32/KERNELBASE.dll (WaitForSingleObjectEx+148)
+   *   2     0x77AF1E9D: c:/Windows/System32/KERNELBASE.dll (WaitForSingleObject+13)
+   *   3     0x008E73B3: ws_tool.exe     (vm_bug_list+99)  vm_dump.c(386)
+   *   4     0x008E7AEC: ws_tool.exe     (abort_handler+28)  vm_dump.c(415)
+   *   5     0x7713D8CA: c:/Windows/System32/ucrtbase.dll (raise+442)
+   *   6     0x7713EDBD: c:/Windows/System32/ucrtbase.dll (abort+45)
+   *   7     0x77140989: c:/Windows/System32/ucrtbase.dll (common_assert_to_stderr_direct+152)
+   *   8     0x771408AB: c:/Windows/System32/ucrtbase.dll (common_assert_to_stderr<wchar_t>+15)
+   *   9     0x7713FE2D: c:/Windows/System32/ucrtbase.dll (common_assert<wchar_t>+65)
+   * > 10    0x771409E1: c:/Windows/System32/ucrtbase.dll (_wassert+17)             !! we want to start decoding frames from this point
+   *   11    0x00BA43AA: ws_tool.exe     (smartlist_get+90)  smartlist.c(207)
+   *   12    0x00BB7F5C: ws_tool.exe     (backtrace_main+316)  backtrace.c(488)
+   *   13    0x00BBB83E: ws_tool.exe     (run_sub_command+94)  ws_tool.c(77)
+   *   14    0x00BBB968: ws_tool.exe     (main+232)  ws_tool.c(142)
+   *   15    0x00BC62D3: ws_tool.exe     (__scrt_common_main_seh+245)  d:/a01/_work/38/s/src/vctools/crt/vcstartup/src/startup/exe_common.inl(288)
+   *   16    0x76EEFA24: c:/Windows/System32/kernel32.dll (BaseThreadInitThunk+20)
+   *   17    0x77E57A79: c:/Windows/System32/ntdll.dll (__RtlUserThreadStart+42)
+   */
   vm_bug_list (10, NULL);  /* First traced function should become the function with assert(FALSE) */
-#endif
 
-  fflush (stdout);
+  fflush (vm_bug_stream);
 
   if (orig_abort_handler != SIG_DFL)
     (*orig_abort_handler) (sig);
@@ -427,6 +463,8 @@ static void abort_handler (int sig)
 
 void vm_bug_abort_init (void)
 {
+  vm_bug_stream = stdout;
+
   if (orig_abort_handler == SIG_DFL && !IsDebuggerPresent())
   {
     orig_abort_handler = signal (SIGABRT, abort_handler);

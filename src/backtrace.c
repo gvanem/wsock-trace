@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <signal.h>
 #include <windows.h>
 
 #include "common.h"
@@ -41,8 +42,9 @@ typedef USHORT (WINAPI *func_RtlCaptureStackBackTrace) (ULONG  frames_to_skip,
 
 static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
 
-static char g_module [_MAX_PATH];
-static int  use_sym_list = 0;
+static HANDLE g_ntdll = INVALID_HANDLE_VALUE;
+static char   g_module [_MAX_PATH];
+static int    g_use_sym_list = 0;
 
 static smartlist_t *modules_list = NULL;  /* A 'smartlist' of modules in our process. */
 static smartlist_t *symbols_list = NULL;  /* A 'smartlist' of symbols in all modules. */
@@ -114,7 +116,7 @@ static char *get_caller (int frame_num, int *err)
 
   REG_EIP (&ctx) = ret_addr;
 
-  if (use_sym_list)
+  if (g_use_sym_list)
   {
 #if USE_STRDUP2
     char *rc2 = StackWalkShow (thr, &ctx);
@@ -170,15 +172,17 @@ static void print_symbols (const smartlist_t *sl, BOOL print_all)
 
 int backtrace_init (void)
 {
-  HANDLE ntdll = LoadLibrary ("ntdll.dll");
-  int    rc = 0;
+  int rc = 0;
+
+  if (g_ntdll == INVALID_HANDLE_VALUE)
+     g_ntdll = LoadLibrary ("ntdll.dll");
 
   GetModuleFileName (NULL, g_module, sizeof(g_module));
 
-  if (ntdll)
+  if (g_ntdll)
      p_RtlCaptureStackBackTrace = (func_RtlCaptureStackBackTrace)
-                                    GetProcAddress (ntdll, "RtlCaptureStackBackTrace");
-  if (use_sym_list)
+                                    GetProcAddress (g_ntdll, "RtlCaptureStackBackTrace");
+  if (g_use_sym_list)
   {
     StackWalkSymbols (&symbols_list);
     if (g_cfg.trace_level >= 2)
@@ -192,6 +196,9 @@ int backtrace_exit (void)
   /* The 'smartlist_t*' and their contents are freed in stkwalk.c
    */
   symbols_list = modules_list = NULL;
+  if (g_ntdll && g_ntdll != INVALID_HANDLE_VALUE)
+     FreeLibrary (g_ntdll);
+  g_ntdll = INVALID_HANDLE_VALUE;
   return (1);
 }
 
@@ -290,6 +297,8 @@ static char *search_symbols_list (ULONG_PTR addr)
 static int threaded        = 0;
 static int test_vm_bug     = 0;
 static int test_vm_abort   = 0;
+static int test_VM_ASSERT  = 0;
+static int test_inv_parameter_handler = 0;
 static int recursion_depth = 0;
 
 struct thread_arg {
@@ -343,7 +352,7 @@ DWORD WINAPI foo_last (void *arg)
   rc = get_caller (0, &err);
 
 #if USE_STRDUP2
-  if (use_sym_list && err == 0)
+  if (g_use_sym_list && err == 0)
      free (rc);
 #endif
 
@@ -355,7 +364,7 @@ DWORD WINAPI foo_last (void *arg)
     rc = get_caller (i, &err);
     C_printf ("  %s\n", rc);
 #if USE_STRDUP2
-    if (use_sym_list && err == 0)
+    if (g_use_sym_list && err == 0)
        free (rc);
 #endif
   }
@@ -400,9 +409,11 @@ DWORD WINAPI foo_first (void *arg)
 
 static int show_help (void)
 {
-  printf ("Usage: %s [-abstv] [-r <depth>]\n"
+  printf ("Usage: %s [-aAbistv] [-r <depth>]\n"
           "       -a:   test vm_bug_abort_handler().\n"
+          "       -A:   test VM_ASSERT().\n"
           "       -b:   test vm_bug_list().\n"
+          "       -i:   test invalid-parameter trapping.\n"
           "       -s:   test symbol-list and not 'StackWalkShow()'.\n"
           "       -t:   run threaded test.\n"
           "       -v:   sets 'vm_bug_debug' value.\n"
@@ -436,17 +447,128 @@ static void test_unwind_fooX (void)
   }
 }
 
+#if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800) || defined(__MINGW64_VERSION_MAJOR)
+#define HAVE_INVALID_HANDLER 1
+
+static DWORD old_err_mode;
+
+#if defined(_DEBUG) || defined(__MINGW64_VERSION_MAJOR)
+/*
+ * In case it's MinGW-w64, include this here.
+ */
+#include <crtdbg.h>
+
+/*
+ * Temporarily disable asserts just for the current thread.
+ */
+static int crt_dbg_report_handler (int report_type, char *message, int *ret_val)
+{
+  if (report_type != _CRT_ASSERT)
+     return (FALSE);
+
+  if (ret_val)
+     *ret_val = 0;
+
+  /* Returning TRUE prevents real _CrtDbgReport() handler to
+   * show the Dialogbox with the error details.
+   */
+  return (TRUE);
+}
+#endif
+
+static void __cdecl invalid_parameter_handler (const wchar_t *expression,
+                                               const wchar_t *function,
+                                               const wchar_t *file,
+                                               unsigned int   line,
+                                               uintptr_t      dummy)
+{
+#if defined(_DEBUG)
+  const char *comment = "";
+#else
+  const char *comment = ", expecting no sensible parameters";
+#endif
+
+  fprintf (vm_bug_stream,
+           "invalid_parameter_handler() invoked%s:\n"
+           "  expression: %" WCHAR_FMT "\n"
+           "  function:   %" WCHAR_FMT "\n"
+           "  file:       %" WCHAR_FMT "\n"
+           "  line:       %u)\n",
+           comment, expression, function, file, line);
+
+  _set_invalid_parameter_handler (NULL);
+  SetErrorMode (old_err_mode);
+
+  fprintf (vm_bug_stream, "Call-stack:\n");
+
+  /* Raise the signal for SIGABRT to cause the call-stack to be printed.
+   * This also exists the program.
+   */
+  raise (SIGABRT);
+  (void) dummy;
+}
+
+static void setup_handlers (void)
+{
+  /* Setup the signal-handler for SIGABRT
+   */
+  vm_bug_abort_init();
+
+  /*
+   * Let all 'vm_dump.c' print-outs go to 'stderr' with an indent of 2.
+   * Like this:
+   *
+   *   invalid_parameter_handler() invoked:
+   *     expression: stream != nullptr
+   *     function:   _fwrite_internal
+   *     file:       minkernel\crts\ucrt\src\appcrt\stdio\fwrite.cpp
+   *     line:       35)
+   *   Call-stack:
+   *     0x00DE8F89: ws_tool.exe     (backtrace_main+585)  backtrace.c(600)
+   *     0x00DEDD74: ws_tool.exe     (run_sub_command+132)  ws_tool.c(77)
+   *     0x00DEDEF9: ws_tool.exe     (main+249)  ws_tool.c(142)
+   *     0x00DFAF7E: ws_tool.exe     (invoke_main+46)  d:/a01/_work/38/s/src/vctools/crt/vcstartup/src/startup/exe_common.inl(78)
+   *     0x00DFAE52: ws_tool.exe     (__scrt_common_main_seh+338)  d:/a01/_work/38/s/src/vctools/crt/vcstartup/src/startup/exe_common.inl(2
+   *     88)
+   *     0x00DFACF8: ws_tool.exe     (__scrt_common_main+8)  d:/a01/_work/38/s/src/vctools/crt/vcstartup/src/startup/exe_common.inl(330)
+   *     0x00DFAFE3: ws_tool.exe     (mainCRTStartup+3)  d:/a01/_work/38/s/src/vctools/crt/vcstartup/src/startup/exe_main.cpp(16)
+   *     0x76EEFA24: c:/Windows/System32/kernel32.dll (BaseThreadInitThunk+20)
+   *     0x77E57A79: c:/Windows/System32/ntdll.dll (__RtlUserThreadStart+42)
+   */
+  vm_bug_stream = stderr;
+  vm_bug_indent = 2;
+
+  old_err_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
+  _set_invalid_parameter_handler (invalid_parameter_handler);
+
+  /* Also need to setup our CRT-debug report handler.
+   */
+#if defined(_DEBUG) || defined(__MINGW64_VERSION_MAJOR)
+  _CrtSetReportHook (crt_dbg_report_handler);
+#endif
+}
+#endif
+
 int backtrace_main (int argc, char **argv)
 {
   int c;
 
   set_program_name (argv[0]);
 
-  while ((c = getopt (argc, argv, "atvsbr:h?")) != EOF)
+  while ((c = getopt (argc, argv, "aAbitvsr:h?")) != EOF)
     switch (c)
     {
       case 'a':
            test_vm_abort = 1;
+           break;
+      case 'A':
+           test_VM_ASSERT = 1;
+           break;
+      case 'b':
+           test_vm_bug = 1;
+           break;
+      case 'i':
+           test_inv_parameter_handler = 1;
            break;
       case 't':
            threaded = 1;
@@ -455,10 +577,7 @@ int backtrace_main (int argc, char **argv)
            vm_bug_debug++;
            break;
       case 's':
-           use_sym_list = 1;
-           break;
-      case 'b':
-           test_vm_bug = 1;
+           g_use_sym_list = 1;
            break;
       case 'r':
            recursion_depth = atoi (optarg);
@@ -485,7 +604,40 @@ int backtrace_main (int argc, char **argv)
     vm_bug_abort_init();
     sl = smartlist_new();
     smartlist_free (sl);
-    smartlist_get (sl, 0);  /* access after free should trigger a SIGABRT */
+
+    /* Access a smartlist after it's freed should trigger a SIGABRT
+     */
+    smartlist_get (sl, 0);
+    return (1);
+  }
+
+  if (test_VM_ASSERT)
+  {
+    VM_ASSERT (c == 'A');
+    return (1);
+  }
+
+  if (test_inv_parameter_handler)
+  {
+#if defined(HAVE_INVALID_HANDLER)
+    setup_handlers();
+
+    /**
+     * Writing to NULL triggers the MSVC invalid parameter handler inside ftell():
+     *  0x69B11FF2: c:/Windows/System32/ucrtbased.dll (ftell+546)
+     *  0x69B12616: c:/Windows/System32/ucrtbased.dll (fwrite+38)
+     *  0x00EE8E8E: ws_tool.exe     (backtrace_main+590)  backtrace.c(552)
+     *  0x00EEDCF4: ws_tool.exe     (run_sub_command+132)  ws_tool.c(77)
+     *  0x00EEDE79: ws_tool.exe     (main+249)  ws_tool.c(142)
+     *
+     * But sensible parameters for the handler is only present in _DEBUG-mode
+     * which also triggers a Dialogbox unless we call `SetErrorMode()` and
+     * `_CrtSetReportHook()`
+     */
+    fwrite ("hello world", 11, 1, NULL);
+#else
+    fputs ("This compiler lacks support for the '-i' option\n", stderr);
+#endif
     return (1);
   }
 
