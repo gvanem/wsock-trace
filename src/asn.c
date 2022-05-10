@@ -896,15 +896,47 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
                  iana->status);
 }
 
-static BOOL ASN_match (const struct ASN_record *rec, const char *spec)
+static BOOL ASN_match_number (const struct ASN_record *rec, const char *spec)
 {
   char AS_num_str [20];
 
-  if (!spec || (rec->as_number == 0 && !strcmp(spec, "0"))) /* match all or the unknowns */
+  if (rec->as_number == 0 && !strcmp(spec, "0")) /* match all or the unknowns */
      return (TRUE);
 
   _ultoa (rec->as_number, AS_num_str, 10);
   return (fnmatch(spec, AS_num_str, FNM_NOESCAPE) == 0);
+}
+
+static BOOL ASN_match_name (const struct ASN_record *rec, const char *spec)
+{
+  char *p, *end, AS_name_spec [200];
+
+  if (!rec->as_name[0] && *spec == '*')  /* match all or the unknowns */
+     return (TRUE);
+
+  _strlcpy (AS_name_spec, spec, sizeof(AS_name_spec)-1);
+
+  /* To turn this 'spec':
+   *   ws_tool.exe asn -D "Adobe Systems* Ireland"
+   *
+   * into this 'spec':
+   *   ws_tool.exe asn -D "Adobe Systems* Ireland*"
+   */
+  p = strrchr (AS_name_spec, '*');
+  end = strrchr (AS_name_spec, '\0');
+  if (p && p < end - 1)
+     strcpy (end, "*");
+
+  return (fnmatch(AS_name_spec, rec->as_name, FNM_NOESCAPE | FNM_CASEFOLD) == 0);
+}
+
+static BOOL ASN_match (const struct ASN_record *rec, const char *spec)
+{
+  if (!spec)
+     return (TRUE);
+  if (isdigit((int)*spec))
+     return ASN_match_number (rec, spec);
+  return ASN_match_name (rec, spec);
 }
 
 /*
@@ -993,7 +1025,9 @@ static int show_help (void)
           "       -f:        force an update with the '-u' option.\n"
           "       -u:        update the IPFire database-file.\n"
           "       -v:        show version of IPFire database and libloc library version.\n"
-          "  Option '-D' accepts a range. E.g. 'ws_tool asn -D 10[2-4]*'\n", program_name);
+          "  Option '-D' accepts a range or name wildcard.\n"
+          "       E.g. 'ws_tool asn -D 10[2-4]*'\n"
+          "       or   'ws_tool asn -D \"Nasdaq*\"'\n", program_name);
   return (0);
 }
 
