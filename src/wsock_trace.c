@@ -3696,7 +3696,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       if (g_cfg.trace_time_usec)
          indent += 3;
       if (g_cfg.show_tid)
-         indent += strlen (get_threadid(TRUE)) - 1;  /* just need it's length */
+         indent += (int) strlen (get_threadid(TRUE)) - 1;  /* just need it's length */
 
       ret = malloc (strlen(a) + strlen(b) + indent + 3);
       sprintf (ret, "%s\n%*s%s", a, indent, "", b);
