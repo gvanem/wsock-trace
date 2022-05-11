@@ -1473,9 +1473,7 @@ void wsock_trace_init (void)
     else ws_sema_inherited = FALSE;
   }
 
-#if !defined(USE_ASAN)
-  set_invalid_handler();  /* ASAN hs issues with this */
-#endif
+  set_invalid_handler();
 
   if ((g_cfg.msvc_only   && !is_msvc)  ||
       (g_cfg.mingw_only  && !is_mingw) ||

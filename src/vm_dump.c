@@ -209,20 +209,8 @@ static DWORD WINAPI dump_thread (void *arg)
   HANDLE       proc, thr = NULL;
   CONTEXT      context;
   STACKFRAME64 frame;
-  int          save = g_cfg.trace_level;
   int          rec_count = 0;
-  BOOL         okay;
-
-#ifdef USE_ASAN
-  /*
-   * Using ASAN could insert some trampoline function.
-   * Let us see their values.
-   */
-  g_cfg.trace_level = 4;
-#endif
-
-  okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
-  g_cfg.trace_level = save;
+  BOOL         okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
 
   if (!okay)
   {
@@ -376,6 +364,9 @@ void vm_bug_list (int skip_frames, void *list)
 
   init();
 
+  if (vm_bug_debug > 0)  /* show all frames */
+     skip_frames = 0;
+
   /**\todo: 'list' is a user defined 'smartlist_t' array to fill.
    */
   arg.list          = list;
@@ -428,6 +419,12 @@ void vm_bug_report (void)
 
 static void abort_handler (int sig)
 {
+#ifdef _WIN64
+  #define SKIP_FRAMES 9
+#else
+  #define SKIP_FRAMES 10
+#endif
+
   /*
    * For MSVC / clang-cl, all frames should look like this for a
    * `ws_tool.exe backtrace -a` command:
@@ -452,7 +449,7 @@ static void abort_handler (int sig)
    *   16    0x76EEFA24: c:/Windows/System32/kernel32.dll (BaseThreadInitThunk+20)
    *   17    0x77E57A79: c:/Windows/System32/ntdll.dll (__RtlUserThreadStart+42)
    */
-  vm_bug_list (10, NULL);  /* First traced function should become the function with assert(FALSE) */
+  vm_bug_list (SKIP_FRAMES, NULL);  /* First traced function should become the function with assert(FALSE) */
 
   fflush (vm_bug_stream);
 

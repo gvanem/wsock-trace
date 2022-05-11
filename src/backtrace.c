@@ -44,7 +44,7 @@ static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
 
 static HANDLE g_ntdll = INVALID_HANDLE_VALUE;
 static char   g_module [_MAX_PATH];
-static int    g_use_sym_list = 0;
+static BOOL   g_use_sym_list = FALSE;
 
 static smartlist_t *modules_list = NULL;  /* A 'smartlist' of modules in our process. */
 static smartlist_t *symbols_list = NULL;  /* A 'smartlist' of symbols in all modules. */
@@ -240,10 +240,10 @@ static int compare_addr (const void *key, const void **member)
  */
 static char *search_symbols_list (ULONG_PTR addr)
 {
-  static char buf[400];
+  static char buf [400];
   const struct SymbolEntry *se = NULL;
   char *ret = "";
-  char  mod[40] = { '\0' };
+  char  mod [40] = { '\0' };
   char  displacement [20];
   char  file_line [_MAX_PATH+10] = { '\0' };
   int   diff = 0;
@@ -416,7 +416,7 @@ static int show_help (void)
           "       -i:   test invalid-parameter trapping.\n"
           "       -s:   test symbol-list and not 'StackWalkShow()'.\n"
           "       -t:   run threaded test.\n"
-          "       -v:   sets 'vm_bug_debug' value.\n"
+          "       -v:   sets 'vm_bug_debug' value. Will also show all frames.\n"
           "       -r #: sets 'foo_first()' recursion-level.\n", program_name);
   return (0);
 }
@@ -524,7 +524,7 @@ static void setup_handlers (void)
    *     file:       minkernel\crts\ucrt\src\appcrt\stdio\fwrite.cpp
    *     line:       35)
    *   Call-stack:
-   *     0x00DE8F89: ws_tool.exe     (backtrace_main+585)  backtrace.c(600)
+   *     0x00DE8F89: ws_tool.exe     (backtrace_main+585)  backtrace.c(641)  << fwrite() to NULL
    *     0x00DEDD74: ws_tool.exe     (run_sub_command+132)  ws_tool.c(77)
    *     0x00DEDEF9: ws_tool.exe     (main+249)  ws_tool.c(142)
    *     0x00DFAF7E: ws_tool.exe     (invoke_main+46)  d:/a01/_work/38/s/src/vctools/crt/vcstartup/src/startup/exe_common.inl(78)
@@ -537,6 +537,10 @@ static void setup_handlers (void)
    */
   vm_bug_stream = stderr;
   vm_bug_indent = 2;
+
+#if !defined(__CYGWIN__)
+  setvbuf (vm_bug_stream, NULL, _IONBF, 0);
+#endif
 
   old_err_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
   _set_invalid_parameter_handler (invalid_parameter_handler);
@@ -577,7 +581,7 @@ int backtrace_main (int argc, char **argv)
            vm_bug_debug++;
            break;
       case 's':
-           g_use_sym_list = 1;
+           g_use_sym_list = TRUE;
            break;
       case 'r':
            recursion_depth = atoi (optarg);
@@ -605,10 +609,19 @@ int backtrace_main (int argc, char **argv)
     sl = smartlist_new();
     smartlist_free (sl);
 
-    /* Access a smartlist after it's freed should trigger a SIGABRT
+    /* Access a smartlist after it's freed should trigger a SIGABRT.
+     * But not with ASAN since it's "heap-use-after-free" handler will
+     * kick in before this code:
+     *   assert (sl->num_used > idx);
+     * in smartlist.c.
+     * Hence just call 'abort()' with USE_ASAN.
      */
+#ifdef USE_ASAN
+    abort();
+#else
     smartlist_get (sl, 0);
     return (1);
+#endif
   }
 
   if (test_VM_ASSERT)
@@ -635,6 +648,8 @@ int backtrace_main (int argc, char **argv)
      * `_CrtSetReportHook()`
      */
     fwrite ("hello world", 11, 1, NULL);
+
+    fputs ("This compiler does not seems to trap 'invalid parameters'!\n", stderr);
 #else
     fputs ("This compiler lacks support for the '-i' option\n", stderr);
 #endif
