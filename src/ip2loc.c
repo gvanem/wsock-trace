@@ -366,7 +366,7 @@ DWORD ip2loc_num_ipv6_entries (void)
     #pragma clang diagnostic ignored "-Wcast-qual"
     #pragma clang diagnostic ignored "-Wconditional-uninitialized"
   #else
-    #pragma GCC diagnostic ignored   "-Wunused-but-set-variable"
+    GCC_PRAGMA (GCC diagnostic ignored   "-Wunused-but-set-variable")
   #endif
 
 #elif defined(_MSC_VER)

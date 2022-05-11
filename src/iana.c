@@ -552,7 +552,7 @@ int iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *out
  * Ignore the gcc warning on 'loop' initialisation.
  */
 #if defined(__GNUC__)
-#pragma GCC diagnostic ignored  "-Wmissing-braces"
+GCC_PRAGMA (GCC diagnostic ignored  "-Wmissing-braces")
 #endif
 
 /**

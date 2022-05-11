@@ -947,7 +947,7 @@ static DWORD enum_and_load_symbols (const char *module)
 
   me      = smartlist_get (g_modules_list, mod_len-1);
   is_last = (stricmp(module, me->module_name) == 0);
-  num     = enum_module_symbols (g_symbols_list, module, is_last, g_cfg.pdb_report == 0);
+  num     = enum_module_symbols (g_symbols_list, module, is_last, g_cfg.pdb_report);
 
   TRACE (2, "num: %5lu, sym_len: %5d, num+sym_len: %5lu.\n",
          DWORD_CAST(num), sym_len, DWORD_CAST(num+sym_len));
@@ -2004,8 +2004,8 @@ BOOL StackWalkInit (void)
 static char ret_buf [MAX_NAMELEN+100];
 
 #if defined(__GNUC__)
-  #pragma GCC diagnostic ignored  "-Wunused-variable"
-  #pragma GCC diagnostic ignored  "-Wunused-but-set-variable"
+  GCC_PRAGMA (GCC diagnostic ignored  "-Wunused-variable")
+  GCC_PRAGMA (GCC diagnostic ignored  "-Wunused-but-set-variable")
 #endif
 
 static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *ctx)

@@ -49,13 +49,13 @@
  * Ignore some MinGW/gcc warnings below.
  */
 #if defined(__MINGW32__)
-  #pragma GCC diagnostic ignored  "-Wformat"             /* does not understand '%zu'! */
-  #pragma GCC diagnostic ignored  "-Wformat-extra-args"  /* ditto */
+  GCC_PRAGMA (GCC diagnostic ignored  "-Wformat")             /* does not understand '%zu'! */
+  GCC_PRAGMA (GCC diagnostic ignored  "-Wformat-extra-args")  /* ditto */
 #endif
 
 #if defined(__GNUC__)
-  #pragma GCC diagnostic ignored  "-Wstrict-aliasing"
-  #pragma GCC diagnostic ignored  "-Wmissing-braces"
+  GCC_PRAGMA (GCC diagnostic ignored  "-Wstrict-aliasing")
+  GCC_PRAGMA (GCC diagnostic ignored  "-Wmissing-braces")
 #endif
 
 struct libloc_data {
@@ -64,6 +64,7 @@ struct libloc_data {
        FILE                *file;
        size_t               num_AS;
      };
+
 struct libloc_data libloc;
 
 struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */

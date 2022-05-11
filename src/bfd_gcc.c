@@ -470,7 +470,7 @@ static const char *get_file_flags (flagword flags)
 }
 
 #if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wunused-function"
+GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
 #endif
 
 static const char *get_sym_flags (flagword flags)
