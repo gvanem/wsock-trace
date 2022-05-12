@@ -1,9 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -12,8 +28,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{710CAAFD-8FAF-4CAD-BB90-66EA6D461793}</ProjectGuid>
-    <WindowsTargetPlatformVersion>
-    </WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -21,10 +35,30 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>ClangCL</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>ClangCL</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -32,7 +66,19 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -44,6 +90,22 @@
     <LinkIncremental>false</LinkIncremental>
     <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <TargetName>wsock_trace</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <TargetName>wsock_trace</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)</OutDir>
     <TargetName>wsock_trace</TargetName>
@@ -51,6 +113,22 @@
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
     <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <TargetName>wsock_trace</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <TargetName>wsock_trace</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
@@ -62,9 +140,58 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <ClCompile>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /DUSE_WSOCK_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <CustomBuildStep>
+      <Command>del wsock_trace.exp</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Deleting wsock_trace.exp</Message>
+      <TreatOutputAsContent>false</TreatOutputAsContent>
+      <Inputs>wsock_trace.dll;%(Inputs)</Inputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <Link>
+      <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
+      <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
+      <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;LuaJit\src\luajit_static32.lib</AdditionalDependencies>
+      <ManifestFile>
+      </ManifestFile>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+    <ClCompile>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <CustomBuildStep>
+      <Command>del wsock_trace.exp</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Deleting wsock_trace.exp</Message>
+      <TreatOutputAsContent>false</TreatOutputAsContent>
+      <Inputs>wsock_trace.dll;%(Inputs)</Inputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <Link>
+      <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
+      <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
+      <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;LuaJit\src\luajit_static32.lib</AdditionalDependencies>
+      <ManifestFile>
+      </ManifestFile>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+    <ClCompile>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <CustomBuildStep>
       <Command>del wsock_trace.exp</Command>
@@ -85,9 +212,58 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <ClCompile>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4146 /wd4267 /D_WIN32_WINNT=0x0600 /DLIBLOC_PRIVATE /DENABLE_DEBUG /DUSE_TRACE /DUSE_WSOCK_TRACE /D_CRT_NONSTDC_NO_WARNINGS /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/loc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <CustomBuildStep>
+      <Command>del wsock_trace.exp</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Deleting wsock_trace.exp</Message>
+      <TreatOutputAsContent>false</TreatOutputAsContent>
+      <Inputs>wsock_trace.dll;%(Inputs)</Inputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <Link>
+      <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
+      <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
+      <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;LuaJit\src\luajit_static32.lib</AdditionalDependencies>
+      <ManifestFile>
+      </ManifestFile>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+    <ClCompile>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <CustomBuildStep>
+      <Command>del wsock_trace.exp</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Deleting wsock_trace.exp</Message>
+      <TreatOutputAsContent>false</TreatOutputAsContent>
+      <Inputs>wsock_trace.dll;%(Inputs)</Inputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <Link>
+      <ModuleDefinitionFile>wsock_trace.def</ModuleDefinitionFile>
+      <ProgramDatabaseFile>$(TargetName).pdb</ProgramDatabaseFile>
+      <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>advapi32.lib;ole32.lib;dnsapi.lib;winmm.lib;LuaJit\src\luajit_static32.lib</AdditionalDependencies>
+      <ManifestFile>
+      </ManifestFile>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+    <ClCompile>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;USE_DEF_FILE;USE_LUAJIT;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <CustomBuildStep>
       <Command>del wsock_trace.exp</Command>
@@ -144,9 +320,17 @@
   <ItemGroup>
     <ResourceCompile Include="wsock_trace.rc">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">_MSC_VER;DEBUG=1;BITNESS=32</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">_MSC_VER;DEBUG=1;BITNESS=32</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">_MSC_VER;DEBUG=1;BITNESS=64</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">_MSC_VER;DEBUG=0;BITNESS=32</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">_MSC_VER;DEBUG=0;BITNESS=32</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">_MSC_VER;DEBUG=0;BITNESS=64</PreprocessorDefinitions>
       <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ShowProgress>
+      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ShowProgress>
+      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ShowProgress>
       <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ShowProgress>
+      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ShowProgress>
+      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ShowProgress>
     </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
