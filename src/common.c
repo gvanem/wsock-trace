@@ -1108,8 +1108,9 @@ char *fix_drive (char *path)
 
 /**
  * This function is called from `StackWalkShow()` to return a
- * short version of `Line.FileName`. I.e. a file-name relative to
- * the path of the calling program.
+ * short version of `Line.FileName`.
+ *
+ * I.e. a file-name relative to the current-working-directory.
  *
  * \note The `SymGetLineFromAddr64()` function always seems to
  *       return `Line.FileName` in lower-case.
@@ -1129,9 +1130,9 @@ const char *shorten_path (const char *path)
 
   if (!g_cfg.use_full_path)
   {
-    size_t len = strlen (prog_dir);
-    if (len >= 3 && !strnicmp(prog_dir, path, len))
-       return (real_name + len);
+    size_t len = strlen (curr_dir);
+    if (len >= 3 && !strnicmp(curr_dir, path, len))
+       return (real_name + len + 1);
   }
   return (real_name);
 }

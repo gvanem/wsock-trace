@@ -91,7 +91,7 @@
   cpp_demangle   = 1
   short_errors   = 1
   use_full_path  = 1                 # Report with full file-names in traces. Otherwise, report file-names
-                                     # relative to the path of the calling program.
+                                     # relative to the path of the current-working-directory.
   use_short_path = 0                 # Report with short file-names always.
 
   use_toolhlp32  = 1                 # If 0, use PsApi.dll functions instead
