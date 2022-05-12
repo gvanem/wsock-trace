@@ -447,7 +447,7 @@ static void test_unwind_fooX (void)
   }
 }
 
-#if defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800) || defined(__MINGW64_VERSION_MAJOR)
+#if (defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800) || defined(__MINGW64_VERSION_MAJOR)) && !defined(__CYGWIN__)
 #define HAVE_INVALID_HANDLER 1
 
 static DWORD old_err_mode;
