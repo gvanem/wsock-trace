@@ -719,7 +719,7 @@ const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
  */
 const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
 {
-  const char *p = sockaddr_str_port (sa, sa_len);
+  const char *p = sockaddr_str_port (sa);
 
   if (!p)
      return sockaddr_str (sa, sa_len);
@@ -742,7 +742,7 @@ struct fake_sockaddr_un {
  *  \li `"127.0.0.1:1234"`  for an `AF_INET` sockaddr. And
  *  \li `"[0F::80::]:1234"` for an `AF_INET6` sockaddr.
  */
-const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
+const char *sockaddr_str_port (const struct sockaddr *sa)
 {
   const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) sa;
   const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) sa;
@@ -788,7 +788,6 @@ const char *sockaddr_str_port (const struct sockaddr *sa, const int *sa_len)
     return (buf);
   }
 
-  ARGSUSED (sa_len);
   return (NULL);
 }
 
@@ -1553,7 +1552,7 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   if (addr->sa_family == AF_UNIX)
   {
     WSTRACE ("bind (%s, \"%s\") --> %s",
-             socket_number(s), sockaddr_str_port (addr, &addr_len), get_error(rc, 0));
+             socket_number(s), sockaddr_str_port(addr), get_error(rc, 0));
   }
   else
   {
