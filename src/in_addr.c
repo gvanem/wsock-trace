@@ -102,6 +102,19 @@ char *ws_inet_ntop (int family, const void *addr, char *result, size_t result_si
 }
 
 /**
+ * A more compact version of the above.
+ */
+char *ws_inet_ntop2 (int family, const void *addr)
+{
+  static char buf [MAX_IP6_SZ+1];
+  PCSTR  rc = ws_inet_ntop (family, addr, buf, sizeof(buf), NULL);
+
+  if (!rc)
+     strcpy (buf, "??");
+  return (buf);
+}
+
+/**
  * This function is for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
@@ -121,6 +134,15 @@ int ws_inet_pton (int family, const char *addr, void *result, int *err)
   *err = WSAEAFNOSUPPORT;
   return (0);
 }
+
+/**
+ * A more compact version of the above.
+ */
+int ws_inet_pton2 (int family, const char *addr, void *result)
+{
+  return ws_inet_pton (family, addr, result, NULL);
+}
+
 
 /**
  * Format an IPv4 address, more or less like `inet_ntoa()`.

@@ -638,7 +638,6 @@ static int libloc_handle_net (struct loc_network    *net,
 {
   struct loc_as       *as = NULL;
   struct _loc_network *_net = (struct _loc_network*) net;
-  char                 _prefix_str [10];
   char                 _net_name [MAX_IP6_SZ+1+4];
   int                  _prefix = _net->prefix;
   const char          *net_name;
@@ -649,6 +648,7 @@ static int libloc_handle_net (struct loc_network    *net,
   int                  rc = 0;
   uint32_t             AS_num;
   BOOL                 is_anycast, is_anon_proxy, is_sat_provider, is_hostile;
+
 #if 0
   /** \todo: hopefully, some day this could be possible in 'libloc'
    */
@@ -659,9 +659,7 @@ static int libloc_handle_net (struct loc_network    *net,
   if (ip4)
      _prefix -= 96;
 
-  ws_inet_ntop (AF_INET6, &_net->first_address, _net_name, sizeof(_net_name), NULL);
-  strcat (_net_name, "/");
-  strcat (_net_name, _itoa(_prefix, _prefix_str, 10));
+  snprintf (_net_name, sizeof(_net_name), "%s/%d", ws_inet_ntop2(AF_INET6, &_net->first_address), _prefix);
 
   if (ip4)
        net_name = _net_name + strlen("::ffff:");
@@ -754,7 +752,7 @@ static int __ASN_libloc_print (const char            *intro,
 {
   struct loc_network *net = NULL;
   struct in6_addr     addr;
-  char                addr_str [MAX_IP6_SZ+1] = "?";
+  const  char        *addr_str;
   int                 rc, save, ip6_teredo;
 
   if (!libloc.db)
@@ -786,19 +784,15 @@ static int __ASN_libloc_print (const char            *intro,
 
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
     *(u_long*) &addr.s6_words[6] = ip4->s_addr;
-    if (g_cfg.trace_level >= 2)
-       ws_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
   }
   else if (ip6)
   {
     memcpy (&addr, ip6, sizeof(addr));
-    if (g_cfg.trace_level >= 2)
-       ws_inet_ntop (AF_INET6, &addr, addr_str, sizeof(addr_str), NULL);
   }
   else
     return (0);
 
-  TRACE (2, "Looking up: %s.\n", addr_str);
+  TRACE (2, "Looking up: %s.\n", addr_str = ws_inet_ntop2(AF_INET6, &addr));
 
   /* Do not trace 'inet_pton()' inside libloc or `WSAGetLastError()' below.
    */

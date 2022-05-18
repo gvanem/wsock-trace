@@ -110,13 +110,13 @@ static smartlist_t *geoip_ipv6_entries = NULL;
  * Structure for counting countries found at run-time.
  */
 struct geoip_stats {
-       uint64  num4;        /**< Total # of times seen in an IPv4-address */
-       uint64  num6;        /**< Total # of times seen in an IPv6-address */
-       char    country[2];  /**< 2 letter ISO-3166 2 letter Country-code */
-       char    flag;        /**< The country was seen in IPv4 or IPv6 address(es). <br>
-                             *   If the address was found by `ip2loc_get_ipv4_entry()` or `ip2loc_get_ipv6_entry()`
-                             *   the flag `GEOIP_VIA_IP2LOC` is also set.
-                             */
+       uint64  num4;         /**< Total # of times seen in an IPv4-address */
+       uint64  num6;         /**< Total # of times seen in an IPv6-address */
+       char    country [2];  /**< 2 letter ISO-3166 2 letter Country-code */
+       char    flag;         /**< The country was seen in IPv4 or IPv6 address(es). <br>
+                              *   If the address was found by `ip2loc_get_ipv4_entry()` or `ip2loc_get_ipv6_entry()`
+                              *   the flag `GEOIP_VIA_IP2LOC` is also set.
+                              */
     };
 
 /**
@@ -247,8 +247,8 @@ static void geoip_ipv4_add_specials (void)
   {
     DWORD low, high;
 
-    if (ws_inet_pton (AF_INET, priv[i].low, &low, NULL) == 1 &&
-        ws_inet_pton (AF_INET, priv[i].high, &high, NULL) == 1)
+    if (ws_inet_pton2(AF_INET, priv[i].low, &low) == 1 &&
+        ws_inet_pton2(AF_INET, priv[i].high, &high) == 1)
       geoip4_add_entry (swap32(low), swap32(high), priv[i].remark);
     else
       TRACE (0, "Illegal low/high IPv4 address: %s/%s\n", priv[i].low, priv[i].high);
@@ -280,8 +280,8 @@ static void geoip_ipv6_add_specials (void)
   {
     struct in6_addr low, high;
 
-    ws_inet_pton (AF_INET6, priv[i].low, &low, NULL);
-    ws_inet_pton (AF_INET6, priv[i].high, &high, NULL);
+    ws_inet_pton2 (AF_INET6, priv[i].low, &low);
+    ws_inet_pton2 (AF_INET6, priv[i].high, &high);
     geoip6_add_entry (&low, &high, priv[i].remark);
   }
 }
@@ -435,10 +435,10 @@ static int geoip6_CSV_add (struct CSV_context *ctx, const char *value)
   switch (ctx->field_num)
   {
     case 0:
-          ws_inet_pton (AF_INET6, value, &low, NULL);
+          ws_inet_pton2 (AF_INET6, value, &low);
           break;
      case 1:
-          ws_inet_pton (AF_INET6, value, &high, NULL);
+          ws_inet_pton2 (AF_INET6, value, &high);
           break;
      case 2:
           memcpy (&country, value, sizeof(country));

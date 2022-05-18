@@ -307,12 +307,12 @@ static int DNSBL_test_single (const char *addr_str)
   int   special, rc;
 
   snprintf (addr_buf, sizeof(addr_buf), "\"%s\"", addr_str);
-  if (ws_inet_pton(AF_INET, addr_str, &addr.ip4, NULL) == 1)
+  if (ws_inet_pton2(AF_INET, addr_str, &addr.ip4) == 1)
   {
     special = INET_util_addr_is_special (&addr.ip4, NULL, &remark);
     rc = DNSBL_check_common (&addr.ip4, NULL, &sbl_ref);
   }
-  else if (ws_inet_pton(AF_INET6, addr_str, &addr.ip6, NULL) == 1)
+  else if (ws_inet_pton2(AF_INET6, addr_str, &addr.ip6) == 1)
   {
     special = INET_util_addr_is_special (NULL, &addr.ip6, &remark);
     rc = DNSBL_check_common (NULL, &addr.ip6, &sbl_ref);
@@ -404,7 +404,7 @@ static int DNSBL_test (const char *addr_str)
     const char *country_code, *location, *okay;
     BOOL        res;
 
-    ws_inet_pton (test->family, test->addr, &addr, NULL);
+    ws_inet_pton2 (test->family, test->addr, &addr);
 
     if (test->family == AF_INET)
     {
@@ -617,7 +617,7 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   if (!dnsbl)
      return;
 
-  ws_inet_pton (AF_INET, addr, &dnsbl->u.ip4.network, NULL);
+  ws_inet_pton2 (AF_INET, addr, &dnsbl->u.ip4.network);
   INET_util_get_mask4 (&dnsbl->u.ip4.mask, bits);
 
   dnsbl->bits   = bits;
@@ -663,7 +663,7 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
   if (!dnsbl)
      return;
 
-  ws_inet_pton (AF_INET6, addr, &dnsbl->u.ip6.network, NULL);
+  ws_inet_pton2 (AF_INET6, addr, &dnsbl->u.ip6.network);
   INET_util_get_mask6 (&dnsbl->u.ip6.mask, bits);
 
   dnsbl->bits   = bits;
