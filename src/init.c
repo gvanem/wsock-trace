@@ -463,8 +463,8 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
 
   if (exclude_which & EXCL_ADDRESS)
   {
-    if (ws_inet_pton(AF_INET, name, ia4, NULL) == 1 ||
-        ws_inet_pton(AF_INET6, name, ia6, NULL) == 1)
+    if (ws_inet_pton2(AF_INET, name, ia4) == 1 ||
+        ws_inet_pton2(AF_INET6, name, ia6) == 1)
        which = EXCL_ADDRESS;
   }
 
@@ -731,6 +731,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 
   else if (!stricmp(key, "dump_nameinfo"))
      g_cfg.dump_nameinfo = atoi (val);
+
+  else if (!stricmp(key, "dump_addrinfo"))
+     g_cfg.dump_addrinfo = atoi (val);
 
   else if (!stricmp(key, "dump_protoent"))
      g_cfg.dump_protoent = atoi (val);
@@ -1647,6 +1650,7 @@ void wsock_trace_init (void)
     g_cfg.dump_servent           = FALSE;
     g_cfg.dump_protoent          = FALSE;
     g_cfg.dump_nameinfo          = FALSE;
+    g_cfg.dump_addrinfo          = FALSE;
     g_cfg.dump_wsaprotocol_info  = FALSE;
     g_cfg.dump_wsanetwork_events = FALSE;
     g_cfg.dump_data              = 0;

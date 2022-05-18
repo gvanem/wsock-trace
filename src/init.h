@@ -156,6 +156,7 @@ struct config_table {
        BOOL    dump_data;
        BOOL    dump_select;
        BOOL    dump_nameinfo;
+       BOOL    dump_addrinfo;
        BOOL    dump_hostent;
        BOOL    dump_servent;
        BOOL    dump_protoent;

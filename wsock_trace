@@ -107,6 +107,7 @@
   dump_protoent  = 1                 # Dump the 'protoent' structure returned in getprotobynumber() and getprotobyname().
   dump_servent   = 1                 # Dump the 'servent' structure returned in getservbyport() and getservbyname().
   dump_nameinfo  = 1                 # Dump the data returned from getnameinfo().
+  dump_addrinfo  = 1                 # Dump the data returned from getaddrinfo() and GetAddrInfoW().
 
   dump_wsaprotocol_info    = 1       # Dump the WSAPROTOCOL_INFO[A|W] structure in e.g. WSASocketA() and WSADuplicateSocketA().
   dump_wsanetwork_events   = 1       # Dump the WSAEVENT array from WSAEnumNetworkEvents().
