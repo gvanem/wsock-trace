@@ -12,28 +12,28 @@
  * The IPv4-address structure with a short-country.
  */
 struct ipv4_node {
-       DWORD low;         /**< The lowest address for this node */
-       DWORD high;        /**< The highest address for this node */
-       char  country[3];  /**< The short country name of this node */
+       DWORD low;          /**< The lowest address for this node */
+       DWORD high;         /**< The highest address for this node */
+       char  country [3];  /**< The short country name of this node */
      };
 
 /**\struct ip4_node
  * The IPv6-address structure with a short-country.
  */
 struct ipv6_node {
-       struct in6_addr low;         /**< The lowest address for this node */
-       struct in6_addr high;        /**< The highest address for this node */
-       char            country[3];  /**< The short country name of this node */
+       struct in6_addr low;          /**< The lowest address for this node */
+       struct in6_addr high;         /**< The highest address for this node */
+       char            country [3];  /**< The short country name of this node */
      };
 
 /**\struct ip2loc_entry
  * A structure as returned from functions in ip2loc.c.
  */
 struct ip2loc_entry {
-       char   country_short[3];     /**< The short country name of this entry */
-       char   country_long[30];     /**< The full country name of this entry */
-       char   city[40];             /**< The city name of this entry (if any) */
-       char   region[40];           /**< The region name of this entry (if any) */
+       char   country_short [3];    /**< The short country name of this entry */
+       char   country_long  [30];   /**< The full country name of this entry */
+       char   city [40];            /**< The city name of this entry (if any) */
+       char   region [40];          /**< The region name of this entry (if any) */
        float  latitude;             /**< The latitude of this entry (if any) */
        float  longitude;            /**< The longitude of this entry (if any) */
      };

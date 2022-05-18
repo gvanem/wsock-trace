@@ -18,7 +18,7 @@
  * The structure for host-entries we read from a file.
  */
 struct host_entry {
-       char        host_name [MAX_HOST_LEN];  /**< name of `etc/hosts` entry */
+       char        host_name [MAX_HOST_LEN];  /**< name of `/etc/hosts` entry */
        int         addr_type;                 /**< type `AF_INET` or `AF_INET6` */
        char        addr [IN6ADDRSZ];          /**< the address; 16 bytes to hold an IPv6 address */
        const char *file;                      /**< which `g_cfg.hosts_file[]` is this entry from? */
@@ -61,7 +61,8 @@ static void add_entry (const void *addr, const char *name, int af_type)
 }
 
 /**
- * `smartlist_sort()` and `smartlist_make_uniq()` helper; compare on names.
+ * `smartlist_sort()` and `smartlist_make_uniq()` helper;
+ * compare on address-types, then on names.
  */
 static int hosts_compare_name (const void **_a, const void **_b)
 {
@@ -69,7 +70,7 @@ static int hosts_compare_name (const void **_a, const void **_b)
   const struct host_entry *b = *_b;
 
   if (a->addr_type == b->addr_type)
-     return strcmp (a->host_name, b->host_name);
+     return stricmp (a->host_name, b->host_name);
 
   /* This will cause AF_INET6 addresses to come last.
    */
@@ -83,7 +84,7 @@ static int hosts_bsearch_name (const void *key, const void **member)
 {
   const struct host_entry *he = *member;
   const char              *name = key;
-  int   rc = strcmp (name, he->host_name);
+  int   rc = stricmp (name, he->host_name);
 
   TRACE (3, "key: %-30s he->host_name: %-30s he->addr_type: %d, rc: %d\n",
          name, he->host_name, he->addr_type, rc);
@@ -99,7 +100,7 @@ static int hosts_bsearch_name (const void *key, const void **member)
  *
  * \note
  * The Windows `hosts` file support both `AF_INET` and `AF_INET6` addresses. <br>
- * That's the reason we use the internal `ws_inet_pton()`.
+ * That's the reason we use the internal `ws_inet_pton2()`.
  */
 static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
 {
@@ -115,12 +116,12 @@ static int hosts_CSV_add (struct CSV_context *ctx, const char *value)
            TRACE (3, "Ignoring scoped addr: '%s'\n", value);
            family = -1;
          }
-         else if (ws_inet_pton(AF_INET, value, &ip4, NULL) == 1)
+         else if (ws_inet_pton2(AF_INET, value, &ip4) == 1)
          {
            TRACE (3, "AF_INET: addr: '%s'\n", value);
            family = AF_INET;
          }
-         else if (ws_inet_pton(AF_INET6, value, &ip6, NULL) == 1)
+         else if (ws_inet_pton2(AF_INET6, value, &ip6) == 1)
          {
            TRACE (3, "AF_INET6: addr: '%s'\n", value);
            family = AF_INET6;
@@ -209,8 +210,7 @@ void hosts_file_init (void)
   if (!hosts_list)
      return;
 
-  for (current_hosts_file = 0; g_cfg.hosts_file[current_hosts_file];
-       current_hosts_file++)
+  for (current_hosts_file = 0; g_cfg.hosts_file[current_hosts_file]; current_hosts_file++)
   {
     memset (&ctx, '\0', sizeof(ctx));
     ctx.file_name  = g_cfg.hosts_file [current_hosts_file];
@@ -236,7 +236,8 @@ int hosts_file_check_hostent (const char *name, const struct hostent *host)
 {
   const char              **addresses;
   const struct host_entry  *he;
-  int                       i, asize, num = 0;
+  int                       i, asize;
+  int                       num = 0;
 
   addresses = (const char**) host->h_addr_list;
 
@@ -272,7 +273,7 @@ int hosts_file_check_hostent (const char *name, const struct hostent *host)
  */
 int hosts_file_check_addrinfo (const char *name, const struct addrinfo *ai)
 {
-  struct hostent he;
+  struct hostent             he;
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
   char *addr_list [2];
@@ -307,7 +308,7 @@ int hosts_file_check_addrinfo (const char *name, const struct addrinfo *ai)
 int hosts_file_check_addrinfoW (const wchar_t *name, const struct addrinfoW *aiW)
 {
   struct addrinfo ai;
-  char  a_name [100] = "??";
+  char   a_name [100] = "??";
 
   if (WideCharToMultiByte(CP_ACP, 0, name, -1, a_name, (int)sizeof(a_name), NULL, NULL) == 0)
      return (0);
