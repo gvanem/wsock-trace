@@ -1463,8 +1463,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
 
   ws_inet_pton2 (AF_INET, IP4_NET, &network4);
   ws_inet_pton2 (AF_INET6, IP6_NET, &network6);
-  ws_inet_ntop2 (family, (family == AF_INET6) ? (const void*)&network6 : (const void*)&network4,
-                 network_str, sizeof(network_str));
+  if (family == AF_INET6)
+       _strlcpy (network_str, ws_inet_ntop2(family, &network6), sizeof(network_str));
+  else _strlcpy (network_str, ws_inet_ntop2(family, &network4), sizeof(network_str));
 
   for (bits = 0; bits <= max_bits; bits++)
   {
