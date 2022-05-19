@@ -76,12 +76,18 @@ int  (__stdcall *g_WSAGetLastError) (void)    = dummy_WSAGetLastError;
  */
 static smartlist_t *sock_list = NULL;
 
-struct sock_list_entry {
-       SOCKET sock;
-       int    family;
-       int    type;
-       int    protocol;
-     };
+/**
+ * \typedef sock_list_entry
+ * The structure for remembering a socket's lifetime.
+ *
+ * \todo: options from `setsockopt()` should be added here.
+ */
+typedef struct sock_list_entry {
+        SOCKET sock;        /**< the socket-value */
+        int    family;      /**< the address family; AF_INET, AF_INET6, AF_UNIX */
+        int    type;        /**< the procotol type; SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, SOCK_RDM, SOCK_SEQPACKET */
+        int    protocol;    /**< the protocol number; IPPROTO_IP, etc. */
+      } sock_list_entry;
 
 void sock_list_add (SOCKET sock, int family, int type, int protocol)
 {
