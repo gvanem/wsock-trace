@@ -61,7 +61,7 @@ functions.
 \li *IP-Location* information from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
   (this is contolled by `USE_IP2LOCATION = 1` in the makefiles).<br>
   The above `Mountain View/California` is Google's well-known location.<br>
-  Many thanks to IP2Location [**[3]**](#footnotes) for their data-bases.
+  Many thanks to **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)** for their data-bases.
 
 \li *Domain Name System-based Blackhole List*
   (**[DNSBL](https://en.wikipedia.org/wiki/DNSBL)**) support: with the help of

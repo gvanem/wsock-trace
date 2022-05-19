@@ -559,9 +559,9 @@ static BOOL win32_ascii_to_idn (const char *in, char **out)
 #endif  /* (USE_WINIDN && 0) */
 
 /**
- * `IDNA_convert_to_ACE()`.
+ * IDNA_convert_to_ACE().
  *
- * E.g. convert "www.tromsø.no" to ACE:
+ * E.g. convert `"www.tromsø.no"` to ACE:
  *
  * \li Convert each label separately. `www`, `tromsø` and `no`.
  * \li `tromsø` -> `u+0074`, `u+0072, `u+006F`, `u+006D`, `u+0073` and `u+00F8`.
@@ -570,10 +570,9 @@ static BOOL win32_ascii_to_idn (const char *in, char **out)
  * \li Prepending `xn--` for each converted label gives `www.xn--troms-zua.no`.
  *
  * E.g. 2: \n
- *   `www.blåbærsyltetøy.no` -> `www.xn--blbrsyltety-y8aO3x.no`  (which exist, but it's a parked domain).
+ *   `www.blåbærsyltetøy.no` -> `www.xn--blbrsyltety-y8aO3x.no` (which exist, but it's a parked domain).
  *
- * \ref http://www.imc.org/idna/do-idna.cgi
- *      http://www.norid.no/domenenavnbaser/ace/ace_technical.en.html
+ * \sa https://www.norid.no/en/om-domenenavn/regelverk-for-no/vedlegg-l/
  */
 BOOL IDNA_convert_to_ACE (
           char   *name,   /* IN/OUT: native ASCII/ACE name */

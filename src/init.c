@@ -154,7 +154,7 @@ static void set_time_format (TS_TYPE *ret, const char *val)
  * Return the preferred time-stamp string.
  *
  * \todo the below `buf[]` should be a "Thread Local Storage" variable.
- * \ref  https://docs.microsoft.com/en-us/windows/win32/dlls/using-thread-local-storage-in-a-dynamic-link-library
+ * \sa https://docs.microsoft.com/en-us/windows/win32/dlls/using-thread-local-storage-in-a-dynamic-link-library
  */
 const char *get_timestamp (void)
 {

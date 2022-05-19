@@ -2470,10 +2470,14 @@ static char *add_app (const char *app, BOOL *exist, BOOL *is_native)
  * Break apart the `rule` and extract the `Action`, `Dir`, the program-name. etc.
  *
  * Look only for lines that looks like:
- *   v2.30|Action=Block|Active=TRUE|Dir=Out|RA4=8.254.34.155|Name=8.254.34.155_Block|.
+ * ```
+ *   v2.30|Action=Block|Active=TRUE|Dir=Out|RA4=8.254.34.155|Name=8.254.34.155_Block|
+ * ```
  *
  * or:
+ * ```
  *   v2.10|Action=Allow|Active=TRUE|Dir=In|Protocol=17|Profile=Private|App=F:\gv\dx-radio\pothos-sdr\bin\gqrx.exe|...
+ * ```
  */
 static struct rule_entry *parse_program_rule (const char *_rule)
 {
@@ -2734,7 +2738,9 @@ static int rule_compare_name (const void **_a, const void **_b)
 
 /**
  * Enumerate the Firewall rules from:
+ * ```
  *   HKLM\SYSTEM\ControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules
+ * ```
  */
 static int fw_enumerate_programs (BOOL RA4_only)
 {

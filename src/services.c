@@ -392,10 +392,11 @@ static __inline const struct servent *fill_servent (const struct service_entry *
  * The internal `getservbyport()` function that does a
  * binary search in the `services_list`.
  *
- * \param[in] port      the port on network that we'll search the name for.
- * \param[in] protocol  the optional protocol name to look for.
- * \param[in] fallback  call the Winsock function `getservbyport()` if this
- *                      function fails to find a match.
+ * \param[in] port        the port on network that we'll search the name for.
+ * \param[in] protocol    the optional protocol name to look for.
+ * \param[in] fallback    call the Winsock function `getservbyport()` if this
+ *                        function fails to find a match.
+ * \param[in] do_wstrace  TRUE when this function is called from services_run_tests().
  */
 const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOOL fallback, BOOL do_wstrace)
 {
@@ -414,7 +415,7 @@ const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOO
    *  but possibly ask Winsock about it.
    */
   if (protocol && lookup.proto == PROTO_UNKNOWN)
-      TRACE (3, "Unknown protocol: '%s'.\n", protocol);
+       TRACE (3, "Unknown protocol: '%s'.\n", protocol);
   else if (!services_list || g_cfg.num_services_files == 0)
        TRACE (3, "No services file(s).\n");
   else se = smartlist_bsearch (services_list, &lookup, services_bsearch_port_proto);

@@ -730,13 +730,17 @@ static int libloc_handle_net (struct loc_network    *net,
  * Print ASN information for an IPv4 or IPv6 address.
  *
  * Simlator to wahat the IPFire script does:
+ * ```
  * c:\> py -3 location.py lookup ::ffff:45.150.206.231
  *   Network:           45.150.206.0/23
  *   Autonomous System: AS35029 - WebLine LTD
  *   Anonymous Proxy:   yes
+ * ```
  *
- * for an IPv4 address we must map `ip4` to an IPv4-mapped first:
- * `45.150.206.231`  -> `::ffff:45.150.206.231`)
+ * for an IPv4 address we must first map `ip4` to an IPv4-mapped address:
+ * ```
+ *   45.150.206.231 -> ::ffff:45.150.206.231
+ * ```
  *
  * This function does nothing for top-level networks like from IANA, RIPE etc.
  * 'libloc' only have information on RIRs (Regional Internet Registries).
