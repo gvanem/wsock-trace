@@ -320,7 +320,7 @@
 #endif
 
 #ifndef IPV6_GET_IFLIST
-#define IPV6_GET_IFLIST  33
+#define IPV6_GET_IFLIST 33
 #endif
 
 #ifndef IPV6_RECVRTHDR
@@ -333,6 +333,10 @@
 
 #ifndef IPV6_RECVTCLASS
 #define IPV6_RECVTCLASS 40
+#endif
+
+#ifndef IPV6_ECN
+#define IPV6_ECN IP_ECN
 #endif
 
 #ifndef IPV6_PKTINFO_EX
@@ -949,6 +953,8 @@ static const struct search_list tcp_options[] = {
 
 /**
  * The options and their names used in `setsockopt (s, IPPROTO_UDP, opt, ...)` etc.
+ *
+ * Ref: https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-udp-socket-options
  */
 static const struct search_list udp_options[] = {
                     ADD_VALUE (UDP_NOCHECKSUM),
@@ -1025,6 +1031,7 @@ static const struct search_list ip6_options[] = {
                     ADD_VALUE (IPV6_CHECKSUM),
                     ADD_VALUE (IPV6_V6ONLY),
                     ADD_VALUE (IPV6_IFLIST),
+                    ADD_VALUE (IPV6_ECN),
                     ADD_VALUE (IPV6_PKTINFO_EX),
                     ADD_VALUE (IPV6_ADD_IFLIST),
                     ADD_VALUE (IPV6_DEL_IFLIST),
@@ -1509,14 +1516,14 @@ const char *get_sio_name (DWORD code)
   return (buf);
 }
 
-const char *socklevel_name (int level)
-{
-  return list_lookup_name (level, levels, DIM(levels));
-}
-
 const char *protocol_name (int proto)
 {
   return list_lookup_name (proto, protocols, DIM(protocols));
+}
+
+const char *socklevel_name (int level)
+{
+  return list_lookup_name (level, levels, DIM(levels));
 }
 
 const char *sockopt_name (int level, int opt)
@@ -1567,18 +1574,15 @@ static const char *dump_ip_add_membership (char *buf, size_t buf_sz, const char 
 
   assert (buf_sz > sizeof(addr) + sizeof(iface) + 5);
 
-  ws_inet_ntop (AF_INET, &mreq->imr_multiaddr.s_addr, addr, sizeof(addr), NULL);
-  ws_inet_ntop (AF_INET, &mreq->imr_interface.s_addr, iface, sizeof(iface), NULL);
+  memcpy (&addr,  ws_inet_ntop2(AF_INET, &mreq->imr_multiaddr.s_addr), sizeof(addr));
+  memcpy (&iface, ws_inet_ntop2(AF_INET, &mreq->imr_interface.s_addr), sizeof(iface));
   snprintf (buf, buf_sz, "{%s, %s}", addr, iface);
   return (buf);
 }
 
 static const char *dump_ip_multicast_if (char *buf, size_t buf_sz, const char *opt_val)
 {
-  char addr [MAX_IP4_SZ];
-
-  ws_inet_ntop (AF_INET, (const void*) opt_val, addr, sizeof(addr), NULL);
-  snprintf (buf, buf_sz, "{%s}", addr);
+  snprintf (buf, buf_sz, "{%s}", ws_inet_ntop2(AF_INET, (const void*)opt_val));
   return (buf);
 }
 
@@ -1591,10 +1595,10 @@ static const char *dump_ipv6_multicast_if (char *buf, size_t buf_sz, const char 
 static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const char *opt_val)
 {
   const struct ipv6_mreq *mreq6 = (const struct ipv6_mreq*) opt_val;
-  char  addr [MAX_IP6_SZ];
 
-  ws_inet_ntop (AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr, addr, sizeof(addr), NULL);
-  snprintf (buf, buf_sz, "{%s%%%d}", addr, mreq6->ipv6mr_interface);
+  snprintf (buf, buf_sz, "{%s%%%d}",
+            ws_inet_ntop2(AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr),
+            mreq6->ipv6mr_interface);
   return (buf);
 }
 
@@ -1609,8 +1613,7 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
  */
 static const char *socket_addr_str (char *buf, size_t buf_sz, const SOCKET_ADDRESS *sa)
 {
-  const char *addr;
-  int   af;
+  int af;
 
   if (sa->iSockaddrLength == 0)
      _strlcpy (buf, "<None>", buf_sz);
@@ -1618,13 +1621,8 @@ static const char *socket_addr_str (char *buf, size_t buf_sz, const SOCKET_ADDRE
   {
     af = sa->lpSockaddr->sa_family;
     if (af != AF_INET && af != AF_INET6)
-       snprintf (buf, buf_sz, "AF %d??", af);
-    else
-    {
-      addr = ws_inet_ntop (af, &sa->lpSockaddr->sa_data, buf, buf_sz, NULL);
-      if (!addr)
-        _strlcpy (buf, "<??>", buf_sz);
-    }
+         snprintf (buf, buf_sz, "AF %d??", af);
+    else _strlcpy (buf, ws_inet_ntop2(af, &sa->lpSockaddr->sa_data), buf_sz);
   }
   return (buf);
 }
@@ -1862,17 +1860,51 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
   }
 }
 
+/**
+ * Print a WSAMSG control buffer.
+ *
+ * \todo
+ * This control data buffers depends on the option(s) for the socket
+ * set in `setsockopt()`. More specially:
+ *  \li Dump the `in_pktinfo`  structure if `IP_PKTINFO` or `IP_PKTINFO_EX` was set on the socket.
+ *  \li Dump the `in6_pktinfo` structure if `IPV6_PKTINFO` or `IPV6_PKTINFO_EX` was set on the socket.
+ *
+ * For now, just dump it as raw hex.
+ */
+static void print_control_buf (const WSABUF *buf)
+{
+  int save = g_cfg.max_data;
+
+  g_cfg.max_data = buf->len;
+  dump_data_internal (buf->buf, buf->len, "control: ");
+  g_cfg.max_data = save;
+}
+
 void dump_wsamsg (const WSAMSG *msg, int rc)
 {
+  const char *remote       = "<none>";
+  BOOL        have_control = FALSE;
+
   if (!msg)
      return;
 
-  C_printf ("%*sremote: %s, dwFlags: 0x%04lX\n",
-            g_cfg.trace_indent+2, "",
-            sockaddr_str2(msg->name, &msg->namelen),
-            DWORD_CAST(msg->dwFlags));
+  if (rc != SOCKET_ERROR)
+  {
+    if (!IsBadReadPtr(msg->name, sizeof(msg->name)))
+       remote = sockaddr_str_port (msg->name);
 
-  if (rc == NO_ERROR && g_cfg.dump_data)
+    if (!IsBadReadPtr(&msg->Control, sizeof(WSABUF)) && msg->Control.len)
+       have_control = TRUE;
+  }
+
+  C_printf ("~4%*sremote: %*s%s, dwFlags: 0x%04lX~0\n",
+            g_cfg.trace_indent+2, "", have_control, "",
+            remote, DWORD_CAST(msg->dwFlags));
+
+  if (have_control)
+     print_control_buf (&msg->Control);
+
+  if (rc != SOCKET_ERROR && g_cfg.dump_data)
      dump_wsabuf (msg->lpBuffers, msg->dwBufferCount);
 }
 
@@ -1944,11 +1976,6 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
 
   if (newline)
      start = newline;
-
-#if 0
-  TRACE (5, "newline: %p, start: %p, out: %p, len: %d, max_len: %d\n",
-            newline, start, out, out - start, max_len);
-#endif
 
   if (out - start >= max_len)
   {
@@ -2452,11 +2479,7 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
 
   for (num = 0; addresses && addresses[num] && left > 0; num++)
   {
-    char  buf [MAX_IP6_SZ+1];
-    char *addr = ws_inet_ntop (type, addresses[num], buf, sizeof(buf), NULL);
-
-    if (!addr)
-       addr = "<??>";
+    const char *addr = ws_inet_ntop2 (type, addresses[num]);
 
     if (total + (int)strlen(addr) + 2 >= max_len)
     {
@@ -2488,7 +2511,7 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
  */
 static const char *dump_aliases (char **aliases)
 {
-  static char result[500];  /* Win-XP supports only 8 aliases in a 'hostent::h_aliases' */
+  static char result [500];  /* Win-XP supports only 8 aliases in a 'hostent::h_aliases' */
   char  *out = result;
   int    i, len, added, indent = g_cfg.trace_indent + 3 + (int)strlen("aliases:");
   size_t left = sizeof(result)-1;
@@ -2617,7 +2640,7 @@ static void check_and_dump_idna (const char *name)
   char   buf [MAX_HOST_LEN] = "?";
   size_t size;
 
-  if (!g_cfg.IDNA.enable || !name || !strstr(name,"xn--"))
+  if (!g_cfg.IDNA.enable || !name || !strstr(name, "xn--"))
      return;
 
   C_indent (g_cfg.trace_indent+2);
