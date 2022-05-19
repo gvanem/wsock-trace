@@ -673,7 +673,7 @@ static const char *get_error (SOCK_RC_TYPE rc, int local_err)
   /* Longest result:
    *   "WSAECANCELLED: A call to WSALookupServiceEnd was made while this call was still processing. The call has been canceled (10103)" = 127 chars.
    */
-  static char buf[150];
+  static char buf [150];
 
   if (local_err != 0)
      return ws_strerror (local_err, buf, sizeof(buf));
@@ -789,23 +789,6 @@ const char *sockaddr_str_port (const struct sockaddr *sa)
   }
 
   return (NULL);
-}
-
-static const char *inet_ntop2 (const char *addr, int family)
-{
-  static char buf [MAX_IP6_SZ+1];
-  PCSTR  rc;
-
-#if 0
-  rc = (*p_inet_ntop) (family, addr, buf, sizeof(buf));
-  if (!rc)
-     return get_error (-1, 0);
-#else
-  rc = ws_inet_ntop (family, addr, buf, sizeof(buf), NULL);
-  if (!rc)
-     strcpy (buf, "??");
-#endif
-  return (buf);
 }
 
 static __inline const char *uint_ptr_hexval (UINT_PTR val, char *buf)
@@ -1422,9 +1405,10 @@ EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, __LONG32
   return (rc);
 }
 
-/*
+/**
  * The `condition` handler is not traced (only the address is printed).
  * It has the following signature:
+ * ```
  *  int CALLBACK ConditionFunc (
  *   IN     LPWSABUF    lpCallerId,
  *   IN     LPWSABUF    lpCallerData,
@@ -1434,6 +1418,7 @@ EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, __LONG32
  *   IN     LPWSABUF    lpCalleeData,
  *   OUT    GROUP FAR * g,
  *   IN     DWORD_PTR   dwCallbackData);
+ * ```
  *
  * From:
  *   https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaaccept
@@ -2556,9 +2541,10 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA
 
 EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW *provider_buf)
 {
-  char  buf [50], *p = buf;
-  DWORD buf_len_in = buf_len ? *buf_len : 0;
-  int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
+  char        buf [50];
+  const char *p = buf;
+  DWORD       buf_len_in = buf_len ? *buf_len : 0;
+  int         i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersW);
   exclude_this = TRUE;
@@ -2570,7 +2556,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW
   {
     if (rc > 0)
          snprintf (buf, sizeof(buf), "num: %d, size: %lu", rc, DWORD_CAST(*buf_len));
-    else p = (char*) get_error (rc, 0);
+    else p = get_error (rc, 0);
 
     WSTRACE ("WSAEnumNameSpaceProvidersW (%lu, 0x%p) --> %s", DWORD_CAST(buf_len_in), provider_buf, p);
 
@@ -2822,27 +2808,41 @@ EXPORT int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val,
 
 EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *opt_len)
 {
-  int rc;
+  int rc, _opt_len;
 
   CHECK_PTR (p_getsockopt);
   rc = (*p_getsockopt) (s, level, opt, opt_val, opt_len);
 
   ENTER_CRIT();
+  _opt_len = opt_len ? *opt_len : 0;
 
   WSTRACE ("getsockopt (%s, %s, %s, %s, %d) --> %s",
            socket_number(s), socklevel_name(level), sockopt_name(level, opt),
-           sockopt_value(level, opt, opt_val, opt_len ? *opt_len : 0),
-           opt_len ? *opt_len : 0, get_error(rc, 0));
+           sockopt_value(level, opt, opt_val, _opt_len),
+           _opt_len, get_error(rc, 0));
 
-#if 0  /* \todo */
-  if (level == SOL_SOCKET && !exclude_this && g_cfg.dump_wsaprotocol_info)
+  if (!exclude_this)
   {
-    if (opt == SO_PROTOCOL_INFOA)
-       dump_wsaprotocol_info ('A', opt_val, p_WSCGetProviderPath);
-    else if (opt == SO_PROTOCOL_INFOW)
-       dump_wsaprotocol_info ('W', opt_val, p_WSCGetProviderPath);
-  }
+    if (level == SOL_SOCKET && g_cfg.dump_wsaprotocol_info)
+    {
+      switch (opt)
+      {
+        case SO_PROTOCOL_INFOA:
+             dump_wsaprotocol_info ('A', opt_val, p_WSCGetProviderPath);
+             break;
+        case SO_PROTOCOL_INFOW:
+             dump_wsaprotocol_info ('W', opt_val, p_WSCGetProviderPath);
+             break;
+      }
+    }
+#if 0  /* \todo */
+    else if (level == IPPROTO_TCP)
+    {
+      if (opt == TCP_ICMP_ERROR_INFO && g_cfg.dump_icmp_info)
+         dump_icmp_error_info (opt_val);
+    }
 #endif
+  }
 
   LEAVE_CRIT (!exclude_this);
   return (rc);
@@ -2963,7 +2963,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
   ENTER_CRIT();
 
   WSTRACE ("gethostbyaddr (%s, %d, %s) --> %s",
-           inet_ntop2(addr, type), len, socket_family(type), ptr_or_error(rc));
+           ws_inet_ntop2(type, addr), len, socket_family(type), ptr_or_error(rc));
 
   if (!exclude_this)
   {
@@ -3335,7 +3335,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
   if (rc == NO_ERROR && *res && !exclude_this)
   {
-    if (g_cfg.dump_data)
+    if (g_cfg.dump_addrinfo)
        dump_addrinfo (host_name, *res);
 
     if (g_cfg.GEOIP.enable)
@@ -3405,7 +3405,7 @@ EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_na
 
   if (rc == NO_ERROR && *res && !exclude_this)
   {
-    if (g_cfg.dump_data)
+    if (g_cfg.dump_addrinfo)
        dump_addrinfoW (host_name, *res);
 
 #if 0
@@ -3580,10 +3580,13 @@ static void get_tcp_info_v01 (SOCKET s, TCP_INFO_v0 *info_0, TCP_INFO_v1 *info_1
   {
     ENTER_CRIT();
 
+    *err = NO_ERROR;
     rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, size, &size_ret, NULL, NULL);
     if (rc == SOCKET_ERROR)
-         *err = (*g_WSAGetLastError)();
-    else *err = NO_ERROR;
+    {
+      *err = (*g_WSAGetLastError)();
+      (*g_WSASetLastError) (0);
+    }
 
     LEAVE_CRIT (0);
   }
