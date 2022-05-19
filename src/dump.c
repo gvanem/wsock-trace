@@ -1432,7 +1432,7 @@ const char *socket_type (int type)
 
 const char *socket_flags (int flags)
 {
-  static char buf[100];
+  static char buf [100];
   char  *end;
 
   buf[0] = '\0';
@@ -1505,7 +1505,7 @@ const char *event_bits_decode (__LONG32 flag)
  */
 const char *get_sio_name (DWORD code)
 {
-  static char buf[20];
+  static char buf [20];
   const  struct search_list *sl = sio_codes;
   size_t i;
 
@@ -1528,7 +1528,7 @@ const char *socklevel_name (int level)
 
 const char *sockopt_name (int level, int opt)
 {
-  static char buf[20];
+  static char buf [20];
 
   switch (level)
   {
@@ -1570,7 +1570,7 @@ static const char *dump_ip_add_membership (char *buf, size_t buf_sz, const char 
 {
   const struct ip_mreq *mreq = (const struct ip_mreq*) opt_val;
   char  addr [MAX_IP4_SZ];
-  char  iface[MAX_IP4_SZ];
+  char  iface [MAX_IP4_SZ];
 
   assert (buf_sz > sizeof(addr) + sizeof(iface) + 5);
 
@@ -1747,7 +1747,7 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
 
 const char *ioctlsocket_cmd_name (long cmd)
 {
-  static char buf[50];
+  static char buf [50];
   int    group = IOCGROUP (cmd);
 
   if (group == 'f' || group == 's')
@@ -1802,7 +1802,7 @@ static UINT dump_data_internal (const void *data_p, unsigned data_len, const cha
 
     for (i = 0; i < 16 && i+ofs < data_len; i++)
     {
-      int ch = data[i+ofs];
+      int ch = data [i+ofs];
 
       if (ch < ' ' || ch == 0x7F)    /* non-printable */
            C_putc ('.');
@@ -1842,7 +1842,7 @@ void dump_wsabuf (const WSABUF *bufs, DWORD num_bufs)
 
   for (i = 0; i < (int)num_bufs && bufs; i++, bufs++)
   {
-    char prefix[30];
+    char prefix [30];
 
     snprintf (prefix, sizeof(prefix), "iov %d: ", i);
 
@@ -1917,7 +1917,7 @@ void dump_tcp_info_v0 (const TCP_INFO_v0 *info, int err_code)
 
   if (err_code != NO_ERROR)
   {
-    char buf[150];
+    char buf [150];
 
     C_printf ("%s~0\n", ws_strerror(err_code, buf, sizeof(buf)));
     return;
@@ -2041,7 +2041,7 @@ void print_long_flags (const char *start, size_t indent, int brk_ch)
 
 const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
 {
-  static char buf[300];
+  static char buf [300];
 
   snprintf (buf, sizeof(buf),
             "ai_flags:    %s\n"
@@ -2057,7 +2057,7 @@ const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
 
 const char *get_addrinfo_hintW (const struct addrinfoW *hint, size_t indent)
 {
-  static char buf[300];
+  static char buf [300];
 
   snprintf (buf, sizeof(buf),
             "ai_flags:    %s\n"
@@ -2169,7 +2169,7 @@ fd_set *copy_fd_set_to (const fd_set *fd, fd_set *dst)
 
   dst->fd_count = fd->fd_count;
   for (i = 0; i < fd->fd_count; i++)
-      dst->fd_array[i] = fd->fd_array[i];
+      dst->fd_array [i] = fd->fd_array [i];
   return (dst);
 }
 
@@ -2196,7 +2196,7 @@ static void dump_one_fd_set (const fd_set *fd, int indent)
 
   for (i = 0; i < s_limit; i++)
   {
-    char buf[10];
+    char buf [10];
 
     _itoa ((int)fd->fd_array[i], buf, 10);
     max_len = (u_int) (g_cfg.screen_width - strlen(buf) - 1);
@@ -2235,16 +2235,16 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
   struct sel_info {
          const char   *which;
          const fd_set *fd;
-       } info[3] = {
+       } info [3] = {
          { " rd: ", NULL },
          { " wr: ", NULL },
          { " ex: ", NULL }
        };
   int i;
 
-  info[0].fd = rd;
-  info[1].fd = wr;
-  info[2].fd = ex;
+  info [0].fd = rd;
+  info [1].fd = wr;
+  info [2].fd = ex;
 
   for (i = 0; i < DIM(info); i++)
   {
@@ -2297,15 +2297,15 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
 
 static const char *proto_padding = "                   ";  /* Length of "WSAPROTOCOL_INFOx: " */
 
-void dump_one_proto_info (const char *prefix, const char *buf)
+static void dump_one_proto_info (const char *prefix, const char *buf)
 {
   C_indent (g_cfg.trace_indent+2);
   C_printf ("%s%s\n", prefix ? prefix : proto_padding, buf);
 }
 
-void dump_one_proto_infof (_Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (1,2);
+static void dump_one_proto_infof (_Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (1,2);
 
-void dump_one_proto_infof (const char *fmt, ...)
+static void dump_one_proto_infof (_Printf_format_string_ const char *fmt, ...)
 {
   va_list args;
 
@@ -2319,7 +2319,7 @@ void dump_one_proto_infof (const char *fmt, ...)
 static void dump_provider_path (const GUID *guid, const void *provider_path_func)
 {
   int     error;
-  wchar_t path[MAX_PATH] = L"??";
+  wchar_t path [MAX_PATH] = L"??";
   int     path_len = DIM(path);
 
   /* As in wsock_trace.c:
@@ -2402,20 +2402,10 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwProviderReserved));
 
   if (ascii_or_wide == 'A')
-     dump_one_proto_infof ("szProtocol:         \"%.*s\"\n", WSAPROTOCOL_LEN, pi_a->szProtocol);
-  else
-  {
-    char proto_buf [40] = "<none>";
-
-    if (!pi_w->szProtocol[0])
-       dump_one_proto_infof ("szProtocol:         \"%s\"\n", proto_buf);
-    else
-    {
-      if (WideCharToMultiByte(CP_ACP, 0, pi_w->szProtocol, WSAPROTOCOL_LEN, proto_buf, (int)sizeof(proto_buf), NULL, NULL) == 0)
-         strcpy (proto_buf, "??");
-      dump_one_proto_infof ("szProtocol:         \"%s\"\n", proto_buf);
-    }
-  }
+       dump_one_proto_infof ("szProtocol:         \"%.*s\"\n",
+                             WSAPROTOCOL_LEN, pi_a->szProtocol[0] ? pi_a->szProtocol : "<none>");
+  else dump_one_proto_infof ("szProtocol:         \"%.*" WCHAR_FMT "\"\n",
+                             WSAPROTOCOL_LEN, pi_w->szProtocol[0] ? pi_w->szProtocol : L"<none>");
 
   dump_one_proto_infof ("ProviderId:         %s\n", get_guid_string(&pi_a->ProviderId));
 
@@ -2708,7 +2698,7 @@ void dump_countries (int type, const char **addresses)
  */
 void dump_countries_sockaddr (const struct sockaddr *sa)
 {
-  const char                *addr[2];
+  const char                *addr [2];
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
 
@@ -2718,15 +2708,15 @@ void dump_countries_sockaddr (const struct sockaddr *sa)
   if (sa->sa_family == AF_INET)
   {
     sa4 = (const struct sockaddr_in*) sa;
-    addr[0] = (const char*) &sa4->sin_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa4->sin_addr;
+    addr [1] = NULL;
     dump_countries (AF_INET, addr);
   }
   else if (sa->sa_family == AF_INET6)
   {
     sa6 = (const struct sockaddr_in6*) sa;
-    addr[0] = (const char*) &sa6->sin6_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa6->sin6_addr;
+    addr [1] = NULL;
     dump_countries (AF_INET6, addr);
   }
 }
@@ -2880,7 +2870,7 @@ void dump_IANA_addresses (int family, const char **addresses)
 
 void dump_IANA_sockaddr (const struct sockaddr *sa)
 {
-  const char                *addr[2];
+  const char                *addr [2];
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
 
@@ -2890,15 +2880,15 @@ void dump_IANA_sockaddr (const struct sockaddr *sa)
   if (sa->sa_family == AF_INET)
   {
     sa4 = (const struct sockaddr_in*) sa;
-    addr[0] = (const char*) &sa4->sin_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa4->sin_addr;
+    addr [1] = NULL;
     dump_IANA_addresses (AF_INET, addr);
   }
   else if (sa->sa_family == AF_INET6)
   {
     sa6 = (const struct sockaddr_in6*) sa;
-    addr[0] = (const char*) &sa6->sin6_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa6->sin6_addr;
+    addr [1] = NULL;
     dump_IANA_addresses (AF_INET6, addr);
   }
 }
@@ -2970,7 +2960,7 @@ void dump_ASN_addresses (int family, const char **addresses)
 
 void dump_ASN_sockaddr (const struct sockaddr *sa)
 {
-  const char                *addr[2];
+  const char                *addr [2];
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
 
@@ -2980,15 +2970,15 @@ void dump_ASN_sockaddr (const struct sockaddr *sa)
   if (sa->sa_family == AF_INET)
   {
     sa4 = (const struct sockaddr_in*) sa;
-    addr[0] = (const char*) &sa4->sin_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa4->sin_addr;
+    addr [1] = NULL;
     dump_ASN_addresses (AF_INET, addr);
   }
   else if (sa->sa_family == AF_INET6)
   {
     sa6 = (const struct sockaddr_in6*) sa;
-    addr[0] = (const char*) &sa6->sin6_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa6->sin6_addr;
+    addr [1] = NULL;
     dump_ASN_addresses (AF_INET6, addr);
   }
 }
@@ -3135,7 +3125,7 @@ void dump_DNSBL (int family, const char **addresses)
 
 void dump_DNSBL_sockaddr (const struct sockaddr *sa)
 {
-  const char                *addr[2];
+  const char                *addr [2];
   const struct sockaddr_in  *sa4;
   const struct sockaddr_in6 *sa6;
 
@@ -3145,15 +3135,15 @@ void dump_DNSBL_sockaddr (const struct sockaddr *sa)
   if (sa->sa_family == AF_INET)
   {
     sa4 = (const struct sockaddr_in*) sa;
-    addr[0] = (const char*) &sa4->sin_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa4->sin_addr;
+    addr [1] = NULL;
     dump_DNSBL (AF_INET, addr);
   }
   else if (sa->sa_family == AF_INET6)
   {
     sa6 = (const struct sockaddr_in6*) sa;
-    addr[0] = (const char*) &sa6->sin6_addr;
-    addr[1] = NULL;
+    addr [0] = (const char*) &sa6->sin6_addr;
+    addr [1] = NULL;
     dump_DNSBL (AF_INET6, addr);
   }
 }
@@ -3274,8 +3264,7 @@ static const struct search_list test_list_2[] = {
                               { UINT_MAX, "01"  }
                             };
 
-static void
-report_check_err (const struct search_list *tab, const char *name, int rc, int idx1, int idx2)
+static void report_check_err (const struct search_list *tab, const char *name, int rc, int idx1, int idx2)
 {
   switch (rc)
   {
