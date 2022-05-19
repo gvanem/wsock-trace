@@ -810,6 +810,8 @@ INPUT = main_page.dox            \
        ../src/wsock_defs.h       \
        ../src/wsock_trace.h      \
        ../src/wsock_trace_lua.h  \
+       ../src/xz_decompress.c    \
+       ../src/xz_decompress.h    \
        ../src/wsock_trace.rc
 
 #
