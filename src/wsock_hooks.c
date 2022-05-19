@@ -34,6 +34,14 @@
 
 typedef BOOL (PASCAL *extension_func) (void);
 
+/* A copy of the awful 'LPWSAOVERLAPPED_COMPLETION_ROUTINE' typedef.
+ */
+typedef void (PASCAL *WSAOVERLAPPED_COMPLETION_ROUTINE) (
+                      DWORD          dwError,
+                      DWORD          cbTransferred,
+                      WSAOVERLAPPED *Overlapped,
+                      DWORD          dwFlags);
+
 typedef enum ext_enum {
         ex_ACCEPTEX = 0,
         ex_CONNECTEX,
@@ -55,6 +63,9 @@ struct extension_hook_list {
        const char *guid_name;
      };
 
+/**
+ * \todo These should be in "Thread Local Storage"
+ */
 static LPFN_ACCEPTEX             orig_ACCEPTEX;
 static LPFN_CONNECTEX            orig_CONNECTEX;
 static LPFN_DISCONNECTEX         orig_DISCONNECTEX;
@@ -97,7 +108,7 @@ static BOOL PASCAL hooked_CONNECTEX (SOCKET                 s,
   ENTER_CRIT();
   WSTRACE ("ConnectEx (%s, ...) (ex-func) --> %s", socket_number(s), get_error(rc, 0));
 
-  if (g_cfg.dump_data && send_buf && (rc || WSAERROR_PUSH() == ERROR_IO_PENDING))
+  if (g_cfg.dump_data && send_buf && (rc != SOCKET_ERROR || WSAERROR_PUSH() == ERROR_IO_PENDING))
      dump_data (send_buf, send_data_len);
 
   LEAVE_CRIT (!exclude_this);
@@ -166,20 +177,37 @@ static BOOL PASCAL hooked_TRANSMITPACKETS (SOCKET                    s,
   return (rc);
 }
 
-static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
-                                     WSAMSG        *msg,
-                                     DWORD         *bytes_recv,
-                                     WSAOVERLAPPED *ov,
-                                     LPWSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
+static INT PASCAL hooked_WSARECVMSG (SOCKET          s,
+                                     WSAMSG         *msg,
+                                     DWORD          *bytes_recv,
+                                     WSAOVERLAPPED  *ov,
+                                     WSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
 {
-  char recv[20] = "?";
-  INT  rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
+  char recv [20] = "?";
+  INT  rc;
+
+  WSAERROR_PUSH();
+
+  rc = (*orig_WSARECVMSG) (s, msg, bytes_recv, ov, complete_func);
 
   ENTER_CRIT();
 
   if (bytes_recv)
   {
+    WSAMSG copy;
+    WSABUF wcopy;
+
     _itoa (*bytes_recv, recv, 10);
+
+    memset (&copy, '\0', sizeof(copy));
+    memset (&wcopy, '\0', sizeof(wcopy));
+    wcopy.len          = *bytes_recv;
+    wcopy.buf          = msg->lpBuffers ? msg->lpBuffers->buf : NULL;
+    copy.lpBuffers     = &wcopy;
+    copy.dwBufferCount = 1;
+    copy.dwFlags       = msg->dwFlags;
+    msg = &copy;
+
     if (rc == NO_ERROR || (*g_WSAGetLastError)() == WSA_IO_PENDING)
        g_cfg.counts.recv_bytes += *bytes_recv;
   }
@@ -187,14 +215,16 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET         s,
   WSTRACE ("WSARecvMsg (%s, 0x%p, ...) (ex-func) --> %s, recv: %s",
            socket_number(s), msg, get_error(rc, 0), recv);
 
-  if (!exclude_this)
+  if (rc != SOCKET_ERROR && !exclude_this)
   {
-    C_printf ("%*src: %ld, msg->lpBuffers: 0x%p, msg->dwBufferCount: %lu\n",
+    C_printf ("~4%*src: %ld, msg->lpBuffers: 0x%p, msg->dwBufferCount: %lu~0\n",
               g_cfg.trace_indent+2, "", (long)rc, msg->lpBuffers, DWORD_CAST(msg->dwBufferCount));
+
     dump_wsamsg (msg, rc);
   }
 
   LEAVE_CRIT (!exclude_this);
+  WSAERROR_POP();
   return (rc);
 }
 
@@ -203,7 +233,7 @@ static INT PASCAL hooked_WSASENDMSG (SOCKET        s,
                                      DWORD          flags,
                                      DWORD         *bytes_sent,
                                      WSAOVERLAPPED *ov,
-                                     LPWSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
+                                     WSAOVERLAPPED_COMPLETION_ROUTINE complete_func)
 {
   char sent [20] = "?";
   INT  rc = (*orig_WSASENDMSG) (s, msg, flags, bytes_sent, ov, complete_func);
@@ -216,7 +246,7 @@ static INT PASCAL hooked_WSASENDMSG (SOCKET        s,
   WSTRACE ("WSASendMsg (%s, 0x%p, %s, ...) (ex-func) --> %s, sent: %s",
            socket_number(s), msg, socket_flags(flags), get_error(rc, 0), sent);
 
-  if (!exclude_this)
+  if (rc != SOCKET_ERROR && !exclude_this)
      dump_wsamsg (msg, rc);
 
   LEAVE_CRIT (!exclude_this);
@@ -271,9 +301,11 @@ static void hook_extension_func (const GUID *in_guid, extension_func *in_out)
   TRACE (3, "extension func at index %d matching GUID \"%s\"\n",
          ex, ex != ex_NONE ? extension_hooks[ex].guid_name : "<none>");
 
-  #define CASE_HOOK(x)  case ex_##x:                                \
-                             orig_##x = (LPFN_##x) *orig;           \
-                             *in_out = (extension_func) hooked_##x; \
+  #define CASE_HOOK(x)  case ex_##x:                                         \
+                             orig_##x = (LPFN_##x) *orig;                    \
+                             *in_out = (extension_func) hooked_##x;          \
+                             TRACE (2, "ext-func 0x%p -> '%s()' at 0x%p.\n", \
+                                    orig, "hooked_" #x, *in_out);            \
                              break
   switch (ex)
   {
@@ -290,7 +322,6 @@ static void hook_extension_func (const GUID *in_guid, extension_func *in_out)
     CASE_HOOK (WSASENDMSG);
     CASE_HOOK (WSAPOLL);
   }
-  TRACE (2, "orig extension func 0x%p hooked to 0x%p\n", orig, *in_out);
 }
 
 #undef ADD_HOOK
