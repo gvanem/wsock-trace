@@ -1,4 +1,4 @@
-/**\file    in_addr.c
+/**\file    inet_addr.c
  * \ingroup inet_util
  *
  * \brief
