@@ -65,7 +65,7 @@
 #include "common.h"
 #include "smartlist.h"
 #include "init.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 #include "inet_util.h"
 #include "iana.h"
 #include "asn.h"

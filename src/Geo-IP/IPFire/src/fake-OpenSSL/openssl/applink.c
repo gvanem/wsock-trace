@@ -23,7 +23,7 @@
 #endif
 
 #include "common.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 
 #undef  LIBLOC_PRIVATE
 #define LIBLOC_PRIVATE

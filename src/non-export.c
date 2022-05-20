@@ -20,7 +20,7 @@
 #endif
 
 #include "common.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 
 GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 

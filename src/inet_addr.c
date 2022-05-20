@@ -36,7 +36,7 @@
 
 #include "common.h"
 #include "init.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 
 /**
  * \todo

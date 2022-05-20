@@ -43,7 +43,7 @@
 
 #include "common.h"
 #include "bfd_gcc.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 #include "init.h"
 #include "idna.h"
 #include "cpu.h"

@@ -13,15 +13,14 @@
 #include <ctype.h>
 
 #include "common.h"
-#include "in_addr.h"
 #include "init.h"
 #include "geoip.h"
 #include "asn.h"
 #include "iana.h"
 #include "idna.h"
-#include "in_addr.h"
 #include "hosts.h"
 #include "wsock_trace.h"
+#include "inet_addr.h"
 #include "inet_util.h"
 #include "_ipproto.h"
 #include "dnsbl.h"

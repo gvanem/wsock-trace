@@ -34,7 +34,7 @@
 #include "asn.h"
 #include "iana.h"
 #include "dnsbl.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 #include "init.h"
 
 #define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)

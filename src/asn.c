@@ -17,7 +17,7 @@
 #include "smartlist.h"
 #include "xz_decompress.h"
 #include "inet_util.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 #include "init.h"
 #include "iana.h"
 #include "asn.h"

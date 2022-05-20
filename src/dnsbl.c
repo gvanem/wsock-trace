@@ -33,10 +33,10 @@
 
 #include "common.h"
 #include "init.h"
-#include "in_addr.h"
 #include "smartlist.h"
 #include "geoip.h"
 #include "getopt.h"
+#include "inet_addr.h"
 #include "inet_util.h"
 #include "dnsbl.h"
 

@@ -777,7 +777,7 @@ INPUT = main_page.dox            \
        ../src/idna.c             \
        ../src/inet_util.c        \
        ../src/init.c             \
-       ../src/in_addr.c          \
+       ../src/inet_addr.c        \
        ../src/ip2loc.c           \
        ../src/miniz.c            \
        ../src/non-export.c       \
@@ -801,7 +801,7 @@ INPUT = main_page.dox            \
        ../src/idna.h             \
        ../src/inet_util.h        \
        ../src/init.h             \
-       ../src/in_addr.h          \
+       ../src/inet_addr.h        \
        ../src/overlap.h          \
        ../src/services.h         \
        ../src/smartlist.h        \

@@ -21,8 +21,8 @@
 #include "smartlist.h"
 #include "asn.h"
 #include "getopt.h"
+#include "inet_addr.h"
 #include "inet_util.h"
-#include "in_addr.h"
 #include "init.h"
 #include "iana.h"
 

@@ -80,7 +80,7 @@ SOURCES = asn.c             \
           hosts.c           \
           iana.c            \
           idna.c            \
-          in_addr.c         \
+          inet_addr.c       \
           inet_util.c       \
           init.c            \
           ip2loc.c          \
@@ -109,7 +109,7 @@ WS_TOOL_OBJ = $(addprefix $(OBJ_DIR)/, \
                 hosts.o                \
                 iana.o                 \
                 idna.o                 \
-                in_addr.o              \
+                inet_addr.o            \
                 init.o                 \
                 inet_util.o            \
                 ip2loc.o               \

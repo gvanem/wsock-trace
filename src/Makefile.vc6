@@ -123,7 +123,7 @@ WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj             \
                   $(OBJ_DIR)\hosts.obj           \
                   $(OBJ_DIR)\iana.obj            \
                   $(OBJ_DIR)\idna.obj            \
-                  $(OBJ_DIR)\in_addr.obj         \
+                  $(OBJ_DIR)\inet_addr.obj       \
                   $(OBJ_DIR)\inet_util.obj       \
                   $(OBJ_DIR)\init.obj            \
                   $(OBJ_DIR)\ip2loc.obj          \
@@ -159,12 +159,12 @@ WS_TOOL_OBJ = $(OBJ_DIR)\asn.obj             \
               $(OBJ_DIR)\hosts.obj           \
               $(OBJ_DIR)\iana.obj            \
               $(OBJ_DIR)\idna.obj            \
-              $(OBJ_DIR)\in_addr.obj         \
+              $(OBJ_DIR)\inet_addr.obj       \
               $(OBJ_DIR)\inet_util.obj       \
               $(OBJ_DIR)\init.obj            \
               $(OBJ_DIR)\ip2loc.obj          \
               $(OBJ_DIR)\overlap.obj         \
-              $(OBJ_DIR)\services.obj       \
+              $(OBJ_DIR)\services.obj        \
               $(OBJ_DIR)\smartlist.obj       \
               $(OBJ_DIR)\stkwalk.obj         \
               $(OBJ_DIR)\test.obj            \
@@ -320,49 +320,49 @@ wsock_trace_d.def: wsock_trace.def Makefile.VC6
 
 common.h: wsock_defs.h
 
-$(OBJ_DIR)\asn.obj: asn.c common.h in_addr.h common.h  \
-                    csv.h smartlist.h inet_util.h      \
-                    in_addr.h init.h iana.h asn.h      \
-                    $(LIBLOC_ROOT)\libloc\libloc.h     \
-                    $(LIBLOC_ROOT)\libloc\compat.h     \
-                    $(LIBLOC_ROOT)\libloc\database.h   \
-                    $(LIBLOC_ROOT)\libloc\network.h    \
-                    $(LIBLOC_ROOT)\libloc\format.h     \
-                    $(LIBLOC_ROOT)\libloc\as.h         \
-                    $(LIBLOC_ROOT)\libloc\stringpool.h \
-                    $(LIBLOC_ROOT)\libloc\country.h    \
-                    $(LIBLOC_ROOT)\libloc\resolv.h     \
+$(OBJ_DIR)\asn.obj: asn.c common.h inet_addr.h common.h \
+                    csv.h smartlist.h inet_util.h       \
+                    inet_addr.h init.h iana.h asn.h     \
+                    $(LIBLOC_ROOT)\libloc\libloc.h      \
+                    $(LIBLOC_ROOT)\libloc\compat.h      \
+                    $(LIBLOC_ROOT)\libloc\database.h    \
+                    $(LIBLOC_ROOT)\libloc\network.h     \
+                    $(LIBLOC_ROOT)\libloc\format.h      \
+                    $(LIBLOC_ROOT)\libloc\as.h          \
+                    $(LIBLOC_ROOT)\libloc\stringpool.h  \
+                    $(LIBLOC_ROOT)\libloc\country.h     \
+                    $(LIBLOC_ROOT)\libloc\resolv.h      \
                     $(LIBLOC_ROOT)\libloc\windows\syslog.h
 
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
 $(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h
 $(OBJ_DIR)\csv.obj:         csv.c common.h init.h csv.h
-$(OBJ_DIR)\dump.obj:        dump.c common.h in_addr.h init.h geoip.h smartlist.h \
-                            idna.h inet_util.h hosts.h wsock_trace.h dnsbl.h dump.h
-$(OBJ_DIR)\dnsbl.obj:       dnsbl.c dnsbl.h common.h init.h in_addr.h inet_util.h geoip.h smartlist.h
-$(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h in_addr.h hosts.h
-$(OBJ_DIR)\geoip.obj:       geoip.c common.h smartlist.h init.h in_addr.h inet_util.h geoip.h
+$(OBJ_DIR)\dump.obj:        dump.c common.h inet_addr.h init.h geoip.h smartlist.h \
+                            idna.h inet_addr.h inet_util.h hosts.h wsock_trace.h dnsbl.h dump.h
+$(OBJ_DIR)\dnsbl.obj:       dnsbl.c dnsbl.h common.h init.h inet_addr.h inet_util.h geoip.h smartlist.h
+$(OBJ_DIR)\hosts.obj:       hosts.c common.h init.h smartlist.h inet_addr.h hosts.h
+$(OBJ_DIR)\geoip.obj:       geoip.c common.h smartlist.h init.h inet_addr.h inet_util.h geoip.h
 
-$(OBJ_DIR)\iana.obj:        iana.c common.h in_addr.h common.h csv.h smartlist.h asn.h \
-                            inet_util.h in_addr.h init.h iana.h
+$(OBJ_DIR)\iana.obj:        iana.c common.h inet_addr.h common.h csv.h smartlist.h asn.h \
+                            inet_util.h inet_addr.h init.h iana.h
 
 $(OBJ_DIR)\idna.obj:        idna.c common.h init.h smartlist.h idna.h
-$(OBJ_DIR)\inet_util.obj:   inet_util.c inet_util.h common.h init.h in_addr.h
+$(OBJ_DIR)\inet_util.obj:   inet_util.c inet_util.h common.h init.h inet_addr.h
 $(OBJ_DIR)\init.obj:        init.c common.h wsock_trace.h wsock_trace_lua.h \
                             dnsbl.h dump.h geoip.h smartlist.h idna.h stkwalk.h \
                             overlap.h hosts.h cpu.h init.h
-$(OBJ_DIR)\in_addr.obj:     in_addr.c common.h in_addr.h
+$(OBJ_DIR)\inet_addr.obj:   inet_addr.c common.h inet_addr.h
 $(OBJ_DIR)\overlap.obj:     overlap.c common.h init.h smartlist.h overlap.h
 $(OBJ_DIR)\services.obj:    services.c common.h wsock_defs.h init.h smartlist.h csv.h wsock_trace.h services.h
 $(OBJ_DIR)\smartlist.obj:   smartlist.c common.h vm_dump.h smartlist.h
 $(OBJ_DIR)\stkwalk.obj:     stkwalk.c common.h init.h stkwalk.h smartlist.h
 $(OBJ_DIR)\vm_dump.obj:     vm_dump.c common.h cpu.h vm_dump.h
 $(OBJ_DIR)\ws_tool.obj:     csv.c backtrace.c geoip.c iana.c firewall.c dnsbl.c idna.c
-$(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h in_addr.h \
+$(OBJ_DIR)\wsock_trace.obj: wsock_trace.c common.h inet_addr.h \
                             init.h cpu.h stkwalk.h smartlist.h \
                             overlap.h dump.h wsock_trace_lua.h \
                             wsock_trace.h wsock_hooks.c
-$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h in_addr.h
+$(OBJ_DIR)\ip2loc.obj:      ip2loc.c common.h init.h geoip.h smartlist.h inet_addr.h
 $(OBJ_DIR)\disasm.obj:      mhook\disasm.c mhook\disasm.h
 $(OBJ_DIR)\mhook.obj:       mhook\mhook.c mhook\disasm.h mhook\mhook.h
 $(OBJ_DIR)\mhook-test.obj:  mhook\mhook.c mhook\mhook.h

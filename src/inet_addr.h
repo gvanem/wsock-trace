@@ -1,8 +1,8 @@
-/**\file    in_addr.h
+/**\file    inet_addr.h
  * \ingroup inet_util
  */
-#ifndef _IN_ADDR_H
-#define _IN_ADDR_H
+#ifndef _INET_ADDR_H
+#define _INET_ADDR_H
 
 #define INT16SZ     2
 #define INADDRSZ    4

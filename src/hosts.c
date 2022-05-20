@@ -9,7 +9,7 @@
 #include "common.h"
 #include "init.h"
 #include "smartlist.h"
-#include "in_addr.h"
+#include "inet_addr.h"
 #include "csv.h"
 #include "hosts.h"
 
