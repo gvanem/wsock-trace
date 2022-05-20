@@ -518,12 +518,12 @@ static void test_ioctlsocket (void)
 
 /*
  * If this program was run like:
- *   test.exe -d wsastartup socket connect
+ *   ws_tool.exe test -v wsastartup socket connect
  *
  * the below WSAGetLastError() would return WSAECONNREFUSED.
  *
  * If this program was run like:
- *   test.exe -d wsastartup socket ioctlsocket connect
+ *   ws_tool.exe test -v wsastartup socket ioctlsocket connect
  *
  * the below WSAGetLastError() would return WSAEWOULDBLOCK.
  *
@@ -1120,7 +1120,7 @@ int test_main (int argc, char **argv)
 
           /* The above "t::" means 'optarg' is optional.
            * A limitation in getopt.c shows that if 4 threads is wanted, start this
-           * programs as 'test.exe -t4' and not 'test.exe -t 4'.
+           * programs as 'ws_tool.exe test -t4' and not 'ws_tool.exe test -t 4'.
            */
       case 't':
            if (optarg)
@@ -1152,7 +1152,7 @@ int test_main (int argc, char **argv)
 }
 
 /*
-   If test.exe was linked correctly and you have "trace_level=1" in wsock_trace,
+   If 'ws_tool.exe' was linked correctly and you have "trace_level=1" in wsock_trace,
    the running trace should look something like this:
 
    * 22.383 msec: test.c(130) (test_WSAStartup+50):
