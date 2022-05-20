@@ -280,24 +280,24 @@ LIBLOC_CFLAGS = -DENABLE_DEBUG                  \
                 -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
 
 {$(LIBLOC_ROOT)}.c{$(OBJ_DIR)}.obj:
-	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo$*.obj $<
+	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo.\$*.obj $<
 	@echo
 
 MHOOK_CFLAGS = $(CFLAGS) -DUSE_TRACE
 
 {mhook}.c{$(OBJ_DIR)}.obj:
-	$(CC) -c $(MHOOK_CFLAGS) -Fo$*.obj $<
+	$(CC) -c $(MHOOK_CFLAGS) -Fo.\$*.obj $<
 	@echo
 
 $(OBJ_DIR)\mhook-test.obj: mhook\mhook.c
-	$(CC) -c $(MHOOK_CFLAGS) -DMHOOK_TEST -Fo$*.obj mhook\mhook.c
+	$(CC) -c $(MHOOK_CFLAGS) -DMHOOK_TEST -Fo.\$*.obj mhook\mhook.c
 	@echo
 
 #
 # The default fall-back rule for other .obj-files.
 #
 .c{$(OBJ_DIR)}.obj:
-	$(CC) -c $(CFLAGS) -Fo$*.obj $<
+	$(CC) -c $(CFLAGS) -Fo.\$*.obj $<
 	@echo
 
 #
