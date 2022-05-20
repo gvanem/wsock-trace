@@ -1638,11 +1638,10 @@ static const char *socket_addr_str (char *buf, size_t buf_sz, const SOCKET_ADDRE
  *  } CSADDR_INFO;
  * ```
  */
-static const char *dump_csaddr (char *buf, size_t buf_sz, const char *opt_val)
+static const char *dump_csaddr (char *buf, size_t buf_sz, const CSADDR_INFO *csaddr)
 {
-  const CSADDR_INFO *csaddr = (const CSADDR_INFO*) opt_val;
-  char  local [MAX_IP6_SZ+1];
-  char  remote [MAX_IP6_SZ+1];
+  char local [MAX_IP6_SZ+1];
+  char remote [MAX_IP6_SZ+1];
 
   socket_addr_str (local, sizeof(local), &csaddr->LocalAddr);
   socket_addr_str (remote, sizeof(remote), &csaddr->RemoteAddr);
@@ -1674,7 +1673,7 @@ static const char *dump_sol_socket (char *buf, size_t buf_sz, int opt, const cha
   }
 
   if (opt == SO_BSP_STATE && opt_len >= sizeof(CSADDR_INFO))
-     return dump_csaddr (buf, buf_sz, opt_val);
+     return dump_csaddr (buf, buf_sz, (const CSADDR_INFO*)opt_val);
 
   return (NULL);
 }
