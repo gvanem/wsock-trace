@@ -154,11 +154,11 @@ static int DNSBL_compare_is_on_net4 (const void *key, const void **member)
     DWORD start_ip = netw & mask;
     DWORD end_ip   = start_ip | ~mask;
 
-    ws_inet_ntop (AF_INET, &dnsbl->u.ip4.network, net_str, sizeof(net_str), NULL);
-    ws_inet_ntop (AF_INET, &dnsbl->u.ip4.mask, mask_str, sizeof(mask_str), NULL);
-    ws_inet_ntop (AF_INET, &ia->s_addr, ip_str, sizeof(ip_str), NULL);
-    ws_inet_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
-    ws_inet_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+    INET_addr_ntop (AF_INET, &dnsbl->u.ip4.network, net_str, sizeof(net_str), NULL);
+    INET_addr_ntop (AF_INET, &dnsbl->u.ip4.mask, mask_str, sizeof(mask_str), NULL);
+    INET_addr_ntop (AF_INET, &ia->s_addr, ip_str, sizeof(ip_str), NULL);
+    INET_addr_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+    INET_addr_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
 
     TRACE (3, "ip: %-15s net: %-15s (%-12s - %-15s) mask: %-15s rc: %d\n",
            ip_str, net_str, start_ip_str, end_ip_str, mask_str, rc);
@@ -197,11 +197,11 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
     char   start_ip_str[MAX_IP6_SZ+1];
     char   end_ip_str  [MAX_IP6_SZ+1];
 
-    ws_inet_ntop (AF_INET6, &dnsbl->u.ip6.network, net_str, sizeof(net_str), NULL);
-    ws_inet_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask_str, sizeof(mask_str), NULL);
-    ws_inet_ntop (AF_INET6, &ia->s6_addr, ip_str, sizeof(ip_str), NULL);
-    ws_inet_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
-    ws_inet_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+    INET_addr_ntop (AF_INET6, &dnsbl->u.ip6.network, net_str, sizeof(net_str), NULL);
+    INET_addr_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask_str, sizeof(mask_str), NULL);
+    INET_addr_ntop (AF_INET6, &ia->s6_addr, ip_str, sizeof(ip_str), NULL);
+    INET_addr_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+    INET_addr_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
 
     TRACE (3, "ip: %-20s net: %-20s (%-20s - %-30s)\n"
                "                mask: 0x%s, rc: %d\n",
@@ -278,13 +278,13 @@ static void DNSBL_dump (void)
 
     if (dnsbl->family == AF_INET)
     {
-      ws_inet_ntop (AF_INET, &dnsbl->u.ip4.network, addr, sizeof(addr), NULL);
-      ws_inet_ntop (AF_INET, &dnsbl->u.ip4.mask, mask, sizeof(mask), NULL);
+      INET_addr_ntop (AF_INET, &dnsbl->u.ip4.network, addr, sizeof(addr), NULL);
+      INET_addr_ntop (AF_INET, &dnsbl->u.ip4.mask, mask, sizeof(mask), NULL);
     }
     else
     {
-      ws_inet_ntop (AF_INET6, &dnsbl->u.ip6.network, addr, sizeof(addr), NULL);
-      ws_inet_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask, sizeof(mask), NULL);
+      INET_addr_ntop (AF_INET6, &dnsbl->u.ip6.network, addr, sizeof(addr), NULL);
+      INET_addr_ntop (AF_INET6, &dnsbl->u.ip6.mask, mask, sizeof(mask), NULL);
     }
     snprintf (cidr, sizeof(cidr), "%s/%u", addr, dnsbl->bits);
     C_printf (line_fmt, i, dnsbl->SBL_ref[0] ? dnsbl->SBL_ref : "<none>",
@@ -307,12 +307,12 @@ static int DNSBL_test_single (const char *addr_str)
   int   special, rc;
 
   snprintf (addr_buf, sizeof(addr_buf), "\"%s\"", addr_str);
-  if (ws_inet_pton2(AF_INET, addr_str, &addr.ip4) == 1)
+  if (INET_addr_pton2(AF_INET, addr_str, &addr.ip4) == 1)
   {
     special = INET_util_addr_is_special (&addr.ip4, NULL, &remark);
     rc = DNSBL_check_common (&addr.ip4, NULL, &sbl_ref);
   }
-  else if (ws_inet_pton2(AF_INET6, addr_str, &addr.ip6) == 1)
+  else if (INET_addr_pton2(AF_INET6, addr_str, &addr.ip6) == 1)
   {
     special = INET_util_addr_is_special (NULL, &addr.ip6, &remark);
     rc = DNSBL_check_common (NULL, &addr.ip6, &sbl_ref);
@@ -404,7 +404,7 @@ static int DNSBL_test (const char *addr_str)
     const char *country_code, *location, *okay;
     BOOL        res;
 
-    ws_inet_pton2 (test->family, test->addr, &addr);
+    INET_addr_pton2 (test->family, test->addr, &addr);
 
     if (test->family == AF_INET)
     {
@@ -465,7 +465,7 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
  *
  * This function is called before `load_ws2_funcs()` that dynamically loads
  * all Winsock functions. That means we must NOT call any true Winsock functions.
- * But instead use private functions like `ws_inet_pton()`.
+ * But instead use private functions like `INET_addr_pton()`.
  *
  * Since the `DNSBL_test()` test function will call `inet_addr()` (at `trace_level >= 3`)
  * via `IP2Location_get_record()`, the `DNSBL_test()` must be postponed to a later
@@ -617,7 +617,7 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   if (!dnsbl)
      return;
 
-  ws_inet_pton2 (AF_INET, addr, &dnsbl->u.ip4.network);
+  INET_addr_pton2 (AF_INET, addr, &dnsbl->u.ip4.network);
   INET_util_get_mask4 (&dnsbl->u.ip4.mask, bits);
 
   dnsbl->bits   = bits;
@@ -663,7 +663,7 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
   if (!dnsbl)
      return;
 
-  ws_inet_pton2 (AF_INET6, addr, &dnsbl->u.ip6.network);
+  INET_addr_pton2 (AF_INET6, addr, &dnsbl->u.ip6.network);
   INET_util_get_mask6 (&dnsbl->u.ip6.mask, bits);
 
   dnsbl->bits   = bits;

@@ -67,14 +67,14 @@
 extern int IPv6_leading_zeroes;
 
 /**
- * `inet_ntop()`, `inet_pton()` and `ws_inet_ntop2()` are for internal use or to be used before
+ * `inet_ntop()`, `inet_pton()` and `INET_addr_ntop2()` are for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-extern char *ws_inet_ntop  (int family, const void *addr, char *result, size_t size, int *err);
-extern char *ws_inet_ntop2 (int family, const void *addr);
-extern int   ws_inet_pton  (int family, const char *addr, void *result, int *err);
-extern int   ws_inet_pton2 (int family, const char *addr, void *result);
-extern char *ws_sockaddr_ntop (const struct sockaddr *sa);
+extern char *INET_addr_ntop  (int family, const void *addr, char *result, size_t size, int *err);
+extern char *INET_addr_ntop2 (int family, const void *addr);
+extern int   INET_addr_pton  (int family, const char *addr, void *result, int *err);
+extern int   INET_addr_pton2 (int family, const char *addr, void *result);
+extern char *INET_addr_sockaddr (const struct sockaddr *sa);
 
 #endif
 

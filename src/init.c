@@ -463,8 +463,8 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
 
   if (exclude_which & EXCL_ADDRESS)
   {
-    if (ws_inet_pton2(AF_INET, name, ia4) == 1 ||
-        ws_inet_pton2(AF_INET6, name, ia6) == 1)
+    if (INET_addr_pton2(AF_INET, name, ia4) == 1 ||
+        INET_addr_pton2(AF_INET6, name, ia6) == 1)
        which = EXCL_ADDRESS;
   }
 

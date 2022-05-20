@@ -247,8 +247,8 @@ static void geoip_ipv4_add_specials (void)
   {
     DWORD low, high;
 
-    if (ws_inet_pton2(AF_INET, priv[i].low, &low) == 1 &&
-        ws_inet_pton2(AF_INET, priv[i].high, &high) == 1)
+    if (INET_addr_pton2(AF_INET, priv[i].low, &low) == 1 &&
+        INET_addr_pton2(AF_INET, priv[i].high, &high) == 1)
       geoip4_add_entry (swap32(low), swap32(high), priv[i].remark);
     else
       TRACE (0, "Illegal low/high IPv4 address: %s/%s\n", priv[i].low, priv[i].high);
@@ -280,8 +280,8 @@ static void geoip_ipv6_add_specials (void)
   {
     struct in6_addr low, high;
 
-    ws_inet_pton2 (AF_INET6, priv[i].low, &low);
-    ws_inet_pton2 (AF_INET6, priv[i].high, &high);
+    INET_addr_pton2 (AF_INET6, priv[i].low, &low);
+    INET_addr_pton2 (AF_INET6, priv[i].high, &high);
     geoip6_add_entry (&low, &high, priv[i].remark);
   }
 }
@@ -435,10 +435,10 @@ static int geoip6_CSV_add (struct CSV_context *ctx, const char *value)
   switch (ctx->field_num)
   {
     case 0:
-          ws_inet_pton2 (AF_INET6, value, &low);
+          INET_addr_pton2 (AF_INET6, value, &low);
           break;
      case 1:
-          ws_inet_pton2 (AF_INET6, value, &high);
+          INET_addr_pton2 (AF_INET6, value, &high);
           break;
      case 2:
           memcpy (&country, value, sizeof(country));
@@ -522,7 +522,7 @@ const char *geoip_get_country_by_ipv4 (const struct in_addr *addr)
   IP2LOC_SET_BAD();
   num_4_compare = 0;
 
-  ws_inet_ntop (AF_INET, addr, buf, sizeof(buf), NULL);
+  INET_addr_ntop (AF_INET, addr, buf, sizeof(buf), NULL);
 
   num = ip2loc_num_ipv4_entries();
   TRACE (4, "Looking for %s in %u elements.\n", buf, num);
@@ -567,7 +567,7 @@ const char *geoip_get_country_by_ipv6 (const struct in6_addr *addr)
   IP2LOC_SET_BAD();
   num_6_compare = 0;
 
-  ws_inet_ntop (AF_INET6, addr, buf, sizeof(buf), NULL);
+  INET_addr_ntop (AF_INET6, addr, buf, sizeof(buf), NULL);
 
   num = ip2loc_num_ipv6_entries();
   TRACE (4, "Looking for %s in %u elements.\n", buf, num);
@@ -1525,7 +1525,7 @@ static int check_ipv4_unallocated (int dump_cidr,
       char low[25] = "?";
       int  nw_len = network_len32 (last->high+1, entry->low-1);
 
-      ws_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
+      INET_addr_ntop (AF_INET, &addr, low, sizeof(low), NULL);
       len = C_printf ("%s/%d", low, nw_len);
     }
     else
@@ -1586,7 +1586,7 @@ static void dump_ipv4_entries (int dump_cidr)
       int   nw_len = network_len32 (entry->high, entry->low);
       DWORD addr   = swap32 (entry->low);
 
-      ws_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
+      INET_addr_ntop (AF_INET, &addr, low, sizeof(low), NULL);
       len = C_printf ("%6d: %s/%d", i, low, nw_len);
     }
     else
@@ -1618,7 +1618,7 @@ static int check_ipv6_unallocated (int dump_cidr, const struct ipv6_node *entry,
       int   nw_len = network_len32 (last->high+1, entry->low-1);
       DWORD addr   = swap32 (last->high+1);
 
-      ws_inet_ntop (AF_INET, &addr, low, sizeof(low), NULL);
+      INET_addr_ntop (AF_INET, &addr, low, sizeof(low), NULL);
       len = C_printf ("%s/%d", low, nw_len);
     }
     else
@@ -1669,8 +1669,8 @@ static void dump_ipv6_entries (int dump_cidr)
     last = entry;
     len = 0;
 
-    ws_inet_ntop (AF_INET6, &entry->low, low, sizeof(low), NULL);
-    ws_inet_ntop (AF_INET6, &entry->high, high, sizeof(high), NULL);
+    INET_addr_ntop (AF_INET6, &entry->low, low, sizeof(low), NULL);
+    INET_addr_ntop (AF_INET6, &entry->high, high, sizeof(high), NULL);
 
     if (dump_cidr)
     {
@@ -1947,7 +1947,7 @@ static void test_addr_common (const char            *addr_str,
        sbl_ref = " <none>";
     if (rc)
     {
-      ws_inet_ntop (AF_INET, a4, addr, sizeof(addr), NULL);
+      INET_addr_ntop (AF_INET, a4, addr, sizeof(addr), NULL);
       C_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
@@ -1961,7 +1961,7 @@ static void test_addr_common (const char            *addr_str,
        sbl_ref = " <none>";
     if (rc)
     {
-      ws_inet_ntop (AF_INET6, a6, addr, sizeof(addr), NULL);
+      INET_addr_ntop (AF_INET6, a6, addr, sizeof(addr), NULL);
       C_printf ("  Listed as SpamHaus SBL%s\n", sbl_ref);
     }
   }
@@ -2097,7 +2097,7 @@ static void rand_test_addr4 (int loops, BOOL use_ip2loc)
     char   addr_buf [MAX_IP4_SZ+1];
 
     make_random_addr (&addr, NULL);
-    ws_inet_ntop (AF_INET, &addr, addr_buf, sizeof(addr_buf), NULL);
+    INET_addr_ntop (AF_INET, &addr, addr_buf, sizeof(addr_buf), NULL);
     test_addr4 (addr_buf, use_ip2loc);
     C_putc ('\n');
   }
@@ -2118,7 +2118,7 @@ static void rand_test_addr6 (int loops, BOOL use_ip2loc)
     char   addr_buf [MAX_IP6_SZ+1];
 
     make_random_addr (NULL, &addr);
-    ws_inet_ntop (AF_INET6, &addr, addr_buf, sizeof(addr_buf), NULL);
+    INET_addr_ntop (AF_INET6, &addr, addr_buf, sizeof(addr_buf), NULL);
     test_addr6 (addr_buf, use_ip2loc);
     C_putc ('\n');
   }

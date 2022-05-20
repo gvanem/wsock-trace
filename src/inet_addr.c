@@ -59,10 +59,10 @@ static const char hex_chars[] = "0123456789abcdef";
 
 /* These are now locals:
  */
-static char *_ws_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err);
-static char *_ws_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err);
-static int   _ws_inet_pton4 (const char *src, u_char *dst, int *err);
-static int   _ws_inet_pton6 (const char *src, u_char *dst, int *err);
+static char *_INET_addr_ntop4 (const u_char *src, char *dst, size_t size, int *err);
+static char *_INET_addr_ntop6 (const u_char *src, char *dst, size_t size, int *err);
+static int   _INET_addr_pton4 (const char *src, u_char *dst, int *err);
+static int   _INET_addr_pton6 (const char *src, u_char *dst, int *err);
 
 /**
  * Check if `str` is simply an IPv4 address.
@@ -84,7 +84,7 @@ static BOOL is_ip4_addr (const char *str)
  * This function is for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-char *ws_inet_ntop (int family, const void *addr, char *result, size_t result_size, int *err)
+char *INET_addr_ntop (int family, const void *addr, char *result, size_t result_size, int *err)
 {
   int err2;
 
@@ -93,9 +93,9 @@ char *ws_inet_ntop (int family, const void *addr, char *result, size_t result_si
   *err = 0;
 
   if (family == AF_INET)
-     return _ws_inet_ntop4 (addr, result, result_size, err);
+     return _INET_addr_ntop4 (addr, result, result_size, err);
   if (family == AF_INET6)
-     return _ws_inet_ntop6 (addr, result, result_size, err);
+     return _INET_addr_ntop6 (addr, result, result_size, err);
 
   *err = WSAEAFNOSUPPORT;
   return (NULL);
@@ -104,10 +104,10 @@ char *ws_inet_ntop (int family, const void *addr, char *result, size_t result_si
 /**
  * A more compact version of the above.
  */
-char *ws_inet_ntop2 (int family, const void *addr)
+char *INET_addr_ntop2 (int family, const void *addr)
 {
   static char buf [MAX_IP6_SZ+1];
-  PCSTR  rc = ws_inet_ntop (family, addr, buf, sizeof(buf), NULL);
+  PCSTR  rc = INET_addr_ntop (family, addr, buf, sizeof(buf), NULL);
 
   if (!rc)
      strcpy (buf, "??");
@@ -118,7 +118,7 @@ char *ws_inet_ntop2 (int family, const void *addr)
  * This function is for internal use or to be used before
  * `load_ws2_funcs()` has dynamically loaded all needed Winsock functions.
  */
-int ws_inet_pton (int family, const char *addr, void *result, int *err)
+int INET_addr_pton (int family, const char *addr, void *result, int *err)
 {
   int err2;
 
@@ -127,9 +127,9 @@ int ws_inet_pton (int family, const char *addr, void *result, int *err)
   *err = 0;
 
   if (family == AF_INET)
-     return _ws_inet_pton4 (addr, result, err);
+     return _INET_addr_pton4 (addr, result, err);
   if (family == AF_INET6)
-     return _ws_inet_pton6 (addr, result, err);
+     return _INET_addr_pton6 (addr, result, err);
 
   *err = WSAEAFNOSUPPORT;
   return (0);
@@ -138,9 +138,9 @@ int ws_inet_pton (int family, const char *addr, void *result, int *err)
 /**
  * A more compact version of the above.
  */
-int ws_inet_pton2 (int family, const char *addr, void *result)
+int INET_addr_pton2 (int family, const char *addr, void *result)
 {
-  return ws_inet_pton (family, addr, result, NULL);
+  return INET_addr_pton (family, addr, result, NULL);
 }
 
 
@@ -154,7 +154,7 @@ int ws_inet_pton2 (int family, const char *addr, void *result)
  *
  * \author Paul Vixie, 1996.
  */
-static char *_ws_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err)
+static char *_INET_addr_ntop4 (const u_char *src, char *dst, size_t size, int *err)
 {
   char tmp [sizeof("255.255.255.255")];
 
@@ -172,7 +172,7 @@ static char *_ws_inet_ntop4 (const u_char *src, char *dst, size_t size, int *err
  * \author
  *  Paul Vixie, 1996.
  */
-static char *_ws_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err)
+static char *_INET_addr_ntop6 (const u_char *src, char *dst, size_t size, int *err)
 {
   /*
    * Note that int32_t and int16_t need only be "at least" large enough
@@ -252,7 +252,7 @@ static char *_ws_inet_ntop6 (const u_char *src, char *dst, size_t size, int *err
     if (i == 6 && best.base == 0 &&
         (best.len == 6 || (best.len == 5 && words[5] == 0xffff)))
     {
-      if (!_ws_inet_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp), err))
+      if (!_INET_addr_ntop4(src+12, tp, sizeof(tmp) - (tp - tmp), err))
          goto inval;
       tp += strlen (tp);
       break;
@@ -290,7 +290,7 @@ inval:
  * \author
  *   Paul Vixie, 1996.
  */
-static int _ws_inet_pton4 (const char *src, u_char *dst, int *err)
+static int _INET_addr_pton4 (const char *src, u_char *dst, int *err)
 {
   static const char digits[] = "0123456789";
   int    saw_digit, octets, ch;
@@ -352,7 +352,7 @@ inval:
  * \author Paul Vixie, 1996.
  * \n\b credit: inspired by Mark Andrews.
  */
-static int _ws_inet_pton6 (const char *src, u_char *dst, int *err)
+static int _INET_addr_pton6 (const char *src, u_char *dst, int *err)
 {
   u_char  tmp [IN6ADDRSZ];
   u_char *endp, *colonp, *tp = tmp;
@@ -411,11 +411,11 @@ static int _ws_inet_pton6 (const char *src, u_char *dst, int *err)
       continue;
     }
     if (ch == '.' && ((tp + INADDRSZ) <= endp) &&
-        _ws_inet_pton4(curtok, tp, err) > 0)
+        _INET_addr_pton4(curtok, tp, err) > 0)
     {
       tp += INADDRSZ;
       saw_xdigit = 0;
-      break;     /* '\0' was seen by _ws_inet_pton4(). */
+      break;     /* '\0' was seen by _INET_addr_pton4(). */
     }
     goto inval;
   }
@@ -482,7 +482,7 @@ struct fake_sockaddr_un {
  *
  * \param[in] sa   the `struct sockaddr *` to format a string from.
  */
-char *ws_sockaddr_ntop (const struct sockaddr *sa)
+char *INET_addr_sockaddr (const struct sockaddr *sa)
 {
   const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) sa;
   const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) sa;
@@ -495,7 +495,7 @@ char *ws_sockaddr_ntop (const struct sockaddr *sa)
 
   if (sa4->sin_family == AF_INET)
   {
-    _ws_inet_ntop4 ((u_char*)&sa4->sin_addr, buf, sizeof(buf), NULL);
+    _INET_addr_ntop4 ((u_char*)&sa4->sin_addr, buf, sizeof(buf), NULL);
     if (sa4->sin_port)
     {
      end = strchr (buf, '\0');
@@ -508,7 +508,7 @@ char *ws_sockaddr_ntop (const struct sockaddr *sa)
   if (sa4->sin_family == AF_INET6)
   {
     buf[0] = '[';
-    _ws_inet_ntop6 ((u_char*)&sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
+    _INET_addr_ntop6 ((u_char*)&sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
     end = strchr (buf, '\0');
     *end++ = ']';
     if (sa6->sin6_port)

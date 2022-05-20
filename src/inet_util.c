@@ -1251,7 +1251,7 @@ void INET_util_get_mask6 (struct in6_addr *out, int bits)
 
 /**
  * Return a hex-string for an `in6_addr *mask`.
- * Should return the same as `ws_inet_ntop6()` without
+ * Should return the same as `INET_addr_ntop6()` without
  * the `::` shorthanding.
  */
 const char *INET_util_in6_mask_str (const struct in6_addr *mask)
@@ -1306,7 +1306,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
   if (dash)
      *dash = '\0';
 
-  if (ws_inet_pton2(AF_INET, copy, &a4_low) != 1)
+  if (INET_addr_pton2(AF_INET, copy, &a4_low) != 1)
      return (FALSE);
 
   if (!dash)
@@ -1314,7 +1314,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
     *ip4 = a4_low;
     return (TRUE);
   }
-  if (ws_inet_pton2(AF_INET, dash+1, &a4_high) != 1)
+  if (INET_addr_pton2(AF_INET, dash+1, &a4_high) != 1)
      return (FALSE);
 
   *ip4 = a4_low;
@@ -1357,7 +1357,7 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
   if (dash)
      *dash = '\0';
 
-  if (ws_inet_pton2(AF_INET6, copy, &a6) != 1)
+  if (INET_addr_pton2(AF_INET6, copy, &a6) != 1)
      return (FALSE);
 
   *ip6 = a6;
@@ -1463,11 +1463,11 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
             ip_width,       "mask",
             total_str);
 
-  ws_inet_pton2 (AF_INET, IP4_NET, &network4);
-  ws_inet_pton2 (AF_INET6, IP6_NET, &network6);
+  INET_addr_pton2 (AF_INET, IP4_NET, &network4);
+  INET_addr_pton2 (AF_INET6, IP6_NET, &network6);
   if (family == AF_INET6)
-       _strlcpy (network_str, ws_inet_ntop2(family, &network6), sizeof(network_str));
-  else _strlcpy (network_str, ws_inet_ntop2(family, &network4), sizeof(network_str));
+       _strlcpy (network_str, INET_addr_ntop2(family, &network6), sizeof(network_str));
+  else _strlcpy (network_str, INET_addr_ntop2(family, &network4), sizeof(network_str));
 
   for (bits = 0; bits <= max_bits; bits++)
   {
@@ -1506,9 +1506,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         end_ip.s6_bytes[i]   = start_ip.s6_bytes[i] | ~mask.s6_bytes[i];
       }
 
-      ws_inet_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
-      ws_inet_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
-      ws_inet_ntop (AF_INET6, &mask, mask_str, sizeof(mask_str), NULL);
+      INET_addr_ntop (AF_INET6, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+      INET_addr_ntop (AF_INET6, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+      INET_addr_ntop (AF_INET6, &mask, mask_str, sizeof(mask_str), NULL);
     }
     else
     {
@@ -1532,9 +1532,9 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
         total_ips = swap32 (end_ip.s_addr) - swap32 (start_ip.s_addr) + 1;
       }
 
-      ws_inet_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
-      ws_inet_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
-      ws_inet_ntop (AF_INET, &mask, mask_str, sizeof(mask_str), NULL);
+      INET_addr_ntop (AF_INET, &start_ip, start_ip_str, sizeof(start_ip_str), NULL);
+      INET_addr_ntop (AF_INET, &end_ip, end_ip_str, sizeof(end_ip_str), NULL);
+      INET_addr_ntop (AF_INET, &mask, mask_str, sizeof(mask_str), NULL);
     }
 
     if (lshift_prob)

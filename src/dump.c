@@ -1574,15 +1574,15 @@ static const char *dump_ip_add_membership (char *buf, size_t buf_sz, const char 
 
   assert (buf_sz > sizeof(addr) + sizeof(iface) + 5);
 
-  memcpy (&addr,  ws_inet_ntop2(AF_INET, &mreq->imr_multiaddr.s_addr), sizeof(addr));
-  memcpy (&iface, ws_inet_ntop2(AF_INET, &mreq->imr_interface.s_addr), sizeof(iface));
+  memcpy (&addr,  INET_addr_ntop2(AF_INET, &mreq->imr_multiaddr.s_addr), sizeof(addr));
+  memcpy (&iface, INET_addr_ntop2(AF_INET, &mreq->imr_interface.s_addr), sizeof(iface));
   snprintf (buf, buf_sz, "{%s, %s}", addr, iface);
   return (buf);
 }
 
 static const char *dump_ip_multicast_if (char *buf, size_t buf_sz, const char *opt_val)
 {
-  snprintf (buf, buf_sz, "{%s}", ws_inet_ntop2(AF_INET, (const void*)opt_val));
+  snprintf (buf, buf_sz, "{%s}", INET_addr_ntop2(AF_INET, (const void*)opt_val));
   return (buf);
 }
 
@@ -1597,7 +1597,7 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
   const struct ipv6_mreq *mreq6 = (const struct ipv6_mreq*) opt_val;
 
   snprintf (buf, buf_sz, "{%s%%%d}",
-            ws_inet_ntop2(AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr),
+            INET_addr_ntop2(AF_INET6, &mreq6->ipv6mr_multiaddr.s6_addr),
             mreq6->ipv6mr_interface);
   return (buf);
 }
@@ -1622,7 +1622,7 @@ static const char *socket_addr_str (char *buf, size_t buf_sz, const SOCKET_ADDRE
     af = sa->lpSockaddr->sa_family;
     if (af != AF_INET && af != AF_INET6)
          snprintf (buf, buf_sz, "AF %d??", af);
-    else _strlcpy (buf, ws_inet_ntop2(af, &sa->lpSockaddr->sa_data), buf_sz);
+    else _strlcpy (buf, INET_addr_ntop2(af, &sa->lpSockaddr->sa_data), buf_sz);
   }
   return (buf);
 }
@@ -1891,7 +1891,7 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
   if (rc != SOCKET_ERROR)
   {
     if (!IsBadReadPtr(msg->name, sizeof(msg->name)))
-       remote = ws_sockaddr_ntop (msg->name);
+       remote = INET_addr_sockaddr (msg->name);
 
     if (!IsBadReadPtr(&msg->Control, sizeof(WSABUF)) && msg->Control.len)
        have_control = TRUE;
@@ -2090,7 +2090,7 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
 
     C_indent (g_cfg.trace_indent+2);
     C_printf ("ai_canonname: %s, ai_addr: %s%s\n",
-              ai->ai_canonname, ws_sockaddr_ntop(ai->ai_addr), comment);
+              ai->ai_canonname, INET_addr_sockaddr(ai->ai_addr), comment);
   }
   C_puts ("~0");
 }
@@ -2114,7 +2114,7 @@ void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
 
     C_indent (g_cfg.trace_indent+2);
     C_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
-              ai->ai_canonname, ws_sockaddr_ntop(ai->ai_addr), comment);
+              ai->ai_canonname, INET_addr_sockaddr(ai->ai_addr), comment);
   }
   C_puts ("~0");
 }
@@ -2463,7 +2463,7 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
 
   for (num = 0; addresses && addresses[num] && left > 0; num++)
   {
-    const char *addr = ws_inet_ntop2 (type, addresses[num]);
+    const char *addr = INET_addr_ntop2 (type, addresses[num]);
 
     if (total + (int)strlen(addr) + 2 >= max_len)
     {

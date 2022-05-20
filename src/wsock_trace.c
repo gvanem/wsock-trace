@@ -1056,7 +1056,7 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
   ENTER_CRIT();
 
   WSTRACE ("WSAConnect (%s, %s, 0x%p, 0x%p, ...) --> %s",
-           socket_number(s), ws_sockaddr_ntop(name),
+           socket_number(s), INET_addr_sockaddr(name),
            caller_data, callee_data, socket_or_error(rc));
 
 #if 0
@@ -1333,7 +1333,7 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
   ENTER_CRIT();
 
   WSTRACE ("WSAAccept (%s, %s, 0x%p, 0x%p) --> %s",
-           socket_number(s), ws_sockaddr_ntop(addr),
+           socket_number(s), INET_addr_sockaddr(addr),
            condition, (const void*)callback_data, socket_or_error(rc));
 
   if (!exclude_this)
@@ -1402,7 +1402,7 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
            /*
             * If `rc == INVALID_SOCKET`, the `addr` is not filled. Hence simply print it's pointer address.
             */
-           rc == INVALID_SOCKET ? ptr_or_error(addr) : ws_sockaddr_ntop(addr),
+           rc == INVALID_SOCKET ? ptr_or_error(addr) : INET_addr_sockaddr(addr),
            socket_or_error(rc));
 
   if (!exclude_this)
@@ -1436,12 +1436,12 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   if (addr->sa_family == AF_UNIX)
   {
     WSTRACE ("bind (%s, \"%s\") --> %s",
-             socket_number(s), ws_sockaddr_ntop(addr), get_error(rc, 0));
+             socket_number(s), INET_addr_sockaddr(addr), get_error(rc, 0));
   }
   else
   {
     WSTRACE ("bind (%s, %s) --> %s",
-             socket_number(s), ws_sockaddr_ntop(addr), get_error(rc, 0));
+             socket_number(s), INET_addr_sockaddr(addr), get_error(rc, 0));
   }
 
   if (!exclude_this)
@@ -1517,7 +1517,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
   rc = (*p_connect) (s, addr, addr_len);
 
   WSTRACE ("connect (%s, %s, fam %s) --> %s",
-           socket_number(s), ws_sockaddr_ntop(addr),
+           socket_number(s), INET_addr_sockaddr(addr),
            socket_family(sa->sin_family), get_error(rc, 0));
 
   if (!exclude_this)
@@ -1798,7 +1798,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 
     WSTRACE ("recvfrom (%s, 0x%p, %d, %s, %s) --> %s",
              socket_number(s), buf, buf_len, socket_flags(flags),
-             ws_sockaddr_ntop(from), res);
+             INET_addr_sockaddr(from), res);
 
     if (rc > 0 && g_cfg.dump_data)
        dump_data (buf, rc);
@@ -1893,7 +1893,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
 
     WSTRACE ("sendto (%s, 0x%p, %d, %s, %s) --> %s",
              socket_number(s), buf, buf_len, socket_flags(flags),
-             ws_sockaddr_ntop(to), res);
+             INET_addr_sockaddr(to), res);
 
     if (g_cfg.dump_data)
        dump_data (buf, buf_len);
@@ -2032,7 +2032,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
     WSTRACE ("WSARecvFrom (%s, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, flg,
-             ws_sockaddr_ntop(from), ov, func, res);
+             INET_addr_sockaddr(from), ov, func, res);
 
     if (rc == NO_ERROR && g_cfg.dump_data)
     {
@@ -2219,7 +2219,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
     WSTRACE ("WSASendTo (%s, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, socket_flags(flags),
-             ws_sockaddr_ntop(to), ov, func, res);
+             INET_addr_sockaddr(to), ov, func, res);
 
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
@@ -2862,7 +2862,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
   ENTER_CRIT();
 
   WSTRACE ("gethostbyaddr (%s, %d, %s) --> %s",
-           ws_inet_ntop2(type, addr), len, socket_family(type), ptr_or_error(rc));
+           INET_addr_ntop2(type, addr), len, socket_family(type), ptr_or_error(rc));
 
   if (!exclude_this)
   {
@@ -3058,7 +3058,7 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
   ENTER_CRIT();
 
   WSTRACE ("getpeername (%s, %s) --> %s",
-           socket_number(s), ws_sockaddr_ntop(name), get_error(rc, 0));
+           socket_number(s), INET_addr_sockaddr(name), get_error(rc, 0));
 
   if (!exclude_this)
   {
@@ -3089,7 +3089,7 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
   ENTER_CRIT();
 
   WSTRACE ("getsockname (%s, %s) --> %s",
-           socket_number(s), ws_sockaddr_ntop(name), get_error(rc, 0));
+           socket_number(s), INET_addr_sockaddr(name), get_error(rc, 0));
 
   if (!exclude_this)
   {
@@ -3162,7 +3162,7 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   ENTER_CRIT();
 
   WSTRACE ("getnameinfo (%s, ..., %s) --> %s",
-           ws_sockaddr_ntop(sa), getnameinfo_flags_decode(flags), get_error(rc, 0));
+           INET_addr_sockaddr(sa), getnameinfo_flags_decode(flags), get_error(rc, 0));
 
   if (!exclude_this)
   {
@@ -3356,7 +3356,7 @@ EXPORT INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, siz
 
   if (p_inet_ntop)
        ret = (*p_inet_ntop) (af, src, dst, size);
-  else ret = ws_inet_ntop (af, src, dst, size, &err);
+  else ret = INET_addr_ntop (af, src, dst, size, &err);
 
   ENTER_CRIT();
 
@@ -3376,7 +3376,7 @@ EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
 
   if (p_inet_pton)
        ret = (*p_inet_pton) (af, src, dst);
-  else ret = ws_inet_pton (af, src, dst, &err);
+  else ret = INET_addr_pton (af, src, dst, &err);
 
   ENTER_CRIT();
 
