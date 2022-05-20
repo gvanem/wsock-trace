@@ -11,7 +11,6 @@
 export CL=
 
 USE_CRT_DEBUG ?= 0
-USE_GEOIP_DLL ?= 1
 
 define Usage
 
@@ -28,10 +27,18 @@ else
   $(error $(Usage))
 endif
 
+OBJ_DIR = geoip_obj
+
 #
 # Warn on undefined variables.
 #
 MAKEFLAGS += --warn-undefined-variables
+
+#
+# Get a list of .$(O)-files from .c-files:
+#
+c_to_obj = $(addprefix $(OBJ_DIR)/, \
+             $(notdir $(1:.c=.$(O))))
 
 ifeq ($(CC),gcc)
   CFLAGS    = -m32 -O2 -ggdb
@@ -55,7 +62,8 @@ else
             -D_CRT_OBSOLETE_NO_WARNINGS
 
   ifeq ($(CC),clang-cl)
-    CFLAGS += -Wno-unused-function \
+    CFLAGS += -ferror-limit=5      \
+              -Wno-unused-function \
               -Wno-unused-variable
   else
     CFLAGS += -wd4146 -wd4267
@@ -71,12 +79,12 @@ CFLAGS += -I.. -I. -D_WIN32_WINNT=0x0601
 CFLAGS += -DUSE_Winsock2
 
 #
-# CFLAG for 'test-MMDB.c'
+# CFLAG for 'test-MMDB.c', '../getopt.c' and '$(MMDB_SRC)':
 #
-CFLAGS += -I./GeoipMMDB \
-          -D_UNICODE    \
-          -DUNICODE     \
-        # -DMMDB_DEBUG
+MMDB_CFLAGS = -I./GeoipMMDB \
+              -DNO_TRACE    \
+              -D_UNICODE    \
+              -DUNICODE
 
 #
 # CFLAG for $(IPFIRE_SRC):
@@ -85,8 +93,6 @@ CFLAGS += -I./IPFire/src                \
           -I./IPFire/src/libloc/windows \
           -I./IPFire/src/fake-OpenSSL   \
           -DLIBLOC_PRIVATE
-
-OBJ_DIR = geoip_obj
 
 VPATH = GeoipMMDB   \
         IP2Location \
@@ -117,10 +123,10 @@ IPFIRE_SRC = $(addprefix IPFire/src/, \
 
 IP2LOCATION_SRC = ../ip2loc.c
 
-GEOIP_OBJ       = $(addprefix $(OBJ_DIR)/, $(notdir $(GEOIP_SRC:.c=.$(O))))
-MMDB_OBJ        = $(addprefix $(OBJ_DIR)/, $(notdir $(MMDB_SRC:.c=.$(O))))
-IPFIRE_OBJ      = $(addprefix $(OBJ_DIR)/, $(notdir $(IPFIRE_SRC:.c=.$(O))))
-IP2LOCATION_OBJ = $(addprefix $(OBJ_DIR)/, $(notdir $(IP2LOCATION_SRC:.c=.$(O))))
+GEOIP_OBJ       = $(call c_to_obj, $(GEOIP_SRC))
+MMDB_OBJ        = $(call c_to_obj, $(MMDB_SRC))
+IPFIRE_OBJ      = $(call c_to_obj, $(IPFIRE_SRC))
+IP2LOCATION_OBJ = $(call c_to_obj, $(IP2LOCATION_SRC))
 
 ifeq ($(CC),gcc)
   GEOIP_STAT_LIB = libgeoip.a
@@ -149,8 +155,10 @@ $(GEOIP_IMP_LIB): geoip.dll
 geoip.dll: $(OBJ_DIR)/geoip.def $(GEOIP_STAT_LIB)
 	$(call link_DLL, $@, $(GEOIP_IMP_LIB), $(DEF_ARG)$^ $(WS2_32_LIB) $(DNSAPI_LIB))
 
+$(MMDB_OBJ) $(OBJ_DIR)/getopt.$(O) $(OBJ_DIR)/test-MMDB.$(O): CFLAGS += $(MMDB_CFLAGS)
+
 $(OBJ_DIR)/%.obj: %.c
-	$(CC) -c $(CFLAGS) -Fo$@ $<
+	$(CC) -c $(CFLAGS) -Fo./$@ $<
 	@echo
 
 $(OBJ_DIR)/%.o: %.c
@@ -160,7 +168,7 @@ $(OBJ_DIR)/%.o: %.c
 $(OBJ_DIR)/geoip.def: $(GEOIP_STAT_LIB) Makefile.Windows
 	$(call make_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_)
 
-test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(GEOIP_IMP_LIB)
+test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
 #

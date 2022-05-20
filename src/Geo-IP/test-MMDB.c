@@ -1,5 +1,6 @@
 #include <string.h>
 #include <time.h>
+#include <getopt.h>
 #include <maxminddb.h>
 
 static MMDB_s g_mmdb = { 0 };
@@ -179,17 +180,33 @@ static BOOL dump_metadata (const MMDB_metadata_s *meta)
   return (meta->binary_format_major_version == 2);
 }
 
+char *program_name;   /* for '../getopt.c' */
+
 int main (int argc, char **argv)
 {
   WSADATA     wsa;
-  int         rc;
+  int         rc, c, verbose = 0;
   const char *db_file = "test.mmdb";
 
+  program_name = argv[0];
   crtdbg_init();
   WSAStartup (MAKEWORD(1, 1), &wsa);
 
-  if (argc >= 2)
-     db_file = argv[1];
+  while ((c = getopt (argc, argv, "vf:")) != EOF)
+    switch (c)
+    {
+      case 'v':
+           verbose++;
+           break;
+      case 'f':
+           db_file = optarg;
+           break;
+      default:
+           puts ("Illegal option.");
+           return (1);
+    }
+
+  MMDB_set_debug (verbose);
 
   rc = MMDB_open (db_file, MMDB_MODE_MMAP, &g_mmdb);
   if (rc != MMDB_SUCCESS)
