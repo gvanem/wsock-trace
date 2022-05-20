@@ -57,12 +57,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <winsock2.h>  /* Prevent including <winsock.h> in below <windows.h> */
 #include <windows.h>
 #include <shellapi.h>
 
 #include "common.h"
 #include "init.h"
 #include "getopt.h"
+
+#if !defined(__CYGWIN__) && !defined(__MINGW32__) /* Rest of file */
 
 #define PRINT_ERROR ((opterr) && (*options != ':'))
 
@@ -376,7 +379,9 @@ static int getopt_internal (int nargc, char * const *nargv,
   optarg = NULL;
 
 start:
+#if !defined(NO_TRACE)
   TRACE (2, "nargv[%d]: '%s'\n", optind, nargv[optind]);
+#endif
 
   if (!*place)              /* update scanning pointer */
   {
@@ -587,3 +592,4 @@ int getopt_long_only (int nargc, char * const *nargv, const char *options,
   return getopt_internal (nargc, nargv, options, long_options, idx,
                           FLAG_PERMUTE|FLAG_LONGONLY);
 }
+#endif /* !__CYGWIN__ && !__MINGW32__ */
