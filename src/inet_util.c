@@ -302,15 +302,15 @@ static const char *winhttp_strerror (DWORD err)
 static const char *wininet_strerror (DWORD err)
 {
   HMODULE mod = GetModuleHandle ("wininet.dll");
-  char    buf[512];
+  char    buf [512];
 
   if (mod && mod != INVALID_HANDLE_VALUE &&
       FormatMessageA (FORMAT_MESSAGE_FROM_HMODULE,
                       mod, err, MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
                       buf, sizeof(buf), NULL))
   {
-    static char err_buf[512];
-    char   wininet_err_buf[200];
+    static char err_buf [512];
+    char   wininet_err_buf [200];
     char  *p;
     DWORD  wininet_err = 0;
     DWORD  wininet_err_len = sizeof(wininet_err_buf)-1;
@@ -1091,8 +1091,9 @@ int INET_util_addr_is_special (const struct in_addr *ip4, const struct in6_addr 
       return (1);
     }
 
-    /* Old WinXP Teredo prefix, 3FFE:831F::/32
-     * https://technet.microsoft.com/en-us/library/bb457011.aspx
+    /**
+     * Old WinXP Teredo prefix, 3FFE:831F::/32 <br>
+     * Ref: https://technet.microsoft.com/en-us/library/bb457011.aspx
      */
     if (ip6->s6_bytes[0] == 0x3F && ip6->s6_bytes[1] == 0xFE &&
         ip6->s6_bytes[2] == 0x83 && ip6->s6_bytes[3] == 0x1F)
@@ -1115,7 +1116,7 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
    if (ip4)
    {
      /**
-      * Global for IPv4 means not status "RESERVED" by IANA.
+      * Global for IPv4 means not status "RESERVED" by IANA. <br>
       * Ref: https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
       */
      if (ip4->S_un.S_un_b.s_b1 != 0x0  &&                       /* not 0/8        */
@@ -1429,7 +1430,8 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
 {
   struct in_addr  network4;
   struct in6_addr network6;
-  int             i, bits, max_bits = (family == AF_INET6 ? 128 : 32);
+  int             i, bits;
+  int             max_bits = (family == AF_INET6 ? 128 : 32);
   uint64          total_ips = U64_SUFFIX(0);
   const char     *total_str;
   char            network_str [MAX_IP6_SZ+1];
@@ -1437,7 +1439,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
 
 #if defined(__GNUC__)
   /**
-   * The below code for `total_ips` shows some stange issues with
+   * The below code for `total_ips` shows some strange issues with
    * GCC and left shifts > 32. So just drop showing `total_ips`
    * for IPv6.
    */
