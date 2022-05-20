@@ -14,6 +14,7 @@
 #include "config.h"
 #include "getopt.h"
 #include "common.h"
+#include "inet_addr.h"
 #include "init.h"
 
 #ifndef s6_bytes     /* mingw.org */
@@ -82,6 +83,16 @@ static int on_appveyor = 0;
 #define SGR_GREEN     "\x1B[1;32m"
 #define SGR_YELLOW    "\x1B[1;33m"
 #define SGR_DEFAULT   "\x1B[0m"
+
+/* Some www.google.com IPv6 addresses: Should be in Ireland (Dublin)
+ * and reverse resolve to 'arn09s20-in-x04.1e100.net'.
+ * Verified by:
+ *   dig -t ptr -x 2A00:1450:400F:80D::2004
+ */
+#define IP6_TEST_ADDR_A             "2a00:1450:400f:80d::2004"
+#define IP6_TEST_ADDR_W            L"2a00:1450:400f:80d::2004"
+#define IP6_TEST_ADDR_WITH_PORT_A   "[" IP6_TEST_ADDR_A "]:80"
+#define IP6_TEST_ADDR_WITH_PORT_W  L"[" IP6_TEST_ADDR_A "]:80"
 
 static void set_colour (int col);
 
@@ -259,14 +270,10 @@ static void test_gethostbyaddr (void)
   ia = (const char*) &ia6;         /* '::' -> hostname of this machine */
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6));
 
-  /* Some www.google.com IPv6 addresses: Should be in Ireland and
-   * reverse resolve to 'arn09s20-in-x04.1e100.net'.
-   * But that can change tomorrow.
-   */
-  TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:400f:80D::2004", &ia6.s6_addr));
+  TEST_CONDITION (== 1, inet_pton (AF_INET6, IP6_TEST_ADDR_A, &ia6.s6_addr));
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6));
 
-  /* Should be in Finland.
+  /* Should be in Finland (Lappeenranta/Etela-Karjala).
    */
   TEST_CONDITION (== 1, inet_pton (AF_INET6, "2A00:1450:4010:C07::63", &ia6.s6_addr));
   TEST_CONDITION (!= 0, gethostbyaddr (ia, sizeof(ia6), AF_INET6)); /* Has a reverse */
@@ -645,51 +652,85 @@ static void test_WSAAddressToStringA (void)
   struct sockaddr_in  sa4;
   struct sockaddr_in6 sa6;
   char   data [256];
-  DWORD  size = DIM (data);
+  DWORD  size;
 
+  /* WSAAddressToStringA() and AF_INET:
+   */
   memset (&sa4, 0, sizeof(sa4));
-  memset (&sa6, 0, sizeof(sa6));
   sa4.sin_family = AF_INET;
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   sa4.sin_port        = htons (80);
+  size = DIM (data);
   WSAAddressToStringA ((SOCKADDR*)&sa4, sizeof(sa4), NULL, (LPTSTR)&data, &size);
+
+  if (verbose >= 1)
+     printf ("  data: '%s', size: %lu.\n", data, DWORD_CAST(size));
 
   TEST_CONDITION (== 0, strcmp (data, "127.0.0.1:80"));
   TEST_CONDITION (== 1, (size == sizeof("127.0.0.1:80")));
 
+  /* WSAAddressToStringA() and AF_INET6:
+   */
+  memset (&sa6, 0, sizeof(sa6));
   sa6.sin6_family = AF_INET6;
-/*sa6.sin6_addr.s_addr = all zeroes == [::] */
-  sa6.sin6_port        = htons (80);
+  sa6.sin6_port   = htons (80);
+  size = DIM (data);
+  INET_addr_pton2 (AF_INET6, IP6_TEST_ADDR_A, &sa6.sin6_addr);
   WSAAddressToStringA ((SOCKADDR*)&sa6, sizeof(sa6), NULL, (LPTSTR)&data, &size);
 
-  TEST_CONDITION (== 0, strcmp (data, "[::]:80"));
-  TEST_CONDITION (== 1, (size == sizeof("[::]:80")));
+  if (verbose >= 1)
+     printf ("  data: '%s', size: %lu.\n", data, DWORD_CAST(size));
+
+  TEST_CONDITION (== 0, strcmp (data, IP6_TEST_ADDR_WITH_PORT_A));
+  TEST_CONDITION (== 1, (size == sizeof(IP6_TEST_ADDR_WITH_PORT_A)));
 }
 
-static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
+static void test_WSAAddressToStringW_common (BOOL test_ip6, WSAPROTOCOL_INFOW *p_info)
 {
   struct sockaddr_in sa4;
   wchar_t            data [256];
-  DWORD              size = DIM (data);
+  DWORD              size;
 
+  /* WSAAddressToStringW() and AF_INET:
+   */
   memset (&data, '\0', sizeof(data));
   memset (&sa4, '\0', sizeof(sa4));
   sa4.sin_family = AF_INET;
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   sa4.sin_port        = htons (80);
-
-  WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, (wchar_t*)&data, &size);
+  size = DIM (data);
+  WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, data, &size);
 
   if (verbose >= 1)
      printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
 
   TEST_CONDITION (== 0, wcscmp (data, L"127.0.0.1:80"));
   TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1:80")/2));
+
+  /* WSAAddressToStringW() and AF_INET6:
+   */
+  if (test_ip6)
+  {
+    struct sockaddr_in6 sa6;
+
+    memset (&sa6, '\0', sizeof(sa6));
+    sa6.sin6_family = AF_INET6;
+    sa6.sin6_port   = htons (80);
+    size = DIM (data);
+    INET_addr_pton2 (AF_INET6, IP6_TEST_ADDR_A, &sa6.sin6_addr);
+    WSAAddressToStringW ((SOCKADDR*)&sa6, sizeof(sa6), NULL, data, &size);
+
+    if (verbose >= 1)
+       printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
+
+    TEST_CONDITION (== 0, wcscmp (data, IP6_TEST_ADDR_WITH_PORT_W));
+    TEST_CONDITION (== 1, (size == sizeof(IP6_TEST_ADDR_WITH_PORT_W) / 2));
+  }
 }
 
 static void test_WSAAddressToStringW (void)
 {
-  test_WSAAddressToStringW_common (NULL);
+  test_WSAAddressToStringW_common (TRUE, NULL);
 }
 
 /**
@@ -726,7 +767,7 @@ static void test_WSAAddressToStringWP (void)
 
   memcpy (&p_info.ProviderId, &guid, sizeof(p_info.ProviderId));
 
-  test_WSAAddressToStringW_common (&p_info);
+  test_WSAAddressToStringW_common (FALSE, &p_info);
 }
 
 static void test_WSAStringToAddressA (void)
