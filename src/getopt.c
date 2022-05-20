@@ -379,10 +379,6 @@ static int getopt_internal (int nargc, char * const *nargv,
   optarg = NULL;
 
 start:
-#if !defined(NO_TRACE)
-  TRACE (2, "nargv[%d]: '%s'\n", optind, nargv[optind]);
-#endif
-
   if (!*place)              /* update scanning pointer */
   {
     if (optind >= nargc)    /* end of argument vector */

@@ -82,7 +82,6 @@ CFLAGS += -DUSE_Winsock2
 # CFLAG for 'test-MMDB.c', '../getopt.c' and '$(MMDB_SRC)':
 #
 MMDB_CFLAGS = -I./GeoipMMDB \
-              -DNO_TRACE    \
               -D_UNICODE    \
               -DUNICODE
 
