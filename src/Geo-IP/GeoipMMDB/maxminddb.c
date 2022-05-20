@@ -28,12 +28,19 @@
 #define MMDB_DATA_SECTION_SEPARATOR (16)
 #define MAXIMUM_DATA_STRUCTURE_DEPTH (512)
 
-#ifdef MMDB_DEBUG
-#define LOCAL
-#define DEBUG_MSG(msg) fprintf(stderr, msg "\n")
-#define DEBUG_MSGF(fmt, ...) fprintf(stderr, fmt "\n", __VA_ARGS__)
+static int debug_level = 0;
+
+#define LOCAL static
+
+#define DEBUG_MSG(fmt, ...)                            \
+        do {                                           \
+          if (debug_level > 0)                         \
+             fprintf(stderr, fmt "\n", ##__VA_ARGS__); \
+        } while (0)
+
 #define DEBUG_BINARY(fmt, byte)                                 \
     do {                                                        \
+      if (debug_level > 0) {                                    \
         char *binary = byte_to_binary(byte);                    \
         if (NULL == binary) {                                   \
             fprintf(stderr, "Calloc failed in DEBUG_BINARY\n"); \
@@ -41,18 +48,10 @@
         }                                                       \
         fprintf(stderr, fmt "\n", binary);                      \
         free(binary);                                           \
+      }                                                         \
     } while (0)
-#define DEBUG_NL fprintf(stderr, "\n")
-#else
-#define LOCAL static
-#define DEBUG_MSG(...)
-#define DEBUG_MSGF(...)
-#define DEBUG_BINARY(...)
-#define DEBUG_NL
-#endif
 
-#ifdef MMDB_DEBUG
-char *byte_to_binary(uint8_t byte)
+static char *byte_to_binary(uint8_t byte)
 {
     char *bits = calloc(9, sizeof(char));
     if (NULL == bits) {
@@ -67,7 +66,7 @@ char *byte_to_binary(uint8_t byte)
     return bits;
 }
 
-char *type_num_to_name(uint8_t num)
+static char *type_num_to_name(uint8_t num)
 {
     switch (num) {
     case 0:
@@ -106,7 +105,11 @@ char *type_num_to_name(uint8_t num)
         return "unknown type";
     }
 }
-#endif
+
+void MMDB_set_debug (int level)
+{
+  debug_level = level;
+}
 
 /* None of the values we check on the lhs are bigger than uint32_t, so on
  * platforms where SIZE_MAX is a 64-bit integer, this would be a no-op, and it
@@ -198,21 +201,21 @@ LOCAL MMDB_entry_data_list_s *dump_entry_data_list(
 LOCAL void print_indentation(FILE *stream, int i);
 LOCAL char *bytes_to_hex(uint8_t *bytes, uint32_t size);
 
-#define CHECKED_DECODE_ONE(mmdb, offset, entry_data)                        \
-    do {                                                                    \
-        int status = decode_one(mmdb, offset, entry_data);                  \
-        if (MMDB_SUCCESS != status) {                                       \
-            DEBUG_MSGF("CHECKED_DECODE_ONE failed."                         \
-                       " status = %d (%s)", status, MMDB_strerror(status)); \
-            return status;                                                  \
-        }                                                                   \
+#define CHECKED_DECODE_ONE(mmdb, offset, entry_data)                       \
+    do {                                                                   \
+        int status = decode_one(mmdb, offset, entry_data);                 \
+        if (MMDB_SUCCESS != status) {                                      \
+            DEBUG_MSG("CHECKED_DECODE_ONE failed."                         \
+                      " status = %d (%s)", status, MMDB_strerror(status)); \
+            return status;                                                 \
+        }                                                                  \
     } while (0)
 
 #define CHECKED_DECODE_ONE_FOLLOW(mmdb, offset, entry_data)                 \
     do {                                                                    \
         int status = decode_one_follow(mmdb, offset, entry_data);           \
         if (MMDB_SUCCESS != status) {                                       \
-            DEBUG_MSGF("CHECKED_DECODE_ONE_FOLLOW failed."                  \
+            DEBUG_MSG("CHECKED_DECODE_ONE_FOLLOW failed."                   \
                        " status = %d (%s)", status, MMDB_strerror(status)); \
             return status;                                                  \
         }                                                                   \
@@ -507,8 +510,8 @@ LOCAL int read_metadata(MMDB_s *mmdb)
 
     if (mmdb->metadata.record_size != 24 && mmdb->metadata.record_size != 28
         && mmdb->metadata.record_size != 32) {
-        DEBUG_MSGF("bad record size in metadata: %i",
-                   mmdb->metadata.record_size);
+        DEBUG_MSG("bad record size in metadata: %i",
+                  mmdb->metadata.record_size);
         return MMDB_UNKNOWN_DATABASE_FORMAT_ERROR;
     }
 
@@ -522,8 +525,8 @@ LOCAL int read_metadata(MMDB_s *mmdb)
         return MMDB_INVALID_METADATA_ERROR;
     }
     if (!(mmdb->metadata.ip_version == 4 || mmdb->metadata.ip_version == 6)) {
-        DEBUG_MSGF("ip_version value in metadata is not 4 or 6 - it was %i",
-                   mmdb->metadata.ip_version);
+        DEBUG_MSG("ip_version value in metadata is not 4 or 6 - it was %i",
+                  mmdb->metadata.ip_version);
         return MMDB_INVALID_METADATA_ERROR;
     }
 
@@ -603,8 +606,8 @@ LOCAL int value_for_key_as_uint16(MMDB_entry_s *start, char *key,
         return status;
     }
     if (MMDB_DATA_TYPE_UINT16 != entry_data.type) {
-        DEBUG_MSGF("expect uint16 for %s but received %s", key,
-                   type_num_to_name(
+        DEBUG_MSG("expect uint16 for %s but received %s", key,
+                  type_num_to_name(
                        entry_data.type));
         return MMDB_INVALID_METADATA_ERROR;
     }
@@ -622,8 +625,8 @@ LOCAL int value_for_key_as_uint32(MMDB_entry_s *start, char *key,
         return status;
     }
     if (MMDB_DATA_TYPE_UINT32 != entry_data.type) {
-        DEBUG_MSGF("expect uint32 for %s but received %s", key,
-                   type_num_to_name(
+        DEBUG_MSG("expect uint32 for %s but received %s", key,
+                  type_num_to_name(
                        entry_data.type));
         return MMDB_INVALID_METADATA_ERROR;
     }
@@ -641,8 +644,8 @@ LOCAL int value_for_key_as_uint64(MMDB_entry_s *start, char *key,
         return status;
     }
     if (MMDB_DATA_TYPE_UINT64 != entry_data.type) {
-        DEBUG_MSGF("expect uint64 for %s but received %s", key,
-                   type_num_to_name(
+        DEBUG_MSG("expect uint64 for %s but received %s", key,
+                  type_num_to_name(
                        entry_data.type));
         return MMDB_INVALID_METADATA_ERROR;
     }
@@ -660,8 +663,8 @@ LOCAL int value_for_key_as_string(MMDB_entry_s *start, char *key,
         return status;
     }
     if (MMDB_DATA_TYPE_UTF8_STRING != entry_data.type) {
-        DEBUG_MSGF("expect string for %s but received %s", key,
-                   type_num_to_name(
+        DEBUG_MSG("expect string for %s but received %s", key,
+                  type_num_to_name(
                        entry_data.type));
         return MMDB_INVALID_METADATA_ERROR;
     }
@@ -744,7 +747,7 @@ LOCAL int populate_description_metadata(MMDB_s *mmdb, MMDB_s *metadata_db,
     }
 
     if (MMDB_DATA_TYPE_MAP != entry_data.type) {
-        DEBUG_MSGF("Unexpected entry_data type: %d", entry_data.type);
+        DEBUG_MSG("Unexpected entry_data type: %d", entry_data.type);
         return MMDB_INVALID_METADATA_ERROR;
     }
 
@@ -756,7 +759,7 @@ LOCAL int populate_description_metadata(MMDB_s *mmdb, MMDB_s *metadata_db,
     MMDB_entry_data_list_s *member;
     status = MMDB_get_entry_data_list(&map_start, &member);
     if (MMDB_SUCCESS != status) {
-        DEBUG_MSGF(
+        DEBUG_MSG(
             "MMDB_get_entry_data_list failed while populating description."
             " status = %d (%s)", status, MMDB_strerror(status));
         return status;
@@ -1176,13 +1179,11 @@ int MMDB_aget_value(MMDB_entry_s *const start,
     uint32_t offset = start->offset;
 
     memset(entry_data, 0, sizeof(MMDB_entry_data_s));
-    DEBUG_NL;
-    DEBUG_MSG("looking up value by path");
+    DEBUG_MSG("\nlooking up value by path");
 
     CHECKED_DECODE_ONE_FOLLOW(mmdb, offset, entry_data);
 
-    DEBUG_NL;
-    DEBUG_MSGF("top level element is a %s", type_num_to_name(entry_data->type));
+    DEBUG_MSG("\ntop level element is a %s", type_num_to_name(entry_data->type));
 
     /* Can this happen? It'd probably represent a pathological case under
      * normal use, but there's nothing preventing someone from passing an
@@ -1194,8 +1195,7 @@ int MMDB_aget_value(MMDB_entry_s *const start,
     const char *path_elem;
     int i = 0;
     while (NULL != (path_elem = path[i++])) {
-        DEBUG_NL;
-        DEBUG_MSGF("path elem = %s", path_elem);
+        DEBUG_MSG("\npath elem = %s", path_elem);
 
         /* XXX - it'd be good to find a quicker way to skip through these
            entries that doesn't involve decoding them
@@ -1389,52 +1389,51 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
     // could overflow for a corrupt database while an underflow
     // from data_section_size - 1 should not be possible.
     if (offset > mmdb->data_section_size - 1) {
-        DEBUG_MSGF("Offset (%d) past data section (%d)", offset,
-                   mmdb->data_section_size);
+        DEBUG_MSG("Offset (%d) past data section (%d)", offset,
+                  mmdb->data_section_size);
         return MMDB_INVALID_DATA_ERROR;
     }
 
     entry_data->offset = offset;
     entry_data->has_data = true;
 
-    DEBUG_NL;
-    DEBUG_MSGF("Offset: %i", offset);
+    DEBUG_MSG("\nOffset: %i", offset);
 
     uint8_t ctrl = mem[offset++];
     DEBUG_BINARY("Control byte: %s", ctrl);
 
     int type = (ctrl >> 5) & 7;
-    DEBUG_MSGF("Type: %i (%s)", type, type_num_to_name(type));
+    DEBUG_MSG("Type: %i (%s)", type, type_num_to_name(type));
 
     if (type == MMDB_DATA_TYPE_EXTENDED) {
         // Subtracting 1 to avoid possible overflow on offset + 1
         if (offset > mmdb->data_section_size - 1) {
-            DEBUG_MSGF("Extended type offset (%d) past data section (%d)",
-                       offset,
-                       mmdb->data_section_size);
+            DEBUG_MSG("Extended type offset (%d) past data section (%d)",
+                      offset,
+                      mmdb->data_section_size);
             return MMDB_INVALID_DATA_ERROR;
         }
         type = get_ext_type(mem[offset++]);
-        DEBUG_MSGF("Extended type: %i (%s)", type, type_num_to_name(type));
+        DEBUG_MSG("Extended type: %i (%s)", type, type_num_to_name(type));
     }
 
     entry_data->type = type;
 
     if (type == MMDB_DATA_TYPE_POINTER) {
         uint8_t psize = ((ctrl >> 3) & 3) + 1;
-        DEBUG_MSGF("Pointer size: %i", psize);
+        DEBUG_MSG("Pointer size: %i", psize);
 
         // We check that the offset does not extend past the end of the
         // database and that the subtraction of psize did not underflow.
         if (offset > mmdb->data_section_size - psize ||
             mmdb->data_section_size < psize) {
-            DEBUG_MSGF("Pointer offset (%d) past data section (%d)", offset +
-                       psize,
-                       mmdb->data_section_size);
+            DEBUG_MSG("Pointer offset (%d) past data section (%d)", offset +
+                      psize,
+                      mmdb->data_section_size);
             return MMDB_INVALID_DATA_ERROR;
         }
         entry_data->pointer = get_ptr_from(ctrl, &mem[offset], psize);
-        DEBUG_MSGF("Pointer to: %i", entry_data->pointer);
+        DEBUG_MSG("Pointer to: %i", entry_data->pointer);
 
         entry_data->data_size = psize;
         entry_data->offset_to_next = offset + psize;
@@ -1446,9 +1445,9 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
     case 29:
         // We subtract when checking offset to avoid possible overflow
         if (offset > mmdb->data_section_size - 1) {
-            DEBUG_MSGF("String end (%d, case 29) past data section (%d)",
-                       offset,
-                       mmdb->data_section_size);
+            DEBUG_MSG("String end (%d, case 29) past data section (%d)",
+                      offset,
+                      mmdb->data_section_size);
             return MMDB_INVALID_DATA_ERROR;
         }
         size = 29 + mem[offset++];
@@ -1456,9 +1455,9 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
     case 30:
         // We subtract when checking offset to avoid possible overflow
         if (offset > mmdb->data_section_size - 2) {
-            DEBUG_MSGF("String end (%d, case 30) past data section (%d)",
-                       offset,
-                       mmdb->data_section_size);
+            DEBUG_MSG("String end (%d, case 30) past data section (%d)",
+                      offset,
+                      mmdb->data_section_size);
             return MMDB_INVALID_DATA_ERROR;
         }
         size = 285 + get_uint16(&mem[offset]);
@@ -1467,9 +1466,9 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
     case 31:
         // We subtract when checking offset to avoid possible overflow
         if (offset > mmdb->data_section_size - 3) {
-            DEBUG_MSGF("String end (%d, case 31) past data section (%d)",
-                       offset,
-                       mmdb->data_section_size);
+            DEBUG_MSG("String end (%d, case 31) past data section (%d)",
+                      offset,
+                      mmdb->data_section_size);
             return MMDB_INVALID_DATA_ERROR;
         }
         size = 65821 + get_uint24(&mem[offset]);
@@ -1478,7 +1477,7 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
         break;
     }
 
-    DEBUG_MSGF("Size: %i", size);
+    DEBUG_MSG("Size: %i", size);
 
     if (type == MMDB_DATA_TYPE_MAP || type == MMDB_DATA_TYPE_ARRAY) {
         entry_data->data_size = size;
@@ -1490,7 +1489,7 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
         entry_data->boolean = size ? true : false;
         entry_data->data_size = 0;
         entry_data->offset_to_next = offset;
-        DEBUG_MSGF("boolean value: %s", entry_data->boolean ? "true" : "false");
+        DEBUG_MSG("boolean value: %s", entry_data->boolean ? "true" : "false");
         return MMDB_SUCCESS;
     }
 
@@ -1498,42 +1497,42 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
     // buffer and that the calculation in doing this did not underflow.
     if (offset > mmdb->data_section_size - size ||
         mmdb->data_section_size < size) {
-        DEBUG_MSGF("Data end (%d) past data section (%d)", offset + size,
-                   mmdb->data_section_size);
+        DEBUG_MSG("Data end (%d) past data section (%d)", offset + size,
+                  mmdb->data_section_size);
         return MMDB_INVALID_DATA_ERROR;
     }
 
     if (type == MMDB_DATA_TYPE_UINT16) {
         if (size > 2) {
-            DEBUG_MSGF("uint16 of size %d", size);
+            DEBUG_MSG("uint16 of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
         entry_data->uint16 = (uint16_t)get_uintX(&mem[offset], size);
-        DEBUG_MSGF("uint16 value: %u", entry_data->uint16);
+        DEBUG_MSG("uint16 value: %u", entry_data->uint16);
     } else if (type == MMDB_DATA_TYPE_UINT32) {
         if (size > 4) {
-            DEBUG_MSGF("uint32 of size %d", size);
+            DEBUG_MSG("uint32 of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
         entry_data->uint32 = (uint32_t)get_uintX(&mem[offset], size);
-        DEBUG_MSGF("uint32 value: %u", entry_data->uint32);
+        DEBUG_MSG("uint32 value: %u", entry_data->uint32);
     } else if (type == MMDB_DATA_TYPE_INT32) {
         if (size > 4) {
-            DEBUG_MSGF("int32 of size %d", size);
+            DEBUG_MSG("int32 of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
         entry_data->int32 = get_sintX(&mem[offset], size);
-        DEBUG_MSGF("int32 value: %i", entry_data->int32);
+        DEBUG_MSG("int32 value: %i", entry_data->int32);
     } else if (type == MMDB_DATA_TYPE_UINT64) {
         if (size > 8) {
-            DEBUG_MSGF("uint64 of size %d", size);
+            DEBUG_MSG("uint64 of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
         entry_data->uint64 = get_uintX(&mem[offset], size);
-        DEBUG_MSGF("uint64 value: %" PRIu64, entry_data->uint64);
+        DEBUG_MSG("uint64 value: %" PRIu64, entry_data->uint64);
     } else if (type == MMDB_DATA_TYPE_UINT128) {
         if (size > 16) {
-            DEBUG_MSGF("uint128 of size %d", size);
+            DEBUG_MSG("uint128 of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
 #if MMDB_UINT128_IS_BYTE_ARRAY
@@ -1546,20 +1545,20 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
 #endif
     } else if (type == MMDB_DATA_TYPE_FLOAT) {
         if (size != 4) {
-            DEBUG_MSGF("float of size %d", size);
+            DEBUG_MSG("float of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
         size = 4;
         entry_data->float_value = get_ieee754_float(&mem[offset]);
-        DEBUG_MSGF("float value: %f", entry_data->float_value);
+        DEBUG_MSG("float value: %f", entry_data->float_value);
     } else if (type == MMDB_DATA_TYPE_DOUBLE) {
         if (size != 8) {
-            DEBUG_MSGF("double of size %d", size);
+            DEBUG_MSG("double of size %d", size);
             return MMDB_INVALID_DATA_ERROR;
         }
         size = 8;
         entry_data->double_value = get_ieee754_double(&mem[offset]);
-        DEBUG_MSGF("double value: %f", entry_data->double_value);
+        DEBUG_MSG("double value: %f", entry_data->double_value);
     } else if (type == MMDB_DATA_TYPE_UTF8_STRING) {
         entry_data->utf8_string = size == 0 ? "" : (char *)&mem[offset];
         entry_data->data_size = size;
@@ -1569,7 +1568,7 @@ LOCAL int decode_one(const MMDB_s *const mmdb, uint32_t offset,
         if (NULL == string) {
             abort();
         }
-        DEBUG_MSGF("string value: %s", string);
+        DEBUG_MSG("string value: %s", string);
         free(string);
 #endif
     } else if (type == MMDB_DATA_TYPE_BYTES) {

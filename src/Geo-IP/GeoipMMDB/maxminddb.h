@@ -223,6 +223,8 @@ typedef struct MMDB_search_node_s {
     MMDB_entry_s right_record_entry;
 } MMDB_search_node_s;
 
+extern void MMDB_set_debug (int level);
+
 extern int MMDB_open(const char *const filename, uint32_t flags,
                      MMDB_s *const mmdb);
 extern MMDB_lookup_result_s MMDB_lookup_string(const MMDB_s *const mmdb,
