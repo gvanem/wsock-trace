@@ -756,7 +756,7 @@ static int __ASN_libloc_print (const char            *intro,
 {
   struct loc_network *net = NULL;
   struct in6_addr     addr;
-  const  char        *addr_str;
+  const  char        *addr_str = "?";
   int                 rc, save, ip6_teredo;
 
   if (!libloc.db)
@@ -796,7 +796,10 @@ static int __ASN_libloc_print (const char            *intro,
   else
     return (0);
 
-  TRACE (2, "Looking up: %s.\n", addr_str = ws_inet_ntop2(AF_INET6, &addr));
+  if (g_cfg.trace_level >= 2)
+     addr_str = ws_inet_ntop2 (AF_INET6, &addr);
+
+  TRACE (2, "Looking up: %s.\n", addr_str);
 
   /* Do not trace 'inet_pton()' inside libloc or `WSAGetLastError()' below.
    */
