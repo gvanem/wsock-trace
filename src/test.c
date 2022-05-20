@@ -642,37 +642,49 @@ static void test_WSAFDIsSet (void)
 
 static void test_WSAAddressToStringA (void)
 {
-  struct sockaddr_in sa4;
-  char   data[256];
+  struct sockaddr_in  sa4;
+  struct sockaddr_in6 sa6;
+  char   data [256];
   DWORD  size = DIM (data);
 
   memset (&sa4, 0, sizeof(sa4));
+  memset (&sa6, 0, sizeof(sa6));
   sa4.sin_family = AF_INET;
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  sa4.sin_port        = htons (80);
   WSAAddressToStringA ((SOCKADDR*)&sa4, sizeof(sa4), NULL, (LPTSTR)&data, &size);
 
-  TEST_CONDITION (== 0, strcmp (data, "127.0.0.1"));
-  TEST_CONDITION (== 1, (size == sizeof("127.0.0.1")));
+  TEST_CONDITION (== 0, strcmp (data, "127.0.0.1:80"));
+  TEST_CONDITION (== 1, (size == sizeof("127.0.0.1:80")));
+
+  sa6.sin6_family = AF_INET6;
+/*sa6.sin6_addr.s_addr = all zeroes == [::] */
+  sa6.sin6_port        = htons (80);
+  WSAAddressToStringA ((SOCKADDR*)&sa6, sizeof(sa6), NULL, (LPTSTR)&data, &size);
+
+  TEST_CONDITION (== 0, strcmp (data, "[::]:80"));
+  TEST_CONDITION (== 1, (size == sizeof("[::]:80")));
 }
 
 static void test_WSAAddressToStringW_common (WSAPROTOCOL_INFOW *p_info)
 {
   struct sockaddr_in sa4;
-  wchar_t            data[256];
+  wchar_t            data [256];
   DWORD              size = DIM (data);
 
   memset (&data, '\0', sizeof(data));
   memset (&sa4, '\0', sizeof(sa4));
   sa4.sin_family = AF_INET;
   sa4.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  sa4.sin_port        = htons (80);
 
   WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, (wchar_t*)&data, &size);
 
   if (verbose >= 1)
      printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
 
-  TEST_CONDITION (== 0, wcscmp (data, L"127.0.0.1"));
-  TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1")/2));
+  TEST_CONDITION (== 0, wcscmp (data, L"127.0.0.1:80"));
+  TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1:80")/2));
 }
 
 static void test_WSAAddressToStringW (void)
