@@ -173,11 +173,4 @@ const struct LoadTable *find_ws2_func_by_name (const char *func)
   ARGSUSED (func);
   return (NULL);
 }
-
-const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
-{
-  ARGSUSED (sa);
-  ARGSUSED (sa_len);
-  return (NULL);
-}
 #endif

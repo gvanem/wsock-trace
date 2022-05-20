@@ -459,3 +459,77 @@ toolong:
   *err = WSAENAMETOOLONG;
   return (0);
 }
+
+/**
+ * \struct fake_sockaddr_un
+ * This is in `<afunix.h>` on recent SDK's.
+ */
+struct fake_sockaddr_un {
+       short sun_family;       /* AF_UNIX */
+       char  sun_path [108];   /* pathname */
+     };
+#define sockaddr_un fake_sockaddr_un
+
+/**
+ * Instead of calling `WSAAddressToStringA()` for `AF_INET`, `AF_INET6`
+ * and `AF_UNIX` addresses, we do it ourself.
+ *
+ * This function returns the address *and* the port if the
+ * `sockaddr_in::sin_port` (or `sockaddr_in6::sin6_port`) is set.
+ * Like:
+ *  \li `127.0.0.1:1234` or
+ *  \li `[aa:bb::ff]:1234`
+ *
+ * \param[in] sa   the `struct sockaddr *` to format a string from.
+ */
+char *ws_sockaddr_ntop (const struct sockaddr *sa)
+{
+  const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) sa;
+  const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) sa;
+  const struct sockaddr_un  *su  = (const struct sockaddr_un*) sa;
+  static char buf [MAX_IP6_SZ+MAX_PORT_SZ+3];
+  char       *end;
+
+  if (!sa4)
+     return ("<NULL>");
+
+  if (sa4->sin_family == AF_INET)
+  {
+    _ws_inet_ntop4 ((u_char*)&sa4->sin_addr, buf, sizeof(buf), NULL);
+    if (sa4->sin_port)
+    {
+     end = strchr (buf, '\0');
+     *end++ = ':';
+      _itoa (swap16(sa4->sin_port), end, 10);
+    }
+    return (buf);
+  }
+
+  if (sa4->sin_family == AF_INET6)
+  {
+    buf[0] = '[';
+    _ws_inet_ntop6 ((u_char*)&sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
+    end = strchr (buf, '\0');
+    *end++ = ']';
+    if (sa6->sin6_port)
+    {
+      *end++ = ':';
+      _itoa (swap16(sa6->sin6_port), end, 10);
+    }
+    return (buf);
+  }
+
+  if (sa4->sin_family == AF_UNIX)
+  {
+    const wchar_t *path = (const wchar_t*) &su->sun_path;
+
+    if (!su->sun_path[0])
+         strcpy (buf, "abstract");
+    else if (su->sun_path[0] && su->sun_path[1])
+         _strlcpy (buf, su->sun_path, sizeof(buf));
+    else if (WideCharToMultiByte(CP_ACP, 0, path, (int)wcslen(path), buf, (int)sizeof(buf), NULL, NULL) == 0)
+         strcpy (buf, "??");
+    return (buf);
+  }
+  return ("??");
+}

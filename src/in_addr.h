@@ -74,6 +74,7 @@ extern char *ws_inet_ntop  (int family, const void *addr, char *result, size_t s
 extern char *ws_inet_ntop2 (int family, const void *addr);
 extern int   ws_inet_pton  (int family, const char *addr, void *result, int *err);
 extern int   ws_inet_pton2 (int family, const char *addr, void *result);
+extern char *ws_sockaddr_ntop (const struct sockaddr *sa);
 
 #endif
 

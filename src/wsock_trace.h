@@ -15,8 +15,4 @@ extern const struct LoadTable *find_ws2_func_by_name (const char *func);
 
 extern int WSAError_save_restore (int pop);
 
-extern const char *sockaddr_str      (const struct sockaddr *sa, const int *sa_len);
-extern const char *sockaddr_str2     (const struct sockaddr *sa, const int *sa_len);
-extern const char *sockaddr_str_port (const struct sockaddr *sa);
-
 #endif

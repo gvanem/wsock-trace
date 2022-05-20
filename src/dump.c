@@ -19,6 +19,7 @@
 #include "asn.h"
 #include "iana.h"
 #include "idna.h"
+#include "in_addr.h"
 #include "hosts.h"
 #include "wsock_trace.h"
 #include "inet_util.h"
@@ -1891,7 +1892,7 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
   if (rc != SOCKET_ERROR)
   {
     if (!IsBadReadPtr(msg->name, sizeof(msg->name)))
-       remote = sockaddr_str_port (msg->name);
+       remote = ws_sockaddr_ntop (msg->name);
 
     if (!IsBadReadPtr(&msg->Control, sizeof(WSABUF)) && msg->Control.len)
        have_control = TRUE;
@@ -2075,7 +2076,6 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
 {
   for ( ; ai; ai = ai->ai_next)
   {
-    const int  *addr_len;
     const char *comment;
 
     C_indent (g_cfg.trace_indent+2);
@@ -2090,10 +2090,8 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
     else comment = "";
 
     C_indent (g_cfg.trace_indent+2);
-    addr_len = (const int*)&ai->ai_addrlen;
-
     C_printf ("ai_canonname: %s, ai_addr: %s%s\n",
-              ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len), comment);
+              ai->ai_canonname, ws_sockaddr_ntop(ai->ai_addr), comment);
   }
   C_puts ("~0");
 }
@@ -2102,7 +2100,6 @@ void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
 {
   for ( ; ai; ai = ai->ai_next)
   {
-    const int  *addr_len;
     const char *comment;
 
     C_indent (g_cfg.trace_indent+2);
@@ -2117,10 +2114,8 @@ void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
     else comment = "";
 
     C_indent (g_cfg.trace_indent+2);
-    addr_len = (const int*)&ai->ai_addrlen;
-
     C_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
-              ai->ai_canonname, sockaddr_str2(ai->ai_addr, addr_len), comment);
+              ai->ai_canonname, ws_sockaddr_ntop(ai->ai_addr), comment);
   }
   C_puts ("~0");
 }

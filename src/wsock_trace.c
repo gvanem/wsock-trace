@@ -690,107 +690,6 @@ static const char *get_error (SOCK_RC_TYPE rc, int local_err)
   return ("No error");
 }
 
-/**
- * `WSAAddressToStringA()` returns the address *and* the port.<br>
- * Like: `127.0.0.1:1234`
- *
- * \param[in] sa      the `struct sockaddr *` to return the address from.
- * \param[in] sa_len  the length of the `struct sockaddr` structure.
- */
-const char *sockaddr_str (const struct sockaddr *sa, const int *sa_len)
-{
-  static char buf [MAX_IP6_SZ+MAX_PORT_SZ+1];
-  DWORD  size = sizeof(buf);
-  DWORD  len  = sa_len ? *(DWORD*)sa_len : (DWORD)sizeof(*sa);
-
-  WSAERROR_PUSH();
-  if ((*p_WSAAddressToStringA)((SOCKADDR*)sa, len, NULL, buf, &size))
-     strcpy (buf, "??");
-  WSAERROR_POP();
-  return (buf);
-}
-
-/**
- * Instead of calling `WSAAddressToStringA()` for AF_INET/AF_INET6 addresses,
- * we do it ourself using `sockaddr_str_port()`.
- *
- * \param[in] sa      the `struct sockaddr *` to format and return from.
- * \param[in] sa_len  the length of the `struct sockaddr` structure.
- */
-const char *sockaddr_str2 (const struct sockaddr *sa, const int *sa_len)
-{
-  const char *p = sockaddr_str_port (sa);
-
-  if (!p)
-     return sockaddr_str (sa, sa_len);
-  return (p);
-}
-
-/**
- * \struct fake_sockaddr_un
- * This is in `<afunix.h>` on recent SDK's.
- */
-struct fake_sockaddr_un {
-       short sun_family;       /* AF_UNIX */
-       char  sun_path [108];   /* pathname */
-     };
-#define sockaddr_un fake_sockaddr_un
-
-/**
- * This returns the address *and* the port in the `buf`. <br>
- * Like:
- *  \li `"127.0.0.1:1234"`  for an `AF_INET` sockaddr. And
- *  \li `"[0F::80::]:1234"` for an `AF_INET6` sockaddr.
- */
-const char *sockaddr_str_port (const struct sockaddr *sa)
-{
-  const struct sockaddr_in  *sa4 = (const struct sockaddr_in*) sa;
-  const struct sockaddr_in6 *sa6 = (const struct sockaddr_in6*) sa;
-  const struct sockaddr_un  *su  = (const struct sockaddr_un*) sa;
-  static char buf [MAX_IP6_SZ+MAX_PORT_SZ+3];
-  char       *end;
-
-  if (!sa4)
-     return ("<NULL>");
-
-  if (sa4->sin_family == AF_INET)
-  {
-    snprintf (buf, sizeof(buf), "%u.%u.%u.%u:%d",
-              sa4->sin_addr.S_un.S_un_b.s_b1,
-              sa4->sin_addr.S_un.S_un_b.s_b2,
-              sa4->sin_addr.S_un.S_un_b.s_b3,
-              sa4->sin_addr.S_un.S_un_b.s_b4,
-              swap16(sa4->sin_port));
-    return (buf);
-  }
-
-  if (sa4->sin_family == AF_INET6)
-  {
-    buf[0] = '[';
-    ws_inet_ntop (AF_INET6, &sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
-    end = strchr (buf, '\0');
-    *end++ = ']';
-    *end++ = ':';
-    _itoa (swap16(sa6->sin6_port), end, 10);
-    return (buf);
-  }
-
-  if (sa4->sin_family == AF_UNIX)
-  {
-    const wchar_t *path = (const wchar_t*) &su->sun_path;
-
-    if (!su->sun_path[0])
-         strcpy (buf, "abstract");
-    else if (su->sun_path[0] && su->sun_path[1])
-         _strlcpy (buf, su->sun_path, sizeof(buf));
-    else if (WideCharToMultiByte(CP_ACP, 0, path, (int)wcslen(path), buf, (int)sizeof(buf), NULL, NULL) == 0)
-         strcpy (buf, "??");
-    return (buf);
-  }
-
-  return (NULL);
-}
-
 static __inline const char *uint_ptr_hexval (UINT_PTR val, char *buf)
 {
   int i, j;
@@ -1157,7 +1056,7 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
   ENTER_CRIT();
 
   WSTRACE ("WSAConnect (%s, %s, 0x%p, 0x%p, ...) --> %s",
-           socket_number(s), sockaddr_str2(name, &namelen),
+           socket_number(s), ws_sockaddr_ntop(name),
            caller_data, callee_data, socket_or_error(rc));
 
 #if 0
@@ -1434,7 +1333,7 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
   ENTER_CRIT();
 
   WSTRACE ("WSAAccept (%s, %s, 0x%p, 0x%p) --> %s",
-           socket_number(s), sockaddr_str2(addr, addr_len),
+           socket_number(s), ws_sockaddr_ntop(addr),
            condition, (const void*)callback_data, socket_or_error(rc));
 
   if (!exclude_this)
@@ -1503,7 +1402,7 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
            /*
             * If `rc == INVALID_SOCKET`, the `addr` is not filled. Hence simply print it's pointer address.
             */
-           rc == INVALID_SOCKET ? ptr_or_error(addr) : sockaddr_str2(addr, addr_len),
+           rc == INVALID_SOCKET ? ptr_or_error(addr) : ws_sockaddr_ntop(addr),
            socket_or_error(rc));
 
   if (!exclude_this)
@@ -1537,12 +1436,12 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   if (addr->sa_family == AF_UNIX)
   {
     WSTRACE ("bind (%s, \"%s\") --> %s",
-             socket_number(s), sockaddr_str_port(addr), get_error(rc, 0));
+             socket_number(s), ws_sockaddr_ntop(addr), get_error(rc, 0));
   }
   else
   {
     WSTRACE ("bind (%s, %s) --> %s",
-             socket_number(s), sockaddr_str2 (addr, &addr_len), get_error(rc, 0));
+             socket_number(s), ws_sockaddr_ntop(addr), get_error(rc, 0));
   }
 
   if (!exclude_this)
@@ -1618,7 +1517,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
   rc = (*p_connect) (s, addr, addr_len);
 
   WSTRACE ("connect (%s, %s, fam %s) --> %s",
-           socket_number(s), sockaddr_str2(addr, &addr_len),
+           socket_number(s), ws_sockaddr_ntop(addr),
            socket_family(sa->sin_family), get_error(rc, 0));
 
   if (!exclude_this)
@@ -1899,7 +1798,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
 
     WSTRACE ("recvfrom (%s, 0x%p, %d, %s, %s) --> %s",
              socket_number(s), buf, buf_len, socket_flags(flags),
-             sockaddr_str2(from, from_len), res);
+             ws_sockaddr_ntop(from), res);
 
     if (rc > 0 && g_cfg.dump_data)
        dump_data (buf, rc);
@@ -1994,7 +1893,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
 
     WSTRACE ("sendto (%s, 0x%p, %d, %s, %s) --> %s",
              socket_number(s), buf, buf_len, socket_flags(flags),
-             sockaddr_str2(to, &to_len), res);
+             ws_sockaddr_ntop(to), res);
 
     if (g_cfg.dump_data)
        dump_data (buf, buf_len);
@@ -2133,7 +2032,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
 
     WSTRACE ("WSARecvFrom (%s, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, flg,
-             sockaddr_str2(from, from_len), ov, func, res);
+             ws_sockaddr_ntop(from), ov, func, res);
 
     if (rc == NO_ERROR && g_cfg.dump_data)
     {
@@ -2320,7 +2219,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
 
     WSTRACE ("WSASendTo (%s, 0x%p, %lu, %s, <%s>, %s, 0x%p, 0x%p) --> %s",
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, socket_flags(flags),
-             sockaddr_str2(to, &to_len), ov, func, res);
+             ws_sockaddr_ntop(to), ov, func, res);
 
     if (g_cfg.dump_data)
        dump_wsabuf (bufs, num_bufs);
@@ -3159,7 +3058,7 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
   ENTER_CRIT();
 
   WSTRACE ("getpeername (%s, %s) --> %s",
-           socket_number(s), sockaddr_str2(name, name_len), get_error(rc, 0));
+           socket_number(s), ws_sockaddr_ntop(name), get_error(rc, 0));
 
   if (!exclude_this)
   {
@@ -3190,7 +3089,7 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
   ENTER_CRIT();
 
   WSTRACE ("getsockname (%s, %s) --> %s",
-           socket_number(s), sockaddr_str2(name, name_len), get_error(rc, 0));
+           socket_number(s), ws_sockaddr_ntop(name), get_error(rc, 0));
 
   if (!exclude_this)
   {
@@ -3263,7 +3162,7 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   ENTER_CRIT();
 
   WSTRACE ("getnameinfo (%s, ..., %s) --> %s",
-           sockaddr_str2(sa, &sa_len), getnameinfo_flags_decode(flags), get_error(rc, 0));
+           ws_sockaddr_ntop(sa), getnameinfo_flags_decode(flags), get_error(rc, 0));
 
   if (!exclude_this)
   {
