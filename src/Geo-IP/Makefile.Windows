@@ -28,19 +28,26 @@ else
   $(error $(Usage))
 endif
 
+#
+# Warn on undefined variables.
+#
+MAKEFLAGS += --warn-undefined-variables
+
 ifeq ($(CC),gcc)
-  CFLAGS  = -m32 -O2 -ggdb
-  LDFLAGS = -m32 -Wl,--print-map
+  CFLAGS    = -m32 -O2 -ggdb
+  LDFLAGS   = -m32 -Wl,--print-map
+  MSVC_TYPE = 0
 
 else
-  DEF_ARG = -def:
-  CFLAGS  = -nologo -Zi -W3
-  LDFLAGS = -debug -map -verbose -nologo -incremental:no
+  DEF_ARG   = -def:
+  CFLAGS    = -nologo -Zi -W3
+  LDFLAGS   = -debug -map -verbose -nologo -incremental:no
+  MSVC_TYPE = 1
 
   ifeq ($(USE_CRT_DEBUG),1)
-    CFLAGS = -MDd -D_CRTDBG_MAP_ALLOC -FIcrtdbg.h
+    CFLAGS += -MDd -D_CRTDBG_MAP_ALLOC -FIcrtdbg.h
   else
-    CFLAGS = -MD
+    CFLAGS += -MD
   endif
 
   CFLAGS += -D_CRT_SECURE_NO_WARNINGS  \
@@ -135,7 +142,7 @@ $(OBJ_DIR):
 	- mkdir $@
 
 $(GEOIP_STAT_LIB): $(GEOIP_OBJ) $(MMDB_OBJ) $(IPFIRE_OBJ) $(IP2LOCATION_OBJ)
-	$(call create_lib, $@, $^)
+	$(call create_static_lib, $@, $^)
 
 $(GEOIP_IMP_LIB): geoip.dll
 
@@ -164,8 +171,8 @@ link_JUNK = $(sort $(TARGETS)                                \
                    $(TARGETS:.exe=.map) $(TARGETS:.exe=.pdb))
 
 clean realclean vclean:
-	rm -f vc14*.pdb link.tmp geoip.dll $(link_JUNK) $(OBJ_DIR)/*
-	- rmdir $(OBJ_DIR)
+	rm -f vc14*.pdb link.tmp geoip.dll $(link_JUNK)
+	rm -fr $(OBJ_DIR)
 
 #
 # GNU-make macros:
@@ -182,14 +189,15 @@ green_msg  = $(call colour_msg,\e[1;32m$(strip $(1)))
 #
 define link_EXE
   $(call green_msg, Linking $(1))
-  $(call link_EXE_$(CC), $(1), $(2))
+  $(call link_EXE_$(MSVC_TYPE), $(1), $(2))
   @echo
 endef
 
-link_EXE_gcc      = $(CC) $(LDFLAGS) -o $(1) $(2) > $(1:.exe=.map)
-link_EXE_clang-cl = $(call link_EXE_cl, $(1), $(2))
+define link_EXE_0
+  $(CC) $(LDFLAGS) -o $(1) $(2) > $(1:.exe=.map)
+endef
 
-define link_EXE_cl
+define link_EXE_1
   link $(LDFLAGS) -out:$(strip $(1)) $(2) > link.tmp
   @cat link.tmp >> $(1:.exe=.map)
 endef
@@ -203,28 +211,33 @@ endef
 #
 define link_DLL
   $(call green_msg, Linking $(1))
-  $(call link_DLL_$(CC), $(1), $(2), $(3))
+  $(call link_DLL_$(MSVC_TYPE), $(1), $(2), $(3))
   @echo
 endef
 
-define link_DLL_cl
+define link_DLL_1
   link -out:$(strip $(1)) $(LDFLAGS) -dll -implib:$(strip $(2)) $(3) > link.tmp
   @cat link.tmp >> $(1:.dll=.map)
   @rm -f $(2:.lib=.exp)
 endef
 
-link_DLL_gcc      = $(CC) -shared $(LDFLAGS) -o $(1) -Wl,--out-implib,$(strip $(2)) $(3) > $(1:.dll=.map)
-link_DLL_clang-cl = $(call link_DLL_cl, $(1), $(2), $(3))
+define link_DLL_0
+  $(CC) -shared $(LDFLAGS) -o $(1) -Wl,--out-implib,$(strip $(2)) $(3) > $(1:.dll=.map)
+endef
 
-define create_lib
+#
+# Create a static library:
+#   arg1, $(1): The .a/.lib file.
+#   arg2, $(2): The .$(O) files.
+#
+define create_static_lib
   $(call green_msg, Creating static lib $(1))
-  $(call create_lib_$(CC), $(1), $(2))
+  $(call create_static_lib_$(MSVC_TYPE), $(1), $(2))
   @echo
 endef
 
-create_lib_gcc      = ar rs $(1) $(2)
-create_lib_cl       = lib -nologo -out:$(strip $(1)) $(2)
-create_lib_clang-cl = $(call create_lib_cl, $(1), $(2))
+create_static_lib_0 = ar rs $(1) $(2)
+create_static_lib_1 = lib -nologo -out:$(strip $(1)) $(2)
 
 #
 # This .def-file macro uses 'nm <library>'.
