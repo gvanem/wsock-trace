@@ -172,6 +172,11 @@ These environment variables are on the form:
 
 ### Running samples
 
+All the below samples uses these `%APPDATA%/wsock_trace` settings:
+  * `compact = 1`
+  * `trace_time = none` and
+  * `use_short_path = 1`.
+
 Example output from `src/ws_tool.exe test` (built with MSVC):
  ```c
    * ws_trace/test.c(45) (main+50):              WSAStartup (2.2) --> No error.
@@ -197,6 +202,7 @@ Example output from `src/ws_tool.exe test` (built with MSVC):
 
 Here is a more realistic and useful example with `wsock_trace.lib` linked to
 Nmap [**[1]**](#footnotes):
+
 ```c
   c:\> nmap -sT -P0 -p23,80 10.0.0.1
      * mswin32/winfix.cc(134) (win_pre_init+68):   WSAStartup (2.2) --> No error.
@@ -255,11 +261,7 @@ Notes:
 
 
 And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
-**[adig.c](https://github.com/c-ares/c-ares/blob/master/src/tools/adig.c)** with these settings:
- * `compact = 1`
- * `trace_time = none` and
- * `use_short_path = 1` :
-
+**[adig.c](https://github.com/c-ares/c-ares/blob/master/src/tools/adig.c)** with the same settings as above:
 ```c
     c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
@@ -366,7 +368,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
    6. Make it possible to switch network stacks at run-time:
       select amongst Winsock2, **[lwIP](https://savannah.nongnu.org/projects/lwip/)**,
-      **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or
+      **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or <br>
       **[Cyclone TCP](https://www.oryx-embedded.com/cyclone_tcp.html)**.
 
    7. Make a GUI trace viewer for it. Ref:
@@ -392,7 +394,7 @@ Note that some virus scanners may find the behaviour of programs linked to
       }
 
       stack_mux {
-        use_lwip: [wget.2exe, curl.exe]  # Force wget2.exe and curl.exe to use lwIP.dll
+        use_lwip: [wget2.exe, curl.exe]  # Force wget2.exe and curl.exe to use lwIP.dll
       }
       ```
 
