@@ -29,6 +29,10 @@
 #define SO_OPENTYPE  0x7008
 #endif
 
+#ifndef TCP_FAIL_CONNECT_ON_ICMP_ERROR
+#define TCP_FAIL_CONNECT_ON_ICMP_ERROR 18
+#endif
+
 #if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
   #define USE_WSAPoll 0
 #elif defined(__CYGWIN__) && defined(__i386__)
