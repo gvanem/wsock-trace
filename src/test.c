@@ -125,6 +125,7 @@ static void test_getaddrinfo (void);
 static void test_gai_strerror (void);
 static void test_socket (void);
 static void test_socket_unix (void);
+static void test_setsockopt (void);
 static void test_getsockopt (void);
 static void test_ioctlsocket (void);
 static void test_connect (void);
@@ -182,6 +183,7 @@ static const struct test_struct tests[] = {
                     ADD_TEST (socket),
                     ADD_TEST (socket_unix),
                     ADD_TEST (ioctlsocket),
+                    ADD_TEST (setsockopt),
                     ADD_TEST (connect),
                     ADD_TEST (select_1),
                     ADD_TEST (select_2),
@@ -506,6 +508,14 @@ static void test_getsockopt (void)
   len = sizeof(opentype);
   opentype = (DWORD) -1;
   TEST_CONDITION (== 0, getsockopt(s1, SOL_SOCKET, SO_OPENTYPE, (char*)&opentype, &len));
+}
+
+static void test_setsockopt (void)
+{
+  DWORD on = 1;
+
+  TEST_CONDITION (== 0, setsockopt (s1, IPPROTO_TCP, TCP_FAIL_CONNECT_ON_ICMP_ERROR, (const char*)&on, sizeof(on)));
+  TEST_CONDITION (== 0, WSAGetLastError());
 }
 
 static void test_ioctlsocket (void)
