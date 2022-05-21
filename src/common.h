@@ -229,8 +229,110 @@ extern int  sock_list_type (SOCKET sock, int *family, int *protocol);
   extern int fnmatch (const char *pattern, const char *string, int flags);
 #endif
 
+/*
+ * For decoding 'WSAIoctl (sock, SIO_TCP_INFO, ...)':
+ *
+ * The more advanced 'TCP_INFO_v1' structure seems only to be valid for WinHTTP:
+ *   https://docs.microsoft.com/en-us/windows/win32/winhttp/option-flags
+ */
+typedef struct local_TCP_INFO_v0 {
+        uint32_t   State;       /* TCPSTATE_CLOSED=0, ... TCPSTATE_TIME_WAIT=10 */
+        uint32_t   Mss;
+        uint64_t   ConnectionTimeMs;
+        uint8_t    TimestampsEnabled;
+        uint32_t   RttUs;
+        uint32_t   MinRttUs;
+        uint32_t   BytesInFlight;
+        uint32_t   Cwnd;
+        uint32_t   SndWnd;
+        uint32_t   RcvWnd;
+        uint32_t   RcvBuf;
+        uint64_t   BytesOut;
+        uint64_t   BytesIn;
+        uint32_t   BytesReordered;
+        uint32_t   BytesRetrans;
+        uint32_t   FastRetrans;
+        uint32_t   DupAcksIn;
+        uint32_t   TimeoutEpisodes;
+        uint8_t    SynRetrans;
+      } local_TCP_INFO_v0;
+
+/*
+ * Type-defined in the SDK `<shared/mstcpip.h>` as `TCP_INFO_v1` when
+ * `NTDDI_VERSION >= NTDDI_WIN10_RS5`. Hence keep a private typedef here.
+ *
+ * Besides it's only usable on Win-10, Build 20348 or later.
+ * Ref: https://docs.microsoft.com/en-us/windows/win32/api/mstcpip/ns-mstcpip-tcp_info_v1#requirements
+ */
+typedef struct local_TCP_INFO_v1 {
+        uint32_t   State;
+        uint32_t   Mss;
+        uint64_t   ConnectionTimeMs;
+        uint8_t    TimestampsEnabled;
+        uint32_t   RttUs;
+        uint32_t   MinRttUs;
+        uint32_t   BytesInFlight;
+        uint32_t   Cwnd;
+        uint32_t   SndWnd;
+        uint32_t   RcvWnd;
+        uint32_t   RcvBuf;
+        uint64_t   BytesOut;
+        uint64_t   BytesIn;
+        uint32_t   BytesReordered;
+        uint32_t   BytesRetrans;
+        uint32_t   FastRetrans;
+        uint32_t   DupAcksIn;
+        uint32_t   TimeoutEpisodes;
+        uint8_t    SynRetrans;
+        uint32_t   SndLimTransRwin;
+        uint32_t   SndLimTimeRwin;
+        uint64_t   SndLimBytesRwin;
+        uint32_t   SndLimTransCwnd;
+        uint32_t   SndLimTimeCwnd;
+        uint64_t   SndLimBytesCwnd;
+        uint32_t   SndLimTransSnd;
+        uint32_t   SndLimTimeSnd;
+        uint64_t   SndLimBytesSnd;
+      } local_TCP_INFO_v1;
+
+#define TCP_INFO_v0  local_TCP_INFO_v0
+#define TCP_INFO_v1  local_TCP_INFO_v1
+
+/**
+ * \struct local_ICMP_ERROR_INFO
+ * This is in `<ws2ipdef.h>` on recent SDK's.
+ */
+typedef struct local_ICMP_ERROR_INFO {
+        union {
+          struct sockaddr_in  Ipv4;
+          struct sockaddr_in6 Ipv6;
+          uint16_t            si_family;
+        } srcaddress;
+        int      protocol;
+        uint8_t  type;
+        uint8_t  code;
+      } local_ICMP_ERROR_INFO;
+
+#define ICMP_ERROR_INFO local_ICMP_ERROR_INFO
+
+/**
+ * \struct local_sockaddr_un
+ * This is in `<afunix.h>` on recent SDK's.
+ */
+struct local_sockaddr_un {
+       short sun_family;       /* AF_UNIX */
+       char  sun_path [108];   /* pathname */
+     };
+
+#define sockaddr_un local_sockaddr_un
+
 #ifndef AF_UNIX
 #define AF_UNIX 1
 #endif
+
+#ifndef SIO_TCP_INFO
+#define SIO_TCP_INFO   0xD8000027   /* == _WSAIORW (IOC_VENDOR, 39) */
+#endif
+
 
 #endif  /* _COMMON_H */

@@ -2737,7 +2737,7 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
     else if (level == IPPROTO_TCP)
     {
       if (g_cfg.dump_icmp_info && opt == TCP_ICMP_ERROR_INFO && _opt_len >= sizeof(ICMP_ERROR_INFO))
-         dump_icmp_error ((const ICMP_ERROR_INFO*)opt_val);
+         dump_icmp_error (opt_val);
     }
   }
 

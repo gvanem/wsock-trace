@@ -461,16 +461,6 @@ toolong:
 }
 
 /**
- * \struct fake_sockaddr_un
- * This is in `<afunix.h>` on recent SDK's.
- */
-struct fake_sockaddr_un {
-       short sun_family;       /* AF_UNIX */
-       char  sun_path [108];   /* pathname */
-     };
-#define sockaddr_un fake_sockaddr_un
-
-/**
  * Instead of calling `WSAAddressToStringA()` for `AF_INET`, `AF_INET6`
  * and `AF_UNIX` addresses, we do it ourself.
  *
