@@ -1748,12 +1748,9 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
  * For printing an `ICMP_ERROR_INFO` structure from a
  * `getsockopt (sock, IPPROTO_TCP, TCP_ICMP_ERROR_INFO,...)` call.
  */
-void dump_icmp_error (const void *icmp_error)
+void dump_icmp_error (const ICMP_ERROR_INFO *icmp)
 {
-  const ICMP_ERROR_INFO *icmp = (ICMP_ERROR_INFO*) icmp_error;
-
   /* not yet */
-  ARGSUSED (icmp_error);
   ARGSUSED (icmp);
 }
 
