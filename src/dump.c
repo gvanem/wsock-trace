@@ -117,10 +117,6 @@
 #define TCP_FAIL_CONNECT_ON_ICMP_ERROR 18
 #endif
 
-#ifndef TCP_ICMP_ERROR_INFO
-#define TCP_ICMP_ERROR_INFO  19
-#endif
-
 #ifndef TCP_BSDURGENT
 #define TCP_BSDURGENT 0x7000  /* Enabled by default */
 #endif

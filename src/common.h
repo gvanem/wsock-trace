@@ -334,5 +334,8 @@ struct local_sockaddr_un {
 #define SIO_TCP_INFO   0xD8000027   /* == _WSAIORW (IOC_VENDOR, 39) */
 #endif
 
+#ifndef TCP_ICMP_ERROR_INFO
+#define TCP_ICMP_ERROR_INFO 19
+#endif
 
 #endif  /* _COMMON_H */
