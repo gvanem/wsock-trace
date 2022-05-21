@@ -332,17 +332,17 @@
   #define strdup       _strdup
   #endif
 
-  #define strnicmp    _strnicmp
-  #define stricmp     _stricmp
-  #define strlwr      _strlwr
-  #define strupr      _strupr
-  #define snprintf    _snprintf
-  #define vsnprintf   _vsnprintf
-  #define fdopen      _fdopen
-  #define tzset()     _tzset()
-  #define isatty(fd)  _isatty (fd)
-  #define fileno(f)   _fileno (f)
-  #define access(f,m) _access (f,m)
+  #define strnicmp     _strnicmp
+  #define stricmp      _stricmp
+  #define strlwr       _strlwr
+  #define strupr       _strupr
+  #define snprintf     _snprintf
+  #define vsnprintf    _vsnprintf
+  #define fdopen       _fdopen
+  #define tzset()      _tzset()
+  #define isatty(fd)   _isatty (fd)
+  #define fileno(f)    _fileno (f)
+  #define access(f, m) _access (f, m)
 
 #elif defined(__CYGWIN__)
   #ifndef _fileno
