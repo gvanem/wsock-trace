@@ -1545,7 +1545,7 @@ static HMODULE WINAPI Hook_LoadLibraryW_2 (const wchar_t *dll_name)
 static void *WINAPI Hook_HeapAlloc (HANDLE a_Handle, DWORD a_Bla, SIZE_T a_Bla2)
 {
   void *ret = (*True_HeapAlloc) (a_Handle, a_Bla, a_Bla2);
-  printf ("***** Call to HeapAlloc(0x%p, %lu, 0x%zu) -> 0x%p\n", a_Handle, a_Bla, a_Bla2, ret);
+  printf ("***** Call to HeapAlloc(0x%p, %lu, 0x%lu) -> 0x%p\n", a_Handle, a_Bla, (DWORD)a_Bla2, ret);
   return (ret);
 }
 
