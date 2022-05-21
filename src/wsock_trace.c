@@ -2734,13 +2734,11 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
              break;
       }
     }
-#if 0  /* \todo */
     else if (level == IPPROTO_TCP)
     {
-      if (opt == TCP_ICMP_ERROR_INFO && g_cfg.dump_icmp_info)
-         dump_icmp_error_info (opt_val);
+      if (g_cfg.dump_icmp_info && opt == TCP_ICMP_ERROR_INFO && _opt_len >= sizeof(ICMP_ERROR_INFO))
+         dump_icmp_error ((const ICMP_ERROR_INFO*)opt_val);
     }
-#endif
   }
 
   LEAVE_CRIT (!exclude_this);

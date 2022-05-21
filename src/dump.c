@@ -762,10 +762,6 @@
 #define SIO_SET_PRIORITY_HINT                        _WSAIOW (IOC_VENDOR, 24)
 #endif
 
-#ifndef SIO_TCP_INFO
-#define SIO_TCP_INFO                                 _WSAIORW (IOC_VENDOR, 39)
-#endif
-
 #ifndef SIO_ACQUIRE_PORT_RESERVATION
 #define SIO_ACQUIRE_PORT_RESERVATION                 _WSAIOW (IOC_VENDOR, 100)
 #endif
@@ -1703,6 +1699,14 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
     if (opt == IPV6_MULTICAST_IF && opt_len == sizeof(ULONG))
        return dump_ipv6_multicast_if (buf, sizeof(buf), opt_val);
   }
+  else if (level == IPPROTO_TCP)
+  {
+    if (opt == TCP_KEEPCNT && opt_len == sizeof(ULONG))
+    {
+      snprintf (buf, sizeof(buf), "TCP-keep-count: %lu", *opt_val);
+      return (buf);
+    }
+  }
 
   if (level == SOL_SOCKET && dump_sol_socket(buf, sizeof(buf), opt, opt_val, opt_len))
      return (buf);
@@ -1742,6 +1746,16 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
          break;
   }
   return (buf);
+}
+
+/**
+ * For printing an `ICMP_ERROR_INFO` structure from a
+ * `getsockopt (sock, IPPROTO_TCP, TCP_ICMP_ERROR_INFO,...)` call.
+ */
+void dump_icmp_error (const ICMP_ERROR_INFO *icmp)
+{
+  /* not yet */
+  ARGSUSED (icmp);
 }
 
 const char *ioctlsocket_cmd_name (long cmd)

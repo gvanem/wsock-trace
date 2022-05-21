@@ -16,6 +16,7 @@ extern void dump_wsabuf     (const WSABUF *bufs, DWORD num_bufs);
 extern void dump_wsamsg     (const WSAMSG *msg, int rc);
 extern void dump_tcp_info_v0(const TCP_INFO_v0 *info, int err_code);
 extern void dump_tcp_info_v1(const TCP_INFO_v1 *info, int err_code);
+extern void dump_icmp_error (const ICMP_ERROR_INFO *icmp);
 
 extern void dump_hostent   (const char *name, const struct hostent *h);
 extern void dump_servent   (const struct servent *s);

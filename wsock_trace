@@ -126,6 +126,12 @@
   #
   dump_tcpinfo = 0
 
+  #
+  # For printing the ICMP info of an ICMP error on a failed connect() call.
+  # The setsockopt (sock, IPPROTO_TCP, TCP_FAIL_CONNECT_ON_ICMP_ERROR, ..)' must have been set.
+  #
+  dump_icmp_info = 0
+
   dump_data   = 1                    # Dump data in recv(), recvfrom(), send() and sendto().
   max_data    = 5000                 # but not more than 'max_data'.
   max_displacement = 100             # maximum distance for a public symbol to accept in SymGetLineFromAddr64()

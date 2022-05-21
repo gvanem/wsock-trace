@@ -165,6 +165,7 @@ struct config_table {
        BOOL    dump_namespace_providers;
        BOOL    dump_modules;
        BOOL    dump_tcpinfo;
+       BOOL    dump_icmp_info;
        BOOL    compact;
        BOOL    short_errors;
        BOOL    use_full_path;
