@@ -51,7 +51,7 @@ install:
   - cmd: if %BUILDER%-%CPU%. == cygwin-x64. set PATH=c:\msys64\usr\bin;%PATH%
 
 build_script:
-  - cmd: appveyor-script.bat init
+  - cmd: CI\appveyor-script.bat init
   - cmd: cd src
   - cmd: set USE_LUAJIT=1
   - cmd: set PLATFORM=%CPU%

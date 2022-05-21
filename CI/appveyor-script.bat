@@ -82,8 +82,8 @@ echo   dump_tcpinfo             = 1                                           >>
 echo   max_data                 = 5000                                        >> wsock_trace.appveyor
 echo   max_displacement         = 1000                                        >> wsock_trace.appveyor
 echo   exclude                  = htons,htonl,inet_addr                       >> wsock_trace.appveyor
-echo   hosts_file               = %CD%\appveyor-hosts                         >> wsock_trace.appveyor
-echo   services_file            = %CD%\appveyor-services                      >> wsock_trace.appveyor
+echo   hosts_file               = %CD%\CI\appveyor-hosts                      >> wsock_trace.appveyor
+echo   services_file            = %CD%\CI\appveyor-services                   >> wsock_trace.appveyor
 echo   use_winhttp              = 0                                           >> wsock_trace.appveyor
 echo   nice_numbers             = 1                                           >> wsock_trace.appveyor
 
@@ -142,14 +142,14 @@ echo   api_level = 3                                                         >> 
 
 ::
 :: Windows-Defender thinks generating a 'hosts' file is suspicious.
-:: Even generating 'appveyor-hosts' triggers Windows-Defender.
+:: Even generating 'CI\appveyor-hosts' triggers Windows-Defender.
 :: Therefore generate it by the 'type' command below.
 ::
 :: Ref:
 ::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
 ::
-echo Generating appveyor-hosts file...
-type appveyor_hosts_content.txt > appveyor-hosts
+echo Generating CI\appveyor-hosts file...
+type CI\appveyor-hosts-content.txt > CI\appveyor-hosts
 
 ::
 :: These should survive until 'build_script' for 'msvc', 'mingw' or 'cygwin' get to run.
@@ -166,11 +166,11 @@ if exist c:\Users\appveyor\AppData\Roaming\. copy wsock_trace.appveyor c:\Users\
 exit /b 0
 
 ::
-:: Cleanup after a local 'appveyor-script <builder>'.
+:: Cleanup after a local 'CI\appveyor-script <builder>'.
 :: This is not used by AppVeyor itself (not refered in appveyor.yml).
 ::
 :clean
 del /Q %CI_DIR%\IP46-COUNTRY.BIN %CI_DIR%\IP4-ASN.CSV %CI_DIR%\IP6-ASN.CSV 2> NUL
-del /Q wsock_trace.appveyor appveyor-hosts 2> NUL
+del /Q wsock_trace.appveyor CI\appveyor-hosts 2> NUL
 echo Cleaning done.
 exit /b 0
