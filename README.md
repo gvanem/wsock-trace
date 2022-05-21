@@ -255,7 +255,11 @@ Notes:
 
 
 And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
-**[adig.c](https://github.com/c-ares/c-ares/blob/master/src/tools/adig.c)**:
+**[adig.c](https://github.com/c-ares/c-ares/blob/master/src/tools/adig.c)** with these settings:
+ * `compact = 1`
+ * `trace_time = none` and
+ * `use_short_path = 1` :
+
 ```c
     c:\> adig -t PTR 89.42.216.144
       * adig.c(216) (main+105):   WSAStartup (2.2) --> No error.
