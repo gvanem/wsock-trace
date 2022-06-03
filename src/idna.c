@@ -45,13 +45,21 @@ static smartlist_t *cp_list;
                                 wchar_t       *unicode_chars,
                                 int            unicode_len));
 
+  DEF_FUNC (int, IdnToNameprepUnicode, (DWORD   dwFlags,
+                                        const wchar_t *unicode_chars,
+                                        int            unicode_len,
+                                        wchar_t       *ASCII_chars,
+                                        int            ASCII_len));
+
   #define ADD_VALUE(dll, func)  { 1, NULL, dll, #func, (void**)&p_##func }
 
   static struct LoadTable dyn_funcs [] = {
                 ADD_VALUE ("normaliz.dll", IdnToAscii),
                 ADD_VALUE ("normaliz.dll", IdnToUnicode),
+                ADD_VALUE ("normaliz.dll", IdnToNameprepUnicode),
                 ADD_VALUE ("kernel32.dll", IdnToAscii),
-                ADD_VALUE ("kernel32.dll", IdnToUnicode)
+                ADD_VALUE ("kernel32.dll", IdnToUnicode),
+                ADD_VALUE ("kernel32.dll", IdnToNameprepUnicode),
               };
 #endif
 
@@ -1025,7 +1033,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
 static int show_help (void)
 {
-  printf ("Usage: %s %s[-c CP-number] hostname | ip-address\n"
+  printf ("Usage: %s %s[-c CP-number] hostname ... | ip-address ...\n"
           "%s"
           "       -c select codepage (active is CP%d)\n",
           program_name, W_OPT, W_HELP, IDNA_GetCodePage());
@@ -1099,14 +1107,6 @@ static int do_test (WORD cp, const char *host)
 {
   struct in_addr addr;
 
-  sock_init();
-
-  if (!IDNA_init(cp, g_cfg.IDNA.use_winidn))
-  {
-    printf ("%s\n", IDNA_strerror(_idna_errno));
-    return (-1);
-  }
-
   printf ("Resolving `%s'...", host);
   fflush (stdout);
 
@@ -1123,7 +1123,7 @@ static int do_test (WORD cp, const char *host)
 int idna_main (int argc, char **argv)
 {
   WORD cp = CP_ACP;  /* == 0 */
-  int  ch, rc = 0;
+  int  i, ch, rc = 0;
 
   set_program_name (argv[0]);
 
@@ -1143,6 +1143,14 @@ int idna_main (int argc, char **argv)
               printf ("'-c0' maps to code-page %u.\n", cp);
             }
             break;
+
+     /**
+       * \todo: Convert an already prefixed name to UTF8 using IdnToNameprepUnicode()?
+       */
+#if 0
+       case 'r':
+            break;
+#endif
        case 'w':
             g_cfg.IDNA.use_winidn = 1;
             break;
@@ -1154,9 +1162,20 @@ int idna_main (int argc, char **argv)
 
   argc -= optind;
   argv += optind;
+
   if (*argv)
-       rc = do_test (cp, argv[0]);
-  else rc = show_help();
+  {
+    sock_init();
+    if (!IDNA_init(cp, g_cfg.IDNA.use_winidn))
+    {
+      printf ("%s\n", IDNA_strerror(_idna_errno));
+      return (-1);
+    }
+    for (i = 0; i < argc; i++)
+        rc += do_test (cp, argv[i]);
+  }
+  else
+    rc = show_help();
 
   return (rc);
 }
