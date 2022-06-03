@@ -220,16 +220,18 @@ static int run_test (const char *wildcard)
   const struct test_struct *t = tests;
   int   rc = 0, i = DIM(tests) - 1;
   const char *t_name;
+  const char *raw_name;
   size_t      t_len = strlen ("test_");
 
   assert ((t+i)->func == test_WSACleanup);
 
   for (i = 0; i < DIM(tests); i++, t++)
   {
-    assert (strncmp(t->name,"test_",t_len) == 0);
-    t_name = t->name + t_len;
+    assert (strncmp(t->name, "test_", t_len) == 0);
+    t_name   = t->name + t_len;
+    raw_name = t->name;
 
-    if (name_match(wildcard, t_name) != NAME_MATCH)
+    if (name_match(wildcard, t_name) != NAME_MATCH && name_match(wildcard, raw_name) != NAME_MATCH)
     {
       if (verbose >= 2)
          printf ("Skipping %s().\n", t->name);
@@ -310,13 +312,56 @@ static void test_getprotobynumber (void)
   TEST_CONDITION (== 0, getprotobynumber (9999));
 }
 
-/** Test idna.c functions
+static BOOL test_IDNA_func (const char *input, const char *expected_ACE)
+{
+  struct hostent *he = gethostbyname (input);
+  BOOL            rc = FALSE;
+
+  last_result = 0;
+  TEST_CONDITION (!= 0, (int)he);
+  if (he)
+  {
+    if (!strcmp(he->h_name, expected_ACE))
+       last_result = 1;
+    if (verbose >= 1)
+       printf ("  he->h_name: '%s', expected_ACE: '%s'\n", he->h_name, expected_ACE);
+  }
+
+#if 0
+  /**
+   * \todo do the above for `getaddrinfo()` too.
+   */
+  struct addrinfo hints;
+  struct addrinfo *res = NULL;
+
+  memset (&hints, 0, sizeof(hints));
+  hints.ai_family   = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  TEST_CONDITION (== 0, getaddrinfo (input, NULL, &hints, &res));
+  if (res)
+  {
+    if (verbose >= 1)
+       printf ("  ai_canonname: '%s', expected_ACE: '%s'\n", res->ai_canonname, expected_ACE);
+    freeaddrinfo (res);
+  }
+#endif
+
+  rc = (BOOL) last_result;
+  return (rc);
+}
+
+/**
+ * Test idna.c functions.
+ *
+ * Works best with a 'c:\> chcp 1252' first.
  */
 static void test_IDNA_functions (void)
 {
-  TEST_CONDITION (!= 0, gethostbyname ("www.seoghør.no"));  /**< ACE: `www.xn--seoghr-fya.no` (www.lookhere.no) */
-  TEST_CONDITION (!= 0, gethostbyname ("www.Bücher.ch"));   /**< ACE: `www.xn--bcher-kva.ch` (www.books.ch) */
-  TEST_CONDITION (!= 0, gethostbyname ("öbb.at"));          /**< From: http://unicode.org/faq/idn.html */
+  TEST_CONDITION (== TRUE, test_IDNA_func ("seoghør.no",    "xn--seoghr-fya.no"));      /* Norwegian gossip */
+  TEST_CONDITION (== TRUE, test_IDNA_func ("Bücher.ch",     "xn--bcher-kva.ch"));       /* German bookstore */
+  TEST_CONDITION (== TRUE, test_IDNA_func ("öbb.at",        "xn--bb-eka.at"));          /* Austrian Railways */
+  TEST_CONDITION (== TRUE, test_IDNA_func ("räksmörgås.se", "xn--rksmrgs-5wao1o.se"));  /* Swedish IDN test site */
 }
 
 /**
@@ -1156,7 +1201,7 @@ int test_main (int argc, char **argv)
   if (argc >= 1)
   {
     for (i = 0; i < argc; i++)
-       num += run_test (argv[i]);
+        num += run_test (argv[i]);
     if (num == 0)
        printf ("  No tests matched '%s'\n", argv[0]);
   }
