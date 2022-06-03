@@ -72,7 +72,7 @@ test_script:
   #
   - cmd: del /Q ..\IPFire-database.db
   - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe asn -u
-  - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe services -t
+  - cmd: set WSOCK_TRACE_LEVEL=0 & ws_tool.exe idna räksmörgås.se öbb.at Bücher.ch
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat -4
   - cmd: set WSOCK_TRACE_LEVEL=0 & geoip-test.bat -6
 
