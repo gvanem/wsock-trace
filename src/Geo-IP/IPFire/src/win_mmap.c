@@ -19,13 +19,12 @@ static SYSTEM_INFO si;
  * until we call `munmap()` on the pointer.
  */
 struct mmap_info {
-       HANDLE hnd;   /* the handle from CreateFileMapping() */
        void  *map;   /* the value from MapViewOfFile() */
        void  *rval;  /* the value we returned to caller of mmap() */
      };
 static struct mmap_info mmap_storage[10];
 
-static void *mmap_remember (void *map, uint64_t offset, HANDLE handle);
+static void *mmap_remember (void *map, uint64_t offset);
 static int   mmap_forget (void *map, struct mmap_info *info);
 
 void *mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset)
@@ -68,12 +67,13 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   else
   {
     map = MapViewOfFile (handle, access, DWORD_HI(pstart), DWORD_LO(pstart), (SIZE_T)psize);
+    CloseHandle (handle);
     if (!map)
        map = MAP_FAILED;
   }
 
   SetLastError (0);   /* clear any possible error from above */
-  return mmap_remember (map, poffset, handle);
+  return mmap_remember (map, poffset);
 }
 
 int munmap (void *map, size_t length)
@@ -95,7 +95,7 @@ int munmap (void *map, size_t length)
   return (rc);
 }
 
-static void *mmap_remember (void *map, uint64_t offset, HANDLE handle)
+static void *mmap_remember (void *map, uint64_t offset)
 {
   size_t i;
 
@@ -111,17 +111,12 @@ static void *mmap_remember (void *map, uint64_t offset, HANDLE handle)
     {
       mmap_storage[i].map  = map;
       mmap_storage[i].rval = (char*)map + offset;
-      mmap_storage[i].hnd  = handle;
       return (mmap_storage[i].rval);
     }
   }
-
   errno = EAGAIN;
 
 fail:
-  if (handle && handle != INVALID_HANDLE_VALUE)
-      CloseHandle (handle);
-
   return (MAP_FAILED); /* all buckets full */
 }
 
@@ -133,14 +128,8 @@ static int mmap_forget (void *map, struct mmap_info *info)
   {
     if (map == mmap_storage[i].rval)
     {
-      HANDLE handle = mmap_storage[i].hnd;
-
       *info = mmap_storage[i];
       mmap_storage[i].map = NULL;   /* reuse this */
-      mmap_storage[i].hnd = INVALID_HANDLE_VALUE;
-
-      if (handle && handle != INVALID_HANDLE_VALUE)
-         CloseHandle (handle);
       SetLastError (0);
       return (1);
     }
