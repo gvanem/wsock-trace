@@ -41,35 +41,35 @@ Ideas for the public interface to a unified "Geo-IP" library:
 ```c
   const struct geoip_provider_st mmdb_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_MMDB_FILE,
-    .files  = [ "DB-IP/dbip-country-lite-2020-03.mmdb", NULL ],
+    .files  = { "DB-IP/dbip-country-lite-2020-03.mmdb", NULL },
     .url    = "https://updates.maxmind.com/app/update_getfilename?product_id=GeoLite2-Country/update?db_md5=a456ade...",
     .config = "$(APPDATA)/GeoIP.conf",                     // for using the 'geoipupdate' program
     .init   = geoip_MMDB_init,
-    .close  = geoip_MMDB_close,
-    .lookup = geoip_MMDB_lookup
+    .lookup = geoip_MMDB_lookup,
+    .close  = geoip_MMDB_close
   };
 
   const struct geoip_provider_st libloc_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_ASN_FILE,
-    .files  = [ "IPFire/location.db", NULL ],
+    .files  = { "IPFire/location.db", NULL },
     .url    = "https://location.ipfire.org/databases/1/location.db.xz",
     .init   = geoip_libloc_init,
-    .close  = geoip_libloc_close,
     .lookup = geoip_libloc_lookup,
-    .update = geoip_libloc_update  // update the local '.files[0]' from '.url'
+    .update = geoip_libloc_update,  // update the local '.files[0]' from '.url'
+    .close  = geoip_libloc_close
   };
 
   const struct geoip_provider_st asn_handler1 = {
     .flags  = GEOIP_ASN_FILE | GEOIP_MMDB_FILE,
-    .files  = [ "DB-IP/dbip-asn-lite-2020-10.mmdb", NULL ],
+    .files  = { "DB-IP/dbip-asn-lite-2020-10.mmdb", NULL },
     .init   = geoip_ASN_init,
-    .close  = geoip_ASN_close,
-    .lookup = geoip_ASN_lookup
+    .lookup = geoip_ASN_lookup,
+    .close  = geoip_ASN_close
   };
 
   const struct geoip_provider_st asn_handler2 = {
     .flags  = GEOIP_ASN_FILE | GEOIP_CSV_FILE,
-    .files  = [ "IP4-ASN.CSV", NULL ],
+    .files  = { "IP4-ASN.CSV", NULL },
     .init   = geoip_ASN_init,
     .close  = geoip_ASN_close,
     .lookup = geoip_ASN_lookup
@@ -77,10 +77,10 @@ Ideas for the public interface to a unified "Geo-IP" library:
 
   const struct geoip_provider_st drop_handler = {
     .flags  = GEOIP_DROP | GEOIP_TXT_FILES,
-    .files  = [ "DROP.txt", "DROPv6.txt", "EDROP.txt", NULL ],
+    .files  = { "DROP.txt", "DROPv6.txt", "EDROP.txt", NULL },
     .init   = geoip_DROP_init,
-    .close  = geoip_DROP_close,
-    .lookup = geoip_DROP_lookup
+    .lookup = geoip_DROP_lookup,
+    .close  = geoip_DROP_close
   };
 ```
 
@@ -103,14 +103,14 @@ Add the above provider back-ends in an internal structure for later use:
 
 
   ```c
-  const struct in_addr ia4 = ...;
-  const struct geoip_data_rec *rec = geoip_lookup (&ia4, GEOIP_IPV4_ADDR | GEOIP_ASN_FILE);
+  const struct in_addr ia4 = { 8, 8, 8, 8 };
+  struct geoip_data_rec rec;
 
-  if (rec)
+  if (geoip_lookup(&ia4, GEOIP_IPV4_ADDR | GEOIP_ASN_FILE, &rec))
   {
-    printf ("%s, location: %s\"n, rec->country, rec->location);
-    printf ("AS%lu, name: %s\"n, rec->as_number, rec->as_name);
-    geoip_free_rec (rec);  // add to internal cache?
+    printf ("%s, location: %s\n", rec.country, rec.location);
+    printf ("AS%lu, name: %s\n", rec.as_number, rec.as_name);
+    geoip_free_rec (&rec);  // add to internal cache?
   }
   ```
 
