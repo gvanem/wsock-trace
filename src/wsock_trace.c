@@ -3203,8 +3203,8 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
      exclude_this = TRUE;
 
   /**
-   * If no address was found for the non-NULL `host_name`, then convert it to ACE-form and call
-   * `*p_getaddrinfo()` again with the converted host-name from `IDNA_convert_to_ACE()`.
+   * If no address was found for a non-ASCII `host_name`, convert it to ACE-form and call
+   * `*p_getaddrinfo()` again with the converted name from `IDNA_convert_to_ACE()`.
    */
 #if 1
   if (rc != NO_ERROR && !exclude_this && !IDNA_is_ASCII(host_name))
