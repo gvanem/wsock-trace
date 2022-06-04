@@ -299,7 +299,7 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
     return (FALSE);
   }
   cur_cp = cp;
-  TRACE (2, "IDNA_init: Using codepage %u\n", cp);
+  TRACE (1, "IDNA_init: Using codepage %u\n", cp);
   return (TRUE);
 }
 
@@ -608,7 +608,7 @@ BOOL IDNA_convert_to_ACE (
     ace = NULL;
     if (!strncmp("xn--", label, 4))
     {
-      TRACE (2, "IDNA_convert_to_ACE: label `%s' already prefixed\n", label);
+      TRACE (2, "IDNA_convert_to_ACE: label `%s' already prefixed.\n", label);
       _idna_errno = IDNAERR_ALREADY_PFX;
       goto quit;
     }
@@ -713,16 +713,16 @@ enum {
 };
 
 /**
- * \def basic(cp)
+ * \def BASIC(cp)
  * tests whether `cp` is a basic code point.
  */
-#define basic(cp) ((DWORD)(cp) < 0x80)
+#define BASIC(cp) ((DWORD)(cp) < 0x80)
 
 /**
- * \def delim(cp)
+ * \def DELIM(cp)
  * tests whether cp is a delimiter.
  */
-#define delim(cp) ((cp) == delimiter)
+#define DELIM(cp) ((cp) == delimiter)
 
 /**
  * `decode_digit(cp)` returns the numeric value of a basic code
@@ -755,12 +755,12 @@ static char encode_digit (DWORD d, int flag)
 }
 
 /**
- * \def flagged(bcp)
+ * \def FLAGGED(bcp)
  *
  * tests whether a basic code point is flagged (uppercase). \n
  * The behavior is undefined if `bcp` is not a basic code point.
  */
-#define flagged(bcp) ((DWORD)(bcp) - 65 < 26)
+#define FLAGGED(bcp) ((DWORD)(bcp) - 65 < 26)
 
 /**
  * `encode_basic(bcp, flag)` forces a basic code point to lowercase
@@ -817,7 +817,7 @@ static enum punycode_status punycode_encode (size_t       input_length,
    */
   for (j = 0; j < input_length; ++j)
   {
-    if (basic (input[j]))
+    if (BASIC(input[j]))
     {
       if (max_out - out < 2)
          return (punycode_big_output);
@@ -850,10 +850,11 @@ static enum punycode_status punycode_encode (size_t       input_length,
     for (m = maxint, j = 0; j < input_length; ++j)
     {
 #if 0
-      if (basic(input[j]))
+      if (BASIC(input[j]))
           continue;
       /* (not needed for Punycode) */
 #endif
+
       if (input[j] >= n && input[j] < m)
          m = input[j];
     }
@@ -929,7 +930,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
    * copy the first b code points to the output.
    */
   for (b = j = 0; j < input_length; ++j)
-      if (delim (input[j]))
+      if (DELIM(input[j]))
          b = j;
   if (b > max_out)
      return (punycode_big_output);
@@ -937,8 +938,8 @@ static enum punycode_status punycode_decode (size_t      input_length,
   for (j = 0; j < b; ++j)
   {
     if (case_flags)
-       case_flags[out] = flagged (input[j]);
-    if (!basic (input[j]))
+       case_flags[out] = FLAGGED (input[j]);
+    if (!BASIC(input[j]))
        return (punycode_bad_input);
     output[out++] = input[j];
   }
@@ -999,6 +1000,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
     if (decode_digit(n) <= base)
        return (punycode_invalid_input);
 #endif
+
     if (out >= max_out)
        return (punycode_big_output);
 
@@ -1008,7 +1010,7 @@ static enum punycode_status punycode_decode (size_t      input_length,
 
       /* Case of last character determines uppercase flag:
        */
-      case_flags[i] = flagged (input[in - 1]);
+      case_flags[i] = FLAGGED (input[in - 1]);
     }
     memmove (output + i + 1, output + i, (out - i) * sizeof *output);
     output[i++] = n;
@@ -1022,21 +1024,18 @@ static enum punycode_status punycode_decode (size_t      input_length,
  * A simple test for this module
  */
 #if (USE_WINIDN)
-  #define W_GETOPT "w"
-  #define W_OPT    "[-w] "
-  #define W_HELP   "       -w use the Windows Idn functions\n"
+  #define W_HELP   "       -w:     use the Windows Idn functions\n"
 #else
-  #define W_GETOPT ""
-  #define W_OPT    ""
   #define W_HELP   ""
 #endif
 
 static int show_help (void)
 {
-  printf ("Usage: %s %s[-c CP-number] hostname ... | ip-address ...\n"
-          "%s"
-          "       -c select codepage (active is CP%d)\n",
-          program_name, W_OPT, W_HELP, IDNA_GetCodePage());
+  printf ("Usage: %s [OPTIONS] hostname ... | ip-address ...\n"
+          "       -c <N>: select codepage (active is CP%d)\n"
+          "       -r:     reverse; convert an already prefixed \"xn--\" hostname to ASCII\n"
+          "%s",
+          program_name, IDNA_GetCodePage(), W_HELP);
   return (0);
 }
 
@@ -1045,20 +1044,36 @@ static void print_last_error (void)
   printf ("IDNA error: %s\n", IDNA_strerror(_idna_errno));
 }
 
-static int resolve_name (const char *name)
+static int resolve_name (const char *name, int do_reverse)
 {
   struct hostent *he;
-  char   host [100];
+  char   host [MAX_HOST_LEN];
   size_t len;
 
   _strlcpy (host, name, sizeof(host)-1);
   len = sizeof (host);
-  if (!IDNA_convert_to_ACE(host, &len))
+  printf ("Resolving `%s'", name);
+
+  if (strstr(name, "xn--") && do_reverse)
   {
-    print_last_error();
-    if (_idna_errno != IDNAERR_ALREADY_PFX)
-       return (-1);
+    if (!IDNA_convert_from_ACE(host, &len))
+    {
+      print_last_error();
+      return (-1);
+    }
   }
+  else
+  {
+    if (!IDNA_convert_to_ACE(host, &len))
+    {
+      print_last_error();
+      if (_idna_errno != IDNAERR_ALREADY_PFX)
+         return (-1);
+    }
+  }
+
+  printf (" (%s) ... ", host);
+  fflush (stdout);
 
   he = gethostbyname (host);
   if (he)
@@ -1069,10 +1084,14 @@ static int resolve_name (const char *name)
 
 static int reverse_resolve (struct in_addr addr)
 {
-  struct hostent *he = gethostbyaddr ((char*)&addr, sizeof(addr), AF_INET);
-  char   host [100];
+  struct hostent *he;
+  char   host [MAX_HOST_LEN];
   size_t len;
 
+  printf ("Reverse resolving %s... ", inet_ntoa(addr));
+  fflush (stdout);
+
+  he = gethostbyaddr ((char*)&addr, sizeof(addr), AF_INET);
   if (!he)
   {
     printf ("failed (code %d)\n", h_errno);
@@ -1103,31 +1122,28 @@ static void sock_init (void)
   }
 }
 
-static int do_test (WORD cp, const char *host)
+static int do_test_IDNA (WORD cp, const char *host, int do_reverse)
 {
   struct in_addr addr;
 
-  printf ("Resolving `%s'...", host);
-  fflush (stdout);
-
-  /* If 'host' is an IP-address, try to reverse resolve the address. Unfortunately
-   * I've not found any ACE encoded hostname with a PTR record, so this may not
-   * work.
+  /* If 'host' is an IP-address, try to reverse resolve the address.
+   * Unfortunately I've not found any ACE encoded hostname with a PTR record,
+   * so this may not work.
    */
   addr.s_addr = inet_addr (host);
   if (addr.s_addr != INADDR_NONE)
      return reverse_resolve (addr);
-  return resolve_name (host);
+  return resolve_name (host, do_reverse);
 }
 
 int idna_main (int argc, char **argv)
 {
   WORD cp = CP_ACP;  /* == 0 */
-  int  i, ch, rc = 0;
+  int  i, ch, reverse = 0, rc = 0;
 
   set_program_name (argv[0]);
 
-  while ((ch = getopt(argc, argv, "c:" W_GETOPT "h?")) != EOF)
+  while ((ch = getopt(argc, argv, "c:rwh?")) != EOF)
      switch (ch)
      {
        case 'c':
@@ -1143,14 +1159,9 @@ int idna_main (int argc, char **argv)
               printf ("'-c0' maps to code-page %u.\n", cp);
             }
             break;
-
-     /**
-       * \todo: Convert an already prefixed name to UTF8 using IdnToNameprepUnicode()?
-       */
-#if 0
        case 'r':
+            reverse = 1;
             break;
-#endif
        case 'w':
             g_cfg.IDNA.use_winidn = 1;
             break;
@@ -1163,16 +1174,17 @@ int idna_main (int argc, char **argv)
   argc -= optind;
   argv += optind;
 
+  sock_init();
+  if (!IDNA_init(cp, g_cfg.IDNA.use_winidn))
+  {
+    printf ("%s\n", IDNA_strerror(_idna_errno));
+    return (1);
+  }
+
   if (*argv)
   {
-    sock_init();
-    if (!IDNA_init(cp, g_cfg.IDNA.use_winidn))
-    {
-      printf ("%s\n", IDNA_strerror(_idna_errno));
-      return (-1);
-    }
     for (i = 0; i < argc; i++)
-        rc += do_test (cp, argv[i]);
+        rc += do_test_IDNA (cp, argv[i], reverse);
   }
   else
     rc = show_help();
