@@ -359,7 +359,7 @@ static BOOL test_IDNA_func (const char *input, const char *expected_ACE)
 static void test_IDNA_functions (void)
 {
   TEST_CONDITION (== TRUE, test_IDNA_func ("seoghør.no",    "xn--seoghr-fya.no"));      /* Norwegian gossip */
-  TEST_CONDITION (== TRUE, test_IDNA_func ("Bücher.ch",     "xn--bcher-kva.ch"));       /* German bookstore */
+  TEST_CONDITION (== TRUE, test_IDNA_func ("bücher.de",     "xn--bcher-kva.de"));       /* German bookstore */
   TEST_CONDITION (== TRUE, test_IDNA_func ("öbb.at",        "xn--bb-eka.at"));          /* Austrian Railways */
   TEST_CONDITION (== TRUE, test_IDNA_func ("räksmörgås.se", "xn--rksmrgs-5wao1o.se"));  /* Swedish IDN test site */
 }
