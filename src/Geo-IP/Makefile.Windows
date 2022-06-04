@@ -62,15 +62,23 @@ else
             -D_CRT_OBSOLETE_NO_WARNINGS
 
   ifeq ($(CC),clang-cl)
-    CFLAGS += -ferror-limit=5      \
-              -Wno-unused-function \
-              -Wno-unused-variable
+    CFLAGS += -ferror-limit=5       \
+              -Wno-unused-function  \
+              -Wno-unused-variable  \
+              -Wno-writable-strings \
+              -Wno-missing-braces
   else
-    CFLAGS += -wd4146 -wd4267
+    CFLAGS += -wd4018 -wd4146 -wd4267
   endif
 endif
 
-CFLAGS += -I.. -I. -D_WIN32_WINNT=0x0601
+#
+# CFLAG common to all .c-files
+#
+CFLAGS += -I.. -I.              \
+          -D_WIN32_WINNT=0x0601 \
+          -DWIN32_LEAN_AND_MEAN \
+          -D_WINSOCK_DEPRECATED_NO_WARNINGS
 
 #
 # Flag for 'IPFire/src/fake-OpenSSL/applink.c'.
@@ -139,7 +147,7 @@ else
   DNSAPI_LIB     = dnsapi.lib
 endif
 
-TARGETS = $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB) geoip.dll test-MMDB.exe
+TARGETS = $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB) geoip.dll test-MMDB.exe test-geoip.exe
 
 all: $(OBJ_DIR) $(TARGETS)
 
@@ -160,14 +168,25 @@ $(OBJ_DIR)/%.obj: %.c
 	$(CC) -c $(CFLAGS) -Fo./$@ $<
 	@echo
 
+$(OBJ_DIR)/%.obj: %.cpp
+	$(CC) -c -std:c++17 -EHsc $(CFLAGS) -Fo./$@ $<
+	@echo
+
 $(OBJ_DIR)/%.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
+	@echo
+
+$(OBJ_DIR)/%.o: %.cpp
+	$(CC) -c -std:c++17 $(CFLAGS) -o $@ $<
 	@echo
 
 $(OBJ_DIR)/geoip.def: $(GEOIP_STAT_LIB) Makefile.Windows
 	$(call make_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_)
 
 test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
+	$(call link_EXE, $@, $^ $(WS2_32_LIB))
+
+test-geoip.exe: $(OBJ_DIR)/test-geoip.$(O) $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
 #
