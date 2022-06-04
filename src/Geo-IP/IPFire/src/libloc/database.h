@@ -26,6 +26,10 @@
 #include <libloc/country.h>
 #include <libloc/country-list.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct loc_database;
 int loc_database_new(struct loc_ctx* ctx, struct loc_database** database, FILE* f);
 struct loc_database* loc_database_ref(struct loc_database* db);
@@ -82,5 +86,9 @@ int loc_database_enumerator_next_network(
 	struct loc_database_enumerator* enumerator, struct loc_network** network);
 int loc_database_enumerator_next_country(
 	struct loc_database_enumerator* enumerator, struct loc_country** country);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif
