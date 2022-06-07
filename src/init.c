@@ -1335,7 +1335,6 @@ void wsock_trace_exit (void)
            startup_count, cleaned_up);
 
     fw_monitor_stop (TRUE);
-    fw_exit();
   }
 
   rc = TlsFree (ws_Tls_index);
@@ -1486,7 +1485,8 @@ void wsock_trace_init (void)
       (g_cfg.cygwin_only && !is_cygwin) )
   {
  // g_cfg.stealth_mode = 1;
-    g_cfg.trace_level = g_cfg.trace_report = g_cfg.dump_tcpinfo = 0;
+    g_cfg.trace_level = 0;
+    g_cfg.trace_report = g_cfg.dump_tcpinfo = FALSE;
     g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = FALSE;
   }
 
@@ -1555,7 +1555,7 @@ void wsock_trace_init (void)
   if (image_opt_header_is_gui_app(mod))
   {
     TRACE (2, "Disabling sound in a GUI-program.\n");
-    g_cfg.FIREWALL.sound.enable = 0;
+    g_cfg.FIREWALL.sound.enable = FALSE;
   }
 
   now = get_time_now();
