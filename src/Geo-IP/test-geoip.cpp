@@ -88,8 +88,6 @@ typedef struct geoip_provider_st {
         char            *provider_name;
       } geoip_provider_st;
 
-static char *_strndup (const char *str, size_t max);
-
 /* -- Dummy no-op providers: ------------------------------------------------------------------------------------------ */
 
 static bool geoip_dummy_init (geoip_handle_st **geoip_p)
@@ -458,32 +456,6 @@ bool geoip_DROP_close (geoip_handle_st *geoip)
 
   // todo
   return (true);
-}
-
-/* -- Utility functions: --------------------------------------------------------------------------------------- */
-
-static size_t _strnlen (const char *s, size_t maxlen)
-{
-  size_t len;
-
-  for (len = 0; len < maxlen; len++, s++)
-  {
-    if (!*s)
-       break;
-  }
-  return (len);
-}
-
-static char *_strndup (const char *str, size_t max)
-{
-  size_t len  = _strnlen (str, max);
-  char  *copy = (char*) malloc (len + 1);
-
-  if (copy == NULL)
-     return (NULL);
-  memcpy (copy, str, len);
-  copy[len] = '\0';
-  return (copy);
 }
 
 /* -- Usage example: ------------------------------------------------------------------------------------------- */

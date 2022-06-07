@@ -193,6 +193,8 @@ extern const char *dword_str (DWORD val);
 extern const char *qword_str (unsigned __int64 val);
 
 extern char       *_strlcpy (char *dst, const char *src, size_t len);
+extern char       *_strndup (const char *str, size_t max);
+extern size_t      _strnlen (const char *s, size_t maxlen);
 extern char       *_strtok_r (char *ptr, const char *sep, char **end);
 extern char       *_strrepeat (int ch, size_t num);
 extern char       *_strreverse (char *str);

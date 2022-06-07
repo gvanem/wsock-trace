@@ -1740,6 +1740,36 @@ char *_strlcpy (char *dst, const char *src, size_t len)
 }
 
 /**
+ * Similar to `strlen()`, but return at most a length of `maxlen`.
+ */
+size_t _strnlen (const char *s, size_t maxlen)
+{
+  size_t len;
+
+  for (len = 0; len < maxlen; len++, s++)
+  {
+    if (!*s)
+       break;
+  }
+  return (len);
+}
+
+/**
+ * Similar to `strdup()`, but duplicate at most `max` bytes of the input `str`.
+ */
+char *_strndup (const char *str, size_t max)
+{
+  size_t len  = _strnlen (str, max);
+  char  *copy = (char*) malloc (len + 1);
+
+  if (copy == NULL)
+     return (NULL);
+  memcpy (copy, str, len);
+  copy[len] = '\0';
+  return (copy);
+}
+
+/**
  * Return a string with `ch` repeated `num` times. \n
  * Limited to 200 characters.
  */
