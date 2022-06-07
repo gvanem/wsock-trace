@@ -1487,7 +1487,7 @@ void wsock_trace_init (void)
   {
  // g_cfg.stealth_mode = 1;
     g_cfg.trace_level = g_cfg.trace_report = g_cfg.dump_tcpinfo = 0;
-    g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = 0;
+    g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = FALSE;
   }
 
   if (g_cfg.trace_file && !stricmp(g_cfg.trace_file, "stderr"))
@@ -1656,10 +1656,12 @@ void wsock_trace_init (void)
     g_cfg.dump_addrinfo          = FALSE;
     g_cfg.dump_wsaprotocol_info  = FALSE;
     g_cfg.dump_wsanetwork_events = FALSE;
-    g_cfg.dump_data              = 0;
-    g_cfg.dump_select            = 0;
-    g_cfg.dump_tcpinfo           = 0;
-    g_cfg.extra_new_line         = 0;
+    g_cfg.dump_data              = FALSE;
+    g_cfg.dump_select            = FALSE;
+    g_cfg.dump_tcpinfo           = FALSE;
+    g_cfg.extra_new_line         = FALSE;
+    g_cfg.ASN.enable             = FALSE;
+    g_cfg.GEOIP.enable           = FALSE;
     g_cfg.FIREWALL.enable        = FALSE;
     g_cfg.FIREWALL.sound.enable  = FALSE;
   }

@@ -692,8 +692,8 @@ int iana_main (int argc, char **argv)
   if (!*argv)
      return show_help();
 
-  g_cfg.IANA.enable = 1;
-  g_cfg.ASN.enable  = 1;
+  g_cfg.IANA.enable = TRUE;
+  g_cfg.ASN.enable  = TRUE;
 
   if (do_ip6)
   {
