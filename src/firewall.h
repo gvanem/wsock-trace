@@ -4,8 +4,6 @@
 #ifndef _FIREWALL_H
 #define _FIREWALL_H
 
-extern BOOL        fw_init (void);
-extern void        fw_exit (void);
 extern void        fw_report (void);
 extern BOOL        fw_enumerate_callouts (void);
 extern BOOL        fw_monitor_start (void);

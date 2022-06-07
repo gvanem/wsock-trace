@@ -156,9 +156,9 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
  */
 #define TIME_STRING_FMT_2   "\n  ~1* ~3%s ~2%s~0"
 
-DWORD fw_errno;
-int   fw_api = FW_API_DEFAULT;
-BOOL  fw_force_init = FALSE;
+static DWORD fw_errno;
+static int   fw_api = FW_API_DEFAULT;
+static BOOL  fw_force_init = FALSE;
 
 /**
  * TRUE if we've been called from `firewall_main()`.
@@ -1878,7 +1878,7 @@ static BOOL fw_load_funcs (void)
  *
  * It should be called after `geoip_init()`. I.e. after `wsock_trace_init()`.
  */
-BOOL fw_init (void)
+static BOOL fw_init (void)
 {
   USHORT api_version;
   ULONG  user_len;
@@ -1984,21 +1984,6 @@ static void fw_free_data (void)
 }
 
 /**
- * This should be the last functions called in this module.
- */
-void fw_exit (void)
-{
-  if (p_FWClosePolicyStore && fw_policy_handle != INVALID_HANDLE_VALUE)
-    (*p_FWClosePolicyStore) (fw_policy_handle);
-
-  fw_policy_handle = INVALID_HANDLE_VALUE;
-
-  fw_monitor_stop (FALSE);
-  fw_free_data();
-  unload_dynamic_table (fw_funcs, DIM(fw_funcs));
-}
-
-/**
  * Report statistics for this module.
  */
 void fw_report (void)
@@ -2022,7 +2007,7 @@ void fw_report (void)
     if (g_cfg.FIREWALL.show_ipv6)
        C_printf ("    Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
 
-    max = smartlist_len (SBL_entries);
+    max = SBL_entries ? smartlist_len (SBL_entries) : 0;
     if (max == 0)
        C_puts ("    No remote addresses found in DNSBL block lists.\n");
     else
@@ -2261,7 +2246,7 @@ static BOOL fw_check_sizes (void)
 /**
  * This functions starts the event-subscription.
  */
-BOOL fw_monitor_start (void)
+static BOOL fw_monitor_start (void)
 {
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
@@ -2308,9 +2293,16 @@ BOOL fw_monitor_start (void)
  *
  * Some issue when running under a debugger causes illegal-handle exception
  * (code 0xC0000008) in ' ntdll!NtClose()'. So do not close those handles then.
+ *
+ * This should be the last functions called in this module.
  */
 void fw_monitor_stop (BOOL force)
 {
+  if (p_FWClosePolicyStore && fw_policy_handle != INVALID_HANDLE_VALUE)
+    (*p_FWClosePolicyStore) (fw_policy_handle);
+
+  fw_policy_handle = INVALID_HANDLE_VALUE;
+
   if (force)
   {
     BOOL dbg_active = IsDebuggerPresent();
@@ -2336,6 +2328,10 @@ void fw_monitor_stop (BOOL force)
     if (fw_engine_handle && fw_engine_handle != INVALID_HANDLE_VALUE && p_FwpmEngineClose0)
        (*p_FwpmEngineClose0) (fw_engine_handle);
   }
+
+  fw_free_data();
+  unload_dynamic_table (fw_funcs, DIM(fw_funcs));
+
   fw_event_handle = fw_engine_handle = INVALID_HANDLE_VALUE;
 }
 
@@ -4037,6 +4033,7 @@ static BOOL print_country_location (const struct in_addr *ia4, const struct in6_
  */
 static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, int extra_indent, str_put_func func)
 {
+  BOOL  rc;
   char  intro [50];
   const char *remark;
 
@@ -4049,7 +4046,10 @@ static BOOL print_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia
        snprintf (intro, sizeof(intro), "%-*sASN:      ", (int) (fw_indent_sz + extra_indent), "");
   else snprintf (intro, sizeof(intro), "%-*sASN:     ", (int) fw_indent_sz, "");
 
-  return ASN_libloc_print (intro, ia4, ia6, func);
+  rc = ASN_libloc_print (intro, ia4, ia6, func);
+  if (func)
+    (*func) ("\n");
+  return (rc);
 }
 
 /**
@@ -4437,7 +4437,7 @@ static BOOL print_user_id (const _FWPM_NET_EVENT_HEADER3 *header)
 
   /* Show activity for logged-on user only
    */
-  if (g_cfg.FIREWALL.show_user && !stricmp(se->account, fw_logged_on_user))
+  if (g_cfg.FIREWALL.show_user && stricmp(se->account, fw_logged_on_user))
      return (FALSE);
 
   fw_buf_addf ("%-*suser:    %s\\%s\n",
@@ -4715,7 +4715,7 @@ static char *set_net_program (int argc, char **argv)
 static int show_help (void)
 {
   printf ("Simple Windows ICF Firewall monitor test program.\n"
-          "Usage: %s [-aN] [-A] [-c] [-e] [-f] [-lfile] [-p] [-r] [-R] [-s] [-v] [program]\n"
+          "Usage: %s [OPTIONS] [program]\n"
           "       -aN:    the API-level to use (%d-%d, default: %d).\n"
           "       -A:     show timestamps on absolute time.\n"
           "       -c:     only dump the callout rules.\n"
@@ -4895,6 +4895,7 @@ int firewall_main (int argc, char **argv)
   program = set_net_program (argc-optind, argv+optind);
 
   g_cfg.FIREWALL.enable = TRUE; /* should be redundant */
+  g_cfg.trace_report = TRUE;    /* enable statistics in 'fw_report()' */
 
   if (dump_events || dump_rules || dump_callouts || log_file)
      g_cfg.FIREWALL.sound.enable = FALSE;
@@ -4980,7 +4981,8 @@ int firewall_main (int argc, char **argv)
 
 quit:
   fw_report();
-  fw_free_data();   /* just in case */
+  g_cfg.trace_report = FALSE;   /* not again */
+  fw_free_data();               /* just in case */
 
   free (program);
   free (log_file);
