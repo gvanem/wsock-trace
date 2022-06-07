@@ -120,7 +120,10 @@ void ASN_init (void)
      num_AS += ASN_load_CSV_file (g_cfg.ASN.asn_csv_file);
 
   if (num_AS == 0)
-     g_cfg.ASN.enable = 0;
+  {
+    g_cfg.ASN.enable = FALSE;
+    ASN_bin_close();
+  }
 }
 
 /**
@@ -1069,13 +1072,13 @@ int asn_main (int argc, char **argv)
 
   if (do_dump)
   {
-    g_cfg.ASN.enable = 1;
+    g_cfg.ASN.enable = TRUE;
     ASN_dump (*argv);
   }
   else if (do_update)
   {
     ASN_bin_close();
-    g_cfg.ASN.enable = 1;
+    g_cfg.ASN.enable = TRUE;
     ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
   }
   else if (do_version)
