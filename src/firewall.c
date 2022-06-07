@@ -2246,7 +2246,7 @@ static BOOL fw_check_sizes (void)
 /**
  * This functions starts the event-subscription.
  */
-static BOOL fw_monitor_start (void)
+BOOL fw_monitor_start (void)
 {
   _FWPM_NET_EVENT_SUBSCRIPTION0  subscription   = { 0 };
   _FWPM_NET_EVENT_ENUM_TEMPLATE0 event_template = { 0 };
