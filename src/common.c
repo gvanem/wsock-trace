@@ -77,6 +77,26 @@ int  (__stdcall *g_WSAGetLastError) (void)    = dummy_WSAGetLastError;
 static smartlist_t *sock_list = NULL;
 
 /**
+ * A mapping table of `"\\device\\harddiskvolume1\\x"` to paths.
+ * A list of `device_to_path_entry`.
+ */
+static smartlist_t *device_to_paths_map = NULL;
+
+typedef struct device_to_path_entry {
+        char device [_MAX_PATH];
+        char path [10];
+      } device_to_path_entry;
+
+static void get_device_to_paths_mapping (void);
+
+static void device_to_paths_map_remove_all (void)
+{
+  if (device_to_paths_map)
+     smartlist_wipe (device_to_paths_map, free);
+  device_to_paths_map = NULL;
+}
+
+/**
  * \typedef sock_list_entry
  * The structure for remembering a socket's lifetime.
  *
@@ -187,6 +207,7 @@ void common_init (void)
   C_ptr = C_buf;
   C_end = C_ptr + TRACE_BUF_SIZE - 1;
   sock_list = smartlist_new();
+  device_to_paths_map = smartlist_new();
 }
 
 void common_exit (void)
@@ -196,6 +217,7 @@ void common_exit (void)
 
   fname_cache_free();
   sock_list_remove_all();
+  device_to_paths_map_remove_all();
   C_ptr = C_end = NULL;
 }
 
@@ -817,32 +839,124 @@ char *fix_path (const char *path)
   return (result);
 }
 
+static const char *get_device_paths (int vol_idx, const char *volume, const char *device)
+{
+  BOOL  ok         = FALSE;
+  DWORD char_count = MAX_PATH;
+  char  *p, *names = NULL;
+  const char *ret = NULL;
+
+  while (1)
+  {
+    names = alloca (char_count);
+    ok = GetVolumePathNamesForVolumeName (volume, names, char_count, &char_count);
+    if (ok || GetLastError() != ERROR_MORE_DATA)
+       break;
+  }
+  if (!ok)
+  {
+    TRACE (1, "GetVolumePathNamesForVolumeName (\"%s\"): %s\n", volume, win_strerror(GetLastError()));
+    return (NULL);
+  }
+
+  for (p = names; p[0] != '\0'; p += strlen(p) + 1)
+  {
+    device_to_path_entry *map = malloc (sizeof(*map));
+    if (map)
+    {
+      if (!ret)
+         ret = p;
+      _strlcpy (map->path, p, sizeof(map->path));
+      _strlcpy (map->device, device, sizeof(map->device));
+      smartlist_add (device_to_paths_map, map);
+    }
+  }
+  return (ret);
+}
+
+/*
+ * Called from `get_path()` once to build up the `device_to_paths_map` smartlist.
+ *
+ * Rewritten from MSDN sample:
+ *  https://docs.microsoft.com/en-us/windows/win32/fileio/displaying-volume-paths
+ */
+static void get_device_to_paths_mapping (void)
+{
+  char   vol_buf [_MAX_PATH];
+  char   dev_buf [_MAX_PATH];
+  HANDLE vol_hnd;
+  int    vol;
+
+  vol_hnd = FindFirstVolume (vol_buf, sizeof(vol_buf));
+  if (vol_hnd == INVALID_HANDLE_VALUE)
+  {
+    TRACE (1, "FindFirstVolume(): %s\n", win_strerror(GetLastError()));
+    return;
+  }
+
+  for (vol = 0;; vol++)
+  {
+    char        *end = strrchr (vol_buf, '\0');
+    const char *first_path;
+    BOOL        ok;
+
+   if (vol_buf[0] != '\\' || vol_buf[1] != '\\' || vol_buf[2] != '?' ||
+       vol_buf[3] != '\\' || end[-1] != '\\')
+    {
+      TRACE (1, "Find*Volume() retuned a bad path: %s\n", vol_buf);
+      break;
+    }
+
+    strcpy (dev_buf, "??");
+
+    /* QueryDosDevice() does not allow a trailing backslash. So temporarily remove it.
+     */
+    end[-1] = '\0';
+    ok = (QueryDosDevice(&vol_buf[4], dev_buf, sizeof(dev_buf)) > 0);
+    end[-1] = '\\';
+    if (ok)
+    {
+      first_path = get_device_paths (vol, vol_buf, dev_buf);
+      TRACE (2, "%d: %s -> %s, %s.\n", vol, vol_buf, dev_buf, first_path);
+    }
+
+    if (!FindNextVolume(vol_hnd, vol_buf, sizeof(vol_buf)))
+    {
+      TRACE (2, "FindNextVolume(): %s\n", win_strerror(GetLastError()));
+      break;
+    }
+  }
+  if (vol_hnd != INVALID_HANDLE_VALUE)
+     FindVolumeClose (vol_hnd);
+}
+
 /**
  * Check for a path starting with `"\\device\\harddiskvolume[0-9]\\"` and map
- * to a drive letter the easy way.
+ * to a drive letter using the `device_to_paths_map` smartlist.
  *
  * E.g. `"\\device\\harddiskvolume1\\x"` -> `"d:\\x"`
  *
  * Somewhat related:
  *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
  */
-static char *volume_to_path (char *path)
+static char *get_path_from_volume (char *path)
 {
   #define VOLUME "\\Device\\HarddiskVolume"
-  char *p;
+
+  device_to_path_entry *map;
+  int    i, max;
 
   if (strnicmp(path, VOLUME, sizeof(VOLUME)-1))
      return (path);
 
-  p = path + sizeof(VOLUME) - 1;
-
-  if (!isdigit((int)*p) || p[1] != '\\')
-     return (path);
-
-  p--;
-  p[0] = 'a' - '0' + p[1];
-  p[1] = ':';
-  return (p);
+  max = device_to_paths_map ? smartlist_len(device_to_paths_map) : 0;
+  for (i = 0; i < max; i++)
+  {
+    map = smartlist_get (device_to_paths_map, i);
+    if (!stricmp(path, map->device))
+       return (map->path);
+  }
+  return (path);
 }
 
 /*
@@ -907,6 +1021,7 @@ const char *get_path (const char    *apath,
 {
   static char ret [_MAX_PATH];
   static char path [_MAX_PATH];
+  static int  done = 0;
   char   *p;
   int     save;
 
@@ -923,7 +1038,21 @@ const char *get_path (const char    *apath,
   if (!stricmp(path, "System"))    /* No more to do for this path */
      return (path);
 
-  p = volume_to_path (path);
+  if (!done && device_to_paths_map)
+  {
+    int i, max;
+
+    get_device_to_paths_mapping();
+    max = device_to_paths_map ? smartlist_len(device_to_paths_map) : 0;
+    for (i = 0; i < max; i++)
+    {
+      const device_to_path_entry *map = smartlist_get (device_to_paths_map, i);
+      TRACE (1, "path: %s, device: %s\n", map->path, map->device);
+    }
+  }
+  done = 1;
+
+  p = get_path_from_volume (path);
   if (strchr (p, '%'))
      p = getenv_expand (p, path, sizeof(path));
 
