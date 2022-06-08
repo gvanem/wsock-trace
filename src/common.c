@@ -903,7 +903,7 @@ static void get_device_to_paths_mapping (void)
    if (vol_buf[0] != '\\' || vol_buf[1] != '\\' || vol_buf[2] != '?' ||
        vol_buf[3] != '\\' || end[-1] != '\\')
     {
-      TRACE (1, "Find*Volume() retuned a bad path: %s\n", vol_buf);
+      TRACE (1, "Find*Volume() returned a bad path: %s\n", vol_buf);
       break;
     }
 
@@ -1049,7 +1049,7 @@ const char *get_path (const char    *apath,
     for (i = 0; i < max; i++)
     {
       const device_to_path_entry *map = smartlist_get (device_to_paths_map, i);
-      TRACE (1, "path: '%s', device: '%s'\n", map->path, map->device);
+      TRACE (2, "path: '%s', device: '%s'\n", map->path, map->device);
     }
   }
   done = 1;
