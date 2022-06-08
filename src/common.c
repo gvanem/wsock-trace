@@ -884,10 +884,9 @@ static void get_device_to_paths_mapping (void)
 {
   char   vol_buf [_MAX_PATH];
   char   dev_buf [_MAX_PATH];
-  HANDLE vol_hnd;
   int    vol;
+  HANDLE vol_hnd = FindFirstVolume (vol_buf, sizeof(vol_buf));
 
-  vol_hnd = FindFirstVolume (vol_buf, sizeof(vol_buf));
   if (vol_hnd == INVALID_HANDLE_VALUE)
   {
     TRACE (1, "FindFirstVolume(): %s\n", win_strerror(GetLastError()));
@@ -919,15 +918,13 @@ static void get_device_to_paths_mapping (void)
       first_path = get_device_paths (vol, vol_buf, dev_buf);
       TRACE (2, "%d: %s -> %s, %s.\n", vol, vol_buf, dev_buf, first_path);
     }
-
     if (!FindNextVolume(vol_hnd, vol_buf, sizeof(vol_buf)))
     {
       TRACE (2, "FindNextVolume(): %s\n", win_strerror(GetLastError()));
       break;
     }
   }
-  if (vol_hnd != INVALID_HANDLE_VALUE)
-     FindVolumeClose (vol_hnd);
+  FindVolumeClose (vol_hnd);
 }
 
 /**
