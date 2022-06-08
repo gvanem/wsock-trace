@@ -939,24 +939,24 @@ static void get_device_to_paths_mapping (void)
  * Somewhat related:
  *   https://stackoverflow.com/questions/18509633/how-do-i-map-the-device-details-such-as-device-harddisk1-dr1-in-the-event-log-t
  */
-static char *get_path_from_volume (char *path)
+#define DEVICE_PFX "\\Device\\HarddiskVolume"
+
+static char *get_path_from_volume (char *path, size_t size)
 {
-  #define DEVICE_PFX "\\Device\\HarddiskVolume"
+  int i, max = smartlist_len (device_to_paths_map);
 
-  device_to_path_entry *map;
-  size_t len;
-  int    i, max;
-
-  if (strnicmp(path, DEVICE_PFX, sizeof(DEVICE_PFX)-1))
-     return (path);
-
-  len = strlen (map->device) + 1;   /* length of `"\\device\\harddiskvolume1\\"` */
-  max = device_to_paths_map ? smartlist_len(device_to_paths_map) : 0;
   for (i = 0; i < max; i++)
   {
-    map = smartlist_get (device_to_paths_map, i);
+    device_to_path_entry *map = smartlist_get (device_to_paths_map, i);
+    char   buf [_MAX_PATH];
+    size_t len = strlen (map->device);     /* length of `"\\device\\harddiskvolumeX"` */
+
+    TRACE (2, "path: '%.*s', map->path: '%s'\n", len, path, map->device);
     if (!strnicmp(path, map->device, len))
-       return (map->path);
+    {
+      snprintf (buf, sizeof(buf), "%s%s", map->path, path + len + 1);
+      return _strlcpy (path, buf, size);
+    }
   }
   return (path);
 }
@@ -1010,7 +1010,7 @@ static char *get_native_path (const char *path)
  * \param[in,out] exist      Optionally check if the file exists.
  * \param[in,out] is_native  If a file `"%WinDir\\System32\xx"` does not exists, check if the
  *                           `"%WinDir\\sysnative\xx"` file exists.
- *                           And return that file-name instead and set `is_native == TRUE`.
+ *                           And return that file-name instead and set `*is_native == TRUE`.
  *
  * \retval a ASCII-string with the true casing for the `wpath`.
  *
@@ -1049,12 +1049,14 @@ const char *get_path (const char    *apath,
     for (i = 0; i < max; i++)
     {
       const device_to_path_entry *map = smartlist_get (device_to_paths_map, i);
-      TRACE (1, "path: %s, device: %s\n", map->path, map->device);
+      TRACE (1, "path: '%s', device: '%s'\n", map->path, map->device);
     }
   }
   done = 1;
 
-  p = get_path_from_volume (path);
+  if (!strnicmp(path, DEVICE_PFX, sizeof(DEVICE_PFX)-1) && device_to_paths_map)
+     p = get_path_from_volume (path, sizeof(path));
+
   if (strchr (p, '%'))
      p = getenv_expand (p, path, sizeof(path));
 
