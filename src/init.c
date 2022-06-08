@@ -1660,7 +1660,7 @@ void wsock_trace_init (void)
     g_cfg.dump_select            = FALSE;
     g_cfg.dump_tcpinfo           = FALSE;
     g_cfg.extra_new_line         = FALSE;
-    g_cfg.ASN.enable             = FALSE;
+ // g_cfg.ASN.enable             = FALSE;
  // g_cfg.GEOIP.enable           = FALSE;
     g_cfg.FIREWALL.enable        = FALSE;
     g_cfg.FIREWALL.sound.enable  = FALSE;
