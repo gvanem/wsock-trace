@@ -1052,7 +1052,8 @@ const char *get_path (const char    *apath,
   done = 1;
 
   if (!strnicmp(path, DEVICE_PFX, sizeof(DEVICE_PFX)-1) && device_to_paths_map)
-     p = get_path_from_volume (path, sizeof(path));
+       p = get_path_from_volume (path, sizeof(path));
+  else p = path;
 
   if (strchr (p, '%'))
      p = getenv_expand (p, path, sizeof(path));
