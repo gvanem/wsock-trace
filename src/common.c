@@ -941,19 +941,21 @@ static void get_device_to_paths_mapping (void)
  */
 static char *get_path_from_volume (char *path)
 {
-  #define VOLUME "\\Device\\HarddiskVolume"
+  #define DEVICE_PFX "\\Device\\HarddiskVolume"
 
   device_to_path_entry *map;
+  size_t len;
   int    i, max;
 
-  if (strnicmp(path, VOLUME, sizeof(VOLUME)-1))
+  if (strnicmp(path, DEVICE_PFX, sizeof(DEVICE_PFX)-1))
      return (path);
 
+  len = strlen (map->device) + 1;   /* length of `"\\device\\harddiskvolume1\\"` */
   max = device_to_paths_map ? smartlist_len(device_to_paths_map) : 0;
   for (i = 0; i < max; i++)
   {
     map = smartlist_get (device_to_paths_map, i);
-    if (!stricmp(path, map->device))
+    if (!strnicmp(path, map->device, len))
        return (map->path);
   }
   return (path);
