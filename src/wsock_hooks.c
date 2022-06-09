@@ -208,8 +208,8 @@ static INT PASCAL hooked_WSARECVMSG (SOCKET          s,
     copy.dwFlags       = msg->dwFlags;
     msg = &copy;
 
-    if (rc == NO_ERROR || (*g_WSAGetLastError)() == WSA_IO_PENDING)
-       g_cfg.counts.recv_bytes += *bytes_recv;
+    if (rc == NO_ERROR || (*g_data.WSAGetLastError)() == WSA_IO_PENDING)
+       g_data.counts.recv_bytes += *bytes_recv;
   }
 
   WSTRACE ("WSARecvMsg (%s, 0x%p, ...) (ex-func) --> %s, recv: %s",

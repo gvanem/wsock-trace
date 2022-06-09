@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <time.h>
 #include <ctype.h>
 #include <string.h>
@@ -113,14 +114,14 @@
 #endif
 
 /*
- * A `uintptr_t dummy_reg = 0;` must be defined in each module
- * using these `REG_x()` macros:
+ * When the architecture has no such `x` register,
+ * use `g_data.dummy_reg`.
  */
 #if defined(WS_TRACE_AMD64)
   #define REG_EBP(ctx)  (ctx)->Rbp
   #define REG_ESP(ctx)  (ctx)->Rsp
   #define REG_EIP(ctx)  (ctx)->Rip
-  #define REG_BSP(ctx)  dummy_reg
+  #define REG_BSP(ctx)  g_data.dummy_reg
 
 #elif defined(WS_TRACE_IA64)
   #define REG_EBP(ctx)  (ctx)->Rbp
@@ -129,16 +130,16 @@
   #define REG_BSP(ctx)  (ctx)->RsBSP
 
 #elif defined(WS_TRACE_ARM) || defined(WS_TRACE_ARM64)
-  #define REG_EBP(ctx)  dummy_reg
+  #define REG_EBP(ctx)  g_data.dummy_reg
   #define REG_ESP(ctx)  (ctx)->Sp
   #define REG_EIP(ctx)  (ctx)->Pc
-  #define REG_BSP(ctx)  dummy_reg
+  #define REG_BSP(ctx)  g_data.dummy_reg
 
 #else
   #define REG_EBP(ctx)  (ctx)->Ebp
   #define REG_ESP(ctx)  (ctx)->Esp
   #define REG_EIP(ctx)  (ctx)->Eip
-  #define REG_BSP(ctx)  dummy_reg
+  #define REG_BSP(ctx)  g_data.dummy_reg
 #endif
 
 #define loBYTE(w)       (BYTE)(w)

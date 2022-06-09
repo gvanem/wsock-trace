@@ -134,11 +134,6 @@ static void        wstrace_printf (BOOL first_line,
   #define GET_RET_ADDR()  0
 #endif
 
-/* For some `REG_x()` macros.
- * Used when the architecture has no such `x` register.
- */
-static uintptr_t dummy_reg = 0;
-
 #if (defined(_MSC_VER) && defined(_M_X64)) || \
     (defined(__GNUC__) && !defined(__i386__)) || \
     defined(WS_TRACE_ARM) || defined(WS_TRACE_ARM64)
@@ -588,8 +583,8 @@ void load_ws2_funcs (void)
 {
   load_dynamic_table (dyn_funcs, DIM(dyn_funcs));
 
-  g_WSASetLastError = p_WSASetLastError;
-  g_WSAGetLastError = p_WSAGetLastError;
+  g_data.WSASetLastError = p_WSASetLastError;
+  g_data.WSAGetLastError = p_WSAGetLastError;
 
   if (p_RtlCaptureStackBackTrace == NULL)
       g_cfg.trace_caller = 0;
@@ -620,7 +615,7 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
      * to a trace-file.
      */
     BOOL add_nl = (g_cfg.start_new_line && g_cfg.trace_file_device &&
-                   (get_column() > 0 || g_cfg.stdout_redirected));
+                   (get_column() > 0 || g_data.stdout_redirected));
 
     /* If `g_cfg.extra_new_line == true` we add an extra newline when leaving a
      * traced function. Hence do NOT add an extra newline *before* a trace.
@@ -1731,11 +1726,11 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
   if (rc >= 0)
   {
     if (flags & MSG_PEEK)
-         g_cfg.counts.recv_peeked += rc;
-    else g_cfg.counts.recv_bytes  += rc;
+         g_data.counts.recv_peeked += rc;
+    else g_data.counts.recv_bytes  += rc;
   }
   else
-    g_cfg.counts.recv_errors++;
+    g_data.counts.recv_errors++;
 
   if (!exclude_this)
   {
@@ -1777,11 +1772,11 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
   if (rc >= 0)
   {
     if (flags & MSG_PEEK)
-         g_cfg.counts.recv_peeked += rc;
-    else g_cfg.counts.recv_bytes  += rc;
+         g_data.counts.recv_peeked += rc;
+    else g_data.counts.recv_bytes  += rc;
   }
   else
-    g_cfg.counts.recv_errors++;
+    g_data.counts.recv_errors++;
 
   if (!exclude_this)
   {
@@ -1792,8 +1787,8 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
     else
     {
       strcpy (res, get_error(rc, 0));
-      if ((*g_WSAGetLastError)() == WSAEWOULDBLOCK)
-         g_cfg.counts.recv_EWOULDBLOCK++;
+      if ((*g_data.WSAGetLastError)() == WSAEWOULDBLOCK)
+         g_data.counts.recv_EWOULDBLOCK++;
     }
 
     WSTRACE ("recvfrom (%s, 0x%p, %d, %s, %s) --> %s",
@@ -1839,8 +1834,8 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("send", EXCL_FUNCTION));
 
   if (rc >= 0)
-       g_cfg.counts.send_bytes += rc;
-  else g_cfg.counts.send_errors++;
+       g_data.counts.send_bytes += rc;
+  else g_data.counts.send_errors++;
 
   if (!exclude_this)
   {
@@ -1880,8 +1875,8 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("sendto", EXCL_FUNCTION));
 
   if (rc >= 0)
-       g_cfg.counts.send_bytes += rc;
-  else g_cfg.counts.send_errors++;
+       g_data.counts.send_bytes += rc;
+  else g_data.counts.send_errors++;
 
   if (!exclude_this)
   {
@@ -1953,7 +1948,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
      * But this may not work so maybe we need to hook
      * 'PostQueuedCompletionStatus()' and update the recv/transmit counters there?
      */
-    g_cfg.counts.recv_bytes += size;
+    g_data.counts.recv_bytes += size;
   }
 
   if (!exclude_this)
@@ -2015,7 +2010,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
     /* If the transfer is overlapped this counter should be
      * updated in 'WSAGetOverlappedResult()'
      */
-    g_cfg.counts.recv_bytes += size;
+    g_data.counts.recv_bytes += size;
   }
 
   if (!exclude_this)
@@ -2043,7 +2038,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
       dump_wsabuf (&bufs2, 1);
     }
 
-    if ((*g_WSAGetLastError)() != WSA_IO_PENDING)
+    if ((*g_data.WSAGetLastError)() != WSA_IO_PENDING)
     {
       if (g_cfg.GEOIP.enable)
          dump_countries_sockaddr (from);
@@ -2079,8 +2074,8 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSARecvEx", EXCL_FUNCTION));
 
   if (rc >= 0)
-       g_cfg.counts.recv_bytes += rc;
-  else g_cfg.counts.recv_errors++;
+       g_data.counts.recv_bytes += rc;
+  else g_data.counts.recv_errors++;
 
   if (!exclude_this)
   {
@@ -2147,7 +2142,7 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     /* If the transfer is overlapped this counter should be
      * updated in 'WSAGetOverlappedResult()'
      */
-    g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
+    g_data.counts.send_bytes += count_wsabuf (bufs, num_bufs);
   }
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASend", EXCL_FUNCTION));
@@ -2201,7 +2196,7 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
     /* If the transfer is overlapped this counter should be
      * updated in 'WSAGetOverlappedResult()'
      */
-    g_cfg.counts.send_bytes += count_wsabuf (bufs, num_bufs);
+    g_data.counts.send_bytes += count_wsabuf (bufs, num_bufs);
   }
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("WSASendTo", EXCL_FUNCTION));
@@ -3212,7 +3207,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
     char   buf [MAX_HOST_LEN] = "?";
     size_t size;
 
-    _strlcpy (buf, host_name, sizeof(buf));
+    str_ncpy (buf, host_name, sizeof(buf));
     size = strlen (buf);
     if (IDNA_convert_to_ACE(buf, &size))
     {
@@ -3481,8 +3476,8 @@ static void get_tcp_info_v01 (SOCKET s, TCP_INFO_v0 *info_0, TCP_INFO_v1 *info_1
     rc = (*p_WSAIoctl) (s, SIO_TCP_INFO, &ver, sizeof(ver), info, size, &size_ret, NULL, NULL);
     if (rc == SOCKET_ERROR)
     {
-      *err = (*g_WSAGetLastError)();
-      (*g_WSASetLastError) (0);
+      *err = (*g_data.WSAGetLastError)();
+      (*g_data.WSASetLastError) (0);
     }
 
     LEAVE_CRIT (0);
@@ -3527,7 +3522,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
   if (reentry++)
   {
     ret = "get_caller() reentry. Breaking out.";
-    g_cfg.reentries++;
+    g_data.reentries++;
   }
   else if (g_cfg.callee_level == 0)
   {
@@ -3725,7 +3720,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
   /* If we're called from DllMain(), we cannot use WinHTTP in inet_util.c etc.
    */
-  ws_from_dll_main = TRUE;
+  g_data.ws_from_dll_main = TRUE;
 
   switch (reason)
   {
@@ -3758,7 +3753,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
     case DLL_THREAD_ATTACH:
          tid = GetCurrentThreadId();
-         g_cfg.counts.dll_attach++;
+         g_data.counts.dll_attach++;
          reason_str = "DLL_THREAD_ATTACH";
 
          /** \todo
@@ -3772,7 +3767,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
     case DLL_THREAD_DETACH:
          tid = GetCurrentThreadId();
-         g_cfg.counts.dll_detach++;
+         g_data.counts.dll_detach++;
          reason_str = "DLL_THREAD_DETACH";
          if (g_cfg.trace_level >= 3)
          {
@@ -3796,8 +3791,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   {
     if (g_cfg.show_tid)
          wstrace_printf (TRUE, "~1* ~3%s, %s%s~0\n", get_threadid(FALSE), get_timestamp(), reason_str);
-    else TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", tid: %lu, ws_sema_inherited: %d.\n",
-                rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), ws_sema_inherited);
+    else TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", tid: %lu, g_data.ws_sema_inherited: %d.\n",
+                rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), g_data.ws_sema_inherited);
   }
 #else
   ARGSUSED (reason_str);

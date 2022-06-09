@@ -69,11 +69,11 @@
  * The 'WSTRACE()' macro shows what the *user* of wsock_trace.dll is doing.
  *
  */
-#define TRACE(level, fmt, ...)                                     \
-                           do {                                    \
-                             if (g_cfg.trace_level >= level)       \
-                               debug_printf (__FILE__, __LINE__,   \
-                                             fmt, ## __VA_ARGS__); \
+#define TRACE(level, fmt, ...)                                      \
+                           do {                                     \
+                             if (g_cfg.trace_level >= level)        \
+                                debug_printf (__FILE__, __LINE__,   \
+                                              fmt, ## __VA_ARGS__); \
                            } while (0)
 
 #define WARNING(fmt, ...)  do {                                     \
@@ -84,11 +84,13 @@
                              fprintf (stderr, "\nFatal error: %s(%u): " \
                                       fmt, __FILE__, __LINE__,          \
                                       ## __VA_ARGS__);                  \
-                             fatal_error = 1;                           \
+                             g_data.fatal_error = 1;                    \
                              if (IsDebuggerPresent())                   \
                                   abort();                              \
                              else ExitProcess (GetCurrentProcessId());  \
                            } while (0)
+
+#define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
 
 extern void debug_printf (const char *file, unsigned line,
                           _Printf_format_string_ const char *fmt, ...) ATTR_PRINTF (3,4);
@@ -146,19 +148,8 @@ extern int unload_dynamic_table (struct LoadTable *tab, int tab_size);
 
 extern const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab_size,
                                                    const char *func_name);
-extern char        curr_dir  [MAX_PATH];
-extern char        curr_prog [MAX_PATH];
-extern char        prog_dir  [MAX_PATH];
-extern HINSTANCE   ws_trace_base;        /* Our base-address */
 
-/* For getopt.c
- */
-extern char *program_name;
-extern char *set_program_name (const char *argv0);
-
-extern void (__stdcall *g_WSASetLastError) (int err);
-extern int  (__stdcall *g_WSAGetLastError) (void);
-
+extern char       *set_program_name (const char *argv0);
 extern char       *ws_strerror (DWORD err, char *buf, size_t len);
 extern char       *win_strerror (DWORD err);
 extern char       *basename (const char *fname);
@@ -186,18 +177,18 @@ extern const char *str_hex_dword (DWORD val);
 extern char       *str_rip  (char *s);
 extern wchar_t    *str_ripw (wchar_t *s);
 extern char       *str_ltrim (char *s);
+extern char       *str_repeat (int ch, size_t num);
+extern char       *str_reverse (char *str);
+extern char       *str_ncpy (char *dst, const char *src, size_t len);
+extern char       *str_ndup (const char *str, size_t max);
+extern size_t      str_nlen (const char *s, size_t maxlen);
+extern char       *str_tok_r (char *ptr, const char *sep, char **end);
 
 extern const char *get_guid_string (const GUID *guid);
 extern const char *get_guid_path_string (const GUID *guid);
 extern const char *dword_str (DWORD val);
 extern const char *qword_str (unsigned __int64 val);
 
-extern char       *_strlcpy (char *dst, const char *src, size_t len);
-extern char       *_strndup (const char *str, size_t max);
-extern size_t      _strnlen (const char *s, size_t maxlen);
-extern char       *_strtok_r (char *ptr, const char *sep, char **end);
-extern char       *_strrepeat (int ch, size_t num);
-extern char       *_strreverse (char *str);
 extern char       *_utoa10w (int value, int width, char *buf);
 extern char       *getenv_expand (const char *variable, char *buf, size_t size);
 extern int         ws_setenv (const char *env, const char *val, int overwrite);

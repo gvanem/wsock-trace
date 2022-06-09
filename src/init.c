@@ -37,27 +37,8 @@
 #include "inet_addr.h"
 #include "init.h"
 
-#define FREE(p)   (p ? (void) (free(p), p = NULL) : (void)0)
-
 struct config_table g_cfg;
-
-CONSOLE_SCREEN_BUFFER_INFO console_info;
-
-static HANDLE console_hnd = INVALID_HANDLE_VALUE;
-
-/* The "Thread Local Storage" index used per thread to internal data.
- */
-DWORD ws_Tls_index = TLS_OUT_OF_INDEXES; /* == DWORD_MAX */
-
-/* Signal we're called via DllMain()
- */
-BOOL ws_from_dll_main;
-
-/* Use CreateSemaphore() to check for multiple instances of ourself.
- */
-HANDLE      ws_sema = INVALID_HANDLE_VALUE;
-BOOL        ws_sema_inherited;
-const char *ws_sema_name = "Global\\wsock_trace-semaphore";
+struct global_data  g_data;
 
 /**
  * \typedef exclude
@@ -86,9 +67,9 @@ static void reset_invalid_handler (void);
  */
 void ws_sema_wait (void)
 {
-  while (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
+  while (g_data.ws_sema && g_data.ws_sema != INVALID_HANDLE_VALUE)
   {
-    DWORD ret = WaitForSingleObject (ws_sema, 0);
+    DWORD ret = WaitForSingleObject (g_data.ws_sema, 0);
 
     if (ret == WAIT_OBJECT_0)
        break;
@@ -97,7 +78,7 @@ void ws_sema_wait (void)
       SetLastError (0);
       break;
     }
-    g_cfg.counts.sema_waits++;
+    g_data.counts.sema_waits++;
     Sleep (5);
   }
 }
@@ -107,15 +88,15 @@ void ws_sema_wait (void)
  */
 void ws_sema_release (void)
 {
-  if (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
-     ReleaseSemaphore (ws_sema, 1, NULL);
+  if (g_data.ws_sema && g_data.ws_sema != INVALID_HANDLE_VALUE)
+     ReleaseSemaphore (g_data.ws_sema, 1, NULL);
 }
 
 /**
  * Get the `start-ticks` value for showing time-stamps.
  *
  * \note
- *   The `g_cfg.clocks_per_usec` is not the true CPU-speed.
+ *   The `g_data.clocks_per_usec` is not the true CPU-speed.
  *   On a multicore CPU, this is normally higher than the real
  *   CPU MHz frequeny.
  */
@@ -127,14 +108,14 @@ static void init_timestamp (void)
 
   QueryPerformanceFrequency (&rc);
   frequency = rc.QuadPart;
-  g_cfg.clocks_per_usec = frequency / 1000000ULL;
+  g_data.clocks_per_usec = frequency / 1000000ULL;
   MHz = (double)frequency / 1E3;
   if (MHz > 1000.0)
        TRACE (2, "QPC speed: %.3f GHz\n", MHz/1000.0);
   else TRACE (2, "QPC speed: %.0f MHz\n", MHz);
 
   QueryPerformanceCounter (&rc);
-  g_cfg.start_ticks = rc.QuadPart;
+  g_data.start_ticks = rc.QuadPart;
 }
 
 static void set_time_format (TS_TYPE *ret, const char *val)
@@ -170,18 +151,18 @@ const char *get_timestamp (void)
     case TS_RELATIVE:
     case TS_DELTA:
          if (last.QuadPart == 0ULL)
-            last.QuadPart = g_cfg.start_ticks;
+            last.QuadPart = g_data.start_ticks;
 
          QueryPerformanceCounter (&ticks);
          if (g_cfg.trace_time_format == TS_RELATIVE)
-              clocks = (int64) (ticks.QuadPart - g_cfg.start_ticks);
+              clocks = (int64) (ticks.QuadPart - g_data.start_ticks);
          else clocks = (int64) (ticks.QuadPart - last.QuadPart);
 
          last = ticks;
 
          if (g_cfg.trace_time_usec)
          {
-           double      usec = (double)clocks / (double)g_cfg.clocks_per_usec;
+           double      usec = (double)clocks / (double)g_data.clocks_per_usec;
            int         dec = (int) fmodl (usec, 1000000.0);
            const char *sec = qword_str ((unsigned __int64) (usec/1000000.0));
            char *p;
@@ -197,7 +178,7 @@ const char *get_timestamp (void)
          }
          else
          {
-           double      msec = (double)clocks / ((double)g_cfg.clocks_per_usec * 1000.0);
+           double      msec = (double)clocks / ((double)g_data.clocks_per_usec * 1000.0);
            int         dec = (int) fmodl (msec, 1000.0);
            const char *sec = qword_str ((unsigned __int64) (msec/1000.0));
            char *p;
@@ -475,7 +456,7 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
       len -= 2;
       p++;
     }
-    p = _strlcpy (prog, p, min(len+1, sizeof(prog)));
+    p = str_ncpy (prog, p, min(len+1, sizeof(prog)));
     if (basename(prog) > prog && !file_exists(prog))
          TRACE (1, "EXCL_PROGRAM '%s' does not exist.\n", prog);
     else which = EXCL_PROGRAM;
@@ -495,7 +476,7 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
     ex = malloc (sizeof(*ex)+len+1);
     ex->num_excludes = 0;
     ex->which        = which;
-    ex->name         = _strlcpy ((char*)(ex+1), p, len+1);
+    ex->name         = str_ncpy ((char*)(ex+1), p, len+1);
     smartlist_add (exclude_list, ex);
   }
 
@@ -561,48 +542,41 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
   GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
 #endif
 
-static char fname [MAX_PATH];
-
 static FILE *open_config_file (const char *base_name)
 {
-  char *appdata, *env = getenv_expand ("WSOCK_TRACE", fname, sizeof(fname));
+  char *appdata, *env = getenv_expand ("WSOCK_TRACE", g_data.cfg_fname, sizeof(g_data.cfg_fname));
   FILE *fil;
 
   TRACE (2, "%%WSOCK_TRACE%%=%s.\n", env);
 
-  if (env == fname)
+  if (env == g_data.cfg_fname)
   {
-    if (!file_exists(fname))
+    if (!file_exists(g_data.cfg_fname))
     {
       WARNING ("%%WSOCK_TRACE=\"%s\" does not exist.\nRunning with default values.\n", env);
       return (NULL);
     }
   }
   else
-    snprintf (fname, sizeof(fname), "%s\\%.30s", curr_dir, base_name);
+    snprintf (g_data.cfg_fname, sizeof(g_data.cfg_fname), "%s\\%.30s", g_data.curr_dir, base_name);
 
-  fil = fopen (fname, "r");
+  fil = fopen (g_data.cfg_fname, "r");
   if (!fil)
   {
     appdata = getenv ("APPDATA");
     if (appdata)
     {
-      snprintf (fname, sizeof(fname), "%s\\%s", appdata, base_name);
-      fil = fopen (fname, "r");
+      snprintf (g_data.cfg_fname, sizeof(g_data.cfg_fname), "%s\\%s", appdata, base_name);
+      fil = fopen (g_data.cfg_fname, "r");
     }
   }
-  TRACE (2, "config-file: \"%s\". %sfound.\n", fname, fil ? "" : "not ");
+  TRACE (2, "config-file: \"%s\". %sfound.\n", g_data.cfg_fname, fil ? "" : "not ");
   return (fil);
 }
 
 #if !defined(__clang__)
   GCC_PRAGMA (GCC diagnostic pop)
 #endif
-
-const char *config_file_name (void)
-{
-  return (fname);
-}
 
 /*
  * Handler for default section or '[core]' section.
@@ -807,7 +781,7 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   }
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -837,7 +811,7 @@ static void parse_lua_settings (const char *key, const char *val, unsigned line)
        g_cfg.LUA.exit_script = strdup (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -889,7 +863,7 @@ static void parse_geoip_settings (const char *key, const char *val, unsigned lin
   }
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -910,7 +884,7 @@ static void parse_idna_settings (const char *key, const char *val, unsigned line
        g_cfg.IDNA.codepage = atoi (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -943,7 +917,7 @@ static void parse_DNSBL_settings (const char *key, const char *val, unsigned lin
        g_cfg.DNSBL.max_days = atoi (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -1006,7 +980,7 @@ static void parse_firewall_settings (const char *key, const char *val, unsigned 
       get_freq_msec (val, &g_cfg.FIREWALL.sound.beep.event_DNSBL);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -1024,7 +998,7 @@ static void parse_iana_settings (const char *key, const char *val, unsigned line
        g_cfg.IANA.ip6_file = strdup (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -1051,7 +1025,7 @@ static void parse_asn_settings (const char *key, const char *val, unsigned line)
        g_cfg.ASN.xz_decompress = atoi (val);
 
   else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              fname, line, key, val);
+              g_data.cfg_fname, line, key, val);
 }
 
 enum cfg_sections {
@@ -1101,7 +1075,7 @@ static int parse_config_file (FILE *file)
   unsigned    lines = 0;
   BOOL        done = FALSE;
 
-  str_replace ('\\', '/', fname);
+  str_replace ('\\', '/', g_data.cfg_fname);
 
   /* If for some reason the config-file is missing a "[section]", the
    * default section is "core". This can happen with an old 'wsock_trace'
@@ -1127,15 +1101,15 @@ static int parse_config_file (FILE *file)
             /**
              * \todo
              * Let the below be printed at column 0.
-             * I.e. add a newline. But we do not yet have the `console_info`.
+             * I.e. add a newline. But we do not yet have the `g_data.console_info`.
              */
 #if 0
-             if (console_hnd != INVALID_HANDLE_VALUE && console_info.dwCursorPosition.X > 0
+             if (g_data.console_hnd != INVALID_HANDLE_VALUE && g_data.console_info.dwCursorPosition.X > 0
                 C_putc ('\n');
 #endif
              TRACE (1, "Parsing config-file \"%s\"\n"
                        "              for \"%s, %s\".\n",
-                    fname, get_builder(TRUE), get_dll_build_date());
+                    g_data.cfg_fname, get_builder(TRUE), get_dll_build_date());
            }
            done = TRUE;
            break;
@@ -1175,8 +1149,8 @@ static int parse_config_file (FILE *file)
            if (section[0] && stricmp(section,last_section))
            {
              TRACE (0, "%s (%u):\nKeyword '%s' = '%s' in unknown section '%s'.\n",
-                    fname, line, key, val, section);
-             _strlcpy (last_section, section, sizeof(last_section));
+                    g_data.cfg_fname, line, key, val, section);
+             str_ncpy (last_section, section, sizeof(last_section));
            }
            break;
     }
@@ -1223,13 +1197,13 @@ static void trace_report (void)
     }
   }
 
-  if (g_cfg.reentries > 0)
-     C_printf ("  get_caller() reentered %lu times.\n", DWORD_CAST(g_cfg.reentries));
+  if (g_data.reentries > 0)
+     C_printf ("  get_caller() reentered %lu times.\n", DWORD_CAST(g_data.reentries));
 
-//if (g_cfg.counts.dll_attach > 0 || g_cfg.counts.dll_detach > 0)
+//if (g_data.counts.dll_attach > 0 || g_data.counts.dll_detach > 0)
   {
-    C_printf ("  DLL attach %" U64_FMT " times.\n", g_cfg.counts.dll_attach);
-    C_printf ("  DLL detach %" U64_FMT " times.\n", g_cfg.counts.dll_detach);
+    C_printf ("  DLL attach %" U64_FMT " times.\n", g_data.counts.dll_attach);
+    C_printf ("  DLL detach %" U64_FMT " times.\n", g_data.counts.dll_detach);
   }
   C_puts ("~0");
 
@@ -1255,22 +1229,22 @@ static void trace_report (void)
   */
 
 #if 0  /* test */
-  g_cfg.counts.recv_bytes  = 1000000000;
-  g_cfg.counts.recv_peeked = 9999999900;
-  g_cfg.counts.send_bytes  = 20000000;
-  g_cfg.counts.send_errors = 20000;
+  g_data.counts.recv_bytes  = 1000000000;
+  g_data.counts.recv_peeked = 9999999900;
+  g_data.counts.send_bytes  = 20000000;
+  g_data.counts.send_errors = 20000;
 #endif
 
   C_printf ("\n"
             "  Statistics:\n"
-            "    Recv bytes:   %15s",               qword_str(g_cfg.counts.recv_bytes));
-  C_printf ("  Recv errors:  %15s\n",               qword_str(g_cfg.counts.recv_errors));
-  C_printf ("    Recv bytes:   %15s  (MSG_PEEK)\n", qword_str(g_cfg.counts.recv_peeked));
-  C_printf ("    Send bytes:   %15s",               qword_str(g_cfg.counts.send_bytes));
-  C_printf ("  Send errors:  %15s\n",               qword_str(g_cfg.counts.send_errors));
+            "    Recv bytes:   %15s",               qword_str(g_data.counts.recv_bytes));
+  C_printf ("  Recv errors:  %15s\n",               qword_str(g_data.counts.recv_errors));
+  C_printf ("    Recv bytes:   %15s  (MSG_PEEK)\n", qword_str(g_data.counts.recv_peeked));
+  C_printf ("    Send bytes:   %15s",               qword_str(g_data.counts.send_bytes));
+  C_printf ("  Send errors:  %15s\n",               qword_str(g_data.counts.send_errors));
 
   if (g_cfg.use_sema)
-     C_printf ("    Semaphore wait: %13s\n",        qword_str(g_cfg.counts.sema_waits));
+     C_printf ("    Semaphore wait: %13s\n",        qword_str(g_data.counts.sema_waits));
 
   if (g_cfg.GEOIP.enable)
   {
@@ -1304,7 +1278,7 @@ void wsock_trace_exit (void)
 
   set_color (NULL);
 
-  if (fatal_error)
+  if (g_data.fatal_error)
      g_cfg.trace_report = FALSE;
 
 #if 0
@@ -1337,8 +1311,8 @@ void wsock_trace_exit (void)
     fw_monitor_stop (TRUE);
   }
 
-  rc = TlsFree (ws_Tls_index);
-  TRACE (2, "TlsFree (%lu) -> %d.\n", DWORD_CAST(ws_Tls_index), rc);
+  rc = TlsFree (g_data.ws_Tls_index);
+  TRACE (2, "TlsFree (%lu) -> %d.\n", DWORD_CAST(g_data.ws_Tls_index), rc);
 
   common_exit();
 
@@ -1381,10 +1355,49 @@ void wsock_trace_exit (void)
   IDNA_exit();
 
   reset_invalid_handler();
-  if (ws_sema && ws_sema != INVALID_HANDLE_VALUE)
-     CloseHandle (ws_sema);
-  ws_sema = NULL;
-  DeleteCriticalSection (&crit_sect);
+  if (g_data.ws_sema && g_data.ws_sema != INVALID_HANDLE_VALUE)
+     CloseHandle (g_data.ws_sema);
+  g_data.ws_sema = NULL;
+  DeleteCriticalSection (&g_data.crit_sect);
+}
+
+static void __stdcall dummy_WSASetLastError (int err)
+{
+  ARGSUSED (err);
+}
+
+static int __stdcall dummy_WSAGetLastError (void)
+{
+  return (0);
+}
+
+/**
+ * Initialize `g_data` with default values.
+ */
+static void init_g_data (void)
+{
+  memset (&g_data, '\0', sizeof(g_data));
+
+  /* The "Thread Local Storage" index used per thread to internal data.
+   */
+  g_data.ws_Tls_index = TLS_OUT_OF_INDEXES;  /* == DWORD_MAX */
+
+  /* Use A CreateSemaphore() to check for multiple instances of ourself.
+   */
+  g_data.ws_sema      = INVALID_HANDLE_VALUE;
+  g_data.ws_sema_name = "Global\\wsock_trace-semaphore";
+
+  g_data.WSASetLastError = dummy_WSASetLastError;
+  g_data.WSAGetLastError = dummy_WSAGetLastError;
+
+  /**
+   * \todo
+   * Use `InitializeCriticalSectionEx (&g_data.crit_sect, CRITICAL_SECTION_NO_DEBUG_INFO)` instead?
+   * Ref:
+   *   https://www.codeproject.com/Articles/5278932/Synchronization-with-Visual-Cplusplus-and-the-Wind
+   * and the comments there.
+   */
+  InitializeCriticalSection (&g_data.crit_sect);
 }
 
 /**
@@ -1406,18 +1419,10 @@ void wsock_trace_init (void)
   HMODULE     mod;
   BOOL        is_msvc, is_mingw, is_cygwin;
 
-  /**
-   * \todo
-   * Use `InitializeCriticalSectionEx (&crit_sect, CRITICAL_SECTION_NO_DEBUG_INFO)` instead?
-   * Ref:
-   *   https://www.codeproject.com/Articles/5278932/Synchronization-with-Visual-Cplusplus-and-the-Wind
-   * and the comments there.
-   */
-  InitializeCriticalSection (&crit_sect);
-
   /* Set default values.
    */
-  memset (&g_cfg, 0, sizeof(g_cfg));
+  memset (&g_cfg, '\0', sizeof(g_cfg));
+  init_g_data();
 
   /* Set trace-level before config-file could reset it.
    */
@@ -1438,17 +1443,17 @@ void wsock_trace_init (void)
   common_init();
 
   mod = GetModuleHandle (NULL);
-  GetCurrentDirectory (sizeof(curr_dir), curr_dir);
-  GetModuleFileName (NULL, prog_dir, sizeof(prog_dir));
-  end = strrchr (prog_dir, '\0');
-  if (!strnicmp(end-4, ".exe", 4))
+  GetCurrentDirectory (sizeof(g_data.curr_dir), g_data.curr_dir);
+  GetModuleFileName (NULL, g_data.prog_dir, sizeof(g_data.prog_dir));
+  end = strrchr (g_data.prog_dir, '\0');
+  if (!strnicmp(end - 4, ".exe", 4))
   {
-    end = strrchr (prog_dir, '\\');
-    _strlcpy (curr_prog, end+1, sizeof(curr_prog));
-    end[1] = '\0';  /* Ensure 'prog_dir' has a trailing '\\' */
+    end = strrchr (g_data.prog_dir, '\\');
+    str_ncpy (g_data.curr_prog, end+1, sizeof(g_data.curr_prog));
+    end[1] = '\0';  /* Ensure 'g_data.prog_dir' has a trailing '\\' */
   }
   else
-    _strlcpy (curr_prog, "??", sizeof(curr_prog));
+    str_ncpy (g_data.curr_prog, "??", sizeof(g_data.curr_prog));
 
   file = open_config_file ("wsock_trace");
   if (file)
@@ -1472,10 +1477,10 @@ void wsock_trace_init (void)
     sec.nLength = sizeof (sec);
     sec.lpSecurityDescriptor = NULL;
     sec.bInheritHandle       = TRUE;
-    ws_sema = CreateSemaphore (&sec, 1, 1, ws_sema_name);
+    g_data.ws_sema = CreateSemaphore (&sec, 1, 1, g_data.ws_sema_name);
     if (GetLastError() == ERROR_ALREADY_EXISTS)
-         ws_sema_inherited = TRUE;
-    else ws_sema_inherited = FALSE;
+         g_data.ws_sema_inherited = TRUE;
+    else g_data.ws_sema_inherited = FALSE;
   }
 
   set_invalid_handler();
@@ -1484,7 +1489,7 @@ void wsock_trace_init (void)
       (g_cfg.mingw_only  && !is_mingw) ||
       (g_cfg.cygwin_only && !is_cygwin) )
   {
- // g_cfg.stealth_mode = 1;
+    g_data.stealth_mode = true;
     g_cfg.trace_level = 0;
     g_cfg.trace_report = g_cfg.dump_tcpinfo = FALSE;
     g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = FALSE;
@@ -1500,7 +1505,7 @@ void wsock_trace_init (void)
     g_cfg.trace_stream      = NULL;
     g_cfg.trace_file_device = TRUE;
     g_cfg.trace_use_ods     = TRUE;
-    g_cfg.trace_binmode     = 1;
+    g_cfg.trace_binmode     = TRUE;
   }
   else if (g_cfg.trace_file && g_cfg.trace_level > 0)
   {
@@ -1566,24 +1571,24 @@ void wsock_trace_init (void)
               "------ %s, %s. Build-date: %s.\n",
              now, get_builder(TRUE), get_dll_short_name(), get_dll_build_date());
 
-  memset (&console_info, 0, sizeof(console_info));
+  memset (&g_data.console_info, '\0', sizeof(g_data.console_info));
 
   if (g_cfg.trace_stream == stderr)
-       console_hnd = GetStdHandle (STD_ERROR_HANDLE);
-  else console_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
+       g_data.console_hnd = GetStdHandle (STD_ERROR_HANDLE);
+  else g_data.console_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
 
-  okay = (console_hnd != INVALID_HANDLE_VALUE &&
-          GetConsoleScreenBufferInfo(console_hnd, &console_info));
+  okay = (g_data.console_hnd != INVALID_HANDLE_VALUE &&
+          GetConsoleScreenBufferInfo(g_data.console_hnd, &g_data.console_info));
 
-  if (!okay || GetFileType(console_hnd) != FILE_TYPE_CHAR)
+  if (!okay || GetFileType(g_data.console_hnd) != FILE_TYPE_CHAR)
   {
-    g_cfg.stdout_redirected = TRUE;
+    g_data.stdout_redirected = TRUE;
   }
   else
   {
     DWORD mode;
 
-    GetConsoleMode (console_hnd, &mode);
+    GetConsoleMode (g_data.console_hnd, &mode);
     TRACE (3, "GetConsoleMode(): 0x%08lX\n", DWORD_CAST(mode));
   }
 
@@ -1592,54 +1597,54 @@ void wsock_trace_init (void)
    */
   env = getenv ("LINES");
   if (env && atoi(env) > 0)
-     g_cfg.screen_heigth = atoi (env);
+     g_data.screen_heigth = atoi (env);
 
   env = getenv ("COLUMNS");
   if (env && atoi(env) > 0)
-     g_cfg.screen_width = atoi (env);
+     g_data.screen_width = atoi (env);
 
   /* If console not redirected and not set above.
    */
-  if (g_cfg.screen_width == 0)
+  if (g_data.screen_width == 0)
   {
-    if (!g_cfg.stdout_redirected)
-         g_cfg.screen_width = console_info.srWindow.Right - console_info.srWindow.Left + 1;
-    else g_cfg.screen_width = g_cfg.trace_max_len;
+    if (!g_data.stdout_redirected)
+         g_data.screen_width = g_data.console_info.srWindow.Right - g_data.console_info.srWindow.Left + 1;
+    else g_data.screen_width = g_cfg.trace_max_len;
   }
-  if (g_cfg.screen_heigth == 0 && !g_cfg.stdout_redirected)
-      g_cfg.screen_heigth = console_info.srWindow.Bottom - console_info.srWindow.Top + 1;
+  if (g_data.screen_heigth == 0 && !g_data.stdout_redirected)
+      g_data.screen_heigth = g_data.console_info.srWindow.Bottom - g_data.console_info.srWindow.Top + 1;
 
-  TRACE (2, "g_cfg.screen_width: %d, g_cfg.screen_heigth: %d, g_cfg.stdout_redirected: %d\n",
-         g_cfg.screen_width, g_cfg.screen_heigth, g_cfg.stdout_redirected);
+  TRACE (2, "g_data.screen_width: %d, g_data.screen_heigth: %d, g_data.stdout_redirected: %d\n",
+         g_data.screen_width, g_data.screen_heigth, g_data.stdout_redirected);
 
   TRACE (2, "g_cfg.trace_file_okay: %d, g_cfg.trace_file_device: %d\n",
          g_cfg.trace_file_okay, g_cfg.trace_file_device);
 
   if (g_cfg.use_sema)
-     TRACE (2, "ws_sema: 0x%" ADDR_FMT ", ws_sema_inherited: %d\n",
-            ADDR_CAST(ws_sema), ws_sema_inherited);
+     TRACE (2, "g_data.ws_sema: 0x%" ADDR_FMT ", g_data.ws_sema_inherited: %d\n",
+            ADDR_CAST(g_data.ws_sema), g_data.ws_sema_inherited);
 
-  ws_Tls_index = TlsAlloc();
-  if (ws_Tls_index == TLS_OUT_OF_INDEXES)
+  g_data.ws_Tls_index = TlsAlloc();
+  if (g_data.ws_Tls_index == TLS_OUT_OF_INDEXES)
        TRACE (1, "TlsAlloc() -> TLS_OUT_OF_INDEXES! GetLastError(): %lu.\n", DWORD_CAST(GetLastError()));
-  else TRACE (2, "TlsAlloc() -> %lu.\n", DWORD_CAST(ws_Tls_index));
+  else TRACE (2, "TlsAlloc() -> %lu.\n", DWORD_CAST(g_data.ws_Tls_index));
 
-  if (!g_cfg.stdout_redirected)
+  if (!g_data.stdout_redirected)
   {
     if (!g_cfg.color_file)
-       g_cfg.color_file = console_info.wAttributes;
+       g_cfg.color_file = g_data.console_info.wAttributes;
 
     if (!g_cfg.color_func)
-       g_cfg.color_func = console_info.wAttributes;
+       g_cfg.color_func = g_data.console_info.wAttributes;
 
     if (!g_cfg.color_trace)
-       g_cfg.color_trace = console_info.wAttributes;
+       g_cfg.color_trace = g_data.console_info.wAttributes;
 
     if (!g_cfg.color_time)
-       g_cfg.color_time = console_info.wAttributes;
+       g_cfg.color_time = g_data.console_info.wAttributes;
 
     if (!g_cfg.color_data)
-       g_cfg.color_data = console_info.wAttributes;
+       g_cfg.color_data = g_data.console_info.wAttributes;
   }
 
   if (g_cfg.trace_time_format != TS_NONE)
@@ -1666,12 +1671,12 @@ void wsock_trace_init (void)
     g_cfg.FIREWALL.sound.enable  = FALSE;
   }
 
-  TRACE (3, "curr_prog:           '%s'\n"
-            "                curr_dir:            '%s'\n"
-            "                prog_dir:            '%s'\n"
+  TRACE (3, "g_data.curr_prog:     '%s'\n"
+            "                g_data.curr_dir:     '%s'\n"
+            "                g_data.prog_dir:     '%s'\n"
             "                get_dll_short_name(): %s\n"
             "                get_dll_build_date(): %s\n",
-         curr_prog, curr_dir, prog_dir, get_dll_short_name(), get_dll_build_date());
+         g_data.curr_prog, g_data.curr_dir, g_data.prog_dir, get_dll_short_name(), get_dll_build_date());
 
   geoip_init (NULL, NULL);
 
@@ -1762,7 +1767,7 @@ void get_color (const char *val, WORD *col)
 
   if (!val)
   {
-    *col = 0xFF00 | (console_info.wAttributes & 7);
+    *col = 0xFF00 | (g_data.console_info.wAttributes & 7);
     return;
   }
 
@@ -1836,7 +1841,7 @@ WORD set_color (const WORD *col)
 
   if (!col)
   {
-    attr = console_info.wAttributes;
+    attr = g_data.console_info.wAttributes;
     fg   = loBYTE (attr);
     bg   = hiBYTE (attr);
   }
@@ -1848,7 +1853,7 @@ WORD set_color (const WORD *col)
 
     if (bg == (BYTE)-1)
     {
-      attr = console_info.wAttributes & ~7;
+      attr = g_data.console_info.wAttributes & ~7;
       attr &= ~8;  /* Since 'wAttributes' could have been hi-intensity at startup. */
     }
     else
@@ -1859,12 +1864,12 @@ WORD set_color (const WORD *col)
 
   if (attr != last_attr)
   {
-    FlushFileBuffers (console_hnd);
-    SetConsoleTextAttribute (console_hnd, attr);
+    FlushFileBuffers (g_data.console_hnd);
+    SetConsoleTextAttribute (g_data.console_hnd, attr);
   }
 
   if (last_attr == (WORD)-1)
-       rc = console_info.wAttributes;
+       rc = g_data.console_info.wAttributes;
   else rc = last_attr;
   last_attr = attr;
   return (rc);
@@ -1874,11 +1879,11 @@ int get_column (void)
 {
   CONSOLE_SCREEN_BUFFER_INFO ci;
 
-  if (console_hnd == INVALID_HANDLE_VALUE)
+  if (g_data.console_hnd == INVALID_HANDLE_VALUE)
      return (-1);
 
   memset (&ci, 0, sizeof(ci));
-  if (!GetConsoleScreenBufferInfo (console_hnd, &ci))
+  if (!GetConsoleScreenBufferInfo (g_data.console_hnd, &ci))
      return (-1);
 
   return (int) (ci.dwCursorPosition.X);

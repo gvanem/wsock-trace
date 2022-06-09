@@ -276,22 +276,22 @@ static int iana_CSV_add4 (struct CSV_context *ctx, const char *value)
          sscanf (value, "%lu/%d", (unsigned long*)&rec.net_num.ip4.s_addr, &rec.mask);
          break;
     case 1:
-         _strlcpy (rec.misc, value, sizeof(rec.misc));
+         str_ncpy (rec.misc, value, sizeof(rec.misc));
          break;
     case 2:
-         _strlcpy (rec.date, value, sizeof(rec.date));
+         str_ncpy (rec.date, value, sizeof(rec.date));
          break;
     case 3:
-         _strlcpy (rec.whois, value, sizeof(rec.whois));
+         str_ncpy (rec.whois, value, sizeof(rec.whois));
          break;
     case 4:
-         _strlcpy (rec.url, value, sizeof(rec.url));
+         str_ncpy (rec.url, value, sizeof(rec.url));
          space = strchr (rec.url, ' ');
          if (space)
             *space = '\0';
          break;
     case 5:
-         _strlcpy (rec.status, value, sizeof(rec.status));
+         str_ncpy (rec.status, value, sizeof(rec.status));
          break;
     case 6:   /* The value in this 'NOTE' field is ignored */
          rec.family = AF_INET;
@@ -340,22 +340,22 @@ static int iana_CSV_add6 (struct CSV_context *ctx, const char *value)
          INET_addr_pton2 (AF_INET6, ip6_addr, &rec.net_num.ip6);
          break;
     case 1:
-         _strlcpy (rec.misc, value, sizeof(rec.misc));
+         str_ncpy (rec.misc, value, sizeof(rec.misc));
          break;
     case 2:
-         _strlcpy (rec.date, value, sizeof(rec.date));
+         str_ncpy (rec.date, value, sizeof(rec.date));
          break;
     case 3:
-         _strlcpy (rec.whois, value, sizeof(rec.whois));
+         str_ncpy (rec.whois, value, sizeof(rec.whois));
          break;
     case 4:
-         _strlcpy (rec.url, value, sizeof(rec.url));
+         str_ncpy (rec.url, value, sizeof(rec.url));
          space = strchr (rec.url, ' ');
          if (space)
             *space = '\0';
          break;
     case 5:
-         _strlcpy (rec.status, value, sizeof(rec.status));
+         str_ncpy (rec.status, value, sizeof(rec.status));
          break;
     case 6:                                   /* The value in this 'NOTE' field is ignored */
          rec.family = AF_INET6;
@@ -620,7 +620,7 @@ static int show_help (void)
           "  test_ip4_address (\"37.142.14.15\"):\n"
           "    ASN: 037/8, RIPE NCC, 2010-11, whois.ripe.net, https://rdap.db.ripe.net/, ALLOCATED\n"
           "    ASN: 12849, 21450 (status: ALLOCATED)\n"
-          "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)\n", program_name, program_name);
+          "    ASN: 12849, name: Hot-Net internet services Ltd. (0,0,0)\n", g_data.program_name, g_data.program_name);
   return (0);
 }
 

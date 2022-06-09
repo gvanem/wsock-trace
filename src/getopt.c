@@ -178,7 +178,7 @@ static void warnx (const char *fmt, ...)
   va_list ap;
 
   va_start (ap, fmt);
-  fprintf (stderr, "%s: ", program_name);
+  fprintf (stderr, "%s: ", g_data.program_name);
   vfprintf (stderr, fmt, ap);
   fprintf (stderr, "\n");
   va_end (ap);

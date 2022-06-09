@@ -123,10 +123,6 @@ static char our_module [_MAX_PATH];
 
 static void (*orig_abort_handler)(int) = SIG_DFL;
 
-/* For some `REG_BSP()` etc. macros.
- */
-static uintptr_t dummy_reg = 0;
-
 static NO_INLINE void print_one_address (thread_args *args, DWORD64 addr)
 {
   SYMBOL_INFO    *info;
@@ -342,7 +338,7 @@ static void init (void)
 
   GetModuleFileName (NULL, our_module, sizeof(our_module));
 
-  if (prog_dir[0])
+  if (g_data.prog_dir[0])
      return;
 
   /* In case wsock_trace_init() wasn't called.
@@ -351,8 +347,8 @@ static void init (void)
   end = strrchr (our_module, '\0');
   if (!strnicmp(end-4, ".exe", 4))
   {
-    end = strrchr (our_module, '\\');   /* Ensure 'prog_dir' has a trailing '\\' */
-    strncpy (prog_dir, our_module, end-our_module+1);
+    end = strrchr (our_module, '\\');   /* Ensure 'g_data.prog_dir' has a trailing '\\' */
+    strncpy (g_data.prog_dir, our_module, end - our_module + 1);
   }
 }
 

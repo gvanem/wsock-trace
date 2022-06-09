@@ -48,7 +48,7 @@
 #endif
 
 #ifndef MAX_URL_SIZE
-#define MAX_URL_SIZE   (sizeof("https://") + MAX_HOST_LEN + MAX_PATH)
+#define MAX_URL_SIZE   (sizeof("https://") + MAX_HOST_LEN + _MAX_PATH)
 #endif
 
 #ifndef IN4_CLASSD
@@ -663,7 +663,7 @@ static void download_winhttp (struct download_context *context)
 
   wchar_t url_wide [MAX_URL_SIZE];
   wchar_t host [MAX_HOST_LEN];
-  wchar_t path [MAX_PATH];
+  wchar_t path [_MAX_PATH];
   BOOL    success = FALSE;
 
   winhttp_URL_COMPONENTSW *url_comp = &ctx->url_comp;
@@ -807,7 +807,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
   BOOL              use_threaded = FALSE;
   BOOL              use_async    = FALSE;
 
-  if (ws_from_dll_main)
+  if (g_data.ws_from_dll_main)
   {
     TRACE (1, "Not safe to enter here from 'DllMain()'.\n");
     return (0);
@@ -1466,8 +1466,8 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
   INET_addr_pton2 (AF_INET, IP4_NET, &network4);
   INET_addr_pton2 (AF_INET6, IP6_NET, &network6);
   if (family == AF_INET6)
-       _strlcpy (network_str, INET_addr_ntop2(family, &network6), sizeof(network_str));
-  else _strlcpy (network_str, INET_addr_ntop2(family, &network4), sizeof(network_str));
+       str_ncpy (network_str, INET_addr_ntop2(family, &network6), sizeof(network_str));
+  else str_ncpy (network_str, INET_addr_ntop2(family, &network4), sizeof(network_str));
 
   for (bits = 0; bits <= max_bits; bits++)
   {

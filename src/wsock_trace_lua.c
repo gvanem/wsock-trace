@@ -110,7 +110,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
     *ljit_trace_level() = g_cfg.LUA.trace_level;
 
-    LUA_TRACE (1, "ws_from_dll_main: %d, dll/exe: '%s', loaded: '%s'\n", ws_from_dll_main, dll, loaded);
+    LUA_TRACE (1, "g_data.ws_from_dll_main: %d, dll/exe: '%s', loaded: '%s'\n", g_data.ws_from_dll_main, dll, loaded);
 
     if (!g_cfg.LUA.color_head)
        get_color (NULL, &g_cfg.LUA.color_head);
@@ -118,14 +118,14 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
     if (!g_cfg.LUA.color_body)
        get_color (NULL, &g_cfg.LUA.color_body);
 
-    if (ws_from_dll_main && stricmp(loaded, dll))
+    if (g_data.ws_from_dll_main && stricmp(loaded, dll))
     {
       LUA_WARNING ("Expected '%s', but loaded DLL/EXE was '%s:\n", dll, loaded);
       rc = FALSE;
     }
     else
     {
-      if (ws_from_dll_main)
+      if (g_data.ws_from_dll_main)
       {
         LUA_TRACE (1, "Importing from '%s'\n", full_name);
         wslua_set_path (full_name);
@@ -473,7 +473,7 @@ static void wslua_init (const char *script)
    */
   lua_atpanic (L, wstrace_lua_panic);
 
-  if (!ws_from_dll_main)
+  if (!g_data.ws_from_dll_main)
      luaopen_wsock_trace (L);
 
 #if 1
@@ -526,7 +526,7 @@ static void wslua_set_path (const char *full_name)
   size_t      len, left = sizeof(lua_cpath);
 
   p = strrchr (full_name, '\\');
-  _strlcpy (dll_path, full_name, p - full_name + 1);
+  str_ncpy (dll_path, full_name, p - full_name + 1);
 
   p = lua_cpath;
 
@@ -547,7 +547,7 @@ static void wslua_set_path (const char *full_name)
   if (env && left > strlen(env)+2)
   {
     *p++ = ';';
-    _strlcpy (p, env, left-1);
+    str_ncpy (p, env, left-1);
   }
 
   ws_setenv ("LUA_CPATH", lua_cpath, 1);
@@ -579,13 +579,13 @@ int luaopen_wsock_trace (lua_State *l)
   char *dot, module [20];
   const char *comment = "";
 
-  _strlcpy (module, get_dll_short_name(), sizeof(module));
+  str_ncpy (module, get_dll_short_name(), sizeof(module));
   dot = strrchr (module, '.');
   dot[0] = '\0';
 
-  if (!ws_from_dll_main)
+  if (!g_data.ws_from_dll_main)
   {
-    _strlcpy (module, "wsock_trace", sizeof(module));
+    str_ncpy (module, "wsock_trace", sizeof(module));
     comment = " (faking 'wsock_trace' module)";
   }
 

@@ -36,16 +36,6 @@
 #define TOUPPER(c)   toupper ((int)(c))
 #define TOLOWER(c)   tolower ((int)(c))
 
-int              fatal_error;
-CRITICAL_SECTION crit_sect;
-
-char curr_dir  [MAX_PATH] = { '\0' };
-char curr_prog [MAX_PATH] = { '\0' };
-char prog_dir  [MAX_PATH] = { '\0' };
-
-HINSTANCE ws_trace_base;        /* Our base-address */
-char     *program_name;         /* For getopt.c and 'xx_main()' functions */
-
 char *set_program_name (const char *argv0)
 {
   static char ret [_MAX_PATH];
@@ -53,22 +43,9 @@ char *set_program_name (const char *argv0)
   DWORD  len = GetModuleFileName (NULL, my_name, sizeof(my_name));
 
   snprintf (ret, sizeof(ret), "%.*s %s", (int)len, my_name, argv0);
-  program_name = ret;
+  g_data.program_name = ret;
   return (ret);
 }
-
-static void __stdcall dummy_WSASetLastError (int err)
-{
-  ARGSUSED (err);
-}
-
-static int __stdcall dummy_WSAGetLastError (void)
-{
-  return (0);
-}
-
-void (__stdcall *g_WSASetLastError) (int err) = dummy_WSASetLastError;
-int  (__stdcall *g_WSAGetLastError) (void)    = dummy_WSAGetLastError;
 
 /**
  * Keep a cache of socket-values and their associated data
@@ -596,7 +573,7 @@ char *_utoa10w (int value, int width, char *buf)
   while (i < width)
      buf [i++] = '0';
   buf [i] = '\0';
-  return _strreverse (buf);
+  return str_reverse (buf);
 }
 
 /**
@@ -788,7 +765,7 @@ char *dirname (const char *fname)
   dirpart = malloc (dirlen + 1);
   if (dirpart)
   {
-    _strlcpy (dirpart, fname, dirlen+1);
+    str_ncpy (dirpart, fname, dirlen+1);
     if (slash && *slash == ':' && dirlen == 3)
        dirpart[2] = '.';      /* for "x:foo" return "x:." */
   }
@@ -801,7 +778,7 @@ char *dirname (const char *fname)
  */
 char *copy_path (char *out_path, const char *in_path, char use)
 {
-  _strlcpy (out_path, in_path, _MAX_PATH);
+  str_ncpy (out_path, in_path, _MAX_PATH);
   if (use == '/')
      str_replace ('\\', '/', out_path);
   else if (use == '\\')
@@ -866,8 +843,8 @@ static const char *get_device_paths (int vol_idx, const char *volume, const char
     {
       if (!ret)
          ret = p;
-      _strlcpy (map->path, p, sizeof(map->path));
-      _strlcpy (map->device, device, sizeof(map->device));
+      str_ncpy (map->path, p, sizeof(map->path));
+      str_ncpy (map->device, device, sizeof(map->device));
       smartlist_add (device_to_paths_map, map);
     }
   }
@@ -952,7 +929,7 @@ static char *get_path_from_volume (char *path, size_t size)
     if (!strnicmp(path, map->device, len))
     {
       snprintf (buf, sizeof(buf), "%s%s", map->path, path + len + 1);
-      return _strlcpy (path, buf, size);
+      return str_ncpy (path, buf, size);
     }
   }
   return (path);
@@ -978,7 +955,7 @@ static char *get_native_path (const char *path)
   {
     const char *p = getenv ("WinDir");
 
-    _strlcpy (win_root, p ? p : "?", sizeof(win_root));
+    str_ncpy (win_root, p ? p : "?", sizeof(win_root));
     fix_drive (win_root);
     snprintf (sys_dir, sizeof(sys_dir), "%s\\System32\\", win_root);
   }
@@ -1032,7 +1009,7 @@ const char *get_path (const char    *apath,
 
   if (wpath)
        snprintf (path, sizeof(path), "%" WCHAR_FMT, wpath);
-  else _strlcpy (path, apath, sizeof(path));
+  else str_ncpy (path, apath, sizeof(path));
 
   if (!stricmp(path, "System"))    /* No more to do for this path */
      return (path);
@@ -1267,8 +1244,8 @@ const char *shorten_path (const char *path)
 
   if (!g_cfg.use_full_path)
   {
-    size_t len = strlen (curr_dir);
-    if (len >= 3 && !strnicmp(curr_dir, path, len))
+    size_t len = strlen (g_data.curr_dir);
+    if (len >= 3 && !strnicmp(g_data.curr_dir, path, len))
        return (real_name + len + 1);
   }
   return (real_name);
@@ -1302,7 +1279,7 @@ static const char *fname_cache_add (const char *fname)
 {
   struct file_name_entry *fn;
   size_t fn_len = strlen (fname);
-  char   buf [MAX_PATH];
+  char   buf [_MAX_PATH];
 
   fn = malloc (sizeof(*fn) + fn_len + 1);
   if (!fn)
@@ -1361,15 +1338,15 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   int     save1, save2;
   va_list args;
 
-  /* Since 'g_cfg.trace_raw = 0' below, ensure colorised messages from 'WSTRACE()'
+  /* Since 'g_data.trace_raw == false' below, ensure colorised messages from 'WSTRACE()'
    * cannot interrupt this piece of code (we'd then get colours here).
    * Thus make this a critical region.
    */
   ENTER_CRIT();
 
-  save1 = g_cfg.trace_raw;
+  save1 = g_data.trace_raw;
   save2 = g_cfg.trace_indent;
-  g_cfg.trace_raw    = 1;
+  g_data.trace_raw   = true;
   g_cfg.trace_indent = 0;
 
   if (g_cfg.show_caller && file)
@@ -1379,7 +1356,7 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   C_vprintf (fmt, args);
   va_end (args);
 
-  g_cfg.trace_raw    = save1;
+  g_data.trace_raw   = save1;
   g_cfg.trace_indent = save2;
   LEAVE_CRIT (0);
 }
@@ -1475,7 +1452,7 @@ int C_putc (int ch)
   assert (C_ptr >= C_buf);
   assert (C_ptr < C_end-1);
 
-  if (C_tilde_escape && C_get_color && !g_cfg.trace_raw)
+  if (C_tilde_escape && C_get_color && !g_data.trace_raw)
   {
     const WORD *color;
     int         col_idx;
@@ -1536,7 +1513,7 @@ int C_putc (int ch)
     return (1);
   }
 
-  if (C_tilde_escape && ch == '~' && !g_cfg.trace_raw)
+  if (C_tilde_escape && ch == '~' && !g_data.trace_raw)
   {
     C_get_color = TRUE;
     return (1);
@@ -1667,8 +1644,6 @@ FILE *fopen_excl (const char *file, const char *mode)
  *
  * Use 8 buffers in round-robin.
  */
-int use_win_locale = 0;
-
 const char *qword_str (unsigned __int64 val)
 {
   static char buf [8][30];
@@ -1677,7 +1652,7 @@ const char *qword_str (unsigned __int64 val)
   char  *rc = buf [idx++];
 
 #if defined(_MSC_VER)
-  if (use_win_locale)
+  if (g_data.use_win_locale)
   {
     char buf2[30];
 
@@ -1725,7 +1700,7 @@ const char *dword_str (DWORD val)
 /**
  * Similar to `strncpy()`, but always returns `dst` with 0-termination.
  */
-char *_strlcpy (char *dst, const char *src, size_t len)
+char *str_ncpy (char *dst, const char *src, size_t len)
 {
   assert (dst != NULL);
   assert (src != NULL);
@@ -1744,7 +1719,7 @@ char *_strlcpy (char *dst, const char *src, size_t len)
 /**
  * Similar to `strlen()`, but return at most a length of `maxlen`.
  */
-size_t _strnlen (const char *s, size_t maxlen)
+size_t str_nlen (const char *s, size_t maxlen)
 {
   size_t len;
 
@@ -1759,9 +1734,9 @@ size_t _strnlen (const char *s, size_t maxlen)
 /**
  * Similar to `strdup()`, but duplicate at most `max` bytes of the input `str`.
  */
-char *_strndup (const char *str, size_t max)
+char *str_ndup (const char *str, size_t max)
 {
-  size_t len  = _strnlen (str, max);
+  size_t len  = str_nlen (str, max);
   char  *copy = (char*) malloc (len + 1);
 
   if (copy == NULL)
@@ -1775,7 +1750,7 @@ char *_strndup (const char *str, size_t max)
  * Return a string with `ch` repeated `num` times. \n
  * Limited to 200 characters.
  */
-char *_strrepeat (int ch, size_t num)
+char *str_repeat (int ch, size_t num)
 {
   static char buf [200];
   char  *p = buf;
@@ -1793,7 +1768,7 @@ char *_strrepeat (int ch, size_t num)
  *
  * Copyright (C) 1998 - 2007, Daniel Stenberg, <daniel@haxx.se>, et al.
   */
-char *_strtok_r (char *ptr, const char *sep, char **end)
+char *str_tok_r (char *ptr, const char *sep, char **end)
 {
   if (!ptr)
   {
@@ -1834,7 +1809,7 @@ char *_strtok_r (char *ptr, const char *sep, char **end)
 /**
  * Reverse string `str` in place.
  */
-char *_strreverse (char *str)
+char *str_reverse (char *str)
 {
   int i, j;
 
@@ -1846,12 +1821,6 @@ char *_strreverse (char *str)
   }
   return (str);
 }
-
-/*
- * According to:
- *  http://msdn.microsoft.com/en-us/library/windows/desktop/ms683188(v=vs.85).aspx
- */
-#define MAX_ENV_VAR 32767
 
 /**
  * Returns the expanded version of an environment variable.
@@ -1887,7 +1856,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
       env = buf2;
   }
 
-  rc = env ? _strlcpy(buf, env, size) : orig_var;
+  rc = env ? str_ncpy(buf, env, size) : orig_var;
   TRACE (3, "env: '%s', expanded: '%s'\n", orig_var, rc);
   return (rc);
 }
@@ -2201,20 +2170,18 @@ int file_exists (const char *fname)
  * runtime.
  *
  * The .lua-scripts needs this information to know which .DLL (or .EXE) to
- * integrate with. If called from 'ws_tool.c', the `full_name` is `ws_tool.exe`.
- * Hopefully LUA will be able to import from that.
+ * integrate with. If called from 'ws_tool.c', the `g_data.full_name` is
+ * `ws_tool.exe`. Hopefully LUA will be able to import from that.
  *
  * Some of these functions are also called from `geoip.c`.
  */
 #include "wsock_trace.rc"
 
-static char full_name [_MAX_PATH];
-
 const char *set_dll_full_name (HINSTANCE inst_dll)
 {
-  if (!full_name[0])  /* prevent re-entry from the same .dll */
-     GetModuleFileName (inst_dll, full_name, sizeof(full_name));
-  return (full_name);
+  if (!g_data.full_name[0])  /* prevent re-entry from the same .dll */
+     GetModuleFileName (inst_dll, g_data.full_name, sizeof(g_data.full_name));
+  return (g_data.full_name);
 }
 
 /**
@@ -2222,9 +2189,9 @@ const char *set_dll_full_name (HINSTANCE inst_dll)
  */
 const char *get_dll_full_name (void)
 {
-  if (full_name[0] == '\0')
+  if (g_data.full_name[0] == '\0')
      return (NULL);
-  return (full_name);
+  return (g_data.full_name);
 }
 
 /**

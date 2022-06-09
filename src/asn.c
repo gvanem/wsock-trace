@@ -192,7 +192,7 @@ static int ASN_CSV_add (struct CSV_context *ctx, const char *value)
            copy->as_number = rec.as_number;
            copy->prefix = 32 - INET_util_network_len32 (copy->ipv4.high.s_addr, copy->ipv4.low.s_addr);
            copy->family = AF_INET;
-           _strlcpy (copy->as_name, value, sizeof(copy->as_name));
+           str_ncpy (copy->as_name, value, sizeof(copy->as_name));
            smartlist_add (ASN_entries, copy);
          }
          memset (&rec, '\0', sizeof(rec));    /* Ready for a new record. */
@@ -315,8 +315,8 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
 void ASN_update_file (const char *db_file, BOOL force_update)
 {
   struct stat st;
-  char   db_xz_temp_file [MAX_PATH];
-  char   db_temp_file [MAX_PATH];
+  char   db_xz_temp_file [_MAX_PATH];
+  char   db_temp_file [_MAX_PATH];
   char  *db_dir;
   BOOL   db_dir_ok, need_update;
   DWORD  downloaded;
@@ -923,7 +923,7 @@ static BOOL ASN_match_name (const struct ASN_record *rec, const char *spec)
   if (!rec->as_name[0] && *spec == '*')  /* match all or the unknowns */
      return (TRUE);
 
-  _strlcpy (AS_name_spec, spec, sizeof(AS_name_spec)-1);
+  str_ncpy (AS_name_spec, spec, sizeof(AS_name_spec)-1);
 
   /* To turn this 'spec':
    *   ws_tool.exe asn -D "Adobe Systems* Ireland"
@@ -1036,7 +1036,7 @@ static int show_help (void)
           "       -v:        show version of IPFire database and libloc library version.\n"
           "  Option '-D' accepts a range or name wildcard.\n"
           "       E.g. 'ws_tool asn -D 10[2-4]*'\n"
-          "       or   'ws_tool asn -D \"Nasdaq*\"'\n", program_name);
+          "       or   'ws_tool asn -D \"Nasdaq*\"'\n", g_data.program_name);
   return (0);
 }
 

@@ -53,7 +53,7 @@ static void add_entry (const void *addr, const char *name, int af_type)
   if (he && asize)
   {
     he->addr_type = af_type;
-    _strlcpy (he->host_name, name, sizeof(he->host_name));
+    str_ncpy (he->host_name, name, sizeof(he->host_name));
     memcpy (&he->addr, addr, asize);
     he->file = g_cfg.hosts_file [current_hosts_file];
     smartlist_add (hosts_list, he);

@@ -92,7 +92,7 @@ static void show_help (const char *extra)
   printf ("%sWsock-trace test tool.\n"
           "Usage: %s [-h] <command> [<args>]\n"
           "       -h:   shows this help\n"
-          "Available sub-commands:\n", extra ? extra : "", program_name);
+          "Available sub-commands:\n", extra ? extra : "", g_data.program_name);
 
   for (i = 0; i < DIM(sub_commands); i++)
      printf ("  %s\n", sub_commands[i].main_name);
@@ -102,10 +102,9 @@ int main (int argc, char **argv)
 {
   int c, do_help = 0, rc = 0;
 
-  program_name = argv[0];
-
   memset (&g_cfg, '\0', sizeof(g_cfg));
-  ws_from_dll_main = FALSE;
+
+  set_program_name (argv[0]);
 
   while ((c = getopt (argc, argv, "+h?")) != EOF)
     switch (c)

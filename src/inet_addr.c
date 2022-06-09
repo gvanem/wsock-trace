@@ -516,7 +516,7 @@ char *INET_addr_sockaddr (const struct sockaddr *sa)
     if (!su->sun_path[0])
          strcpy (buf, "abstract");
     else if (su->sun_path[0] && su->sun_path[1])
-         _strlcpy (buf, su->sun_path, sizeof(buf));
+         str_ncpy (buf, su->sun_path, sizeof(buf));
     else if (WideCharToMultiByte(CP_ACP, 0, path, (int)wcslen(path), buf, (int)sizeof(buf), NULL, NULL) == 0)
          strcpy (buf, "??");
     return (buf);

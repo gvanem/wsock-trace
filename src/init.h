@@ -123,6 +123,9 @@ struct FIREWALL_cfg {
        } sound;
      };
 
+/**
+ * Keep ALL user-configurable data to this structure:
+ */
 struct config_table {
        char   *trace_file;
        FILE   *trace_stream;
@@ -137,7 +140,6 @@ struct config_table {
        BOOL    trace_file_device;
        BOOL    trace_file_commit;
        BOOL    trace_use_ods;
-       BOOL    trace_raw;
        int     trace_level;
        int     trace_overlap;
        int     trace_indent;
@@ -184,23 +186,14 @@ struct config_table {
        WORD    color_func;
        WORD    color_trace;
        WORD    color_data;
-
        BOOL    nice_numbers;
        BOOL    use_winhttp;
        BOOL    msvc_only;
        BOOL    mingw_only;
        BOOL    cygwin_only;
-       BOOL    stealth_mode;
        BOOL    no_buffering;
-       BOOL    stdout_redirected;
-       WORD    screen_width;
-       WORD    screen_heigth;
-       DWORD   reentries;
-
        TS_TYPE trace_time_format;
        BOOL    trace_time_usec;
-       uint64  start_ticks;
-       uint64  clocks_per_usec;
 
        struct LUA_cfg      LUA;
        struct PCAP_cfg     PCAP;
@@ -210,19 +203,46 @@ struct config_table {
        struct ASN_cfg      ASN;
        struct GEOIP_cfg    GEOIP;
        struct FIREWALL_cfg FIREWALL;
-       struct statistics   counts;
      };
 
 extern struct config_table g_cfg;
-extern int                 fatal_error;
 
-extern DWORD       ws_Tls_index;
-extern BOOL        ws_from_dll_main;
-extern HANDLE      ws_sema;
-extern BOOL        ws_sema_inherited;
-extern const char *ws_sema_name;
+/**
+ * Keep ALL other global data to this structure:
+ */
+struct global_data {
+       bool                       fatal_error;
+       bool                       trace_raw;
+       bool                       ws_from_dll_main;          /**< We're called via DllMain() */
+       DWORD                      ws_Tls_index;              /**< *Thread Local Storage* index */
+       HANDLE                     ws_sema;                   /**< Handle of global semaphore */
+       bool                       ws_sema_inherited;         /**< Semaphore was inherited from another running instance */
+       const char                *ws_sema_name;              /**< Name of global semaphore; `"Global\\wsock_trace-semaphore"` */
+       uint64                     start_ticks;               /**< Absolute start-time from `QueryPerformanceCounter()` */
+       uint64                     clocks_per_usec;           /**< Clocks per usec from `QueryPerformanceFrequency()` */
+       CRITICAL_SECTION           crit_sect;                 /**< Global critical section */
+       HANDLE                     console_hnd;               /**< Console handle */
+       CONSOLE_SCREEN_BUFFER_INFO console_info;              /**< Console information (unless redirected) */
+       bool                       stealth_mode;              /**< Not used */
+       bool                       stdout_redirected;         /**< Trace is redirected to a file */
+       WORD                       screen_width;              /**< Max width of the screen to use */
+       WORD                       screen_heigth;             /**< The height of the screen (not used) */
+       DWORD                      reentries;                 /**< Reentries in get_caller()`; fatal */
+       uintptr_t                  dummy_reg;                 /**< For some `REG_x()` macros */
+       bool                       use_win_locale;            /**< Currently alway false */
+       char                      *program_name;              /**< For getopt.c filled by `set_program_name()` */
+       char                       curr_dir  [_MAX_PATH];     /**< Current working directory */
+       char                       curr_prog [_MAX_PATH];     /**< Current running program */
+       char                       prog_dir  [_MAX_PATH];     /**< And it's program directory */
+       char                       full_name [_MAX_PATH];     /**< Full name of program that loaded `wsock_trace.dll` */
+       char                       cfg_fname [_MAX_PATH];     /**< Full name of `wsock_trace` config-file */
+       HINSTANCE                  ws_trace_base;             /**< Our base-address */
+       void (__stdcall           *WSASetLastError) (int);    /**< Dummy WSA* functions */
+       int  (__stdcall           *WSAGetLastError) (void);
+       struct statistics          counts;                    /**< Statistics counters */
+     };
 
-extern CONSOLE_SCREEN_BUFFER_INFO console_info;
+extern struct global_data g_data;
 
 extern void wsock_trace_init (void);
 extern void wsock_trace_exit (void);
@@ -248,7 +268,6 @@ extern BOOL exclude_list_add (const char *name, unsigned exclude_which);
 extern BOOL exclude_list_get (const char *fmt, unsigned exclude_which);
 extern BOOL exclude_list_free (void);
 
-extern const char *config_file_name (void);
 extern const char *get_timestamp (void);
 extern double      get_timestamp_now (void);
 extern const char *get_date_str (const SYSTEMTIME *st);
@@ -263,13 +282,11 @@ extern size_t write_pcap_header  (void);
 extern size_t write_pcap_packet  (SOCKET s, const void *pkt, size_t len, BOOL out);
 extern size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, BOOL out);
 
-extern CRITICAL_SECTION crit_sect;
-
-#define ENTER_CRIT()           EnterCriticalSection (&crit_sect)
-#define LEAVE_CRIT(extra_nl)   do {                                    \
-                                 if (extra_nl && g_cfg.extra_new_line) \
-                                    C_putc ('\n');                     \
-                                 LeaveCriticalSection (&crit_sect);    \
+#define ENTER_CRIT()           EnterCriticalSection (&g_data.crit_sect)
+#define LEAVE_CRIT(extra_nl)   do {                                        \
+                                 if (extra_nl && g_cfg.extra_new_line)     \
+                                    C_putc ('\n');                         \
+                                 LeaveCriticalSection (&g_data.crit_sect); \
                                } while (0)
 #endif
 

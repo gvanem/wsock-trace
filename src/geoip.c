@@ -1442,7 +1442,7 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
  */
 void geoip_update_file (int family, BOOL force_update)
 {
-  char        tmp_file [MAX_PATH];
+  char        tmp_file [_MAX_PATH];
   const char *env = getenv ("TEMP");
 
   if (family == AF_INET)
@@ -2055,9 +2055,9 @@ static int show_help (void)
           "       -u:     test updating of geoip files.\n"
           "       -4:     test IPv4 address(es).\n"
           "       -6:     test IPv6 address(es).\n"
-          "       -h:     this help.\n", program_name);
+          "       -h:     this help.\n", g_data.program_name);
   printf ("   address(es) can also come from a response-file: '@file-with-addr'.\n"
-          "   Or from 'stdin': \"%s -4 < file-with-addr\".\n", program_name);
+          "   Or from 'stdin': \"%s -4 < file-with-addr\".\n", g_data.program_name);
   return (0);
 }
 
@@ -2196,7 +2196,7 @@ static int check_requirements (void)
   }
   if (!g_cfg.GEOIP.enable)
   {
-    C_printf ("'[geoip]' section must have 'enable=1' in %s to use this option.\n", config_file_name());
+    C_printf ("'[geoip]' section must have 'enable=1' in %s to use this option.\n", g_data.cfg_fname);
     return (0);
   }
   return (1);

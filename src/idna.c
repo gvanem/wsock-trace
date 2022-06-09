@@ -196,7 +196,7 @@ static BOOL CALLBACK get_cp_info (LPTSTR cp_str)
   cp_info->valid  = IsValidCodePage (cp);
 
   if (GetCPInfoEx(cp, 0, &cp_info_ex))
-     _strlcpy (cp_info->name, cp_info_ex.CodePageName, sizeof(cp_info->name));
+     str_ncpy (cp_info->name, cp_info_ex.CodePageName, sizeof(cp_info->name));
 
   smartlist_add (cp_list, cp_info);
   return (TRUE);
@@ -405,11 +405,11 @@ static char **split_labels (const char *name)
 
     if (!dot)
     {
-      res[i] = _strlcpy (buf[i], p, sizeof(buf[i]));
+      res[i] = str_ncpy (buf[i], p, sizeof(buf[i]));
       i++;
       break;
     }
-    res[i] = _strlcpy (buf[i], p, dot-p+1);
+    res[i] = str_ncpy (buf[i], p, dot-p+1);
     p = ++dot;
   }
   res[i] = NULL;
@@ -1035,7 +1035,7 @@ static int show_help (void)
           "       -c <N>: select codepage (active is CP%d)\n"
           "       -r:     reverse; convert an already prefixed \"xn--\" hostname to ASCII\n"
           "%s",
-          program_name, IDNA_GetCodePage(), W_HELP);
+          g_data.program_name, IDNA_GetCodePage(), W_HELP);
   return (0);
 }
 
@@ -1050,7 +1050,7 @@ static int resolve_name (const char *name, int do_reverse)
   char   host [MAX_HOST_LEN];
   size_t len;
 
-  _strlcpy (host, name, sizeof(host)-1);
+  str_ncpy (host, name, sizeof(host)-1);
   len = sizeof (host);
   printf ("Resolving `%s'", name);
 
@@ -1098,7 +1098,7 @@ static int reverse_resolve (struct in_addr addr)
     return (-1);
   }
 
-  _strlcpy (host,  he->h_name, sizeof(host)-1);
+  str_ncpy (host,  he->h_name, sizeof(host)-1);
   printf ("raw ACE: \"%s\"\n", host);
   len = strlen (host);
   if (!IDNA_convert_from_ACE(host, &len))

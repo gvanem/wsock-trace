@@ -211,8 +211,8 @@ void overlap_recall_all (const WSAEVENT *event)
 /**
  * Match the socket `s` and overlapped pointer `o` against a previous overlapped
  * `WSARecvXX()` / `WSASendXX()` call. <br>
- * And do update the `g_cfg.counts.recv_bytes`
- * or `g_cfg.counts.send_bytes` statistics with the `bytes` value.
+ * And do update the `g_data.counts.recv_bytes`
+ * or `g_data.counts.send_bytes` statistics with the `bytes` value.
  */
 void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
 {
@@ -229,13 +229,13 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
 
     if (ov->is_recv)
     {
-      g_cfg.counts.recv_bytes += bytes;
+      g_data.counts.recv_bytes += bytes;
       TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n",
              i, DWORD_CAST(ov->bytes), DWORD_CAST(bytes));
     }
     else
     {
-      g_cfg.counts.send_bytes += bytes;
+      g_data.counts.send_bytes += bytes;
       TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n",
              i, DWORD_CAST(ov->bytes), DWORD_CAST(bytes));
     }

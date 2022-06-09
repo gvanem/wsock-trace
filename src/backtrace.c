@@ -417,7 +417,7 @@ static int show_help (void)
           "       -s:   test symbol-list and not 'StackWalkShow()'.\n"
           "       -t:   run threaded test.\n"
           "       -v:   sets 'vm_bug_debug' value. Will also show all frames.\n"
-          "       -r #: sets 'foo_first()' recursion-level.\n", program_name);
+          "       -r #: sets 'foo_first()' recursion-level.\n", g_data.program_name);
   return (0);
 }
 

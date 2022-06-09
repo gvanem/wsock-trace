@@ -158,11 +158,11 @@ static int encode_proto_str (const char *proto_str, BOOL multi_fields)
     char  copy [MAX_PROTOS_LEN];
     int   i;
 
-    _strlcpy (copy, proto_str, sizeof(copy));
+    str_ncpy (copy, proto_str, sizeof(copy));
     rc = PROTO_UNKNOWN;
     i = 0;
-    for (tok = _strtok_r (copy, "/", &end); tok;
-         tok = _strtok_r (NULL, "/", &end), i++)
+    for (tok = str_tok_r (copy, "/", &end); tok;
+         tok = str_tok_r (NULL, "/", &end), i++)
     {
       TRACE (3, "tok[%d]: '%s'.\n", i, tok);
       rc |= encode_proto_str (tok, FALSE);
@@ -264,7 +264,7 @@ static int services_CSV_add (struct CSV_context *ctx, const char *value)
   switch (ctx->field_num)
   {
     case 0:
-         _strlcpy (se.name, value, sizeof(se.name));
+         str_ncpy (se.name, value, sizeof(se.name));
          break;
     case 1:
          if (parse_port_proto(&se, value))
@@ -379,9 +379,9 @@ static __inline const struct servent *fill_servent (const struct service_entry *
 
   if (protocol == PROTO_UNKNOWN)
        proto_ret = NULL;
-  else proto_ret = _strlcpy (proto, list_lookup_name(protocol, protocol_list, DIM(protocol_list)), sizeof(proto));
+  else proto_ret = str_ncpy (proto, list_lookup_name(protocol, protocol_list, DIM(protocol_list)), sizeof(proto));
 
-  ret_fill_servent.s_name    = _strlcpy (name, se->name, sizeof(name));
+  ret_fill_servent.s_name    = str_ncpy (name, se->name, sizeof(name));
   ret_fill_servent.s_proto   = (char*) proto_ret;
   ret_fill_servent.s_aliases = null_aliases;
   ret_fill_servent.s_port    = swap16 (se->port);
@@ -514,7 +514,7 @@ static int show_help (void)
           "       -D:  run 'services_file_dump()' to dump the services list.\n"
           "       -t:  run 'services_run_tests()' for a simple test.\n"
           " If a <services-file> is specified, use this instead of they configured one.\n",
-          program_name);
+          g_data.program_name);
   return (0);
 }
 

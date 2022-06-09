@@ -1130,7 +1130,7 @@ static int show_help (void)
           "       -v:     increase verbosity.\n"
           "       -f:     calls 'test_select_3()' for 100 sec (handy for Firewall event monitoring).\n"
           "       -l:     list tests and exit.\n"
-          "       -t[N]:  only do a thread test with <N> running threads.\n", program_name);
+          "       -t[N]:  only do a thread test with <N> running threads.\n", g_data.program_name);
   return (0);
 }
 

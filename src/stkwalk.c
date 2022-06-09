@@ -1231,7 +1231,7 @@ static void print_modules_and_pdb_info (BOOL do_sort)
             (int)mod_len, "Module",
             16+8*IS_WIN64, "Baseaddr",
             g_cfg.pdb_report ? pdb_hdr : "",
-            _strrepeat('-', dash_len));
+            str_repeat('-', dash_len));
 
   /* Make a sorted copy before printing the module-list.
    * Sort on Baseaddr
@@ -1313,7 +1313,7 @@ static void print_modules_and_pdb_info (BOOL do_sort)
      C_printf ("%*s  %s\n"
                "%*s  = %5lu %5lu %5lu %5lu\n",
                26 + (int)mod_len + 8*IS_WIN64, "",
-               _strrepeat('-',  25),
+               str_repeat('-',  25),
                26 + (int)mod_len + 8*IS_WIN64, "",
                DWORD_CAST(total_text),
                DWORD_CAST(total_data),
@@ -1366,7 +1366,7 @@ static void enum_and_load_modules (void)
     if (!stricmp(g_module, me->module_name))
     {
    // add_to_shared_list (base);   /* \todo */
-      ws_trace_base = (HINSTANCE) me->base_addr;
+      g_data.ws_trace_base = (HINSTANCE) me->base_addr;
     }
 
 #ifdef USE_BFD
@@ -1421,7 +1421,7 @@ static BOOL set_symbol_search_path (void)
       TRACE (1, "Python detected: \"%s\", g_py_dir: '%s'.\n", g_py_exe, g_py_dir);
     }
 #endif
-    if (strcmp(dir, curr_dir))
+    if (strcmp(dir, g_data.curr_dir))
     {
       p   += snprintf (p, left, "%s;", dir);
       left = end - p;
@@ -1429,9 +1429,9 @@ static BOOL set_symbol_search_path (void)
     free (dir);
   }
 
-  if (curr_dir[0])  /* set in wsock_trace_init() */
+  if (g_data.curr_dir[0])  /* set in wsock_trace_init() */
   {
-    p += snprintf (p, left, "%s;", curr_dir);
+    p += snprintf (p, left, "%s;", g_data.curr_dir);
     left = end - p;
   }
 
@@ -1578,7 +1578,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
 
       if (dot > module)
       {
-        _strlcpy (pdb_file, module, dot-module+1);
+        str_ncpy (pdb_file, module, dot-module+1);
         strcat (pdb_file, ".pdb");
         have_PDB = file_exists (pdb_file);
       }
@@ -1602,7 +1602,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
 
   len = min (sym->NameLen+1, MAX_NAMELEN);
 
-  _strlcpy (raw_name, sym->Name, len);
+  str_ncpy (raw_name, sym->Name, len);
   name_fmt = (g_long_CPP_syms && is_ours ? "%-140.140s " : "%-50.50s ");
 
   /* Ignore symbols like these:
@@ -1753,7 +1753,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
   if (!dot)
      return (0);
 
-  _strlcpy (map_file, module, dot-module+1);
+  str_ncpy (map_file, module, dot-module+1);
   strcat (map_file, ".map");
   if (!file_exists(map_file))
   {
@@ -1880,8 +1880,8 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
 
   _C_printf = verbose ? C_printf : null_C_printf;
 
-  save = g_cfg.trace_raw;
-  g_cfg.trace_raw = 1;
+  save = g_data.trace_raw;
+  g_data.trace_raw = true;
 
 #if !defined(_MSC_VER)
   if (!stricmp(g_module, module))
@@ -1891,7 +1891,7 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_l
   }
 #endif
 
-  _strlcpy (pattern, basename(module), _MAX_PATH);
+  str_ncpy (pattern, basename(module), _MAX_PATH);
   dot = strrchr (pattern, '.');
   if (dot)
      *dot = '\0';
@@ -1909,7 +1909,7 @@ check_mingw_map_file:
 #endif
 #endif
 
-  g_cfg.trace_raw = save;
+  g_data.trace_raw = save;
 
   /* Only do the sorting when the last module is processed.
    * Wastefull otherwise, since no modules should have overlapping base-addresses.
@@ -1955,8 +1955,8 @@ BOOL StackWalkInit (void)
 
   GetModuleFileName (NULL, g_module, sizeof(g_module));
   if (GetSystemDirectory(g_sym_dir, DIM(g_sym_dir)) && (p = strrchr(g_sym_dir, '\\')) != NULL)
-       _strlcpy (p+1, "symbols", p - g_sym_dir - 1);
-  else _strlcpy (g_sym_dir, "c:\\Windows\\symbols", sizeof(g_sym_dir));
+       str_ncpy (p+1, "symbols", p - g_sym_dir - 1);
+  else str_ncpy (g_sym_dir, "c:\\Windows\\symbols", sizeof(g_sym_dir));
 
   TRACE (1, "g_module: %s, g_sym_dir: %s\n", g_module, g_sym_dir);
 

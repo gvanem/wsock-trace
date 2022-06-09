@@ -465,7 +465,7 @@ static int show_help (void)
           "    -f: set field delimiter. Use '\\t' for a <TAB> or '\\s for a <SPACE> delimiter (default is ',').\n"
           "    -m: max number of records to handle.\n"
           "    -n: number of fields in CSV-records. Default is found by auto-detection.\n",
-          program_name);
+          g_data.program_name);
   return (0);
 }
 

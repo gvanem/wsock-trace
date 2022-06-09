@@ -570,7 +570,7 @@ static int DNSBL_update_file (const char *fname, const char *tmp_file, const cha
  */
 int DNSBL_update_files (BOOL force_update)
 {
-  char        tmp_file [MAX_PATH];
+  char        tmp_file [_MAX_PATH];
   const char *env = getenv ("TEMP");
   time_t      now, expiry;
   int         num = 0;
@@ -624,7 +624,7 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   dnsbl->type   = type;
   dnsbl->family = AF_INET;
 
-  _strlcpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
+  str_ncpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
   smartlist_add (sl, dnsbl);
 }
 
@@ -670,7 +670,7 @@ static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line)
   dnsbl->type   = DNSBL_DROPv6;
   dnsbl->family = AF_INET6;
 
-  _strlcpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
+  str_ncpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
   smartlist_add (sl, dnsbl);
 }
 
@@ -685,7 +685,7 @@ static int show_help (void)
           "       -t:  run 'DNSBL_test()' for a simple test.\n"
           "            if an <address> is specified, test that.\n"
           "       -u:  update the SpamHaus' 'DROP.txt', 'DROPv6.txt' and 'EDROP.txt' files.\n",
-          program_name);
+          g_data.program_name);
   return (0);
 }
 
@@ -735,7 +735,7 @@ int dnsbl_main (int argc, char **argv)
     g_cfg.trace_level = save;
   }
   else
-    printf ("Nothing done in %s.\n", program_name);
+    printf ("Nothing done in %s.\n", g_data.program_name);
 
   return (0);
 }

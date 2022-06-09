@@ -1596,7 +1596,7 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
 
 /*
  * dump.c: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
- *         _strlcpy (buf, "<??>", buf_sz);
+ *         str_ncpy (buf, "<??>", buf_sz);
  */
 GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
 
@@ -1608,13 +1608,13 @@ static const char *socket_addr_str (char *buf, size_t buf_sz, const SOCKET_ADDRE
   int af;
 
   if (sa->iSockaddrLength == 0)
-     _strlcpy (buf, "<None>", buf_sz);
+     str_ncpy (buf, "<None>", buf_sz);
   else
   {
     af = sa->lpSockaddr->sa_family;
     if (af != AF_INET && af != AF_INET6)
          snprintf (buf, buf_sz, "AF %d??", af);
-    else _strlcpy (buf, INET_addr_ntop2(af, &sa->lpSockaddr->sa_data), buf_sz);
+    else str_ncpy (buf, INET_addr_ntop2(af, &sa->lpSockaddr->sa_data), buf_sz);
   }
   return (buf);
 }
@@ -1661,7 +1661,7 @@ static const char *dump_sol_socket (char *buf, size_t buf_sz, int opt, const cha
   if (opt == SO_OPENTYPE && opt_len == sizeof(DWORD))
   {
     val = *(DWORD*)opt_val;
-    return _strlcpy (buf, list_lookup_name(val, opentypes, DIM(opentypes)), buf_sz);
+    return str_ncpy (buf, list_lookup_name(val, opentypes, DIM(opentypes)), buf_sz);
   }
 
   if (opt == SO_BSP_STATE && opt_len >= sizeof(CSADDR_INFO))
@@ -1980,7 +1980,7 @@ void dump_tcp_info_v1 (const TCP_INFO_v1 *info, int err_code)
 static char *maybe_wrap_line (int indent, int trailing_len, const char *start, char *out, int *added_p)
 {
   const char *newline    = strrchr (start, '\n');
-  int         i, max_len = g_cfg.screen_width - indent - trailing_len;
+  int         i, max_len = g_data.screen_width - indent - trailing_len;
   int         added = 0;
 
   if (newline)
@@ -2002,14 +2002,14 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
 
 /*
  * Function that prints a long line while limiting it
- * to at most 'g_cfg.screen_width'. And such that line-breaks
+ * to at most 'g_data.screen_width'. And such that line-breaks
  * does NOT occur in the middle of a word, but only at 'brk_ch'.
  * An appropriate number of spaces are added on subsequent lines.
  *
  * Example, if 'start' is:
  *   "XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|XP1_IFS_HANDLES" (80 bytes)
  *
- * and 'indent == 1' and 'g_cfg.screen_width == 80', that would without any wrap-checking
+ * and 'indent == 1' and 'g_data.screen_width == 80', that would without any wrap-checking
  * cause this "ugly" output:
  *   " XP1_GUARANTEED_DELIVERY|XP1_GUARANTEED_ORDER|XP1_GRACEFUL_CLOSE|XP1_IFS_HANDLE"\n
  *   "S"
@@ -2020,7 +2020,7 @@ static char *maybe_wrap_line (int indent, int trailing_len, const char *start, c
  */
 void print_long_flags (const char *start, size_t indent, int brk_ch)
 {
-  int         left = (int) (g_cfg.screen_width - indent);
+  int         left = (int) (g_data.screen_width - indent);
   const char *c = start;
 
   while (*c)
@@ -2037,7 +2037,7 @@ void print_long_flags (const char *start, size_t indent, int brk_ch)
       if (left <= 2 || (left <= next - c))
       {
         C_printf ("%c\n%*c", *c++, (int)indent, ' ');
-        left  = (int)(g_cfg.screen_width - indent);
+        left  = (int)(g_data.screen_width - indent);
         start = c;
         continue;
       }
@@ -2202,7 +2202,7 @@ static void dump_one_fd_set (const fd_set *fd, int indent)
     char buf [10];
 
     _itoa ((int)fd->fd_array[i], buf, 10);
-    max_len = (u_int) (g_cfg.screen_width - strlen(buf) - 1);
+    max_len = (u_int) (g_data.screen_width - strlen(buf) - 1);
     C_puts (buf);
 
     if (i < s_limit-1)
@@ -2322,7 +2322,7 @@ static void dump_one_proto_infof (_Printf_format_string_ const char *fmt, ...)
 static void dump_provider_path (const GUID *guid, const void *provider_path_func)
 {
   int     error;
-  wchar_t path [MAX_PATH] = L"??";
+  wchar_t path [_MAX_PATH] = L"??";
   int     path_len = DIM(path);
 
   /* As in wsock_trace.c:
@@ -2468,7 +2468,7 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
   char  *out = result;
   int    num, len, left = (int)sizeof(result)-1;
   int    total = 0;
-  int    max_len = g_cfg.screen_width - column;
+  int    max_len = g_data.screen_width - column;
 
   for (num = 0; addresses && addresses[num] && left > 0; num++)
   {
@@ -2480,7 +2480,7 @@ static const char *dump_addr_list (int type, const char **addresses, int indent,
       out  += len;
       left -= len;
       total = len;
-      max_len = g_cfg.screen_width - indent;
+      max_len = g_data.screen_width - indent;
     }
 
     len = snprintf (out, left, "%s, ", addr);
@@ -2639,7 +2639,7 @@ static void check_and_dump_idna (const char *name)
   C_indent (g_cfg.trace_indent+2);
   C_puts ("from ACE: ");
 
-  _strlcpy (buf, name, sizeof(buf));
+  str_ncpy (buf, name, sizeof(buf));
   size = strlen (buf);
   if (IDNA_convert_from_ACE(buf, &size))
        C_printf ("%s\n", buf);
