@@ -142,14 +142,14 @@ echo   api_level = 3                                                         >> 
 
 ::
 :: Windows-Defender thinks generating a 'hosts' file is suspicious.
-:: Even generating 'CI\appveyor-hosts' triggers Windows-Defender.
+:: Even generating '%CD%\CI\appveyor-hosts' triggers Windows-Defender.
 :: Therefore generate it by the 'type' command below.
 ::
 :: Ref:
 ::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
 ::
-echo Generating CI\appveyor-hosts file...
-type CI\appveyor-hosts-content.txt > CI\appveyor-hosts
+echo Generating %CD%\CI\appveyor-hosts file...
+type %CD%\CI\appveyor-hosts-content.txt > %CD%\CI\appveyor-hosts
 
 ::
 :: These should survive until 'build_script' for 'msvc', 'mingw' or 'cygwin' get to run.
@@ -171,6 +171,6 @@ exit /b 0
 ::
 :clean
 del /Q %CI_DIR%\IP46-COUNTRY.BIN %CI_DIR%\IP4-ASN.CSV %CI_DIR%\IP6-ASN.CSV 2> NUL
-del /Q wsock_trace.appveyor CI\appveyor-hosts 2> NUL
+del /Q %CD%\wsock_trace.appveyor %CD%\CI\appveyor-hosts 2> NUL
 echo Cleaning done.
 exit /b 0
