@@ -1000,6 +1000,24 @@ DWORD StackWalkSymbols (smartlist_t **sl_p)
   return (num);     /*  Total # of symbols */
 }
 
+BOOL StackWalkOurModule (const char *module)
+{
+  static char  module_unix [_MAX_PATH] = { '\0' };
+  static char *module_base = NULL;
+
+  if (!module_unix[0])
+  {
+    copy_path (module_unix, g_module, '/');
+    module_base = basename (g_module);
+  }
+
+  /* Check for a short-name match.
+   */
+  if (!strchr(module, '\\') && !strchr(module, '/'))
+     return !stricmp (module, module_base);
+  return (!stricmp(module, g_module) || !stricmp(module, module_unix));
+}
+
 DWORD StackWalkModules (smartlist_t **sl_p)
 {
   if (sl_p)

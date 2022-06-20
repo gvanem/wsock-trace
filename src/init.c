@@ -49,6 +49,7 @@ struct global_data  g_data;
  */
 typedef struct exclude {
         char        *name;          /**< The `name` to exclude from trace */
+        char        *only_if_prog;  /**< But only if `EXCL_FUNCTION == only_if_prog` (optional) */
         uint64       num_excludes;  /**< Number of times this `name` was excluded */
         exclude_type which;         /**< A single `exclude_type` of the above `name` */
       } exclude;
@@ -409,6 +410,9 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
     len = strlen (ex->name);
     if ((ex->which & exclude_which) && !strnicmp(fmt, ex->name, len))
     {
+      if (ex->only_if_prog && exclude_which == EXCL_FUNCTION && !StackWalkOurModule(ex->only_if_prog))
+         return (FALSE);
+
       ex->num_excludes++;
       return (TRUE);
     }
@@ -416,9 +420,24 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
   return (FALSE);
 }
 
+/**
+ * Free one element in `exclude_list`.
+ */
+static void exclude_list_free_one (void *_ex)
+{
+  struct exclude *ex = (struct exclude*) _ex;
+
+  free (ex->name);
+  if (ex->only_if_prog)
+     free (ex->only_if_prog);
+}
+
+/**
+ * Free all elements in `exclude_list`.
+ */
 BOOL exclude_list_free (void)
 {
-  smartlist_wipe (exclude_list, free);
+  smartlist_wipe (exclude_list, exclude_list_free_one);
   exclude_list = NULL;
   return (TRUE);
 }
@@ -427,7 +446,7 @@ BOOL exclude_list_free (void)
  * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
-static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
+static BOOL _exclude_list_add (char *name, unsigned exclude_which)
 {
   static const struct search_list exclude_flags[] = {
                     { EXCL_NONE,     "EXCL_NONE"     },
@@ -435,12 +454,15 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
                     { EXCL_PROGRAM,  "EXCL_PROGRAM"  },
                     { EXCL_ADDRESS,  "EXCL_ADDRESS"  },
                   };
-  struct exclude *ex = NULL;
-  const char     *p = name;
-  size_t          len = strlen (p);
-  u_char          ia4[4], ia6[16];
-  char            prog [_MAX_PATH];
-  exclude_type    which = EXCL_NONE;
+  char        *prog = name;
+  char        *func = name;
+  char        *only = NULL;
+  const char  *which_str;
+  size_t       len = strlen (prog);
+  u_char       ia4 [4];
+  u_char       ia6 [16];
+  char         program [_MAX_PATH];
+  exclude_type which = EXCL_NONE;
 
   if (exclude_which & EXCL_ADDRESS)
   {
@@ -451,37 +473,73 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
 
   if (which == EXCL_NONE && (exclude_which & EXCL_PROGRAM))
   {
-    if (strchr(p+1,'"') > strchr(p,'"'))
+    if (strchr(prog+1, '"') > strchr(prog, '"'))
     {
       len -= 2;
-      p++;
+      prog++;
     }
-    p = str_ncpy (prog, p, min(len+1, sizeof(prog)));
-    if (basename(prog) > prog && !file_exists(prog))
+    prog = str_ncpy (program, prog, min(len+1, sizeof(program)));
+    if (basename(program) > program && !file_exists(program))
          TRACE (1, "EXCL_PROGRAM '%s' does not exist.\n", prog);
     else which = EXCL_PROGRAM;
   }
 
   if (which == EXCL_NONE && (exclude_which & EXCL_FUNCTION))
   {
-    if (isalpha((int)*p))
+    if (isalpha((int)*func))
        which = EXCL_FUNCTION;
+
+    /**
+     * Check for:
+     *  `program!function` or
+     *  `"c:\some quoted path\program with spaces.exe"!inet_addr`
+     *
+     * to exclude.
+     */
+    only = strchr (func, '!');
+    if (only && only[1] != '\0')
+    {
+      char *p = only;
+
+      only = func;
+      *p++ = '\0';
+      prog = func = p;
+
+      /* Check for missing ".exe" in 'only'
+       */
+      if (strnicmp(p-5, ".exe", 4))
+      {
+        str_ncpy (program, only, sizeof(program)-4);
+        only = strcat (program, ".exe");
+      }
+    }
+    else
+      only = NULL;
   }
 
   if (which != EXCL_NONE)
   {
+    struct exclude *ex;
+
     if (!exclude_list)
        exclude_list = smartlist_new();
 
-    ex = malloc (sizeof(*ex)+len+1);
-    ex->num_excludes = 0;
-    ex->which        = which;
-    ex->name         = str_ncpy ((char*)(ex+1), p, len+1);
-    smartlist_add (exclude_list, ex);
+    ex = malloc (sizeof(*ex));
+    if (ex)
+    {
+      ex->num_excludes = 0;
+      ex->which        = which;
+      ex->name         = strdup (prog);
+      ex->only_if_prog = only ? strdup(only) : NULL;
+      smartlist_add (exclude_list, ex);
+    }
   }
 
-  TRACE (3, "_exclude_list_add() of '%s', which: %s.\n",
-         ex ? ex->name : name, flags_decode(which, exclude_flags, DIM(exclude_flags)));
+  which_str = flags_decode (which, exclude_flags, DIM(exclude_flags));
+  if (only)
+       TRACE (1, "which: %-14s name: '%s', only: '%s'.\n", which_str[0] ? which_str : "unknown", prog, only);
+  else TRACE (3, "which: %-14s name: '%s'.\n", which_str[0] ? which_str : "unknown", prog);
+
   return (which != EXCL_NONE);
 }
 
@@ -496,15 +554,18 @@ static BOOL _exclude_list_add (const char *name, unsigned exclude_which)
 BOOL exclude_list_add (const char *name, unsigned exclude_which)
 {
   const char *tok_fmt = " ,";
+  char       *tok_end, *end;
   char       *p, *tok, *copy = strdup (name);
+
+  if (!copy)
+     return (FALSE);
 
   p = copy;
 
-  /* If adding a `"program with spaces.exe"`, we must use `strtok (p, ",")`.
+  /* If adding a `"program with spaces.exe"`, we must use `str_tok_r (p, ",", &tok_end)`.
    */
-  if (exclude_which & EXCL_PROGRAM)
+  if (exclude_which & (EXCL_PROGRAM | EXCL_FUNCTION))
   {
-    char *end;
     while (*p == '"')
        p++;
     end = strrchr (p, '"');
@@ -513,9 +574,9 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
     tok_fmt = ",";
   }
 
-  for (tok = strtok(p, tok_fmt); tok; tok = strtok(NULL, tok_fmt))
+  for (tok = str_tok_r(p, tok_fmt, &tok_end); tok; tok = str_tok_r(NULL, tok_fmt, &tok_end))
   {
-    if (exclude_which & EXCL_PROGRAM)
+    if (exclude_which & (EXCL_PROGRAM | EXCL_FUNCTION))
        while (*tok == ' ')
           tok++;
     _exclude_list_add (tok, exclude_which);

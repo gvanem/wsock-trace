@@ -43,6 +43,7 @@ typedef struct SymbolEntry {
 extern BOOL  StackWalkInit (void);
 extern BOOL  StackWalkExit (void);
 extern char *StackWalkShow (HANDLE thread, CONTEXT *ctx);
+extern BOOL  StackWalkOurModule (const char *module);
 
 /* These returns smartlists for modules and symbols. A list of
  * 'struct ModuleEntry *' and 'struct SymbolEntry *' respectively.

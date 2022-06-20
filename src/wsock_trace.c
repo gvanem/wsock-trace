@@ -123,9 +123,9 @@ static void        wstrace_printf (BOOL first_line,
                             ts_now ? ts_now : get_timestamp(),   \
                             get_caller (GET_RET_ADDR(),          \
                                         get_EBP()) );            \
-            ts_now = NULL;                                       \
             wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
           }                                                      \
+          ts_now = NULL;                                         \
         } while (0)
 
 #if defined(__GNUC__) || defined(__clang__)
