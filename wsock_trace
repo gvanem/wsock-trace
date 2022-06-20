@@ -156,20 +156,14 @@
   exclude = htonl
   exclude = ntohs
   exclude = ntohl
-  # exclude = WSASetLastError
-  # exclude = WSAGetLastError
-
   exclude = inet_addr
-  exclude = FD_ISSET
-  # exclude = __WSAFDIsSet
 
   #
-  # Or don't trace these functions in these programs (not effective yet):
+  # Or don't trace these functions in these programs:
   #
-  # exclude = libcurl*.dll!select
-  # exclude = curl.exe!inet_addr
+  # exclude = libcurl.dll!select
+  # exclude = f:\mingw32\src\inet\src\curl.exe!inet_addr
   # exclude = wget!WSAStartup
-  # exclude = nmap!getaddrinfo
 
   #
   # Use WinHTTP.dll to download the below files.
