@@ -10,7 +10,7 @@
 8.8.8.8     google-public-dns-a.google.com
 
 #
-# This hostname is used in test.exe.
-# Check that it prints "from 'hosts' file".
+# This hostname is used in 'ws_tool test'.
+# Check that it prints "(in a 'hosts' file) file".
 #
 10.0.0.20   www.no-such-host.com
