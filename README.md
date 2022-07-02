@@ -254,13 +254,20 @@ Notes:
   a *TTL* of *ULONG_MAX*.
 * Nmap also calls [`WSAStartup()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms742213(v=vs.85).aspx)
   before the startup message.
-* Last but not least, notice how Wsock-trace handles (demangles) C++ symbols just
+* Notice how Wsock-trace handles (demangles) C++ symbols just
   fine  thanks to `dbghelp.dll` and [`UnDecorateSymbolName()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms681400(v=vs.85).aspx).
   I.e. the destructor `ConnectProbe::~ConnectProbe` above is calling [`closesocket()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737582(v=vs.85).aspx)
   at offset 37. (you can turn off C++ demangling by `cpp_demangle = 0` in the `wsock_trace` config-file).
+* Even symbols from a Rust library can be demangled. E.g. from [**rustls-ffi**](https://github.com/rustls/rustls-ffi.git) as used in
+  [**libcurl**](https://github.com/curl/curl):
+  ```
+  * 1.807833 sec: f:/MingW32/src/inet/Crypto/Rustls/src/io.rs(44) (rustls_ffi::io::impl$0::read+32)
+    WSAGetLastError() --> WSAEWOULDBLOCK (10035).
+  ```
+  This Rust function `rustls_ffi::io::impl$0::read` should be [**here**](https://github.com/rustls/rustls-ffi/blob/main/src/io.rs#L41-L44).
 
 
-And another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
+Another example from [**C-ares**](https://github.com/c-ares/c-ares)'s
 **[adig.c](https://github.com/c-ares/c-ares/blob/master/src/tools/adig.c)** with the same settings as above:
 ```c
     c:\> adig -t PTR 89.42.216.144
