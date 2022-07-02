@@ -90,7 +90,7 @@ void sock_list_add (SOCKET sock, int family, int type, int protocol)
 {
   struct sock_list_entry *se;
 
-  if (!sock_list)
+  if (g_cfg.trace_level <= 0 || !sock_list)
      return;
 
   se = malloc (sizeof(*se));
@@ -106,16 +106,20 @@ void sock_list_add (SOCKET sock, int family, int type, int protocol)
 
 void sock_list_remove (SOCKET sock)
 {
-  int i, max = sock_list ? smartlist_len (sock_list) : 0;
+  int i, max;
 
+  if (g_cfg.trace_level <= 0 || !sock_list)
+     return;
+
+  max = smartlist_len (sock_list);
   for (i = 0; i < max; i++)
   {
     struct sock_list_entry *se = smartlist_get (sock_list, i);
 
-    if (sock == se->sock)
+    if (se && sock == se->sock)
     {
       free (se);
-      smartlist_del (sock_list, i);
+      smartlist_del_keeporder (sock_list, i);
       break;
     }
   }
@@ -130,13 +134,17 @@ static void sock_list_remove_all (void)
 
 int sock_list_type (SOCKET sock, int *family, int *protocol)
 {
-  int i, max = sock_list ? smartlist_len (sock_list) : 0;
+  int i, max;
 
+  if (g_cfg.trace_level <= 0 || !sock_list)
+     return  (-1);
+
+  max = smartlist_len (sock_list);
   for (i = 0; i < max; i++)
   {
     const struct sock_list_entry *se = smartlist_get (sock_list, i);
 
-    if (sock == se->sock)
+    if (se && sock == se->sock)
     {
       if (family)
          *family = se->family;
