@@ -536,9 +536,7 @@ static BOOL _exclude_list_add (char *name, unsigned exclude_which)
   }
 
   which_str = flags_decode (which, exclude_flags, DIM(exclude_flags));
-  if (only)
-       TRACE (1, "which: %-14s name: '%s', only: '%s'.\n", which_str[0] ? which_str : "unknown", prog, only);
-  else TRACE (3, "which: %-14s name: '%s'.\n", which_str[0] ? which_str : "unknown", prog);
+  TRACE (2, "which: %-14s name: '%s', only: '%s'.\n", which_str[0] ? which_str : "unknown", prog, only ? only : "none");
 
   return (which != EXCL_NONE);
 }
