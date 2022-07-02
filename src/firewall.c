@@ -82,6 +82,15 @@ typedef LONG NTSTATUS;
 #include <fwpsu.h>
 #endif
 
+/**
+ * \todo Handle these keys too:
+ * ```
+ *  HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices\AppIso\FirewallRules
+ *  HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices\Configurable\System
+ *  HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices\Static\System
+ * ```
+ */
+
 /*
  * The code 'ip = _byteswap_ulong (*(DWORD*)&header->localAddrV4);' causes
  * a gcc warning. Ignore it.
