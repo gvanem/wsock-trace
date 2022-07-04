@@ -2265,7 +2265,7 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
   }
 }
 
-static void wsapollfd_event_decode (SHORT ev, char *buf, size_t buf_sz)
+static void wsapollfd_event_decode (char *buf, size_t buf_sz, SHORT ev)
 {
   char *end;
 
@@ -2314,7 +2314,7 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent, BOOL outp
        continue;
 
     C_printf ("%*sfd: %4u, ", line > 0 ? indent : 0, "", fd->fd);
-    wsapollfd_event_decode (ev, ev_buf, sizeof(ev_buf));
+    wsapollfd_event_decode (ev_buf, sizeof(ev_buf), ev);
     C_printf ("%s 0x%04X: %s\n", output ? "fd->revents:" : "fd->events: ", ev, ev_buf);
     line++;
   }
