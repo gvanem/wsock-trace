@@ -3223,7 +3223,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
            "%*shints: %s",
            host_name, serv_name, get_error(rc, 0),
            g_cfg.trace_indent+4, "",
-           hints ? get_addrinfo_hint(hints, g_cfg.trace_indent + 3 + sizeof("hints: ")) : "<none>");
+           get_addrinfo_hint(hints, g_cfg.trace_indent + 3 + sizeof("hints: ")));
 
   if (rc == NO_ERROR && *res && !exclude_this)
   {
@@ -3293,7 +3293,7 @@ EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_na
            "%*shints: %s",
            host_name, serv_name, get_error(rc, 0),
            g_cfg.trace_indent+4, "",
-           hints ? get_addrinfo_hintW (hints, g_cfg.trace_indent + 3 + sizeof("hints: ")) : "<none>");
+           get_addrinfo_hintW(hints, g_cfg.trace_indent + 3 + sizeof("hints: ")));
 
   if (rc == NO_ERROR && *res && !exclude_this)
   {

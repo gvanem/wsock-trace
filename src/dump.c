@@ -2052,15 +2052,17 @@ const char *get_addrinfo_hint (const struct addrinfo *hint, size_t indent)
 {
   static char buf [300];
 
-  snprintf (buf, sizeof(buf),
-            "ai_flags:    %s\n"
-            "%*sai_family:   %s\n"
-            "%*sai_socktype: %s\n"
-            "%*sai_protocol: %s",
-            ai_flags_decode(hint->ai_flags),
-            (int)indent, "", socket_family(hint->ai_family),
-            (int)indent, "", socket_type(hint->ai_socktype),
-            (int)indent, "", protocol_name(hint->ai_protocol));
+  if (!hint)
+       strcpy (buf, "<none>");
+  else snprintf (buf, sizeof(buf),
+                 "ai_flags:    %s\n"
+                 "%*sai_family:   %s\n"
+                 "%*sai_socktype: %s\n"
+                 "%*sai_protocol: %s",
+                 ai_flags_decode(hint->ai_flags),
+                 (int)indent, "", socket_family(hint->ai_family),
+                 (int)indent, "", socket_type(hint->ai_socktype),
+                 (int)indent, "", protocol_name(hint->ai_protocol));
   return (buf);
 }
 
@@ -2068,15 +2070,17 @@ const char *get_addrinfo_hintW (const struct addrinfoW *hint, size_t indent)
 {
   static char buf [300];
 
-  snprintf (buf, sizeof(buf),
-            "ai_flags:    %s\n"
-            "%*sai_family:   %s\n"
-            "%*sai_socktype: %s\n"
-            "%*sai_protocol: %s",
-            ai_flags_decode(hint->ai_flags),
-            (int)indent, "", socket_family(hint->ai_family),
-            (int)indent, "", socket_type(hint->ai_socktype),
-            (int)indent, "", protocol_name(hint->ai_protocol));
+  if (!hint)
+       strcpy (buf, "<none>");
+  else snprintf (buf, sizeof(buf),
+                 "ai_flags:    %s\n"
+                 "%*sai_family:   %s\n"
+                 "%*sai_socktype: %s\n"
+                 "%*sai_protocol: %s",
+                 ai_flags_decode(hint->ai_flags),
+                 (int)indent, "", socket_family(hint->ai_family),
+                 (int)indent, "", socket_type(hint->ai_socktype),
+                 (int)indent, "", protocol_name(hint->ai_protocol));
   return (buf);
 }
 
@@ -2482,56 +2486,54 @@ void dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
 
 #undef DUMP_WSANAMESPACE_INFO
 
-static const char *dump_addr_list (int type, const char **addresses, int indent, int column)
+static void dump_addr_list (char *buf, size_t buf_sz, int type, const char **addresses, int indent, int column)
 {
-  static char result [300];
-  char  *out = result;
-  int    num, len, left = (int)sizeof(result)-1;
-  int    total = 0;
-  int    max_len = g_data.screen_width - column;
+  int num, len;
+  int total = 0;
+  int max_len = g_data.screen_width - column;
 
-  for (num = 0; addresses && addresses[num] && left > 0; num++)
+  for (num = 0; addresses && addresses[num] && buf_sz > 0; num++)
   {
     const char *addr = INET_addr_ntop2 (type, addresses[num]);
 
     if (total + (int)strlen(addr) + 2 >= max_len)
     {
-      len = snprintf (out, left, "\n%*s", indent, "");
-      out  += len;
-      left -= len;
+      len = snprintf (buf, buf_sz, "\n%*s", indent, "");
+      buf    += len;
+      buf_sz -= len;
       total = len;
       max_len = g_data.screen_width - indent;
     }
 
-    len = snprintf (out, left, "%s, ", addr);
-    out   += len;
-    left  -= len;
+    len = snprintf (buf, buf_sz, "%s, ", addr);
+    buf     += len;
+    buf_sz  -= len;
     total += len;
-    if (left < 15)
+    if (buf_sz < 15)
     {
-      strcpy (out-2, "..  ");
+      strcpy (buf-2, "..  ");
       break;
     }
   }
   if (num == 0)
-     return ("<none>");
-  *(out-2) = '\0';
-  return (result);
+       strcpy (buf, "<none>");
+  else *(buf-2) = '\0';
 }
 
-/*
+/**
  * Dump the list of aliases from dump_hostent(), dump_servent() or dump_protoent().
+ *
+ * \note Win-XP supports only 8 aliases in a 'hostent::h_aliases'
  */
-static const char *dump_aliases (char **aliases)
+static void dump_aliases (char *buf, size_t buf_sz, char **aliases)
 {
-  static char result [500];  /* Win-XP supports only 8 aliases in a 'hostent::h_aliases' */
-  char  *out = result;
+  char  *out = buf;
   int    i, len, added, indent = g_cfg.trace_indent + 3 + (int)strlen("aliases:");
-  size_t left = sizeof(result)-1;
+  size_t left = buf_sz - 1;
 
   for (i = 0; aliases && aliases[i]; i++)
   {
-    out = maybe_wrap_line (indent, (int)strlen(aliases[i])+2, result, out, &added);
+    out   = maybe_wrap_line (indent, (int)strlen(aliases[i])+2, buf, out, &added);
     left -= added;
     len = snprintf (out, left, "%s, ", aliases[i]);
     out  += len;
@@ -2545,10 +2547,12 @@ static const char *dump_aliases (char **aliases)
     }
   }
   if (i == 0)
-     return ("<none>");
-  *(out-2) = '.';
-  *(out-1) = '\0';
-  return (result);
+     strcpy (buf, "<none>");
+  else
+  {
+    *(out-2) = '.';
+    *(out-1) = '\0';
+  }
 }
 
 /**
@@ -3039,41 +3043,50 @@ void dump_nameinfo (const char *host, const char *serv, DWORD flags)
 
 void dump_hostent (const char *name, const struct hostent *host)
 {
-  const char *comment;
+  const char *comment = "";
+  char        buf [500];
   int         column;
 
   if (hosts_file_check_hostent(name, host) > 0)
-       comment = " (in a 'hosts' file)";
-  else comment = "";
+     comment = " (in a 'hosts' file)";
 
   C_indent (g_cfg.trace_indent+2);
   column = C_printf ("~4name: %s, addrtype: %s, ", host->h_name, socket_family(host->h_addrtype));
   column += sizeof("addr_list: ") - 1;
-  C_printf ("addr_list: %s%s\n", dump_addr_list(host->h_addrtype, (const char**)host->h_addr_list, g_cfg.trace_indent+2, column), comment);
+
+  dump_addr_list (buf, sizeof(buf), host->h_addrtype, (const char**)host->h_addr_list, g_cfg.trace_indent+2, column);
+  C_printf ("addr_list: %s%s\n", buf, comment);
 
   check_and_dump_idna (host->h_name);
 
   C_indent (g_cfg.trace_indent+2);
-  C_printf ("aliases: %s~0\n", dump_aliases(host->h_aliases));
+  dump_aliases (buf, sizeof(buf), host->h_aliases);
+  C_printf ("aliases: %s~0\n", buf);
 }
 
 void dump_servent (const struct servent *serv)
 {
+  char buf [500];
+
   C_indent (g_cfg.trace_indent+2);
   C_printf ("~4name: %s, port: %d, proto: %s\n",
                 serv->s_name, swap16(serv->s_port), serv->s_proto);
 
   C_indent (g_cfg.trace_indent+2);
-  C_printf ("aliases: %s~0\n", dump_aliases(serv->s_aliases));
+  dump_aliases (buf, sizeof(buf), serv->s_aliases);
+  C_printf ("aliases: %s~0\n", buf);
 }
 
 void dump_protoent (const struct protoent *proto)
 {
+  char buf [500];
+
   C_indent (g_cfg.trace_indent+2);
   C_printf ("~4name: %s, proto: %d\n", proto->p_name, proto->p_proto);
 
   C_indent (g_cfg.trace_indent+2);
-  C_printf ("aliases: %s~0\n", dump_aliases(proto->p_aliases));
+  dump_aliases (buf, sizeof(buf), proto->p_aliases);
+  C_printf ("aliases: %s~0\n", buf);
 }
 
 static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
