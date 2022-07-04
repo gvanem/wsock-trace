@@ -2261,37 +2261,54 @@ void dump_select (const fd_set *rd, const fd_set *wr, const fd_set *ex, int inde
   }
 }
 
-static const char *wsapollfd_event_decode (SHORT ev, char *buf)
+static void wsapollfd_event_decode (SHORT ev, char *buf, size_t buf_sz)
 {
+  char *end;
+
   if (ev == 0)
-     return ("0x0000");
+  {
+    str_ncpy (buf, "0x0000", buf_sz);
+    return;
+  }
 
-  if (ev == (POLLRDNORM | POLLRDBAND))
-     return ("POLLIN");
+  if (ev & POLLIN)
+  {
+    str_ncpy (buf, "POLLIN|", buf_sz);
+    ev &= ~POLLIN;
+    buf    += 7;
+    buf_sz -= 7;
+  }
+  else if (ev & POLLOUT)
+  {
+    str_ncpy (buf, "POLLOUT|", buf_sz);
+    ev &= ~POLLOUT;
+    buf    += 8;
+    buf_sz -= 8;
+  }
 
-  if (ev == (POLLOUT | POLLRDNORM | POLLRDBAND))
-     return ("POLLOUT|POLLIN");
+  str_ncpy (buf, flags_decode(ev, wsapollfd_flgs, DIM(wsapollfd_flgs)), buf_sz);
 
-  return strcpy (buf, flags_decode(ev, wsapollfd_flgs, DIM(wsapollfd_flgs)));
+  /* Remove trailing '|'
+   */
+  end = strrchr (buf, '\0');
+  if (end[-1] == '|')
+     end[-1] = '\0';
 }
 
-void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent)
+void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent, BOOL output)
 {
   const WSAPOLLFD *fd = fd_array;
-  int   line = 0;
-  char  ev_buf1 [300];
-  char  ev_buf2 [300];
-  ULONG i;
+  ULONG            i;
+  int              line = 0;
 
   for (i = 0; i < fds; i++, fd++)
   {
-    if (fd->fd == INVALID_SOCKET)
-       continue;
+    char  ev_buf [300];
+    SHORT ev = output ? fd->revents : fd->events;
 
-    C_printf ("%*sfd: %4u, fd->events: %s, fd->revents: %s\n",
-              line > 0 ? indent : 0, "", (unsigned)fd->fd,
-              wsapollfd_event_decode(fd->events,ev_buf1),
-              wsapollfd_event_decode(fd->revents,ev_buf2));
+    C_printf ("%*sfd: %d, ", line > 0 ? indent : 0, "", (int)fd->fd);
+    wsapollfd_event_decode (ev, ev_buf, sizeof(ev_buf));
+    C_printf ("%s 0x%04X: %s\n", output ? "fd->revents:" : "fd->events: ", ev, ev_buf);
     line++;
   }
   if (line == 0)

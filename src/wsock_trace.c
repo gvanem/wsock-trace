@@ -2591,13 +2591,13 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
     C_indent (g_cfg.trace_indent+2);
     C_puts ("~4" FD_INPUT " ");
     if (fd_in)
-         dump_wsapollfd (fd_in, fds, g_cfg.trace_indent + 2 + sizeof(FD_INPUT));
+         dump_wsapollfd (fd_in, fds, g_cfg.trace_indent + 2 + sizeof(FD_INPUT), FALSE);
     else C_puts ("None!\n");
 
     C_indent (g_cfg.trace_indent+2);
     C_puts (FD_OUTPUT " ");
     if (fd_array)
-         dump_wsapollfd (fd_array, fds, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT));
+         dump_wsapollfd (fd_array, fds, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT), TRUE);
     else C_puts ("None!\n");
     C_puts ("~0");
   }

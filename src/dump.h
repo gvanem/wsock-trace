@@ -23,7 +23,7 @@ extern void dump_servent   (const struct servent *s);
 extern void dump_protoent  (const struct protoent *p);
 extern void dump_nameinfo  (const char *host, const char *serv, DWORD flags);
 extern void dump_select    (const fd_set *rd, const fd_set *wr, const fd_set *ex, int indent);
-extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent);
+extern void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent, BOOL output);
 
 extern void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const void *provider_path_func);
 extern void dump_events           (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events);
