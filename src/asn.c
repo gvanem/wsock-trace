@@ -701,7 +701,7 @@ static int libloc_handle_net (struct loc_network    *net,
   {
     TRACE (2, "No data for AS%u, err: %d/%s.\n", AS_num, -rc, strerror(-rc));
     AS_name = "<unknown>";
-    rc = 0;
+    rc = 1;
   }
 
   if (remark)
