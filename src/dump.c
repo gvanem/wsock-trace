@@ -2810,8 +2810,7 @@ static BOOL        iana_equal = FALSE;
 /*
  * Common dumper of IANA information for a single address.
  */
-static int
-dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
+static void dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
 {
   struct IANA_record rec;
   char   IANA_intro [100];
@@ -2830,7 +2829,6 @@ dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_si
     iana_find_by_ip6_address (ia6, &rec);
     iana_print_rec (IANA_intro, &rec);
   }
-  return (1);
 }
 
 /**
@@ -2846,8 +2844,7 @@ static void iana_info_reset (void)
 /*
  * Common dumper of ASN information for a single address.
  */
-static int
-dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
+static void dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
 {
   char ASN_intro [100];
   int  rc;
@@ -2859,7 +2856,6 @@ dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_sin
   rc = ASN_libloc_print (ASN_intro, ia4, ia6, NULL);
   if (rc > 0)
      C_putc ('\n');
-  return (rc);
 }
 
 /*
