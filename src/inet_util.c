@@ -13,6 +13,32 @@
 #include <limits.h>
 #include <errno.h>
 #include <wininet.h>
+
+#if defined(__MINGW32__) || defined(__CYGWIN__)
+  /*
+   * Hacks for MinGW and Cygwin to be able to include <winhttp.h> below.
+   * Not needed for MSVC + clang-cl using the 'Windows Kit' SDK.
+   */
+  #define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
+  #define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
+
+  #define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
+  #define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
+
+  #define URL_COMPONENTS       winhttp_URL_COMPONENTS
+  #define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
+
+  #define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
+  #define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
+
+  #undef BOOLAPI
+  #undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
+  #undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
+
+#else
+  #define winhttp_URL_COMPONENTSW   URL_COMPONENTSW
+#endif
+
 #include <winhttp.h>
 
 #include "common.h"
@@ -116,10 +142,10 @@ DEF_FUNC (HINTERNET, WinHttpConnect, (HINTERNET      hnd,
                                       WORD           server_port,
                                       DWORD          reserved));
 
-DEF_FUNC (BOOL, WinHttpCrackUrl, (const wchar_t   *url,
-                                  DWORD            url_len,
-                                  DWORD            flags,
-                                  URL_COMPONENTSW *url_comp));
+DEF_FUNC (BOOL, WinHttpCrackUrl, (const wchar_t           *url,
+                                  DWORD                    url_len,
+                                  DWORD                    flags,
+                                  winhttp_URL_COMPONENTSW *url_comp));
 
 DEF_FUNC (HINTERNET, WinHttpOpenRequest, (HINTERNET      hnd,
                                           const wchar_t  *verb,
@@ -377,10 +403,10 @@ struct wininet_context {
      };
 
 struct winhttp_context {
-       HINTERNET       h1;        /**< Handle from `(*p_WinHttpOpen)()` */
-       HINTERNET       h2;        /**< Handle from `(*p_WinHttpConnect)()` */
-       HINTERNET       h3;        /**< Handle from `(*p_WinHttpOpenRequest)()` */
-       URL_COMPONENTSW url_comp;
+       HINTERNET               h1;        /**< Handle from `(*p_WinHttpOpen)()` */
+       HINTERNET               h2;        /**< Handle from `(*p_WinHttpConnect)()` */
+       HINTERNET               h3;        /**< Handle from `(*p_WinHttpOpenRequest)()` */
+       winhttp_URL_COMPONENTSW url_comp;
      };
 
 struct download_context {
@@ -645,7 +671,8 @@ static void download_winhttp (struct download_context *context)
   wchar_t host [MAX_HOST_LEN];
   wchar_t path [_MAX_PATH];
   BOOL    success = FALSE;
-  URL_COMPONENTSW *url_comp = &ctx->url_comp;
+
+  winhttp_URL_COMPONENTSW *url_comp = &ctx->url_comp;
 
   if (!MultiByteToWideChar(CP_ACP, 0, context->url, -1, url_wide, DIM(url_wide)))
   {
