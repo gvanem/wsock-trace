@@ -1820,8 +1820,8 @@ void get_color (const char *val, WORD *col)
   BYTE        bg = (BYTE)-1;
   unsigned    x;
   const char *orig = val;
-  char        fg_str [20] = "";
-  char        bg_str [20] = "";
+  char        fg_str [21] = "";
+  char        bg_str [21] = "";
   int         num1, num2, bright = 0;
 
   if (!val)

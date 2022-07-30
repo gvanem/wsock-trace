@@ -239,7 +239,7 @@ static int services_bsearch_port_proto (const void *key, const void **member)
  */
 static int parse_port_proto (struct service_entry *se, const char *value)
 {
-  char the_rest [MAX_PROTOS_LEN] = { '\0' };
+  char the_rest [MAX_PROTOS_LEN+1] = { '\0' };
   UINT port;
 
   if (sscanf(value, "%u/%" _STR(MAX_PROTOS_LEN) "s", &port, the_rest) == 2)
