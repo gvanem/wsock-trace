@@ -829,7 +829,8 @@ static const char *get_device_paths (int vol_idx, const char *volume, const char
   BOOL  ok         = FALSE;
   DWORD char_count = MAX_PATH;
   char  *p, *names = NULL;
-  const char *ret = NULL;
+  const char           *ret = NULL;
+  device_to_path_entry *map;
 
   while (1)
   {
@@ -846,14 +847,14 @@ static const char *get_device_paths (int vol_idx, const char *volume, const char
 
   for (p = names; p[0] != '\0'; p += strlen(p) + 1)
   {
-    device_to_path_entry *map = malloc (sizeof(*map));
+    map = malloc (sizeof(*map));
     if (map)
     {
-      if (!ret)
-         ret = p;
       str_ncpy (map->path, p, sizeof(map->path));
       str_ncpy (map->device, device, sizeof(map->device));
       smartlist_add (device_to_paths_map, map);
+      if (!ret)
+         ret = map->path;
     }
   }
   return (ret);
@@ -925,13 +926,16 @@ static void get_device_to_paths_mapping (void)
 
 static char *get_path_from_volume (char *path, size_t size)
 {
-  int i, max = smartlist_len (device_to_paths_map);
+  device_to_path_entry *map;
+  int    i, max = smartlist_len (device_to_paths_map);
+  size_t len;
 
   for (i = 0; i < max; i++)
   {
-    device_to_path_entry *map = smartlist_get (device_to_paths_map, i);
-    char   buf [_MAX_PATH];
-    size_t len = strlen (map->device);     /* length of `"\\device\\harddiskvolumeX"` */
+    char buf [_MAX_PATH];
+
+    map = smartlist_get (device_to_paths_map, i);
+    len = strlen (map->device);     /* length of `"\\device\\harddiskvolumeX"` */
 
     TRACE (2, "path: '%.*s', map->path: '%s'\n", (int)len, path, map->device);
     if (!strnicmp(path, map->device, len))
