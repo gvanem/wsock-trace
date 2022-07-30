@@ -933,7 +933,7 @@ static char *get_path_from_volume (char *path, size_t size)
     char   buf [_MAX_PATH];
     size_t len = strlen (map->device);     /* length of `"\\device\\harddiskvolumeX"` */
 
-    TRACE (2, "path: '%.*s', map->path: '%s'\n", len, path, map->device);
+    TRACE (2, "path: '%.*s', map->path: '%s'\n", (int)len, path, map->device);
     if (!strnicmp(path, map->device, len))
     {
       snprintf (buf, sizeof(buf), "%s%s", map->path, path + len + 1);

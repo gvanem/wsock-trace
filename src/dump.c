@@ -2313,7 +2313,7 @@ void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent, BOOL outp
     if (fd->fd == INVALID_SOCKET)
        continue;
 
-    C_printf ("%*sfd: %4u, ", line > 0 ? indent : 0, "", fd->fd);
+    C_printf ("%*sfd: %4u, ", line > 0 ? indent : 0, "", (unsigned int)fd->fd);
     wsapollfd_event_decode (ev_buf, sizeof(ev_buf), ev);
     C_printf ("%s 0x%04X: %s\n", output ? "fd->revents:" : "fd->events: ", ev, ev_buf);
     line++;
