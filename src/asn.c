@@ -790,7 +790,7 @@ static int __ASN_libloc_print (const char            *intro,
                }};
 
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
-    *(u_long*) &addr.s6_words[6] = ip4->s_addr;
+    *(__ms_u_long*) &addr.s6_words[6] = ip4->s_addr;
   }
   else if (ip6)
   {
