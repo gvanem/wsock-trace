@@ -336,7 +336,7 @@ static int iana_CSV_add6 (struct CSV_context *ctx, const char *value)
   switch (ctx->field_num)
   {
     case 0:
-         sscanf (value, "%50[^/]/%d", ip6_addr, &rec.mask);
+         sscanf (value, "%46[^/]/%d", ip6_addr, &rec.mask);
          INET_addr_pton2 (AF_INET6, ip6_addr, &rec.net_num.ip6);
          break;
     case 1:
