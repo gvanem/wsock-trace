@@ -28,6 +28,10 @@
 #include <libloc/database.h>
 #include <libloc/writer.h>
 
+#ifndef ABS_SRCDIR
+#define ABS_SRCDIR ".."
+#endif
+
 int main(int argc, char** argv) {
 	int err;
 
