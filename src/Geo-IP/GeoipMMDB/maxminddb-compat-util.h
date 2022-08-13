@@ -45,7 +45,7 @@
 static void *
 mmdb_memmem(const void *l, size_t l_len, const void *s, size_t s_len)
 {
-	register char *cur, *last;
+	char *cur, *last;
 	const char *cl = (const char *)l;
 	const char *cs = (const char *)s;
 
@@ -59,14 +59,14 @@ mmdb_memmem(const void *l, size_t l_len, const void *s, size_t s_len)
 
 	/* special case where s_len == 1 */
 	if (s_len == 1)
-		return memchr(l, (int)*cs, l_len);
+		return (void*)memchr(l, (int)*cs, l_len);
 
 	/* the last position where its possible to find "s" in "l" */
 	last = (char *)cl + l_len - s_len;
 
 	for (cur = (char *)cl; cur <= last; cur++)
 		if (cur[0] == cs[0] && memcmp(cur, cs, s_len) == 0)
-			return cur;
+			return (void*)cur;
 
 	return NULL;
 }
@@ -145,7 +145,8 @@ mmdb_strdup(const char *str)
 	char *copy;
 
 	len = strlen(str) + 1;
-	if ((copy = malloc(len)) == NULL)
+	copy = (char*)malloc(len);
+	if (copy == NULL)
 		return (NULL);
 	memcpy(copy, str, len);
 	return (copy);
@@ -158,7 +159,8 @@ mmdb_strndup(const char *str, size_t n)
 	char *copy;
 
 	len = mmdb_strnlen(str, n);
-	if ((copy = malloc(len + 1)) == NULL)
+	copy = (char*) malloc(len + 1);
+	if (copy == NULL)
 		return (NULL);
 	memcpy(copy, str, len);
 	copy[len] = '\0';
