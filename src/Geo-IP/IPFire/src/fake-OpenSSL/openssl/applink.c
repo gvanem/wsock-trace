@@ -22,8 +22,8 @@
 #define _CRT_NONSTDC_NO_WARNINGS
 #endif
 
-#include "common.h"
-#include "inet_addr.h"
+#include "../../../../../common.h"
+#include "../../../../../inet_addr.h"
 
 #undef  LIBLOC_PRIVATE
 #define LIBLOC_PRIVATE
