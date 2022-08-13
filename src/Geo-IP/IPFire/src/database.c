@@ -26,7 +26,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#ifndef _WIN32
+#if !(defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)))
 #  include <arpa/inet.h>
 #  include <netinet/in.h>
 #endif

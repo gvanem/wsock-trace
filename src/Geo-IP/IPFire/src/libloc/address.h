@@ -17,7 +17,7 @@
 #ifndef LIBLOC_ADDRESS_H
 #define LIBLOC_ADDRESS_H
 
-#ifdef _WIN32
+#if defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS))
 #define IN6_DWORD(addr, idx)  *(u_long*) &addr->s6_words [2*(idx)]
 #else
 #define IN6_DWORD(addr, idx)  addr->s6_addr32 [idx]
@@ -25,6 +25,8 @@
 
 #ifdef LIBLOC_PRIVATE
 
+#include <stdio.h>
+#include <string.h>
 #include <errno.h>
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -207,7 +209,7 @@ static inline struct in6_addr loc_address_and(
 	struct in6_addr a;
 
 	// Perform bitwise AND
-#ifdef _WIN32
+#if defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS))
 	for (unsigned int i = 0; i < 8; i++)
 		a.s6_words[i] = address->s6_words[i] & bitmask->s6_words[i];
 #else
@@ -223,7 +225,7 @@ static inline struct in6_addr loc_address_or(
 	struct in6_addr a;
 
 	// Perform bitwise OR
-#ifdef _WIN32
+#if defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS))
 	for (unsigned int i = 0; i < 8; i++)
 		a.s6_words[i] = address->s6_words[i] | ~bitmask->s6_words[i];
 #else

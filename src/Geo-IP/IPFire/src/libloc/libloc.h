@@ -17,7 +17,7 @@
 #ifndef LIBLOC_H
 #define LIBLOC_H
 
-#ifdef _WIN32
+#if defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS))
   #include <sys/types.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>
