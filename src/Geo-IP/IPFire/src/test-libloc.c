@@ -25,6 +25,7 @@
 #include <syslog.h>
 
 #include <libloc/libloc.h>
+#include <libloc/version.h>
 
 int main(int argc, char** argv) {
 	struct loc_ctx *ctx;
@@ -36,7 +37,7 @@ int main(int argc, char** argv) {
 	// Enable debug logging
 	loc_set_log_priority(ctx, LOG_DEBUG);
 
-	printf("version %s\n", VERSION);
+	printf("version %s\n", PACKAGE_VERSION);
 
 	loc_unref(ctx);
 	return EXIT_SUCCESS;
