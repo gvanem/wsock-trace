@@ -3,8 +3,7 @@
 #include <stdbool.h>
 
 #include <GeoipMMDB/maxminddb.h>
-// #include <GeoipMMDB/maxminddb-compat-util.h>
-
+#include <GeoipMMDB/maxminddb-compat-util.h>
 // #include <DB-IP/db-ip.h>
 // #include <IP2Location/ip2location.h>
 // #include <SpamHaus/DROP.h>
@@ -331,7 +330,7 @@ bool geoip_MMDB_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_da
   path[0] = "autonomous_system_organization";
   path[1] = NULL;
   if (MMDB_aget_value(&result.entry, &data, (const char *const *const) path) == MMDB_SUCCESS && data.has_data && data.type == MMDB_DATA_TYPE_UTF8_STRING)
-     rec->as_name = _strndup (data.utf8_string, data.data_size);
+     rec->as_name = mmdb_strndup (data.utf8_string, data.data_size);
   TRACE (1, "data.has_data: %d, data.type: %d.\n", data.has_data, data.type);
 
   path[0] = "country";
@@ -339,7 +338,7 @@ bool geoip_MMDB_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_da
   path[2] = "en";
   path[3] = NULL;
   if (MMDB_aget_value(&result.entry, &data, (const char *const *const)path) == MMDB_SUCCESS && data.has_data && data.type == MMDB_DATA_TYPE_UTF8_STRING)
-     rec->country = _strndup (data.utf8_string, data.data_size);
+     rec->country = mmdb_strndup (data.utf8_string, data.data_size);
   TRACE (1, "data.has_data: %d, data.type: %d.\n", data.has_data, data.type);
   return (rec->as_number || rec->as_name || rec->country);
 }
