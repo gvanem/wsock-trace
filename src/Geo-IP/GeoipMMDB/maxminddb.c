@@ -13,16 +13,19 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#ifdef _WIN32
-#ifndef UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-#include <ws2ipdef.h>
+#if defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS))
+  #ifndef UNICODE
+  #define UNICODE
+  #endif
+  #include <windows.h>
+  #include <ws2ipdef.h>
 #else
-#include <arpa/inet.h>
-#include <sys/mman.h>
-#include <unistd.h>
+  #include <arpa/inet.h>
+#endif
+
+#if !defined(_WIN32)
+  #include <sys/mman.h>
+  #include <unistd.h>
 #endif
 
 #define MMDB_DATA_SECTION_SEPARATOR (16)
