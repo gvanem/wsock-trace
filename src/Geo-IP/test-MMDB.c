@@ -2,15 +2,18 @@
 #include <time.h>
 #include <getopt.h>
 #include <maxminddb.h>
+#include "wsock_defs.h"
+#include "init.h"
 
+struct global_data g_data;
 static MMDB_s g_mmdb = { 0 };
 
 #define MAX_wchar_COUNTRY_NAME  50
 
 typedef wchar_t mmdb_wname [MAX_wchar_COUNTRY_NAME];
 
-static void crtdbg_init (void);
-static void crtdbg_exit (void);
+void crtdbg_init (void);
+void crtdbg_exit (void);
 
 static void utf8_to_wchar (const void *in_buf, size_t in_len, mmdb_wname out_buf)
 {
@@ -238,7 +241,7 @@ int main (int argc, char **argv)
 #if defined(_MSC_VER) && defined(_DEBUG)
   static _CrtMemState last_state;
 
-  static void crtdbg_init (void)
+  void crtdbg_init (void)
   {
     _CrtSetReportFile (_CRT_WARN, _CRTDBG_FILE_STDERR);
     _CrtSetReportMode (_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -246,7 +249,7 @@ int main (int argc, char **argv)
                     _CRTDBG_LEAK_CHECK_DF | _CRTDBG_DELAY_FREE_MEM_DF | _CRTDBG_ALLOC_MEM_DF);
     _CrtMemCheckpoint (&last_state);
   }
-  static void crtdbg_exit (void)
+  void crtdbg_exit (void)
   {
     _CrtMemState new_state, diff_state;
 
@@ -261,10 +264,10 @@ int main (int argc, char **argv)
   }
 
 #else
-  static void crtdbg_init (void)
+  void crtdbg_init (void)
   {
   }
-  static void crtdbg_exit (void)
+  void crtdbg_exit (void)
   {
   }
 #endif
