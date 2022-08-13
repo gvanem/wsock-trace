@@ -59,6 +59,17 @@ USE_STATIC_LIBLOC ?= 1
 #
 MAKEFLAGS += --warn-undefined-variables
 
+#
+# Use correct prefix:
+#
+ifeq ($(CPU),x64)
+  uscore :=
+  bits   := 64
+else
+  uscore := _
+  bits   := 32
+endif
+
 define Usage
 
   Usage: "$(MAKE) -f $(THIS_FILE) CC=[gcc | cl | clang-cl] [all | clean | realclean]"
@@ -97,13 +108,20 @@ endif
 PY_D =
 
 ifeq ($(CC),gcc)
-  CFLAGS  = -m32 -O2 -g
-  LDFLAGS = -m32 -Wl,--print-map,--sort-common,--cref
-  RCFLAGS = -O COFF -D__MINGW32__ --target=pe-i386
+  CFLAGS  = -m$(bits) -O2 -g
+  LDFLAGS = -m$(bits) -Wl,--print-map,--sort-common,--cref
+  RCFLAGS = -I. -O COFF -D__MINGW32__
   O = o
 
-  STATIC_LIB = libloc.a
-  IMPORT_LIB = libloc.dll.a
+  ifeq ($(CPU),x64)
+    RCFLAGS += --target=pe-x86-64
+  else
+    RCFLAGS += --target=pe-i386
+  endif
+
+
+  STATIC_LIB = libloc-$(CPU).a
+  IMPORT_LIB = libloc-$(CPU).dll.a
 
 else
   CFLAGS = -nologo -Zi -GS-           \
@@ -115,8 +133,8 @@ else
   RCFLAGS = -nologo
   O = obj
 
-  STATIC_LIB = libloc.lib
-  IMPORT_LIB = libloc_imp.lib
+  STATIC_LIB = libloc-$(CPU).lib
+  IMPORT_LIB = libloc_imp-$(CPU).lib
 
   ifeq ($(CC),clang-cl)
     RCFLAGS += -D__clang__
@@ -138,16 +156,21 @@ endif
 #
 # What to build:
 #
-TARGETS = $(STATIC_LIB) \
-          $(IMPORT_LIB) \
-          libloc.dll    \
+TARGETS = $(STATIC_LIB)     \
+          $(IMPORT_LIB)     \
+          libloc-$(CPU).dll \
           $(TEST_PROGS)
 
-CFLAGS += -I. -I./libloc/windows          \
-          -DLIBLOC_PRIVATE                \
-          -D_WIN32_WINNT=0x601            \
-          -DABS_SRCDIR=\"$(realpath ..)\" \
-          -DVERSION=\"$(VERSION)\"
+CFLAGS += -I. -I./libloc/windows \
+          -DLIBLOC_PRIVATE       \
+          -D_WIN32_WINNT=0x601
+
+#
+# Does not work with Cygwin
+#
+ifneq ($(CC),gcc)
+  CFLAGS += -DABS_SRCDIR=\"$(realpath ..)\"
+endif
 
 ifeq ($(USE_OPENSSL),1)
   CFLAGS += -I$(OPENSSL_ROOT)/include \
@@ -175,7 +198,7 @@ else ifeq ($(CC),clang-cl)
             -Wno-missing-field-initializers \
             -Wno-incompatible-pointer-types
 else
-  CFLAGS += -W4 -wd4100 -wd4115 -wd4146 -wd4189 -wd4244 -wd4267
+  CFLAGS += -W4 -wd4100 -wd4115 -wd4146 -wd4189 -wd4201 -wd4244 -wd4267
 
   #
   # For warnings such as:
@@ -186,7 +209,7 @@ else
 endif
 
 #
-# External lib(s) to use for 'libloc.dll'.
+# External lib(s) to use for 'libloc-$(CPU).dll'.
 # And possibly 'test-*.exe' if 'USE_STATIC_LIBLOC = 1'.
 #
 ifeq ($(CC),gcc)
@@ -196,7 +219,7 @@ else
   select = $(2)
 
   ifeq ($(USE_WSOCK_TRACE),1)
-    WS2_32 = wsock_trace.lib
+    WS2_32 = wsock_trace-$(CPU).lib
   else
     WS2_32 = ws2_32.lib
   endif
@@ -209,8 +232,8 @@ endif
 DNS_LIB = $(call select, -ldnsapi, dnsapi.lib)
 
 ifeq ($(USE_OPENSSL),1)
-  OPENSSL_LIBS = $(call select, $(OPENSSL_ROOT)/lib32/libcrypto.dll.a, \
-                                $(OPENSSL_ROOT)/lib32/libcrypto_imp.lib)
+  OPENSSL_LIBS = $(call select, $(OPENSSL_ROOT)/lib/$(CPU)/libcrypto.dll.a, \
+                                $(OPENSSL_ROOT)/lib/$(CPU)/libcrypto_imp.lib)
 else
   OPENSSL_LIBS =
 endif
@@ -271,9 +294,9 @@ ifeq ($(MSVC_TYPE),1)
   DEF_ARG = -def:
 endif
 
-$(IMPORT_LIB): libloc.dll
+$(IMPORT_LIB): libloc-$(CPU).dll
 
-libloc.dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
+libloc-$(CPU).dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
 	$(call link_DLL, $@, $(DEF_ARG)$^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 
 libloc/version.h: $(THIS_FILE)
@@ -288,13 +311,13 @@ libloc/version.h: $(THIS_FILE)
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
 	$(call Generate, $@, ;)
-	@echo -e 'LIBRARY libloc.dll\nEXPORTS'      >> $@
-	nm $< | grep ' T _loc_' | sed 's/^.* _/  /' >> $@
+	@echo -e 'LIBRARY libloc-$(CPU).dll\nEXPORTS'               >> $@
+	nm $< | grep ' T $(uscore)loc_' | sed 's/^.* $(uscore)/  /' >> $@
 	@echo
 
 $(OBJ_DIR)/libloc.rc: $(THIS_FILE)
 	$(call Generate, $@, //)
-	$(file >> $@, #define RC_FILENAME     "libloc.dll")
+	$(file >> $@, #define RC_FILENAME     "libloc-$(CPU).dll")
 	$(file >> $@, #define RC_DESCRIPTION  "A library to determine the location of someone on the Internet.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
@@ -302,7 +325,7 @@ $(OBJ_DIR)/libloc.rc: $(THIS_FILE)
 $(OBJ_DIR)/_location.rc: $(THIS_FILE)
 	$(call Generate, $@, //)
 	$(file >> $@, #define RC_FILENAME     "_location.pyd")
-	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for 'libloc.dll'.")
+	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for 'libloc-$(CPU).dll'.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
@@ -314,12 +337,12 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 	@echo
 
-%.i: %.c FORCE cpp_filter.py
+%.i: %.c FORCE cpp-filter.py
 	$(call C_preprocess, $<, $@, $(C_FORMATER))
 
 FORCE:
 
-cpp_filter.py: $(THIS_FILE)
+cpp-filter.py: $(THIS_FILE)
 	$(call green_msg, Generating $@)
 	$(file >  $@,#!/usr/bin/env python)
 	$(file >> $@,#)
@@ -399,19 +422,27 @@ $(PY_GEN_FILES): $(THIS_FILE)
 #
 # Needed by '_location.pyd'
 #
-PY_DLL_FILES = libloc.dll
+PY_DLL_FILES = libloc-$(CPU).dll
 
 #
 # This could be handy for debugging
 #
 ifneq ($(CC),gcc)
-  PY_DLL_FILES += libloc.pdb
+  PY_DLL_FILES += libloc-$(CPU).pdb
 endif
 
-py3_module: py3_install py3_install/location $(PY_GEN_FILES) libloc.dll
+cyg_test:
+	@echo `$(shell uname -o)`
+
+ifeq ($(shell uname -o)-$(CC),Cygwin-gcc)
+  py3_module:
+	$(call red_msg, $@ not possible for Cygwin)
+else
+  py3_module: py3_install py3_install/location $(PY_GEN_FILES) libloc-$(CPU).dll
 	cp --update $(PY_DLL_FILES)  py3_install
 	cp --update $(PY_FILES)      py3_install/location
 	@echo
+endif
 
 #
 # Hopefully there is only 1 Python library for MinGW matching this:
@@ -436,7 +467,7 @@ py3_install/location-importer.py: scripts/location-importer.in
 	@echo
 
 clean:
-	rm -f *.pdb *.map link.tmp cpp_filter.py libloc/version.h ../man/location.8 ../man/location.html
+	rm -f *.pdb *.map test-*.exe.core link.tmp cpp-filter.py libloc/version.h ../man/location.8 ../man/location.html
 	rm -fr $(OBJ_DIR)
 	@echo
 
@@ -469,12 +500,14 @@ XSLTPROC_FLAGS += http://docbook.sourceforge.net/release/xsl/current/manpages/do
 #
 # The following ESC codes assumes you have a MSys/Cygwin 'echo.exe' program with colour support.
 #
+BRIGHT_RED   = \e[1;31m
 BRIGHT_GREEN = \e[1;32m
 BRIGHT_WHITE = \e[1;37m
 
 colour_msg = @echo -e "$(1)\e[0m"
 green_msg  = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
 white_msg  = $(call colour_msg,$(BRIGHT_WHITE)$(strip $(1)))
+red_msg    = $(call colour_msg,$(BRIGHT_RED)$(strip $(1)))
 
 define Warning
   $(1)
@@ -572,7 +605,7 @@ define C_preprocess
   @echo "The result of preprocessing $(strip $(1)) with these CFLAGS:" > $(2)
   @echo $(CFLAGS)                            >> $(2)
   @echo "--------------------------------- " >> $(2)
-  $(CC) $(CFLAGS) $(1) -E | $(PYTHON) cpp_filter.py $(3) >> $(2)
+  $(CC) $(CFLAGS) $(1) -E | $(PYTHON) cpp-filter.py $(3) >> $(2)
 endef
 
 define RC_COMMON
@@ -590,9 +623,9 @@ define RC_COMMON
   #endif
 
   #if $(USE_CRT_DEBUG)
-    #define DBG_STRING  "x86, debug"
+    #define DBG_STRING  "$(CPU), debug"
   #else
-    #define DBG_STRING  "x86, release"
+    #define DBG_STRING  "$(CPU), release"
   #endif
 
   #if defined(__MINGW32__)
@@ -641,59 +674,31 @@ endef
 define CPP_FILTER_PY
   import sys, os
 
-  try:
-    import ntpath
-  except ImportError as e:
-    print ("Failed to import ntpath: %s" % e)
-    sys.exit(1)
-
-  def _win32_abspath (path):
-    path = ntpath.abspath (path)
-    return path.replace ('\\', '/')
-
-  def skip_cwd (s1, s2):
-    ''' Skip the leading part that is in common with s1 and s2
-    '''
-    i = 0
-    while i < len(s1) and s1[i] == s2[i]:
-       i += 1
-    return s2[i:]
-
-  cwd = _win32_abspath (os.getcwd()) + '/'
-
-  last_line  = '??'
-  last_fname = '??'
   empty_lines = 0
-
   while True:
     line = sys.stdin.readline()
     if not line:
-      break
-    if line.startswith('\n') or line.startswith('\r'):
-      empty_lines += 1
-      continue
+       break
+    line = line.rstrip()
+    if line == "":
+       empty_lines += 1
+       continue
 
-    if line.lstrip().startswith("#line"):
-      line = line.replace ("\\\\", "/")
-    fname = None
-    quote = line.find ('\"')
+    #
+    # MSVC or clang-cl 'line' directive
+    #
+    if line.startswith("#line") or line.startswith("# "):
+       line = line.replace (r"\\", "/")
 
-    if line.startswith ("#line ") and quote > 0:
-      fname = _win32_abspath (line[quote:])
-      last_fname = fname
+    print (line)
 
-    if line.strip() != '' and last_line != '':
-      if fname is None or fname != last_fname:
-        print (line, end="")
+    #
+    # Print a newline after a functions or structs
+    #
+    if line == "}" or line == "};":
+       print ("")
 
-      if line.strip() == '}' or line.strip() == '};':  # Print a newline after a functions or structs
-        print ("")
-
-    last_line = line
-
-  if empty_lines > 0:
-    sys.stderr.write ("Removed %d empty lines.\n" % empty_lines)
-
+  print ("Removed %d empty lines." % empty_lines, file=sys.stderr)
 endef
 
 DEP_CFLAGS  = -MM $(filter -D% -I%, $(CFLAGS))

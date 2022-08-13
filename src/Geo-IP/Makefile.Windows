@@ -1,5 +1,5 @@
 #
-# A GNU-makefile for 'geoip.lib' + 'geoip.dll':
+# A GNU-makefile for 'geoip-$(CPU).lib' + 'geoip-$(CPU).dll':
 #
 # The unified Geo-location library for:
 #  *) MaxMind CSV databases
@@ -27,6 +27,17 @@ else
   $(error $(Usage))
 endif
 
+#
+# Use correct prefix:
+#
+ifeq ($(CPU),x64)
+  uscore :=
+  bits   := 64
+else
+  uscore := _
+  bits   := 32
+endif
+
 OBJ_DIR = geoip_obj
 
 #
@@ -41,8 +52,11 @@ c_to_obj = $(addprefix $(OBJ_DIR)/, \
              $(notdir $(1:.c=.$(O))))
 
 ifeq ($(CC),gcc)
-  CFLAGS    = -m32 -O2 -ggdb
-  LDFLAGS   = -m32 -Wl,--print-map
+  #
+  # This ass-u-mes a Cygwin 'gcc'.
+  #
+  CFLAGS    = -m$(bits) -O2 -ggdb -D__USE_W32_SOCKETS -DHAVE_ENDIAN_H -Wno-write-strings
+  LDFLAGS   = -m$(bits) -Wl,--print-map
   MSVC_TYPE = 0
 
 else
@@ -66,7 +80,8 @@ else
               -Wno-unused-function  \
               -Wno-unused-variable  \
               -Wno-writable-strings \
-              -Wno-missing-braces
+              -Wno-missing-braces   \
+              -Wno-unused-command-line-argument
   else
     CFLAGS += -wd4018 -wd4146 -wd4267
   endif
@@ -136,18 +151,18 @@ IPFIRE_OBJ      = $(call c_to_obj, $(IPFIRE_SRC))
 IP2LOCATION_OBJ = $(call c_to_obj, $(IP2LOCATION_SRC))
 
 ifeq ($(CC),gcc)
-  GEOIP_STAT_LIB = libgeoip.a
-  GEOIP_IMP_LIB  = libgeoip.dll.a
+  GEOIP_STAT_LIB = libgeoip-$(CPU).a
+  GEOIP_IMP_LIB  = libgeoip-$(CPU).dll.a
   WS2_32_LIB     = -lws2_32
   DNSAPI_LIB     = -ldnsapi
 else
-  GEOIP_STAT_LIB = geoip.lib
-  GEOIP_IMP_LIB  = geoip_imp.lib
+  GEOIP_STAT_LIB = geoip-$(CPU).lib
+  GEOIP_IMP_LIB  = geoip_imp-$(CPU).lib
   WS2_32_LIB     = ws2_32.lib
   DNSAPI_LIB     = dnsapi.lib
 endif
 
-TARGETS = $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB) geoip.dll test-MMDB.exe test-geoip.exe
+TARGETS = $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB) geoip-$(CPU).dll test-MMDB.exe test-geoip.exe
 
 all: $(OBJ_DIR) $(TARGETS)
 
@@ -157,9 +172,9 @@ $(OBJ_DIR):
 $(GEOIP_STAT_LIB): $(GEOIP_OBJ) $(MMDB_OBJ) $(IPFIRE_OBJ) $(IP2LOCATION_OBJ)
 	$(call create_static_lib, $@, $^)
 
-$(GEOIP_IMP_LIB): geoip.dll
+$(GEOIP_IMP_LIB): geoip-$(CPU).dll
 
-geoip.dll: $(OBJ_DIR)/geoip.def $(GEOIP_STAT_LIB)
+geoip-$(CPU).dll: $(OBJ_DIR)/geoip-$(CPU).def $(GEOIP_STAT_LIB)
 	$(call link_DLL, $@, $(GEOIP_IMP_LIB), $(DEF_ARG)$^ $(WS2_32_LIB) $(DNSAPI_LIB))
 
 $(MMDB_OBJ) $(OBJ_DIR)/getopt.$(O) $(OBJ_DIR)/test-MMDB.$(O): CFLAGS += $(MMDB_CFLAGS)
@@ -169,7 +184,7 @@ $(OBJ_DIR)/%.obj: %.c
 	@echo
 
 $(OBJ_DIR)/%.obj: %.cpp
-	$(CC) -c -std:c++17 -EHsc $(CFLAGS) -Fo./$@ $<
+	$(CC) -c -std:c++20 -Zc:strictStrings- -EHsc $(CFLAGS) -Fo./$@ $<
 	@echo
 
 $(OBJ_DIR)/%.o: %.c
@@ -177,10 +192,10 @@ $(OBJ_DIR)/%.o: %.c
 	@echo
 
 $(OBJ_DIR)/%.o: %.cpp
-	$(CC) -c -std:c++17 $(CFLAGS) -o $@ $<
+	$(CC) -c -x c++ $(CFLAGS) -o $@ $<
 	@echo
 
-$(OBJ_DIR)/geoip.def: $(GEOIP_STAT_LIB) Makefile.Windows
+$(OBJ_DIR)/geoip-$(CPU).def: $(GEOIP_STAT_LIB) Makefile.Windows
 	$(call make_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_)
 
 test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
@@ -197,7 +212,7 @@ link_JUNK = $(sort $(TARGETS)                                \
                    $(TARGETS:.exe=.map) $(TARGETS:.exe=.pdb))
 
 clean realclean vclean:
-	rm -f vc14*.pdb link.tmp geoip.dll $(link_JUNK)
+	rm -f vc14*.pdb link.tmp geoip-$(CPU).dll $(link_JUNK)
 	rm -fr $(OBJ_DIR)
 
 #
@@ -275,12 +290,12 @@ create_static_lib_1 = lib -nologo -out:$(strip $(1)) $(2)
 #   arg2, $(2): Name of .lib-file.
 #   arg3, $(3): the code/data-symbol prefix(es). E.g. "geoip_ MMDB_"
 #
-extract_code_syms = nm $(1) | grep $(foreach s, $(2), -e ' T _$(s).*') | \
-                    sed 's/^.* _/  /' | sort | uniq
+extract_code_syms = nm $(1) | grep $(foreach s, $(2), -e ' T $(uscore)$(s).*') | \
+                    sed 's/^.* $(uscore)/  /' | sort | uniq
 
 extract_data_syms = nm $(1)                                  | \
-                    grep $(foreach s, $(2), -e ' [BDCGR] _$(s).*') | \
-                    sed -e 's/^.* _\([_a-zA-Z0-9]*\)/  \1  DATA/'  | \
+                    grep $(foreach s, $(2), -e ' [BDCGR] $(uscore)$(s).*') | \
+                    sed -e 's/^.* $(uscore)\([_a-zA-Z0-9]*\)/  \1  DATA/'  | \
                     sort | uniq
 
 define make_def_file

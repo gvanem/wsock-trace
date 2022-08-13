@@ -1,4 +1,4 @@
-LIBRARY wsock_trace.dll
+LIBRARY wsock_trace-x86.dll
 EXPORTS
 
  _DllMain@12

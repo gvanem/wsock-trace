@@ -60,22 +60,22 @@
 
 #if defined(_ARM)
   #define RC_BITNESS     "ARM 32-bit"
-  #define RC_CPU_SUFFIX  "_arm"
+  #define RC_CPU_SUFFIX  "-arm"
 
 #elif defined(_ARM64)
   #define RC_BITNESS     "ARM 64-bit"
-  #define RC_CPU_SUFFIX  "_arm64"
+  #define RC_CPU_SUFFIX  "-arm64"
 
 #elif defined(BITNESS) && (BITNESS == 64)
   #define RC_BITNESS     "64-bit"
-  #define RC_CPU_SUFFIX  "_x64"
+  #define RC_CPU_SUFFIX  "-x64"
 
 #else
   #define RC_BITNESS     "32-bit"
-  #define RC_CPU_SUFFIX  ""
+  #define RC_CPU_SUFFIX  "-x86"
 #endif
 
-#define RC_DLL_NAME RC_BASENAME RC_CPU_SUFFIX RC_DBG_SUFFIX
+#define RC_DLL_NAME RC_BASENAME RC_DBG_SUFFIX RC_CPU_SUFFIX
 
 /**
  * Since this file is also included from `common.c` and `wsock_trace_lua.c`,
@@ -105,7 +105,7 @@ BEGIN
       VALUE "ProductName",      RC_DLL_NAME ".dll Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
-                                "\t\t\tCopyright 2012-2021, Gisle Vanem <gvanem@yahoo.no>."
+                                "\t\t\tCopyright 2012-2022, Gisle Vanem <gvanem@yahoo.no>."
     END
   END
 

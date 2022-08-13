@@ -2210,21 +2210,21 @@ const char *get_dll_full_name (void)
  * Returns the `.dll` basename.
  *
  * \retval
- *   "wsock_trace.dll"          for 32-bit Visual-C / clang-cl
- *   "wsock_trace_x64.dll"      for 64-bit Visual-C / clang-cl
+ *   "wsock_trace-x86.dll"      for 32-bit Visual-C / clang-cl
+ *   "wsock_trace-x64.dll"      for 64-bit Visual-C / clang-cl
  *   "wsock_trace_mw.dll"       for 32-bit MinGW
- *   "wsock_trace_mw_x64.dll"   for 64-bit MinGW
+ *   "wsock_trace_mw-x64.dll"   for 64-bit MinGW
  *   "wsock_trace_cyg.dll"      for 32-bit CygWin
- *   "wsock_trace_cyg_x64.dll"  for 64-bit CygWin
+ *   "wsock_trace_cyg-x64.dll"  for 64-bit CygWin
  *
- * And an extra `"_d"` (before `".dll"`) for a CRT-DEBUG version.
+ * And an extra `"_d"` after `"wsock_trace"` for a CRT-DEBUG version.
  *
  * When the code in "wsock_trace*.dll" is loaded via a program,
  * return that program's shortname.
  */
 const char *get_dll_short_name (void)
 {
-  return (RC_BASENAME RC_CPU_SUFFIX RC_DBG_SUFFIX ".dll");
+  return (RC_BASENAME RC_DBG_SUFFIX RC_CPU_SUFFIX ".dll");
 }
 
 const char *get_dll_build_date (void)
