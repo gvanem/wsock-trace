@@ -43,7 +43,8 @@
 #endif
 
 #if defined(__CYGWIN__)
-  #define _byteswap_ulong(x)  (unsigned long) swap32 (x)
+  #include <bits/byteswap.h>
+  #define _byteswap_ulong(x)  (unsigned long) __bswap_32 (x)
 #endif
 
 /*
