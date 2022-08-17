@@ -2,8 +2,8 @@
  * \ingroup inet_util
  *
  * \brief
- *  Functions for downloading files via `WinInet.dll` or `WinHttp.dll`
- *  and checking of address types.
+ *  Functions for downloading files via `WinInet.dll` or
+ * `WinHttp.dll` (unless `DISABLE_WinHTTP` is defined).
  *
  * inet_util.c - Part of Wsock-Trace.
  */
@@ -13,34 +13,6 @@
 #include <limits.h>
 #include <errno.h>
 #include <wininet.h>
-
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  /*
-   * Hacks for MinGW and Cygwin to be able to include <winhttp.h> below.
-   * Not needed for MSVC + clang-cl using the 'Windows Kit' SDK.
-   */
-  #define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
-  #define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
-
-  #undef _INTERNET_SCHEME_
-  #define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
-  #define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
-
-  #define URL_COMPONENTS       winhttp_URL_COMPONENTS
-  #define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
-
-  #define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
-  #define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
-
-  #undef BOOLAPI
-  #undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
-  #undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
-
-#else
-  #define winhttp_URL_COMPONENTSW   URL_COMPONENTSW
-#endif
-
-#include <winhttp.h>
 
 #include "common.h"
 #include "init.h"
@@ -66,7 +38,7 @@
  * \def DEF_FUNC
  *
  * Handy macro to both define and declare the function-pointer for
- * `WinInet.dll` and `WinHttp.dll` functions.
+ * `WinInet.dll` and `WinHttp.dll` (unless `DISABLE_WinHTTP` is defined).
  */
 #define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
                                 static func_##f p_##f = NULL
@@ -127,6 +99,40 @@ static struct LoadTable wininet_funcs[] = {
                         ADD_VALUE (InternetSetStatusCallback),
                         ADD_VALUE (InternetCloseHandle)
                       };
+
+#if !defined(DISABLE_WinHTTP)
+/*
+ * Microsoft recommends WinInet or WinHTTP:
+ * https://docs.microsoft.com/en-us/windows/win32/wininet/wininet-vs-winhttp
+ */
+
+#if defined(__MINGW32__) || defined(__CYGWIN__)
+  /*
+   * Hacks for MinGW and Cygwin to be able to include <winhttp.h> below.
+   * Not needed for MSVC + clang-cl using the 'Windows Kit' SDK.
+   */
+  #define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
+  #define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
+
+  #undef _INTERNET_SCHEME_
+  #define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
+  #define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
+
+  #define URL_COMPONENTS       winhttp_URL_COMPONENTS
+  #define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
+
+  #define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
+  #define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
+
+  #undef BOOLAPI
+  #undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
+  #undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
+
+#else
+  #define winhttp_URL_COMPONENTSW   URL_COMPONENTSW
+#endif
+
+#include <winhttp.h>
 
 /***
  * A similar interface to WinHTTP. A comparision table: \n
@@ -299,6 +305,7 @@ static const char *winhttp_strerror (DWORD err)
      return list_lookup_name (err, winhttp_errors, DIM(winhttp_errors));
   return win_strerror (err);
 }
+#endif /* !DISABLE_WinHTTP */
 
 /**
  * Return error-string for `err` from `WinInet.dll`.
@@ -403,12 +410,14 @@ struct wininet_context {
        INTERNET_BUFFERSA inet_buf;
      };
 
-struct winhttp_context {
-       HINTERNET               h1;        /**< Handle from `(*p_WinHttpOpen)()` */
-       HINTERNET               h2;        /**< Handle from `(*p_WinHttpConnect)()` */
-       HINTERNET               h3;        /**< Handle from `(*p_WinHttpOpenRequest)()` */
-       winhttp_URL_COMPONENTSW url_comp;
-     };
+#if !defined(DISABLE_WinHTTP)
+  struct winhttp_context {
+         HINTERNET               h1;        /**< Handle from `(*p_WinHttpOpen)()` */
+         HINTERNET               h2;        /**< Handle from `(*p_WinHttpConnect)()` */
+         HINTERNET               h3;        /**< Handle from `(*p_WinHttpOpenRequest)()` */
+         winhttp_URL_COMPONENTSW url_comp;
+       };
+#endif
 
 struct download_context {
        const char       *url;
@@ -420,7 +429,9 @@ struct download_context {
        int               error;
        union {
          struct wininet_context wininet;
+#if !defined(DISABLE_WinHTTP)
          struct winhttp_context winhttp;
+#endif
        } u;
     };
 
@@ -661,6 +672,7 @@ static void download_threaded (struct download_context *context)
          __FUNCTION__, t_hnd, (unsigned long)t_id, t_timedout);
 }
 
+#if !defined(DISABLE_WinHTTP)
 /**
  * Download a file using `WinHttp.dll`.
  */
@@ -794,6 +806,13 @@ static void download_winhttp (struct download_context *context)
      fclose (context->fil);
 }
 
+#else
+static void download_winhttp (struct download_context *context)
+{
+  assert (0);
+}
+#endif /* !DISABLE_WinHTTP */
+
 /**
  * Download a file from url using dynamcally loaded functions
  * from `WinInet.dll` or `WinHttp.dll`.
@@ -820,6 +839,9 @@ DWORD INET_util_download_file (const char *file, const char *url)
     return (0);
   }
 
+#if defined(DISABLE_WinHTTP)
+  g_cfg.use_winhttp = FALSE;
+#else
   if (g_cfg.use_winhttp)
   {
     funcs    = winhttp_funcs;
@@ -827,6 +849,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
     tab_dll  = "WinHttp.dll";
   }
   else
+#endif
   {
     funcs    = wininet_funcs;
     tab_size = DIM (wininet_funcs);
@@ -847,6 +870,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
   if (!context.fil)
      context.error = errno;
 
+#if !defined(DISABLE_WinHTTP)
   else if (g_cfg.use_winhttp)
   {
     context.u.winhttp.url_comp.dwStructSize     = sizeof(context.u.winhttp.url_comp);
@@ -854,6 +878,7 @@ DWORD INET_util_download_file (const char *file, const char *url)
     context.u.winhttp.url_comp.dwHostNameLength = (DWORD)-1;
     context.u.winhttp.url_comp.dwUrlPathLength  = (DWORD)-1;
   }
+#endif
   else
   {
     context.u.wininet.inet_buf.dwStructSize   = sizeof(context.u.wininet.inet_buf);

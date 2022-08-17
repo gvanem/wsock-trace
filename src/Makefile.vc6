@@ -1,6 +1,6 @@
 #
 # Wsock-trace makefile for MSVC6+
-# G. Vanem <gvanem@yahoo.no> 2018.
+# G. Vanem <gvanem@yahoo.no> 2018 - 2022.
 #
 # Usage:
 #   Open a "MSVC Developer Command Prompt" and set the compiler environment:
@@ -99,6 +99,16 @@ EX_LIBS   = $(EX_LIBS)   libloc$(_D)-$(CPU).lib advapi32.lib dnsapi.lib ole32.li
 WSOCK_DEP = $(WSOCK_DEP) libloc$(_D)-$(CPU).lib
 
 #
+# WinHTTP will be removed soon in favour of WinInet.
+#
+CFLAGS = $(CFLAGS) -DDISABLE_WinHTTP
+
+#
+# Squelch some CRT warnings.
+#
+CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
+
+#
 # The 'wsock_trace{_x64}.lib' is an import-lib for 'wsock_trace{_x64}.dll'.
 # Since the SDK header <ws2ipdef.h> declares some data with no export
 # declaration ('in6addr_any' etc.), the non-export.obj is simply added to this
@@ -106,8 +116,6 @@ WSOCK_DEP = $(WSOCK_DEP) libloc$(_D)-$(CPU).lib
 #
 WSOCK_TRACE_LIB = wsock_trace$(_D)-$(CPU).lib
 WSOCK_TRACE_DLL = wsock_trace$(_D)-$(CPU).dll
-
-CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
 
 WSOCK_TRACE_OBJ = $(OBJ_DIR)\asn.obj             \
                   $(OBJ_DIR)\common.obj          \

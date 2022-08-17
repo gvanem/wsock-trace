@@ -168,6 +168,7 @@
   #
   # Use WinHTTP.dll to download the below files.
   # If 0, use WinInet.dll instead.
+  # Subject for removal; always use WinInet.dll and ignore this setting.
   #
   use_winhttp = 0
 

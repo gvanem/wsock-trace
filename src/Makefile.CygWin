@@ -41,6 +41,11 @@ endif
 CCDEBUG = -ggdb
 CFLAGS += $(CCDEBUG) $(CCOPT)
 
+#
+# WinHTTP will be removed soon in favour of WinInet.
+#
+CFLAGS += -DDISABLE_WinHTTP
+
 ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
   WSOCK_LIB = libwsock_trace_cyg$(_D).a
   WSOCK_DLL = wsock_trace_cyg$(_D).dll
@@ -245,7 +250,7 @@ machine_test:
 ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
 	$(call yellow_msg, Using a 32-bit Cygwin.)
 else ifeq ($(CHECK_MACHINE),x86_64-pc-cygwin)
-	$(call yellow_msg, Using a 64-bit Cygwin.
+	$(call yellow_msg, Using a 64-bit Cygwin.)
 else
 	$(call yellow_msg, Using an unknown Cygwin.)
 endif
