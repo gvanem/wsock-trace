@@ -1699,7 +1699,7 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
   {
     if (opt == TCP_KEEPCNT && opt_len == sizeof(ULONG))
     {
-      snprintf (buf, sizeof(buf), "TCP-keep-count: %lu", *opt_val);
+      snprintf (buf, sizeof(buf), "TCP-keep-count: %lu", (unsigned long)*opt_val);
       return (buf);
     }
   }
