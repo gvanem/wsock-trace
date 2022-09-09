@@ -296,12 +296,8 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
   /* The `CopyFile()` fails if `db_file` is open.
    */
   if (!CopyFile(db_temp_file, db_file, FALSE))
-     TRACE (1, "CopyFile(): %s -> %s failed: %s\n", db_temp_file, db_file, win_strerror(GetLastError()));
-  else
-  {
-    TRACE (1, "CopyFile(): %s -> %s OK\n", db_temp_file, db_file);
-    INET_util_touch_file (db_file);
-  }
+       TRACE (1, "CopyFile(): %s -> %s failed: %s\n", db_temp_file, db_file, win_strerror(GetLastError()));
+  else TRACE (1, "CopyFile(): %s -> %s OK\n", db_temp_file, db_file);
 }
 
 /**
@@ -353,7 +349,7 @@ void ASN_update_file (const char *db_file, BOOL force_update)
   {
     time_t now = time (NULL);
     time_t expiry = now - g_cfg.ASN.max_days * 24 * 3600;
-    time_t when;
+    time_t when   = now + g_cfg.ASN.max_days * 24 * 3600;
 
     expiry -= 10;   /* Give a 10 sec time slack */
 
@@ -364,7 +360,6 @@ void ASN_update_file (const char *db_file, BOOL force_update)
      */
     if (st.st_size && st.st_mtime > expiry)
     {
-      when = now + g_cfg.ASN.max_days * 24 * 3600;
       TRACE (0, "Update of \"%s\" not needed until \"%.24s\".\n"
                 "            Use option '-f' to force an update.\n",
              db_file, ctime(&when));
@@ -378,7 +373,6 @@ void ASN_update_file (const char *db_file, BOOL force_update)
      */
     if (st.st_size && st.st_mtime > expiry)
     {
-      when = now + g_cfg.ASN.max_days * 24 * 3600;
       TRACE (0, "Download of \"%s\" not needed until \"%.24s\"\n"
                 "              Use option '-f' to force an update\n",
              db_xz_temp_file, ctime(&when));
