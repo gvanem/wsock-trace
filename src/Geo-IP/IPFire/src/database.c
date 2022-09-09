@@ -160,7 +160,7 @@ static inline int __loc_database_check_boundaries(struct loc_database* db,
 
 	DEBUG(db->ctx, "Database read check failed at %p for %zu byte(s)\n", p, length);
 	DEBUG(db->ctx, "  p      = %p (offset = %jd, length = %zu)\n", p, offset, length);
-	DEBUG(db->ctx, "  data   = %p (length = %zu)\n", db->data, db->length);
+	DEBUG(db->ctx, "  data   = %p (length = %zu)\n", db->data, (size_t)db->length);
 	DEBUG(db->ctx, "  end    = %p\n", db->data + db->length);
 	DEBUG(db->ctx, "  overflow of %zu byte(s)\n", offset + length - db->length);
 
@@ -259,7 +259,7 @@ static int loc_database_mmap(struct loc_database* db) {
 		return 1;
 	}
 
-	DEBUG(db->ctx, "Mapped database of %zu byte(s) at %p\n", db->length, db->data);
+	DEBUG(db->ctx, "Mapped database of %zu byte(s) at %p\n", (size_t)db->length, db->data);
 
 #ifndef _WIN32
 	// Tell the system that we expect to read data randomly
@@ -1263,7 +1263,7 @@ static int loc_database_enumerator_stack_push_node(
 	// Check if the node is in range
 	if (offset >= (off_t)e->db->network_node_objects.count) {
 		ERROR(e->ctx, "Trying to add invalid node with offset %jd/%zu\n",
-			offset, e->db->network_node_objects.count);
+			(intmax_t)offset, (size_t)e->db->network_node_objects.count);
 		errno = ERANGE;
 		return 1;
 	}
@@ -1351,7 +1351,7 @@ static int __loc_database_enumerator_next_network(
 		// Get object from top of the stack
 		struct loc_node_stack* node = &enumerator->network_stack[enumerator->network_stack_depth];
 
-		DEBUG(enumerator->ctx, "  Got node: %jd\n", node->offset);
+		DEBUG(enumerator->ctx, "  Got node: %jd\n", (intmax_t)node->offset);
 
 		// Remove the node from the stack if we have already visited it
 		if (enumerator->networks_visited[node->offset]) {
