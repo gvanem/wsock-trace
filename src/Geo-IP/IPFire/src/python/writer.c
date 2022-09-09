@@ -229,7 +229,7 @@ static PyObject* Writer_write(WriterObject* self, PyObject* args) {
 	INFO(loc_ctx, "Opening database %s\n", path);
 	FILE* f = fopen(path, "w+b");
 	if (!f) {
-		PyErr_Format(PyExc_IOError, strerror(errno));
+		PyErr_SetFromErrno(PyExc_OSError);
 		return NULL;
 	}
 
@@ -238,7 +238,7 @@ static PyObject* Writer_write(WriterObject* self, PyObject* args) {
 
 	// Raise any errors
 	if (r) {
-		PyErr_Format(PyExc_IOError, strerror(errno));
+		PyErr_SetFromErrno(PyExc_OSError);
 		return NULL;
 	}
 

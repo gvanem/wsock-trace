@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
 
 	err = loc_writer_write(writer, f, LOC_DATABASE_VERSION_UNSET);
 	if (err) {
-		fprintf(stderr, "Could not write database: %s\n", strerror(-err));
+		fprintf(stderr, "Could not write database: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 	loc_writer_unref(writer);
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
 	struct loc_database* db;
 	err = loc_database_new(ctx, &db, f);
 	if (err) {
-		fprintf(stderr, "Could not open database: %s\n", strerror(-err));
+		fprintf(stderr, "Could not open database: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
 	// Create a test network
 	err = loc_network_new_from_string(ctx, &network, "2001:db8::/64");
 	if (err) {
-		fprintf(stderr, "Could not create network: %s\n", strerror(-err));
+		fprintf(stderr, "Could not create network: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 

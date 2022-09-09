@@ -42,7 +42,7 @@ struct loc_as {
 LOC_EXPORT int loc_as_new(struct loc_ctx* ctx, struct loc_as** as, uint32_t number) {
 	struct loc_as* a = calloc(1, sizeof(*a));
 	if (!a)
-		return -ENOMEM;
+		return 1;
 
 	a->ctx = loc_ref(ctx);
 	a->refcount = 1;

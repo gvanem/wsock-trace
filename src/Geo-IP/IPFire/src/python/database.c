@@ -46,29 +46,37 @@ static void Database_dealloc(DatabaseObject* self) {
 
 static int Database_init(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
 	const char* path = NULL;
+	FILE* f = NULL;
 
+	// Parse arguments
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return -1;
 
+	// Copy path
 	self->path = strdup(path);
-	INFO(loc_ctx, "Opening database %s\n", self->path);
+	if (!self->path)
+		goto ERROR;
 
 	// Open the file for reading
-	FILE* f = fopen(self->path, "rb");
-	if (!f) {
-		PyErr_SetFromErrno(PyExc_IOError);
-		return -1;
-	}
+	INFO(loc_ctx, "Opening database %s\n", self->path);
+	f = fopen(self->path, "rb");
+	if (!f)
+		goto ERROR;
 
 	// Load the database
 	int r = loc_database_new(loc_ctx, &self->db, f);
-	fclose(f);
-
-	// Return on any errors
 	if (r)
-		return -1;
+		goto ERROR;
 
+	fclose(f);
 	return 0;
+
+ERROR:
+	if (f)
+		fclose(f);
+
+	PyErr_SetFromErrno(PyExc_OSError);
+	return -1;
 }
 
 static PyObject* Database_repr(DatabaseObject* self) {
@@ -109,18 +117,24 @@ static PyObject* Database_verify(DatabaseObject* self, PyObject* args) {
 
 static PyObject* Database_get_description(DatabaseObject* self) {
 	const char* description = loc_database_get_description(self->db);
+	if (!description)
+		Py_RETURN_NONE;
 
 	return PyUnicode_FromString(description);
 }
 
 static PyObject* Database_get_vendor(DatabaseObject* self) {
 	const char* vendor = loc_database_get_vendor(self->db);
+	if (!vendor)
+		Py_RETURN_NONE;
 
 	return PyUnicode_FromString(vendor);
 }
 
 static PyObject* Database_get_license(DatabaseObject* self) {
 	const char* license = loc_database_get_license(self->db);
+	if (!license)
+		Py_RETURN_NONE;
 
 	return PyUnicode_FromString(license);
 }
@@ -158,16 +172,31 @@ static PyObject* Database_get_as(DatabaseObject* self, PyObject* args) {
 }
 
 static PyObject* Database_get_country(DatabaseObject* self, PyObject* args) {
+	struct loc_country* country = NULL;
 	const char* country_code = NULL;
 
 	if (!PyArg_ParseTuple(args, "s", &country_code))
 		return NULL;
 
-	struct loc_country* country;
+	// Fetch the country
 	int r = loc_database_get_country(self->db, &country, country_code);
 	if (r) {
-		Py_RETURN_NONE;
+		switch (errno) {
+			case EINVAL:
+				PyErr_SetString(PyExc_ValueError, "Invalid country code");
+				break;
+
+			default:
+				PyErr_SetFromErrno(PyExc_OSError);
+				break;
+		}
+
+		return NULL;
 	}
+
+	// No result
+	if (!country)
+		Py_RETURN_NONE;
 
 	PyObject* obj = new_country(&CountryType, country);
 	loc_country_unref(country);
@@ -191,18 +220,21 @@ static PyObject* Database_lookup(DatabaseObject* self, PyObject* args) {
 		loc_network_unref(network);
 
 		return obj;
-
-	// Nothing found
-	} else if (r == 1) {
-		Py_RETURN_NONE;
-
-	// Invalid input
-	} else if (r == -EINVAL) {
-		PyErr_Format(PyExc_ValueError, "Invalid IP address: %s", address);
-		return NULL;
 	}
 
-	// Unexpected error
+	// Nothing found
+	if (!errno)
+		Py_RETURN_NONE;
+
+	// Handle any errors
+	switch (errno) {
+		case EINVAL:
+			PyErr_Format(PyExc_ValueError, "Invalid IP address: %s", address);
+
+		default:
+			PyErr_SetFromErrno(PyExc_OSError);
+	}
+
 	return NULL;
 }
 
@@ -353,7 +385,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		struct loc_as_list* asns;
 		r = loc_as_list_new(loc_ctx, &asns);
 		if (r) {
-			PyErr_SetString(PyExc_SystemError, "Could not create AS list");
+			PyErr_SetFromErrno(PyExc_OSError);
 			return NULL;
 		}
 
@@ -372,7 +404,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 			struct loc_as* as;
 			r = loc_as_new(loc_ctx, &as, number);
 			if (r) {
-				PyErr_SetString(PyExc_SystemError, "Could not create AS");
+				PyErr_SetFromErrno(PyExc_OSError);
 
 				loc_as_list_unref(asns);
 				loc_as_unref(as);
@@ -381,7 +413,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 
 			r = loc_as_list_append(asns, as);
 			if (r) {
-				PyErr_SetString(PyExc_SystemError, "Could not append AS to the list");
+				PyErr_SetFromErrno(PyExc_OSError);
 
 				loc_as_list_unref(asns);
 				loc_as_unref(as);
@@ -393,7 +425,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 
 		r = loc_database_enumerator_set_asns(enumerator, asns);
 		if (r) {
-			PyErr_SetFromErrno(PyExc_SystemError);
+			PyErr_SetFromErrno(PyExc_OSError);
 
 			loc_as_list_unref(asns);
 			return NULL;
@@ -407,7 +439,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		r = loc_database_enumerator_set_flag(enumerator, flags);
 
 		if (r) {
-			PyErr_SetFromErrno(PyExc_SystemError);
+			PyErr_SetFromErrno(PyExc_OSError);
 			return NULL;
 		}
 	}
@@ -417,7 +449,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		r = loc_database_enumerator_set_family(enumerator, family);
 
 		if (r) {
-			PyErr_SetFromErrno(PyExc_SystemError);
+			PyErr_SetFromErrno(PyExc_OSError);
 			return NULL;
 		}
 	}

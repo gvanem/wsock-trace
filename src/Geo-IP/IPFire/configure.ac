@@ -1,6 +1,6 @@
 AC_PREREQ(2.60)
 AC_INIT([libloc],
-        [0.9.13],
+        [0.9.14],
         [location@lists.ipfire.org],
         [libloc],
         [https://location.ipfire.org/])
@@ -18,7 +18,7 @@ AM_INIT_AUTOMAKE([
 	dist-xz
 	subdir-objects
 ])
-AC_PROG_CC_STDC
+AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
@@ -81,6 +81,7 @@ AC_CHECK_FUNCS([ \
     htobe16 \
     htobe32 \
     htobe64 \
+    madvise \
     mmap \
     munmap \
     res_query \

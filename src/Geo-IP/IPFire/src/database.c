@@ -53,6 +53,17 @@
 #include <libloc/private.h>
 #include <libloc/stringpool.h>
 
+struct loc_database_objects {
+	char* data;
+	size_t length;
+	size_t count;
+};
+
+struct loc_database_signature {
+	const char* data;
+	size_t length;
+};
+
 struct loc_database {
 	struct loc_ctx* ctx;
 	int refcount;
@@ -66,28 +77,26 @@ struct loc_database {
 	off_t license;
 
 	// Signatures
-	char* signature1;
-	size_t signature1_length;
-	char* signature2;
-	size_t signature2_length;
+	struct loc_database_signature signature1;
+	struct loc_database_signature signature2;
 
-	// ASes in the database
-	struct loc_database_as_v1* as_v1;
-	size_t as_count;
-
-	// Network tree
-	struct loc_database_network_node_v1* network_nodes_v1;
-	size_t network_nodes_count;
-
-	// Networks
-	struct loc_database_network_v1* networks_v1;
-	size_t networks_count;
-
-	// Countries
-	struct loc_database_country_v1* countries_v1;
-	size_t countries_count;
+	// Data mapped into memory
+	char* data;
+	off_t length;
 
 	struct loc_stringpool* pool;
+
+	// ASes in the database
+	struct loc_database_objects as_objects;
+
+	// Network tree
+	struct loc_database_objects network_node_objects;
+
+	// Networks
+	struct loc_database_objects network_objects;
+
+	// Countries
+	struct loc_database_objects country_objects;
 };
 
 #define MAX_STACK_DEPTH 256
@@ -135,7 +144,63 @@ struct loc_database_enumerator {
 	struct in6_addr gap4_start;
 };
 
-static int loc_database_read_magic(struct loc_database* db) {
+/*
+	Checks if it is safe to read the buffer of size length starting at p.
+*/
+#define loc_database_check_boundaries(db, p) \
+	__loc_database_check_boundaries(db, (const char*)p, sizeof(*p))
+
+static inline int __loc_database_check_boundaries(struct loc_database* db,
+		const char* p, const size_t length) {
+	size_t offset = p - db->data;
+
+	// Return if everything is within the boundary
+	if (offset <= db->length - length)
+		return 1;
+
+	DEBUG(db->ctx, "Database read check failed at %p for %zu byte(s)\n", p, length);
+	DEBUG(db->ctx, "  p      = %p (offset = %jd, length = %zu)\n", p, offset, length);
+	DEBUG(db->ctx, "  data   = %p (length = %zu)\n", db->data, db->length);
+	DEBUG(db->ctx, "  end    = %p\n", db->data + db->length);
+	DEBUG(db->ctx, "  overflow of %zu byte(s)\n", offset + length - db->length);
+
+	// Otherwise raise EFAULT
+	errno = EFAULT;
+	return 0;
+}
+
+/*
+	Returns a pointer to the n-th object
+*/
+static inline char* loc_database_object(struct loc_database* db,
+		const struct loc_database_objects* objects, const size_t length, const off_t n) {
+	// Calculate offset
+	const off_t offset = n * length;
+
+	// Return a pointer to where the object lies
+	char* object = objects->data + offset;
+
+	// Check if the object is part of the memory
+	if (!__loc_database_check_boundaries(db, object, length))
+		return NULL;
+
+	return object;
+}
+
+static int loc_database_version_supported(struct loc_database* db, uint8_t version) {
+	switch (version) {
+		// Supported versions
+		case LOC_DATABASE_VERSION_1:
+			return 1;
+
+		default:
+			ERROR(db->ctx, "Database version %d is not supported\n", version);
+			errno = ENOTSUP;
+			return 0;
+	}
+}
+
+static int loc_database_check_magic(struct loc_database* db) {
 	struct loc_database_magic magic;
 
 	// Read from file
@@ -145,12 +210,16 @@ static int loc_database_read_magic(struct loc_database* db) {
 	if (bytes_read < sizeof(magic)) {
 		ERROR(db->ctx, "Could not read enough data to validate magic bytes\n");
 		DEBUG(db->ctx, "Read %zu bytes, but needed %zu\n", bytes_read, sizeof(magic));
-		return -ENOMSG;
+		goto ERROR;
 	}
 
 	// Compare magic bytes
-	if (memcmp(LOC_DATABASE_MAGIC, magic.magic, strlen(LOC_DATABASE_MAGIC)) == 0) {
+	if (memcmp(magic.magic, LOC_DATABASE_MAGIC, sizeof(magic.magic)) == 0) {
 		DEBUG(db->ctx, "Magic value matches\n");
+
+		// Do we support this version?
+		if (!loc_database_version_supported(db, magic.version))
+			return 1;
 
 		// Parse version
 		db->version = magic.version;
@@ -158,187 +227,160 @@ static int loc_database_read_magic(struct loc_database* db) {
 		return 0;
 	}
 
+ERROR:
 	ERROR(db->ctx, "Unrecognized file type\n");
+	errno = ENOMSG;
 
 	// Return an error
 	return 1;
 }
 
-static int loc_database_read_as_section_v1(struct loc_database* db,
-		const struct loc_database_header_v1* header) {
-	off_t as_offset  = be32toh(header->as_offset);
-	size_t as_length = be32toh(header->as_length);
+/*
+	Maps the entire database into memory
+*/
+static int loc_database_mmap(struct loc_database* db) {
+	// Get file descriptor
+	int fd = fileno(db->f);
 
-	DEBUG(db->ctx, "Reading AS section from %jd (%zu bytes)\n", (intmax_t)as_offset, as_length);
-
-	if (as_length > 0) {
-		db->as_v1 = mmap(NULL, as_length, PROT_READ,
-			MAP_SHARED, fileno(db->f), as_offset);
-
-		if (db->as_v1 == MAP_FAILED)
-			return -errno;
+	// Determine the length of the database
+	db->length = lseek(fd, 0, SEEK_END);
+	if (db->length < 0) {
+		ERROR(db->ctx, "Could not determine the length of the database: %m\n");
+		return 1;
 	}
 
-	db->as_count = as_length / sizeof(*db->as_v1);
+	rewind(db->f);
 
-	INFO(db->ctx, "Read %zu ASes from the database\n", db->as_count);
+	// Map all data
+	db->data = mmap(NULL, db->length, PROT_READ, MAP_SHARED, fd, 0);
+	if (db->data == MAP_FAILED) {
+		ERROR(db->ctx, "Could not map the database: %m\n");
+		db->data = NULL;
+		return 1;
+	}
+
+	DEBUG(db->ctx, "Mapped database of %zu byte(s) at %p\n", db->length, db->data);
+
+#ifndef _WIN32
+	// Tell the system that we expect to read data randomly
+	int r = madvise(db->data, db->length, MADV_RANDOM);
+	if (r) {
+		ERROR(db->ctx, "madvise() failed: %m\n");
+		return r;
+	}
+#endif
 
 	return 0;
 }
 
-static int loc_database_read_network_nodes_section_v1(struct loc_database* db,
-		const struct loc_database_header_v1* header) {
-	off_t network_nodes_offset  = be32toh(header->network_tree_offset);
-	size_t network_nodes_length = be32toh(header->network_tree_length);
-
-	DEBUG(db->ctx, "Reading network nodes section from %jd (%zu bytes)\n",
-		(intmax_t)network_nodes_offset, network_nodes_length);
-
-	if (network_nodes_length > 0) {
-		db->network_nodes_v1 = mmap(NULL, network_nodes_length, PROT_READ,
-			MAP_SHARED, fileno(db->f), network_nodes_offset);
-
-		if (db->network_nodes_v1 == MAP_FAILED)
-			return -errno;
-	}
-
-	db->network_nodes_count = network_nodes_length / sizeof(*db->network_nodes_v1);
-
-	INFO(db->ctx, "Read %zu network nodes from the database\n", db->network_nodes_count);
-
-	return 0;
-}
-
-static int loc_database_read_networks_section_v1(struct loc_database* db,
-		const struct loc_database_header_v1* header) {
-	off_t networks_offset  = be32toh(header->network_data_offset);
-	size_t networks_length = be32toh(header->network_data_length);
-
-	DEBUG(db->ctx, "Reading networks section from %jd (%zu bytes)\n",
-		(intmax_t)networks_offset, networks_length);
-
-	if (networks_length > 0) {
-		db->networks_v1 = mmap(NULL, networks_length, PROT_READ,
-			MAP_SHARED, fileno(db->f), networks_offset);
-
-		if (db->networks_v1 == MAP_FAILED)
-			return -errno;
-	}
-
-	db->networks_count = networks_length / sizeof(*db->networks_v1);
-
-	INFO(db->ctx, "Read %zu networks from the database\n", db->networks_count);
-
-	return 0;
-}
-
-static int loc_database_read_countries_section_v1(struct loc_database* db,
-		const struct loc_database_header_v1* header) {
-	off_t countries_offset  = be32toh(header->countries_offset);
-	size_t countries_length = be32toh(header->countries_length);
-
-	DEBUG(db->ctx, "Reading countries section from %jd (%zu bytes)\n",
-		(intmax_t)countries_offset, countries_length);
-
-	if (countries_length > 0) {
-		db->countries_v1 = mmap(NULL, countries_length, PROT_READ,
-			MAP_SHARED, fileno(db->f), countries_offset);
-
-		if (db->countries_v1 == MAP_FAILED)
-			return -errno;
-	}
-
-	db->countries_count = countries_length / sizeof(*db->countries_v1);
-
-	INFO(db->ctx, "Read %zu countries from the database\n",
-		db->countries_count);
+/*
+	Maps arbitrary objects from the database into memory.
+*/
+static int loc_database_map_objects(struct loc_database* db, struct loc_database_objects* objects,
+		const size_t size, const off_t offset, const size_t length) {
+	// Store parameters
+	objects->data   = db->data + offset;
+	objects->length = length;
+	objects->count  = objects->length / size;
 
 	return 0;
 }
 
 static int loc_database_read_signature(struct loc_database* db,
-		char** dst, char* src, size_t length) {
+		struct loc_database_signature* signature, const char* data, const size_t length) {
 	// Check for a plausible signature length
 	if (length > LOC_SIGNATURE_MAX_LENGTH) {
 		ERROR(db->ctx, "Signature too long: %zu\n", length);
-		return -EINVAL;
+		errno = EINVAL;
+		return 1;
 	}
 
-	DEBUG(db->ctx, "Reading signature of %zu bytes\n", length);
+	// Store data & length
+	signature->data = data;
+	signature->length = length;
 
-	// Allocate space
-	*dst = malloc(length);
-	if (!*dst)
-		return -ENOMEM;
+	DEBUG(db->ctx, "Read signature of %zu byte(s) at %p\n",
+		signature->length, signature->data);
 
-	// Copy payload
-	memcpy(*dst, src, length);
+	hexdump(db->ctx, signature->data, signature->length);
 
 	return 0;
 }
 
 static int loc_database_read_header_v1(struct loc_database* db) {
-	struct loc_database_header_v1 header;
+	const struct loc_database_header_v1* header =
+		(const struct loc_database_header_v1*)(db->data + LOC_DATABASE_MAGIC_SIZE);
 	int r;
 
-	// Read from file
-	size_t size = fread(&header, 1, sizeof(header), db->f);
+	DEBUG(db->ctx, "Reading header at %p\n", header);
 
-	if (size < sizeof(header)) {
+	// Check if we can read the header
+	if (!loc_database_check_boundaries(db, header)) {
 		ERROR(db->ctx, "Could not read enough data for header\n");
-		return -ENOMSG;
+		return 1;
 	}
+
+	// Dump the entire header
+	hexdump(db->ctx, header, sizeof(*header));
 
 	// Copy over data
-	db->created_at  = be64toh(header.created_at);
-	db->vendor      = be32toh(header.vendor);
-	db->description = be32toh(header.description);
-	db->license     = be32toh(header.license);
-
-	db->signature1_length = be16toh(header.signature1_length);
-	db->signature2_length = be16toh(header.signature2_length);
+	db->created_at  = be64toh(header->created_at);
+	db->vendor      = be32toh(header->vendor);
+	db->description = be32toh(header->description);
+	db->license     = be32toh(header->license);
 
 	// Read signatures
-	if (db->signature1_length) {
-		r = loc_database_read_signature(db, &db->signature1,
-			header.signature1, db->signature1_length);
-		if (r)
-			return r;
-	}
-
-	if (db->signature2_length) {
-		r = loc_database_read_signature(db, &db->signature2,
-			header.signature2, db->signature2_length);
-		if (r)
-			return r;
-	}
-
-	// Open pool
-	off_t pool_offset  = be32toh(header.pool_offset);
-	size_t pool_length = be32toh(header.pool_length);
-
-	r = loc_stringpool_open(db->ctx, &db->pool,
-		db->f, pool_length, pool_offset);
+	r = loc_database_read_signature(db, &db->signature1,
+		header->signature1, be16toh(header->signature1_length));
 	if (r)
 		return r;
 
-	// AS section
-	r = loc_database_read_as_section_v1(db, &header);
+	r = loc_database_read_signature(db, &db->signature2,
+		header->signature2, be16toh(header->signature2_length));
 	if (r)
 		return r;
 
-	// Network Nodes
-	r = loc_database_read_network_nodes_section_v1(db, &header);
+	const char* stringpool_start = db->data + be32toh(header->pool_offset);
+	size_t stringpool_length = be32toh(header->pool_length);
+
+	// Check if the stringpool is part of the mapped area
+	if (!__loc_database_check_boundaries(db, stringpool_start, stringpool_length))
+		return 1;
+
+	// Open the stringpool
+	r = loc_stringpool_open(db->ctx, &db->pool, stringpool_start, stringpool_length);
 	if (r)
 		return r;
 
-	// Networks
-	r = loc_database_read_networks_section_v1(db, &header);
+	// Map AS objects
+	r = loc_database_map_objects(db, &db->as_objects,
+		sizeof(struct loc_database_as_v1),
+		be32toh(header->as_offset),
+		be32toh(header->as_length));
 	if (r)
 		return r;
 
-	// countries
-	r = loc_database_read_countries_section_v1(db, &header);
+	// Map Network Nodes
+	r = loc_database_map_objects(db, &db->network_node_objects,
+		sizeof(struct loc_database_network_node_v1),
+		be32toh(header->network_tree_offset),
+		be32toh(header->network_tree_length));
+	if (r)
+		return r;
+
+	// Map Networks
+	r = loc_database_map_objects(db, &db->network_objects,
+		sizeof(struct loc_database_network_v1),
+		be32toh(header->network_data_offset),
+		be32toh(header->network_data_length));
+	if (r)
+		return r;
+
+	// Map countries
+	r = loc_database_map_objects(db, &db->country_objects,
+		sizeof(struct loc_database_country_v1),
+		be32toh(header->countries_offset),
+		be32toh(header->countries_length));
 	if (r)
 		return r;
 
@@ -358,30 +400,47 @@ static int loc_database_read_header(struct loc_database* db) {
 	}
 }
 
-static int loc_database_read(struct loc_database* db, FILE* f) {
-	clock_t start = clock();
-
+static int loc_database_clone_handle(struct loc_database* db, FILE* f) {
+	// Fetch the FD of the original handle
 	int fd = fileno(f);
 
 	// Clone file descriptor
 	fd = dup(fd);
 	if (!fd) {
 		ERROR(db->ctx, "Could not duplicate file descriptor\n");
-		return -1;
+		return 1;
 	}
 
 	// Reopen the file so that we can keep our own file handle
 	db->f = fdopen(fd, "rb");
 	if (!db->f) {
 		ERROR(db->ctx, "Could not re-open database file\n");
-		return -1;
+		return 1;
 	}
 
 	// Rewind to the start of the file
 	rewind(db->f);
 
+	return 0;
+}
+
+static int loc_database_open(struct loc_database* db, FILE* f) {
+	int r;
+
+	clock_t start = clock();
+
+	// Clone the file handle
+	r = loc_database_clone_handle(db, f);
+	if (r)
+		return r;
+
 	// Read magic bytes
-	int r = loc_database_read_magic(db);
+	r = loc_database_check_magic(db);
+	if (r)
+		return r;
+
+	// Map the database into memory
+	r = loc_database_mmap(db);
 	if (r)
 		return r;
 
@@ -398,79 +457,21 @@ static int loc_database_read(struct loc_database* db, FILE* f) {
 	return 0;
 }
 
-LOC_EXPORT int loc_database_new(struct loc_ctx* ctx, struct loc_database** database, FILE* f) {
-	// Fail on invalid file handle
-	if (!f)
-		return -EINVAL;
-
-	struct loc_database* db = calloc(1, sizeof(*db));
-	if (!db)
-		return -ENOMEM;
-
-	// Reference context
-	db->ctx = loc_ref(ctx);
-	db->refcount = 1;
-
-	DEBUG(db->ctx, "Database object allocated at %p\n", db);
-
-	int r = loc_database_read(db, f);
-	if (r) {
-		loc_database_unref(db);
-		return r;
-	}
-
-	*database = db;
-
-	return 0;
-}
-
-LOC_EXPORT struct loc_database* loc_database_ref(struct loc_database* db) {
-	db->refcount++;
-
-	return db;
-}
-
 static void loc_database_free(struct loc_database* db) {
 	int r;
 
 	DEBUG(db->ctx, "Releasing database %p\n", db);
 
-	// Removing all ASes
-	if (db->as_v1) {
-		r = munmap(db->as_v1, db->as_count * sizeof(*db->as_v1));
+	// Unmap the entire database
+	if (db->data) {
+		r = munmap(db->data, db->length);
 		if (r)
-			ERROR(db->ctx, "Could not unmap AS section: %s\n", strerror(errno));
+			ERROR(db->ctx, "Could not unmap the database: %m\n");
 	}
 
-	// Remove mapped network sections
-	if (db->networks_v1) {
-		r = munmap(db->networks_v1, db->networks_count * sizeof(*db->networks_v1));
-		if (r)
-			ERROR(db->ctx, "Could not unmap networks section: %s\n", strerror(errno));
-	}
-
-	// Remove mapped network nodes section
-	if (db->network_nodes_v1) {
-		r = munmap(db->network_nodes_v1, db->network_nodes_count * sizeof(*db->network_nodes_v1));
-		if (r)
-			ERROR(db->ctx, "Could not unmap network nodes section: %s\n", strerror(errno));
-	}
-
-	// Remove mapped countries section
-	if (db->countries_v1) {
-		r = munmap(db->countries_v1, db->countries_count * sizeof(*db->countries_v1));
-		if (r)
-			ERROR(db->ctx, "Could not unmap countries section: %s\n", strerror(errno));
-	}
-
+	// Free the stringpool
 	if (db->pool)
 		loc_stringpool_unref(db->pool);
-
-	// Free signature
-	if (db->signature1)
-		free(db->signature1);
-	if (db->signature2)
-		free(db->signature2);
 
 	// Close database file
 	if (db->f)
@@ -478,6 +479,49 @@ static void loc_database_free(struct loc_database* db) {
 
 	loc_unref(db->ctx);
 	free(db);
+}
+
+LOC_EXPORT int loc_database_new(struct loc_ctx* ctx, struct loc_database** database, FILE* f) {
+	struct loc_database* db = NULL;
+	int r = 1;
+
+	// Fail on invalid file handle
+	if (!f) {
+		errno = EINVAL;
+		return 1;
+	}
+
+	// Allocate the database object
+	db = calloc(1, sizeof(*db));
+	if (!db)
+		goto ERROR;
+
+	// Reference context
+	db->ctx = loc_ref(ctx);
+	db->refcount = 1;
+
+	DEBUG(db->ctx, "Database object allocated at %p\n", db);
+
+	// Try to open the database
+	r = loc_database_open(db, f);
+	if (r)
+		goto ERROR;
+
+	*database = db;
+
+	return 0;
+
+ERROR:
+	if (db)
+		loc_database_free(db);
+
+	return r;
+}
+
+LOC_EXPORT struct loc_database* loc_database_ref(struct loc_database* db) {
+	db->refcount++;
+
+	return db;
 }
 
 LOC_EXPORT struct loc_database* loc_database_unref(struct loc_database* db) {
@@ -489,8 +533,10 @@ LOC_EXPORT struct loc_database* loc_database_unref(struct loc_database* db) {
 }
 
 LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
+	size_t bytes_read = 0;
+
 	// Cannot do this when no signature is available
-	if (!db->signature1 && !db->signature2) {
+	if (!db->signature1.data && !db->signature2.data) {
 		DEBUG(db->ctx, "No signature available to verify\n");
 		return 1;
 	}
@@ -501,8 +547,8 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 	// Load public key
 	EVP_PKEY* pkey = PEM_read_PUBKEY(f, NULL, NULL, NULL);
 	if (!pkey) {
-		char* error = ERR_error_string(ERR_get_error(), NULL);
-		ERROR(db->ctx, "Could not parse public key: %s\n", error);
+		ERROR(db->ctx, "Could not parse public key: %s\n",
+			ERR_error_string(ERR_get_error(), NULL));
 
 		return -1;
 	}
@@ -526,7 +572,12 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 
 	// Read magic
 	struct loc_database_magic magic;
-	fread(&magic, 1, sizeof(magic), db->f);
+	bytes_read = fread(&magic, 1, sizeof(magic), db->f);
+	if (bytes_read < sizeof(magic)) {
+		ERROR(db->ctx, "Could not read header: %m\n");
+		r = 1;
+		goto CLEANUP;
+	}
 
 	hexdump(db->ctx, &magic, sizeof(magic));
 
@@ -541,7 +592,6 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 
 	// Read the header
 	struct loc_database_header_v1 header_v1;
-	size_t bytes_read;
 
 	switch (db->version) {
 		case LOC_DATABASE_VERSION_1:
@@ -596,11 +646,11 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 	}
 
 	// Check first signature
-	if (db->signature1) {
-		hexdump(db->ctx, db->signature1, db->signature1_length);
+	if (db->signature1.data) {
+		hexdump(db->ctx, db->signature1.data, db->signature1.length);
 
 		r = EVP_DigestVerifyFinal(mdctx,
-			(unsigned char*)db->signature1, db->signature1_length);
+			(unsigned char*)db->signature1.data, db->signature1.length);
 
 		if (r == 0) {
 			DEBUG(db->ctx, "The first signature is invalid\n");
@@ -616,11 +666,11 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 	}
 
 	// Check second signature only when the first one was invalid
-	if (r && db->signature2) {
-		hexdump(db->ctx, db->signature2, db->signature2_length);
+	if (r && db->signature2.data) {
+		hexdump(db->ctx, db->signature2.data, db->signature2.length);
 
 		r = EVP_DigestVerifyFinal(mdctx,
-			(unsigned char*)db->signature2, db->signature2_length);
+			(unsigned char*)db->signature2.data, db->signature2.length);
 
 		if (r == 0) {
 			DEBUG(db->ctx, "The second signature is invalid\n");
@@ -664,29 +714,39 @@ LOC_EXPORT const char* loc_database_get_license(struct loc_database* db) {
 }
 
 LOC_EXPORT size_t loc_database_count_as(struct loc_database* db) {
-	return db->as_count;
+	return db->as_objects.count;
 }
 
 // Returns the AS at position pos
 static int loc_database_fetch_as(struct loc_database* db, struct loc_as** as, off_t pos) {
-	if ((size_t)pos >= db->as_count)
-		return -EINVAL;
+	struct loc_database_as_v1* as_v1 = NULL;
+	int r;
+
+	if ((size_t)pos >= db->as_objects.count) {
+		errno = ERANGE;
+		return 1;
+	}
 
 	DEBUG(db->ctx, "Fetching AS at position %jd\n", (intmax_t)pos);
 
-	int r;
 	switch (db->version) {
 		case LOC_DATABASE_VERSION_1:
-			r = loc_as_new_from_database_v1(db->ctx, db->pool, as, db->as_v1 + pos);
+			// Find the object
+			as_v1 = (struct loc_database_as_v1*)loc_database_object(db,
+				&db->as_objects, sizeof(*as_v1), pos);
+			if (!as_v1)
+				return 1;
+
+			r = loc_as_new_from_database_v1(db->ctx, db->pool, as, as_v1);
 			break;
 
 		default:
-			return -1;
+			errno = ENOTSUP;
+			return 1;
 	}
 
-	if (r == 0) {
+	if (r == 0)
 		DEBUG(db->ctx, "Got AS%u\n", loc_as_get_number(*as));
-	}
 
 	return r;
 }
@@ -694,7 +754,7 @@ static int loc_database_fetch_as(struct loc_database* db, struct loc_as** as, of
 // Performs a binary search to find the AS in the list
 LOC_EXPORT int loc_database_get_as(struct loc_database* db, struct loc_as** as, uint32_t number) {
 	off_t lo = 0;
-	off_t hi = db->as_count - 1;
+	off_t hi = db->as_objects.count - 1;
 
 #ifdef ENABLE_DEBUG
 	// Save start time
@@ -742,24 +802,32 @@ LOC_EXPORT int loc_database_get_as(struct loc_database* db, struct loc_as** as, 
 // Returns the network at position pos
 static int loc_database_fetch_network(struct loc_database* db, struct loc_network** network,
 		struct in6_addr* address, unsigned int prefix, off_t pos) {
-	if ((size_t)pos >= db->networks_count) {
-		DEBUG(db->ctx, "Network ID out of range: %jd/%jd\n",
-			(intmax_t)pos, (intmax_t)db->networks_count);
-		return -EINVAL;
-	}
+	struct loc_database_network_v1* network_v1 = NULL;
+	int r;
 
+	if ((size_t)pos >= db->network_objects.count) {
+		DEBUG(db->ctx, "Network ID out of range: %jd/%jd\n",
+			(intmax_t)pos, (intmax_t)db->network_objects.count);
+		errno = ERANGE;
+		return 1;
+	}
 
 	DEBUG(db->ctx, "Fetching network at position %jd\n", (intmax_t)pos);
 
-	int r;
 	switch (db->version) {
 		case LOC_DATABASE_VERSION_1:
-			r = loc_network_new_from_database_v1(db->ctx, network,
-				address, prefix, db->networks_v1 + pos);
+			// Read the object
+			network_v1 = (struct loc_database_network_v1*)loc_database_object(db,
+				&db->network_objects, sizeof(*network_v1), pos);
+			if (!network_v1)
+				return 1;
+
+			r = loc_network_new_from_database_v1(db->ctx, network, address, prefix, network_v1);
 			break;
 
 		default:
-			return -1;
+			errno = ENOTSUP;
+			return 1;
 	}
 
 	if (r == 0)
@@ -777,13 +845,13 @@ static int __loc_database_lookup_handle_leaf(struct loc_database* db, const stru
 		const struct loc_database_network_node_v1* node) {
 	off_t network_index = be32toh(node->network);
 
-	DEBUG(db->ctx, "Handling leaf node at %jd (%jd)\n", (intmax_t)(node - db->network_nodes_v1), (intmax_t)network_index);
+	DEBUG(db->ctx, "Handling leaf node at %jd\n", (intmax_t)network_index);
 
 	// Fetch the network
-	int r = loc_database_fetch_network(db, network,
-		network_address, prefix, network_index);
+	int r = loc_database_fetch_network(db, network, network_address, prefix, network_index);
 	if (r) {
-		ERROR(db->ctx, "Could not fetch network %jd from database\n", (intmax_t)network_index);
+		ERROR(db->ctx, "Could not fetch network %jd from database: %m\n",
+			(intmax_t)network_index);
 		return r;
 	}
 
@@ -803,29 +871,37 @@ static int __loc_database_lookup_handle_leaf(struct loc_database* db, const stru
 // Searches for an exact match along the path
 static int __loc_database_lookup(struct loc_database* db, const struct in6_addr* address,
 		struct loc_network** network, struct in6_addr* network_address,
-		const struct loc_database_network_node_v1* node, unsigned int level) {
+		off_t node_index, unsigned int level) {
+	struct loc_database_network_node_v1* node_v1 = NULL;
+
 	int r;
-	off_t node_index;
+
+	// Fetch the next node
+	node_v1 = (struct loc_database_network_node_v1*)loc_database_object(db,
+		&db->network_node_objects, sizeof(*node_v1), node_index);
+	if (!node_v1)
+		return 1;
 
 	// Follow the path
 	int bit = loc_address_get_bit(address, level);
 	loc_address_set_bit(network_address, level, bit);
 
 	if (bit == 0)
-		node_index = be32toh(node->zero);
+		node_index = be32toh(node_v1->zero);
 	else
-		node_index = be32toh(node->one);
+		node_index = be32toh(node_v1->one);
 
 	// If the node index is zero, the tree ends here
 	// and we cannot descend any further
 	if (node_index > 0) {
 		// Check boundaries
-		if ((size_t)node_index >= db->network_nodes_count)
-			return -EINVAL;
+		if ((size_t)node_index >= db->network_node_objects.count) {
+			errno = ERANGE;
+			return 1;
+		}
 
 		// Move on to the next node
-		r = __loc_database_lookup(db, address, network, network_address,
-			db->network_nodes_v1 + node_index, level + 1);
+		r = __loc_database_lookup(db, address, network, network_address, node_index, level + 1);
 
 		// End here if a result was found
 		if (r == 0)
@@ -841,8 +917,8 @@ static int __loc_database_lookup(struct loc_database* db, const struct in6_addr*
 	}
 
 	// If this node has a leaf, we will check if it matches
-	if (__loc_database_node_is_leaf(node)) {
-		r = __loc_database_lookup_handle_leaf(db, address, network, network_address, level, node);
+	if (__loc_database_node_is_leaf(node_v1)) {
+		r = __loc_database_lookup_handle_leaf(db, address, network, network_address, level, node_v1);
 		if (r <= 0)
 			return r;
 	}
@@ -862,8 +938,7 @@ LOC_EXPORT int loc_database_lookup(struct loc_database* db,
 	clock_t start = clock();
 #endif
 
-	int r = __loc_database_lookup(db, address, network, &network_address,
-		db->network_nodes_v1, 0);
+	int r = __loc_database_lookup(db, address, network, &network_address, 0, 0);
 
 #ifdef ENABLE_DEBUG
 	clock_t end = clock();
@@ -890,24 +965,35 @@ LOC_EXPORT int loc_database_lookup_from_string(struct loc_database* db,
 // Returns the country at position pos
 static int loc_database_fetch_country(struct loc_database* db,
 		struct loc_country** country, off_t pos) {
-	if ((size_t)pos >= db->countries_count)
-		return -EINVAL;
+	struct loc_database_country_v1* country_v1 = NULL;
+	int r;
+
+	// Check if the country is within range
+	if ((size_t)pos >= db->country_objects.count) {
+		errno = ERANGE;
+		return 1;
+	}
 
 	DEBUG(db->ctx, "Fetching country at position %jd\n", (intmax_t)pos);
 
-	int r;
 	switch (db->version) {
 		case LOC_DATABASE_VERSION_1:
-			r = loc_country_new_from_database_v1(db->ctx, db->pool, country, db->countries_v1 + pos);
+			// Read the object
+			country_v1 = (struct loc_database_country_v1*)loc_database_object(db,
+				&db->country_objects, sizeof(*country_v1), pos);
+			if (!country_v1)
+				return 1;
+
+			r = loc_country_new_from_database_v1(db->ctx, db->pool, country, country_v1);
 			break;
 
 		default:
-			return -1;
+			errno = ENOTSUP;
+			return 1;
 	}
 
-	if (r == 0) {
+	if (r == 0)
 		DEBUG(db->ctx, "Got country %s\n", loc_country_get_code(*country));
-	}
 
 	return r;
 }
@@ -916,7 +1002,13 @@ static int loc_database_fetch_country(struct loc_database* db,
 LOC_EXPORT int loc_database_get_country(struct loc_database* db,
 		struct loc_country** country, const char* code) {
 	off_t lo = 0;
-	off_t hi = db->countries_count - 1;
+	off_t hi = db->country_objects.count - 1;
+
+	// Check if the country code is valid
+	if (!loc_country_code_is_valid(code)) {
+		errno = EINVAL;
+		return 1;
+	}
 
 #ifdef ENABLE_DEBUG
 	// Save start time
@@ -960,7 +1052,7 @@ LOC_EXPORT int loc_database_get_country(struct loc_database* db,
 	// Nothing found
 	*country = NULL;
 
-	return 1;
+	return 0;
 }
 
 // Enumerator
@@ -982,7 +1074,8 @@ static void loc_database_enumerator_free(struct loc_database_enumerator* enumera
 		loc_as_list_unref(enumerator->asns);
 
 	// Free network search
-	free(enumerator->networks_visited);
+	if (enumerator->networks_visited)
+		free(enumerator->networks_visited);
 
 	// Free subnet/bogons stack
 	if (enumerator->stack)
@@ -996,9 +1089,12 @@ static void loc_database_enumerator_free(struct loc_database_enumerator* enumera
 
 LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enumerator,
 		struct loc_database* db, enum loc_database_enumerator_mode mode, int flags) {
+	int r;
+
 	struct loc_database_enumerator* e = calloc(1, sizeof(*e));
-	if (!e)
+	if (!e) {
 		return -ENOMEM;
+	}
 
 	// Reference context
 	e->ctx = loc_ref(db->ctx);
@@ -1011,14 +1107,17 @@ LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enum
 
 	// Initialise graph search
 	e->network_stack_depth = 1;
-	e->networks_visited = calloc(db->network_nodes_count, sizeof(*e->networks_visited));
+	e->networks_visited = calloc(db->network_node_objects.count, sizeof(*e->networks_visited));
+	if (!e->networks_visited) {
+		ERROR(db->ctx, "Could not allocated visited networks: %m\n");
+		r = 1;
+		goto ERROR;
+	}
 
 	// Allocate stack
-	int r = loc_network_list_new(e->ctx, &e->stack);
-	if (r) {
-		loc_database_enumerator_free(e);
-		return r;
-	}
+	r = loc_network_list_new(e->ctx, &e->stack);
+	if (r)
+		goto ERROR;
 
 	// Initialize bogon search
 	loc_address_reset(&e->gap6_start, AF_INET6);
@@ -1028,6 +1127,12 @@ LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enum
 
 	*enumerator = e;
 	return 0;
+
+ERROR:
+	if (e)
+		loc_database_enumerator_free(e);
+
+	return r;
 }
 
 LOC_EXPORT struct loc_database_enumerator* loc_database_enumerator_ref(struct loc_database_enumerator* enumerator) {
@@ -1117,7 +1222,7 @@ LOC_EXPORT int loc_database_enumerator_next_as(
 
 	struct loc_database* db = enumerator->db;
 
-	while (enumerator->as_index < db->as_count) {
+	while (enumerator->as_index < db->as_objects.count) {
 		// Fetch the next AS
 		int r = loc_database_fetch_as(db, as, enumerator->as_index++);
 		if (r)
@@ -1152,7 +1257,15 @@ static int loc_database_enumerator_stack_push_node(
 	// Check if there is any space left on the stack
 	if (e->network_stack_depth >= MAX_STACK_DEPTH) {
 		ERROR(e->ctx, "Maximum stack size reached: %d\n", e->network_stack_depth);
-		return -1;
+		return 1;
+	}
+
+	// Check if the node is in range
+	if (offset >= (off_t)e->db->network_node_objects.count) {
+		ERROR(e->ctx, "Trying to add invalid node with offset %jd/%zu\n",
+			offset, e->db->network_node_objects.count);
+		errno = ERANGE;
+		return 1;
 	}
 
 	// Increase stack size
@@ -1238,6 +1351,8 @@ static int __loc_database_enumerator_next_network(
 		// Get object from top of the stack
 		struct loc_node_stack* node = &enumerator->network_stack[enumerator->network_stack_depth];
 
+		DEBUG(enumerator->ctx, "  Got node: %jd\n", node->offset);
+
 		// Remove the node from the stack if we have already visited it
 		if (enumerator->networks_visited[node->offset]) {
 			enumerator->network_stack_depth--;
@@ -1253,18 +1368,19 @@ static int __loc_database_enumerator_next_network(
 
 		// Pop node from top of the stack
 		struct loc_database_network_node_v1* n =
-			enumerator->db->network_nodes_v1 + node->offset;
+			(struct loc_database_network_node_v1*)loc_database_object(enumerator->db,
+				&enumerator->db->network_node_objects, sizeof(*n), node->offset);
+		if (!n)
+			return 1;
 
 		// Add edges to stack
 		int r = loc_database_enumerator_stack_push_node(enumerator,
 			be32toh(n->one), 1, node->depth + 1);
-
 		if (r)
 			return r;
 
 		r = loc_database_enumerator_stack_push_node(enumerator,
 			be32toh(n->zero), 0, node->depth + 1);
-
 		if (r)
 			return r;
 
@@ -1571,7 +1687,7 @@ LOC_EXPORT int loc_database_enumerator_next_country(
 
 	struct loc_database* db = enumerator->db;
 
-	while (enumerator->country_index < db->countries_count) {
+	while (enumerator->country_index < db->country_objects.count) {
 		// Fetch the next country
 		int r = loc_database_fetch_country(db, country, enumerator->country_index++);
 		if (r)

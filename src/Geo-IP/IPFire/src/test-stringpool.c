@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 	// Append a string
 	off_t pos = loc_stringpool_add(pool, "ABC");
 	if (pos < 0) {
-		fprintf(stderr, "Could not add string: %s\n", strerror(-pos));
+		fprintf(stderr, "Could not add string: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 		free(string);
 
 		if (pos < 0) {
-			fprintf(stderr, "Could not add string %d: %s\n", i, strerror(-pos));
+			fprintf(stderr, "Could not add string %d: %s\n", i, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	}

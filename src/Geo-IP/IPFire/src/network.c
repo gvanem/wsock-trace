@@ -69,10 +69,8 @@ LOC_EXPORT int loc_network_new(struct loc_ctx* ctx, struct loc_network** network
 	}
 
 	struct loc_network* n = calloc(1, sizeof(*n));
-	if (!n) {
-		errno = ENOMEM;
+	if (!n)
 		return 1;
-	}
 
 	n->ctx = loc_ref(ctx);
 	n->refcount = 1;
@@ -590,7 +588,7 @@ int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** n
 
 	int r = loc_network_new(ctx, network, address, prefix);
 	if (r) {
-		ERROR(ctx, "Could not allocate a new network: %s", strerror(-r));
+		ERROR(ctx, "Could not allocate a new network: %s", strerror(errno));
 		return r;
 	}
 
@@ -642,7 +640,7 @@ struct loc_network_tree_node {
 int loc_network_tree_new(struct loc_ctx* ctx, struct loc_network_tree** tree) {
 	struct loc_network_tree* t = calloc(1, sizeof(*t));
 	if (!t)
-		return -ENOMEM;
+		return 1;
 
 	t->ctx = loc_ref(ctx);
 	t->refcount = 1;

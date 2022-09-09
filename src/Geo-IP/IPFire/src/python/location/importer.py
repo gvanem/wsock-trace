@@ -19,6 +19,7 @@
 
 import gzip
 import logging
+import tempfile
 import urllib.request
 
 # Initialise logging
@@ -95,6 +96,9 @@ EXTENDED_SOURCES = {
 	# ],
 }
 
+# List all sources
+SOURCES = set(WHOIS_SOURCES|EXTENDED_SOURCES)
+
 class Downloader(object):
 	def __init__(self):
 		self.proxy = None
@@ -106,75 +110,76 @@ class Downloader(object):
 		log.info("Using proxy %s" % url)
 		self.proxy = url
 
-	def request(self, url, data=None, return_blocks=False):
+	def retrieve(self, url, data=None):
+		"""
+			This method will fetch the content at the given URL
+			and will return a file-object to a temporary file.
+
+			If the content was compressed, it will be decompressed on the fly.
+		"""
+		# Open a temporary file to buffer the downloaded content
+		t = tempfile.SpooledTemporaryFile(max_size=100 * 1024 * 1024)
+
+		# Create a new request
 		req = urllib.request.Request(url, data=data)
 
 		# Configure proxy
 		if self.proxy:
 			req.set_proxy(self.proxy, "http")
 
-		return DownloaderContext(self, req, return_blocks=return_blocks)
-
-
-class DownloaderContext(object):
-	def __init__(self, downloader, request, return_blocks=False):
-		self.downloader = downloader
-		self.request = request
-
-		# Should we return one block or a single line?
-		self.return_blocks = return_blocks
-
-		# Save the response object
-		self.response = None
-
-	def __enter__(self):
-		log.info("Retrieving %s..." % self.request.full_url)
+		log.info("Retrieving %s..." % req.full_url)
 
 		# Send request
-		self.response = urllib.request.urlopen(self.request)
+		res = urllib.request.urlopen(req)
 
 		# Log the response headers
 		log.debug("Response Headers:")
-		for header in self.headers:
-			log.debug("	%s: %s" % (header, self.get_header(header)))
+		for header in res.headers:
+			log.debug("	%s: %s" % (header, res.headers[header]))
 
-		return self
+		# Write the payload to the temporary file
+		with res as f:
+			while True:
+				buf = f.read(65536)
+				if not buf:
+					break
 
-	def __exit__(self, type, value, traceback):
-		pass
+				t.write(buf)
 
-	def __iter__(self):
-		"""
-			Makes the object iterable by going through each block
-		"""
-		if self.return_blocks:
-			return iterate_over_blocks(self.body)
+		# Rewind the temporary file
+		t.seek(0)
 
-		return iterate_over_lines(self.body)
-
-	@property
-	def headers(self):
-		if self.response:
-			return self.response.headers
-
-	def get_header(self, name):
-		if self.headers:
-			return self.headers.get(name)
-
-	@property
-	def body(self):
-		"""
-			Returns a file-like object with the decoded content
-			of the response.
-		"""
-		content_type = self.get_header("Content-Type")
+		# Fetch the content type
+		content_type = res.headers.get("Content-Type")
 
 		# Decompress any gzipped response on the fly
 		if content_type in ("application/x-gzip", "application/gzip"):
-			return gzip.GzipFile(fileobj=self.response, mode="rb")
+			t = gzip.GzipFile(fileobj=t, mode="rb")
 
-		# Return the response by default
-		return self.response
+		# Return the temporary file handle
+		return t
+
+	def request_blocks(self, url, data=None):
+		"""
+			This method will fetch the data from the URL and return an
+			iterator for each block in the data.
+		"""
+		# Download the data first
+		t = self.retrieve(url, data=data)
+
+		# Then, split it into blocks
+		return iterate_over_blocks(t)
+
+	def request_lines(self, url, data=None):
+		"""
+			This method will fetch the data from the URL and return an
+			iterator for each line in the data.
+		"""
+		# Download the data first
+		t = self.retrieve(url, data=data)
+
+		# Then, split it into lines
+		return iterate_over_lines(t)
 
 
 def read_blocks(f):
@@ -198,6 +203,10 @@ def iterate_over_blocks(f, charsets=("utf-8", "latin1")):
 	block = []
 
 	for line in f:
+		# Skip commented lines
+		if line.startswith(b"#") or line.startswith(b"%"):
+			continue
+
 		# Convert to string
 		for charset in charsets:
 			try:
@@ -207,24 +216,17 @@ def iterate_over_blocks(f, charsets=("utf-8", "latin1")):
 			else:
 				break
 
-		# Skip commented lines
-		if line.startswith("#") or line.startswith("%"):
-			continue
-
-		# Strip line-endings
-		line = line.rstrip()
-
 		# Remove any comments at the end of line
 		line, hash, comment = line.partition("#")
 
-		if comment:
-			# Strip any whitespace before the comment
-			line = line.rstrip()
+		# Strip any whitespace at the end of the line
+		line = line.rstrip()
 
-			# If the line is now empty, we move on
-			if not line:
-				continue
+		# If we cut off some comment and the line is empty, we can skip it
+		if comment and not line:
+			continue
 
+		# If the line has some content, keep collecting it
 		if line:
 			block.append(line)
 			continue

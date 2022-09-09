@@ -51,11 +51,13 @@ SED_PROCESS = \
 	-e 's,@databasedir\@,$(databasedir),g' \
 	< $< > $@ || rm $@
 
+cron_dailydir = $(sysconfdir)/cron.daily
 databasedir = $(localstatedir)/lib/location
 pkgconfigdir = $(libdir)/pkgconfig
 
 # Overwrite Python path
-pkgpythondir = $(pythondir)/location
+#pkgpythondir = $(pythondir)/location
+pkgpythondir = /usr/lib/python3/dist-packages/location
 
 %: %.in Makefile
 	$(SED_PROCESS)
@@ -280,6 +282,7 @@ CLEANFILES += \
 
 # ------------------------------------------------------------------------------
 
+# Use systemd timers if available
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = \
 	src/systemd/location-update.service \
@@ -290,9 +293,18 @@ CLEANFILES += \
 
 INSTALL_DIRS += \
 	$(systemdsystemunitdir)
+
+# Otherwise fall back to cron
+else
+cron_daily_SCRIPTS = \
+	src/cron/location-update
+
+CLEANFILES += \
+	$(cron_daily_DATA)
 endif
 
 EXTRA_DIST += \
+	src/cron/location-update.in \
 	src/systemd/location-update.service.in \
 	src/systemd/location-update.timer.in
 
@@ -321,7 +333,8 @@ TESTS = \
 	$(dist_check_SCRIPTS)
 
 EXTRA_DIST += \
-	tests/data/location-2022-03-30.db
+	tests/data/location-2022-03-30.db \
+	tests/data/signing-key.pem
 
 CLEANFILES += \
 	testdata.db
@@ -332,6 +345,7 @@ testdata.db: examples/python/create-database.py
 		$(PYTHON) $< $@
 
 dist_check_SCRIPTS = \
+	tests/python/test-database.py \
 	tests/python/test-export.py
 
 check_PROGRAMS = \
@@ -513,16 +527,21 @@ upload-man: $(MANPAGES_HTML)
 EXTRA_DIST += \
 	debian/build.sh \
 	debian/changelog \
-	debian/compat \
 	debian/control \
 	debian/copyright \
-	debian/location.install \
-	debian/location.manpages \
-	debian/location-python.install \
+	debian/genchangelog.sh \
+	debian/gensymbols.sh \
 	debian/libloc1.install \
+	debian/libloc1.symbols \
 	debian/libloc-dev.install \
+	debian/location.install \
+	debian/location.postinst \
+	debian/location.postrm \
+	debian/python3-location.examples \
+	debian/python3-location.install \
 	debian/rules \
-	debian/source/format
+	debian/source/format \
+	debian/watch
 
 .PHONY: debian
 debian: dist

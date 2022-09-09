@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include <libloc/compat.h>
 #include <libloc/country.h>
 #include <libloc/country-list.h>
 #include <libloc/private.h>
@@ -42,7 +43,7 @@ static int loc_country_list_grow(struct loc_country_list* list) {
 	struct loc_country** elements = reallocarray(list->elements,
 			list->elements_size + size, sizeof(*list->elements));
 	if (!elements)
-		return -errno;
+		return 1;
 
 	list->elements = elements;
 	list->elements_size += size;
@@ -81,9 +82,6 @@ static void loc_country_list_free(struct loc_country_list* list) {
 }
 
 LOC_EXPORT struct loc_country_list* loc_country_list_unref(struct loc_country_list* list) {
-	if (!list)
-		return NULL;
-
 	if (--list->refcount > 0)
 		return list;
 
@@ -159,8 +157,8 @@ LOC_EXPORT int loc_country_list_contains_code(
 		// Ignore invalid country codes which would never match
 		if (errno == EINVAL)
 			return 0;
-		else
-			return r;
+
+		return r;
 	}
 
 	r = loc_country_list_contains(list, country);

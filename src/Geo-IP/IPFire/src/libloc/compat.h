@@ -51,6 +51,10 @@
     #pragma intrinsic (_byteswap_ushort)  /* make these inlined */
     #pragma intrinsic (_byteswap_ulong)
     #pragma intrinsic (_byteswap_uint64)
+
+    /* Drop dependency on 'oldnames.lib'
+     */
+    #define lseek(fd, ofs, whence) _lseek (fd, ofs, whence)
   #endif
 
   #if !defined(__CYGWIN__)  /* '_MSC_VER' or '__MINGW32__' */

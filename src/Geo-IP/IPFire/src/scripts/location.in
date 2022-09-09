@@ -488,7 +488,7 @@ class CLI(object):
 				return 1
 
 		# Success
-		log.debug("Database successfully verified")
+		log.info("Database successfully verified")
 		return 0
 
 	def __get_output_formatter(self, ns):

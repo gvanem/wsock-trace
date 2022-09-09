@@ -73,6 +73,9 @@ static inline void hexdump(struct loc_ctx* ctx, const void* addr, size_t len) {
 
 	DEBUG(ctx, "Dumping %zu byte(s)\n", len);
 
+	if (!len)
+		return;
+
 	// Process every byte in the data
 	for (i = 0; i < len; i++) {
 		// Multiple of 16 means new line (with line offset)

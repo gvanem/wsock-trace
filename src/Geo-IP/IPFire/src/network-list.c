@@ -44,7 +44,7 @@ static int loc_network_list_grow(struct loc_network_list* list) {
 	struct loc_network** elements = reallocarray(list->elements,
 			list->elements_size + size, sizeof(*list->elements));
 	if (!elements)
-		return -errno;
+		return 1;
 
 	list->elements = elements;
 	list->elements_size += size;

@@ -27,7 +27,7 @@
 struct loc_stringpool;
 int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool);
 int loc_stringpool_open(struct loc_ctx* ctx, struct loc_stringpool** pool,
-	FILE* f, size_t length, off_t offset);
+	const char* data, const size_t length);
 
 struct loc_stringpool* loc_stringpool_ref(struct loc_stringpool* pool);
 struct loc_stringpool* loc_stringpool_unref(struct loc_stringpool* pool);

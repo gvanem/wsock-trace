@@ -181,7 +181,12 @@ class IpsetOutputWriter(OutputWriter):
 
 	def _write_footer(self):
 		# Jump back to the beginning of the file
-		self.f.seek(0)
+		try:
+			self.f.seek(0)
+
+		# If the output stream isn't seekable, we won't try writing the header again
+		except io.UnsupportedOperation:
+			return
 
 		# Rewrite the header with better configuration
 		self._write_header()

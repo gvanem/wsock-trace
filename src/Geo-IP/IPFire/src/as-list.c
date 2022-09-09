@@ -14,11 +14,11 @@
 	Lesser General Public License for more details.
 */
 
-#include <errno.h>
 #include <stdlib.h>
 
 #include <libloc/as.h>
 #include <libloc/as-list.h>
+#include <libloc/compat.h>
 #include <libloc/private.h>
 
 struct loc_as_list {
@@ -42,7 +42,7 @@ static int loc_as_list_grow(struct loc_as_list* list) {
 	struct loc_as** elements = reallocarray(list->elements,
 			list->elements_size + size, sizeof(*list->elements));
 	if (!elements)
-		return -errno;
+		return 1;
 
 	list->elements = elements;
 	list->elements_size += size;
@@ -54,7 +54,7 @@ LOC_EXPORT int loc_as_list_new(struct loc_ctx* ctx,
 		struct loc_as_list** list) {
 	struct loc_as_list* l = calloc(1, sizeof(*l));
 	if (!l)
-		return -ENOMEM;
+		return 1;
 
 	l->ctx = loc_ref(ctx);
 	l->refcount = 1;

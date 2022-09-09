@@ -26,6 +26,7 @@ import re
 import socket
 import sys
 import telnetlib
+import urllib.error
 
 # Load our location module
 import location
@@ -403,127 +404,179 @@ class CLI(object):
 	def handle_update_whois(self, ns):
 		downloader = location.importer.Downloader()
 
-		# Download all sources
-		with self.db.transaction():
-			# Create some temporary tables to store parsed data
-			self.db.execute("""
-				CREATE TEMPORARY TABLE _autnums(number integer NOT NULL, organization text NOT NULL, source text NOT NULL)
-					ON COMMIT DROP;
-				CREATE UNIQUE INDEX _autnums_number ON _autnums(number);
+		# Did we run successfully?
+		error = False
 
-				CREATE TEMPORARY TABLE _organizations(handle text NOT NULL, name text NOT NULL, source text NOT NULL)
-					ON COMMIT DROP;
-				CREATE UNIQUE INDEX _organizations_handle ON _organizations(handle);
+		# Fetch all valid country codes to check parsed networks aganist
+		validcountries = self.countries
 
-				CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL, original_countries text[] NOT NULL, source text NOT NULL)
-					ON COMMIT DROP;
-				CREATE INDEX _rirdata_search ON _rirdata USING BTREE(family(network), masklen(network));
-				CREATE UNIQUE INDEX _rirdata_network ON _rirdata(network);
-			""")
+		# Iterate over all potential sources
+		for source in sorted(location.importer.SOURCES):
+			with self.db.transaction():
+				# Create some temporary tables to store parsed data
+				self.db.execute("""
+					CREATE TEMPORARY TABLE _autnums(number integer NOT NULL,
+						organization text NOT NULL, source text NOT NULL) ON COMMIT DROP;
+					CREATE UNIQUE INDEX _autnums_number ON _autnums(number);
 
-			# Remove all previously imported content
-			self.db.execute("""
-				TRUNCATE TABLE networks;
-			""")
+					CREATE TEMPORARY TABLE _organizations(handle text NOT NULL,
+						name text NOT NULL, source text NOT NULL) ON COMMIT DROP;
+					CREATE UNIQUE INDEX _organizations_handle ON _organizations(handle);
 
-			# Fetch all valid country codes to check parsed networks aganist...
-			rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
-			validcountries = []
+					CREATE TEMPORARY TABLE _rirdata(network inet NOT NULL, country text NOT NULL,
+						original_countries text[] NOT NULL, source text NOT NULL)
+						ON COMMIT DROP;
+					CREATE INDEX _rirdata_search ON _rirdata
+						USING BTREE(family(network), masklen(network));
+					CREATE UNIQUE INDEX _rirdata_network ON _rirdata(network);
+				""")
 
-			for row in rows:
-				validcountries.append(row.country_code)
+				# Remove all previously imported content
+				self.db.execute("DELETE FROM networks WHERE source = %s", source)
 
-			for source_key in location.importer.WHOIS_SOURCES:
-				for single_url in location.importer.WHOIS_SOURCES[source_key]:
-					with downloader.request(single_url, return_blocks=True) as f:
-						for block in f:
-							self._parse_block(block, source_key, validcountries)
+				try:
+					# Fetch WHOIS sources
+					for url in location.importer.WHOIS_SOURCES.get(source, []):
+						for block in downloader.request_blocks(url):
+							self._parse_block(block, source, validcountries)
 
-			# Process all parsed networks from every RIR we happen to have access to,
-			# insert the largest network chunks into the networks table immediately...
-			families = self.db.query("SELECT DISTINCT family(network) AS family FROM _rirdata ORDER BY family(network)")
+					# Fetch extended sources
+					for url in location.importer.EXTENDED_SOURCES.get(source, []):
+						for line in downloader.request_lines(url):
+							self._parse_line(line, source, validcountries)
+				except urllib.error.URLError as e:
+					log.error("Could not retrieve data from %s: %s" % (source, e))
+					error = True
 
-			for family in (row.family for row in families):
-				smallest = self.db.get("SELECT MIN(masklen(network)) AS prefix FROM _rirdata WHERE family(network) = %s", family)
+					# Continue with the next source
+					continue
 
-				self.db.execute("INSERT INTO networks(network, country, original_countries, source) \
-					SELECT network, country, original_countries, source FROM _rirdata WHERE masklen(network) = %s AND family(network) = %s", smallest.prefix, family)
+				# Process all parsed networks from every RIR we happen to have access to,
+				# insert the largest network chunks into the networks table immediately...
+				families = self.db.query("SELECT DISTINCT family(network) AS family FROM _rirdata \
+					ORDER BY family(network)")
 
-				# ... determine any other prefixes for this network family, ...
-				prefixes = self.db.query("SELECT DISTINCT masklen(network) AS prefix FROM _rirdata \
-					WHERE family(network) = %s ORDER BY masklen(network) ASC OFFSET 1", family)
+				for family in (row.family for row in families):
+					# Fetch the smallest mask length in our data set
+					smallest = self.db.get("""
+						SELECT
+							MIN(
+								masklen(network)
+							) AS prefix
+						FROM
+							_rirdata
+						WHERE
+							family(network) = %s""",
+						family,
+					)
 
-				# ... and insert networks with this prefix in case they provide additional
-				# information (i. e. subnet of a larger chunk with a different country)
-				for prefix in (row.prefix for row in prefixes):
+					# Copy all networks
 					self.db.execute("""
-						WITH candidates AS (
-							SELECT
-								_rirdata.network,
-								_rirdata.country,
-								_rirdata.original_countries,
-								_rirdata.source
-							FROM
-								_rirdata
-							WHERE
-								family(_rirdata.network) = %s
-							AND
-								masklen(_rirdata.network) = %s
-						),
-						filtered AS (
-							SELECT
-								DISTINCT ON (c.network)
-								c.network,
-								c.country,
-								c.original_countries,
-								c.source,
-								masklen(networks.network),
-								networks.country AS parent_country
-							FROM
-								candidates c
-							LEFT JOIN
-								networks
-							ON
-								c.network << networks.network
-							ORDER BY
-								c.network,
-								masklen(networks.network) DESC NULLS LAST
-						)
 						INSERT INTO
-							networks(network, country, original_countries, source)
+							networks
+						(
+							network,
+							country,
+							original_countries,
+							source
+						)
 						SELECT
 							network,
 							country,
 							original_countries,
 							source
 						FROM
-							filtered
+							_rirdata
 						WHERE
-							parent_country IS NULL
-						OR
-							country <> parent_country
-						ON CONFLICT DO NOTHING""",
-						family, prefix,
+							masklen(network) = %s
+						AND
+							family(network) = %s
+						ON CONFLICT DO
+							NOTHING""",
+						smallest.prefix,
+						family,
 					)
 
-			self.db.execute("""
-				INSERT INTO autnums(number, name, source)
-					SELECT _autnums.number, _organizations.name, _organizations.source FROM _autnums
-						JOIN _organizations ON _autnums.organization = _organizations.handle
-				ON CONFLICT (number) DO UPDATE SET name = excluded.name;
-			""")
+					# ... determine any other prefixes for this network family, ...
+					prefixes = self.db.query("""
+						SELECT
+							DISTINCT masklen(network) AS prefix
+						FROM
+							_rirdata
+						WHERE
+							family(network) = %s
+						ORDER BY
+							masklen(network) ASC
+						OFFSET 1""",
+						family,
+					)
 
-		# Download all extended sources
-		for source_key in location.importer.EXTENDED_SOURCES:
-			for single_url in location.importer.EXTENDED_SOURCES[source_key]:
-				with self.db.transaction():
-					# Download data
-					with downloader.request(single_url) as f:
-						for line in f:
-							self._parse_line(line, source_key, validcountries)
+					# ... and insert networks with this prefix in case they provide additional
+					# information (i. e. subnet of a larger chunk with a different country)
+					for prefix in (row.prefix for row in prefixes):
+						self.db.execute("""
+							WITH candidates AS (
+								SELECT
+									_rirdata.network,
+									_rirdata.country,
+									_rirdata.original_countries,
+									_rirdata.source
+								FROM
+									_rirdata
+								WHERE
+									family(_rirdata.network) = %s
+								AND
+									masklen(_rirdata.network) = %s
+							),
+							filtered AS (
+								SELECT
+									DISTINCT ON (c.network)
+									c.network,
+									c.country,
+									c.original_countries,
+									c.source,
+									masklen(networks.network),
+									networks.country AS parent_country
+								FROM
+									candidates c
+								LEFT JOIN
+									networks
+								ON
+									c.network << networks.network
+								ORDER BY
+									c.network,
+									masklen(networks.network) DESC NULLS LAST
+							)
+							INSERT INTO
+								networks(network, country, original_countries, source)
+							SELECT
+								network,
+								country,
+								original_countries,
+								source
+							FROM
+								filtered
+							WHERE
+								parent_country IS NULL
+							OR
+								country <> parent_country
+							ON CONFLICT DO NOTHING""",
+							family, prefix,
+						)
+
+				self.db.execute("""
+					INSERT INTO autnums(number, name, source)
+						SELECT _autnums.number, _organizations.name, _organizations.source FROM _autnums
+							JOIN _organizations ON _autnums.organization = _organizations.handle
+					ON CONFLICT (number) DO UPDATE SET name = excluded.name;
+				""")
 
 		# Download and import (technical) AS names from ARIN
-		self._import_as_names_from_arin()
+		with self.db.transaction():
+			self._import_as_names_from_arin()
+
+		# Return a non-zero exit code for errors
+		return 1 if error else 0
 
 	def _check_parsed_network(self, network):
 		"""
@@ -871,50 +924,46 @@ class CLI(object):
 		# technical, not intended for human consumption, as description fields in
 		# organisation handles for other RIRs are - however, this is what we have got,
 		# and in some cases, it might be still better than nothing)
-		with downloader.request("https://ftp.arin.net/info/asn.txt", return_blocks=False) as f:
-			for line in f:
-				# Convert binary line to string...
-				line = str(line)
+		for line in downloader.request_lines("https://ftp.arin.net/info/asn.txt"):
+			# Valid lines start with a space, followed by the number of the Autonomous System ...
+			if not line.startswith(" "):
+				continue
 
-				# ... valid lines start with a space, followed by the number of the Autonomous System ...
-				if not line.startswith(" "):
-					continue
+			# Split line and check if there is a valid ASN in it...
+			asn, name = line.split()[0:2]
 
-				# Split line and check if there is a valid ASN in it...
-				asn, name = line.split()[0:2]
+			try:
+				asn = int(asn)
+			except ValueError:
+				log.debug("Skipping ARIN AS names line not containing an integer for ASN")
+				continue
 
-				try:
-					asn = int(asn)
-				except ValueError:
-					log.debug("Skipping ARIN AS names line not containing an integer for ASN")
-					continue
+			# Filter invalid ASNs...
+			if not self._check_parsed_asn(asn):
+				continue
 
-				# Filter invalid ASNs...
-				if not self._check_parsed_asn(asn):
-					continue
+			# Skip any AS name that appears to be a placeholder for a different RIR or entity...
+			if re.match(r"^(ASN-BLK|)(AFCONC|AFRINIC|APNIC|ASNBLK|LACNIC|RIPE|IANA)(?:\d?$|\-)", name):
+				continue
 
-				# Skip any AS name that appears to be a placeholder for a different RIR or entity...
-				if re.match(r"^(ASN-BLK|)(AFCONC|AFRINIC|APNIC|ASNBLK|DNIC|LACNIC|RIPE|IANA)(?:\d?$|\-)", name):
-					continue
+			# Bail out in case the AS name contains anything we do not expect here...
+			if re.search(r"[^a-zA-Z0-9-_]", name):
+				log.debug("Skipping ARIN AS name for %s containing invalid characters: %s" % \
+						(asn, name))
 
-				# Bail out in case the AS name contains anything we do not expect here...
-				if re.search(r"[^a-zA-Z0-9-_]", name):
-					log.debug("Skipping ARIN AS name for %s containing invalid characters: %s" % \
-							(asn, name))
-
-				# Things look good here, run INSERT statement and skip this one if we already have
-				# a (better?) name for this Autonomous System...
-				self.db.execute("""
-					INSERT INTO autnums(
-						number,
-						name,
-						source
-					) VALUES (%s, %s, %s)
-					ON CONFLICT (number) DO NOTHING""",
-					asn,
+			# Things look good here, run INSERT statement and skip this one if we already have
+			# a (better?) name for this Autonomous System...
+			self.db.execute("""
+				INSERT INTO autnums(
+					number,
 					name,
-					"ARIN",
-				)
+					source
+				) VALUES (%s, %s, %s)
+				ON CONFLICT (number) DO NOTHING""",
+				asn,
+				name,
+				"ARIN",
+			)
 
 	def handle_update_announcements(self, ns):
 		server = ns.server[0]
@@ -1168,10 +1217,11 @@ class CLI(object):
 
 	def handle_update_overrides(self, ns):
 		with self.db.transaction():
-			# Drop all data that we have
+			# Only drop manually created overrides, as we can be reasonably sure to have them,
+			# and preserve the rest. If appropriate, it is deleted by correspondent functions.
 			self.db.execute("""
-				TRUNCATE TABLE autnum_overrides;
-				TRUNCATE TABLE network_overrides;
+				DELETE FROM autnum_overrides WHERE source = 'manual';
+				DELETE FROM network_overrides WHERE source = 'manual';
 			""")
 
 			# Update overrides for various cloud providers big enough to publish their own IP
@@ -1261,11 +1311,19 @@ class CLI(object):
 		downloader = location.importer.Downloader()
 
 		try:
-			with downloader.request("https://ip-ranges.amazonaws.com/ip-ranges.json", return_blocks=False) as f:
-				aws_ip_dump = json.load(f.body)
+			# Fetch IP ranges
+			f = downloader.retrieve("https://ip-ranges.amazonaws.com/ip-ranges.json")
+
+			# Parse downloaded file
+			aws_ip_dump = json.load(f)
 		except Exception as e:
 			log.error("unable to preprocess Amazon AWS IP ranges: %s" % e)
 			return
+
+		# At this point, we can assume the downloaded file to be valid
+		self.db.execute("""
+			DELETE FROM network_overrides WHERE source = 'Amazon AWS IP feed';
+		""")
 
 		# XXX: Set up a dictionary for mapping a region name to a country. Unfortunately,
 		# there seems to be no machine-readable version available of this other than
@@ -1380,18 +1438,27 @@ class CLI(object):
 				]
 
 		for url in ip_urls:
-			try:
-				with downloader.request(url, return_blocks=False) as f:
-					fcontent = f.body.readlines()
-			except Exception as e:
-				log.error("Unable to download Spamhaus DROP URL %s: %s" % (url, e))
-				return
+			# Fetch IP list
+			f = downloader.retrieve(url)
+
+			# Split into lines
+			fcontent = f.readlines()
+
+			# Conduct a very basic sanity check to rule out CDN issues causing bogus DROP
+			# downloads.
+			if len(fcontent) > 10:
+				self.db.execute("""
+					DELETE FROM autnum_overrides WHERE source = 'Spamhaus ASN-DROP list';
+					DELETE FROM network_overrides WHERE source = 'Spamhaus DROP lists';
+				""")
+			else:
+				log.error("Spamhaus DROP URL %s returned likely bogus file, ignored" % url)
+				continue
 
 			# Iterate through every line, filter comments and add remaining networks to
 			# the override table in case they are valid...
 			with self.db.transaction():
 				for sline in fcontent:
-
 					# The response is assumed to be encoded in UTF-8...
 					sline = sline.decode("utf-8")
 
@@ -1426,18 +1493,13 @@ class CLI(object):
 					)
 
 		for url in asn_urls:
-			try:
-				with downloader.request(url, return_blocks=False) as f:
-					fcontent = f.body.readlines()
-			except Exception as e:
-				log.error("Unable to download Spamhaus DROP URL %s: %s" % (url, e))
-				return
+			# Fetch URL
+			f = downloader.retrieve(url)
 
 			# Iterate through every line, filter comments and add remaining ASNs to
 			# the override table in case they are valid...
 			with self.db.transaction():
-				for sline in fcontent:
-
+				for sline in f.readlines():
 					# The response is assumed to be encoded in UTF-8...
 					sline = sline.decode("utf-8")
 
@@ -1494,6 +1556,14 @@ class CLI(object):
 
 		# Default to None
 		return None
+
+	@property
+	def countries(self):
+		# Fetch all valid country codes to check parsed networks aganist
+		rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+
+		# Return all countries
+		return [row.country_code for row in rows]
 
 	def handle_import_countries(self, ns):
 		with self.db.transaction():
