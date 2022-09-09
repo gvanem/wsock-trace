@@ -2,8 +2,7 @@
  * \ingroup inet_util
  *
  * \brief
- *  Functions for downloading files via `WinInet.dll` or
- * `WinHttp.dll` (unless `DISABLE_WinHTTP` is defined).
+ *  Functions for downloading files via `WinInet.dll`.
  *
  * inet_util.c - Part of Wsock-Trace.
  */
@@ -23,7 +22,7 @@
 #define USER_AGENT_W  L"Wsock-trace"
 
 #ifndef FILE_BUF_SIZE
-#define FILE_BUF_SIZE  (10*1024)
+#define FILE_BUF_SIZE  (20*1024)
 #endif
 
 #ifndef MAX_URL_SIZE
@@ -37,8 +36,7 @@
 /**
  * \def DEF_FUNC
  *
- * Handy macro to both define and declare the function-pointer for
- * `WinInet.dll` and `WinHttp.dll` (unless `DISABLE_WinHTTP` is defined).
+ * Handy macro to both define and declare the function-pointers for `WinInet.dll`.
  */
 #define DEF_FUNC(ret, f, args)  typedef ret (WINAPI *func_##f) args; \
                                 static func_##f p_##f = NULL
@@ -99,213 +97,6 @@ static struct LoadTable wininet_funcs[] = {
                         ADD_VALUE (InternetSetStatusCallback),
                         ADD_VALUE (InternetCloseHandle)
                       };
-
-#if !defined(DISABLE_WinHTTP)
-/*
- * Microsoft recommends WinInet or WinHTTP:
- * https://docs.microsoft.com/en-us/windows/win32/wininet/wininet-vs-winhttp
- */
-
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  /*
-   * Hacks for MinGW and Cygwin to be able to include <winhttp.h> below.
-   * Not needed for MSVC + clang-cl using the 'Windows Kit' SDK.
-   */
-  #define HTTP_VERSION_INFO    winhttp_HTTP_VERSION_INFO
-  #define LPHTTP_VERSION_INFO  winhttp_LPHTTP_VERSION_INFO
-
-  #undef _INTERNET_SCHEME_
-  #define INTERNET_SCHEME      winhttp_INTERNET_SCHEME
-  #define LPINTERNET_SCHEME    winhttp_LPINTERNET_SCHEME
-
-  #define URL_COMPONENTS       winhttp_URL_COMPONENTS
-  #define LPURL_COMPONENTS     winhttp_LPURL_COMPONENTS
-
-  #define URL_COMPONENTSW      winhttp_URL_COMPONENTSW
-  #define LPURL_COMPONENTSW    winhttp_LPURL_COMPONENTSW
-
-  #undef BOOLAPI
-  #undef SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
-  #undef SECURITY_FLAG_IGNORE_CERT_CN_INVALID
-
-#else
-  #define winhttp_URL_COMPONENTSW   URL_COMPONENTSW
-#endif
-
-#include <winhttp.h>
-
-/***
- * A similar interface to WinHTTP. A comparision table: \n
- *   https://docs.microsoft.com/en-us/windows/desktop/winhttp/porting-wininet-applications-to-winhttp
- */
-DEF_FUNC (HINTERNET, WinHttpOpen, (const wchar_t *agent,
-                                   DWORD          access_type,
-                                   const wchar_t *proxy,
-                                   const wchar_t *proxy_bypass,
-                                   DWORD          flags));
-
-DEF_FUNC (HINTERNET, WinHttpConnect, (HINTERNET      hnd,
-                                      const wchar_t *server_name,
-                                      WORD           server_port,
-                                      DWORD          reserved));
-
-DEF_FUNC (BOOL, WinHttpCrackUrl, (const wchar_t           *url,
-                                  DWORD                    url_len,
-                                  DWORD                    flags,
-                                  winhttp_URL_COMPONENTSW *url_comp));
-
-DEF_FUNC (HINTERNET, WinHttpOpenRequest, (HINTERNET      hnd,
-                                          const wchar_t  *verb,
-                                          const wchar_t  *object_name,
-                                          const wchar_t  *version,
-                                          const wchar_t  *referrer,
-                                          const wchar_t **ppwszAcceptTypes,
-                                          DWORD           flags));
-
-DEF_FUNC (BOOL, WinHttpSendRequest, (HINTERNET      hnd,
-                                     const wchar_t *headers,
-                                     DWORD          headers_len,
-                                     void          *optional,
-                                     DWORD          optional_len,
-                                     DWORD          total_len,
-                                     DWORD_PTR      context));
-
-DEF_FUNC (BOOL, WinHttpQueryDataAvailable, (HINTERNET hnd,
-                                            DWORD    *bytes_available));
-
-DEF_FUNC (BOOL, WinHttpQueryHeaders, (HINTERNET hnd,
-                                      DWORD     Info_level,
-                                      wchar_t   *name,
-                                      void      *buffer,
-                                      DWORD     *buffer_len,
-                                      DWORD     *index));
-
-DEF_FUNC (BOOL, WinHttpReceiveResponse, (HINTERNET hnd,
-                                         void     *reserved));
-
-DEF_FUNC (BOOL, WinHttpReadData, (HINTERNET hnd,
-                                  void     *buf,
-                                  DWORD     bytes_to_read,
-                                  DWORD    *bytes_read));
-
-/** Luckily a `WINHTTP_STATUS_CALLBACK` is the same as a `INTERNET_STATUS_CALLBACK`.
- */
-DEF_FUNC (INTERNET_STATUS_CALLBACK, WinHttpSetStatusCallback,
-                                     (HINTERNET                hnd,
-                                      INTERNET_STATUS_CALLBACK callback,
-                                      DWORD                    notification_flags,
-                                      DWORD_PTR                reserved));
-
-DEF_FUNC (BOOL, WinHttpSetOption, (HINTERNET hnd,
-                                   DWORD     option,
-                                   void     *buf,
-                                   DWORD     buf_len));
-
-DEF_FUNC (BOOL, WinHttpCloseHandle, (HINTERNET hnd));
-
-#undef  ADD_VALUE
-#define ADD_VALUE(func)  { 0, NULL, "winhttp.dll", #func, (void**) &p_##func }
-
-static struct LoadTable winhttp_funcs[] = {
-                        ADD_VALUE (WinHttpOpen),
-                        ADD_VALUE (WinHttpConnect),
-                        ADD_VALUE (WinHttpCrackUrl),
-                        ADD_VALUE (WinHttpOpenRequest),
-                        ADD_VALUE (WinHttpSendRequest),
-                        ADD_VALUE (WinHttpQueryDataAvailable),
-                        ADD_VALUE (WinHttpQueryHeaders),
-                        ADD_VALUE (WinHttpReadData),
-                        ADD_VALUE (WinHttpReceiveResponse),
-                        ADD_VALUE (WinHttpSetStatusCallback),
-                        ADD_VALUE (WinHttpSetOption),
-                        ADD_VALUE (WinHttpCloseHandle)
-                      };
-
-/*
- * Missing in AppVeyor's SDK and possibly others.
- */
-#ifndef ERROR_WINHTTP_UNHANDLED_SCRIPT_TYPE
-#define ERROR_WINHTTP_UNHANDLED_SCRIPT_TYPE          (12000 + 176)
-#endif
-
-#ifndef ERROR_WINHTTP_SCRIPT_EXECUTION_ERROR
-#define ERROR_WINHTTP_SCRIPT_EXECUTION_ERROR         (12000 + 177)
-#endif
-
-#ifndef ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED_PROXY
-#define ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED_PROXY  (12000 + 187)
-#endif
-
-#ifndef ERROR_WINHTTP_SECURE_FAILURE_PROXY
-#define ERROR_WINHTTP_SECURE_FAILURE_PROXY           (12000 + 188)
-#endif
-
-#undef  ADD_VALUE
-#define ADD_VALUE(x)   { ERROR_WINHTTP_ ##x, "ERROR_WINHTTP_" #x }
-
-static const struct search_list winhttp_errors[] = {
-                    ADD_VALUE (OUT_OF_HANDLES),
-                    ADD_VALUE (TIMEOUT),
-                    ADD_VALUE (INTERNAL_ERROR),
-                    ADD_VALUE (INVALID_URL),
-                    ADD_VALUE (UNRECOGNIZED_SCHEME),
-                    ADD_VALUE (NAME_NOT_RESOLVED),
-                    ADD_VALUE (INVALID_OPTION),
-                    ADD_VALUE (OPTION_NOT_SETTABLE),
-                    ADD_VALUE (SHUTDOWN),
-                    ADD_VALUE (LOGIN_FAILURE),
-                    ADD_VALUE (OPERATION_CANCELLED),
-                    ADD_VALUE (INCORRECT_HANDLE_TYPE),
-                    ADD_VALUE (INCORRECT_HANDLE_STATE),
-                    ADD_VALUE (CANNOT_CONNECT),
-                    ADD_VALUE (CONNECTION_ERROR),
-                    ADD_VALUE (RESEND_REQUEST),
-                    ADD_VALUE (CLIENT_AUTH_CERT_NEEDED),
-                    ADD_VALUE (CANNOT_CALL_BEFORE_OPEN),
-                    ADD_VALUE (CANNOT_CALL_BEFORE_SEND),
-                    ADD_VALUE (CANNOT_CALL_AFTER_SEND),
-                    ADD_VALUE (CANNOT_CALL_AFTER_OPEN),
-                    ADD_VALUE (HEADER_NOT_FOUND),
-                    ADD_VALUE (INVALID_SERVER_RESPONSE),
-                    ADD_VALUE (INVALID_HEADER),
-                    ADD_VALUE (INVALID_QUERY_REQUEST),
-                    ADD_VALUE (HEADER_ALREADY_EXISTS),
-                    ADD_VALUE (REDIRECT_FAILED),
-                    ADD_VALUE (AUTO_PROXY_SERVICE_ERROR),
-                    ADD_VALUE (BAD_AUTO_PROXY_SCRIPT),
-                    ADD_VALUE (UNABLE_TO_DOWNLOAD_SCRIPT),
-                    ADD_VALUE (UNHANDLED_SCRIPT_TYPE),
-                    ADD_VALUE (SCRIPT_EXECUTION_ERROR),
-                    ADD_VALUE (NOT_INITIALIZED),
-                    ADD_VALUE (SECURE_FAILURE),
-                    ADD_VALUE (SECURE_CERT_DATE_INVALID),
-                    ADD_VALUE (SECURE_CERT_CN_INVALID),
-                    ADD_VALUE (SECURE_INVALID_CA),
-                    ADD_VALUE (SECURE_CERT_REV_FAILED),
-                    ADD_VALUE (SECURE_CHANNEL_ERROR),
-                    ADD_VALUE (SECURE_INVALID_CERT),
-                    ADD_VALUE (SECURE_CERT_REVOKED),
-                    ADD_VALUE (SECURE_CERT_WRONG_USAGE),
-                    ADD_VALUE (AUTODETECTION_FAILED),
-                    ADD_VALUE (HEADER_COUNT_EXCEEDED),
-                    ADD_VALUE (HEADER_SIZE_OVERFLOW),
-                    ADD_VALUE (CHUNKED_ENCODING_HEADER_SIZE_OVERFLOW),
-                    ADD_VALUE (RESPONSE_DRAIN_OVERFLOW),
-                    ADD_VALUE (CLIENT_CERT_NO_PRIVATE_KEY),
-                    ADD_VALUE (CLIENT_CERT_NO_ACCESS_PRIVATE_KEY),
-                    ADD_VALUE (CLIENT_AUTH_CERT_NEEDED_PROXY),
-                    ADD_VALUE (SECURE_FAILURE_PROXY)
-                  };
-/**
- * Return error-string for `err` from a `WinHttp.dll` function.
- */
-static const char *winhttp_strerror (DWORD err)
-{
-  if (err > WINHTTP_ERROR_BASE && err <= WINHTTP_ERROR_LAST)
-     return list_lookup_name (err, winhttp_errors, DIM(winhttp_errors));
-  return win_strerror (err);
-}
-#endif /* !DISABLE_WinHTTP */
 
 /**
  * Return error-string for `err` from `WinInet.dll`.
@@ -400,43 +191,32 @@ static const struct search_list internet_status_list[] = {
                     ADD_VALUE (COOKIE_HISTORY)
                   };
 
-struct wininet_context {
-       HINTERNET         h1;             /**< Handle from `(*p_InternetOpenA)()` */
-       HINTERNET         h2;             /**< Handle from `(*p_InternetOpenUrlA)()` */
-       volatile BOOL     done;
-       BOOL              threaded_mode;
-       BOOL              async_mode;
-       BOOL              async_flag;
-       INTERNET_BUFFERSA inet_buf;
-     };
-
-#if !defined(DISABLE_WinHTTP)
-  struct winhttp_context {
-         HINTERNET               h1;        /**< Handle from `(*p_WinHttpOpen)()` */
-         HINTERNET               h2;        /**< Handle from `(*p_WinHttpConnect)()` */
-         HINTERNET               h3;        /**< Handle from `(*p_WinHttpOpenRequest)()` */
-         winhttp_URL_COMPONENTSW url_comp;
-       };
-#endif
-
-struct download_context {
-       const char       *url;
-       const char       *file_name;
-       char              file_buf [FILE_BUF_SIZE];
-       FILE             *fil;
-       DWORD             bytes_read;     /**< Last `(*p_WinHttpReadData)()` or `(*p_WinHttpReadData)()` read-count */
-       DWORD             bytes_written;  /**< Accumulated bytes written to `fil` */
-       int               error;
-       union {
-         struct wininet_context wininet;
-#if !defined(DISABLE_WinHTTP)
-         struct winhttp_context winhttp;
-#endif
-       } u;
-    };
+typedef struct download_context {
+        const char               *url;
+        const char               *file_name;
+        char                      file_buf [FILE_BUF_SIZE];
+        FILE                     *fil;
+        DWORD                     bytes_read;     /**< Last `(*p_InternetReadFile)()` read-count */
+        DWORD                     bytes_written;  /**< Accumulated bytes written to `fil` */
+        int                       error;
+        HINTERNET                 h1;             /**< Handle from `(*p_InternetOpenA)()` */
+        HINTERNET                 h2;             /**< Handle from `(*p_InternetOpenUrlA)()` */
+        volatile BOOL             done;
+        HANDLE                    event;
+        BOOL                      threaded_mode;
+        BOOL                      async_mode;
+        BOOL                      async_flags;
+        INTERNET_BUFFERSA         inet_buf;
+        INTERNET_STATUS_CALLBACK  callback;
+      } download_context;
 
 /**
  * The WinInet callback called from `download_async_loop()`.
+ *
+ * \note
+ *  The MSDN decription on `INTERNET_STATUS_CALLBACK` is wrong.
+ *  The `INTERNET_STATUS_CONNECTING_TO_SERVER` and `INTERNET_STATUS_CONNECTED_TO_SERVER`
+ *  are strings. Ref: https://github.com/MicrosoftDocs/feedback/issues/2972
  */
 static void CALLBACK download_callback (HINTERNET hnd,
                                         DWORD_PTR _ctx,
@@ -444,220 +224,249 @@ static void CALLBACK download_callback (HINTERNET hnd,
                                         void     *status_info,
                                         DWORD     status_info_len)
 {
-  struct download_context       *context = (struct download_context*) _ctx;
-  struct wininet_context        *ctx = &context->u.wininet;
-  const INTERNET_ASYNC_RESULT   *ar  = (const INTERNET_ASYNC_RESULT*) status_info;
-  const INTERNET_CONNECTED_INFO *ci  = (const INTERNET_CONNECTED_INFO*) status_info;
-  const char                    *status_name = list_lookup_name (status, internet_status_list, DIM(internet_status_list));
+  download_context *ctx = (download_context*) _ctx;
+  const char       *status_name = list_lookup_name (status, internet_status_list, DIM(internet_status_list));
 
-  TRACE (1, "%sstatus: %s (%lu).\n"
-            "                               hnd: 0x%p, ctx->h1: 0x%p, ctx->h2: 0x%p.\n",
-         get_timestamp(), status_name, (unsigned long)status, hnd, ctx->h1, ctx->h2);
-
-  if (ctx->h2 && hnd != ctx->h2)
-     TRACE (1, "Wrong handle\n");
+  TRACE (1, "%sstatus: %s (%lu, %lu).\n", get_timestamp(), status_name, (unsigned long)status, (unsigned long)status_info_len);
 
   if (status == INTERNET_STATUS_HANDLE_CREATED)
   {
-    HINTERNET h2 = (HINTERNET) ar->dwResult;
+    HINTERNET h2 = *(HINTERNET*) status_info;
 
-    TRACE (1, "INTERNET_STATUS_HANDLE_CREATED: h2: 0x%p, file_name: %s\n", h2, context->file_name);
+    TRACE (1, "INTERNET_STATUS_HANDLE_CREATED: h2: 0x%p, file_name: %s\n", h2, ctx->file_name);
     ctx->h2 = h2;
+  }
+  else if (status == INTERNET_STATUS_RESOLVING_NAME)
+  {
+    TRACE (1, "INTERNET_STATUS_RESOLVING_NAME: '%.*s'\n", (int)status_info_len, (const char*)status_info);
+  }
+  else if (status == INTERNET_STATUS_CONNECTING_TO_SERVER)
+  {
+    TRACE (1, "INTERNET_STATUS_CONNECTING_TO_SERVER: '%.*s'\n", (int)status_info_len, (const char*)status_info);
   }
   else if (status == INTERNET_STATUS_CONNECTED_TO_SERVER)
   {
-    TRACE (1, "INTERNET_STATUS_CONNECTED_TO_SERVER: dwConnectedState: 0x%08lX, dwFlags: 0x%08lX\n",
-           (unsigned long)ci->dwConnectedState, (unsigned long)ci->dwFlags);
+    TRACE (1, "INTERNET_STATUS_CONNECTED_TO_SERVER: '%.*s'\n", (int)status_info_len, (const char*)status_info);
+  }
+  else if (status == INTERNET_STATUS_REDIRECT)
+  {
+    TRACE (1, "INTERNET_STATUS_REDIRECT: %s\n", (const char*)status_info);
   }
   else if (status == INTERNET_STATUS_STATE_CHANGE)
   {
+    const INTERNET_CONNECTED_INFO *ci = (const INTERNET_CONNECTED_INFO*) status_info;
+
     TRACE (1, "INTERNET_STATUS_STATE_CHANGE: dwConnectedState: %lu, dwFlags: %lu\n",
            (unsigned long)ci->dwConnectedState, (unsigned long)ci->dwFlags);
   }
-  else if (status == INTERNET_STATUS_REQUEST_COMPLETE)
+  else if (status == INTERNET_STATUS_CLOSING_CONNECTION)
   {
+    SetEvent (ctx->event);
+  }
+  else if (status == INTERNET_STATUS_REQUEST_COMPLETE && status_info_len == sizeof(INTERNET_ASYNC_RESULT))
+  {
+    const INTERNET_ASYNC_RESULT *ar = (const INTERNET_ASYNC_RESULT*) status_info;
+
     TRACE (1, "INTERNET_STATUS_REQUEST_COMPLETE: dwResult: 0x%" ADDR_FMT ", dwError: %s\n",
            ADDR_CAST(ar->dwResult), wininet_strerror(ar->dwError));
-
-    if (ar->dwResult > 0)
-    {
-      BOOL rc;
-      do
-      {
-        rc = (*p_InternetReadFileExA) (ctx->h2, &ctx->inet_buf, WININET_API_FLAG_ASYNC, _ctx);
-        context->bytes_read     = ctx->inet_buf.dwBufferLength;
-        context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
-        ctx->inet_buf.dwBufferLength = sizeof(context->file_buf);
-        TRACE (2, "  InternetReadFileExA(): rc: %d, %lu bytes\n", rc, (unsigned long)context->bytes_read);
-      }
-      while (rc && context->bytes_read > 0);
-
-      if (GetLastError() != ERROR_IO_PENDING)
-      {
-        (*p_InternetCloseHandle) (hnd);
-        (*p_InternetCloseHandle) (ctx->h2);
-        ctx->h1 = ctx->h2 = NULL;
-        ctx->done = TRUE;
-      }
-    }
-    else
-    {
-      (*p_InternetCloseHandle) (hnd);
-      (*p_InternetCloseHandle) (ctx->h2);
-      ctx->h1 = ctx->h2 = NULL;
-    }
   }
-  ARGSUSED (status_info_len);
 }
 
-static BOOL download_init (struct download_context *context)
+static BOOL download_init (download_context *ctx)
 {
-  struct wininet_context *ctx = &context->u.wininet;
   DWORD       access_type  = INTERNET_OPEN_TYPE_DIRECT;
+  DWORD       error, url_flags;
   const char *proxy_name   = NULL;
   const char *proxy_bypass = NULL;
 
+  if (ctx->async_mode)
+  {
+    ctx->event = CreateEvent (NULL,   /* default security attributes */
+                              FALSE,  /* is auto-resetting */
+                              FALSE,  /* initially non-signaled */
+                              NULL);  /* anonymous */
+    if (!ctx->event)
+    {
+      error = GetLastError();
+      TRACE (0, "CreateEvent() failed: %s.\n", win_strerror(error));
+      return (FALSE);
+    }
+  }
+
   if (g_cfg.GEOIP.proxy && g_cfg.GEOIP.proxy[0])
   {
-    proxy_name   = g_cfg.GEOIP.proxy;
     proxy_bypass = "<local>";
+    proxy_name   = g_cfg.GEOIP.proxy;
     access_type  = INTERNET_OPEN_TYPE_PROXY;
   }
 
   TRACE (1, "Calling InternetOpenA(): proxy: %s, URL: %s.\n",
-         proxy_name ? proxy_name : "<none>", context->url);
+         proxy_name ? proxy_name : "<none>", ctx->url);
 
-  ctx->h1 = (*p_InternetOpenA) (USER_AGENT_A, access_type, proxy_name, proxy_bypass, ctx->async_flag);
+  ctx->h1 = (*p_InternetOpenA) (USER_AGENT_A, access_type, proxy_name, proxy_bypass, ctx->async_flags);
   if (!ctx->h1)
   {
-    DWORD error = GetLastError();
-
+    error = GetLastError();
     TRACE (0, "InternetOpenA() failed: %s.\n", wininet_strerror(error));
     return (FALSE);
   }
 
+  url_flags = INTERNET_FLAG_RELOAD |
+              INTERNET_FLAG_PRAGMA_NOCACHE |
+              INTERNET_FLAG_NO_CACHE_WRITE |
+              INTERNET_FLAG_NO_UI;
+
+  if (!strncmp(ctx->url, "https://", 8))
+     url_flags |= INTERNET_FLAG_SECURE;
+
   if (ctx->async_mode)
   {
-    TRACE (1, "Calling InternetSetStatusCallback(), ctx->h1: %p\n", ctx->h1);
-
-    (*p_InternetSetStatusCallback) (ctx->h1, download_callback);
-    ctx->h2 = (*p_InternetOpenUrlA) (ctx->h1, context->url, NULL, 0,
-                                     INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_CACHE_WRITE,
-                                     (DWORD_PTR) context);
+    ctx->callback = (*p_InternetSetStatusCallback) (ctx->h1, download_callback);
+    if (ctx->callback == INTERNET_INVALID_STATUS_CALLBACK)
+    {
+      TRACE (1, "Invalid callback: %s.\n", wininet_strerror(GetLastError()));
+      return (FALSE);
+    }
+    ctx->h2 = (*p_InternetOpenUrlA) (ctx->h1, ctx->url, NULL, 0, url_flags, (DWORD_PTR) ctx);
   }
   else
-    ctx->h2 = (*p_InternetOpenUrlA) (ctx->h1, context->url, NULL, 0,
-                                     INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_CACHE_WRITE,
-                                     INTERNET_NO_CALLBACK);
+    ctx->h2 = (*p_InternetOpenUrlA) (ctx->h1, ctx->url, NULL, 0, url_flags, INTERNET_NO_CALLBACK);
 
-  TRACE (1, "Calling InternetOpenUrlA(): h2: %p, threaded_mode: %d, async_mode: %d\n",
+  TRACE (1, "Calling InternetOpenUrlA(): h2: 0x%p, threaded_mode: %d, async_mode: %d\n",
          ctx->h2, ctx->threaded_mode, ctx->async_mode);
 
   if (!ctx->h2)
   {
-    DWORD error = GetLastError();
-
+    error = GetLastError();
     if (error != ERROR_IO_PENDING)  /* ctx->async_mode == TRUE */
     {
       TRACE (1, "InternetOpenA() failed: %s.\n", wininet_strerror(error));
       return (FALSE);
     }
+
+    while (ctx->async_mode && !ctx->h2)
+    {
+      TRACE (2, "Waiting for 'ctx->h2' to be set.\n");
+      SleepEx (200, TRUE);
+    }
   }
   return (TRUE);
 }
 
-static DWORD download_exit (struct download_context *context)
+static DWORD download_exit (download_context *ctx)
 {
-  struct wininet_context *ctx = &context->u.wininet;
-
   TRACE (1, "download_exit (%s) -> bytes_written: %lu\n",
-         context->file_name, DWORD_CAST(context->bytes_written));
+         ctx->file_name, DWORD_CAST(ctx->bytes_written));
 
-  if (context->fil)
-     fclose (context->fil);
+  if (ctx->fil)
+     fclose (ctx->fil);
 
   if (ctx->h2)
     (*p_InternetCloseHandle) (ctx->h2);
 
   if (ctx->h1)
   {
-    if (ctx->async_mode)
+    if (ctx->callback != INTERNET_INVALID_STATUS_CALLBACK)
     {
-      TRACE (1, "InternetSetStatusCallback (context.h1, NULL)\n");
+      TRACE (1, "InternetSetStatusCallback (ctx->h1, NULL)\n");
       (*p_InternetSetStatusCallback) (ctx->h1, NULL);
     }
     (*p_InternetCloseHandle) (ctx->h1);
   }
+  if (ctx->event)
+     CloseHandle (ctx->event);
   return (0);
 }
 
 /**
  * Download a file using `WinInet.dll` in synchronous mode.
  */
-static DWORD WINAPI download_sync_loop (struct download_context *context)
+static DWORD WINAPI download_sync_loop (download_context *ctx)
 {
-  struct wininet_context *ctx = &context->u.wininet;
-
   if (ctx->threaded_mode)
      TRACE (1, "Threaded: entering download_sync_loop()");
 
-  if (!download_init(context))
+  if (!download_init(ctx))
      return (0);
 
   while (!ctx->done)
   {
-    if (!(*p_InternetReadFile)(ctx->h2, context->file_buf, sizeof(context->file_buf), &context->bytes_read))
+    if (!(*p_InternetReadFile)(ctx->h2, ctx->file_buf, sizeof(ctx->file_buf), &ctx->bytes_read))
        break;
 
-    TRACE (2, "InternetReadFile() read %lu bytes.\n", (unsigned long)context->bytes_read);
-    if (context->bytes_read == 0)
+    TRACE (2, "InternetReadFile() read %lu bytes.\n", (unsigned long)ctx->bytes_read);
+    if (ctx->bytes_read == 0)
        break;
-    context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
+    ctx->bytes_written += (DWORD) fwrite (ctx->file_buf, 1, (size_t)ctx->bytes_read, ctx->fil);
   }
-  return download_exit (context);
+  return download_exit (ctx);
 }
 
 /**
  * Download a file using `WinInet.dll` in asynchronous mode.
+ * In the same thread or in a separate thread if called from `download_threaded()`.
  */
-static DWORD WINAPI download_async_loop (struct download_context *context)
+static DWORD WINAPI download_async_loop (download_context *ctx)
 {
-  struct wininet_context *ctx = &context->u.wininet;
-
   if (ctx->threaded_mode)
-     TRACE (1, "Threaded: entering download_async_loop().");
+     TRACE (1, "Threaded: entering download_async_loop().\n");
 
-  if (!download_init(context))
+  if (!download_init(ctx))
      return (0);
 
   while (!ctx->done)
   {
+    DWORD error, bytes_read;
+
     if (check_quit())
     {
       TRACE (1, "Quit'.\n");
       ctx->done = TRUE;
       break;
     }
-    TRACE (1, "%sLooping waiting for 'ctx->done'.\n", get_timestamp());
-    if (SleepEx(200, TRUE) == WAIT_IO_COMPLETION)
-       TRACE (1, "WAIT_IO_COMPLETION.\n");
+
+    if ((*p_InternetReadFileExA) (ctx->h2, &ctx->inet_buf, WININET_API_FLAG_ASYNC, (DWORD_PTR)ctx))
+    {
+      bytes_read = ctx->bytes_read = ctx->inet_buf.dwBufferLength;
+      ctx->bytes_written += (DWORD) fwrite (ctx->file_buf, 1, (size_t)ctx->bytes_read, ctx->fil);
+      TRACE (2, "  InternetReadFileExA (0x%p): TRUE, %lu bytes\n", ctx->h2, (unsigned long)ctx->bytes_read);
+      if (bytes_read == 0)
+         ctx->done = TRUE;
+    }
+    else
+    {
+      bytes_read = 0;
+      error = GetLastError();
+      TRACE (2, "  InternetReadFileExA (0x%p): FALSE, %s\n", ctx->h2, wininet_strerror(error));
+      if (error != ERROR_IO_PENDING)
+         ctx->done = TRUE;
+    }
+
+    TRACE (1, "Got %lu/%lu bytes\n", DWORD_CAST(bytes_read), DWORD_CAST(ctx->bytes_written));
+
+    ctx->inet_buf.dwBufferLength = sizeof(ctx->file_buf);
+
+    if (WaitForSingleObject(ctx->event, 10) == WAIT_OBJECT_0)
+    {
+      TRACE (1, "We got signalled\n");
+      ctx->done = TRUE;
+    }
   }
-  return download_exit (context);
+  return download_exit (ctx);
 }
 
 /**
  * Download a file using `WinInet.dll` in synchronous or asynchronous mode.
  */
-static void download_threaded (struct download_context *context)
+static void download_threaded (download_context *ctx)
 {
-  struct wininet_context *ctx = &context->u.wininet;
   BOOL   t_timedout = FALSE;
   DWORD  t_id;
   HANDLE t_hnd;
 
   if (ctx->async_mode)
-       t_hnd = CreateThread (NULL, 0, (PTHREAD_START_ROUTINE)download_async_loop, context, 0, &t_id);
-  else t_hnd = CreateThread (NULL, 0, (PTHREAD_START_ROUTINE)download_sync_loop, context, 0, &t_id);
+       t_hnd = CreateThread (NULL, 0, (PTHREAD_START_ROUTINE)download_async_loop, ctx, 0, &t_id);
+  else t_hnd = CreateThread (NULL, 0, (PTHREAD_START_ROUTINE)download_sync_loop, ctx, 0, &t_id);
 
   if (t_hnd != INVALID_HANDLE_VALUE)
   {
@@ -672,150 +481,8 @@ static void download_threaded (struct download_context *context)
          __FUNCTION__, t_hnd, (unsigned long)t_id, t_timedout);
 }
 
-#if !defined(DISABLE_WinHTTP)
 /**
- * Download a file using `WinHttp.dll`.
- */
-static void download_winhttp (struct download_context *context)
-{
-  struct winhttp_context *ctx = &context->u.winhttp;
-
-  wchar_t url_wide [MAX_URL_SIZE];
-  wchar_t host [MAX_HOST_LEN];
-  wchar_t path [_MAX_PATH];
-  BOOL    success = FALSE;
-
-  winhttp_URL_COMPONENTSW *url_comp = &ctx->url_comp;
-
-  if (!MultiByteToWideChar(CP_ACP, 0, context->url, -1, url_wide, DIM(url_wide)))
-  {
-    TRACE (1, "Failed to convert context->url '%s' to 'wchar_t'.\n", context->url);
-    return;
-  }
-
-  TRACE (3, "url_wide '%S'.\n", url_wide);
-
-  if (!(*p_WinHttpCrackUrl)(url_wide, 0, 0, url_comp))
-  {
-    TRACE (1, "WinHttpCrackUrl() failed: %s.\n", win_strerror(GetLastError()));
-    return;
-  }
-
-  wcsncpy (host, url_comp->lpszHostName, DIM(host)-1);
-  host [url_comp->dwHostNameLength] = L'\0';
-
-  wcsncpy (path, url_comp->lpszUrlPath, DIM(path)-1);
-  path [url_comp->dwUrlPathLength] = L'\0';
-
-  TRACE (2, "host: '%" WCHAR_FMT "'.\n"
-            "                  path: '%" WCHAR_FMT "'.\n", host, path);
-
-  /* Obtain a session handle.
-   */
-  ctx->h1 = (*p_WinHttpOpen) (USER_AGENT_W,
-                              WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                              WINHTTP_NO_PROXY_NAME,
-                              WINHTTP_NO_PROXY_BYPASS, 0);
-  TRACE (2, "WinHttpOpen(): context->h1: %p.\n", ctx->h1);
-
-  if (ctx->h1)
-  {
-    ctx->h2 = (*p_WinHttpConnect) (ctx->h1, host, 80, 0);
-    TRACE (2, "WinHttpConnect(): ctx->h2: %p.\n", ctx->h2);
-  }
-
-  /* Create an HTTP Request handle.
-   */
-  if (ctx->h2)
-  {
-    ctx->h3 = (*p_WinHttpOpenRequest) (ctx->h2, L"GET", path,
-                                       NULL, NULL, NULL,
-                                       /* This adds a "Pragma: no-cache" to the header */
-                                       WINHTTP_FLAG_REFRESH);
-    TRACE (2, "WinHttpOpenRequest(): ctx->h3: %p.\n", ctx->h3);
-  }
-
-  /* Send the request.
-   */
-  if (ctx->h3)
-  {
-    success = (*p_WinHttpSendRequest) (ctx->h3, NULL, 0, NULL, 0, 0, 0);
-    TRACE (2, "WinHttpSendRequest(): success: %d.\n", success);
-  }
-
-  /* Receive the response(es).
-   */
-  if (success)
-  {
-    DWORD chunk_size = 0;
-    int   chunk = 1;
-
-    success = (*p_WinHttpReceiveResponse) (ctx->h3, NULL);
-    TRACE (2, "WinHttpReceiveResponse(): success: %d.\n", success);
-
-    do
-    {
-      /* Check for available HTTP data (ignore any HTTP headers).
-       */
-      if (!(*p_WinHttpQueryDataAvailable)(ctx->h3, &chunk_size))
-      {
-        TRACE (2, "WinHttpQueryDataAvailable(): %s.\n", win_strerror(GetLastError()));
-        break;
-      }
-      if (chunk_size == 0)
-      {
-        TRACE (2, "No more data.\n");
-        break;
-      }
-
-      chunk_size = min (chunk_size, sizeof(context->file_buf));
-
-      /* Get the data and write to the 'context->fil'.
-       */
-      if (!(*p_WinHttpReadData)(ctx->h3, context->file_buf, chunk_size, &context->bytes_read))
-         TRACE (1, "WinHttpReadData(): %s.\n", win_strerror(GetLastError()));
-      else
-      {
-        context->bytes_written += (DWORD) fwrite (context->file_buf, 1, (size_t)context->bytes_read, context->fil);
-        TRACE (2, "WinHttpReadData(), got chunk %d size %lu.\n", chunk++, (unsigned long)context->bytes_read);
-      }
-    }
-    while (chunk_size > 0);
-  }
-
-  /* Report any errors.
-   */
-  if (!success)
-     TRACE (1, "Error: %s.\n", winhttp_strerror(GetLastError()));
-
-  if (ctx->h3)
-     (*p_WinHttpCloseHandle) (ctx->h3);
-
-  if (ctx->h2)
-     (*p_WinHttpCloseHandle) (ctx->h2);
-
-  if (ctx->h1)
-     (*p_WinHttpCloseHandle) (ctx->h1);
-
-  ctx->h1 = ctx->h2 = ctx->h3 = NULL;
-
-  TRACE (1, "%s(): %s -> bytes_written: %lu\n",
-         __FUNCTION__, context->file_name, DWORD_CAST(context->bytes_written));
-
-  if (context->fil)
-     fclose (context->fil);
-}
-
-#else
-static void download_winhttp (struct download_context *context)
-{
-  assert (0);
-}
-#endif /* !DISABLE_WinHTTP */
-
-/**
- * Download a file from url using dynamcally loaded functions
- * from `WinInet.dll` or `WinHttp.dll`.
+ * Download a file from url using dynamcally loaded functions from `WinInet.dll`.
  *
  * \param[in] file the file to write to.
  * \param[in] url  the URL to retrieve from.
@@ -826,12 +493,9 @@ static void download_winhttp (struct download_context *context)
  */
 DWORD INET_util_download_file (const char *file, const char *url)
 {
-  static struct download_context context;
-  struct LoadTable *funcs;
-  const char       *tab_dll;
-  int               tab_size;
-  BOOL              use_threaded = FALSE;
-  BOOL              use_async    = FALSE;
+  download_context ctx;
+  BOOL use_threaded = TRUE;
+  BOOL use_async    = FALSE;   /* 'download_async_loop()' works unreliably */
 
   if (g_data.ws_from_dll_main)
   {
@@ -839,71 +503,39 @@ DWORD INET_util_download_file (const char *file, const char *url)
     return (0);
   }
 
-#if defined(DISABLE_WinHTTP)
-  g_cfg.use_winhttp = FALSE;
-#else
-  if (g_cfg.use_winhttp)
+  if (load_dynamic_table(wininet_funcs, DIM(wininet_funcs)) != DIM(wininet_funcs))
   {
-    funcs    = winhttp_funcs;
-    tab_size = DIM (winhttp_funcs);
-    tab_dll  = "WinHttp.dll";
-  }
-  else
-#endif
-  {
-    funcs    = wininet_funcs;
-    tab_size = DIM (wininet_funcs);
-    tab_dll  = "WinInet.dll";
-  }
-
-  if (load_dynamic_table(funcs, tab_size) != tab_size)
-  {
-    TRACE (1, "Failed to load the needed %s functions.\n", tab_dll);
+    TRACE (1, "Failed to load the needed 'WinInet.dll' functions.\n");
     return (0);
   }
 
-  memset (&context, '\0', sizeof(context));
-  context.url       = url;
-  context.file_name = file;
-  context.fil       = fopen (context.file_name, "w+b");
+  memset (&ctx, '\0', sizeof(ctx));
+  ctx.url       = url;
+  ctx.file_name = file;
+  ctx.fil       = fopen (ctx.file_name, "w+b");
+  if (!ctx.fil)
+     ctx.error = errno;
 
-  if (!context.fil)
-     context.error = errno;
+  ctx.inet_buf.dwStructSize   = sizeof(ctx.inet_buf);
+  ctx.inet_buf.dwBufferLength = sizeof(ctx.file_buf);
+  ctx.inet_buf.lpvBuffer      = ctx.file_buf;
 
-#if !defined(DISABLE_WinHTTP)
-  else if (g_cfg.use_winhttp)
+  ctx.threaded_mode = use_threaded;
+  ctx.async_mode    = use_async;
+  ctx.async_flags   = use_async ? INTERNET_FLAG_ASYNC : 0;
+  ctx.async_flags  |= INTERNET_FLAG_NO_COOKIES;       /* no automatic cookie handling */
+
+  if (ctx.fil)
   {
-    context.u.winhttp.url_comp.dwStructSize     = sizeof(context.u.winhttp.url_comp);
-    context.u.winhttp.url_comp.dwSchemeLength   = (DWORD)-1;
-    context.u.winhttp.url_comp.dwHostNameLength = (DWORD)-1;
-    context.u.winhttp.url_comp.dwUrlPathLength  = (DWORD)-1;
-  }
-#endif
-  else
-  {
-    context.u.wininet.inet_buf.dwStructSize   = sizeof(context.u.wininet.inet_buf);
-    context.u.wininet.inet_buf.dwBufferLength = sizeof(context.file_buf);
-    context.u.wininet.inet_buf.lpvBuffer      = context.file_buf;
-
-    context.u.wininet.threaded_mode = use_threaded;
-    context.u.wininet.async_mode    = use_async;
-    context.u.wininet.async_flag    = use_async ? INTERNET_FLAG_ASYNC : 0;
-    context.u.wininet.async_flag   |= INTERNET_FLAG_NO_COOKIES;         /* no automatic cookie handling */
-  }
-
-  if (context.fil)
-  {
-    if (g_cfg.use_winhttp)
-         download_winhttp (&context);
-    else if (use_threaded)
-         download_threaded (&context);
+    if (use_threaded)
+         download_threaded (&ctx);
     else if (use_async)
-         download_async_loop (&context);
-    else download_sync_loop (&context);
+         download_async_loop (&ctx);
+    else download_sync_loop (&ctx);
   }
 
-  unload_dynamic_table (funcs, tab_size);
-  return (context.bytes_written);
+  unload_dynamic_table (wininet_funcs, DIM(wininet_funcs));
+  return (ctx.bytes_written);
 }
 
 /**

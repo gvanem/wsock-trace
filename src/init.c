@@ -826,7 +826,7 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
      g_cfg.no_buffering = atoi (val);
 
   else if (!stricmp(key, "use_winhttp"))
-     g_cfg.use_winhttp = atoi (val);
+     ;   /* dropped WinHTTP.dll in favour of WinInet.dll */
 
   else if (!stricmp(key, "hosts_file"))
   {

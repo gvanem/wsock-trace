@@ -69,11 +69,6 @@ CCDEBUG = -ggdb
 CFLAGS += $(CCDEBUG) $(CCOPT)
 
 #
-# WinHTTP will be removed soon in favour of WinInet.
-#
-CFLAGS += -DDISABLE_WinHTTP
-
-#
 # Disable annoying warnings like:
 #   common.c:1575:19: warning: too many arguments for format [-Wformat-extra-args]
 #      1575 |     sprintf (tmp, "%15" U64_FMT, val);

@@ -99,11 +99,6 @@ EX_LIBS   = $(EX_LIBS)   libloc$(_D)-$(CPU).lib advapi32.lib dnsapi.lib ole32.li
 WSOCK_DEP = $(WSOCK_DEP) libloc$(_D)-$(CPU).lib
 
 #
-# WinHTTP will be removed soon in favour of WinInet.
-#
-CFLAGS = $(CFLAGS) -DDISABLE_WinHTTP
-
-#
 # Squelch some CRT warnings.
 #
 CFLAGS = $(CFLAGS) -D_CRT_SECURE_NO_WARNINGS
