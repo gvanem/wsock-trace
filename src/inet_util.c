@@ -384,7 +384,7 @@ static DWORD download_exit (download_context *ctx)
 static DWORD WINAPI download_sync_loop (download_context *ctx)
 {
   if (ctx->threaded_mode)
-     TRACE (1, "Threaded: entering download_sync_loop()");
+     TRACE (1, "Threaded: entering download_sync_loop().\n");
 
   if (!download_init(ctx))
      return (0);
@@ -494,7 +494,7 @@ static void download_threaded (download_context *ctx)
 DWORD INET_util_download_file (const char *file, const char *url)
 {
   download_context ctx;
-  BOOL use_threaded = TRUE;
+  BOOL use_threaded = FALSE;
   BOOL use_async    = FALSE;   /* 'download_async_loop()' works unreliably */
 
   if (g_data.ws_from_dll_main)
