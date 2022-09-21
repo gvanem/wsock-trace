@@ -1925,6 +1925,54 @@ static DWORD count_wsabuf (const WSABUF *bufs, DWORD num_bufs)
   return (bytes);
 }
 
+/**
+ * Common stuff for `WSARecv()` and `WSARecvFrom()`.
+ *
+ * If the transfer is overlapped the `g_data.counts.recv_bytes` counter
+ * should be updated in 'WSAGetOverlappedResult()'.
+ *
+ * But this may not work so maybe we need to hook
+ * 'PostQueuedCompletionStatus()' and update the recv/transmit counters there?
+ */
+static void handle_recv_overlapped (SOCKET s, const WSAOVERLAPPED *ov, DWORD *size)
+{
+  DWORD transferred;
+  DWORD ov_err = WSA_IO_INCOMPLETE; /* assume overlapped operation is pending */
+
+  if (!ov)
+     g_data.counts.recv_bytes += *size;
+
+  else if (overlap_transferred(s, ov, &transferred, &ov_err) && ov_err == NO_ERROR)
+  {
+    *size = transferred;
+    g_data.counts.recv_bytes += *size;
+  }
+}
+
+/**
+ * Common data-dump for `WSARecv()` and `WSARecvFrom()`.
+ */
+static void handle_recv_data (int rc, const WSABUF *bufs, const DWORD *num_bytes, DWORD size, struct sockaddr *from)
+{
+  if (rc == NO_ERROR && g_cfg.dump_data)
+  {
+    WSABUF bufs2;
+
+    bufs2.buf = bufs->buf;
+    bufs2.len = num_bytes ? *num_bytes : size;
+    dump_wsabuf (&bufs2, 1);
+  }
+
+  if (from && (*g_data.WSAGetLastError)() != WSA_IO_PENDING)
+  {
+    if (g_cfg.GEOIP.enable)
+       dump_countries_sockaddr (from);
+
+    if (g_cfg.DNSBL.enable)
+       dump_DNSBL_sockaddr (from);
+  }
+}
+
 EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
                            DWORD *flags, WSAOVERLAPPED *ov,
                            LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
@@ -1941,15 +1989,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   size = bufs->len * num_bufs;
 
   if (rc == NO_ERROR)
-  {
-    /* If the transfer is overlapped this counter should be
-     * updated in 'WSAGetOverlappedResult()'.
-     *
-     * But this may not work so maybe we need to hook
-     * 'PostQueuedCompletionStatus()' and update the recv/transmit counters there?
-     */
-    g_data.counts.recv_bytes += size;
-  }
+     handle_recv_overlapped (s, ov, &size);
 
   if (!exclude_this)
   {
@@ -1966,14 +2006,7 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     WSTRACE ("WSARecv (%s, 0x%p, %lu, %s, <%s>, 0x%p, 0x%p) --> %s",
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, flg, ov, func, res);
 
-    if (rc == NO_ERROR && g_cfg.dump_data)
-    {
-      WSABUF bufs2;
-
-      bufs2.buf = bufs->buf;
-      bufs2.len = num_bytes ? *num_bytes : size;
-      dump_wsabuf (&bufs2, 1);
-    }
+    handle_recv_data (rc, bufs, num_bytes, size, NULL);
 
     if (ov)
        overlap_store (s, ov, size, TRUE);
@@ -2006,17 +2039,12 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
   size = bufs->len * num_bufs;
 
   if (rc == NO_ERROR)
-  {
-    /* If the transfer is overlapped this counter should be
-     * updated in 'WSAGetOverlappedResult()'
-     */
-    g_data.counts.recv_bytes += size;
-  }
+     handle_recv_overlapped (s, ov, &size);
 
   if (!exclude_this)
   {
-    char        res[100];
-    char        nbytes[20];
+    char        res [100];
+    char        nbytes [20];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
 
     if (num_bytes)
@@ -2029,23 +2057,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
              socket_number(s), bufs, DWORD_CAST(num_bufs), nbytes, flg,
              INET_addr_sockaddr(from), ov, func, res);
 
-    if (rc == NO_ERROR && g_cfg.dump_data)
-    {
-      WSABUF bufs2;
-
-      bufs2.buf = bufs->buf;
-      bufs2.len = num_bytes ? *num_bytes : size;
-      dump_wsabuf (&bufs2, 1);
-    }
-
-    if ((*g_data.WSAGetLastError)() != WSA_IO_PENDING)
-    {
-      if (g_cfg.GEOIP.enable)
-         dump_countries_sockaddr (from);
-
-      if (g_cfg.DNSBL.enable)
-         dump_DNSBL_sockaddr (from);
-    }
+    handle_recv_data (rc, bufs, num_bytes, size, from);
 
     if (ov)
        overlap_store (s, ov, size, TRUE);
@@ -2275,7 +2287,7 @@ EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_byt
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *transfered,
+EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *transferred,
                                            BOOL wait, DWORD *flags)
 {
   BOOL  rc;
@@ -2291,7 +2303,7 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
   /* MSDN says "This parameter must not be a NULL pointer."
    * But test anyway.
    */
-  if (transfered)
+  if (transferred)
      _itoa (bytes, xfer, 10);
 
   if (flags)
@@ -2300,10 +2312,10 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
   WSTRACE ("WSAGetOverlappedResult (%s, 0x%p, %s, %d, %s) --> %s",
            socket_number(s), ov, xfer, wait, flg, get_error(rc, 0));
 
-  if (transfered)
+  if (transferred)
   {
     overlap_recall (s, ov, bytes);
-    *transfered = bytes;
+    *transferred = bytes;
   }
 
   LEAVE_CRIT (!exclude_this);

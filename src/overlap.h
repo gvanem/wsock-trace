@@ -7,7 +7,7 @@
 typedef BOOL (WINAPI *func_WSAGetOverlappedResult) (
                            SOCKET         s,
                            WSAOVERLAPPED *ov,
-                           DWORD         *transfered,
+                           DWORD         *transferred,
                            BOOL           wait,
                            DWORD         *flags);
 
@@ -20,5 +20,6 @@ extern void overlap_store (SOCKET s, WSAOVERLAPPED *ov, DWORD num_bytes, BOOL is
 extern void overlap_recall (SOCKET s, const WSAOVERLAPPED *ov, DWORD bytes);
 extern void overlap_recall_all (const WSAEVENT *ev);
 extern void overlap_remove (SOCKET s);
+extern BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred, DWORD *ov_err);
 
 #endif /* _OVERLAP_H */

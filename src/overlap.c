@@ -47,7 +47,7 @@ struct overlapped {
        BOOL is_recv;
 
        /**
-        * Number of bytes expected in `WSARecv()` / `WSARecvFrom()` or <br>
+        * Max number of bytes expected in `WSARecv()` / `WSARecvFrom()` or <br>
         * number of bytes given in `WSASend()` or `WSASendTo()`.
         */
        DWORD bytes;
@@ -145,7 +145,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
   int    i, max = smartlist_len (ov_list);
   BOOL   modify = FALSE;
 
-  TRACE ("o: 0x%p, event: 0x%p, sock: %u\n",
+  TRACE ("o: 0x%p,  event: 0x%p, sock: %u\n",
          o, o ? o->hEvent : NULL, SOCKET_CAST(s));
 
   for (i = 0; i < max; i++)
@@ -272,4 +272,38 @@ void overlap_remove (SOCKET s)
     i--;
   }
   overlap_trace (-1, NULL);
+}
+
+/**
+ * Get the transfer count of an overlapped operation.
+ */
+BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred, DWORD *ov_err)
+{
+  WSAOVERLAPPED ov_copy;
+  char  err_buf [150] = "None";
+  DWORD flags = 0;
+  BOOL  rc = FALSE;
+
+  *transferred = 0;
+  *ov_err = WSA_IO_INCOMPLETE;
+
+  if (p_WSAGetOverlappedResult && HasOverlappedIoCompleted(ov))
+  {
+    ENTER_CRIT();
+    ov_copy = *ov;
+    rc = (*p_WSAGetOverlappedResult) (s, &ov_copy, transferred, FALSE, &flags);
+    LEAVE_CRIT (0);
+  }
+
+  if (rc)
+     *ov_err = NO_ERROR;
+  else
+  {
+    *ov_err = (*g_data.WSAGetLastError)();
+    ws_strerror (*ov_err, err_buf, sizeof(err_buf));
+  }
+
+  TRACE ("rc: %d, sock: %u, ov: 0x%p, flags: %lu, transferred: %lu, ov_err: %s\n",
+         rc, s, ov, flags, *transferred, *ov_err);
+  return (rc);
 }
