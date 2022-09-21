@@ -1911,7 +1911,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
   return (rc);
 }
 
-/*
+/**
  * Count the number of bytes in an array of 'WSABUF' structures.
  * Only used for counting bytes in 'WSASend*' calls.
  */
@@ -1932,21 +1932,22 @@ static DWORD count_wsabuf (const WSABUF *bufs, DWORD num_bufs)
  * should be updated in 'WSAGetOverlappedResult()'.
  *
  * But this may not work so maybe we need to hook
- * 'PostQueuedCompletionStatus()' and update the recv/transmit counters there?
+ * 'PostQueuedCompletionStatus()' and update the recv counters there?
  */
 static void handle_recv_overlapped (SOCKET s, const WSAOVERLAPPED *ov, DWORD *size)
 {
   DWORD transferred;
-  DWORD ov_err = WSA_IO_INCOMPLETE; /* assume overlapped operation is pending */
 
   if (!ov)
      g_data.counts.recv_bytes += *size;
 
-  else if (overlap_transferred(s, ov, &transferred, &ov_err) && ov_err == NO_ERROR)
+  else if (overlap_transferred(s, ov, &transferred))
   {
     *size = transferred;
     g_data.counts.recv_bytes += *size;
   }
+  else
+    *size = 0;  /* Unknown due to  WSA_IO_PENDING */
 }
 
 /**
@@ -1954,6 +1955,8 @@ static void handle_recv_overlapped (SOCKET s, const WSAOVERLAPPED *ov, DWORD *si
  */
 static void handle_recv_data (int rc, const WSABUF *bufs, const DWORD *num_bytes, DWORD size, struct sockaddr *from)
 {
+  char *ov_trace = overlap_trace_buf();
+
   if (rc == NO_ERROR && g_cfg.dump_data)
   {
     WSABUF bufs2;
@@ -1970,6 +1973,12 @@ static void handle_recv_data (int rc, const WSABUF *bufs, const DWORD *num_bytes
 
     if (g_cfg.DNSBL.enable)
        dump_DNSBL_sockaddr (from);
+  }
+
+  if (*ov_trace)
+  {
+    C_puts (ov_trace);
+    *ov_trace = '\0';
   }
 }
 
@@ -1993,8 +2002,8 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
 
   if (!exclude_this)
   {
-    char        res[100];
-    char        nbytes[20];
+    char        res [100];
+    char        nbytes [20];
     const char *flg = flags ? socket_flags(*flags) : "NULL";
 
     if (num_bytes)
@@ -2292,7 +2301,7 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
 {
   BOOL  rc;
   DWORD bytes = 0;
-  char  xfer[10]  = "<N/A>";
+  char  xfer [10] = "<N/A>";
   const char *flg = "<N/A>";
 
   CHECK_PTR (p_WSAGetOverlappedResult);

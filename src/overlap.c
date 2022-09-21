@@ -33,6 +33,8 @@
 
 func_WSAGetOverlappedResult  p_WSAGetOverlappedResult = NULL;
 
+static char ov_trace_buf [200];
+
 /** \struct overlapped
  *
  * Structure for remembering a socket and an overlapped structure.
@@ -169,6 +171,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
     smartlist_add (ov_list, ov);
     num_overlaps++;
   }
+
   ov->event = o ? o->hEvent : NULL;
   ov->bytes = num_bytes;
   overlap_trace (-1, NULL);
@@ -210,7 +213,8 @@ void overlap_recall_all (const WSAEVENT *event)
 
 /**
  * Match the socket `s` and overlapped pointer `o` against a previous overlapped
- * `WSARecvXX()` / `WSASendXX()` call. <br>
+ * `WSARecvXX()` / `WSASendXX()` call.
+ *
  * And do update the `g_data.counts.recv_bytes`
  * or `g_data.counts.send_bytes` statistics with the `bytes` value.
  */
@@ -275,35 +279,43 @@ void overlap_remove (SOCKET s)
 }
 
 /**
+ * Return a pointer to the trace buffer.
+ */
+char *overlap_trace_buf (void)
+{
+  return (ov_trace_buf);
+}
+
+/**
  * Get the transfer count of an overlapped operation.
  */
-BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred, DWORD *ov_err)
+BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred)
 {
   WSAOVERLAPPED ov_copy;
   char  err_buf [150] = "None";
+  BOOL  completed = FALSE;
   DWORD flags = 0;
   BOOL  rc = FALSE;
 
   *transferred = 0;
-  *ov_err = WSA_IO_INCOMPLETE;
+  ov_trace_buf[0] = '\0';
 
   if (p_WSAGetOverlappedResult && HasOverlappedIoCompleted(ov))
   {
     ENTER_CRIT();
+    completed = TRUE;
     ov_copy = *ov;
     rc = (*p_WSAGetOverlappedResult) (s, &ov_copy, transferred, FALSE, &flags);
     LEAVE_CRIT (0);
   }
+  if (!rc)
+     ws_strerror ((*g_data.WSAGetLastError)(), err_buf, sizeof(err_buf));
 
-  if (rc)
-     *ov_err = NO_ERROR;
-  else
+  if (g_cfg.trace_overlap >= 1 && g_cfg.trace_level >= g_cfg.trace_overlap)
   {
-    *ov_err = (*g_data.WSAGetLastError)();
-    ws_strerror (*ov_err, err_buf, sizeof(err_buf));
+    snprintf (ov_trace_buf, sizeof(ov_trace_buf),
+              "%*soverlap.c(%u): rc: %d, sock: %u, ov: 0x%p, transferred: %lu, err: %s, completed: %d\n",
+              g_cfg.trace_indent+2, "", __LINE__, rc, (unsigned int)s, ov, *transferred, err_buf, completed);
   }
-
-  TRACE ("rc: %d, sock: %u, ov: 0x%p, flags: %lu, transferred: %lu, ov_err: %s\n",
-         rc, s, ov, flags, *transferred, *ov_err);
-  return (rc);
+  return (rc && completed);
 }
