@@ -1228,6 +1228,12 @@ static char *shorten_path2 (const char *str, size_t max_len)
 /*
  * Show the retrieved information on all our modules;
  * PDB symbols etc.
+ *
+ * To get the needed .PDB files for a process, this command could be used:
+ * ```
+ * c:\> cdb -s -c g <the_program.exe>
+ * ```
+ * This will take some time for the SymbolServer program to download them.
  */
 static void print_modules_and_pdb_info (BOOL do_sort)
 {
