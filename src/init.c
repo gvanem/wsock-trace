@@ -1923,7 +1923,7 @@ WORD set_color (const WORD *col)
 
   if (attr != last_attr)
   {
-    FlushFileBuffers (g_data.console_hnd);
+ // FlushFileBuffers (g_data.console_hnd);
     SetConsoleTextAttribute (g_data.console_hnd, attr);
   }
 
