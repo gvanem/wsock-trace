@@ -217,6 +217,10 @@ typedef struct download_context {
  *  The MSDN decription on `INTERNET_STATUS_CALLBACK` is wrong.
  *  The `INTERNET_STATUS_CONNECTING_TO_SERVER` and `INTERNET_STATUS_CONNECTED_TO_SERVER`
  *  are strings. Ref: https://github.com/MicrosoftDocs/feedback/issues/2972
+ *
+ * \note
+ *  An old CodeProject article on the subject:
+ *  https://www.codeproject.com/Articles/822/Using-WinInet-HTTP-functions-in-Full-Asynchronous
  */
 static void CALLBACK download_callback (HINTERNET hnd,
                                         DWORD_PTR _ctx,
