@@ -315,7 +315,8 @@ BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred)
   {
     snprintf (ov_trace_buf, sizeof(ov_trace_buf),
               "%*soverlap.c(%u): rc: %d, sock: %u, ov: 0x%p, transferred: %lu, err: %s, completed: %d\n",
-              g_cfg.trace_indent+2, "", __LINE__, rc, (unsigned int)s, ov, *transferred, err_buf, completed);
+              g_cfg.trace_indent+2, "", __LINE__, rc, (unsigned int)s, ov, DWORD_CAST(*transferred),
+              err_buf, completed);
   }
   return (rc && completed);
 }
