@@ -378,9 +378,9 @@ static int config_get_line (FILE        *fil,
     break;
   }
 
-  (*line)++;
   *key_p = key;
-  *val_p = getenv_expand (val, val2, sizeof(val2));
+  *val_p = getenv_expand (val, val2, sizeof(val2), *line);
+  (*line)++;
   return (1);
 }
 
@@ -603,7 +603,7 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
 
 static FILE *open_config_file (const char *base_name)
 {
-  char *appdata, *env = getenv_expand ("WSOCK_TRACE", g_data.cfg_fname, sizeof(g_data.cfg_fname));
+  char *appdata, *env = getenv_expand ("WSOCK_TRACE", g_data.cfg_fname, sizeof(g_data.cfg_fname), 0);
   FILE *fil;
 
   TRACE (2, "%%WSOCK_TRACE%%=%s.\n", env);

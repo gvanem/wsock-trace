@@ -190,7 +190,7 @@ extern const char *dword_str (DWORD val);
 extern const char *qword_str (unsigned __int64 val);
 
 extern char       *_utoa10w (int value, int width, char *buf);
-extern char       *getenv_expand (const char *variable, char *buf, size_t size);
+extern char       *getenv_expand (const char *variable, char *buf, size_t size, unsigned line);
 extern int         ws_setenv (const char *env, const char *val, int overwrite);
 extern FILE       *fopen_excl (const char *file, const char *mode);
 extern int         file_exists (const char *fname);

@@ -1045,7 +1045,7 @@ const char *get_path (const char    *apath,
   else p = path;
 
   if (strchr (p, '%'))
-     p = getenv_expand (p, path, sizeof(path));
+     p = getenv_expand (p, path, sizeof(path), 0);
 
   save = g_cfg.use_full_path;
   g_cfg.use_full_path = 1;
@@ -1843,10 +1843,11 @@ char *str_reverse (char *str)
  * The expanded result is copied into user supplied `buf`. \n
  * If expansion fails, it will return `variable` unchanged into `buf`.
  */
-char *getenv_expand (const char *variable, char *buf, size_t size)
+char *getenv_expand (const char *variable, char *buf, size_t size, unsigned line)
 {
   char *rc, *env = NULL, *orig_var = (char*) variable;
-  char  buf1 [MAX_ENV_VAR], buf2 [MAX_ENV_VAR];
+  char  buf1 [MAX_ENV_VAR];
+  char  buf2 [MAX_ENV_VAR];
   DWORD ret;
 
   /* Don't use getenv(); it doesn't find variable added after program was
@@ -1865,11 +1866,20 @@ char *getenv_expand (const char *variable, char *buf, size_t size)
     ret = ExpandEnvironmentStrings (variable, buf2, sizeof(buf2));
     if (ret > 0 && ret < sizeof(buf2) &&
         !strchr(buf2, '%'))    /* no variables still un-expanded */
-      env = buf2;
+       env = buf2;
   }
 
   rc = env ? str_ncpy(buf, env, size) : orig_var;
   TRACE (3, "env: '%s', expanded: '%s'\n", orig_var, rc);
+
+  if (!env && g_cfg.trace_level > 0)
+  {
+    const char *p = strchr (variable, '%');
+
+    if (p && !strchr(p+1, '%') && line)
+       fprintf (stderr, "Illegal syntax in env-var '%s' at %s (%u).\n",
+                variable, g_data.cfg_fname, line);
+  }
   return (rc);
 }
 

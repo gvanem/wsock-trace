@@ -2410,7 +2410,7 @@ static char *add_app (const char *app, BOOL *exist, BOOL *is_native)
     *exist = TRUE;
     return strdup (app);
   }
-  exp = getenv_expand (app, path, sizeof(path));
+  exp = getenv_expand (app, path, sizeof(path), 0);
   if (!isalpha(exp[0]) || exp[1] != ':')
      return strdup (exp);
 
@@ -2511,7 +2511,7 @@ static struct rule_entry *parse_program_rule (const char *rule_name, const char 
     else if (!r->embed_ctxt && !strncmp(w, "EmbedCtxt=", 10))
     {
       char  context [_MAX_PATH];
-      char *exp = getenv_expand (w+10, context, sizeof(context));
+      char *exp = getenv_expand (w+10, context, sizeof(context), 0);
 
       r->embed_ctxt = strdup (exp);
     }
