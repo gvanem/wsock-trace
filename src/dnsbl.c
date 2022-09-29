@@ -450,6 +450,9 @@ static void DNSBL_parse_and_add (smartlist_t **prev, const char *file, smartlist
   {
     smartlist_t *sl = smartlist_read_file (file, parser);
 
+    if (!sl)
+       return;
+
     if (*prev)
     {
       smartlist_append (*prev, sl);

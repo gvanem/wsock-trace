@@ -22,6 +22,7 @@ THIS_FILE  = $(firstword $(MAKEFILE_LIST))
 # This becomes the default database and .pem directory.
 #
 DATABASE_DIR = $(realpath .)
+ABS_SRCDIR   = $(realpath ..)
 
 #
 # Use CRT debug (and 'ENABLE_DEBUG').
@@ -169,7 +170,8 @@ CFLAGS += -I. -I./libloc/windows \
 # Does not work with Cygwin
 #
 ifneq ($(CC),gcc)
-  CFLAGS += -DABS_SRCDIR=\"$(realpath ..)\"
+  CFLAGS += -DABS_SRCDIR=\"$(ABS_SRCDIR)\" \
+            -DLIBLOC_DEFAULT_DATABASE_PATH=\"$(DATABASE_DIR)\"
 endif
 
 ifeq ($(USE_OPENSSL),1)
