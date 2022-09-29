@@ -28,6 +28,10 @@
 #include "network.h"
 #include "writer.h"
 
+#ifndef LIBLOC_DEFAULT_DATABASE_PATH
+#define LIBLOC_DEFAULT_DATABASE_PATH "."
+#endif
+
 /* Declare global context */
 struct loc_ctx* loc_ctx;
 
@@ -120,6 +124,10 @@ PyMODINIT_FUNC PyInit__location(void) {
 
 	// Version
 	if (PyModule_AddStringConstant(m, "__version__", PACKAGE_VERSION))
+		return NULL;
+
+	// Default Database Path
+	if (PyModule_AddStringConstant(m, "DATABASE_PATH", LIBLOC_DEFAULT_DATABASE_PATH))
 		return NULL;
 
 	// AS

@@ -753,5 +753,8 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 
 	fwrite(&header, 1, sizeof(header), f);
 
+	// Flush everything
+	fflush(f);
+
 	return r;
 }

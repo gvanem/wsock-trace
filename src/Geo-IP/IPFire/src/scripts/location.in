@@ -60,7 +60,7 @@ class CLI(object):
 
 		# database
 		parser.add_argument("--database", "-d",
-			default="@databasedir@/database.db", help=_("Path to database"),
+			default=location.DATABASE_PATH, help=_("Path to database"),
 		)
 
 		# public key

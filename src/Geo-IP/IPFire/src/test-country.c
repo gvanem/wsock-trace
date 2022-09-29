@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
 
 	// Lookup an address in the subnet
 	err = loc_database_get_country(db, &country, "YY");
-	if (err) {
+	if (err || !country) {
 		fprintf(stderr, "Could not find country: YY\n");
 		exit(EXIT_FAILURE);
 	}

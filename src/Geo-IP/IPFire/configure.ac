@@ -120,6 +120,19 @@ CC_CHECK_FLAGS_APPEND([my_LDFLAGS], [LDFLAGS], [-fno-semantic-interposition])
 
 # ------------------------------------------------------------------------------
 
+AC_ARG_WITH([database-path],
+	AS_HELP_STRING([--with-database-path], [The default database path]),
+	[], [with_database_path=/var/lib/${PACKAGE_NAME}/database.db]
+)
+
+if test -z "${with_database_path}"; then
+	AC_MSG_ERROR([The default database path is empty])
+fi
+
+AC_DEFINE_UNQUOTED([LIBLOC_DEFAULT_DATABASE_PATH], ["${with_database_path}"],
+	[The default path for the database])
+AC_SUBST([DEFAULT_DATABASE_PATH], [${with_database_path}])
+
 AC_ARG_WITH([systemd],
 	AS_HELP_STRING([--with-systemd], [Enable systemd support.])
 )
@@ -205,6 +218,7 @@ AC_MSG_RESULT([
         cflags:                 ${CFLAGS}
         ldflags:                ${LDFLAGS}
 
+        database path:          ${with_database_path}
         debug:                  ${enable_debug}
         systemd support:        ${have_systemd}
 

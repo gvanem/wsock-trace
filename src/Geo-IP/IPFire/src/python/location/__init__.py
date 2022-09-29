@@ -22,3 +22,13 @@ from _location import *
 
 # Initialise logging
 from . import logger
+
+def open(path=None):
+	"""
+		Opens the database at path, or opens the default database.
+	"""
+	if not path:
+		path = DATABASE_PATH
+
+	# Open the database
+	return Database(path)
