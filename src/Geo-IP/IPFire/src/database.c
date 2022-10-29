@@ -263,7 +263,7 @@ static int loc_database_mmap(struct loc_database* db) {
 
 	DEBUG(db->ctx, "Mapped database of %zu byte(s) at %p\n", (size_t)db->length, db->data);
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__CYGWIN__)
 	// Tell the system that we expect to read data randomly
 	r = madvise(db->data, db->length, MADV_RANDOM);
 	if (r) {

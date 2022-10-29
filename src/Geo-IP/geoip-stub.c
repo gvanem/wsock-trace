@@ -3,7 +3,7 @@
  * \ingroup Geoip
  *
  * \brief
- * Simple stub-code for 'geoip.dll'. \n
+ * Simple stub-code for 'geoip-$(CPU).dll'. \n
  * Adds minimal stub-functions needed by `../ip2loc.c` etc.
  */
 #include <stdint.h>
@@ -50,11 +50,11 @@ const char *dword_str (DWORD val)
  */
 const char *get_date_str (const SYSTEMTIME *st)
 {
-  static char time [30];
+  static char date [30];
   static char months [3*12] = { "JanFebMarAprMayJunJulAugSepOctNovDec" };
-  snprintf (time, sizeof(time), "%02d %.3s %04d",
+  snprintf (date, sizeof(date), "%02d %.3s %04d",
             st->wDay, months + 3*(st->wMonth-1), st->wYear);
-  return (time);
+  return (date);
 }
 
 /**

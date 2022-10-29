@@ -14,7 +14,7 @@
 	Lesser General Public License for more details.
 */
 
-#ifndef _WIN32
+#if !(defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)))
 #  include <arpa/nameser.h>
 #  include <arpa/nameser_compat.h>
 #  include <resolv.h>
@@ -46,7 +46,7 @@ static int parse_timestamp(const unsigned char* txt, time_t* t) {
     return 0;
 }
 
-#if !defined(_WIN32)
+#if !(defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)))
 LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
         unsigned int version, time_t* t) {
     // Initialise the resolver
