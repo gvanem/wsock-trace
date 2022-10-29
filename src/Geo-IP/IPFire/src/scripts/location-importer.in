@@ -1341,8 +1341,10 @@ class CLI(object):
 				"ap-southeast-2": "AU",
 				"ap-southeast-3": "MY",
 				"ap-southeast-4": "AU",
+				"ap-southeast-6": "AP", # XXX: Precise location not documented anywhere
 				"ap-northeast-1": "JP",
 				"ca-central-1": "CA",
+				"ca-west-1": "CA",
 				"eu-central-1": "DE",
 				"eu-central-2": "CH",
 				"eu-west-1": "IE",
@@ -1427,37 +1429,34 @@ class CLI(object):
 	def _update_overrides_for_spamhaus_drop(self):
 		downloader = location.importer.Downloader()
 
-		ip_urls = [
-					"https://www.spamhaus.org/drop/drop.txt",
-					"https://www.spamhaus.org/drop/edrop.txt",
-					"https://www.spamhaus.org/drop/dropv6.txt"
+		ip_lists = [
+					("SPAMHAUS-DROP", "https://www.spamhaus.org/drop/drop.txt"),
+					("SPAMHAUS-EDROP", "https://www.spamhaus.org/drop/edrop.txt"),
+					("SPAMHAUS-DROPV6", "https://www.spamhaus.org/drop/dropv6.txt")
 				]
 
-		asn_urls = [
-					"https://www.spamhaus.org/drop/asndrop.txt"
+		asn_lists = [
+					("SPAMHAUS-ASNDROP", "https://www.spamhaus.org/drop/asndrop.txt")
 				]
 
-		for url in ip_urls:
-			# Fetch IP list
+		for name, url in ip_lists:
+			# Fetch IP list from given URL
 			f = downloader.retrieve(url)
 
 			# Split into lines
 			fcontent = f.readlines()
 
-			# Conduct a very basic sanity check to rule out CDN issues causing bogus DROP
-			# downloads.
-			if len(fcontent) > 10:
-				self.db.execute("""
-					DELETE FROM autnum_overrides WHERE source = 'Spamhaus ASN-DROP list';
-					DELETE FROM network_overrides WHERE source = 'Spamhaus DROP lists';
-				""")
-			else:
-				log.error("Spamhaus DROP URL %s returned likely bogus file, ignored" % url)
-				continue
-
-			# Iterate through every line, filter comments and add remaining networks to
-			# the override table in case they are valid...
 			with self.db.transaction():
+				# Conduct a very basic sanity check to rule out CDN issues causing bogus DROP
+				# downloads.
+				if len(fcontent) > 10:
+					self.db.execute("DELETE FROM network_overrides WHERE source = %s", name)
+				else:
+					log.error("%s (%s) returned likely bogus file, ignored" % (name, url))
+					continue
+
+				# Iterate through every line, filter comments and add remaining networks to
+				# the override table in case they are valid...
 				for sline in fcontent:
 					# The response is assumed to be encoded in UTF-8...
 					sline = sline.decode("utf-8")
@@ -1475,8 +1474,8 @@ class CLI(object):
 
 					# Sanitize parsed networks...
 					if not self._check_parsed_network(network):
-						log.warning("Skipping bogus network found in Spamhaus DROP URL %s: %s" % \
-							(url, network))
+						log.warning("Skipping bogus network found in %s (%s): %s" % \
+							(name, url, network))
 						continue
 
 					# Conduct SQL statement...
@@ -1488,17 +1487,28 @@ class CLI(object):
 						) VALUES (%s, %s, %s)
 						ON CONFLICT (network) DO UPDATE SET is_drop = True""",
 						"%s" % network,
-						"Spamhaus DROP lists",
+						name,
 						True
 					)
 
-		for url in asn_urls:
+		for name, url in asn_lists:
 			# Fetch URL
 			f = downloader.retrieve(url)
 
-			# Iterate through every line, filter comments and add remaining ASNs to
-			# the override table in case they are valid...
+			# Split into lines
+			fcontent = f.readlines()
+
 			with self.db.transaction():
+				# Conduct a very basic sanity check to rule out CDN issues causing bogus DROP
+				# downloads.
+				if len(fcontent) > 10:
+					self.db.execute("DELETE FROM autnum_overrides WHERE source = %s", name)
+				else:
+					log.error("%s (%s) returned likely bogus file, ignored" % (name, url))
+					continue
+
+				# Iterate through every line, filter comments and add remaining ASNs to
+				# the override table in case they are valid...
 				for sline in f.readlines():
 					# The response is assumed to be encoded in UTF-8...
 					sline = sline.decode("utf-8")
@@ -1518,8 +1528,8 @@ class CLI(object):
 
 					# Filter invalid ASNs...
 					if not self._check_parsed_asn(asn):
-						log.warning("Skipping bogus ASN found in Spamhaus DROP URL %s: %s" % \
-							(url, asn))
+						log.warning("Skipping bogus ASN found in %s (%s): %s" % \
+							(name, url, asn))
 						continue
 
 					# Conduct SQL statement...
@@ -1531,7 +1541,7 @@ class CLI(object):
 						) VALUES (%s, %s, %s)
 						ON CONFLICT (number) DO UPDATE SET is_drop = True""",
 						"%s" % asn,
-						"Spamhaus ASN-DROP list",
+						name,
 						True
 					)
 

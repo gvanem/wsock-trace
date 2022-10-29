@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 ###############################################################################
 #                                                                             #
 # libloc - A library to determine the location of someone on the Internet     #
@@ -48,6 +47,9 @@ class OutputWriter(object):
 		self.family = family
 		self.directory = directory
 
+		# Tag
+		self.tag = self._make_tag()
+
 		# Open output file
 		if f:
 			self.f = f
@@ -57,9 +59,6 @@ class OutputWriter(object):
 			self.f = io.BytesIO()
 		else:
 			self.f = io.StringIO()
-
-		# Tag
-		self.tag = self._make_tag()
 
 		# Call any custom initialization
 		self.init()

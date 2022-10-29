@@ -56,8 +56,7 @@ databasedir = $(localstatedir)/lib/location
 pkgconfigdir = $(libdir)/pkgconfig
 
 # Overwrite Python path
-#pkgpythondir = $(pythondir)/location
-pkgpythondir = /usr/lib/python3/dist-packages/location
+pkgpythondir = $(pythondir)/location
 
 %: %.in Makefile
 	$(SED_PROCESS)
@@ -233,8 +232,7 @@ EXTRA_DIST += \
 	src/perl/t/Location.t \
 	src/perl/typemap
 
-.PHONY: build-perl
-build-perl:
+build-perl: src/libloc.la
 	@mkdir -p $(builddir)/src/perl/{lib,t}
 	@test -e $(builddir)/src/perl/Location.xs || ln -s --relative $(srcdir)/src/perl/Location.xs $(builddir)/src/perl/
 	@test -e $(builddir)/src/perl/MANIFEST || ln -s --relative $(srcdir)/src/perl/MANIFEST $(builddir)/src/perl/
@@ -243,30 +241,33 @@ build-perl:
 	@test -e $(builddir)/src/perl/t/Location.t || ln -s --relative $(srcdir)/src/perl/t/Location.t $(builddir)/src/perl/t/
 	@test -e $(builddir)/src/perl/typemap || ln -s --relative $(srcdir)/src/perl/typemap $(builddir)/src/perl/
 
-	cd $(builddir)/src/perl && $(PERL) Makefile.PL PREFIX="$(prefix)" \
+	cd $(builddir)/src/perl && $(PERL) Makefile.PL NO_PACKLIST=1 NO_PERLLOCAL=1 \
+		INSTALLDIRS=vendor \
 		INC="-I$(abs_srcdir)/src" LIBS="-L$(abs_builddir)/src/.libs -lloc"
-	cd $(builddir)/src/perl && $(MAKE) LD_RUN_PATH=
+	cd $(builddir)/src/perl && $(MAKE)
+	touch build-perl
 
 .PHONY: check-perl
-check-perl: testdata.db
+check-perl: testdata.db build-perl
 	cd $(builddir)/src/perl && $(MAKE) LD_LIBRARY_PATH="$(abs_builddir)/src/.libs" test \
 		database="../../$<" keyfile="$(abs_srcdir)/examples/public-key.pem"
 
 .PHONY: install-perl
-install-perl:
-	cd $(builddir)/src/perl && $(MAKE) install DESTIDR=$(DESTDIR)
+install-perl: build-perl
+	cd $(builddir)/src/perl && $(MAKE) install DESTDIR=$(DESTDIR)
 
 .PHONY: clean-perl
 clean-perl:
 	cd $(builddir)/src/perl && $(MAKE) distclean
+	rm -f build-perl
 
 .PHONY: uninstall-perl
 uninstall-perl:
-	rm -rvf \
-		$(DESTDIR)/$(prefix)/lib/*/perl/*/Location.pm \
-		$(DESTDIR)/$(prefix)/lib/*/perl/*/auto/Location \
-		$(DESTDIR)/$(prefix)/lib/*/perl/*/perllocal.pod \
-		$(DESTDIR)/$(prefix)/man/man3/Location.3pm
+	rm -vf \
+		$(DESTDIR)/@PERL_MODPATH@/Location.pm \
+		$(DESTDIR)/@PERL_MODPATH@/auto/Location/Location.so \
+		$(DESTDIR)/@PERL_MANPATH@/Location.3pm
+	-rmdir $(DESTDIR)/@PERL_MODPATH@/auto/Location
 
 bin_SCRIPTS = \
 	src/scripts/location \
@@ -311,7 +312,15 @@ EXTRA_DIST += \
 # ------------------------------------------------------------------------------
 
 dist_database_DATA = \
-	src/signing-key.pem
+	data/database.db \
+	data/signing-key.pem
+
+install-data-hook:
+	chmod 444 $(DESTDIR)$(databasedir)/database.db
+
+.PHONY: update-database
+update-database:
+	curl https://location.ipfire.org/databases/1/location.db.xz | xz -d > data/database.db
 
 # ------------------------------------------------------------------------------
 
@@ -326,15 +335,11 @@ TESTS_LDADD = \
 
 TESTS_ENVIRONMENT = \
 	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
-	TEST_DATA_DIR="$(abs_top_srcdir)/tests/data"
+	TEST_DATA_DIR="$(abs_top_srcdir)/data"
 
 TESTS = \
 	$(check_PROGRAMS) \
 	$(dist_check_SCRIPTS)
-
-EXTRA_DIST += \
-	tests/data/location-2022-03-30.db \
-	tests/data/signing-key.pem
 
 CLEANFILES += \
 	testdata.db
@@ -444,7 +449,7 @@ src_test_address_LDADD = \
 
 MANPAGES = \
 	$(MANPAGES_3) \
-	$(MANPAGES_8)
+	$(MANPAGES_1)
 
 MANPAGES_3 = \
 	man/libloc.3 \
@@ -458,12 +463,12 @@ MANPAGES_3 = \
 	man/loc_set_log_fn.3 \
 	man/loc_set_log_priority.3
 
-MANPAGES_8 = \
-	man/location.8
+MANPAGES_1 = \
+	man/location.1
 
-MANPAGES_TXT   = $(MANPAGES_TXT_3) $(MANPAGES_TXT_8)
+MANPAGES_TXT   = $(MANPAGES_TXT_3) $(MANPAGES_TXT_1)
 MANPAGES_TXT_3 = $(patsubst %.3,%.txt,$(MANPAGES_3))
-MANPAGES_TXT_8 = $(patsubst %.8,%.txt,$(MANPAGES_8))
+MANPAGES_TXT_1 = $(patsubst %.1,%.txt,$(MANPAGES_1))
 MANPAGES_HTML  = $(patsubst %.txt,%.html,$(MANPAGES_TXT))
 MANPAGES_XML   = $(patsubst %.txt,%.xml,$(MANPAGES_TXT))
 
@@ -511,7 +516,7 @@ man/%.xml: man/%.txt man/asciidoc.conf
 man/%.3: man/%.xml
 	$(XSLTPROC_COMMAND_MAN)
 
-man/%.8: man/%.xml
+man/%.1: man/%.xml
 	$(XSLTPROC_COMMAND_MAN)
 
 man/%.html: man/%.txt man/asciidoc.conf

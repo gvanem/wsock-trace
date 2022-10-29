@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
 	}
 
 	// Open another public key
-	public_key = freopen(ABS_SRCDIR "/src/signing-key.pem", "r", public_key);
+	public_key = freopen(ABS_SRCDIR "/data/signing-key.pem", "r", public_key);
 	if (!public_key) {
 		fprintf(stderr, "Could not open public key file: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);

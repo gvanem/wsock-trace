@@ -239,6 +239,8 @@ ERROR:
 	Maps the entire database into memory
 */
 static int loc_database_mmap(struct loc_database* db) {
+	int r;
+
 	// Get file descriptor
 	int fd = fileno(db->f);
 
@@ -263,7 +265,7 @@ static int loc_database_mmap(struct loc_database* db) {
 
 #ifndef _WIN32
 	// Tell the system that we expect to read data randomly
-	int r = madvise(db->data, db->length, MADV_RANDOM);
+	r = madvise(db->data, db->length, MADV_RANDOM);
 	if (r) {
 		ERROR(db->ctx, "madvise() failed: %m\n");
 		return r;
@@ -508,7 +510,6 @@ LOC_EXPORT int loc_database_new(struct loc_ctx* ctx, struct loc_database** datab
 		goto ERROR;
 
 	*database = db;
-
 	return 0;
 
 ERROR:
@@ -645,8 +646,11 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 		}
 	}
 
+	int sig1_valid = 0;
+	int sig2_valid = 0;
+
 	// Check first signature
-	if (db->signature1.data) {
+	if (db->signature1.length) {
 		hexdump(db->ctx, db->signature1.data, db->signature1.length);
 
 		r = EVP_DigestVerifyFinal(mdctx,
@@ -654,19 +658,19 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 
 		if (r == 0) {
 			DEBUG(db->ctx, "The first signature is invalid\n");
-			r = 1;
 		} else if (r == 1) {
 			DEBUG(db->ctx, "The first signature is valid\n");
-			r = 0;
+			sig1_valid = 1;
 		} else {
 			ERROR(db->ctx, "Error verifying the first signature: %s\n",
 				ERR_error_string(ERR_get_error(), NULL));
 			r = -1;
+			goto CLEANUP;
 		}
 	}
 
 	// Check second signature only when the first one was invalid
-	if (r && db->signature2.data) {
+	if (db->signature2.length) {
 		hexdump(db->ctx, db->signature2.data, db->signature2.length);
 
 		r = EVP_DigestVerifyFinal(mdctx,
@@ -674,20 +678,25 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 
 		if (r == 0) {
 			DEBUG(db->ctx, "The second signature is invalid\n");
-			r = 1;
 		} else if (r == 1) {
 			DEBUG(db->ctx, "The second signature is valid\n");
-			r = 0;
+			sig2_valid = 1;
 		} else {
 			ERROR(db->ctx, "Error verifying the second signature: %s\n",
 				ERR_error_string(ERR_get_error(), NULL));
-			r = -1;
+			goto CLEANUP;
 		}
 	}
 
 	clock_t end = clock();
 	INFO(db->ctx, "Signature checked in %.4fms\n",
 		(double)(end - start) / CLOCKS_PER_SEC * 1000);
+
+	// Check if at least one signature as okay
+	if (sig1_valid || sig2_valid)
+		r = 0;
+	else
+		r = 1;
 
 CLEANUP:
 	// Cleanup

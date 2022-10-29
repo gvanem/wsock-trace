@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 ###############################################################################
 #                                                                             #
 # libloc - A library to determine the location of someone on the Internet     #
@@ -19,6 +18,7 @@
 
 # Import everything from the C module
 from _location import *
+from _location import __version__
 
 # Initialise logging
 from . import logger

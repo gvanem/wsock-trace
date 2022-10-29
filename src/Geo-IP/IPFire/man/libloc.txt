@@ -39,7 +39,7 @@ either version 2.1 of the License, or (at your option) any later version.
 
 == See Also
 
-link:location[8]
+link:location[1]
 
 == Bug Reports
 

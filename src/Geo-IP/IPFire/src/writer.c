@@ -102,6 +102,13 @@ LOC_EXPORT int loc_writer_new(struct loc_ctx* ctx, struct loc_writer** writer,
 		return r;
 	}
 
+	// Add an empty string to the stringpool
+	r = loc_stringpool_add(w->pool, "");
+	if (r) {
+		loc_writer_unref(w);
+		return r;
+	}
+
 	// Initialize the network tree
 	r = loc_network_tree_new(ctx, &w->networks);
 	if (r) {
@@ -740,7 +747,7 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 
 	if (writer->signature2_length) {
 		DEBUG(writer->ctx, "Copying second signature of %zu byte(s)\n",
-			writer->signature1_length);
+			writer->signature2_length);
 
 		memcpy(header.signature2, writer->signature2, writer->signature2_length);
 		header.signature2_length = htobe16(writer->signature2_length);

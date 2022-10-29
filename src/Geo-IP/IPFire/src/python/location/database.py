@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 	A lightweight wrapper around psycopg2.
 

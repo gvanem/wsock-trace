@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 ###############################################################################
 #                                                                             #
 # libloc - A library to determine the location of someone on the Internet     #
