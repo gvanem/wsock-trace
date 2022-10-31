@@ -24,7 +24,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   together with the programs *PDB*-file, the filename, line-number of the calling
   function-name is shown. In the above example, [`WSAStartup()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms742213(v=vs.85).aspx)
   is called from `ahost.c`, line 68. Which should be 53 bytes into the `main()` function.
-  This should be **[here](https://github.com/c-ares/c-ares/blob/master/src/tools/ahost.c#L68)**.
+  This should be **[here](https://github.com/c-ares/c-ares/blob/main/src/tools/ahost.c#L68)**.
 
 * *Precise Timestamps*: All trace-lines starts with a precise timestamp obtained
   from [`QueryPerformanceCounter()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms644904(v=vs.85).aspx).<br>
