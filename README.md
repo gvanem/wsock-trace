@@ -40,8 +40,8 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * *IP-Country* information thanks to the **[MaxMind](https://www.maxmind.com/en/geoip2-services-and-databases)**
   Lite databases. Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
-  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L208)
-  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L209)
+  (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L213)
+  and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L214)
   are always enabled).
 
 * *IP-Location* information (City and Region) from  **[IP2Location](https://github.com/chrislim2888/IP2Location-C-Library)**.
@@ -62,7 +62,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 
 * *Slowdown*; For testing *too fast programs*, all receive, transmit, `select()` and `WSAPoll()`
   calls can be delayed a number of milli-seconds. E.g. slowing down a `recv()` call is
-  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L81)
+  controlled by `recv_delay = 0` in [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L82)
   config-file.
 
 * *Firewall* activity; report activity causing events from the *Window Filtering Platform* (the *Internet Connection Firewall*; ICF).
@@ -88,7 +88,19 @@ do this:
     IP2Location LITE [**database**](https://lite.ip2location.com/database/ip-country-region-city).
     Or in case you have an account, go [**here**](https://lite.ip2location.com/database-download).
   * Download and use a file named like `IP2LOCATION-LITE-DBx.IPV6.BIN`. <br>
-    Such a file contains both IPv4 and IPv6 records.
+    Such a file contains both IPv4 and IPv6 records. A `download-ip2loc.bat` like this could do
+    it automatically:
+    ```
+    @echo off
+    setlocal
+    ::
+    :: Fill in this from the login-page
+    ::
+    if %IP2LOCATION_TOKEN. == . set IP2LOCATION_TOKEN=xxxx
+    curl --output IP2LOCATION-LITE-DB11.IPV6.BIN.zip ^
+       "https://www.ip2location.com/download/?token=%IP2LOCATION_TOKEN%&file=DB11LITEBINIPV6"
+    unzip IP2LOCATION-LITE-DB11.IPV6.BIN.zip
+    ```
   * Copy `IP2LOCATION-LITE-DBx.IPV6.BIN` into your `%APPDATA%` directory and edit the keyword in
     the `[geoip]` section to read: <br>
     `ip2location_bin_file = %APPDATA%\IP2LOCATION-LITE-DBx.IPV6.BIN`
@@ -104,25 +116,29 @@ If the `all` command succeeded, you can do the respective *make* `install` comma
 
 | Builder    | *make* `all`command | *make* `install` result |
 | :--------- | :--- | :--- |
-| CygWin     | make -f Makefile.CygWin | `cp wsock_trace_cyg.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg.a` to `/usr/lib`  |
-| MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw.a` to  `$(MINGW32)/lib`|
-| MSVC | nmake -f makefile.vc6 | `copy wsock_trace.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
+| CygWin     | make -f Makefile.CygWin | `cp wsock_trace_cyg*.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg*.a` to `/usr/lib`  |
+| MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw*.a` to  `$(MINGW32)/lib`|
+| MSVC | nmake -f makefile.vc6 | `copy wsock_trace*.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
 
 *Notes:*
-  * For a `WIN64` build, the above files will have an extra `_x64` suffix.
+  * For a `WIN32` build, the above files will have an `-x86` suffix.
+  * For a `WIN64` build, the above files will have an `-x64` suffix.
   * And for a `USE_CRT_DEBUG = 1` build, the above files will have an extra `_d` suffix.
-  * So for a MinGW, `WIN64` debug-build, the files are named `wsock_trace_mw_x64_d.dll` and
-    `libwsock_trace_mw_x64_d.a`.
+  * So for a MinGW, `WIN64` debug-build, the files are named `wsock_trace_mw_d-x64.dll` and
+    `libwsock_trace_mw_d-x64.a`.
 
 ### Usage
 
 Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_32.lib`):
 
-| Builder  | Library |
-| :------- | :------ |
-| CygWin   | `libwsock_trace_cyg.a` |
-| MinGW    | `libwsock_trace_mw.a` |
-| MSVC     | `wsock_trace.lib` |
+| Builder  | Platform | Library |
+| :------- | :------  | :------ |
+| CygWin   | `x86`    | `libwsock_trace_cyg-x86.a` |
+| CygWin   | `x64`    | `libwsock_trace_cyg-x64.a` |
+| MinGW    | `x86`    | `libwsock_trace_mw-x86.a`  |
+| MinGW    | `x64`    | `libwsock_trace_mw-x64.a`  |
+| MSVC     | `x86`    | `wsock_trace-x86.lib`      |
+| MSVC     | `x64`    | `wsock_trace-x64.lib`      |
 
 Thus most normal Winsock calls are traced on entry and exit.
 
@@ -151,8 +167,8 @@ at startup. Read it's contents; the comments therein should be self-explanatory.
 If `wsock_trace` is not found in one of the above directories, the default
 `trace_level` is set to 1.
 
-There is currently no `install.bat` file for Wsock-trace. So you should copy the following files (here at GitHub) to your <br>
-`%APPDATA%` directory:
+There is currently no `install.bat` file for Wsock-trace. So you should copy the following files (here at GitHub) <br>
+to your `%APPDATA%` directory:
 ```
   wsock_trace
   GeoIP.csv
@@ -335,22 +351,22 @@ is running. You'll see a lot of **DROP**-events like:
 ### Implementation notes
 
 The names of the import libraries and the names of the 32-bit .DLLs are:
-  * For MSVC:      `wsock_trace.lib` and `wsock_trace.dll` .
-  * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw.dll` .
-  * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg.dll`.
+  * For MSVC:      `wsock_trace.lib` and `wsock_trace-x86.dll` .
+  * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw-x86.dll` .
+  * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg-x86.dll`.
 
 And the 64-bit equivalents:
-  * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace_x64.dll` .
-  * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw_x64.dll` .
-  * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg_x64.dll`.
+  * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace-x64.dll` .
+  * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw-x64.dll` .
+  * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg-x64.dll`.
 
 These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications
-using `wsock_trace.lib` needs not to be re-linked when I do change the inner
+using `wsock_trace*.lib` needs not to be re-linked when I do change the inner
 workings of the Wsock-trace source code.
 As long as the ABI is stable (e.g. not adding new functions to the
-[`wsock_trace.def`](https://github.com/gvanem/wsock-trace/blob/master/src/wsock_trace.def)
-file), the application using `wsock_trace.dll` should work the same.
+[`wsock_trace-x86.def`](https://github.com/gvanem/wsock-trace/blob/master/src/wsock_trace-x86.def)
+file), the application using `wsock_trace*.dll` should work the same.
 
 Note that some virus scanners may find the behaviour of programs linked to
 `wsock_trace.lib` suspicious.
@@ -363,7 +379,7 @@ Note that some virus scanners may find the behaviour of programs linked to
    2. LuaJIT-script integration; use a `*.lua` file to exclude/include processes and/or
       functions to trace.
 
-   3. Injecting `wsock_trace.dll` into a remote process. Ref:
+   3. Injecting `wsock_trace-*.dll` into a remote process. Ref:
       [**https://www.viksoe.dk/code/wepmetering.htm**](https://www.viksoe.dk/code/wepmetering.htm).
 
    4. Optionally load [**Wireshark's**](https://www.wireshark.org) `libwireshark.dll` to dissect
