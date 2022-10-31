@@ -1521,6 +1521,9 @@ void wsock_trace_init (void)
     fclose (file);
   }
 
+  if (g_cfg.compact)
+     g_cfg.dump_data = FALSE;
+
   is_msvc   = image_opt_header_is_msvc (mod);
   is_mingw  = image_opt_header_is_mingw (mod);
   is_cygwin = image_opt_header_is_cygwin (mod);
