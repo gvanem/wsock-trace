@@ -306,7 +306,7 @@ $(OBJ_DIR)\mhook-test.obj: mhook\mhook.c
 # Simply copy over
 #
 $(OBJ_DIR)\wsock_trace$(_D)-x86.def: wsock_trace-x86.def
-	copy $< $(OBJ_DIR)\wsock_trace$(_D)-x86.def
+	copy wsock_trace-x86.def $(OBJ_DIR)\wsock_trace$(_D)-x86.def
 	@echo
 
 #
