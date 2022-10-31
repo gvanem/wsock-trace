@@ -4,6 +4,9 @@
 
 #include <GeoipMMDB/maxminddb.h>
 #include <GeoipMMDB/maxminddb-compat-util.h>
+
+// todo:
+//
 // #include <DB-IP/db-ip.h>
 // #include <IP2Location/ip2location.h>
 // #include <SpamHaus/DROP.h>
@@ -164,7 +167,7 @@ bool geoip_add_provider (const char *provider_name, const geoip_provider_st *pro
 /*
  * Delete a single provider
  */
-static int geoip_del_provider (int i)
+int geoip_del_provider (int i)
 {
   geoip_provider_st *p = g_providers + i;
   int   rc = 0;
@@ -196,7 +199,7 @@ bool geoip_del_providers (void)
   return (true);
 }
 
-static int geoip_dump_provider (int i)
+int geoip_dump_provider (int i)
 {
   geoip_provider_st *p = g_providers + i;
 
@@ -291,7 +294,7 @@ void geoip_free_rec (struct geoip_data_rec *rec)
 
 /* -- MMDB interface: ----------------------------------------------------------------------------------------- */
 
-bool geoip_MMDB_init (geoip_handle_st **geoip_p)
+static bool geoip_MMDB_init (geoip_handle_st **geoip_p)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -304,7 +307,7 @@ bool geoip_MMDB_init (geoip_handle_st **geoip_p)
   return (rc == MMDB_SUCCESS);
 }
 
-bool geoip_MMDB_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
+static bool geoip_MMDB_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
 {
   MMDB_lookup_result_s result;
   MMDB_entry_data_s  data;
@@ -343,7 +346,7 @@ bool geoip_MMDB_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_da
   return (rec->as_number || rec->as_name || rec->country);
 }
 
-bool geoip_MMDB_close (geoip_handle_st *geoip)
+static bool geoip_MMDB_close (geoip_handle_st *geoip)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
   MMDB_close (geoip->mmdb);
@@ -352,7 +355,7 @@ bool geoip_MMDB_close (geoip_handle_st *geoip)
 
 /* -- LibLoc interface: ---------------------------------------------------------------------------------------- */
 
-bool geoip_libloc_init (geoip_handle_st **geoip_p)
+static bool geoip_libloc_init (geoip_handle_st **geoip_p)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -365,7 +368,7 @@ bool geoip_libloc_init (geoip_handle_st **geoip_p)
   return (rc != 0);
 }
 
-bool geoip_libloc_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
+static bool geoip_libloc_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
 {
   int  rc = 0;
   TRACE (1, "In %s()\n", __FUNCTION__);
@@ -374,13 +377,13 @@ bool geoip_libloc_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_
   return (rc != 0);
 }
 
-bool geoip_libloc_update (geoip_handle_st *geoip)
+static bool geoip_libloc_update (geoip_handle_st *geoip)
 {
   // todo
   return (true);
 }
 
-bool geoip_libloc_close (geoip_handle_st *geoip)
+static bool geoip_libloc_close (geoip_handle_st *geoip)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -399,7 +402,7 @@ bool geoip_libloc_close (geoip_handle_st *geoip)
 
 /* -- ASN interface: ------------------------------------------------------------------------------------------- */
 
-bool geoip_ASN_init (geoip_handle_st **geoip_p)
+static bool geoip_ASN_init (geoip_handle_st **geoip_p)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -410,7 +413,7 @@ bool geoip_ASN_init (geoip_handle_st **geoip_p)
   return (rc != 0);
 }
 
-bool geoip_ASN_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
+static bool geoip_ASN_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
 {
   int  rc = 0;
   TRACE (1, "In %s()\n", __FUNCTION__);
@@ -419,7 +422,7 @@ bool geoip_ASN_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_dat
   return (rc != 0);
 }
 
-bool geoip_ASN_close (geoip_handle_st *geoip)
+static bool geoip_ASN_close (geoip_handle_st *geoip)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -429,7 +432,7 @@ bool geoip_ASN_close (geoip_handle_st *geoip)
 
 /* -- SpamHaus DROP interface: -------------------------------------------------------------------------------- */
 
-bool geoip_DROP_init (geoip_handle_st **geoip_p)
+static bool geoip_DROP_init (geoip_handle_st **geoip_p)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -440,7 +443,7 @@ bool geoip_DROP_init (geoip_handle_st **geoip_p)
   return (rc != 0);
 }
 
-bool geoip_DROP_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
+static bool geoip_DROP_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_data_rec *rec)
 {
   int  rc = 0;
   TRACE (1, "In %s()\n", __FUNCTION__);
@@ -449,7 +452,7 @@ bool geoip_DROP_lookup (geoip_handle_st *geoip, const char *ip_address, geoip_da
   return (rc != 0);
 }
 
-bool geoip_DROP_close (geoip_handle_st *geoip)
+static bool geoip_DROP_close (geoip_handle_st *geoip)
 {
   TRACE (1, "In %s()\n", __FUNCTION__);
 
@@ -470,7 +473,7 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   va_end (args);
 }
 
-const struct geoip_provider_st mmdb_handler = {
+static const struct geoip_provider_st mmdb_handler = {
     .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_MMDB_FILE,
     .files  = { "DB-IP/dbip-asn-lite-2020-10.mmdb" },
     .url    = "https://updates.maxmind.com/app/update_getfilename?product_id=GeoLite2-Country/update?db_md5=a456ade123456789",
@@ -480,7 +483,7 @@ const struct geoip_provider_st mmdb_handler = {
     .close  = geoip_MMDB_close
   };
 
-const struct geoip_provider_st libloc_handler = {
+static const struct geoip_provider_st libloc_handler = {
   .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_ASN_FILE,
   .files  = { "IPFire/location.db" },
   .url    = "https://location.ipfire.org/databases/1/location.db.xz",
@@ -490,7 +493,7 @@ const struct geoip_provider_st libloc_handler = {
   .close  = geoip_libloc_close
 };
 
-const struct geoip_provider_st asn_handler1 = {
+static const struct geoip_provider_st asn_handler1 = {
   .flags  = GEOIP_ASN_FILE | GEOIP_MMDB_FILE,
   .files  = { "DB-IP/dbip-asn-lite-2020-10.mmdb" },
   .init   = geoip_ASN_init,
@@ -498,7 +501,7 @@ const struct geoip_provider_st asn_handler1 = {
   .close  = geoip_ASN_close
 };
 
-const struct geoip_provider_st asn_handler2 = {
+static const struct geoip_provider_st asn_handler2 = {
   .flags  = GEOIP_ASN_FILE | GEOIP_CSV_FILE,
   .files  = { "IP4-ASN.CSV" },
   .init   = geoip_ASN_init,
@@ -506,7 +509,7 @@ const struct geoip_provider_st asn_handler2 = {
   .close  = geoip_ASN_close
 };
 
-const struct geoip_provider_st drop_handler = {
+static const struct geoip_provider_st drop_handler = {
   .flags  = GEOIP_DROP | GEOIP_TXT_FILE,
   .files  = { "DROP.txt", "DROPv6.txt", "EDROP.txt" },
   .init   = geoip_DROP_init,
