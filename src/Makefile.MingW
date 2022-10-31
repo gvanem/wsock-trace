@@ -36,14 +36,14 @@ endif
 CC      = gcc
 OBJ_DIR = MinGW_obj
 
+MAKEFLAGS += --warn-undefined-variables
+
 ifeq ($(CPU),x64)
-  RCFLAGS  = --target=pe-x86-64
-  BITS     = 64
-  X_SUFFIX = _x64
+  RCFLAGS = --target=pe-x86-64
+  BITS    = 64
 else
-  RCFLAGS  = --target=pe-i386
-  BITS     = 32
-  X_SUFFIX =
+  RCFLAGS = --target=pe-i386
+  BITS    = 32
 endif
 
 CFLAGS   = -Wall -m$(BITS) -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-unused-variable -Wno-unused-function
@@ -93,8 +93,8 @@ LIBLOC_LIB  = libloc_mw.a
 CFLAGS     += -I$(LIBLOC_ROOT)
 EX_LIBS    += -lole32 -ladvapi32 -ldnsapi -lwinmm
 
-WSOCK_DLL = wsock_trace_mw$(X_SUFFIX)$(_D).dll
-WSOCK_LIB = libwsock_trace_mw$(X_SUFFIX)$(_D).a
+WSOCK_DLL = wsock_trace_mw$(_D)-$(CPU).dll
+WSOCK_LIB = libwsock_trace_mw$(_D)$(CPU).a
 
 SOURCES = asn.c             \
           bfd_gcc.c         \

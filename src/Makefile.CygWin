@@ -20,8 +20,10 @@ CC      = gcc
 CFLAGS  = -Wall -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -D__USE_W32_SOCKETS \
           -fmax-errors=5 -Wno-pragmas -Wno-unused-function -Wno-unused-variable
 LDFLAGS = -Wl,--print-map,--sort-common -t
-RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__CYGWIN__
+RCFLAGS = -O COFF -DDEBUG=$(USE_CRT_DEBUG) -DBITNESS=$(BITS) -D__CYGWIN__
 OBJ_DIR = Cygwin_obj
+
+MAKEFLAGS += --warn-undefined-variables
 
 #
 # Check if we use a 32 or a 64-bit Cygwin gcc:
@@ -42,13 +44,13 @@ CCDEBUG = -ggdb
 CFLAGS += $(CCDEBUG) $(CCOPT)
 
 ifeq ($(CHECK_MACHINE),i686-pc-cygwin)
-  WSOCK_LIB = libwsock_trace_cyg$(_D).a
-  WSOCK_DLL = wsock_trace_cyg$(_D).dll
-  CYG_VER   = 32-bit
+  WSOCK_LIB = libwsock_trace_cyg$(_D)-x86.a
+  WSOCK_DLL = wsock_trace_cyg$(_D)-x86.dll
+  BITS      = 32
 else
-  WSOCK_LIB = libwsock_trace_cyg_x64$(_D).a
-  WSOCK_DLL = wsock_trace_cyg_x64$(_D).dll
-  CYG_VER   = 64-bit
+  WSOCK_LIB = libwsock_trace_cyg$(_D)-x64.a
+  WSOCK_DLL = wsock_trace_cyg$(_D)-x64.dll
+  BITS      = 64
 endif
 
 ifeq ($(USE_BFD),1)
@@ -159,7 +161,7 @@ all: message $(OBJ_DIR) $(WSOCK_LIB) ws_tool.exe
 comma := ,
 
 message:
-	$(call green_msg, Building CygWin $(CYG_VER) version. \
+	$(call green_msg, Building CygWin $(BITS)-bit version. \
 	                  USE_LUAJIT=$(USE_LUAJIT)$(comma) USE_CRT_DEBUG=$(USE_CRT_DEBUG)$(comma) USE_BFD=$(USE_BFD).)
 
 $(OBJ_DIR):
@@ -219,26 +221,31 @@ ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #
+  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows DEFAULT_CC=gcc CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)'
+
+  #
+  # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
+  #
+  LUAJIT_MAKE_FLAGS += CFLAGS= TARGET_FLAGS= TARGET_CFLAGS= CROSS=
+
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC=gcc CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)' all
+	$(MAKE) -C $(LUAJIT_ROOT)/src $(LUAJIT_MAKE_FLAGS) all
 	@echo
-
-  clean_lua:
-	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
-	 - rm -f $(LUAJIT_ROOT)/src/*.o              $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB)
-
-else
-  clean_lua: ;
 endif
 
+clean_lua:
+	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe \
+	         $(LUAJIT_ROOT)/src/libluajit.a      $(LUAJIT_ROOT)/src/*.o              \
+	         $(LUAJIT_ROOT)/src/host/*.o
+
 clean: clean_lua
-	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res $(CC).args
+	rm -fr $(OBJ_DIR)
+	rm -f $(CC).args $(WSOCK_DLL:.dll=.map)
 
 vclean realclean: clean
-	rm -f libwsock_trace*.a wsock_trace_cyg*.dll wsock_trace_cyg*.map \
-	      ws_tool.exe ws_tool.map cyg-ver.exe cyg-ver.map .depend.CygWin $(LIBLOC_LIB)
-	- rmdir $(OBJ_DIR)
+	rm -f libwsock_trace_cyg*.{a,dll,map} ws_tool.{exe,map} cyg-ver.{exe,map} \
+	      .depend.CygWin $(LIBLOC_LIB)
 
 machine_test:
 	$(call green_msg, CHECK_MACHINE: $(CHECK_MACHINE))
