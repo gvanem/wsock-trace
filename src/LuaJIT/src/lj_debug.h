@@ -60,23 +60,18 @@ enum {
 };
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-  LUA_API int  ljit_trace_init (void);
-  LUA_API int *ljit_trace_level (void);
-  LUA_API void ljit_set_color (int color);
-  LUA_API void ljit_restore_color (void);
+  LUA_API int *LuaJIT_trace_level (void);
+  LUA_API void LuaJIT_trace_printf (const char *file, unsigned line, const char *fmt, ...);
 
-  #define LJ_TRACE(level, fmt, ...)                            \
-          do {                                                 \
-            if (ljit_trace_init() >= level) {                  \
-              ljit_set_color (1);                              \
-              printf ("LuaJIT: %s(%u): ", __FILE__, __LINE__); \
-              printf (fmt, ##__VA_ARGS__);                     \
-              ljit_restore_color();                            \
-            }                                                  \
+  #define LJ_TRACE(level, fmt, ...)                       \
+          do {                                            \
+            if (*LuaJIT_trace_level() >= level)           \
+               LuaJIT_trace_printf (__FILE__, __LINE__,   \
+                                    fmt, ## __VA_ARGS__); \
           } while (0)
 
 #else
   #define LJ_TRACE(level, fmt, ...)   ((void)0)
-#endif  /* _WIN32 */
+#endif  /* _WIN32 || __CYGWIN__ */
 
 #endif

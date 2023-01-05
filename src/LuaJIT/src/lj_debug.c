@@ -610,47 +610,71 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
 #if defined(_WIN32) || defined(__CYGWIN__)
 
 #include <windows.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <ctype.h>
 
 static HANDLE stdout_hnd = INVALID_HANDLE_VALUE;
 static CONSOLE_SCREEN_BUFFER_INFO console_info;
-static int trace_level = -1;
 
-void ljit_set_color (int color)
+static void set_color (int color)
 {
-  if (stdout_hnd != INVALID_HANDLE_VALUE)
-     SetConsoleTextAttribute (stdout_hnd, (console_info.wAttributes & ~7) |
-                             (FOREGROUND_INTENSITY | FOREGROUND_GREEN));
+  WORD attr = 0;
+
+  if (stdout_hnd == INVALID_HANDLE_VALUE)
+     return;
+
+  switch (color)
+  {
+    case 0:
+         attr = console_info.wAttributes;
+         break;
+    case 1:    /* bright white foreground */
+         attr = (console_info.wAttributes & ~7) |
+                 (FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE);
+         break;
+     case 2:   /* bright green foreground */
+         attr = (console_info.wAttributes & ~7) | (FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+         break;
+  }
+  if (attr)
+  {
+    fflush (stdout);
+    SetConsoleTextAttribute (stdout_hnd, attr);
+  }
 }
 
-void ljit_restore_color (void)
+int *LuaJIT_trace_level (void)
 {
-  if (stdout_hnd != INVALID_HANDLE_VALUE)
-     SetConsoleTextAttribute (stdout_hnd, console_info.wAttributes);
-}
-
-int *ljit_trace_level (void)
-{
-   return (&trace_level);
-}
-
-int ljit_trace_init (void)
-{
-  const char *env;
+  static int trace_level = -1;
 
   if (trace_level == -1)
   {
-    trace_level = 0;
-    env = getenv("LUA_TRACE");
-    if (env)
+    const  char *env = getenv ("LUA_TRACE");
+
+    if (env && isdigit(*env))
     {
       trace_level = *env - '0';
-      if (trace_level > 0 && trace_level <= 9)
-      {
-        stdout_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
-        GetConsoleScreenBufferInfo (stdout_hnd, &console_info);
-      }
+      stdout_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
+      GetConsoleScreenBufferInfo (stdout_hnd, &console_info);
     }
+    else
+      trace_level = 0;
   }
-  return (trace_level);
+  return (&trace_level);
+}
+
+void LuaJIT_trace_printf (const char *file, unsigned line, const char *fmt, ...)
+{
+  va_list args;
+
+  set_color (1);
+  fprintf (stdout, "%s(%u): ", file, line);
+
+  set_color (2);
+  va_start (args, fmt);
+  vfprintf (stdout, fmt, args);
+  va_end (args);
+  set_color (0);
 }
 #endif
