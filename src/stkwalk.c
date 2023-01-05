@@ -608,7 +608,7 @@ static const char *sym_tag_decode (unsigned tag)
  * If a module-list is like (starting with module 0 == 'python.exe' or 'python3.exe' etc.):
  * ```
  *   c:\ProgramFiles\Python39\src\python.exe                0x1CED0000     104 kB
- *   c:\gv\VC_2019\bin\wsock_trace.dll                      0x644D0000     624 kB
+ *   c:\gv\VC_2019\bin\wsock_trace-x86.dll                  0x644D0000     624 kB
  *   c:\ProgramFiles\Python\src\python311.dll               0x64570000   5,816 kB
  * ```
  *
@@ -651,6 +651,44 @@ typedef struct PyModuleDef {
   DEF_PY_FUNC (PyObject*, PyModule_Create2, (PyModuleDef *m_def, int api_ver));
   DEF_PY_FUNC (PyObject*, PyModule_New,     (const char *module));
 #endif
+
+typedef int (*Py_AuditHookFunction) (const char *event, PyObject *args, void *userdata);
+
+DEF_PY_FUNC (int, PySys_AddAuditHook, (Py_AuditHookFunction hook, void *user_data));
+
+static int our_AddAuditHook (const char *event, PyObject *args, void *userdata)
+{
+  if (!strcmp(event, "import"))
+  {
+    TRACE (2, "audit event: %s, args: 0x%p\n", event, args);
+
+    /** \todo
+     */
+  }
+  (void) userdata;
+  return (0);
+}
+
+static BOOL load_AddAuditHook (void)
+{
+  if (!g_py_hnd)
+     g_py_hnd = LoadLibrary (g_py_dll);
+  if (!g_py_hnd)
+  {
+    TRACE (1, "LoadLibrary (\"%s\") failed: %s.\n", g_py_dll, get_error());
+    return (FALSE);
+  }
+
+  /* Needs Python 3.8+. But try anyway
+   */
+  p_PySys_AddAuditHook = (func_PySys_AddAuditHook) GetProcAddress (g_py_hnd, "PySys_AddAuditHook");
+  if (!p_PySys_AddAuditHook)
+  {
+    TRACE (1, "Did not find \"PySys_AddAuditHook\" in \"%s\".\n", g_py_dll);
+    return (FALSE);
+  }
+  return (TRUE);
+}
 
 /**
  * This requires that a `python*.dll` is in the same directory as `python*exe'.
@@ -835,7 +873,7 @@ static void patch_python_dll (void)
   }
   else
   {
-    p_PyModule_New = (func_PyModule_New*) GetProcAddress (g_py_hnd, "PyModule_New");
+    p_PyModule_New  = (func_PyModule_New*) GetProcAddress (g_py_hnd, "PyModule_New");
     addr_to_patch   = (INT_PTR) p_PyModule_New;
     addr_to_unpatch = (INT_PTR) our_PyModule_New;
     if (!p_PyModule_New)
@@ -866,16 +904,16 @@ failed:
   vaddr_wrapper = NULL;
 }
 
-#else
+#else /* USE_PythonHook */
 
-/*
- * Enumerate the extra .pyd files reported from Python.
+/**
+ * \todo Enumerate the extra .pyd files reported from Python.
  */
 static void enumerate_py_DLLs (void)
 {
 }
 #endif /* USE_Py_inject_code  */
-#endif /* USE_PythonHook  */
+#endif /* USE_PythonHook */
 
 /*
  * Add some module information to 'g_modules_list'.
@@ -1031,6 +1069,7 @@ BOOL StackWalkExit (void)
 {
   symbols_list_free();
   modules_list_free();
+
 #if USE_PythonHook
   free (g_py_dir);
   free (g_py_exe);
@@ -1048,7 +1087,8 @@ BOOL StackWalkExit (void)
   g_py_dir = g_py_exe = g_py_dll = NULL;
   g_py_hnd = NULL;
   g_py_major_ver = 0;
-#endif
+#endif /* USE_PythonHook */
+
   return (TRUE);
 }
 
@@ -1405,6 +1445,8 @@ static void enum_and_load_modules (void)
   #else
       enumerate_py_DLLs();
   #endif
+      if (load_AddAuditHook())
+         (*p_PySys_AddAuditHook) (our_AddAuditHook, NULL);
      }
 #endif
 
