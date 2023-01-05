@@ -148,11 +148,26 @@ class Downloader(object):
 		# Rewind the temporary file
 		t.seek(0)
 
+		gzip_compressed = False
+
 		# Fetch the content type
 		content_type = res.headers.get("Content-Type")
 
 		# Decompress any gzipped response on the fly
 		if content_type in ("application/x-gzip", "application/gzip"):
+			gzip_compressed = True
+
+		# Check for the gzip magic in case web servers send a different MIME type
+		elif t.read(2) == b"\x1f\x8b":
+			gzip_compressed = True
+
+		# Reset again
+		t.seek(0)
+
+		# Decompress the temporary file
+		if gzip_compressed:
+			log.debug("Gzip compression detected")
+
 			t = gzip.GzipFile(fileobj=t, mode="rb")
 
 		# Return the temporary file handle
