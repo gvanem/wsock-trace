@@ -20,10 +20,17 @@
 */
 #define LUA_LDIR	"!\\lua\\"
 #define LUA_CDIR	"!\\"
+
+#ifndef LUA_PATH_DEFAULT
 #define LUA_PATH_DEFAULT \
   ".\\?.lua;" LUA_LDIR"?.lua;" LUA_LDIR"?\\init.lua;"
+#endif
+
+#ifndef LUA_CPATH_DEFAULT
 #define LUA_CPATH_DEFAULT \
   ".\\?.dll;" LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll"
+#endif
+
 #else
 /*
 ** Note to distribution maintainers: do NOT patch the following lines!
@@ -58,9 +65,15 @@
 #define LUA_LCPATH1	";" LUA_LCDIR "?.so"
 #define LUA_LCPATH2	";" LUA_LCDIR "loadall.so"
 
+#ifndef LUA_PATH_DEFAULT
 #define LUA_PATH_DEFAULT	"./?.lua" LUA_JPATH LUA_LLPATH LUA_RLPATH
+#endif
+
+#ifndef LUA_CPATH_DEFAULT
 #define LUA_CPATH_DEFAULT	"./?.so" LUA_LCPATH1 LUA_RCPATH LUA_LCPATH2
 #endif
+
+#endif  /* _WIN32 */
 
 /* Environment variable names for path overrides and initialization code. */
 #define LUA_PATH	"LUA_PATH"
