@@ -200,7 +200,7 @@ else ifeq ($(CC),clang-cl)
             -Wno-missing-field-initializers \
             -Wno-incompatible-pointer-types
 else
-  CFLAGS += -W4 -wd4100 -wd4115 -wd4146 -wd4189 -wd4201 -wd4244 -wd4267
+  CFLAGS += -W4 -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 -wd4189 -wd4201 -wd4244 -wd4267
 
   #
   # For warnings such as:
@@ -273,7 +273,7 @@ all: $(OBJ_DIR) libloc/version.h $(TARGETS) py3_module epilogue
 
 epilogue:
 	$(call white_msg, \nWelcome to libloc library and test programs.)
-	$(call white_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) runtests | run_export_test $(BRIGHT_WHITE)too.)
+	$(call white_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) run_tests | run_export_test $(BRIGHT_WHITE)too.)
 
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
@@ -332,7 +332,7 @@ $(OBJ_DIR)/_location.rc: $(THIS_FILE)
 	@echo
 
 $(OBJ_DIR)/%.obj: %.c
-	$(CC) -c $(CFLAGS) -Fo$@ $<
+	$(CC) -c $(CFLAGS) -Fo./$@ $<
 	@echo
 
 $(OBJ_DIR)/%.o: %.c
@@ -365,7 +365,7 @@ PYTHON ?= py -3
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
 $(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py
-	$(CC) -c $(CFLAGS) -I$(PY_ROOT)/include -Fo$@ $<
+	$(CC) -c $(CFLAGS) -I$(PY_ROOT)/include -Fo./$@ $<
 	@echo
 
 $(OBJ_DIR)/py/%.o: python/%.c | $(OBJ_DIR)/py
@@ -384,7 +384,7 @@ else
 	$(call link_EXE, $@, $^ $(WS2_32))
 endif
 
-runtests: $(TEST_PROGS)
+run_tests runtests: $(TEST_PROGS)
 	for p in $^ ; do                            \
 		echo -e "\n\e[1;32mRunning $$p:\e[0m" ; \
 		./$$p ;                                 \
