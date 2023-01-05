@@ -191,6 +191,7 @@ struct config_table {
        BOOL    mingw_only;
        BOOL    cygwin_only;
        BOOL    no_buffering;
+       BOOL    no_inv_handler;
        TS_TYPE trace_time_format;
        BOOL    trace_time_usec;
 

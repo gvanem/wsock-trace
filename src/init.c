@@ -825,6 +825,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "no_buffering"))
      g_cfg.no_buffering = atoi (val);
 
+  else if (!stricmp(key, "no_inv_handler"))
+     g_cfg.no_inv_handler = atoi (val);
+
   else if (!stricmp(key, "use_winhttp"))
      ;   /* dropped WinHTTP.dll in favour of WinInet.dll */
 
@@ -839,8 +842,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
        g_cfg.services_file [g_cfg.num_services_files++] = strdup (val);
   }
 
-  else TRACE (1, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
-              g_data.cfg_fname, line, key, val);
+  else if (g_cfg.trace_level >= 1)
+    debug_printf (NULL, 0, "%s (%u):\n   Unknown keyword '%s' = '%s'\n",
+                  g_data.cfg_fname, line, key, val);
 }
 
 /*
@@ -1545,7 +1549,8 @@ void wsock_trace_init (void)
     else g_data.ws_sema_inherited = FALSE;
   }
 
-  set_invalid_handler();
+  if (!g_cfg.no_inv_handler)
+     set_invalid_handler();
 
   if ((g_cfg.msvc_only   && !is_msvc)  ||
       (g_cfg.mingw_only  && !is_mingw) ||
@@ -1629,7 +1634,7 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_level > 0 &&
       (g_cfg.trace_use_ods || (!g_cfg.trace_file_device && g_cfg.trace_file_okay)))
-    C_printf ("\n------- Trace started at %s --------"
+    C_printf ("\n------- Trace started at %s --------\n"
               "------ %s, %s. Build-date: %s.\n",
              now, get_builder(TRUE), get_dll_short_name(), get_dll_build_date());
 
