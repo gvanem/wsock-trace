@@ -6,13 +6,15 @@
  *
  * A WSock LuaJIT script could be run like:
  * ```
- *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
+ *   c:\wsock_trace> set LUA_CPATH=?_mw-x64.dll
  *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe wsock_trace_init.lua
  * ```
  *
+ * Ref. the `$(WSOCK_DLL)` name in `Makefile.MinGW` for the suffix.
+ *
  * Or to enter interactive mode after loading:
  * ```
- *   c:\wsock_trace> set LUA_CPATH=?_mw_x64.dll
+ *   c:\wsock_trace> set LUA_CPATH=?_mw-x64.dll
  *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe -l wsock_trace -i
  * ```
  *
@@ -108,7 +110,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
     reason_str = "DLL_PROCESS_ATTACH";
 
-    *ljit_trace_level() = g_cfg.LUA.trace_level;
+    *LuaJIT_trace_level() = g_cfg.LUA.trace_level;
 
     LUA_TRACE (1, "g_data.ws_from_dll_main: %d, dll/exe: '%s', loaded: '%s'\n", g_data.ws_from_dll_main, dll, loaded);
 
@@ -532,8 +534,8 @@ static void wslua_set_path (const char *full_name)
 
   /* Ensure a 'require("wsock_trace")' in Lua-land will match the correct .DLL.
    * E.g.
-   *   for Cygwin / x64, our RC_DLL_NAME == "wsock_trace_cyg_x64", so the
-   *   'lua_cpath' MUST end with "?_cyg_x64.dll".
+   *   for Cygwin / x64, our RC_DLL_NAME == "wsock_trace_cyg-x64", so the
+   *   'lua_cpath' MUST end with "?_cyg-x64.dll".
    *
    *   But if "LUA_CPATH=?_cyg.dll" is already defined, set our 'lua_cpath' first.
    *   Otherwise 'LoadLibrary()' in LuaJIT errors with code 193; ERROR_BAD_EXE_FORMAT
