@@ -178,7 +178,11 @@ static void warnx (const char *fmt, ...)
   va_list ap;
 
   va_start (ap, fmt);
+#if defined(CSV_TEST)
+  fprintf (stderr, "%s: ", __argv[0]);
+#else
   fprintf (stderr, "%s: ", g_data.program_name);
+#endif
   vfprintf (stderr, fmt, ap);
   fprintf (stderr, "\n");
   va_end (ap);
