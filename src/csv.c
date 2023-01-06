@@ -786,10 +786,16 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
 {
   CSV_header  header;
   struct stat st;
-  int         bin = _sopen (fname, O_RDONLY | O_BINARY | _O_SEQUENTIAL, SH_DENYWR, S_IREAD);
+  int         bin;
   int         read;
   void       *data;
   size_t      data_size;
+
+#if defined(__CYGWIN__)
+  bin = open (fname, O_RDONLY | O_BINARY);
+#else
+  bin = _sopen (fname, O_RDONLY | O_BINARY | _O_SEQUENTIAL, 0x20 /* SH_DENYWR */, S_IREAD);
+#endif
 
   *data_p      = NULL;
   *data_size_p = 0;
