@@ -1,6 +1,6 @@
   //
   // DO NOT EDIT! This file was automatically generated
-  // from F:/gv/VC_project/ws_trace/src/Geo-IP/IPFire/src/Makefile.Windows at 29-October-2022.
+  // from F:/gv/VC_project/ws_trace/src/Geo-IP/IPFire/src/Makefile.Windows at 05-January-2023.
   // Edit that file instead.
   //
  #ifndef LIBLOC_VERSION_H
