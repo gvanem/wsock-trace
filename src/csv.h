@@ -60,7 +60,11 @@ typedef struct CSV_context {
         CSV_cfile   cfile;
       } CSV_context;
 
+extern int CSV_test_trace;
+extern int CSV_test_use_bsearch;
+
 unsigned CSV_open_and_parse_file (struct CSV_context *ctx);
+FILE    *CSV_fopen_excl (const char *file, const char *mode);
 
 size_t   CSV_generic_read_bin  (const char *fname,       void **data, size_t *data_size_p);
 size_t   CSV_generic_write_bin (const char *fname, const void *data, size_t data_size, size_t rec_size, int overwrite);

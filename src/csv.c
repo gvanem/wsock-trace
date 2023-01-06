@@ -16,10 +16,6 @@
 #include "getopt.h"
 #include "csv.h"
 
-#ifndef SH_DENYWR
-#define SH_DENYWR  0x20 /* In <share.h> on MinGW */
-#endif
-
 #if !defined(CSV_TEST)  /* Not needed in a generated .c-file */
 
 #define DEFAULT_BUF_SIZE 1000
@@ -610,7 +606,7 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
   prefix = strdup (basename(ctx->file_name));
   for (p = prefix; *p; p++)
   {
-    if (!isalnum(*p) && !isdigit(*p))
+    if (!isalnum((int)*p) && !isdigit((int)*p))
        *p = '_';
   }
 
@@ -685,9 +681,6 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
   fprintf (h->file,
            "#if defined(CSV_TEST)\n"
            "\n"
-           "extern int CSV_test_trace;  /* in csv.c */\n"
-           "extern int CSV_test_use_bsearch;\n"
-           "\n"
            "static char *word_n (int n)\n"
            "{\n"
            "  static char word [20];\n"
@@ -695,15 +688,28 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
            "  return (word);\n"
            "}\n"
            "\n"
+           "static void usage (const char *argv0)\n"
+           "{\n"
+           "  printf (\"Usage: %%s [options]\\n\"\n"
+           "          \"  -b: use bsearch().\\n\"\n"
+           "          \"  -v: verbose mode.\\n\",\n"
+           "          argv0);\n"
+           "  exit (0);\n"
+           "}\n"
+           "\n"
            "int main (int argc, char **argv)\n"
            "{\n"
            "  int ch, i, i_max = %d;\n"
            "\n"
-           "  while ((ch = getopt(argc, argv, \"bv\")) != EOF)\n"
+           "  while ((ch = getopt(argc, argv, \"bvh?\")) != EOF)\n"
            "     switch (ch)\n"
            "     {\n"
            "       case 'b':\n"
            "            CSV_test_use_bsearch = 1;\n"
+           "            break;\n"
+           "       case 'h':\n"
+           "       case '?':\n"
+           "            usage (argv[0]);\n"
            "            break;\n"
            "       case 'v':\n"
            "            CSV_test_trace = 1;\n"
@@ -718,18 +724,20 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
   fprintf (h->file,
            "  for (i = 0; i < i_max; i++)\n"
            "      %s_GEN_DATA_0 (i, word_n(i));\n"
-           "  %s_WRITE_BIN (\"%s.BIN\");\n\n",
-           prefix, prefix, fname);
+           "  %s_WRITE_BIN (\"%s.BIN\");\n"
+           "  %s_FREE_DATA();\n\n",
+           prefix, prefix, fname, prefix);
 
   fprintf (h->file,
-           "  %s_FREE_DATA();\n"
-           "  %s_READ_BIN (\"%s.BIN\");\n"
-           "  %s_LOOKUP_FIELD_0 (\"word-1\");\n"
-           "  %s_LOOKUP_FIELD_0 (\"word-2\");\n"
+           "  if (%s_READ_BIN(\"%s.BIN\") > 0)\n"
+           "  {\n"
+           "    %s_LOOKUP_FIELD_0 (\"word-1\");\n"
+           "    %s_LOOKUP_FIELD_0 (\"word-2\");\n"
+           "  }\n"
            "  return (0);\n"
            "}\n"
            "#endif /* CSV_TEST */\n",
-           prefix, prefix, fname, prefix, prefix);
+           prefix, fname, prefix, prefix);
 
   if (h->file != stdout)
      fclose (h->file);
@@ -749,7 +757,7 @@ int CSV_test_use_bsearch = 0;
                                 } while (0)
 
 #pragma pack(push,1)
-typedef struct CSV_header {
+typedef struct CSV_header {      /* 12  bytes */
         char      marker [4];    /* "CBIN" */
         uint32_t  rec_size;
         uint32_t  rec_numbers;
@@ -757,6 +765,7 @@ typedef struct CSV_header {
 #pragma pack(pop)
 
 typedef struct generic_record {
+        size_t  rec_size;
         size_t  field_size;
         char   *field_X;
       } generic_record;
@@ -789,68 +798,62 @@ void CSV_generic_free (void **data, size_t *sz)
 size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size_p)
 {
   CSV_header  header;
-  struct stat st;
-  int         bin;
-  int         read;
+  size_t      read, data_size;
   void       *data;
-  size_t      data_size;
+  FILE       *bin;
+  struct stat st;
 
-#if defined(__CYGWIN__)
-  bin = open (fname, O_RDONLY | O_BINARY);
-#else
-  bin = _sopen (fname, O_RDONLY | O_BINARY | _O_SEQUENTIAL, SH_DENYWR, S_IREAD);
-#endif
+  if (stat(fname, &st) != 0)
+  {
+    CTRACE (0, "Failed to stat() file \"%s\". errno: %d\n", fname, errno);
+    return (0);
+  }
+  st.st_size -= sizeof(header);
 
-  *data_p      = NULL;
-  *data_size_p = 0;
-
-  if (bin < 0)
+  bin = CSV_fopen_excl (fname, "rb");
+  if (!bin)
   {
     CTRACE (0, "Failed to open file \"%s\". errno: %d\n", fname, errno);
     return (0);
   }
-  if (fstat(bin, &st))
-  {
-    CTRACE (0, "Failed to stat() file \"%s\". errno: %d\n", fname, errno);
-    _close (bin);
-    return (0);
-  }
+
+  *data_p      = NULL;
+  *data_size_p = 0;
 
   memset (&header, '\0', sizeof(header));
-  read = _read (bin, &header, sizeof(header));
+  read = fread (&header, 1, sizeof(header), bin);
   if (read != sizeof(header) || memcmp(&header.marker, "CBIN", sizeof(header.marker)))
   {
-    CTRACE (0, "Failed to read header; len %d. errno: %d\n", read, errno);
-    _close (bin);
+    CTRACE (0, "Failed to read header; len %zd. errno: %d\n", read, errno);
+    fclose (bin);
     return (0);
   }
 
   if (header.rec_numbers == 0 || header.rec_size == 0)
   {
     CTRACE (0, "File %s has zero records!\n", fname);
-    _close (bin);
+    fclose (bin);
     return (0);
   }
 
-  st.st_size -= sizeof(header);
   data_size = header.rec_numbers * header.rec_size;
   CSV_generic_alloc (&data, NULL, data_size);
   if (!data)
   {
-    _close (bin);
+    fclose (bin);
     return (0);
   }
 
-  read = _read (bin, data, (uint32_t)data_size);
-  if (read != data_size)
+  read = fread (data, 1, data_size, bin);
+  if (read != data_size || read != st.st_size)
   {
-    CTRACE (0, "Failed to read all data; len %d. errno: %d\n", read, errno);
+    CTRACE (0, "Failed to read all data; len %zd. errno: %d\n", read, errno);
     CSV_generic_free (&data, &data_size);
-    _close (bin);
+    fclose (bin);
     return (0);
   }
 
-  _close (bin);
+  fclose (bin);
 
   *data_p      = data;
   *data_size_p = data_size;
@@ -863,8 +866,8 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
 size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_size, size_t rec_size, int overwrite)
 {
   CSV_header header;
-  int        bin;
-  int        wrote;
+  size_t     wrote;
+  FILE      *bin;
 
   if (!data || data_size == 0)
   {
@@ -878,13 +881,8 @@ size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_s
     return (0);
   }
 
-#if defined(__CYGWIN__)
-  bin = open (fname, O_CREAT | O_WRONLY | O_BINARY);
-#else
-  bin = _sopen (fname, O_CREAT | O_WRONLY | O_BINARY | O_SEQUENTIAL, SH_DENYWR, S_IWRITE);
-#endif
-
-  if (bin < 0)
+  bin = CSV_fopen_excl (fname, "w+b");
+  if (!bin)
   {
     CTRACE (0, "Failed to open file \"%s\". errno: %d\n", fname, errno);
     return (0);
@@ -895,23 +893,23 @@ size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_s
   header.rec_size    = (uint32_t) rec_size;
   header.rec_numbers = (uint32_t) (data_size / rec_size);
 
-  wrote = _write (bin, &header, sizeof(header));
+  wrote = fwrite (&header, 1, sizeof(header), bin);
   if (wrote != sizeof(header))
   {
-    CTRACE (0, "Failed to write header; len %d. errno: %d\n", wrote, errno);
-    _close (bin);
+    CTRACE (0, "Failed to write header; len %zd. errno: %d\n", wrote, errno);
+    fclose (bin);
     return (0);
   }
 
-  wrote = _write (bin, data, (unsigned int)data_size);
+  wrote = fwrite (data, 1, (unsigned int)data_size, bin);
   if (wrote != data_size)
   {
-    CTRACE (0, "Failed to write all data; len %d. errno: %d\n", wrote, errno);
-    _close (bin);
+    CTRACE (0, "Failed to write all data; len %zd. errno: %d\n", wrote, errno);
+    fclose (bin);
     return (0);
   }
   CTRACE (1, "Wrote data for %u records of %u bytes each.\n", header.rec_numbers, header.rec_size);
-  _close (bin);
+  fclose (bin);
   return (data_size);
 }
 
@@ -940,13 +938,18 @@ unsigned CSV_generic_gen_data (void *data, size_t data_size,
   return (key_size);
 }
 
+static int bsearch_round = 0;
+
 static int bsearch_helper (const void *a, const void *b)
 {
   const char           *key    = (const char*) a;
   const generic_record *member = (const generic_record*) b;
-  int   rc = memcmp (key, member->field_X, member->field_size);
+  int   rc;
 
-  CTRACE (1, "key: '%s', rc: %d.\n", key, rc);
+  CTRACE (1, "round: %d, key: '%s'.\n", bsearch_round++, key);
+  rc = memcmp (key, member->field_X, member->field_size);
+
+  CTRACE (1, "rc: %d.\n", rc);
   return (rc);
 }
 
@@ -982,8 +985,10 @@ void *CSV_generic_lookup (const char *key, size_t key_size, int key_ofs,
   {
     generic_record rec;
 
+    rec.rec_size   = rec_size;
     rec.field_X    = p;
     rec.field_size = key_size;
+    bsearch_round  = 0;
     CTRACE (0, "Using bsearch(): looking for key: '%s' in %zu records.\n", key, max_records);
     return bsearch (key, &rec, max_records, sizeof(rec), bsearch_helper);
   }
@@ -1008,4 +1013,54 @@ void *CSV_generic_lookup (const char *key, size_t key_size, int key_ofs,
   CTRACE (1, "key '%s' not found in %zd records.\n", key, max_records);
   return (NULL);
 }
+
+/**
+ * Copied from 'common.c'
+ */
+FILE *CSV_fopen_excl (const char *file, const char *mode)
+{
+#if defined(__CYGWIN__)
+  return fopen (file, mode);
+#else
+  int fd, open_flags, share_flags;
+
+  switch (*mode)
+  {
+    case 'r':
+          open_flags  = _O_RDONLY;
+          share_flags = S_IREAD;
+          break;
+    case 'w':
+          open_flags  = _O_WRONLY;
+          share_flags = S_IWRITE;
+          break;
+    case 'a':
+          open_flags  = _O_CREAT | _O_WRONLY | _O_APPEND;
+          share_flags = S_IWRITE;
+          break;
+    default:
+          return (NULL);
+  }
+
+  if (mode[1] == '+')
+     open_flags |= _O_CREAT | _O_TRUNC;
+
+  if (mode[strlen(mode)-1] == 'b')
+     open_flags |= O_BINARY;
+
+#ifdef _O_SEQUENTIAL
+  open_flags |= _O_SEQUENTIAL;
+#endif
+
+#ifndef SH_DENYWR
+#define SH_DENYWR  0x20   /* In <share.h> on MinGW */
+#endif
+
+  fd = _sopen (file, open_flags, SH_DENYWR, share_flags);
+  if (fd <= -1)
+     return (NULL);
+  return fdopen (fd, mode);
+#endif  /* __CYGWIN__ */
+}
+
 
