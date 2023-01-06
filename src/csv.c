@@ -16,6 +16,10 @@
 #include "getopt.h"
 #include "csv.h"
 
+#ifndef SH_DENYWR
+#define SH_DENYWR  0x20 /* In <share.h> on MinGW */
+#endif
+
 #if !defined(CSV_TEST)  /* Not needed in a generated .c-file */
 
 #define DEFAULT_BUF_SIZE 1000
@@ -794,7 +798,7 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
 #if defined(__CYGWIN__)
   bin = open (fname, O_RDONLY | O_BINARY);
 #else
-  bin = _sopen (fname, O_RDONLY | O_BINARY | _O_SEQUENTIAL, 0x20 /* SH_DENYWR */, S_IREAD);
+  bin = _sopen (fname, O_RDONLY | O_BINARY | _O_SEQUENTIAL, SH_DENYWR, S_IREAD);
 #endif
 
   *data_p      = NULL;
@@ -874,7 +878,12 @@ size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_s
     return (0);
   }
 
+#if defined(__CYGWIN__)
+  bin = open (fname, O_CREAT | O_WRONLY | O_BINARY);
+#else
   bin = _sopen (fname, O_CREAT | O_WRONLY | O_BINARY | O_SEQUENTIAL, SH_DENYWR, S_IWRITE);
+#endif
+
   if (bin < 0)
   {
     CTRACE (0, "Failed to open file \"%s\". errno: %d\n", fname, errno);
