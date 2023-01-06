@@ -221,7 +221,7 @@ ifeq ($(USE_LUAJIT),1)
   #
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)' all
+	$(MAKE) --no-warn-undefined-variables -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)' all
 
   clean_lua:
 	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
