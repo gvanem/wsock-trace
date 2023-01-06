@@ -219,9 +219,17 @@ ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #
+  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)'
+
+  #
+  # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
+  #
+  LUAJIT_MAKE_FLAGS += CFLAGS= HOST_CFLAG= TARGET_FLAGS= TARGET_CFLAGS= \
+                       CROSS= MSYSTEM= PREFIX= MULTILIB= LMULTILIB=
+
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)' all
+	$(MAKE) -C $(LUAJIT_ROOT)/src $(LUAJIT_MAKE_FLAGS) all
 
   clean_lua:
 	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe

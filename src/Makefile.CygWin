@@ -226,7 +226,8 @@ ifeq ($(USE_LUAJIT),1)
   #
   # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
   #
-  LUAJIT_MAKE_FLAGS += CFLAGS= TARGET_FLAGS= TARGET_CFLAGS= CROSS=
+  LUAJIT_MAKE_FLAGS += CFLAGS= HOST_CFLAG= TARGET_FLAGS= TARGET_CFLAGS= \
+                       CROSS=  MSYSTEM= PREFIX= MULTILIB= LMULTILIB=
 
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
