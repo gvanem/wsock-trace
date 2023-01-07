@@ -16,7 +16,7 @@
 #include "getopt.h"
 #include "csv.h"
 
-#if !defined(CSV_TEST)  /* Not needed in a generated .c-file */
+#if !defined(CSV_TEST)  /* Not needed for a generated .c-file */
 
 #define DEFAULT_BUF_SIZE 1000
 
@@ -25,8 +25,8 @@
                       *ctx->parse_ptr++ = c;                             \
                  } while (0)
 
-static NO_INLINE int  CSV_cfile_open (struct CSV_context *ctx);
-static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx);
+static int  CSV_cfile_open (struct CSV_context *ctx);
+static void CSV_cfile_close (struct CSV_context *ctx);
 
 /**
  * A simple state-machine for parsing CSV records.
@@ -489,7 +489,7 @@ static int show_help (void)
           "    -f: set field delimiter. Use '\\t' for a <TAB> or '\\s for a <SPACE> delimiter (default is ',').\n"
           "    -m: max number of records to handle.\n"
           "    -n: number of fields in CSV-records. Default is found by auto-detection.\n"
-          "    -g: generate a .c-file to represent the data (use '-' for stdout).\n",
+          "    -g: generate a .h-file to represent the data (use '-' for stdout).\n",
           g_data.program_name);
   return (0);
 }
@@ -551,7 +551,7 @@ int csv_main (int argc, char **argv)
 /*
  * Function needed to support generated .c-files
  */
-static NO_INLINE int CSV_cfile_open (struct CSV_context *ctx)
+static int CSV_cfile_open (struct CSV_context *ctx)
 {
   CSV_cfile *h = &ctx->cfile;
 
@@ -579,13 +579,14 @@ static NO_INLINE int CSV_cfile_open (struct CSV_context *ctx)
   return (1);
 }
 
-static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
+static void CSV_cfile_close (struct CSV_context *ctx)
 {
   CSV_cfile *h = &ctx->cfile;
   char      *p, *prefix, *fname;
   char       comment [1000];
   time_t     now;
   unsigned   i;
+  size_t     j, ofs;
 
   if (!h->file)
      return;
@@ -596,7 +597,7 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
 
   now = time (NULL);
   snprintf (comment, sizeof(comment),
-            "A generated .c-file representing the CSV data in '%s'.\n"
+            "A generated .h-file representing the CSV data in '%s'.\n"
             " * Generated at %.24s by:\n"
             " * '%s'.\n"
             " *\n"
@@ -614,6 +615,8 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
            "/*\n"
            " * %s\n"
            " */\n"
+           "#ifndef %s_HEADER_H\n"
+           "#define %s_HEADER_H\n"
            "#include <stdio.h>\n"
            "#include <stdlib.h>\n"
            "#include <stdbool.h>\n"
@@ -621,59 +624,81 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
            "#include <getopt.h>\n"
            "#include \"csv.h\"\n"
            "\n"
-           "#pragma pack(push,1)\n"
-           "typedef struct %s_gen_record {\n", comment, prefix);
+           "#include <packon.h>\n"
+           "\n"
+           "typedef struct %s_record {\n", comment, prefix, prefix, prefix);
 
   for (i = 0; i < ctx->num_fields; i++)
-      fprintf (h->file, "        char field_%d [%zd];\n", i, h->field_sizes[i]);
+      fprintf (h->file, "        char field_%d [%zu];\n", i, h->field_sizes[i]);
 
   fprintf (h->file,
-           "      } %s_gen_record;\n"
-           "#pragma pack(pop)\n"
+           "      } %s_record;\n"
            "\n"
-           "%s_gen_record *%s_data;\n"
-           "size_t %*s_data_size;\n\n",
-           prefix, prefix, prefix, 17+(int)strlen(prefix), prefix);
+           "#include <packoff.h>\n"
+           "\n"
+           "#if !defined(CSV_TEST)\n"
+           "  extern %s_record *%s_data;\n"
+           "  extern size_t %*s_data_size;\n"
+           "#else\n",
+           prefix, prefix, prefix, 13+(int)strlen(prefix), prefix);
 
   fprintf (h->file,
+           "  %s_record *%s_data;\n"
+           "  size_t %*s_data_size;\n",
+           prefix, prefix, 13+(int)strlen(prefix), prefix);
+
+  fprintf (h->file,
+           "  static size_t       %s_field_ofs[]  = { ", prefix);
+
+  for (j = ofs = 0; j < ctx->num_fields; j++)
+  {
+    fprintf (h->file, "%zu%s", ofs, j < ctx->num_fields-1 ? ", " : "");
+    ofs += h->field_sizes [j];
+  }
+
+  fprintf (h->file,
+           " };\n"
+           "  static size_t       %s_field_size[] = { ", prefix);
+  for (i = 0; i < ctx->num_fields; i++)
+     fprintf (h->file, "%zu%s", h->field_sizes[i], i < ctx->num_fields-1 ? ", " : "");
+
+  fprintf (h->file,
+           " };\n"
+           "#endif\n\n");   /* CSV_TEST */
+
+  fprintf (h->file,
+           "#define %s_NUM_RECORDS    %d\n"
+           "#define %s_NUM_FIELDS     %d\n"
            "#define %s_ALLOC_DATA(sz) CSV_generic_alloc ((void**)&%s_data, &%s_data_size, sz)\n"
            "#define %s_FREE_DATA()    CSV_generic_free ((void**)&%s_data, &%s_data_size)\n\n",
-           prefix, prefix, prefix, prefix, prefix, prefix);
+           prefix, ctx->rec_num, prefix, ctx->num_fields, prefix, prefix, prefix, prefix, prefix, prefix);
 
   fprintf (h->file, "#define %s_READ_BIN(fname) \\\n"
                     "        CSV_generic_read_bin (fname, (void**)&%s_data, &%s_data_size)\n\n",
            prefix, prefix, prefix);
 
   fprintf (h->file, "#define %s_WRITE_BIN(fname) \\\n"
-                    "        CSV_generic_write_bin (fname, %s_data, %s_data_size, sizeof(%s_gen_record), 0)\n\n",
+                    "        CSV_generic_write_bin (fname, %s_data, %s_data_size, sizeof(%s_record), 1)\n\n",
            prefix, prefix, prefix, prefix);
 
-  fprintf (h->file, "#undef  FIELD_SIZE\n"
-                    "#undef  FIELD_OFS\n");
+  fprintf (h->file, "#define %s_GEN_DATA(field, rec_num, value) \\\n"
+                    "        CSV_generic_gen_data (%s_data, \\\n"
+                    "                              %s_data_size, \\\n"
+                    "                              sizeof(%s_record), \\\n"
+                    "                              rec_num, value, \\\n"
+                    "                              %s_field_size[field], \\\n"
+                    "                              %s_field_ofs[field])\n\n",
+           prefix, prefix, prefix, prefix, prefix, prefix);
 
-  fprintf (h->file, "#define FIELD_SIZE(n) sizeof (((%s_gen_record *)0)->field_##n)\n", prefix);
-  fprintf (h->file, "#define FIELD_OFS(n)  (size_t) &(((%s_gen_record *)0)->field_##n)\n\n", prefix);
-
-  for (i = 0; i < ctx->num_fields; i++)
-  {
-    fprintf (h->file, "#define %s_GEN_DATA_%d(idx, value) \\\n", prefix, i);
-    fprintf (h->file, "        CSV_generic_gen_data (%s_data, \\\n"
-                      "                              %s_data_size, \\\n"
-                      "                              sizeof(%s_gen_record), \\\n"
-                      "                              idx, value, %d, FIELD_SIZE(%d))\n\n",
-             prefix, prefix, prefix, i, i);
-  }
-
-  for (i = 0; i < ctx->num_fields; i++)
-  {
-    fprintf (h->file, "#define %s_LOOKUP_FIELD_%d(key) \\\n", prefix, i);
-    fprintf (h->file, "        (%s_gen_record*) CSV_generic_lookup ( \\\n"
-                      "          key, %zd, FIELD_OFS(%d), \\\n"
-                      "          %s_data, %s_data_size, \\\n"
-                      "          sizeof(%s_gen_record), %u, \\\n"
-                      "          CSV_test_use_bsearch)\n\n",
-             prefix, h->field_sizes[i], i, prefix, prefix, prefix, ctx->rec_num);
-  }
+  fprintf (h->file, "#define %s_LOOKUP_VAL_FIELD(val, field) \\\n", prefix);
+  fprintf (h->file, "        (const %s_record*) CSV_generic_lookup ( \\\n"
+                    "          val, field, \\\n"
+                    "          %s_field_size[field], \\\n"
+                    "          %s_field_ofs[field], \\\n"
+                    "          %s_data, %s_data_size, \\\n"
+                    "          sizeof(%s_record), \\\n"
+                    "          %s_NUM_RECORDS)\n\n",
+           prefix, prefix, prefix, prefix, prefix, prefix, prefix);
 
   fname = strdup (ctx->file_name);
   str_replace ('\\', '/', fname);
@@ -681,17 +706,32 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
   fprintf (h->file,
            "#if defined(CSV_TEST)\n"
            "\n"
-           "static char *word_n (int n)\n"
+           "static int dump_data (void)\n"
            "{\n"
-           "  static char word [20];\n"
-           "  snprintf (word, sizeof(word), \"word-%%d\", n);\n"
-           "  return (word);\n"
+           "  const %s_record *rec = %s_data;\n"
+           "  int   rec_num, field;\n\n", prefix, prefix);
+
+  fprintf (h->file,
+           "  for (rec_num = 0; rec_num < %s_NUM_RECORDS; rec_num++, rec++)\n"
+           "  {\n"
+           "    for (field = 0; field < %s_NUM_FIELDS; field++)\n"
+           "        CSV_generic_dump (rec, rec_num, field, %s_field_ofs[field]);\n"
+           "  }\n"
+           "  return (0);\n"
+           "}\n\n", prefix, prefix, prefix);
+
+  fprintf (h->file,
+           "static char *record_value (int rec_num, int field)\n"
+           "{\n"
+           "  static char value [30];\n"
+           "  snprintf (value, sizeof(value), \"r%%d/%%d\", rec_num, field); /* keep it short */\n"
+           "  return (value);\n"
            "}\n"
            "\n"
            "static void usage (const char *argv0)\n"
            "{\n"
            "  printf (\"Usage: %%s [options]\\n\"\n"
-           "          \"  -b: use bsearch().\\n\"\n"
+           "          \"  -d: dump generated data.\\n\"\n"
            "          \"  -v: verbose mode.\\n\",\n"
            "          argv0);\n"
            "  exit (0);\n"
@@ -699,45 +739,90 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
            "\n"
            "int main (int argc, char **argv)\n"
            "{\n"
-           "  int ch, i, i_max = %d;\n"
+           "  const %s_record *rec;\n"
+           "  const char *expected;\n"
+           "  char  lookup [30];\n"
+           "  int   ch, i, j;\n"
+           "  int   i_max = %s_NUM_RECORDS;\n"
            "\n"
-           "  while ((ch = getopt(argc, argv, \"bvh?\")) != EOF)\n"
+           "  while ((ch = getopt(argc, argv, \"dvh?\")) != EOF)\n"
            "     switch (ch)\n"
            "     {\n"
-           "       case 'b':\n"
-           "            CSV_test_use_bsearch = 1;\n"
+           "       case 'd':\n"
+           "            CSV_test_dump++;\n"
+           "            break;\n"
+           "       case 'v':\n"
+           "            CSV_test_trace++;\n"
            "            break;\n"
            "       case 'h':\n"
            "       case '?':\n"
            "            usage (argv[0]);\n"
            "            break;\n"
-           "       case 'v':\n"
-           "            CSV_test_trace = 1;\n"
-           "            break;\n"
            "     }\n"
-           "\n", ctx->rec_num);
+           "\n", prefix, prefix);
 
   fprintf (h->file,
-           "  %s_ALLOC_DATA (i_max * sizeof(%s_gen_record));\n",
+           "  CSV_ASSERT (%s_ALLOC_DATA (i_max * sizeof(%s_record)) > 0);\n",
            prefix, prefix);
 
   fprintf (h->file,
+           "\n"
+           "  /* Generate data for all fields in all records (in memory)\n"
+           "   */\n"
            "  for (i = 0; i < i_max; i++)\n"
-           "      %s_GEN_DATA_0 (i, word_n(i));\n"
-           "  %s_WRITE_BIN (\"%s.BIN\");\n"
-           "  %s_FREE_DATA();\n\n",
-           prefix, prefix, fname, prefix);
+           "      for (j = 0; j < %s_NUM_FIELDS; j++)\n"
+           "          CSV_ASSERT (%s_GEN_DATA (j, i, record_value(i, j)) > 0);\n",
+           prefix, prefix);
 
   fprintf (h->file,
-           "  if (%s_READ_BIN(\"%s.BIN\") > 0)\n"
-           "  {\n"
-           "    %s_LOOKUP_FIELD_0 (\"word-1\");\n"
-           "    %s_LOOKUP_FIELD_0 (\"word-2\");\n"
+           "\n"
+           "  /* Write generated data to the .BIN-file\n"
+           "   */\n"
+           "  CSV_ASSERT (%s_WRITE_BIN (\"%s.BIN\"));\n"
+           "  CSV_ASSERT (%s_FREE_DATA() > 0);\n\n",
+           prefix, fname, prefix);
+
+  fprintf (h->file,
+           "  /* And now read them back and dump them or test them all\n"
+           "   */\n"
+           "  CSV_ASSERT (%s_READ_BIN(\"%s.BIN\") > 0);\n"
+           "\n"
+           "  if (CSV_test_dump)\n"
+           "     return dump_data();\n"
+           "\n",
+           prefix, fname);
+
+  fprintf (h->file,
+           "  for (i = 0; i < i_max; i++)\n"
+           "  {\n");
+
+  for (i = 0; i < ctx->num_fields; i++)
+  {
+    fprintf (h->file,
+             "    snprintf (lookup, sizeof(lookup), \"r%%d/%d\", i);\n"
+             "    expected = record_value (i, %d);\n"
+             "    rec = %s_LOOKUP_VAL_FIELD (lookup, %d);\n",
+             i, i, prefix, i);
+
+    fprintf (h->file,
+             "    CSV_ASSERT (rec);\n"
+             "    if (rec && strcmp(expected, rec->field_%d))\n"
+             "    {\n"
+             "      CSV_test_errors++;\n"
+             "      CSV_TRACE (0, \"expected: '%%s', got: '%%s'.\\n\", expected, rec->field_%d);\n"
+             "    }\n",
+             i, i);
+  }
+
+  fprintf (h->file,
            "  }\n"
-           "  return (0);\n"
+           "\n"
+           "  fprintf (stderr, \"There were %%d CSV_test_errors.\\n\", CSV_test_errors);\n"
+           "  return (CSV_test_errors > 0 ? 1 : 0);\n"
            "}\n"
-           "#endif /* CSV_TEST */\n",
-           prefix, fname, prefix, prefix);
+           "#endif /* CSV_TEST */\n"
+           "#endif /* %s_HEADER_H */\n"
+           "\n", prefix);
 
   if (h->file != stdout)
      fclose (h->file);
@@ -748,51 +833,48 @@ static NO_INLINE void CSV_cfile_close (struct CSV_context *ctx)
 }
 #endif  /* !CSV_TEST */
 
-int CSV_test_trace = 0;
-int CSV_test_use_bsearch = 0;
+int CSV_test_errors = 0;
+int CSV_test_trace  = 0;
+int CSV_test_dump   = 0;
 
-#define CTRACE(level, fmt, ...) do { \
-                                  if (CSV_test_trace >= level) \
-                                     printf ("%s(%u): " fmt, __FILE__, __LINE__, ## __VA_ARGS__); \
-                                } while (0)
+#include <packon.h>
 
-#pragma pack(push,1)
-typedef struct CSV_header {      /* 12  bytes */
+typedef struct CSV_header {      /* 12 bytes */
         char      marker [4];    /* "CBIN" */
         uint32_t  rec_size;
         uint32_t  rec_numbers;
       } CSV_header;
-#pragma pack(pop)
 
-typedef struct generic_record {
-        size_t  rec_size;
-        size_t  field_size;
-        char   *field_X;
-      } generic_record;
+#include <packoff.h>
 
-void CSV_generic_alloc (void **data_p, size_t *data_size_p, size_t sz)
+size_t CSV_generic_alloc (void **data_p, size_t *data_size_p, size_t sz)
 {
-  void *data = calloc (sz, 1);
+  void *data = calloc (sz+1, 1);   /* Some extras for 0-termination */
 
   *data_p = data;
   if (!data)
   {
-    CTRACE (0, "Failed to allocate %zd bytes.\n", sz);
+    CSV_TRACE (1, "Failed to allocate %zu bytes.\n", sz);
     sz = 0;
   }
   if (data_size_p)
      *data_size_p = sz;
+  return (sz);
 }
 
-void CSV_generic_free (void **data, size_t *sz)
+size_t CSV_generic_free (void **data, size_t *sz)
 {
+  size_t rc = 0;
+
   if (*data)
   {
     memset (*data, '\0', *sz);
     free (*data);
+    rc = *sz;
   }
   *data = NULL;
-  *sz =0;
+  *sz = 0;
+  return (rc);
 }
 
 size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size_p)
@@ -805,15 +887,14 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
 
   if (stat(fname, &st) != 0)
   {
-    CTRACE (0, "Failed to stat() file \"%s\". errno: %d\n", fname, errno);
+    CSV_TRACE (1, "Failed to stat() file \"%s\". errno: %d\n", fname, errno);
     return (0);
   }
-  st.st_size -= sizeof(header);
 
   bin = CSV_fopen_excl (fname, "rb");
   if (!bin)
   {
-    CTRACE (0, "Failed to open file \"%s\". errno: %d\n", fname, errno);
+    CSV_TRACE (1, "Failed to open file \"%s\". errno: %d\n", fname, errno);
     return (0);
   }
 
@@ -822,16 +903,23 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
 
   memset (&header, '\0', sizeof(header));
   read = fread (&header, 1, sizeof(header), bin);
-  if (read != sizeof(header) || memcmp(&header.marker, "CBIN", sizeof(header.marker)))
+  if (read != sizeof(header))
   {
-    CTRACE (0, "Failed to read header; len %zd. errno: %d\n", read, errno);
+    CSV_TRACE (1, "Failed to read header; len %zu. errno: %d\n", read, errno);
+    fclose (bin);
+    return (0);
+  }
+
+  if (memcmp(&header.marker, "CBIN", sizeof(header.marker)))
+  {
+    CSV_TRACE (1, "File %s has no 'CBIN' header!\n", fname);
     fclose (bin);
     return (0);
   }
 
   if (header.rec_numbers == 0 || header.rec_size == 0)
   {
-    CTRACE (0, "File %s has zero records!\n", fname);
+    CSV_TRACE (1, "File %s has zero records!\n", fname);
     fclose (bin);
     return (0);
   }
@@ -844,10 +932,11 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
     return (0);
   }
 
+  st.st_size -= sizeof(header);
   read = fread (data, 1, data_size, bin);
   if (read != data_size || read != st.st_size)
   {
-    CTRACE (0, "Failed to read all data; len %zd. errno: %d\n", read, errno);
+    CSV_TRACE (1, "Failed to read all data; len %zu. errno: %d\n", read, errno);
     CSV_generic_free (&data, &data_size);
     fclose (bin);
     return (0);
@@ -858,8 +947,8 @@ size_t CSV_generic_read_bin (const char *fname, void **data_p, size_t *data_size
   *data_p      = data;
   *data_size_p = data_size;
 
-  CTRACE (1, "Read data for %u records of %u bytes each. data_size: %zd.\n",
-          header.rec_numbers, header.rec_size, data_size);
+  CSV_TRACE (1, "Read data for %u records of %u bytes each. data_size: %zu.\n",
+             header.rec_numbers, header.rec_size, data_size);
   return (data_size);
 }
 
@@ -871,20 +960,20 @@ size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_s
 
   if (!data || data_size == 0)
   {
-    CTRACE (0, "data == NULL!\n");
+    CSV_TRACE (1, "data == NULL!\n");
     return (0);
   }
 
   if (overwrite == 0 && access(fname, 0) == 0)
   {
-    CTRACE (0, "Not over-writing file \"%s\".\n", fname);
+    CSV_TRACE (1, "Not over-writing file \"%s\".\n", fname);
     return (0);
   }
 
   bin = CSV_fopen_excl (fname, "w+b");
   if (!bin)
   {
-    CTRACE (0, "Failed to open file \"%s\". errno: %d\n", fname, errno);
+    CSV_TRACE (1, "Failed to open file \"%s\". errno: %d\n", fname, errno);
     return (0);
   }
 
@@ -896,7 +985,7 @@ size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_s
   wrote = fwrite (&header, 1, sizeof(header), bin);
   if (wrote != sizeof(header))
   {
-    CTRACE (0, "Failed to write header; len %zd. errno: %d\n", wrote, errno);
+    CSV_TRACE (1, "Failed to write header; len %zu. errno: %d\n", wrote, errno);
     fclose (bin);
     return (0);
   }
@@ -904,114 +993,116 @@ size_t CSV_generic_write_bin (const char *fname, const void *data, size_t data_s
   wrote = fwrite (data, 1, (unsigned int)data_size, bin);
   if (wrote != data_size)
   {
-    CTRACE (0, "Failed to write all data; len %zd. errno: %d\n", wrote, errno);
+    CSV_TRACE (1, "Failed to write all data; len %zu. errno: %d\n", wrote, errno);
     fclose (bin);
     return (0);
   }
-  CTRACE (1, "Wrote data for %u records of %u bytes each.\n", header.rec_numbers, header.rec_size);
+  CSV_TRACE (1, "Wrote data for %u records of %u bytes each.\n", header.rec_numbers, header.rec_size);
   fclose (bin);
   return (data_size);
 }
 
-unsigned CSV_generic_gen_data (void *data, size_t data_size,
-                               size_t rec_size, unsigned idx,
-                               const char *key, int key_ofs, int key_size)
+size_t CSV_generic_gen_data (void *data, size_t data_size,
+                             size_t rec_size, unsigned rec_num,
+                             const char *field_value, size_t field_size, size_t field_ofs)
 {
   char *p, *p_max;
 
   if (!data)
   {
-    CTRACE (0, "data == NULL!\n");
+    CSV_TRACE (1, "data == NULL!\n");
     return (0);
   }
-
-  p     = ((char*) data) + (idx * rec_size) + key_ofs;
-  p_max = ((char*) data) + data_size - key_size;
-  if (p >= p_max)
+  if (field_size == 0)
   {
-    CTRACE (0, "p >= p_max!!\n");
+    CSV_TRACE (0, "field_size == 0!\n");
     return (0);
   }
 
-  strncpy (p, key, key_size);
-  CTRACE (1, "Wrote a %d byte key (\"%s\") to idx: %u, key_ofs: %d\n", key_size, key, idx, key_ofs);
-  return (key_size);
+  p     = ((char*) data) + (rec_num * rec_size) + field_ofs;
+  p_max = ((char*) data) + data_size - field_size;
+  if (p > p_max)
+  {
+    CSV_TRACE (0, "'p >= p_max' for rec_num: %u, field_value: '%s'!!\n", rec_num, field_value);
+    return (0);
+  }
+
+  strncpy (p, field_value, field_size);
+  CSV_TRACE (2, "Wrote a %2zd byte key (\"%s\") to rec_num: %u, field_ofs: %zu\n",
+             field_size, p, rec_num, field_ofs);
+  return (field_size);
 }
 
-static int bsearch_round = 0;
-
-static int bsearch_helper (const void *a, const void *b)
+/**
+ * This `CSV_generic_lookup()` function is called via a
+ * generated macro like this:
+ *  ```
+ *   #define IP4_ASN_CSV_LOOKUP_VAL_FIELD(val, field) \
+ *           (const IP4_ASN_CSV_record*) CSV_generic_lookup ( \
+ *             val, field,
+ *             IP4_ASN_CSV_field_size[field],
+ *             IP4_ASN_CSV_field_ofs[field], \
+ *             IP4_ASN_CSV_data, IP4_ASN_CSV_data_size, \
+ *             sizeof(*IP4_ASN_CSV_data), IP4_ASN_CSV_NUM_RECORDS)
+ *  ```
+ */
+const void *CSV_generic_lookup (const char *value, unsigned field, size_t field_size, size_t field_ofs,
+                                const void *data, size_t data_size, size_t rec_size, size_t max_records)
 {
-  const char           *key    = (const char*) a;
-  const generic_record *member = (const generic_record*) b;
-  int   rc;
-
-  CTRACE (1, "round: %d, key: '%s'.\n", bsearch_round++, key);
-  rc = memcmp (key, member->field_X, member->field_size);
-
-  CTRACE (1, "rc: %d.\n", rc);
-  return (rc);
-}
-
-void *CSV_generic_lookup (const char *key, size_t key_size, int key_ofs,
-                          void *data, size_t data_size, size_t rec_size,
-                          size_t max_records, int use_bsearch)
-{
-  char *p, *p_max;
-  int   i, found = 0;
+  const char *p, *p_max;
+  int   rec;
 
   if (!data || data_size == 0)
   {
-    CTRACE (1, "data == NULL!\n");
-    return (0);
+    CSV_TRACE (0, "data == NULL!\n");
+    return (NULL);
   }
 
   if (data_size != rec_size * max_records)
   {
-    CTRACE (1, "data_size: %zu. rec_size * max_records: %zd.\n", data_size, rec_size * max_records);
-    return (0);
+    CSV_TRACE (0, "data_size: %zu. rec_size * max_records: %zu.\n", data_size, rec_size * max_records);
+    return (NULL);
   }
 
-  p     = ((char*) data) + key_ofs;
-  p_max = ((char*) data) + data_size;
-
-/*
-  #define IP4_ASN_CSV_LOOKUP_FIELD_0(key)           \
-          CSV_generic_lookup (key, 9, FIELD_OFS(0), \
-                              IP4_ASN_CSV_data, IP4_ASN_CSV_data_size, sizeof(*IP4_ASN_CSV_data), 100, CSV_test_use_bsearch)
- */
-
-  if (CSV_test_use_bsearch)
+  if (field_size == 0)
   {
-    generic_record rec;
-
-    rec.rec_size   = rec_size;
-    rec.field_X    = p;
-    rec.field_size = key_size;
-    bsearch_round  = 0;
-    CTRACE (0, "Using bsearch(): looking for key: '%s' in %zu records.\n", key, max_records);
-    return bsearch (key, &rec, max_records, sizeof(rec), bsearch_helper);
+    CSV_TRACE (0, "field_size == 0!\n");
+    return (NULL);
   }
 
-  CTRACE (0, "No bsearch(): Looking for key: '%s' at ofs: %d.\n", key, key_ofs);
-  for (i = 0; i < max_records; i++)
+  p     = ((const char*)data) + field_ofs;
+  p_max = ((const char*)data) + data_size - field_size;
+
+  CSV_TRACE (2, "Looking for value: '%s' in field: %d at ofs: %zu.\n", value, field, field_ofs);
+
+  for (rec = 0; rec < max_records; rec++)
   {
-    CTRACE (1, "i: %d, p: '%.10s'\n", i, p);
-    if (p >= p_max)
+    CSV_TRACE (2, "rec: %d, p: '%s'\n", rec, p);
+    if (p > p_max)
     {
-      CTRACE (0, "p >= p_max!!\n");
+      CSV_TRACE (0, "p > p_max!!\n");
       break;
     }
-    found = (strncmp (key, p, key_size) == 0);
-    if (found)
+    if (!strncmp(value, p, field_size))
     {
-      CTRACE (0, "key '%s' found in record %d.\n", key, i);
-      return (p);
+      CSV_TRACE (1, "value '%s' found in record %d (field %d).\n", value, rec, field);
+      return (p - field_ofs);
     }
     p += rec_size;
   }
-  CTRACE (1, "key '%s' not found in %zd records.\n", key, max_records);
+
+  CSV_TRACE (1, "value '%s' not found in %zu records.\n", value, max_records);
   return (NULL);
+}
+
+void CSV_generic_dump (const void *record_data, unsigned rec_num, unsigned field, size_t field_ofs)
+{
+  const char *field_data = (const char*) record_data;
+
+  field_data += field_ofs;
+  if (field == 0)
+     printf ("rec_%u:\n", rec_num);
+  printf ("  field_%u: '%s'\n", field, field_data);
 }
 
 /**
