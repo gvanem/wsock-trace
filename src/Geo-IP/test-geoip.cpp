@@ -202,6 +202,8 @@ bool geoip_del_providers (void)
 int geoip_dump_provider (int i)
 {
   geoip_provider_st *p = g_providers + i;
+  const char        *db_file;
+  int                f;
 
   if (!p->provider_name)
      return (0);
@@ -212,6 +214,10 @@ int geoip_dump_provider (int i)
   printf ("  p->lookup: 0x%p\n",   p->lookup);
   printf ("  p->update: 0x%p\n",   p->update);
   printf ("  p->close:  0x%p\n",   p->close);
+  for (f = 0; (db_file = p->files[f]) != nullptr; f++)
+      printf ("  p->files[%d]: '%s'. Does%s exist.\n",
+              f, db_file, access(db_file, 0) == 0 ? "" : " not");
+
   return (1);
 }
 
@@ -485,7 +491,7 @@ static const struct geoip_provider_st mmdb_handler = {
 
 static const struct geoip_provider_st libloc_handler = {
   .flags  = GEOIP_IPV4_ADDR | GEOIP_IPV6_ADDR | GEOIP_ASN_FILE,
-  .files  = { "IPFire/location.db" },
+  .files  = { "../../IPFire-database.db" },
   .url    = "https://location.ipfire.org/databases/1/location.db.xz",
   .init   = geoip_libloc_init,
   .lookup = geoip_libloc_lookup,
@@ -503,7 +509,7 @@ static const struct geoip_provider_st asn_handler1 = {
 
 static const struct geoip_provider_st asn_handler2 = {
   .flags  = GEOIP_ASN_FILE | GEOIP_CSV_FILE,
-  .files  = { "IP4-ASN.CSV" },
+  .files  = { "../../IP4-ASN.CSV" },
   .init   = geoip_ASN_init,
   .lookup = geoip_ASN_lookup,
   .close  = geoip_ASN_close
@@ -511,7 +517,7 @@ static const struct geoip_provider_st asn_handler2 = {
 
 static const struct geoip_provider_st drop_handler = {
   .flags  = GEOIP_DROP | GEOIP_TXT_FILE,
-  .files  = { "DROP.txt", "DROPv6.txt", "EDROP.txt" },
+  .files  = { "../../DROP.txt", "../../DROPv6.txt", "../../EDROP.txt" },
   .init   = geoip_DROP_init,
   .lookup = geoip_DROP_lookup,
   .close  = geoip_DROP_close
