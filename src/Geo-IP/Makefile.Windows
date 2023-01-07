@@ -2,11 +2,11 @@
 # A GNU-makefile for 'geoip-$(CPU).lib' + 'geoip-$(CPU).dll':
 #
 # The unified Geo-location library for:
-#  *) MaxMind CSV databases
+#  *) MaxMind CSV databases.
 #  *) MaxMind Geoip2 MMDB databases.
 #  *) IP2Location (the code in ../ip2loc.c).
 #  *) IPFire's libloc. The main code of this is under 'IPFire/src'.
-#  *) DB-IP and IP-to-ASN
+#  *) DB-IP and IP-to-ASN.
 #
 export CL=
 
@@ -55,15 +55,17 @@ ifeq ($(CC),gcc)
   #
   # This ass-u-mes a Cygwin 'gcc'.
   #
-  CFLAGS    = -m$(bits) -O2 -ggdb -D__USE_W32_SOCKETS -DHAVE_ENDIAN_H -Wno-write-strings
-  LDFLAGS   = -m$(bits) -Wl,--print-map
-  MSVC_TYPE = 0
+  CFLAGS       = -m$(bits) -O2 -ggdb -D__USE_W32_SOCKETS -DHAVE_ENDIAN_H -Wno-write-strings
+  LDFLAGS      = -m$(bits) -Wl,--print-map
+  INSTALL_ROOT = /usr
+  MSVC_TYPE    = 0
 
 else
-  DEF_ARG   = -def:
-  CFLAGS    = -nologo -Zi -W3
-  LDFLAGS   = -debug -map -verbose -nologo -incremental:no
-  MSVC_TYPE = 1
+  DEF_ARG      = -def:
+  CFLAGS       = -nologo -Zi -W3
+  LDFLAGS      = -debug -map -verbose -nologo -incremental:no
+  INSTALL_ROOT = $(realpath $(VSINSTALLDIR))
+  MSVC_TYPE    = 1
 
   ifeq ($(USE_CRT_DEBUG),1)
     CFLAGS += -MDd -D_CRTDBG_MAP_ALLOC -FIcrtdbg.h
@@ -204,6 +206,13 @@ test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
 test-geoip.exe: $(OBJ_DIR)/test-geoip.$(O) $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
+install: all
+	- $(call copy_file, $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB), $(INSTALL_ROOT)/lib)
+	- $(call copy_file, geoip-$(CPU).dll,                   $(INSTALL_ROOT)/bin)
+ifeq ($(MSVC_TYPE),1)
+	- $(call copy_file, geoip-$(CPU).pdb,                   $(INSTALL_ROOT)/bin)
+endif
+
 #
 # '$(sort ..)' create a unique list.
 #
@@ -279,6 +288,11 @@ endef
 
 create_static_lib_0 = ar rs $(1) $(2)
 create_static_lib_1 = lib -nologo -out:$(strip $(1)) $(2)
+
+define copy_file
+  cp --update $(strip $(1) $(2))
+  @echo
+endef
 
 #
 # This .def-file macro uses 'nm <library>'.

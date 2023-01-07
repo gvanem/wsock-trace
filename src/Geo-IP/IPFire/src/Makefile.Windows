@@ -6,7 +6,7 @@
 # Ref: https://git.ipfire.org/pub/git/location/libloc.git
 #      https://location.ipfire.org/how-to-use
 #
-# From 'configure.ac':
+# From '../configure.ac':
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
@@ -47,7 +47,8 @@ OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
 #
 # For C-preprocessing.
 #
-USE_CLANG_FORMATER ?= 1
+USE_ASTYLE_FORMATER ?= 1
+USE_CLANG_FORMATER  ?= 0
 
 #
 # Set 'USE_STATIC_LIBLOC=1' to link with '$(STATIC_LIB)' for the test programs.
@@ -340,7 +341,7 @@ $(OBJ_DIR)/%.o: %.c
 	@echo
 
 %.i: %.c FORCE cpp-filter.py
-	$(call C_preprocess, $<, $@, $(C_FORMATER))
+	$(call C_preprocess, $@, $<)
 
 FORCE:
 
@@ -598,15 +599,19 @@ endef
 make_res_0 = windres $(RCFLAGS) -o $(1) -i $(2)
 make_res_1 = rc $(RCFLAGS) -Fo $(1) $(2)
 
-ifeq ($(USE_CLANG_FORMATER),1)
+ifeq ($(USE_ASTYLE_FORMATER),1)
+  C_FORMATER = | astyle
+else ifeq ($(USE_CLANG_FORMATER),1)
   C_FORMATER = | clang-format -style=Mozilla -assume-filename=c
+else
+  C_FORMATER =
 endif
 
 define C_preprocess
-  @echo "The result of preprocessing $(strip $(1)) with these CFLAGS:" > $(2)
-  @echo $(CFLAGS)                            >> $(2)
-  @echo "--------------------------------- " >> $(2)
-  $(CC) $(CFLAGS) $(1) -E | $(PYTHON) cpp-filter.py $(3) >> $(2)
+  @echo "The result of preprocessing $(strip $(2)) with these CFLAGS:" > $(1)
+  @echo $(CFLAGS)                            >> $(1)
+  @echo "--------------------------------- " >> $(1)
+  $(CC) $(CFLAGS) $(2) -E | $(PYTHON) cpp-filter.py $(C_FORMATER) >> $(1)
 endef
 
 define RC_COMMON

@@ -20,6 +20,10 @@ USE_CRT_DEBUG = 0
 USE_DEF_FILE = 1
 !endif
 
+!if "$(USE_LUAJIT)" == ""
+USE_LUAJIT = 0
+!endif
+
 #
 # Support for LuaJIT-scripting:
 # But we cannot mix objects compiled with both '-MDd' and '-MD'.
@@ -67,7 +71,7 @@ INSTALL_ROOT = $(VSINSTALLDIR)
 #
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
-LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console
+LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console -verbose
 LDFLAGS = $(LDFLAGS) -machine:$(CPU) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
 
 OBJ_DIR = MSVC_obj-$(CPU)
@@ -87,10 +91,10 @@ LDFLAGS_DEF = -def:$(WSOCK_DEF)
 !endif
 
 !if "$(USE_LUAJIT)" == "1"
-CFLAGS    = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
+CFLAGS     = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
 LUAJIT_LIB = $(LUAJIT_ROOT)/src/lua51_static.lib
-EX_LIBS   = $(LUAJIT_ROOT)/src/lua51_static.lib
-WSOCK_DEP = $(LUAJIT_ROOT)/src/lua51_static.lib
+EX_LIBS    = $(LUAJIT_ROOT)/src/lua51_static.lib
+WSOCK_DEP  = $(LUAJIT_ROOT)/src/lua51_static.lib
 !endif
 
 CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)
@@ -201,7 +205,8 @@ $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP) $(OBJ_DIR)\wsock_trace.res
-	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(OBJ_DIR)\wsock_trace.res $(EX_LIBS)
+	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(OBJ_DIR)\wsock_trace.res $(EX_LIBS) > link.tmp
+	type link.tmp >> wsock_trace$(_D)-$(CPU).map
 	lib -nologo $(WSOCK_TRACE_LIB) $(NON_EXPORT_OBJ)
 	@del $(WSOCK_TRACE_LIB:.lib=.exp)
 
@@ -216,19 +221,19 @@ uninstall:
 	- del "$(INSTALL_ROOT)\bin\wsock_trace$(_D)-$(CPU).pdb"
 
 ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_DEP)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
+	link.exe $(LDFLAGS) -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
 	@type link.tmp >> ws_tool.map
 	@echo
 
 mhook-test.exe: $(OBJ_DIR)\mhook-test.obj $(OBJ_DIR)\disasm.obj $(WSOCK_TRACE_LIB)
-	link.exe $(LDFLAGS) -verbose -out:$@ $** gdi32.lib kernel32.lib user32.lib > link.tmp
+	link.exe $(LDFLAGS) -out:$@ $** gdi32.lib kernel32.lib user32.lib > link.tmp
 	@type link.tmp >> mhook-test.map
 	@echo
 
 run_test: ws_tool.exe
-	ws_tool.exe -dd test
+	ws_tool.exe test -v
 
-compile_luajit_ compile_luajit_0:
+compile_luajit_0:
 	@echo
 
 compile_luajit_1:
@@ -242,8 +247,8 @@ libloc$(_D)-$(CPU).lib: $(LIBLOC_OBJ)
 	@echo
 
 clean:
-	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\*.res $(OBJ_DIR)\*.def
-	- del libloc*.lib
+	- del link.tmp vc1*.pdb $(OBJ_DIR)\*.obj $(OBJ_DIR)\*.res $(OBJ_DIR)\*.def libloc*.lib
+	- rd $(OBJ_DIR)
 
 vclean realclean: clean
 	- del wsock_trace$(_D)-$(CPU).lib \
@@ -252,7 +257,6 @@ vclean realclean: clean
 	      wsock_trace$(_D)-$(CPU).pdb
 	- del ws_tool.exe    ws_tool.map    ws_tool.pdb
 	- del mhook-test.exe mhook-test.map mhook-test.pdb
-	- rd $(OBJ_DIR)
 !if "$(USE_LUAJIT)" == "1"
 	- del $(LUAJIT_ROOT)\src\lua51*.lib
 !endif
@@ -262,7 +266,7 @@ help:
 Run one of the following targets:
   nmake -f Makefile.vc6 <VAR=x> [all | clean | vclean | install | uninstall]
 
-where VAR can have of the following 'x' values:
+where VAR can have one of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
   USE_DEF_FILE     (default: $(USE_DEF_FILE))
   USE_LUAJIT       (default: $(USE_LUAJIT))

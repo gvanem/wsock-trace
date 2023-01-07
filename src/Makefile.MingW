@@ -240,11 +240,11 @@ else
 endif
 
 clean: clean_lua
-	- rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.res $(CC).args
+	rm -fr $(OBJ_DIR)
+	rm -f $(CC).args $(WSOCK_DLL:.dll=.map) ws_tool.map
 
 vclean realclean: clean
-	rm -f $(WSOCK_LIB) $(WSOCK_DLL) $(WSOCK_DLL:.dll=.map) $(LIBLOC_LIB) ws_tool.exe ws_tool.map .depend.MinGW
-	- rmdir $(OBJ_DIR)
+	rm -f $(WSOCK_LIB) $(WSOCK_DLL) $(LIBLOC_LIB) ws_tool.exe .depend.MinGW
 
 $(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c | $(CC).args
 	$(CC) @$(CC).args $(LIBLOC_CFLAGS) -o $@ $<
