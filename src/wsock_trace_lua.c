@@ -110,7 +110,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
 
     reason_str = "DLL_PROCESS_ATTACH";
 
-    *LuaJIT_trace_level() = g_cfg.LUA.trace_level;
+    *ljit_trace_level() = g_cfg.LUA.trace_level;
 
     LUA_TRACE (1, "g_data.ws_from_dll_main: %d, dll/exe: '%s', loaded: '%s'\n", g_data.ws_from_dll_main, dll, loaded);
 
