@@ -1,6 +1,6 @@
 /*
 ** MIPS IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -643,9 +643,11 @@ static void asm_href(ASMState *as, IRIns *ir)
   if (irt_isnum(kt)) {
     key = ra_alloc1(as, refkey, RSET_FPR);
     tmpnum = ra_scratch(as, rset_exclude(RSET_FPR, key));
-  } else if (!irt_ispri(kt)) {
-    key = ra_alloc1(as, refkey, allow);
-    rset_clear(allow, key);
+  } else {
+    if (!irt_ispri(kt)) {
+      key = ra_alloc1(as, refkey, allow);
+      rset_clear(allow, key);
+    }
     type = ra_allock(as, irt_toitype(irkey->t), allow);
     rset_clear(allow, type);
   }
@@ -1225,7 +1227,7 @@ static void asm_arithov(ASMState *as, IRIns *ir)
   Reg right, left, tmp, dest = ra_dest(as, ir, RSET_GPR);
   if (irref_isk(ir->op2)) {
     int k = IR(ir->op2)->i;
-    if (ir->o == IR_SUBOV) k = -k;
+    if (ir->o == IR_SUBOV) k = (int)(~(unsigned int)k+1u);
     if (checki16(k)) {  /* (dest < left) == (k >= 0 ? 1 : 0) */
       left = ra_alloc1(as, ir->op1, RSET_GPR);
       asm_guard(as, k >= 0 ? MIPSI_BNE : MIPSI_BEQ, RID_TMP, RID_ZERO);

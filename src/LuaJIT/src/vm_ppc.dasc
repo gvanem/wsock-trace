@@ -1,6 +1,6 @@
 |// Low-level VM code for PowerPC CPUs.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 |
 |.arch ppc
 |.section code_op, code_sub
@@ -819,11 +819,11 @@ static void build_subroutines(BuildCtx *ctx)
   |.endif
   |     lwz PC, -16(RB)			// Restore PC from [cont|PC].
   |   subi TMP2, RD, 8
-  |    lwz TMP1, LFUNC:TMP1->pc
   |   stwx TISNIL, RA, TMP2		// Ensure one valid arg.
   |.if FFI
   |  ble >1
   |.endif
+  |    lwz TMP1, LFUNC:TMP1->pc
   |    lwz KBASE, PC2PROTO(k)(TMP1)
   |  // BASE = base, RA = resultptr, RB = meta base
   |  mtctr TMP0

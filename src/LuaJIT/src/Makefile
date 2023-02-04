@@ -7,7 +7,7 @@
 # Also works with MinGW and Cygwin on Windows.
 # Please check msvcbuild.bat for building with MSVC on Windows.
 #
-# Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
+# Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 ##############################################################################
 
 MAJVER=  2
@@ -24,14 +24,20 @@ NODOTABIVER= 51
 # removing the '#' in front of them. Make sure you force a full recompile
 # with "make clean", followed by "make" if you change any options.
 #
+DEFAULT_CC = gcc
+#
+# LuaJIT builds as a native 32 or 64 bit binary by default.
 CC= $(DEFAULT_CC)
 
+#
+# Use this if you want to force a 32 bit build on a 64 bit multilib OS.
+#CC= $(DEFAULT_CC) -m32
 #
 # Since the assembler part does NOT maintain a frame pointer, it's pointless
 # to slow down the C part by not omitting it. Debugging, tracebacks and
 # unwinding are not affected -- the assembler part has frame unwind
 # information and GCC emits it where needed (x64) or with -g (see CCDEBUG).
-CCOPT ?= -O2 -fomit-frame-pointer
+CCOPT= -O2 -fomit-frame-pointer
 
 # Use this if you want to generate a smaller binary (but it's slower):
 #CCOPT= -Os -fomit-frame-pointer
@@ -53,7 +59,7 @@ CCOPT_ppc=
 CCOPT_ppcspe=
 CCOPT_mips=
 #
-CCDEBUG ?=
+CCDEBUG=
 # Uncomment the next line to generate debug information:
 #CCDEBUG= -g
 #
@@ -73,7 +79,7 @@ CCWARN= -Wall
 BUILDMODE= mixed
 #
 # Static mode creates a static library and a statically linked luajit.
-BUILDMODE= static
+#BUILDMODE= static
 #
 # Dynamic mode creates a dynamic library and a dynamically linked luajit.
 # Note: this executable will only run when the library is installed!
@@ -98,8 +104,7 @@ XCFLAGS=
 # enabled by default. Some other features that *might* break some existing
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
-XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
-
+#XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT

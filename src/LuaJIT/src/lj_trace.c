@@ -1,6 +1,6 @@
 /*
 ** Trace management.
-** Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_trace_c
@@ -452,7 +452,11 @@ static void trace_stop(jit_State *J)
     lua_assert(J->parent != 0 && J->cur.root != 0);
     lj_asm_patchexit(J, traceref(J, J->parent), J->exitno, J->cur.mcode);
     /* Avoid compiling a side trace twice (stack resizing uses parent exit). */
-    traceref(J, J->parent)->snap[J->exitno].count = SNAPCOUNT_DONE;
+    {
+      SnapShot *snap = &traceref(J, J->parent)->snap[J->exitno];
+      snap->count = SNAPCOUNT_DONE;
+      if (J->cur.topslot > snap->topslot) snap->topslot = J->cur.topslot;
+    }
     /* Add to side trace chain in root trace. */
     {
       GCtrace *root = traceref(J, J->cur.root);
@@ -583,9 +587,11 @@ static TValue *trace_state(lua_State *L, lua_CFunction dummy, void *ud)
       trace_pendpatch(J, 0);
       setvmstate(J2G(J), RECORD);
       lj_vmevent_send_(L, RECORD,
-	/* Save/restore tmptv state for trace recorder. */
+	/* Save/restore state for trace recorder. */
 	TValue savetv = J2G(J)->tmptv;
 	TValue savetv2 = J2G(J)->tmptv2;
+	TraceNo parent = J->parent;
+	ExitNo exitno = J->exitno;
 	setintV(L->top++, J->cur.traceno);
 	setfuncV(L, L->top++, J->fn);
 	setintV(L->top++, J->pt ? (int32_t)proto_bcpos(J->pt, J->pc) : -1);
@@ -593,6 +599,8 @@ static TValue *trace_state(lua_State *L, lua_CFunction dummy, void *ud)
       ,
 	J2G(J)->tmptv = savetv;
 	J2G(J)->tmptv2 = savetv2;
+	J->parent = parent;
+	J->exitno = exitno;
       );
       lj_record_ins(J);
       break;

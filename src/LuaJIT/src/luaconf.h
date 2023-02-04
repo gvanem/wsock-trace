@@ -1,6 +1,6 @@
 /*
 ** Configuration header.
-** Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef luaconf_h
@@ -65,15 +65,9 @@
 #define LUA_LCPATH1	";" LUA_LCDIR "?.so"
 #define LUA_LCPATH2	";" LUA_LCDIR "loadall.so"
 
-#ifndef LUA_PATH_DEFAULT
 #define LUA_PATH_DEFAULT	"./?.lua" LUA_JPATH LUA_LLPATH LUA_RLPATH
-#endif
-
-#ifndef LUA_CPATH_DEFAULT
 #define LUA_CPATH_DEFAULT	"./?.so" LUA_LCPATH1 LUA_RCPATH LUA_LCPATH2
 #endif
-
-#endif  /* _WIN32 */
 
 /* Environment variable names for path overrides and initialization code. */
 #define LUA_PATH	"LUA_PATH"

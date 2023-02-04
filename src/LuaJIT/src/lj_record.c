@@ -1,6 +1,6 @@
 /*
 ** Trace recorder (bytecode -> SSA IR).
-** Copyright (C) 2005-2021 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_record_c
@@ -1522,6 +1522,8 @@ static void rec_varg(jit_State *J, BCReg dst, ptrdiff_t nresults)
     } else if (dst + nresults > J->maxslot) {
       J->maxslot = dst + (BCReg)nresults;
     }
+    if (J->baseslot + J->maxslot >= LJ_MAX_JSLOTS)
+      lj_trace_err(J, LJ_TRERR_STACKOV);
     for (i = 0; i < nresults; i++)
       J->base[dst+i] = i < nvararg ? getslot(J, i - nvararg - 1) : TREF_NIL;
   } else {  /* Unknown number of varargs passed to trace. */
@@ -1602,8 +1604,6 @@ static void rec_varg(jit_State *J, BCReg dst, ptrdiff_t nresults)
       lj_trace_err_info(J, LJ_TRERR_NYIBC);
     }
   }
-  if (J->baseslot + J->maxslot >= LJ_MAX_JSLOTS)
-    lj_trace_err(J, LJ_TRERR_STACKOV);
 }
 
 /* -- Record allocations -------------------------------------------------- */
