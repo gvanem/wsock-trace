@@ -245,12 +245,16 @@ size_t smartlist_ensure_capacity (smartlist_t *sl, size_t num)
 /**
  * Append `element` to the end of the list `sl`.
  */
-void smartlist_add (smartlist_t *sl, void *element)
+int smartlist_add (smartlist_t *sl, void *element)
 {
   assert (sl);
   ASSERT_VAL (sl);
   if (smartlist_ensure_capacity(sl, 1 + (size_t)sl->num_used) > 0)
-     sl->list [sl->num_used++] = element;
+  {
+    sl->list [sl->num_used++] = element;
+    return (1);
+  }
+  return (0);  /* failed! */
 }
 
 /**
@@ -571,6 +575,7 @@ void *smartlist_bsearch (const smartlist_t *sl,
   return (found ? smartlist_get(sl, idx) : NULL);
 }
 
+#if !defined(CSV_TEST)
 /**
  * Open a text-file and return parsed lines as a smartlist.
  *
@@ -603,4 +608,5 @@ smartlist_t *smartlist_read_file (const char *file, smartlist_parse_func parse)
   fclose (f);
   return (sl);
 }
+#endif /* CSV_TEST */
 
