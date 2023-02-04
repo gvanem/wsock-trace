@@ -209,21 +209,21 @@ const char *get_timestamp (void)
 }
 
 /*
- * Return a time-stamp as a double.
+ * Return a time-stamp in micro-seconds as a double.
  * Works independently of whether 'init_timestamp()' was called or not.
  */
 double get_timestamp_now (void)
 {
   static uint64 frequency = U64_SUFFIX(0);
   LARGE_INTEGER ticks;
-  double        sec;
+  double        usec;
 
   if (frequency == U64_SUFFIX(0))
      QueryPerformanceFrequency ((LARGE_INTEGER*)&frequency);
 
   QueryPerformanceCounter (&ticks);
-  sec = 1E6 * ((double)ticks.QuadPart / (double)frequency);
-  return (sec);
+  usec = 1E6 * ((double)ticks.QuadPart / (double)frequency);
+  return (usec);
 }
 
 /**
