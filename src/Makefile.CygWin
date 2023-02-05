@@ -60,7 +60,7 @@ endif
 
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
-  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit.a
+  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit-5.1.dll.a
 else
   LUAJIT_LIB =
 endif
@@ -235,13 +235,15 @@ ifeq ($(USE_LUAJIT),1)
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
 	$(MAKE) -C $(LUAJIT_ROOT)/src $(LUAJIT_MAKE_FLAGS) all
+	$(call green_msg, \nCopying '$(LUAJIT_ROOT)/src/lua51.dll' to current directory.)
+	cp --update $(LUAJIT_ROOT)/src/lua51.dll .
 	@echo
 endif
 
 clean_lua:
 	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe \
 	         $(LUAJIT_ROOT)/src/libluajit.a      $(LUAJIT_ROOT)/src/*.o              \
-	         $(LUAJIT_ROOT)/src/host/*.o
+	         $(LUAJIT_ROOT)/src/host/*.o         lua51.dll
 
 clean: clean_lua
 	rm -fr $(OBJ_DIR)
