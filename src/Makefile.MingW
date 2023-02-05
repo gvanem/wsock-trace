@@ -52,7 +52,6 @@ RCFLAGS += -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
-  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit.a
   LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit-5.1.dll.a
 else
   LUAJIT_LIB =
@@ -221,7 +220,9 @@ ifeq ($(USE_LUAJIT),1)
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #
   LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows \
-                      DEFAULT_CC='gcc -m$(BITS) -DLUAJIT_ENABLE_LUA52COMPAT' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)'
+                      CCDEBUG=$(CCDEBUG) \
+                      CCOPT='$(CCOPT)'   \
+                      DEFAULT_CC='$(CC) -m$(BITS) -DLUAJIT_ENABLE_LUA52COMPAT'
 
   #
   # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
@@ -232,10 +233,12 @@ ifeq ($(USE_LUAJIT),1)
   $(LUAJIT_LIB):
 	$(call green_msg, Building LuaJIT ...)
 	$(MAKE) -C $(LUAJIT_ROOT)/src $(LUAJIT_MAKE_FLAGS) all
+	$(call green_msg, \nCopying '$(LUAJIT_ROOT)/src/lua51.dll' to current directory.)
+	cp --update $(LUAJIT_ROOT)/src/lua51.dll .
 
   clean_lua:
 	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
-	- rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB)
+	- rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB) lua51.dll
 
 else
   clean_lua: ;
