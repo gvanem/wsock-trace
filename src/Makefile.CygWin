@@ -221,7 +221,10 @@ ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #
-  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows DEFAULT_CC=gcc CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)'
+  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows \
+                      CCDEBUG=$(CCDEBUG) \
+                      CCOPT='$(CCOPT)'   \
+                      DEFAULT_CC='gcc -DLUAJIT_ENABLE_LUA52COMPAT'
 
   #
   # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
