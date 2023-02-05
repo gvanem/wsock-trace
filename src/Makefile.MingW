@@ -2,7 +2,7 @@
 # Wsock-trace makefile for MinGW, MinGW64-w64 or TDM-gcc.
 # This requires GNU make v4 or later.
 #
-# G. Vanem <gvanem@yahoo.no> 2011 - 2021.
+# G. Vanem <gvanem@yahoo.no> 2011 - 2023.
 #
 USE_CRT_DEBUG ?= 0
 USE_BFD       ?= 0
@@ -53,6 +53,7 @@ RCFLAGS += -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
   LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit.a
+  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit-5.1.dll.a
 else
   LUAJIT_LIB =
 endif
@@ -219,7 +220,8 @@ ifeq ($(USE_LUAJIT),1)
   #
   # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
   #
-  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows DEFAULT_CC='gcc -m$(BITS)' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)'
+  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows \
+                      DEFAULT_CC='gcc -m$(BITS) -DLUAJIT_ENABLE_LUA52COMPAT' CCDEBUG=$(CCDEBUG) CCOPT='$(CCOPT)'
 
   #
   # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
