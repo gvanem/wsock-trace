@@ -35,7 +35,6 @@ typedef void (*csv_state_t) (struct CSV_context *ctx);
 typedef struct CSV_cfile {
         const char *file_name;
         FILE       *file;
-        size_t     *field_sizes;
       } CSV_cfile;
 
 /**
@@ -47,6 +46,7 @@ typedef struct CSV_context {
         FILE       *file;
         unsigned    field_num;
         unsigned    num_fields;
+        size_t     *field_sizes;
         int         delimiter;
         int       (*callback) (struct CSV_context *ctx, const char *value);
         unsigned    rec_num;
@@ -64,13 +64,13 @@ typedef struct CSV_context {
         CSV_cfile   cfile;
       } CSV_context;
 
-
 extern int CSV_test_errors;
-extern int CSV_test_trace;
+extern int CSV_test_generate;
+extern int CSV_test_verbose;
 extern int CSV_test_dump;
 
 #define CSV_TRACE(level, fmt, ...) do {                             \
-                                     if (CSV_test_trace >= level)   \
+                                     if (CSV_test_verbose >= level) \
                                         printf ("%s(%u): " fmt,     \
                                                 __FILE__, __LINE__, \
                                                 ## __VA_ARGS__);    \
@@ -91,16 +91,19 @@ size_t      CSV_generic_read_bin  (const char *fname,       void **data, size_t 
 size_t      CSV_generic_write_bin (const char *fname, const void *data, size_t data_size,
                                    size_t rec_size, int overwrite);
 
+size_t      CSV_generic_write_data  (void *data, size_t data_size,
+                                     size_t rec_size, unsigned rec_idx,
+                                     const char *field_value,
+                                     size_t field_size, size_t field_ofs);
+
 size_t      CSV_generic_alloc     (void **data, size_t *data_size_p, size_t sz);
 size_t      CSV_generic_free      (void **data, size_t *sz);
 
-const void *CSV_generic_lookup (const char *key, unsigned field, size_t field_size, size_t field_ofs,
-                                const void *data, size_t data_size, size_t rec_size, size_t max_records);
+typedef int (*CSV_bsearch_func) (const void *key, const void *member);
 
-size_t      CSV_generic_gen_data  (void *data, size_t data_size,
-                                   size_t rec_size, unsigned rec_idx,
-                                   const char *field_value,
-                                   size_t field_size, size_t field_ofs);
+const void *CSV_generic_lookup (const char *key, unsigned field, size_t field_size, size_t field_ofs,
+                                const void *data, size_t data_size, size_t rec_size, size_t max_records,
+                                CSV_bsearch_func cmp_func);
 
 void        CSV_generic_dump (const void *record_data, unsigned rec_num,
                               unsigned field, size_t field_ofs);
