@@ -242,7 +242,7 @@ endif
 
 clean_lua:
 	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe \
-	         $(LUAJIT_ROOT)/src/libluajit.a      $(LUAJIT_ROOT)/src/*.o              \
+	         $(LUAJIT_ROOT)/src/libluajit*.a     $(LUAJIT_ROOT)/src/*.o              \
 	         $(LUAJIT_ROOT)/src/host/*.o         lua51.dll
 
 clean: clean_lua
