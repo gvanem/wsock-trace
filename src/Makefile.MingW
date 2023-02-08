@@ -60,7 +60,7 @@ RCFLAGS += -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
-  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit_static-$(CPU).a
+  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit-$(CPU).a
 else
   LUAJIT_LIB =
 endif
