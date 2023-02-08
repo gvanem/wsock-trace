@@ -90,4 +90,4 @@
 #include "lib_jit.c"
 #include "lib_ffi.c"
 #include "lib_init.c"
-
+#include "lj_win.c"

@@ -7,6 +7,7 @@
 #define _LJ_DEBUG_H
 
 #include "lj_obj.h"
+#include "lj_win.h"
 
 typedef struct lj_Debug {
   /* Common fields. Must be in the same order as in lua.h. */
@@ -58,25 +59,5 @@ enum {
 #undef VARNAMEENUM
   VARNAME__MAX
 };
-
-#if defined(_WIN32) || defined(__CYGWIN__)
-  LUA_API int  ljit_trace_init (void);
-  LUA_API int *ljit_trace_level (void);
-  LUA_API void ljit_set_color (int color);
-  LUA_API void ljit_restore_color (void);
-
-  #define LJ_TRACE(level, fmt, ...)                            \
-          do {                                                 \
-            if (ljit_trace_init() >= level) {                  \
-              ljit_set_color (1);                              \
-              printf ("LuaJIT: %s(%u): ", __FILE__, __LINE__); \
-              printf (fmt, ##__VA_ARGS__);                     \
-              ljit_restore_color();                            \
-            }                                                  \
-          } while (0)
-
-#else
-  #define LJ_TRACE(level, fmt, ...)   ((void)0)
-#endif  /* _WIN32 */
 
 #endif
