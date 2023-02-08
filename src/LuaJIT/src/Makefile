@@ -28,7 +28,6 @@ DEFAULT_CC = gcc
 #
 # LuaJIT builds as a native 32 or 64 bit binary by default.
 CC= $(DEFAULT_CC)
-
 #
 # Use this if you want to force a 32 bit build on a 64 bit multilib OS.
 #CC= $(DEFAULT_CC) -m32
@@ -38,7 +37,6 @@ CC= $(DEFAULT_CC)
 # unwinding are not affected -- the assembler part has frame unwind
 # information and GCC emits it where needed (x64) or with -g (see CCDEBUG).
 CCOPT= -O2 -fomit-frame-pointer
-
 # Use this if you want to generate a smaller binary (but it's slower):
 #CCOPT= -Os -fomit-frame-pointer
 # Note: it's no longer recommended to use -O3 with GCC 4.x.
@@ -160,7 +158,6 @@ XCFLAGS=
 
 ifeq (Windows,$(findstring Windows,$(OS))$(MSYSTEM)$(TERM))
   HOST_SYS= Windows
-  HOST_RM= del
 else
   HOST_SYS:= $(shell uname -s)
   ifneq (,$(findstring MINGW,$(HOST_SYS)))
@@ -571,9 +568,9 @@ endif
 endif
 endif
 
-#Q= @
+Q= @
 E= @echo
-Q=
+#Q=
 #E= @:
 
 ##############################################################################
