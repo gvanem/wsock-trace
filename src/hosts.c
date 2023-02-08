@@ -215,6 +215,7 @@ void hosts_file_init (void)
     memset (&ctx, '\0', sizeof(ctx));
     ctx.file_name  = g_cfg.hosts_file [current_hosts_file];
     ctx.delimiter  = ' ';
+    ctx.num_fields = 2;
     ctx.callback   = hosts_CSV_add;
     CSV_open_and_parse_file (&ctx);
   }
