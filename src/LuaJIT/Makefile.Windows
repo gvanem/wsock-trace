@@ -99,8 +99,14 @@ else ifeq ($(CC),mingw-gcc)
 
   #
   # A dual-mode 'gcc' is assumed.
+  # On AppVeyor, the env-var '%APPVEYOR_BUILD_FOLDER%' exist and MinGW's gcc is on PATH.
   #
-  _CC       = $(MINGW_ROOT)/bin/gcc -m$(BITS)
+  ifneq ($(APPVEYOR_BUILD_FOLDER),)
+    _CC = gcc -m$(BITS)
+  else
+    _CC = $(MINGW_ROOT)/bin/gcc -m$(BITS)
+  endif
+
   RCFLAGS   = -O COFF -D__MINGW32__
   MSVC_TYPE = 0
 
