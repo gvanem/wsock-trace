@@ -1,0 +1,718 @@
+#
+# GNU Makefile for LuaJIT supporting
+# MSVC, Intel's ICX, clang-cl, MinGW and Cygwin.
+#
+# By <gvanem@yahoo.no> 2023.
+#
+TODAY     := $(shell date +%d-%B-%Y)
+THIS_FILE := Makefile.Windows
+comma     := ,
+MAKEFLAGS += --warn-undefined-variables
+
+#
+# Options:
+#
+USE_AMALGATED  ?= 1
+USE_ASTYLE     ?= 1
+USE_MP_COMPILE ?= 1
+
+#
+# From 'luajit.h':
+#
+VER_MAJOR = 2
+VER_MINOR = 0
+VER_MICRO = 5
+
+PYTHON  = py -3
+OBJ_DIR = objects
+
+export CL=
+
+define Usage
+
+  Usage: "make -f $(THIS_FILE) <CPU=x86|x64> CC=[cl | icx | clang-cl | mingw-gcc | cyg-gcc] [all | clean | realclean | install]"
+  Specify CC=cl        - use MSVC
+  Specify CC=icx       - use Intel's ICX
+  Specify CC=clang-cl  - use clang-cl
+  Specify CC=cyg-gcc   - use Cygwin 'gcc'
+  Specify CC=mingw-gcc - use MinGW 'gcc'
+endef
+
+ifeq ($(CPU),x64)
+  BITS = 64
+else
+  BITS = 32
+endif
+
+MSVC_ROOT  = $(realpath $(VCToolkitInstallDir))
+MINGW_ROOT = $(realpath $(MINGW_TDM))
+
+#
+# Change this:
+#   A 'set CYGWIN32_ROOT=x' point to your 32-bit Cygwin installation.
+#   A 'set CYGWIN64_ROOT=y' point to your 64-bit Cygwin installation.
+#
+# And in case 'sh' is a Cygwin 'bash', use the horrid '/cygdrive/x' syntax;
+# E.g. a 'set CYGWIN32_ROOT=c:\CygWin32' should become '/cygdrive/c/CygWin32'
+#
+CYG_ROOT = /cygdrive/$(subst :,,$(realpath $(CYGWIN$(BITS)_ROOT)))
+
+ifeq ($(CC),cl)
+  MSVC_TYPE = 1
+  RCFLAGS   = -D_MSC_VER
+  _CC       = $(MSVC_ROOT)/bin/HostX64/$(CPU)/cl.exe
+
+else ifeq ($(CC),clang-cl)
+  MSVC_TYPE = 1
+  RCFLAGS   = -D__clang__
+
+  #
+  # The 'clang-cl.bat' (on PATH) should look like this:
+  #   @echo off
+  #   setlocal
+  #   set CLANG_32=f:\ProgramFiler\LLVM-15-32bit  << install base of your 32-bit Clang
+  #   set CLANG_64=f:\ProgramFiler\LLVM-15-64bit  << ditto for 64-bit
+  #   set CL=
+  #   if %1. == -m32. (
+  #     shift
+  #     %CLANG_32%\bin\clang-cl.exe %*
+  #   ) else if %1. == -m64. (
+  #     shift
+  #     %CLANG_64%\bin\clang-cl.exe %*
+  #   ) else (
+  #     clang-cl.exe %*
+  #   )
+  #
+  _CC = clang-cl.bat -m$(BITS)
+
+else ifeq ($(CC),icx)
+  #
+  # Since I have only a 'x64' version of the "oneAPI DPC++/C++ Compiler"
+  #
+  CPU = x64
+
+  MSVC_TYPE = 1
+  RCFLAGS   = -D__ICX__
+  _CC       = icx
+
+else ifeq ($(CC),mingw-gcc)
+
+  #
+  # A dual-mode 'gcc' is assumed.
+  #
+  _CC       = $(MINGW_ROOT)/bin/gcc -m$(BITS)
+  RCFLAGS   = -O COFF -D__MINGW32__
+  MSVC_TYPE = 0
+
+else ifeq ($(CC),cyg-gcc)
+  #
+  # A dual-mode 'gcc' is NOT assumed.
+  #
+  _CC       = $(CYG_ROOT)/bin/gcc.exe
+  RCFLAGS   = -O COFF -D__CYGWIN__
+  MSVC_TYPE = 0
+
+else
+  $(error $(Usage))
+endif
+
+#
+# 'CFLAGS' common to all targets
+#
+CFLAGS = -I./src            \
+         -I./dynasm         \
+         -I./$(OBJ_DIR)     \
+         -DLJ_ARCH_HASFPU=1 \
+         -DLUAJIT_ENABLE_LUA52COMPAT
+
+#
+# Flags for '$(OBJ_DIR)/minilua.exe'
+#
+vm_FLAGS = -D JIT -D FFI -D WIN -D FPU -D VER=
+
+ifeq ($(CPU),x64)
+  vm_FLAGS += -D P64
+else
+  vm_FLAGS += -D SSE
+endif
+
+#
+# Define libraries, .RC and .DLL names.
+#
+# And for 'MSVC_TYPE == 1', define path to 'cl' and libraries without the
+# 'vcvarsall.bat' non-sense.
+#
+ifeq ($(MSVC_TYPE),1)
+  LJ_DLL       = bin/luajit-$(CPU).dll
+  LJ_IMP_LIB   = lib/luajit-$(CPU).lib
+  LJ_STAT_LIB  = lib/luajit_static-$(CPU).lib
+  LJ_RC        = $(OBJ_DIR)/luajit-$(CPU).rc
+  INSTALL_ROOT = $(realpath $(VSINSTALLDIR))
+
+  CFLAGS += -nologo -MD -Zi -O2 -W3 -D_CRT_SECURE_NO_DEPRECATE
+
+  ifeq ($(CPU),x64)
+    CFLAGS += -arch:AVX2
+  else
+    CFLAGS += -arch:SSE2
+  endif
+
+  LDFLAGS = -nologo -debug -incremental:no \
+            -machine:$(CPU) -map -verbose  \
+            -nodefaultlib:oldnames.lib     \
+            -nodefaultlib:uuid.lib
+
+  #
+  # The path for the CRT libraries:
+  #
+  LDFLAGS += -libpath:$(MSVC_ROOT)/lib/$(CPU)
+
+  #
+  # 'WindowsKits' root is in '$(WindowsSdkDir)' and
+  # 'WindowsKits' version is in '$(WindowsSdkVer)'.
+  #
+  # Hence the "User-Mode" Windows libraries for 'x86' are in:
+  #   $(WindowsSdkDir)/Lib/$(WindowsSdkVer)/um/x86/
+  #
+  # Ditto for the Universal CRT libraries: for 'x86' the UCRT libs are in:
+  #   $(WindowsSdkDir)/Lib/$(WindowsSdkVer)/ucrt/x86/
+  #
+  LDFLAGS += -libpath:$(realpath $(WindowsSdkDir)/Lib/$(WindowsSdkVer)/um/$(CPU)) \
+             -libpath:$(realpath $(WindowsSdkDir)/Lib/$(WindowsSdkVer)/ucrt/$(CPU))
+
+  O = obj
+
+else
+  ifeq ($(CC),cyg-gcc)
+    INSTALL_ROOT = /usr
+  else
+    INSTALL_ROOT = $(MINGW_ROOT)
+  endif
+
+  ifeq ($(CPU),x64)
+    CFLAGS += -mavx2
+  else
+    CFLAGS += -msse2
+  endif
+
+  LJ_DLL      = bin/libluajit-$(CPU).dll
+  LJ_IMP_LIB  = lib/libluajit-$(CPU).dll.a
+  LJ_STAT_LIB = lib/libluajit-$(CPU).a
+  LJ_RC       = $(OBJ_DIR)/libluajit-$(CPU).rc
+
+  CFLAGS += -ggdb -Wall -O3        \
+            -fomit-frame-pointer   \
+            -D_FILE_OFFSET_BITS=64 \
+            -D_LARGEFILE_SOURCE    \
+            -U_FORTIFY_SOURCE      \
+            -Wno-maybe-uninitialized
+
+  LDFLAGS = -ggdb -static-libgcc -Wl$(comma)--print-map
+  O       = o
+endif
+
+c_to_obj = $(addprefix $(OBJ_DIR)/$(strip $(2)), \
+             $(notdir $(1:.c=.$(O))))
+
+GENERATED = $(addprefix $(OBJ_DIR)/, \
+              buildvm_arch.h         \
+              lj_bcdef.h             \
+              lj_ffdef.h             \
+              lj_folddef.h           \
+              lj_libdef.h            \
+              lj_recdef.h            \
+              lj_vm.$(O)             \
+              vmdef.lua)
+
+VPATH      = src
+LJ_LIB_SRC = $(addprefix src/, \
+               lib_base.c      \
+               lib_math.c      \
+               lib_bit.c       \
+               lib_string.c    \
+               lib_table.c     \
+               lib_io.c        \
+               lib_os.c        \
+               lib_package.c   \
+               lib_debug.c     \
+               lib_jit.c       \
+               lib_ffi.c)
+
+ifeq ($(USE_AMALGATED),1)
+  ALL_SRC = src/ljamalg.c
+else
+  ALL_SRC = $(addprefix src/, \
+              lib_aux.c       \
+              lib_init.c      \
+              lj_alloc.c      \
+              lj_api.c        \
+              lj_asm.c        \
+              lj_bc.c         \
+              lj_bcread.c     \
+              lj_bcwrite.c    \
+              lj_carith.c     \
+              lj_ccall.c      \
+              lj_ccallback.c  \
+              lj_cconv.c      \
+              lj_cdata.c      \
+              lj_char.c       \
+              lj_clib.c       \
+              lj_cparse.c     \
+              lj_crecord.c    \
+              lj_ctype.c      \
+              lj_debug.c      \
+              lj_dispatch.c   \
+              lj_err.c        \
+              lj_ffrecord.c   \
+              lj_func.c       \
+              lj_gc.c         \
+              lj_gdbjit.c     \
+              lj_ir.c         \
+              lj_lex.c        \
+              lj_lib.c        \
+              lj_load.c       \
+              lj_mcode.c      \
+              lj_meta.c       \
+              lj_obj.c        \
+              lj_opt_dce.c    \
+              lj_opt_fold.c   \
+              lj_opt_loop.c   \
+              lj_opt_mem.c    \
+              lj_opt_narrow.c \
+              lj_opt_sink.c   \
+              lj_opt_split.c  \
+              lj_parse.c      \
+              lj_record.c     \
+              lj_snap.c       \
+              lj_state.c      \
+              lj_str.c        \
+              lj_strscan.c    \
+              lj_tab.c        \
+              lj_trace.c      \
+              lj_udata.c      \
+              lj_vmevent.c    \
+              lj_vmmath.c     \
+              lj_win.c)       \
+              $(LJ_LIB_SRC)
+endif
+
+VPATH += src/host
+VM_SRC = $(addprefix src/host/, \
+           buildvm.c            \
+           buildvm_asm.c        \
+           buildvm_fold.c       \
+           buildvm_lib.c        \
+           buildvm_peobj.c)
+
+VM_OBJ      = $(call c_to_obj, $(VM_SRC),  static/)
+STATIC_OBJ  = $(call c_to_obj, $(ALL_SRC), static/)
+DYNAMIC_OBJ = $(call c_to_obj, $(ALL_SRC), dynamic/)
+
+TARGETS = $(LJ_DLL)      \
+          $(LJ_IMP_LIB)  \
+          $(LJ_STAT_LIB) \
+          bin/luajit.exe
+
+all:    $(GENERATED) $(TARGETS)
+static: $(GENERATED) $(LJ_STAT_LIB) bin/luajit.exe
+
+test: test_suite test_scimark test_life
+
+#
+# This test shows 1 error:
+#   tests\test\lib\string\format\num.lua:13:
+#   expected string.format("%.99e", "0") ==
+#    "4.940656458412465441765687928682213723650598026143247644255856825006755072702087518652998363616359924e-324",
+#    but got "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e+00"
+#
+test_suite: bin/luajit.exe
+	$(call green_msg, Running $(BRIGHT_WHITE)bin/luajit.exe tests/test/test.lua ...)
+	- export LUA_PATH=$(realpath ./tests/test) ; \
+	$(call run_test, tests/test/test.lua)
+
+test_life: bin/luajit.exe
+	$(call green_msg, Running $(BRIGHT_WHITE)bin/luajit.exe tests/bench/life.lua ...)
+	$(call run_test, tests/bench/life.lua > life.txt)
+	@cat ./life.txt
+
+#
+# SciMark results of 'test_scimark' on my AMD Ryzen 9 3900X (3.7 GHz):
+#   MinGW  x86: 1864.85
+#   MinGW  x64: 1661.37
+#   Cygwin x86:
+#   Cygwin x64: bin/luajit: not enough memory !!
+#   clang  x86: 1857.30
+#   clang  x64: 1644.73
+#   MSVC   x86: 1866.39
+#   MSVC   x64: 1625.84
+#
+test_scimark: bin/luajit.exe
+	$(call green_msg, Running $(BRIGHT_WHITE)bin/luajit.exe tests/bench/scimark-2010-12-20.lua -large ...)
+	$(call run_test, tests/bench/scimark-2010-12-20.lua -large)
+
+bin lib $(OBJ_DIR) $(OBJ_DIR)/dynamic $(OBJ_DIR)/static:
+	mkdir --parents $@
+
+$(OBJ_DIR)/minilua.exe: $(OBJ_DIR)/static/minilua.$(O)
+	$(call link_EXE, $@, $^)
+
+$(OBJ_DIR)/buildvm_arch.h: $(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua src/vm_x86.dasc
+	$(call gen_to_from, $@, src/vm_x86.dasc)
+	$(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua -o $@ $(vm_FLAGS) src/vm_x86.dasc
+	@echo
+
+$(OBJ_DIR)/buildvm.exe: $(VM_OBJ)
+	$(call link_EXE, $@, $^)
+
+$(OBJ_DIR)/lj_vm.$(O): $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, peobj, )
+
+$(OBJ_DIR)/lj_bcdef.h: $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, bcdef, $(LJ_LIB_SRC))
+
+$(OBJ_DIR)/lj_ffdef.h: $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, ffdef, $(LJ_LIB_SRC))
+
+$(OBJ_DIR)/lj_folddef.h: $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, folddef, src/lj_opt_fold.c)
+
+$(OBJ_DIR)/lj_libdef.h: $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, libdef, $(LJ_LIB_SRC))
+
+$(OBJ_DIR)/lj_recdef.h: $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, recdef, $(LJ_LIB_SRC))
+
+$(OBJ_DIR)/vmdef.lua: $(OBJ_DIR)/buildvm.exe
+	$(call run_buildvm, $@, vmdef, $(LJ_LIB_SRC))
+
+bin/luajit.exe: $(OBJ_DIR)/static/luajit.$(O) $(LJ_STAT_LIB) $(OBJ_DIR)/luajit.res | bin
+	$(call link_EXE, $@, $^)
+
+$(LJ_IMP_LIB): $(LJ_DLL)
+
+$(LJ_DLL): $(DYNAMIC_OBJ) $(OBJ_DIR)/lj_vm.$(O) $(LJ_RC:.rc=.res) | bin lib
+	$(call link_DLL, $@, $^, $(LJ_IMP_LIB))
+
+$(LJ_STAT_LIB): $(STATIC_OBJ) $(OBJ_DIR)/lj_vm.$(O) | lib
+	$(call create_static_lib, $@, $^)
+
+ifeq ($(CC)-$(USE_MP_COMPILE),cl-1)
+  $(DYNAMIC_OBJ): $(ALL_SRC) | $(OBJ_DIR)/dynamic
+	$(call C_compile_MP, $(OBJ_DIR)/dynamic\\, -DLUA_BUILD_AS_DLL $(ALL_SRC))
+
+  $(STATIC_OBJ): $(ALL_SRC) | $(OBJ_DIR)/static
+	$(call C_compile_MP, $(OBJ_DIR)/static\\, $(ALL_SRC))
+endif
+
+$(OBJ_DIR)/dynamic/%.$(O): %.c | $(CC).args $(OBJ_DIR)/dynamic
+	$(call C_compile, $@, -DLUA_BUILD_AS_DLL $<)
+
+$(OBJ_DIR)/static/%.$(O): %.c | $(CC).args $(OBJ_DIR)/static
+	$(call C_compile, $@, $<)
+
+%.i: %.c FORCE $(GENERATED) cpp-filter.py
+	$(call C_preprocess, $<, $@)
+
+$(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc | $(OBJ_DIR)
+	$(call make_res_file, $@, $<)
+
+$(LJ_RC): $(THIS_FILE)
+	$(call make_rc_file, $@, "LuaJIT; a Just-In-Time (JIT) compiler for the Lua programming language", VFT_DLL)
+
+$(OBJ_DIR)/luajit.rc: $(THIS_FILE)
+	$(call make_rc_file, $@, "The LuaJIT program", VFT_APP)
+
+$(CC).args: $(THIS_FILE)
+	$(call white_msg, All CFLAGS are in $@.)
+	$(call create_resp_file, $@, -c $(CFLAGS))
+
+cpp-filter.py: $(THIS_FILE)
+	$(call generate, $@, #)
+	$(file >> $@,if 1:)
+	$(file >> $@,$(CPP_FILTER_PY))
+
+clean:
+	rm -f vc1*.pdb clang-cl.args cl.args icx.args mingw-gcc.args cyg-gcc.args \
+	      life.txt link.args link.tmp lib.args cpp-filter.py
+	rm -fr $(OBJ_DIR)
+
+vclean realclean: clean
+	rm -fr bin lib
+	rm -f .depend.Windows
+
+install: all
+	cp --update $(LJ_IMP_LIB) $(LJ_STAT_LIB)                  $(INSTALL_ROOT)/lib
+ifeq ($(MSVC_TYPE),1)
+	cp --update $(LJ_DLL:.dll=.{dll,pdb}) bin/luajit.{exe,pdb} $(INSTALL_ROOT)/bin
+else
+	cp --update $(LJ_DLL) bin/luajit.exe                       $(INSTALL_ROOT)/bin
+endif
+
+FORCE:
+
+#
+# The following assumes you have MSys/Cygwin's echo with colour support.
+#
+BRIGHT_GREEN = \e[1;32m
+BRIGHT_WHITE = \e[1;37m
+
+colour_msg  = @echo -e "$(1)\e[0m"
+green_msg   = $(call colour_msg,$(BRIGHT_GREEN)$(strip $(1)))
+white_msg   = $(call colour_msg,$(BRIGHT_WHITE)$(strip $(1)))
+gen_to_from = $(call green_msg, Generating $(BRIGHT_WHITE)$(strip $(1)) $(BRIGHT_GREEN)from $(BRIGHT_WHITE)$(strip $(2)))
+
+define Warning
+  $(1)
+  $(1) DO NOT EDIT! This file was automatically generated
+  $(1) from $(realpath $(THIS_FILE)) at $(TODAY).
+  $(1) Edit that file instead.
+  $(1)
+endef
+
+define generate
+  $(call green_msg, Generating$(BRIGHT_WHITE)$(1))
+  $(file > $(1),$(call Warning,$(2)))
+endef
+
+define create_resp_file
+  $(file > $(1))
+  $(foreach f, $(2), $(file >> $(1),$(strip $(f))) )
+endef
+
+define run_test
+  bin/luajit.exe $(1)
+  @echo
+endef
+
+define run_buildvm
+  $(call green_msg, Generating VM definition file$(BRIGHT_WHITE)$(1))
+  $(OBJ_DIR)/buildvm.exe $(strip -m $(2) -o $(1) $(3))
+  @echo
+endef
+
+#
+# A 'USE_ASTYLE = 1' needs 'astyle.exe' on PATH and a '%HOME/.astylerc'.
+#
+ifeq ($(USE_ASTYLE),1)
+  define C_preprocess
+    $(file  > $(2),/* The preprocessed and AStyle'd output of '$(strip $(1))':)
+    $(file >> $(2), * $(CC) -E)
+    @$(foreach f, $(CFLAGS), $(file >> $(2), * $(f)))
+    $(file >> $(2), *---------------------------------------------------------)
+    $(file >> $(2), */)
+    $(_CC) -E @$(CC).args $(1) | $(PYTHON) cpp-filter.py | astyle >> $(2)
+  endef
+else
+  define C_preprocess
+    $(file  > $(2),/* The preprocessed output of '$(strip $(1))':)
+    $(file >> $(2), * $(CC) -E)
+    @$(foreach f, $(CFLAGS), $(file >> $(2), * $(f)))
+    $(file >> $(2), *---------------------------------------------------------)
+    $(file >> $(2), */)
+    $(_CC) -E @$(CC).args $(1) | $(PYTHON) cpp-filter.py >> $(2)
+  endef
+endif
+
+ifeq ($(MSVC_TYPE),1)
+  define C_compile
+    $(_CC) -Fo./$(strip $(1) @$(CC).args $(2))
+    @echo
+  endef
+
+  define C_compile_MP
+    $(call green_msg, Compiling $(words $(filter %.c, $(2))) files in one go...)
+    $(call C_compile, $(1), -MP $(2))
+  endef
+
+  define link_EXE
+    $(call green_msg, Linking $(1))
+    $(call create_resp_file, link.args, $(LDFLAGS) $(2))
+    link -out:$(strip $(1)) @link.args > link.tmp
+    @cat link.tmp >> $(1:.exe=.map)
+    @rm -f $(1:.exe=.exp) $(1:.exe=.lib)
+    @echo
+  endef
+
+  define link_DLL
+    $(call green_msg, Linking $(1))
+    $(call create_resp_file, link.args, -dll $(LDFLAGS) -implib:$(strip $(3)) $(2))
+    link -out:$(strip $(1)) @link.args > link.tmp
+    @cat link.tmp >> $(1:.dll=.map)
+    @rm -f $(3:.lib=.exp)
+    @echo
+  endef
+
+  define create_static_lib
+    $(call green_msg, Creating $(1))
+    $(call create_resp_file, lib.args, $(2))
+    @rm -f $(1)
+    lib -nologo -out:$(strip $(1)) -machine:$(CPU) @lib.args
+    @echo
+  endef
+
+  define make_res_file
+    rc -nologo $(RCFLAGS) -fo $(1) $(2)
+    @echo
+  endef
+
+else
+  define C_compile
+    $(strip $(_CC) -o $(1) @$(CC).args $(2))
+    @echo
+  endef
+
+  define link_EXE
+    $(call green_msg, Linking $(1))
+    $(call create_resp_file, link.args, $(LDFLAGS) $(2))
+    $(_CC) -o $(1) @link.args > $(1:.exe=.map)
+    @echo
+  endef
+
+  define link_DLL
+    $(call green_msg, Linking $(1))
+    $(call create_resp_file, link.args, -shared $(LDFLAGS) -Wl$(comma)--out-implib$(comma)$(strip $(3)) $(2))
+    $(_CC) -o $(1) @link.args > $(1:.dll=.map)
+    @echo
+  endef
+
+  define create_static_lib
+    $(call green_msg, Creating $(1))
+    $(call create_resp_file, lib.args, $(2))
+    @rm -f $(1)
+    ar rs $(1) @lib.args
+    @echo
+  endef
+
+  ifeq ($(CPU),x86)
+    RCFLAGS += --target=pe-i386
+  else
+    RCFLAGS += --target=pe-x86-64
+  endif
+
+  define make_res_file
+    windres $(RCFLAGS) -o $(1) -i $(2)
+    @echo
+  endef
+endif
+
+#
+# Generate a .rc-file with the below common content.
+#  arg1, $(1): The name of the .rc-file. Used for the .exe/.dll name too.
+#  arg2, $(2): The 'RC_DESCRIPTION' enclosed in '"'.
+#  arg3, $(3): The 'RC_FILETYPE'; 'VFT_APP' or 'VFT_DLL'.
+#
+define make_rc_file
+  $(call generate, $(1), //)
+  $(file >> $(1),  // Should become '1' if '$$USER==gv')
+  $(file >> $(1),  #define RC_USER_IS_GV   $(if $(findstring gv,$(USER)),1,0))
+  $(file >> $(1),  #define RC_BASENAME     "$(notdir $(1:.rc=))" )
+  $(file >> $(1),  #define RC_DESCRIPTION  $(2))
+  $(file >> $(1),  #define RC_FILETYPE     $(3))
+  $(file >> $(1),$(RC_COMMON))
+endef
+
+#
+# Stuff common to all .rc-files:
+#
+define RC_COMMON
+  #include <winver.h>
+
+  #define RC_VERSION      $(VER_MAJOR),$(VER_MINOR),$(VER_MICRO),0
+  #define RC_VER_STRING  "$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)"
+
+  #if (RC_FILETYPE == VFT_DLL)
+    #define RC_EXTENSION  "dll"
+  #else
+    #define RC_EXTENSION  "exe"
+  #endif
+
+  #if (RC_USER_IS_GV)
+    #define RC_PRIVATE  "The private build of <gvanem@yahoo.no>."
+  #else
+    #define RC_PRIVATE  ""
+  #endif
+
+  #if defined(__ICX__)         /* Since 'icx' is clang based */
+    #define RC_COMPILER  "Intel icx"
+  #elif defined(__clang__)
+    #define RC_COMPILER  "Clang"
+  #elif defined(_MSC_VER)
+    #define RC_COMPILER  "MSVC"
+  #elif defined(__MINGW32__)
+    #define RC_COMPILER  "MinGW"
+  #elif defined(__CYGWIN__)
+    #define RC_COMPILER  "Cygwin"
+  #else
+    #error "Unsupported compiler"
+  #endif
+
+  VS_VERSION_INFO VERSIONINFO
+    FILEVERSION     RC_VERSION
+    PRODUCTVERSION  RC_VERSION
+    FILEFLAGSMASK   0x3fL
+    FILEOS          VOS__WINDOWS32
+    FILESUBTYPE     0
+    FILEFLAGS       0
+    FILETYPE        RC_FILETYPE /* 'VFT_APP' or 'VFT_DLL' */
+
+  BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+      BLOCK "040904b0"
+      BEGIN
+        VALUE "CompanyName",      "LuaJIT; https://luajit.org"
+        VALUE "FileDescription",  RC_DESCRIPTION "."
+        VALUE "ProductName",      RC_BASENAME "." RC_EXTENSION
+        VALUE "FileVersion",      RC_VER_STRING " (" RC_COMPILER ", $(BITS)-bit)"
+        VALUE "ProductVersion",   RC_VER_STRING " (" RC_COMPILER ", $(BITS)-bit)"
+        VALUE "InternalName",     RC_BASENAME
+        VALUE "OriginalFilename", RC_BASENAME "." RC_EXTENSION
+        VALUE "LegalCopyright",   "Copyright (C) 2005-2022 Mike Pall."
+        VALUE "PrivateBuild",     RC_PRIVATE
+        VALUE "Comments",         "Built on $(TODAY)"
+        VALUE "LegalTrademarks",  ""
+        VALUE "SpecialBuild",     ""
+      END
+    END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+  END
+endef
+
+define CPP_FILTER_PY
+  import sys, os
+
+  empty_lines = 0
+  while True:
+    line = sys.stdin.readline()
+    if not line:
+       break
+    line = line.rstrip()
+    if line == "":
+       empty_lines += 1
+       continue
+    if line.startswith("#line") or line.startswith("# "):
+       line = line.replace (r"\\", "/")
+
+    print (line)
+    if line == "}" or line == "};":
+       print ("")
+
+  print ("Removed %d empty lines." % empty_lines, file=sys.stderr)
+endef
+
+DEP_CFLAGS = -MM
+DEP_CFLAGS += $(sort $(filter -D%, $(CFLAGS))) \
+                     $(filter -I%, $(CFLAGS))
+
+DEP_REPLACE = -e 's@\(.*\)\.o:@\n$$(OBJ_DIR)\/static\/\1.$$(O) $$(OBJ_DIR)\/dynamic\/\1.$(O):@'
+
+depend: $(GENERATED)
+	$(call green_msg, Generating dependencies for $(words $(ALL_SRC)) source-files ...)
+	$(call generate, .depend.Windows, #)
+	gcc $(DEP_CFLAGS) $(ALL_SRC) | sed $(DEP_REPLACE) >> .depend.Windows
+	@echo
+
+-include .depend.Windows

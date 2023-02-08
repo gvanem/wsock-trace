@@ -60,7 +60,7 @@ endif
 
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
-  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit-5.1.dll.a
+  LUAJIT_LIB = $(LUAJIT_ROOT)/lib/libluajit-$(CPU).a
 else
   LUAJIT_LIB =
 endif
@@ -217,37 +217,13 @@ $(LIBLOC_LIB): $(LIBLOC_OBJ)
 	ar rs $@ $^
 	@echo
 
-ifeq ($(USE_LUAJIT),1)
-  #
-  # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
-  #
-  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows \
-                      CCDEBUG=$(CCDEBUG) \
-                      CCOPT='$(CCOPT)'   \
-                      DEFAULT_CC='gcc -DLUAJIT_ENABLE_LUA52COMPAT'
+$(LUAJIT_LIB):
+	$(call make_luajit, static)
 
-  #
-  # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
-  #
-  LUAJIT_MAKE_FLAGS += CFLAGS= HOST_CFLAG= TARGET_FLAGS= TARGET_CFLAGS= \
-                       CROSS=  MSYSTEM= PREFIX= MULTILIB= LMULTILIB=
-
-  $(LUAJIT_LIB):
-	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src $(LUAJIT_MAKE_FLAGS) all
-	$(call green_msg, \nCopying '$(LUAJIT_ROOT)/src/lua51.dll' to current directory.)
-	cp --update $(LUAJIT_ROOT)/src/lua51.dll .
-	@echo
-endif
-
-clean_lua:
-	 - rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe \
-	         $(LUAJIT_ROOT)/src/libluajit*.a     $(LUAJIT_ROOT)/src/*.o              \
-	         $(LUAJIT_ROOT)/src/host/*.o         lua51.dll
-
-clean: clean_lua
+clean:
 	rm -fr $(OBJ_DIR)
 	rm -f $(CC).args $(WSOCK_DLL:.dll=.map)
+	$(call make_luajit, clean)
 
 vclean realclean: clean
 	rm -f libwsock_trace_cyg*.{a,dll,map} ws_tool.{exe,map} cyg-ver.{exe,map} \
@@ -286,6 +262,17 @@ define create_resp_file
   $(file > $(1))
   $(foreach f, $(2), $(file >> $(1),$(strip $(f))) )
 endef
+
+#
+# Enter '$(LUAJIT_ROOT)' to create '$(LUAJIT_LIB)'
+# Or do 'make clean' on it.
+#
+define make_luajit
+  $(call green_msg, Building target '$(strip $(1))' for LuaJIT ...)
+  $(MAKE) -C $(LUAJIT_ROOT) -f Makefile.Windows CC=cyg-gcc CPU=$(CPU) $(1)
+  @echo
+endef
+
 
 DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.o: /'
 

@@ -10,7 +10,7 @@ USE_BFD       ?= 0
 #
 # If you want LuaJIT-script support, set 'USE_LUAJIT = 1':
 #
-USE_LUAJIT ?= 0
+USE_LUAJIT ?= 1
 LUAJIT_ROOT = LuaJIT
 
 BIN_TARGET = $(realpath $(MINGW32))/bin
@@ -33,7 +33,15 @@ ifeq ($(CPU),X64)
   CPU = x64
 endif
 
-CC      = gcc
+ifeq ($(USER),gv)
+  _CC = f:/MinGW32/TDM-gcc/bin/gcc
+else
+  #
+  # Assume you have a MinGW 'gcc.exe' ahead of a Cygwin 'gcc.exe' on your PATH.
+  #
+  _CC = gcc
+endif
+
 OBJ_DIR = MinGW_obj
 
 MAKEFLAGS += --warn-undefined-variables
@@ -52,7 +60,7 @@ RCFLAGS += -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
-  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit-5.1.dll.a
+  LUAJIT_LIB = $(LUAJIT_ROOT)/src/libluajit_static-$(CPU).a
 else
   LUAJIT_LIB =
 endif
@@ -195,7 +203,7 @@ $(WSOCK_LIB): $(WSOCK_DLL)
 
 $(WSOCK_DLL): $(OBJECTS) $(NON_EXPORT_OBJ) $(LUAJIT_LIB) $(LIBLOC_LIB)
 	$(call green_msg, Linking $@.)
-	$(CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_LIB) -o $@ $(OBJECTS) $(LUAJIT_LIB) $(LIBLOC_LIB) $(EX_LIBS) > $(WSOCK_DLL:.dll=.map)
+	$(_CC) $(LDFLAGS) -shared -Wl,--out-implib,$(WSOCK_LIB) -o $@ $(OBJECTS) $(LUAJIT_LIB) $(LIBLOC_LIB) $(EX_LIBS) > $(WSOCK_DLL:.dll=.map)
 	ar rs $(WSOCK_LIB) $(NON_EXPORT_OBJ)
 	@echo
 
@@ -204,7 +212,7 @@ install: $(WSOCK_LIB) $(WSOCK_DLL)
 	cp --update $(WSOCK_DLL)  $(BIN_TARGET)
 
 ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_LIB) $(LIBLOC_LIB) $(LUAJIT_LIB)
-	$(CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > ws_tool.map
+	$(_CC) -o $@ $(LDFLAGS) $^ $(EX_LIBS) > ws_tool.map
 	@echo
 
 run_test: ws_tool.exe
@@ -215,55 +223,30 @@ $(LIBLOC_LIB): $(LIBLOC_OBJ)
 	ar rs $@ $^
 	@echo
 
-ifeq ($(USE_LUAJIT),1)
-  #
-  # Change to '$(LUAJIT_ROOT)/src' to build LuaJIT.
-  #
-  LUAJIT_MAKE_FLAGS = TARGET_SYS=Windows \
-                      CCDEBUG=$(CCDEBUG) \
-                      CCOPT='$(CCOPT)'   \
-                      DEFAULT_CC='$(CC) -m$(BITS) -DLUAJIT_ENABLE_LUA52COMPAT'
+$(LUAJIT_LIB):
+	$(call make_luajit, static)
 
-  #
-  # Let '$(LUAJIT_ROOT)/src/Makefile' shut up about undefined variables.
-  #
-  LUAJIT_MAKE_FLAGS += CFLAGS= HOST_CFLAG= TARGET_FLAGS= TARGET_CFLAGS= \
-                       CROSS= MSYSTEM= PREFIX= MULTILIB= LMULTILIB=
-
-  $(LUAJIT_LIB):
-	$(call green_msg, Building LuaJIT ...)
-	$(MAKE) -C $(LUAJIT_ROOT)/src $(LUAJIT_MAKE_FLAGS) all
-	$(call green_msg, \nCopying '$(LUAJIT_ROOT)/src/lua51.dll' to current directory.)
-	cp --update $(LUAJIT_ROOT)/src/lua51.dll .
-
-  clean_lua:
-	- rm -f $(LUAJIT_ROOT)/src/host/buildvm.exe $(LUAJIT_ROOT)/src/host/minilua.exe
-	- rm -f $(LUAJIT_ROOT)/src/*.o $(LUAJIT_ROOT)/src/host/*.o $(LUAJIT_LIB) lua51.dll
-
-else
-  clean_lua: ;
-endif
-
-clean: clean_lua
+clean:
 	rm -fr $(OBJ_DIR)
-	rm -f $(CC).args $(WSOCK_DLL:.dll=.map) ws_tool.map
+	rm -f gcc.args $(WSOCK_DLL:.dll=.map) ws_tool.map
+	$(call make_luajit, clean)
 
 vclean realclean: clean
 	rm -f $(WSOCK_LIB) $(WSOCK_DLL) $(LIBLOC_LIB) ws_tool.exe .depend.MinGW
 
-$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c | $(CC).args
-	$(CC) @$(CC).args $(LIBLOC_CFLAGS) -o $@ $<
+$(OBJ_DIR)/%.o: $(LIBLOC_ROOT)/%.c | gcc.args
+	$(_CC) @gcc.args $(LIBLOC_CFLAGS) -o $@ $<
 	@echo
 
-$(OBJ_DIR)/%.o: %.c | $(CC).args
-	$(CC) @$(CC).args -o $@ $<
+$(OBJ_DIR)/%.o: %.c | gcc.args
+	$(_CC) @gcc.args -o $@ $<
 	@echo
 
 $(OBJ_DIR)/%.res: %.rc
 	windres $(RCFLAGS) -o $@ $<
 	@echo
 
-$(CC).args::
+gcc.args::
 	$(call yellow_msg, All CFLAGS are in $@.)
 	$(call create_resp_file, $@, -c $(CFLAGS))
 
@@ -286,10 +269,20 @@ define create_resp_file
   $(foreach f, $(2), $(file >> $(1),$(strip $(f))) )
 endef
 
+#
+# Enter '$(LUAJIT_ROOT)' to create '$(LUAJIT_LIB)'
+# Or do 'make clean' on it.
+#
+define make_luajit
+  $(call green_msg, Building target '$(strip $(1))' for LuaJIT ...)
+  $(MAKE) -C $(LUAJIT_ROOT) -f Makefile.Windows CC=mingw-gcc CPU=$(CPU) $(1)
+  @echo
+endef
+
 DEP_REPLACE = 's@\(.*\)\.o: @\n$$(OBJ_DIR)\/\1.o: @'
 
 depend:
-	$(CC) -MM $(CFLAGS) $(SOURCES) non-export.c test.c | sed -e $(DEP_REPLACE) > .depend.MinGW
-	$(CC) -MM $(CFLAGS) $(LIBLOC_CFLAGS) $(LIBLOC_SRC) | sed -e $(DEP_REPLACE) -e 's@$(LIBLOC_ROOT)@$$(LIBLOC_ROOT)@' >> .depend.MinGW
+	$(_CC) -MM $(CFLAGS) $(SOURCES) non-export.c test.c | sed -e $(DEP_REPLACE) > .depend.MinGW
+	$(_CC) -MM $(CFLAGS) $(LIBLOC_CFLAGS) $(LIBLOC_SRC) | sed -e $(DEP_REPLACE) -e 's@$(LIBLOC_ROOT)@$$(LIBLOC_ROOT)@' >> .depend.MinGW
 
 -include .depend.MinGW
