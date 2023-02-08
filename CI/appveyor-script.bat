@@ -149,6 +149,7 @@ echo   api_level = 3                                                         >> 
 ::   https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3aBAT%2fQhost!gen&threatid=2147649092
 ::
 echo Generating %CD%\CI\appveyor-hosts file...
+echo on
 type %CD%\CI\appveyor-hosts-content.txt > %CD%\CI\appveyor-hosts
 
 ::
