@@ -92,7 +92,8 @@ static void show_help (const char *extra)
   printf ("%sWsock-trace test tool.\n"
           "Usage: %s [-h] <command> [<args>]\n"
           "       -h:   shows this help\n"
-          "Available sub-commands:\n", extra ? extra : "", g_data.program_name);
+          "Available sub-commands:\n", extra ? extra : "",
+          g_data.program_name ? g_data.program_name : "ws_tool");
 
   for (i = 0; i < DIM(sub_commands); i++)
      printf ("  %s\n", sub_commands[i].main_name);
