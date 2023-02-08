@@ -96,6 +96,7 @@ else ifeq ($(CC),icx)
   _CC       = icx
 
 else ifeq ($(CC),mingw-gcc)
+  APPVEYOR_BUILD_FOLDER ?=
 
   #
   # A dual-mode 'gcc' is assumed.
