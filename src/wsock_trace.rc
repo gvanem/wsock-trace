@@ -16,20 +16,17 @@
 #define RC_VERSION  0,3,7,0
 #define RC_VER_STR "0.3.7"
 
-/* The CygWin define must come before MinGW since MinGW's windres is
- * used to compile the resource.
- */
-#if defined(__CYGWIN__)
-  #define RC_BUILDER  "CygWin"
-  #define RC_BASENAME "wsock_trace_cyg"
-
-#elif defined(__MINGW64__)        /* seems to be a built-in in MinGW64 no matter what the CPU target is */
+#if defined(__MINGW64__)        /* seems to be a built-in in MinGW64 no matter what the CPU target is */
   #define RC_BUILDER  "MinGW-w64"
   #define RC_BASENAME "wsock_trace_mw"
 
 #elif defined(__MINGW32__)
   #define RC_BUILDER  "MinGW"
   #define RC_BASENAME "wsock_trace_mw"
+
+#elif defined(__CYGWIN__)
+  #define RC_BUILDER  "CygWin"
+  #define RC_BASENAME "wsock_trace_cyg"
 
 #elif defined(__clang__)
   #define RC_BUILDER  "clang-cl"

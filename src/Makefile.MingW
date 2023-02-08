@@ -58,6 +58,11 @@ CFLAGS   = -Wall -m$(BITS) -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -Wno-unus
 LDFLAGS  = -m$(BITS) -Wl,--print-map,--sort-common -t
 RCFLAGS += -O COFF -DDEBUG=$(USE_CRT_DEBUG) -D__MINGW32__ -DBITNESS=$(BITS)
 
+#
+# In case there is a Cygwin 'windres' ahead of MinGW's version.
+#
+RCFLAGS += -D__MINGW64__
+
 ifeq ($(USE_LUAJIT),1)
   CFLAGS    += -DUSE_LUAJIT -I$(LUAJIT_ROOT)/src
   LUAJIT_LIB = $(LUAJIT_ROOT)/lib/libluajit-$(CPU).a
