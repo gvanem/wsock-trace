@@ -19,10 +19,10 @@ static SYSTEM_INFO si;
  * until we call `munmap()` on the pointer.
  */
 struct mmap_info {
-       void  *map;   /* the value from MapViewOfFile() */
-       void  *rval;  /* the value we returned to caller of mmap() */
+       void  *map;   /* the value from 'MapViewOfFile()' */
+       void  *rval;  /* the value we returned to caller of 'mmap()' */
      };
-static struct mmap_info mmap_storage[10];
+static struct mmap_info mmap_storage [10];
 
 static void *mmap_remember (void *map, uint64_t offset);
 static int   mmap_forget (void *map, struct mmap_info *info);
@@ -30,12 +30,13 @@ static int   mmap_forget (void *map, struct mmap_info *info);
 void *mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset)
 {
   void     *map = NULL;
-  HANDLE    handle = INVALID_HANDLE_VALUE;
+  HANDLE    handle;
   intptr_t  h = _get_osfhandle (fd);
   DWORD     access = 0;
   uint64_t  pstart, psize, poffset;
 
-  (void) address;  /* unused arg */
+  (void) address;  /* unused args */
+  (void) flags;
 
   if (si.dwAllocationGranularity == 0)
      GetSystemInfo (&si);
@@ -59,10 +60,11 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
          access = FILE_MAP_ALL_ACCESS;
          break;
     default:
+         handle = INVALID_HANDLE_VALUE;
          break;
   }
 
-  if (!handle)
+  if (!handle || handle == INVALID_HANDLE_VALUE)
      map = MAP_FAILED;
   else
   {
@@ -107,10 +109,10 @@ static void *mmap_remember (void *map, uint64_t offset)
 
   for (i = 0; i < DIM(mmap_storage); i++)
   {
-    if (!mmap_storage[i].map)
+    if (!mmap_storage[i].map)   /* use this vacant slot */
     {
-      mmap_storage[i].map  = map;
-      mmap_storage[i].rval = (char*)map + offset;
+      mmap_storage [i].map  = map;
+      mmap_storage [i].rval = (char*)map + offset;
       return (mmap_storage[i].rval);
     }
   }
@@ -128,8 +130,8 @@ static int mmap_forget (void *map, struct mmap_info *info)
   {
     if (map == mmap_storage[i].rval)
     {
-      *info = mmap_storage[i];
-      mmap_storage[i].map = NULL;   /* reuse this */
+      *info = mmap_storage [i];
+      mmap_storage [i].map = NULL;   /* reuse this */
       SetLastError (0);
       return (1);
     }
