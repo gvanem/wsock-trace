@@ -523,7 +523,7 @@ char *INET_addr_sockaddr (const struct sockaddr *sa)
   }
 
   if (sa->sa_family == AF_UNSPEC)
-       snprintf (buf, sizeof(buf), "?family: AF_UNSPEC");
-  else snprintf (buf, sizeof(buf), "?family: %d", sa->sa_family);
+       snprintf (buf, sizeof(buf), "family: AF_UNSPEC");
+  else snprintf (buf, sizeof(buf), "family: %d?", sa->sa_family);
   return (buf);
 }
