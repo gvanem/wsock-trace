@@ -212,7 +212,7 @@ static const char *IP2Location_api_version_str (void);
  */
 static IP2Location *open_file (const char *fname)
 {
-  struct IP2Location *loc = calloc (1, sizeof(*loc));
+  struct IP2Location *loc = (struct IP2Location*) calloc (1, sizeof(*loc));
   UINT   IPvX;
   BOOL   is_IPv4_only, is_IPv6_only;
   SYSTEMTIME st;
@@ -689,7 +689,7 @@ static int32_t IP2Location_DB_set_shared_memory (IP2Location *loc)
 
   loc->sh_mem_already = (GetLastError() == ERROR_ALREADY_EXISTS);
 
-  loc->sh_mem_ptr = MapViewOfFile (loc->sh_mem_fd, os_map, 0, 0, 0);
+  loc->sh_mem_ptr = (uint8_t*) MapViewOfFile (loc->sh_mem_fd, os_map, 0, 0, 0);
 
   if (!loc->sh_mem_ptr)
   {
