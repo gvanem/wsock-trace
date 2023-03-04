@@ -403,7 +403,16 @@ $(LJ_DLL): $(DYNAMIC_OBJ) $(OBJ_DIR)/lj_vm.$(O) $(LJ_RC:.rc=.res) | bin lib
 $(LJ_STAT_LIB): $(STATIC_OBJ) $(OBJ_DIR)/lj_vm.$(O) | lib
 	$(call create_static_lib, $@, $^)
 
-ifeq ($(CC)-$(USE_MP_COMPILE),cl-1)
+ifeq ($(USE_AMALGATED),1)
+  $(OBJ_DIR)/dynamic/ljamalg.$(O): src/ljamalg.c | $(CC).args $(OBJ_DIR)/dynamic
+	$(call green_msg, This takes some time...)
+	$(call C_compile, $@, -DLUA_BUILD_AS_DLL $<)
+
+  $(OBJ_DIR)/static/ljamalg.$(O): src/ljamalg.c | $(CC).args $(OBJ_DIR)/static
+	$(call green_msg, This takes some time...)
+	$(call C_compile, $@, $<)
+
+else ifeq ($(CC)-$(USE_MP_COMPILE),cl-1)
   $(DYNAMIC_OBJ): $(ALL_SRC) | $(OBJ_DIR)/dynamic
 	$(call C_compile_MP, $(OBJ_DIR)/dynamic\\, -DLUA_BUILD_AS_DLL $(ALL_SRC))
 
