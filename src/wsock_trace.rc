@@ -28,6 +28,10 @@
   #define RC_BUILDER  "CygWin"
   #define RC_BASENAME "wsock_trace_cyg"
 
+#elif defined(__INTEL_CLANG_COMPILER)
+  #define RC_BUILDER  "Intel oneAPI"
+  #define RC_BASENAME "wsock_trace"
+
 #elif defined(__clang__)
   #define RC_BUILDER  "clang-cl"
   #define RC_BASENAME "wsock_trace"
