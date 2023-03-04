@@ -248,17 +248,13 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
  */
 static BOOL wslua_run_zipfile (lua_State *l, const char *zipfile, const char *script)
 {
+  BOOL  rc = FALSE;
   char *buf = mz_zip_extract_archive_file_to_heap (zipfile, script, NULL,
                                                    MZ_ZIP_FLAG_IGNORE_PATH);
-
   if (buf && luaL_loadstring(l, buf) == 0)
-  {
-    free (buf);
-    return execute_and_report (l);
-  }
-  if (buf)
-     free (buf);
-  return (FALSE);
+     rc = execute_and_report (l);
+  free (buf);
+  return (rc);
 }
 
 static int wslua_get_trace_level (lua_State *l)
