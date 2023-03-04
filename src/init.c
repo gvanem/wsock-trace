@@ -430,6 +430,7 @@ static void exclude_list_free_one (void *_ex)
   free (ex->name);
   if (ex->only_if_prog)
      free (ex->only_if_prog);
+  free (ex);
 }
 
 /**
