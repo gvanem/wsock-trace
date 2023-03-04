@@ -114,11 +114,11 @@ do this:
 Enter the `src` sub-directory and do the respective *make* `all`command.<br>
 If the `all` command succeeded, you can do the respective *make* `install` command:
 
-| Builder    | *make* `all`command | *make* `install` result |
-| :--------- | :--- | :--- |
-| CygWin     | make -f Makefile.CygWin | `cp wsock_trace_cyg*.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg*.a` to `/usr/lib`  |
-| MinGW32    | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw*.a` to  `$(MINGW32)/lib`|
-| MSVC | nmake -f makefile.vc6 | `copy wsock_trace*.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
+| **Builder**  | `make all`command | `make install` result |
+| :----------- | :---------------- | :--- |
+| CygWin  | make -f Makefile.CygWin | `cp wsock_trace_cyg*.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg*.a` to `/usr/lib`  |
+| MinGW32 | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw*.a` to  `$(MINGW32)/lib`|
+| MSVC  | nmake -f makefile.vc6 | `copy wsock_trace*.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
 
 *Notes:*
   * For a `WIN32` build, the above files will have an `-x86` suffix.
@@ -423,7 +423,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2022.
+G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2023.
 
 ### Footnotes:
 
