@@ -55,6 +55,41 @@ AC_CHECK_PROGS(ASCIIDOC, [asciidoc])
 if test "${have_man_pages}" = "yes" && test -z "${ASCIIDOC}"; then
 	AC_MSG_ERROR([Required program 'asciidoc' not found])
 fi
+
+# - pkg-config -----------------------------------------------------------------
+
+m4_ifndef([PKG_PROG_PKG_CONFIG],
+	[m4_fatal([Could not locate the pkg-config autoconf
+		macros. These are usually located in /usr/share/aclocal/pkg.m4.
+		If your macros are in a different location, try setting the
+		environment variable AL_OPTS="-I/other/macro/dir" before running
+		./autogen.sh or autoreconf again. Make sure pkg-config is installed.])])
+
+PKG_PROG_PKG_CONFIG
+PKG_INSTALLDIR(['${usrlib_execdir}/pkgconfig'])
+
+# - bash-completion ------------------------------------------------------------
+
+#enable_bash_completion=yes
+AC_ARG_WITH([bashcompletiondir],
+	AS_HELP_STRING([--with-bashcompletiondir=DIR], [Bash completions directory]),
+	[],
+	[AS_IF([`$PKG_CONFIG --exists bash-completion`], [
+		with_bashcompletiondir=`$PKG_CONFIG --variable=completionsdir bash-completion`
+	], [
+		with_bashcompletiondir=${datadir}/bash-completion/completions
+	])
+])
+
+AC_SUBST([bashcompletiondir], [$with_bashcompletiondir])
+
+AC_ARG_ENABLE([bash-completion],
+	AS_HELP_STRING([--disable-bash-completion], [do not install bash completion files]),
+	[], [enable_bash_completion=yes]
+)
+
+AM_CONDITIONAL([BUILD_BASH_COMPLETION], [test "x$enable_bash_completion" = xyes])
+
 # - debug ----------------------------------------------------------------------
 
 AC_ARG_ENABLE([debug],
@@ -229,6 +264,7 @@ AC_MSG_RESULT([
         database path:          ${with_database_path}
         debug:                  ${enable_debug}
         systemd support:        ${have_systemd}
+	bash-completion:        ${enable_bash_completion}
 
 	Bindings:
 	  Perl:			${enable_perl}

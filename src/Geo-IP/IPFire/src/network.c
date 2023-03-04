@@ -796,8 +796,7 @@ static int __loc_network_tree_count(struct loc_network* network, void* data) {
 	size_t* counter = (size_t*)data;
 
 	// Increase the counter for each network
-	counter++;
-
+	(*counter)++;
 	return 0;
 }
 

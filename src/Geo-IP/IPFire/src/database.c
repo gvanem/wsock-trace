@@ -684,6 +684,7 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 		} else {
 			ERROR(db->ctx, "Error verifying the second signature: %s\n",
 				ERR_error_string(ERR_get_error(), NULL));
+			r = -1;
 			goto CLEANUP;
 		}
 	}

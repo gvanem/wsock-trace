@@ -13,6 +13,8 @@ if ENABLE_PERL
 BINDINGS += perl
 endif
 
+bashcompletiondir = @bashcompletiondir@
+
 AM_CPPFLAGS = \
 	-include $(top_builddir)/config.h \
 	-DSYSCONFDIR=\""$(sysconfdir)"\" \
@@ -174,6 +176,14 @@ EXTRA_DIST += \
 
 CLEANFILES += \
 	src/libloc.pc
+
+if BUILD_BASH_COMPLETION
+bashcompletion_DATA = \
+	bash-completion/location
+endif
+
+EXTRA_DIST += \
+	bash-completion/location
 
 dist_pkgpython_PYTHON = \
 	src/python/location/__init__.py \
