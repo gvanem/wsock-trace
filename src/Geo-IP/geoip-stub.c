@@ -22,6 +22,34 @@ void debug_printf (const char *file, unsigned line, const char *fmt, ...)
   ARGSUSED (fmt);
 }
 
+int INET_addr_pton2 (int family, const char *addr, void *result)
+{
+  ARGSUSED (family);
+  ARGSUSED (addr);
+  ARGSUSED (result);
+  return (0);
+}
+
+/*
+ * A simplified version of the one in 'inet_util.c'
+ */
+int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *ip6)
+{
+  if (ip4)
+  {
+    if (ip4->S_un.S_un_b.s_b1 != 0x0  &&   /* not 0/8 */
+        ip4->S_un.S_un_b.s_b1 != 0x7F &&   /* not 127/8 */
+        ip4->S_un.S_un_b.s_b1 != 0x0A)     /* not 10/8  */
+      return (1);
+  }
+  else if (ip6)
+  {
+    if ((ip6->s6_bytes[0] & 0xE0) == 0x20)
+       return (1);
+  }
+  return (0);
+}
+
 const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_addr *ip6)
 {
   ARGSUSED (ip4);
@@ -55,6 +83,46 @@ const char *get_date_str (const SYSTEMTIME *st)
   snprintf (date, sizeof(date), "%02d %.3s %04d",
             st->wDay, months + 3*(st->wMonth-1), st->wYear);
   return (date);
+}
+
+/**
+ * Search 'list' for 'value' and return it's name.
+ */
+const char *list_lookup_name (unsigned value, const struct search_list *list, int num)
+{
+  static char buf [10];
+
+  while (num > 0 && list->name)
+  {
+    if (list->value == value)
+       return (list->name);
+    num--;
+    list++;
+  }
+  return _itoa (value, buf, 10);
+}
+
+const char *flags_decode (DWORD flags, const struct search_list *list, int num)
+{
+  static char buf [400];
+  char  *ret  = buf;
+  char  *end  = buf + sizeof(buf) - 1;
+  size_t left = end - ret;
+  int    i;
+
+  *ret = '\0';
+  for (i = 0; i < num; i++, list++)
+      if (flags & list->value)
+      {
+        ret += snprintf (ret, left, "%s|", list->name);
+        left = end - ret;
+        flags &= ~list->value;
+      }
+  if (flags)           /* print unknown flag-bits */
+     ret += snprintf (ret, left, "0x%08lX|", DWORD_CAST(flags));
+  if (ret > buf)
+     *(--ret) = '\0';   /* remove '|' */
+  return (buf);
 }
 
 /**

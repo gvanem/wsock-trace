@@ -145,7 +145,7 @@ IPFIRE_SRC = $(addprefix IPFire/src/, \
                win_str.c              \
                win_mmap.c)
 
-IP2LOCATION_SRC = ../ip2loc.c
+IP2LOCATION_SRC = # ../ip2loc.c
 
 GEOIP_OBJ       = $(call c_to_obj, $(GEOIP_SRC))
 MMDB_OBJ        = $(call c_to_obj, $(MMDB_SRC))
@@ -198,7 +198,8 @@ $(OBJ_DIR)/%.o: %.cpp
 	@echo
 
 $(OBJ_DIR)/geoip-$(CPU).def: $(GEOIP_STAT_LIB) Makefile.Windows
-	$(call make_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_)
+	$(call make_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_ INET_ \
+	                      win_strerror dword_str flags_decode fopen_excl get_date_str list_lookup_name)
 
 test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
