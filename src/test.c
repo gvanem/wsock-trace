@@ -342,7 +342,9 @@ static BOOL test_IDNA_func (const char *input, const char *expected_ACE)
   if (res)
   {
     if (verbose >= 1)
-       printf ("  ai_canonname: '%s', expected_ACE: '%s'\n", res->ai_canonname, expected_ACE);
+       printf ("  ai_canonname: '%s', expected_ACE: '%s'\n",
+               res->ai_canonname ? res->ai_canonname : "<none>",
+               expected_ACE);
     freeaddrinfo (res);
   }
 #endif

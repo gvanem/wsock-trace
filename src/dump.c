@@ -2103,7 +2103,8 @@ void dump_addrinfo (const char *name, const struct addrinfo *ai)
 
     C_indent (g_cfg.trace_indent+2);
     C_printf ("ai_canonname: %s, ai_addr: %s%s\n",
-              ai->ai_canonname, INET_addr_sockaddr(ai->ai_addr), comment);
+              ai->ai_canonname ? ai->ai_canonname : "<none>",
+              INET_addr_sockaddr(ai->ai_addr), comment);
   }
   C_puts ("~0");
 }
@@ -2127,7 +2128,8 @@ void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
 
     C_indent (g_cfg.trace_indent+2);
     C_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
-              ai->ai_canonname, INET_addr_sockaddr(ai->ai_addr), comment);
+              ai->ai_canonname ? ai->ai_canonname : L"<none>",
+              INET_addr_sockaddr(ai->ai_addr), comment);
   }
   C_puts ("~0");
 }
