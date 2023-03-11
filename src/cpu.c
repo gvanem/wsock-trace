@@ -55,7 +55,7 @@ void cpu_init (void)
      return;
 
   memset (&sys_info, 0, sizeof(sys_info));
-  GetSystemInfo (&sys_info);
+  GetNativeSystemInfo (&sys_info);
 
   if (sys_info.dwNumberOfProcessors == 0)
        num_cpus = 1;

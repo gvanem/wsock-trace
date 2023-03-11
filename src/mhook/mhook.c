@@ -402,7 +402,7 @@ static MHOOKS_TRAMPOLINE *BlockAlloc (BYTE *system_function, BYTE *lower, BYTE *
 {
   SYSTEM_INFO sys_info =  { 0 };
 
-  GetSystemInfo (&sys_info);
+  GetNativeSystemInfo (&sys_info);
 
   // Always allocate in bulk, in case the system actually has a smaller allocation granularity than 'MHOOK_MIN_ALLOCSIZE'.
   ptrdiff_t          alloc_size = MAX (sys_info.dwAllocationGranularity, MHOOK_MIN_ALLOCSIZE);

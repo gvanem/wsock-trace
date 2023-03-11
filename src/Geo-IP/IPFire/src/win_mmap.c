@@ -39,7 +39,7 @@ void *mmap (void *address, size_t length, int protection, int flags, int fd, off
   (void) flags;
 
   if (si.dwAllocationGranularity == 0)
-     GetSystemInfo (&si);
+     GetNativeSystemInfo (&si);
 
   pstart  = (offset / si.dwAllocationGranularity) * si.dwAllocationGranularity;
   poffset = offset - pstart;
