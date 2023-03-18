@@ -246,8 +246,8 @@ BOOL IDNA_CheckCodePage (UINT cp)
       cp_found = TRUE;
     }
     if (cp_info->name[0])
-         TRACE (2, "%cCP-name: %s\n", mark, cp_info->name);
-    else TRACE (2, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
+         TRACE (3, "%cCP-name: %s\n", mark, cp_info->name);
+    else TRACE (3, "%cCP-name: %-5u <unknown>\n", mark, cp_info->number);
   }
 
   /* And now free the content and the 'cp_list' itself.
