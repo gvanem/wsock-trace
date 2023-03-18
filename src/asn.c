@@ -996,8 +996,7 @@ static void ASN_dump (const char *spec)
  */
 void ASN_exit (void)
 {
-  if (ASN_entries)
-     smartlist_wipe (ASN_entries, free);
+  smartlist_wipe (ASN_entries, free);
 
   ASN_bin_close();
   ASN_entries = NULL;
