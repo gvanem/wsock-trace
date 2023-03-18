@@ -1,3 +1,10 @@
+;
+; This .def-file is for 'x86' and 'Release' mode only.
+; But it is used to create .def-files for all other combinations
+; via some 'sed' expressions in the Makefiles:
+;
+; E.g. for 'x64' and 'Debug' mode -> 'wsock_trace_d-x64.dll'.
+
 LIBRARY wsock_trace-x86.dll
 EXPORTS
 
@@ -201,30 +208,30 @@ EXPORTS
 ;
 ; Internal functions in 'inet_addr.c'
 ;
-INET_addr_ntop
-INET_addr_ntop2
-INET_addr_pton
-INET_addr_pton2
-INET_addr_sockaddr
+ INET_addr_ntop
+ INET_addr_ntop2
+ INET_addr_pton
+ INET_addr_pton2
+ INET_addr_sockaddr
 
 ;
 ; Internal functions in 'inet_util.c'
 ;
-INET_util_addr_is_global
-INET_util_addr_is_multicast
-INET_util_addr_is_special
-INET_util_addr_is_zero
-INET_util_download_file
-INET_util_get_CIDR_from_IPv4_string
-INET_util_get_CIDR_from_IPv6_string
-INET_util_get_ip_num
-INET_util_get_mask4
-INET_util_get_mask6
-INET_util_in6_mask_str
-INET_util_network_len128
-INET_util_network_len32
-INET_util_range4cmp
-INET_util_range6cmp
-INET_util_test_mask4
-INET_util_test_mask6
-INET_util_touch_file
+ INET_util_addr_is_global
+ INET_util_addr_is_multicast
+ INET_util_addr_is_special
+ INET_util_addr_is_zero
+ INET_util_download_file
+ INET_util_get_CIDR_from_IPv4_string
+ INET_util_get_CIDR_from_IPv6_string
+ INET_util_get_ip_num
+ INET_util_get_mask4
+ INET_util_get_mask6
+ INET_util_in6_mask_str
+ INET_util_network_len128
+ INET_util_network_len32
+ INET_util_range4cmp
+ INET_util_range6cmp
+ INET_util_test_mask4
+ INET_util_test_mask6
+ INET_util_touch_file
