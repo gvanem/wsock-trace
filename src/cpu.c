@@ -95,7 +95,6 @@ void cpu_init (void)
 
 /**
  * Print some times (and CPU cycle counts) for a thread.
- * I.e. the WinPcap receiver thread.
  */
 void print_thread_times (HANDLE thread)
 {
