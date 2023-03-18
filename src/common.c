@@ -68,8 +68,7 @@ static void get_device_to_paths_mapping (void);
 
 static void device_to_paths_map_remove_all (void)
 {
-  if (device_to_paths_map)
-     smartlist_wipe (device_to_paths_map, free);
+  smartlist_wipe (device_to_paths_map, free);
   device_to_paths_map = NULL;
 }
 
@@ -127,8 +126,7 @@ void sock_list_remove (SOCKET sock)
 
 static void sock_list_remove_all (void)
 {
-  if (sock_list)
-     smartlist_wipe (sock_list, free);
+  smartlist_wipe (sock_list, free);
   sock_list = NULL;
 }
 
@@ -1298,7 +1296,8 @@ static const char *fname_cache_add (const char *fname)
      return (NULL);
 
   fn->crc32     = crc_bytes (fname, fn_len);
-  fn->orig_name = str_replace ('\\', '/', strcpy((char*)(fn+1), fname));
+  fn->orig_name = strcpy ((char*)(fn+1), fname);
+  str_replace ('\\', '/', fn->orig_name);
 
   if (GetLongPathName(fname, buf, sizeof(buf)))
   {
@@ -1337,8 +1336,7 @@ static void fname_cache_free_one (void *e)
 
 static void fname_cache_free (void)
 {
-  if (fname_list)
-     smartlist_wipe (fname_list, fname_cache_free_one);
+  smartlist_wipe (fname_list, fname_cache_free_one);
   fname_list = NULL;
 }
 
