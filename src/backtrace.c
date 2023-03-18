@@ -636,16 +636,56 @@ int backtrace_main (int argc, char **argv)
     setup_handlers();
 
     /**
-     * Writing to NULL triggers the MSVC invalid parameter handler inside ftell():
+     * Writing to NULL triggers the MSVC invalid parameter handler inside `ftell()`:
+     * ```
      *  0x69B11FF2: c:/Windows/System32/ucrtbased.dll (ftell+546)
      *  0x69B12616: c:/Windows/System32/ucrtbased.dll (fwrite+38)
      *  0x00EE8E8E: ws_tool.exe     (backtrace_main+590)  backtrace.c(552)
      *  0x00EEDCF4: ws_tool.exe     (run_sub_command+132)  ws_tool.c(77)
      *  0x00EEDE79: ws_tool.exe     (main+249)  ws_tool.c(142)
+     * ```
      *
-     * But sensible parameters for the handler is only present in _DEBUG-mode
+     * But sensible parameters for the handler is only present in `_DEBUG`-mode
      * which also triggers a Dialogbox unless we call `SetErrorMode()` and
      * `_CrtSetReportHook()`
+     *
+     * In _DEBUG-mode, the below results in this:
+     * ```
+     *   invalid_parameter_handler() invoked:
+     *     expression: stream != nullptr
+     *     function:   _fwrite_internal
+     *     file:       minkernel\crts\ucrt\src\appcrt\stdio\fwrite.cpp [1]
+     *     line:       35)
+     *   Call-stack:
+     *     0x00007FFC7A10D13B: c:/Windows/System32/ntdll.dll (ZwWaitForSingleObject+11)
+     *     0x00007FFC779A3065: c:/Windows/System32/KERNELBASE.dll (WaitForSingleObjectEx+133)
+     *     0x00007FF797F60AA7: f:/gv/VC_project/ws_trace/src/ws_tool.exe (vm_bug_list+199)  f:/gv/VC_project/ws_trace/src/vm_dump.c(388)
+     *     0x00007FF797F616A5: f:/gv/VC_project/ws_trace/src/ws_tool.exe (abort_handler+21)  f:/gv/VC_project/ws_trace/src/vm_dump.c(448)
+     *     0x00007FFC367E90E4: c:/Windows/System32/ucrtbased.dll (raise+1124)
+     *     0x00007FF797F78B70: f:/gv/VC_project/ws_trace/src/ws_tool.exe (invalid_parameter_handler+144)  f:/gv/VC_project/ws_trace/src/backtrace.c(507)
+     *     0x00007FFC367E819D: c:/Windows/System32/ucrtbased.dll (_invalid_parameter+397)
+     *     0x00007FFC367FD973: c:/Windows/System32/ucrtbased.dll (ftell+819)
+     * ```
+     *
+     * \note [1]:
+     *
+     * The corresponding code in `fwrite.cpp (35)`: is <br>
+     *  `_UCRT_VALIDATE_RETURN(ptd, stream != nullptr, EINVAL, 0);`
+     *
+     * (defined in `corecrt_internal_ptd_propagation.h`) which in my case expands to:
+     * ```
+     *  if (!(_Expr_val))
+     *  {
+     *    (ptd).get_errno().set ((22));
+     *    _invalid_parameter_internal (L"stream != nullptr", L__FUNCTION__,
+     *           L"f:/gv/WinKit/Source/10.0.22621.0/ucrt/stdio/fwrite.cpp", 35, 0, (ptd));
+     *    return (0);
+     *  }
+     * ```
+     *
+     * These files should be part of your WinKit: <br>
+     *   \li `$(WindowsSdkDir)/Source/$(WindowsSdkVer)/ucrt/stdio/fwrite.cpp`
+     *   \li `$(WindowsSdkDir)/Source/$(WindowsSdkVer)/ucrt/inc/corecrt_internal_ptd_propagation.h`
      */
     fwrite ("hello world", 11, 1, NULL);
 
