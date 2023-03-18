@@ -4645,6 +4645,8 @@ static int show_help (void)
 {
   printf ("Simple Windows ICF Firewall monitor test program.\n"
           "Usage: %s [OPTIONS] [program]\n"
+          "       -4:     report IPv6 events only.\n"
+          "       -6:     report IPv6 events only.\n"
           "       -aN:    the API-level to use (%d-%d, default: %d).\n"
           "       -A:     show timestamps on absolute time.\n"
           "       -c:     only dump the callout rules.\n"
@@ -4655,7 +4657,7 @@ static int show_help (void)
           "       -r:     only dump the firewall rules and programs.\n"
           "       -R:     with option '-r', only show program-rules with an IPv4/6 address.\n"
           "       -s:     silent; no beeping sounds.\n"
-          "       -v:     sets \"g_cfg.FIREWALL.show_all = TRUE\".\n"
+          "       -v:     show both 'DROP' and 'ALLOW' events.\n"
           "\n"
           "  program: the program (and arguments) to test Firewall activity with.\n"
           "    Does not work with GUI programs. Events may come in late. So an extra \"sleep\" is handy.\n"
@@ -4738,14 +4740,15 @@ static int run_program (const char *program)
 {
   FILE *p;
   char  p_buf [1000];
+  const char *events = (g_cfg.FIREWALL.show_all ? "~1DROP~0 and ~1ALLOW" : "~1DROP");
   const char *what;
 
   what = (g_cfg.FIREWALL.show_ipv4  &&  g_cfg.FIREWALL.show_ipv6) ? "IPv4/6 " :
          (g_cfg.FIREWALL.show_ipv4  && !g_cfg.FIREWALL.show_ipv6) ? "IPv4 "   :
          (!g_cfg.FIREWALL.show_ipv4 &&  g_cfg.FIREWALL.show_ipv6) ? "IPv6 "   : "non-IPv4/IPv6 ";
 
-  C_printf ("Executing ~1%s~0 while listening for %sFilter events. API-level: %d.\n",
-            program ? program : "no program", what, fw_api);
+  C_printf ("Executing ~1%s~0 while listening for %sFilter %s~0 events. API-level: %d.\n",
+            program ? program : "no program", what, events, fw_api);
 
   if (!program)
      return (1);
@@ -4776,6 +4779,8 @@ int firewall_main (int argc, char **argv)
   int     dump_events = 0;
   int     RA4_only = 0;
   int     program_only = 0;  /* Capture 'appId' matching program or 'userId' matching logged-on user only. */
+  BOOL   *ipv4_selected = NULL;
+  BOOL   *ipv6_selected = NULL;
   char   *program  = NULL;
   char   *log_file = NULL;
   FILE   *log_f    = NULL;
@@ -4784,9 +4789,17 @@ int firewall_main (int argc, char **argv)
 
   set_program_name (argv[0]);
 
-  while ((ch = getopt(argc, argv, "a:Afh?cel:prRstv")) != EOF)
+  g_cfg.FIREWALL.show_ipv6 = FALSE; /* override the config-file */
+
+  while ((ch = getopt(argc, argv, "46a:Afh?cel:prRstv")) != EOF)
     switch (ch)
     {
+      case '4':
+           ipv4_selected = &g_cfg.FIREWALL.show_ipv4;
+           break;
+      case '6':
+           ipv6_selected = &g_cfg.FIREWALL.show_ipv6;
+           break;
       case 'a':
            if (!isdigit((int)*optarg))
            {
@@ -4826,12 +4839,19 @@ int firewall_main (int argc, char **argv)
            test_SID();
            break;
       case 'v':
-           g_cfg.FIREWALL.show_all = g_cfg.FIREWALL.show_ipv4 = g_cfg.FIREWALL.show_ipv6 = TRUE;
+           g_cfg.FIREWALL.show_all = TRUE;
+        // g_cfg.FIREWALL.show_ipv4 = g_cfg.FIREWALL.show_ipv6 = TRUE;
            break;
       case '?':
       case 'h':
            return show_help();
     }
+
+  if (ipv4_selected || ipv6_selected)
+  {
+    g_cfg.FIREWALL.show_ipv4 = ipv4_selected ? TRUE : FALSE;
+    g_cfg.FIREWALL.show_ipv6 = ipv6_selected ? TRUE : FALSE;
+  }
 
   program = set_net_program (argc-optind, argv+optind);
 
