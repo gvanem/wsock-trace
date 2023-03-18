@@ -159,10 +159,10 @@ static inline int __loc_database_check_boundaries(struct loc_database* db,
 		return 1;
 
 	DEBUG(db->ctx, "Database read check failed at %p for %zu byte(s)\n", p, length);
-	DEBUG(db->ctx, "  p      = %p (offset = %jd, length = %zu)\n", p, offset, length);
+	DEBUG(db->ctx, "  p      = %p (offset = %zd, length = %zu)\n", p, offset, length);
 	DEBUG(db->ctx, "  data   = %p (length = %zu)\n", db->data, (size_t)db->length);
 	DEBUG(db->ctx, "  end    = %p\n", db->data + db->length);
-	DEBUG(db->ctx, "  overflow of %zu byte(s)\n", offset + length - db->length);
+	DEBUG(db->ctx, "  overflow of %zu byte(s)\n", (size_t)(offset + length - db->length));
 
 	// Otherwise raise EFAULT
 	errno = EFAULT;
