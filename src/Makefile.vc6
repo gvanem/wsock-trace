@@ -81,9 +81,6 @@ CFLAGS = $(CFLAGS) -MD -Ot -Gs
 _D =
 !endif
 
-WSOCK_DEF   = $(OBJ_DIR)\wsock_trace$(_D)-$(CPU).def
-LDFLAGS_DEF = -def:$(WSOCK_DEF)
-
 !if "$(USE_LUAJIT)" == "1"
 CFLAGS     = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
 LUAJIT_LIB = $(LUAJIT_ROOT)/src/luajit_static-$(CPU).lib
@@ -197,8 +194,14 @@ all: $(OBJ_DIR) compile_luajit_$(USE_LUAJIT) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LI
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(WSOCK_DEF) $(WSOCK_TRACE_OBJ) $(NON_EXPORT_OBJ) $(WSOCK_DEP) $(OBJ_DIR)\wsock_trace.res
-	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) $(LDFLAGS_DEF) $(WSOCK_TRACE_OBJ) $(OBJ_DIR)\wsock_trace.res $(EX_LIBS) > link.tmp
+$(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB): $(OBJ_DIR)\wsock_trace$(_D)-$(CPU).def \
+                                       $(WSOCK_TRACE_OBJ)                     \
+                                       $(NON_EXPORT_OBJ)                      \
+                                       $(WSOCK_DEP)                           \
+                                       $(OBJ_DIR)\wsock_trace.res
+	link.exe -dll $(LDFLAGS) -implib:$(WSOCK_TRACE_LIB) -out:$(WSOCK_TRACE_DLL) \
+	         -def:$(OBJ_DIR)\wsock_trace$(_D)-$(CPU).def $(WSOCK_TRACE_OBJ)     \
+	         $(OBJ_DIR)\wsock_trace.res $(EX_LIBS) > link.tmp
 	type link.tmp >> wsock_trace$(_D)-$(CPU).map
 	lib -nologo $(WSOCK_TRACE_LIB) $(NON_EXPORT_OBJ)
 	@del $(WSOCK_TRACE_LIB:.lib=.exp)
