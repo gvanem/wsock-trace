@@ -319,14 +319,14 @@ static int config_get_line (FILE        *fil,
                             const char **val_p,
                             const char **section_p)
 {
-  static char key[256], val[512], val2[512], section[40];
+  static char key [256], val [512], val2 [512], section [40];
   static BOOL seen_a_section = FALSE;
   char  *p, *q;
   int    len;
 
   while (1)
   {
-    char buf[500];
+    char buf [500];
 
     if (!fgets(buf, sizeof(buf)-1, fil))   /* EOF */
        return (0);
@@ -1838,7 +1838,13 @@ void get_color (const char *val, WORD *col)
     return;
   }
 
-  if (!strnicmp(val, "bright ", 7))
+  if (!strnicmp(val, "bri ", 4))
+  {
+    fg |= FOREGROUND_INTENSITY;
+    val += 4;
+    bright = 1;
+  }
+  else if (!strnicmp(val, "bright ", 7))
   {
     fg |= FOREGROUND_INTENSITY;
     val += 7;
@@ -2346,11 +2352,14 @@ static void reset_invalid_handler (void)
      */
     if (_CrtMemDifference(&diff_state, &last_state, &new_state))
     {
+      fputs ("Dumping memory leaks:\n", stderr);
       _CrtMemDumpAllObjectsSince (&last_state);
       _CrtMemDumpStatistics (&last_state);
       _CrtCheckMemory();
       _CrtDumpMemoryLeaks();
     }
+    else
+      fputs ("No memory leaks detected.\n", stderr);
     smartlist_leak_check();
     reset_invalid_handler();
   }
