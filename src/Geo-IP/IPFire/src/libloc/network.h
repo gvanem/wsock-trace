@@ -79,7 +79,6 @@ int loc_network_tree_walk(struct loc_network_tree* tree,
 		int(*callback)(struct loc_network* network, void* data), void* data);
 int loc_network_tree_dump(struct loc_network_tree* tree);
 int loc_network_tree_add_network(struct loc_network_tree* tree, struct loc_network* network);
-size_t loc_network_tree_count_networks(struct loc_network_tree* tree);
 size_t loc_network_tree_count_nodes(struct loc_network_tree* tree);
 
 struct loc_network_tree_node;

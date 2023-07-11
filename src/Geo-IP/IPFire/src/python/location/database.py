@@ -8,6 +8,7 @@
 
 import logging
 import psycopg2
+import time
 
 log = logging.getLogger("location.database")
 log.propagate = 1
@@ -168,14 +169,29 @@ class Connection(object):
 		return self._db.cursor()
 
 	def _execute(self, cursor, query, parameters, kwparameters):
-		log.debug("SQL Query: %s" % (query % (kwparameters or parameters)))
+		log.debug(
+				"Executing query: %s" % \
+						cursor.mogrify(query, kwparameters or parameters).decode(),
+		)
+
+		# Store the time when the query started
+		t = time.monotonic()
 
 		try:
 			return cursor.execute(query, kwparameters or parameters)
-		except (OperationalError, psycopg2.ProgrammingError):
+
+		# Catch any errors
+		except OperationalError:
 			log.error("Error connecting to database on %s", self.host)
 			self.close()
 			raise
+
+		# Log how long the query took
+		finally:
+			# Determine duration the query took
+			d = time.monotonic() - t
+
+			log.debug("Query took %.2fms" % (d * 1000.0))
 
 	def transaction(self):
 		return Transaction(self)

@@ -25,7 +25,7 @@ TEST_DATA_DIR = os.environ["TEST_DATA_DIR"]
 
 class Test(unittest.TestCase):
 	def setUp(self):
-		path = os.path.join(TEST_DATA_DIR, "location-2022-03-30.db")
+		path = os.path.join(TEST_DATA_DIR, "database.db")
 
 		# Load the database
 		self.db = location.Database(path)

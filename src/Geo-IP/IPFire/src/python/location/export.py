@@ -147,6 +147,10 @@ class IpsetOutputWriter(OutputWriter):
 		# Count all networks
 		self.networks = 0
 
+		# Check that family is being set
+		if not self.family:
+			raise ValueError("%s requires family being set" % self.__class__.__name__)
+
 	@property
 	def hashsize(self):
 		"""

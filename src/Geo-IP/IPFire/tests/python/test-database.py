@@ -25,7 +25,7 @@ TEST_DATA_DIR = os.environ["TEST_DATA_DIR"]
 
 class Test(unittest.TestCase):
 	def setUp(self):
-		path = os.path.join(TEST_DATA_DIR, "location-2022-03-30.db")
+		path = os.path.join(TEST_DATA_DIR, "database.db")
 
 		# Load the database
 		self.db = location.Database(path)
@@ -45,7 +45,7 @@ class Test(unittest.TestCase):
 		self.assertEqual(self.db.license, "CC BY-SA 4.0")
 
 		# Created At
-		self.assertEqual(self.db.created_at, 1648619023)
+		self.assertIsInstance(self.db.created_at, int)
 
 	def test_fetch_network(self):
 		"""

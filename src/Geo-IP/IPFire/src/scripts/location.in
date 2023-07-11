@@ -521,7 +521,7 @@ class CLI(object):
 		writer = self.__get_output_formatter(ns)
 
 		for asn in ns.asn:
-			f = writer("AS%s" % asn, f=sys.stdout)
+			f = writer("AS%s" % asn, family=ns.family, f=sys.stdout)
 
 			# Print all matching networks
 			for n in db.search_networks(asns=[asn], family=ns.family):
@@ -534,7 +534,7 @@ class CLI(object):
 
 		for country_code in ns.country_code:
 			# Open standard output
-			f = writer(country_code, f=sys.stdout)
+			f = writer(country_code, family=ns.family, f=sys.stdout)
 
 			# Print all matching networks
 			for n in db.search_networks(country_codes=[country_code.upper()], family=ns.family):
@@ -561,7 +561,7 @@ class CLI(object):
 			raise ValueError(_("You must at least pass one flag"))
 
 		writer = self.__get_output_formatter(ns)
-		f = writer("custom", f=sys.stdout)
+		f = writer("custom", family=ns.family, f=sys.stdout)
 
 		for n in db.search_networks(flags=flags, family=ns.family):
 			f.write(n)
@@ -570,7 +570,7 @@ class CLI(object):
 
 	def handle_list_bogons(self, db, ns):
 		writer = self.__get_output_formatter(ns)
-		f = writer("bogons", f=sys.stdout)
+		f = writer("bogons", family=ns.family, f=sys.stdout)
 
 		for n in db.list_bogons(family=ns.family):
 			f.write(n)

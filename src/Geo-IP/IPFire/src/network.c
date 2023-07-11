@@ -792,24 +792,6 @@ int loc_network_tree_add_network(struct loc_network_tree* tree, struct loc_netwo
 	return 0;
 }
 
-static int __loc_network_tree_count(struct loc_network* network, void* data) {
-	size_t* counter = (size_t*)data;
-
-	// Increase the counter for each network
-	(*counter)++;
-	return 0;
-}
-
-size_t loc_network_tree_count_networks(struct loc_network_tree* tree) {
-	size_t counter = 0;
-
-	int r = loc_network_tree_walk(tree, NULL, __loc_network_tree_count, &counter);
-	if (r)
-		return r;
-
-	return counter;
-}
-
 static size_t __loc_network_tree_count_nodes(struct loc_network_tree_node* node) {
 	size_t counter = 1;
 

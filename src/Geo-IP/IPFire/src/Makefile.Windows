@@ -1,7 +1,7 @@
 #
 # GNU Makefile for libloc. Supporting MinGW, MSVC or clang-cl.
 #
-# By G. Vanem <gvanem@yahoo.no> 2020 - 2022.
+# By G. Vanem <gvanem@yahoo.no> 2020 - 2023.
 #
 # Ref: https://git.ipfire.org/pub/git/location/libloc.git
 #      https://location.ipfire.org/how-to-use
@@ -395,8 +395,8 @@ run_tests runtests: $(TEST_PROGS)
 	done
 
 run_export_test: py3_module
-	export PYTHONPATH=$(realpath py3_install)      ; \
-	export TEST_DATA_DIR=$(realpath ../tests/data) ; \
+	export PYTHONPATH=$(realpath py3_install) ; \
+	export TEST_DATA_DIR=$(realpath ../data)  ; \
 	$(PYTHON) ../tests/python/test-export.py
 
 #
