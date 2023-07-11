@@ -16,12 +16,8 @@
 USE_CRT_DEBUG = 0
 !endif
 
-!if "$(USE_DEF_FILE)" == ""
-USE_DEF_FILE = 1
-!endif
-
 !if "$(USE_LUAJIT)" == ""
-USE_LUAJIT = 1
+USE_LUAJIT = 0
 !endif
 
 #
@@ -70,9 +66,10 @@ INSTALL_ROOT = $(VSINSTALLDIR)
 #  -MTd  - libc, threads, debug
 #
 CC      = cl.exe
-CFLAGS  = -nologo $(CFLAGS) -I. -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 # -GS -RTC1 -RTCu -D_DEBUG
-LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console -verbose
-LDFLAGS = $(LDFLAGS) -machine:$(CPU) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
+CFLAGS  = -nologo $(CFLAGS) -I. -I$(LIBLOC_ROOT) -W3 -Zi \
+          -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -DUSE_DEF_FILE
+LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console -verbose \
+          -machine:$(CPU) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
 
 OBJ_DIR = MSVC_obj-$(CPU)
 
@@ -80,15 +77,12 @@ OBJ_DIR = MSVC_obj-$(CPU)
 CFLAGS = $(CFLAGS) -MDd -Os -D_DEBUG
 _D = _d
 !else
-CFLAGS = $(CFLAGS) -MD -Ot -Gs # -DNDEBUG
+CFLAGS = $(CFLAGS) -MD -Ot -Gs
 _D =
 !endif
 
-!if "$(USE_DEF_FILE)" == "1"
-CFLAGS      = $(CFLAGS) -DUSE_DEF_FILE
 WSOCK_DEF   = $(OBJ_DIR)\wsock_trace$(_D)-$(CPU).def
 LDFLAGS_DEF = -def:$(WSOCK_DEF)
-!endif
 
 !if "$(USE_LUAJIT)" == "1"
 CFLAGS     = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
@@ -97,7 +91,6 @@ EX_LIBS    = $(LUAJIT_ROOT)/src/luajit_static-$(CPU).lib
 WSOCK_DEP  = $(LUAJIT_ROOT)/src/luajit_static-$(CPU).lib
 !endif
 
-CFLAGS    = $(CFLAGS) -I$(LIBLOC_ROOT)
 EX_LIBS   = $(EX_LIBS)   libloc$(_D)-$(CPU).lib advapi32.lib dnsapi.lib ole32.lib winmm.lib
 WSOCK_DEP = $(WSOCK_DEP) libloc$(_D)-$(CPU).lib
 
@@ -214,6 +207,8 @@ install: all
 	copy $(WSOCK_TRACE_LIB)           "$(INSTALL_ROOT)\lib"
 	copy $(WSOCK_TRACE_DLL)           "$(INSTALL_ROOT)\bin"
 	copy wsock_trace$(_D)-$(CPU).pdb  "$(INSTALL_ROOT)\bin"
+	copy ws_tool.exe                  "$(INSTALL_ROOT)\bin"
+	copy ws_tool.pdb                  "$(INSTALL_ROOT)\bin"
 
 uninstall:
 	- del "$(INSTALL_ROOT)\lib\$(WSOCK_TRACE_LIB)"
@@ -232,6 +227,7 @@ mhook-test.exe: $(OBJ_DIR)\mhook-test.obj $(OBJ_DIR)\disasm.obj $(WSOCK_TRACE_LI
 
 run_test: ws_tool.exe
 	ws_tool.exe test -v
+	@echo
 
 compile_luajit_0:
 	@echo
@@ -268,7 +264,6 @@ Run one of the following targets:
 
 where VAR can have one of the following 'x' values:
   USE_CRT_DEBUG    (default: $(USE_CRT_DEBUG))
-  USE_DEF_FILE     (default: $(USE_DEF_FILE))
   USE_LUAJIT       (default: $(USE_LUAJIT))
 << NOKEEP
 
