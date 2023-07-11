@@ -673,6 +673,7 @@ static BOOL load_AddAuditHook (void)
 {
   if (!g_py_hnd)
      g_py_hnd = LoadLibrary (g_py_dll);
+
   if (!g_py_hnd)
   {
     TRACE (1, "LoadLibrary (\"%s\") failed: %s.\n", g_py_dll, get_error());

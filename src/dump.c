@@ -921,7 +921,7 @@ static const struct search_list tcp_options[] = {
                     ADD_VALUE (TCP_NODELAY),
                     ADD_VALUE (TCP_MAXSEG),
                     ADD_VALUE (TCP_EXPEDITED_1122),
-                    ADD_VALUE (TCP_KEEPALIVE),
+                    ADD_VALUE (TCP_KEEPALIVE),   /* == TCP_KEEPIDLE */
                     ADD_VALUE (TCP_MAXRT),
                     ADD_VALUE (TCP_STDURG),
                     ADD_VALUE (TCP_NOURG),
@@ -1542,7 +1542,7 @@ const char *sockopt_name (int level, int opt)
     case IPPROTO_UDP:
          return list_lookup_name (opt, udp_options, DIM(udp_options));
 
-    case IPPROTO_TCP:
+    case IPPROTO_TCP:   /* or 'SOL_TCP' in Posix terms */
          return list_lookup_name (opt, tcp_options, DIM(tcp_options));
 
     case IPPROTO_IP:
@@ -1653,14 +1653,14 @@ static const char *dump_sol_socket (char *buf, size_t buf_sz, int opt, const cha
 
   if (opt_len == sizeof(*tv) && (opt == SO_RCVTIMEO || opt == SO_SNDTIMEO))
   {
-    tv = (struct timeval*) opt_val;
+    tv = (const struct timeval*) opt_val;
     snprintf (buf, buf_sz, "{tv=%ld.%06lds}", tv->tv_sec, tv->tv_usec);
     return (buf);
   }
 
   if (opt == SO_OPENTYPE && opt_len == sizeof(DWORD))
   {
-    val = *(DWORD*)opt_val;
+    val = *(const DWORD*)opt_val;
     return str_ncpy (buf, list_lookup_name(val, opentypes, DIM(opentypes)), buf_sz);
   }
 
@@ -1699,7 +1699,7 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
   {
     if (opt == TCP_KEEPCNT && opt_len == sizeof(ULONG))
     {
-      snprintf (buf, sizeof(buf), "TCP-keep-count: %lu", (unsigned long)*opt_val);
+      snprintf (buf, sizeof(buf), "TCP-keep-count: %lu", *(unsigned long*)opt_val);
       return (buf);
     }
   }
@@ -1710,19 +1710,19 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
   switch (opt_len)
   {
     case sizeof(BYTE):
-         val = *(BYTE*) opt_val;
+         val = *(const BYTE*) opt_val;
          _itoa ((BYTE)val, buf, 10);
          break;
 
     case sizeof(WORD):
-         val = *(WORD*) opt_val;
+         val = *(const WORD*) opt_val;
          if (g_cfg.nice_numbers && val > 1000)
               snprintf (buf, sizeof(buf), "'%s'", dword_str(val));
          else snprintf (buf, sizeof(buf), "%u", (WORD)val);
          break;
 
     case sizeof(DWORD):
-         val = *(DWORD*) opt_val;
+         val = *(const DWORD*) opt_val;
          if (val == DWORD_MAX)
               strcpy (buf, "DWORD_MAX");
          else if (g_cfg.nice_numbers && val > 1000)
@@ -1731,7 +1731,7 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
          break;
 
     case sizeof(ULONG64):
-         val64 = *(ULONG64*) opt_val;
+         val64 = *(const ULONG64*) opt_val;
          if (g_cfg.nice_numbers && val64 > 1000)
               snprintf (buf, sizeof(buf), "'%s'", qword_str(val64));
          else snprintf (buf, sizeof(buf), "%" U64_FMT, val64);
