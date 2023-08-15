@@ -90,5 +90,7 @@ struct loc_network_tree_node* loc_network_tree_node_get(struct loc_network_tree_
 int loc_network_tree_node_is_leaf(struct loc_network_tree_node* node);
 struct loc_network* loc_network_tree_node_get_network(struct loc_network_tree_node* node);
 
+int loc_network_tree_cleanup(struct loc_network_tree* tree);
+
 #endif
 #endif

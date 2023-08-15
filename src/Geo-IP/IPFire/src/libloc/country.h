@@ -54,6 +54,10 @@ static inline void loc_country_code_copy(char* dst, const char* src) {
     }
 }
 
+static inline int loc_country_code_cmp(const char* cc1, const char* cc2) {
+	return memcmp(cc1, cc2, 2);
+}
+
 #endif
 
 #endif

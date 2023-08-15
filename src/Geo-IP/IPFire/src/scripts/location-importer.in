@@ -285,6 +285,10 @@ class CLI(object):
 			""")
 
 		for row in rows:
+			# Skip AS without names
+			if not row.name:
+				continue
+
 			a = writer.add_as(row.number)
 			a.name = row.name
 
@@ -1586,6 +1590,7 @@ class CLI(object):
 				"ap-southeast-2": "AU",
 				"ap-southeast-3": "MY",
 				"ap-southeast-4": "AU",
+				"ap-southeast-5": "NZ", # Auckland, NZ
 				"ap-southeast-6": "AP", # XXX: Precise location not documented anywhere
 				"ap-northeast-1": "JP",
 				"ca-central-1": "CA",
@@ -1697,7 +1702,7 @@ class CLI(object):
 				if len(fcontent) > 10:
 					self.db.execute("DELETE FROM network_overrides WHERE source = %s", name)
 				else:
-					log.error("%s (%s) returned likely bogus file, ignored" % (name, url))
+					log.warning("%s (%s) returned likely bogus file, ignored" % (name, url))
 					continue
 
 				# Iterate through every line, filter comments and add remaining networks to
@@ -1749,7 +1754,7 @@ class CLI(object):
 				if len(fcontent) > 10:
 					self.db.execute("DELETE FROM autnum_overrides WHERE source = %s", name)
 				else:
-					log.error("%s (%s) returned likely bogus file, ignored" % (name, url))
+					log.warning("%s (%s) returned likely bogus file, ignored" % (name, url))
 					continue
 
 				# Iterate through every line, filter comments and add remaining ASNs to

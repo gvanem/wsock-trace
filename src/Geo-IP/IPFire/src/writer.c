@@ -389,6 +389,8 @@ static void free_network(struct network* network) {
 
 static int loc_database_write_networks(struct loc_writer* writer,
 		struct loc_database_header_v1* header, off_t* offset, FILE* f) {
+	int r;
+
 	// Write the network tree
 	DEBUG(writer->ctx, "Network tree starts at %jd bytes\n", (intmax_t)*offset);
 	header->network_tree_offset = htobe32(*offset);
@@ -412,6 +414,11 @@ static int loc_database_write_networks(struct loc_writer* writer,
 	// Initialize queue for networks
 	TAILQ_HEAD(network_t, network) networks;
 	TAILQ_INIT(&networks);
+
+	// Cleanup the tree before writing it
+	r = loc_network_tree_cleanup(writer->networks);
+	if (r)
+		return r;
 
 	// Add root
 	struct loc_network_tree_node* root = loc_network_tree_get_root(writer->networks);
@@ -496,7 +503,7 @@ static int loc_database_write_networks(struct loc_writer* writer,
 		TAILQ_REMOVE(&networks, nw, networks);
 
 		// Prepare what we are writing to disk
-		int r = loc_network_to_database_v1(nw->network, &db_network);
+		r = loc_network_to_database_v1(nw->network, &db_network);
 		if (r)
 			return r;
 

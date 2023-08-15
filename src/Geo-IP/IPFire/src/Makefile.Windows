@@ -10,7 +10,7 @@
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 16
+LIBLOC_MICRO = 17
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 DATE_STAMP = $(shell date.exe +%d-%B-%Y)
@@ -41,7 +41,7 @@ USE_WSOCK_TRACE ?= 0
 # any macro in 'fake-OpenSSL/openssl/fake-it.h' will cause a
 # signature operation in 'test-signature.exe' to fail.
 #
-USE_OPENSSL  ?= 0
+USE_OPENSSL  ?= 1
 OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
 
 #
@@ -179,7 +179,8 @@ ifeq ($(USE_OPENSSL),1)
   CFLAGS += -I$(OPENSSL_ROOT)/include \
             -DUSE_OPENSSL
 else
-  CFLAGS += -I../../.. -I./fake-OpenSSL
+  CFLAGS += -I../../.. \
+            -I./fake-OpenSSL
 endif
 
 #
@@ -198,10 +199,12 @@ else ifeq ($(CC),clang-cl)
             -Wno-unused-parameter           \
             -Wno-unused-variable            \
             -Wno-visibility                 \
+            -Wno-sign-compare               \
             -Wno-missing-field-initializers \
-            -Wno-incompatible-pointer-types
+            -Wno-incompatible-pointer-types \
+            -Wno-single-bit-bitfield-constant-conversion
 else
-  CFLAGS += -W4 -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 -wd4189 -wd4201 -wd4244 -wd4267
+  CFLAGS += -W4 -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
 
   #
   # For warnings such as:
@@ -235,8 +238,8 @@ endif
 DNS_LIB = $(call select, -ldnsapi, dnsapi.lib)
 
 ifeq ($(USE_OPENSSL),1)
-  OPENSSL_LIBS = $(call select, $(OPENSSL_ROOT)/lib/$(CPU)/libcrypto.dll.a, \
-                                $(OPENSSL_ROOT)/lib/$(CPU)/libcrypto_imp.lib)
+  OPENSSL_LIBS = $(call select, $(OPENSSL_ROOT)/lib/libcrypto.dll-$(CPU).a, \
+                                $(OPENSSL_ROOT)/lib/libcrypto_imp-$(CPU).lib)
 else
   OPENSSL_LIBS =
 endif
@@ -303,7 +306,7 @@ libloc-$(CPU).dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
 	$(call link_DLL, $@, $(DEF_ARG)$^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 
 libloc/version.h: $(THIS_FILE)
-	$(call Generate, $@, //)
+	$(call generate, $@, //)
 	$(file >> $@, #ifndef LIBLOC_VERSION_H)
 	$(file >> $@, #define LIBLOC_VERSION_H)
 	$(file >> $@, #define LIBLOC_MAJOR_VER  $(LIBLOC_MAJOR))
@@ -313,20 +316,20 @@ libloc/version.h: $(THIS_FILE)
 	$(file >> $@, #endif)
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
-	$(call Generate, $@, ;)
+	$(call generate, $@, ;)
 	@echo -e 'LIBRARY libloc-$(CPU).dll\nEXPORTS'               >> $@
 	nm $< | grep ' T $(uscore)loc_' | sed 's/^.* $(uscore)/  /' >> $@
 	@echo
 
 $(OBJ_DIR)/libloc.rc: $(THIS_FILE)
-	$(call Generate, $@, //)
+	$(call generate, $@, //)
 	$(file >> $@, #define RC_FILENAME     "libloc-$(CPU).dll")
 	$(file >> $@, #define RC_DESCRIPTION  "A library to determine the location of someone on the Internet.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
 $(OBJ_DIR)/_location.rc: $(THIS_FILE)
-	$(call Generate, $@, //)
+	$(call generate, $@, //)
 	$(file >> $@, #define RC_FILENAME     "_location.pyd")
 	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for 'libloc-$(CPU).dll'.")
 	$(file >> $@, $(RC_COMMON))
@@ -346,12 +349,7 @@ $(OBJ_DIR)/%.o: %.c
 FORCE:
 
 cpp-filter.py: $(THIS_FILE)
-	$(call green_msg, Generating $@)
-	$(file >  $@,#!/usr/bin/env python)
-	$(file >> $@,#)
-	$(file >> $@,# DO NOT EDIT! This file was generated automatically)
-	$(file >> $@,# from $(realpath $<). Edit that file instead.)
-	$(file >> $@,#)
+	$(call generate, $@, #)
 	$(file >> $@,if 1:)
 	$(file >> $@,$(CPP_FILTER_PY))
 
@@ -386,12 +384,12 @@ else
 endif
 
 run_tests runtests: $(TEST_PROGS)
-	for p in $^ ; do                            \
-		echo -e "\n\e[1;32mRunning $$p:\e[0m" ; \
-		./$$p ;                                 \
-		if [ $$? -ne 0 ]; then                  \
-			echo -e "\e[1;31mFailed!\e[0m" ;    \
-		fi ;                                    \
+	for p in $^ ; do                          \
+	  echo -e "\n\e[1;32mRunning $$p:\e[0m" ; \
+	  ./$$p ;                                 \
+	  if [ $$? -ne 0 ]; then                  \
+	    echo -e "\e[1;31mFailed!\e[0m" ;      \
+	  fi ;                                    \
 	done
 
 run_export_test: py3_module
@@ -519,7 +517,7 @@ define Warning
   $(1)
 endef
 
-define Generate
+define generate
   $(call green_msg, Generating $(1))
   $(file > $(1),$(call Warning,$(strip $(2))))
 endef
@@ -611,7 +609,7 @@ define C_preprocess
   @echo "The result of preprocessing $(strip $(2)) with these CFLAGS:" > $(1)
   @echo $(CFLAGS)                            >> $(1)
   @echo "--------------------------------- " >> $(1)
-  $(CC) $(CFLAGS) $(2) -E | $(PYTHON) cpp-filter.py $(C_FORMATER) >> $(1)
+  $(CC) -E $(CFLAGS) $(2) | $(PYTHON) cpp-filter.py $(C_FORMATER) >> $(1)
 endef
 
 define RC_COMMON
@@ -693,7 +691,8 @@ define CPP_FILTER_PY
     #
     # MSVC or clang-cl 'line' directive
     #
-    if line.startswith("#line") or line.startswith("# "):
+    l = line.lstrip()
+    if l.startswith("#line") or l.startswith("# "):
        line = line.replace (r"\\", "/")
 
     print (line)
@@ -701,7 +700,7 @@ define CPP_FILTER_PY
     #
     # Print a newline after a functions or structs
     #
-    if line == "}" or line == "};":
+    if l == "}" or l == "};":
        print ("")
 
   print ("Removed %d empty lines." % empty_lines, file=sys.stderr)
@@ -713,7 +712,7 @@ DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.$$(O): /'
 ALL_SOURCES = $(wildcard test-*.c) $(LIBLOC_SRC)
 
 depend:
-	$(call Generate, .depend.Windows, #)
+	$(call generate, .depend.Windows, #)
 	gcc $(DEP_CFLAGS) $(ALL_SOURCES) | $(DEP_REPLACE) >> .depend.Windows
 
 -include .depend.Windows

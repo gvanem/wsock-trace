@@ -1,12 +1,12 @@
   //
   // DO NOT EDIT! This file was automatically generated
-  // from F:/gv/VC_project/ws_trace/src/Geo-IP/IPFire/src/Makefile.Windows at 11-July-2023.
+  // from F:/gv/VC_project/ws_trace/src/Geo-IP/IPFire/src/Makefile.Windows at 15-August-2023.
   // Edit that file instead.
   //
  #ifndef LIBLOC_VERSION_H
  #define LIBLOC_VERSION_H
  #define LIBLOC_MAJOR_VER  0
  #define LIBLOC_MINOR_VER  9
- #define LIBLOC_MICRO_VER  16
- #define PACKAGE_VERSION  "0.9.16"
+ #define LIBLOC_MICRO_VER  17
+ #define PACKAGE_VERSION  "0.9.17"
  #endif

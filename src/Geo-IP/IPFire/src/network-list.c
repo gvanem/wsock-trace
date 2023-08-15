@@ -279,6 +279,29 @@ LOC_EXPORT struct loc_network* loc_network_list_pop_first(struct loc_network_lis
 	return network;
 }
 
+int loc_network_list_remove(struct loc_network_list* list, struct loc_network* network) {
+	int found = 0;
+
+	// Find the network on the list
+	off_t index = loc_network_list_find(list, network, &found);
+
+	// Nothing to do if the network wasn't found
+	if (!found)
+		return 0;
+
+	// Dereference the network at the position
+	loc_network_unref(list->elements[index]);
+
+	// Move all other elements back
+	for (unsigned int i = index; i < list->size - 1; i++)
+		list->elements[i] = list->elements[i+1];
+
+	// The list is shorter now
+	--list->size;
+
+	return 0;
+}
+
 LOC_EXPORT int loc_network_list_contains(struct loc_network_list* list, struct loc_network* network) {
 	int found = 0;
 
@@ -385,4 +408,35 @@ int loc_network_list_summarize(struct loc_ctx* ctx,
 	}
 
 	return 0;
+}
+
+void loc_network_list_remove_with_prefix_smaller_than(
+		struct loc_network_list* list, const unsigned int prefix) {
+	unsigned int p = 0;
+
+	// Count how many networks were removed
+	unsigned int removed = 0;
+
+	for (unsigned int i = 0; i < list->size; i++) {
+		// Fetch the prefix
+		p = loc_network_prefix(list->elements[i]);
+
+		if (p > prefix) {
+			// Drop this network
+			loc_network_unref(list->elements[i]);
+
+			// Increment counter
+			removed++;
+
+			continue;
+		}
+
+		// Move pointers backwards to keep the list filled
+		list->elements[i - removed] = list->elements[i];
+	}
+
+	// Adjust size
+	list->size -= removed;
+
+	return;
 }

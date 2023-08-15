@@ -35,6 +35,8 @@
 #ifdef _WIN32
   static char err_buf[20];   // Add to the 'context'?
   #define GET_NETERR() _itoa (WSAGetLastError(), err_buf, 10)
+
+  #undef DELETE   /* In 'winnt.h': #define DELETE   (0x00010000L) */
 #else
   #define GET_NETERR() strerror(errno)
 #endif
@@ -274,6 +276,29 @@ LOC_EXPORT int loc_network_cmp(struct loc_network* self, struct loc_network* oth
 		return -1;
 
 	// Both networks are equal
+	return 0;
+}
+
+static int loc_network_properties_cmp(struct loc_network* self, struct loc_network* other) {
+	int r;
+
+	// Check country code
+	r = loc_country_code_cmp(self->country_code, other->country_code);
+	if (r)
+		return r;
+
+	// Check ASN
+	if (self->asn > other->asn)
+		return 1;
+	else if (self->asn < other->asn)
+		return -1;
+
+	// Check flags
+	if (self->flags > other->flags)
+		return 1;
+	else if (self->flags < other->flags)
+		return -1;
+
 	return 0;
 }
 
@@ -565,6 +590,64 @@ LOC_EXPORT struct loc_network_list* loc_network_exclude_list(
 	return subnets;
 }
 
+static int loc_network_merge(struct loc_network** n,
+		struct loc_network* n1, struct loc_network* n2) {
+	struct loc_network* network = NULL;
+	struct in6_addr address;
+	int r;
+
+	// Reset pointer
+	*n = NULL;
+
+	// Family must match
+	if (n1->family != n2->family)
+		return 0;
+
+	// The prefix must match, too
+	if (n1->prefix != n2->prefix)
+		return 0;
+
+	// Cannot merge ::/0 or 0.0.0.0/0
+	if (!n1->prefix || !n2->prefix)
+		return 0;
+
+	const unsigned int prefix = loc_network_prefix(n1);
+
+	// How many bits do we need to represent this address?
+	const size_t bitlength = loc_address_bit_length(&n1->first_address) - 1;
+
+	// We cannot shorten this any more
+	if (bitlength == prefix)
+		return 0;
+
+	// Increment the last address of the first network
+	address = n1->last_address;
+	loc_address_increment(&address);
+
+	// If they don't match they are not neighbours
+	if (loc_address_cmp(&address, &n2->first_address) != 0)
+		return 0;
+
+	// All properties must match, too
+	if (loc_network_properties_cmp(n1, n2) != 0)
+		return 0;
+
+	// Create a new network object
+	r = loc_network_new(n1->ctx, &network, &n1->first_address, prefix - 1);
+	if (r)
+		return r;
+
+	// Copy everything else
+	loc_country_code_copy(network->country_code, n1->country_code);
+	network->asn = n1->asn;
+	network->flags = n1->flags;
+
+	// Return pointer
+	*n = network;
+
+	return 0;
+}
+
 int loc_network_to_database_v1(struct loc_network* network, struct loc_database_network_v1* dbobj) {
 	// Add country code
 	loc_country_code_copy(dbobj->country_code, network->country_code);
@@ -635,6 +718,9 @@ struct loc_network_tree_node {
 	struct loc_network_tree_node* one;
 
 	struct loc_network* network;
+
+	// Set if deleted
+	int deleted:1;
 };
 
 int loc_network_tree_new(struct loc_ctx* ctx, struct loc_network_tree** tree) {
@@ -662,16 +748,30 @@ struct loc_network_tree_node* loc_network_tree_get_root(struct loc_network_tree*
 }
 
 static struct loc_network_tree_node* loc_network_tree_get_node(struct loc_network_tree_node* node, int path) {
-	struct loc_network_tree_node** n;
+	struct loc_network_tree_node** n = NULL;
+	int r;
 
-	if (path == 0)
+	switch (path) {
+		case 0:
 		n = &node->zero;
-	else
+			break;
+
+		case 1:
 		n = &node->one;
+			break;
+
+		default:
+			errno = EINVAL;
+			return NULL;
+	}
+
+	// If the node existed, but has been deleted, we undelete it
+	if (*n && (*n)->deleted) {
+		(*n)->deleted = 0;
 
 	// If the desired node doesn't exist, yet, we will create it
-	if (*n == NULL) {
-		int r = loc_network_tree_node_new(node->ctx, n);
+	} else if (!*n) {
+		r = loc_network_tree_node_new(node->ctx, n);
 		if (r)
 			return NULL;
 	}
@@ -694,6 +794,10 @@ static int __loc_network_tree_walk(struct loc_ctx* ctx, struct loc_network_tree_
 		int(*filter_callback)(struct loc_network* network, void* data),
 		int(*callback)(struct loc_network* network, void* data), void* data) {
 	int r;
+
+	// If the node has been deleted, don't process it
+	if (node->deleted)
+		return 0;
 
 	// Finding a network ends the walk here
 	if (node->network) {
@@ -782,7 +886,8 @@ int loc_network_tree_add_network(struct loc_network_tree* tree, struct loc_netwo
 
 	// Check if node has not been set before
 	if (node->network) {
-		DEBUG(tree->ctx, "There is already a network at this path\n");
+		DEBUG(tree->ctx, "There is already a network at this path: %s\n",
+			loc_network_str(node->network));
 		return -EBUSY;
 	}
 
@@ -792,8 +897,37 @@ int loc_network_tree_add_network(struct loc_network_tree* tree, struct loc_netwo
 	return 0;
 }
 
+static int loc_network_tree_delete_network(
+		struct loc_network_tree* tree, struct loc_network* network) {
+	struct loc_network_tree_node* node = NULL;
+
+	DEBUG(tree->ctx, "Deleting network %s from tree...\n", loc_network_str(network));
+
+	node = loc_network_tree_get_path(tree, &network->first_address, network->prefix);
+	if (!node) {
+		ERROR(tree->ctx, "Network was not found in tree %s\n", loc_network_str(network));
+		return 1;
+	}
+
+	// Drop the network
+	if (node->network) {
+		loc_network_unref(node->network);
+		node->network = NULL;
+	}
+
+	// Mark the node as deleted if it was a leaf
+	if (!node->zero && !node->one)
+		node->deleted = 1;
+
+	return 0;
+}
+
 static size_t __loc_network_tree_count_nodes(struct loc_network_tree_node* node) {
 	size_t counter = 1;
+
+	// Don't count deleted nodes
+	if (node->deleted)
+		return 0;
 
 	if (node->zero)
 		counter += __loc_network_tree_count_nodes(node->zero);
@@ -847,9 +981,6 @@ static void loc_network_tree_node_free(struct loc_network_tree_node* node) {
 }
 
 struct loc_network_tree_node* loc_network_tree_node_unref(struct loc_network_tree_node* node) {
-	if (!node)
-		return NULL;
-
 	if (--node->refcount > 0)
 		return node;
 
@@ -875,4 +1006,281 @@ int loc_network_tree_node_is_leaf(struct loc_network_tree_node* node) {
 
 struct loc_network* loc_network_tree_node_get_network(struct loc_network_tree_node* node) {
 	return loc_network_ref(node->network);
+}
+
+/*
+	Merge the tree!
+*/
+
+struct loc_network_tree_merge_ctx {
+	struct loc_network_tree* tree;
+	struct loc_network_list* networks;
+	unsigned int merged;
+};
+
+static int loc_network_tree_merge_step(struct loc_network* network, void* data) {
+	struct loc_network_tree_merge_ctx* ctx = (struct loc_network_tree_merge_ctx*)data;
+	struct loc_network* n = NULL;
+	struct loc_network* m = NULL;
+	int r;
+
+	// How many networks do we have?
+	size_t i = loc_network_list_size(ctx->networks);
+
+	// If the list is empty, just add the network
+	if (i == 0)
+		return loc_network_list_push(ctx->networks, network);
+
+	while (i--) {
+		// Fetch the last network of the list
+		n = loc_network_list_get(ctx->networks, i);
+
+		// Try to merge the two networks
+		r = loc_network_merge(&m, n, network);
+		if (r)
+			goto ERROR;
+
+		// Did we get a result?
+		if (m) {
+			DEBUG(ctx->tree->ctx, "Merged networks %s + %s -> %s\n",
+				loc_network_str(n), loc_network_str(network), loc_network_str(m));
+
+			// Add the new network
+			r = loc_network_tree_add_network(ctx->tree, m);
+			switch (r) {
+				case 0:
+					break;
+
+				// There might already be a network
+				case -EBUSY:
+					r = 0;
+					goto ERROR;
+
+				default:
+					goto ERROR;
+			}
+
+			// Remove the merge networks
+			r = loc_network_tree_delete_network(ctx->tree, network);
+			if (r)
+				goto ERROR;
+
+			r = loc_network_tree_delete_network(ctx->tree, n);
+			if (r)
+				goto ERROR;
+
+			// Add the new network to the stack
+			r = loc_network_list_push(ctx->networks, m);
+			if (r)
+				goto ERROR;
+
+			// Remove the previous network from the stack
+			r = loc_network_list_remove(ctx->networks, n);
+			if (r)
+				goto ERROR;
+
+			// Count merges
+			ctx->merged++;
+
+			// Try merging the new network with others
+			r = loc_network_tree_merge_step(m, data);
+			if (r)
+				goto ERROR;
+
+			loc_network_unref(m);
+			m = NULL;
+
+			// Once we have found a merge, we are done
+			break;
+
+		// If we could not merge the two networks, we add the current one
+		} else {
+			r = loc_network_list_push(ctx->networks, network);
+			if (r)
+				goto ERROR;
+		}
+
+		loc_network_unref(n);
+		n = NULL;
+	}
+
+	const unsigned int prefix = loc_network_prefix(network);
+
+	// Remove any networks that we cannot merge
+	loc_network_list_remove_with_prefix_smaller_than(ctx->networks, prefix);
+
+ERROR:
+	if (m)
+		loc_network_unref(m);
+	if (n)
+		loc_network_unref(n);
+
+	return r;
+}
+
+static int loc_network_tree_merge(struct loc_network_tree* tree) {
+	struct loc_network_tree_merge_ctx ctx = {
+		.tree     = tree,
+		.networks = NULL,
+		.merged   = 0,
+	};
+	int r;
+
+	// Create a new list
+	r = loc_network_list_new(tree->ctx, &ctx.networks);
+	if (r)
+		goto ERROR;
+
+	// Walk through the entire tree
+	r = loc_network_tree_walk(tree, NULL, loc_network_tree_merge_step, &ctx);
+	if (r)
+		goto ERROR;
+
+	DEBUG(tree->ctx, "%u network(s) have been merged\n", ctx.merged);
+
+ERROR:
+	if (ctx.networks)
+		loc_network_list_unref(ctx.networks);
+
+	return r;
+}
+
+/*
+	Deduplicate the tree
+*/
+
+struct loc_network_tree_dedup_ctx {
+	struct loc_network_tree* tree;
+	struct loc_network* network;
+	unsigned int removed;
+};
+
+static int loc_network_tree_dedup_step(struct loc_network* network, void* data) {
+	struct loc_network_tree_dedup_ctx* ctx = (struct loc_network_tree_dedup_ctx*)data;
+
+	// First call when we have not seen any networks, yet
+	if (!ctx->network) {
+		ctx->network = loc_network_ref(network);
+		return 0;
+	}
+
+	// If network is a subnet of ctx->network, and all properties match,
+	// we can drop the network.
+	if (loc_network_is_subnet(ctx->network, network)) {
+		if (loc_network_properties_cmp(ctx->network, network) == 0) {
+			// Increment counter
+			ctx->removed++;
+
+			// Remove the network
+			return loc_network_tree_delete_network(ctx->tree, network);
+		}
+
+		return 0;
+	}
+
+	// Drop the reference to the previous network
+	if (ctx->network)
+		loc_network_unref(ctx->network);
+	ctx->network = loc_network_ref(network);
+
+	return 0;
+}
+
+static int loc_network_tree_dedup(struct loc_network_tree* tree) {
+	struct loc_network_tree_dedup_ctx ctx = {
+		.tree    = tree,
+		.network = NULL,
+		.removed = 0,
+	};
+	int r;
+
+	// Walk through the entire tree
+	r = loc_network_tree_walk(tree, NULL, loc_network_tree_dedup_step, &ctx);
+	if (r)
+		goto ERROR;
+
+	DEBUG(tree->ctx, "%u network(s) have been removed\n", ctx.removed);
+
+ERROR:
+	if (ctx.network)
+		loc_network_unref(ctx.network);
+
+	return r;
+}
+
+static int loc_network_tree_delete_node(struct loc_network_tree* tree,
+		struct loc_network_tree_node** node) {
+	struct loc_network_tree_node* n = *node;
+	int r0 = 1;
+	int r1 = 1;
+
+	// Return for nodes that have already been deleted
+	if (n->deleted)
+		goto DELETE;
+
+	// Delete zero
+	if (n->zero) {
+		r0 = loc_network_tree_delete_node(tree, &n->zero);
+		if (r0 < 0)
+			return r0;
+	}
+
+	// Delete one
+	if (n->one) {
+		r1 = loc_network_tree_delete_node(tree, &n->one);
+		if (r1 < 0)
+			return r1;
+	}
+
+	// Don't delete this node if we are a leaf
+	if (n->network)
+		return 0;
+
+	// Don't delete this node if has child nodes that we need
+	if (!r0 || !r1)
+		return 0;
+
+	// Don't delete root
+	if (tree->root == n)
+		return 0;
+
+DELETE:
+	// It is now safe to delete the node
+	loc_network_tree_node_unref(n);
+	*node = NULL;
+
+	return 1;
+}
+
+static int loc_network_tree_delete_nodes(struct loc_network_tree* tree) {
+	int r;
+
+	r = loc_network_tree_delete_node(tree, &tree->root);
+	if (r < 0)
+		return r;
+
+	return 0;
+}
+
+int loc_network_tree_cleanup(struct loc_network_tree* tree) {
+	int r;
+
+	// Deduplicate the tree
+	r = loc_network_tree_dedup(tree);
+	if (r)
+		return r;
+
+	// Merge networks
+	r = loc_network_tree_merge(tree);
+	if (r) {
+		ERROR(tree->ctx, "Could not merge networks: %m\n");
+		return r;
+	}
+
+	// Delete any unneeded nodes
+	r = loc_network_tree_delete_nodes(tree);
+	if (r)
+		return r;
+
+	return 0;
 }

@@ -587,7 +587,7 @@ class CLI(object):
 			families = [ socket.AF_INET6, socket.AF_INET ]
 
 		for object in ns.objects:
-			m = re.match("^AS(\d+)$", object)
+			m = re.match(r"^AS(\d+)$", object)
 			if m:
 				object = int(m.group(1))
 
