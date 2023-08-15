@@ -486,12 +486,9 @@ char *INET_addr_sockaddr (const struct sockaddr *sa)
   if (sa4->sin_family == AF_INET)
   {
     _INET_addr_ntop4 ((u_char*)&sa4->sin_addr, buf, sizeof(buf), NULL);
-    if (sa4->sin_port)
-    {
-     end = strchr (buf, '\0');
-     *end++ = ':';
-      _itoa (swap16(sa4->sin_port), end, 10);
-    }
+    end = strchr (buf, '\0');
+    *end++ = ':';
+    _itoa (swap16(sa4->sin_port), end, 10);
     return (buf);
   }
 
@@ -501,11 +498,8 @@ char *INET_addr_sockaddr (const struct sockaddr *sa)
     _INET_addr_ntop6 ((u_char*)&sa6->sin6_addr, buf+1, sizeof(buf)-1, NULL);
     end = strchr (buf, '\0');
     *end++ = ']';
-    if (sa6->sin6_port)
-    {
-      *end++ = ':';
-      _itoa (swap16(sa6->sin6_port), end, 10);
-    }
+    *end++ = ':';
+    _itoa (swap16(sa6->sin6_port), end, 10);
     return (buf);
   }
 
