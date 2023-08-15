@@ -654,13 +654,30 @@ typedef struct PyModuleDef {
 
 typedef int (*Py_AuditHookFunction) (const char *event, PyObject *args, void *userdata);
 
-DEF_PY_FUNC (int, PySys_AddAuditHook, (Py_AuditHookFunction hook, void *user_data));
+DEF_PY_FUNC (int,          PySys_AddAuditHook, (Py_AuditHookFunction hook, void *user_data));
+DEF_PY_FUNC (int,          PyArg_ParseTuple,   (PyObject *o, const char *, ...));
+DEF_PY_FUNC (const char *, PyUnicode_AsUTF8,   (PyObject *o));
 
+/*
+ * The table of "audit events":
+ *   https://docs.python.org/3/library/audit_events.html
+ */
 static int our_AddAuditHook (const char *event, PyObject *args, void *userdata)
 {
+  /* args tuple == module, filename, sys.path, sys.meta_path, sys.path_hooks
+   */
   if (!strcmp(event, "import"))
   {
-    TRACE (2, "audit event: %s, args: 0x%p\n", event, args);
+    PyObject   *module, *filename, *dont_care;
+    const char *_module = "?";
+    const char *_filename = "?";
+
+    if ((*p_PyArg_ParseTuple) (args, "OOOOO", &module, &filename, &dont_care, &dont_care, &dont_care))
+    {
+      _module   = (*p_PyUnicode_AsUTF8) (module);
+      _filename = (*p_PyUnicode_AsUTF8) (filename);
+    }
+    TRACE (2, "audit event: %s, module: '%s', filename: '%s'\n", event, _module, _filename);
 
     /** \todo
      */
@@ -671,6 +688,16 @@ static int our_AddAuditHook (const char *event, PyObject *args, void *userdata)
 
 static BOOL load_AddAuditHook (void)
 {
+  #define LOAD_FUNC(f)                                            \
+          do {                                                    \
+            func = #f;                                            \
+            p_ ##f = (func_ ##f) GetProcAddress (g_py_hnd, func); \
+            if (!p_ ##f)                                          \
+             goto quit;                                           \
+          } while (0)
+
+  const char *func;
+
   if (!g_py_hnd)
      g_py_hnd = LoadLibrary (g_py_dll);
 
@@ -682,13 +709,15 @@ static BOOL load_AddAuditHook (void)
 
   /* Needs Python 3.8+. But try anyway
    */
-  p_PySys_AddAuditHook = (func_PySys_AddAuditHook) GetProcAddress (g_py_hnd, "PySys_AddAuditHook");
-  if (!p_PySys_AddAuditHook)
-  {
-    TRACE (1, "Did not find \"PySys_AddAuditHook\" in \"%s\".\n", g_py_dll);
-    return (FALSE);
-  }
+  LOAD_FUNC (PySys_AddAuditHook);
+  LOAD_FUNC (PyArg_ParseTuple);
+  LOAD_FUNC (PyUnicode_AsUTF8);
+  #undef LOAD_FUNC
   return (TRUE);
+
+quit:
+  TRACE (1, "Did not find \"%s()\" in \"%s\".\n", func, g_py_dll);
+  return (FALSE);
 }
 
 /**
