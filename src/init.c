@@ -1381,9 +1381,11 @@ void wsock_trace_exit (void)
 
   if (g_cfg.trace_stream && !g_cfg.trace_file_device)
      fclose (g_cfg.trace_stream);
+  g_cfg.trace_stream = NULL;
 
   if (g_cfg.PCAP.dump_stream)
      fclose (g_cfg.PCAP.dump_stream);
+  g_cfg.PCAP.dump_stream = NULL;
 
   for (i = 0; i < DIM(g_cfg.hosts_file); i++)
       FREE (g_cfg.hosts_file[i]);
@@ -1392,7 +1394,6 @@ void wsock_trace_exit (void)
       FREE (g_cfg.services_file[i]);
 
   g_cfg.trace_file_okay = FALSE;
-  g_cfg.trace_stream = g_cfg.PCAP.dump_stream = NULL;
 
   FREE (g_cfg.trace_file);
   FREE (g_cfg.PCAP.dump_fname);
@@ -1591,8 +1592,8 @@ void wsock_trace_init (void)
     {
       WARNING ("Failed to open or create trace_file '%s': %s\n"
                "Printing to stdout.\n", g_cfg.trace_file, strerror(errno));
-      g_cfg.trace_stream = stdout;
-      g_cfg.trace_file = NULL;
+      g_cfg.trace_stream      = stdout;
+      g_cfg.trace_file        = NULL;
       g_cfg.trace_file_commit = FALSE;
     }
   }

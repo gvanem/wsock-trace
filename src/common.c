@@ -1392,6 +1392,7 @@ size_t C_flush (void)
   size_t written = len;
 
   assert (len <= TRACE_BUF_SIZE);
+  assert (C_ptr && C_end);
 
   ws_sema_wait();
 
@@ -1417,7 +1418,7 @@ size_t C_flush (void)
 int C_printf (const char *fmt, ...)
 {
   char    buf [2000];
-  int     l1, l2;
+  int     l1 = 0, l2 = 0;
   va_list args;
 
   va_start (args, fmt);
@@ -1442,7 +1443,8 @@ int C_printf (const char *fmt, ...)
 int C_vprintf (const char *fmt, va_list args)
 {
   char buf [2000];
-  int  l1, l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
+  int  l1 = 0;
+  int  l2 = vsnprintf (buf, sizeof(buf)-1, fmt, args);
 
   l1 = C_puts (buf);
   if (l1 < l2)
