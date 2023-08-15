@@ -1892,7 +1892,7 @@ static void print_control_buf (const WSABUF *buf)
 void dump_wsamsg (const WSAMSG *msg, int rc)
 {
   const char *remote       = "<none>";
-  BOOL        have_control = FALSE;
+  bool        have_control = false;
 
   if (!msg)
      return;
@@ -1903,7 +1903,7 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
        remote = INET_addr_sockaddr (msg->name);
 
     if (!IsBadReadPtr(&msg->Control, sizeof(WSABUF)) && msg->Control.len)
-       have_control = TRUE;
+       have_control = true;
   }
 
   C_printf ("~4%*sremote: %*s%s, dwFlags: 0x%04lX~0\n",
@@ -2301,7 +2301,7 @@ static void wsapollfd_event_decode (char *buf, size_t buf_sz, SHORT ev)
      end[-1] = '\0';
 }
 
-void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent, BOOL output)
+void dump_wsapollfd (const WSAPOLLFD *fd_array, ULONG fds, int indent, bool output)
 {
   const WSAPOLLFD *fd = fd_array;
   ULONG            i;
@@ -2565,9 +2565,9 @@ static void dump_aliases (char *buf, size_t buf_sz, char **aliases)
 static const char *cc_last   = NULL;    /**< CountryCode of previous address */
 static const char *loc_last  = NULL;    /**< Location of previous address */
 static position    pos_last;            /**< Position of previous address */
-static BOOL        cc_equal  = FALSE;
-static BOOL        loc_equal = FALSE;
-static BOOL        pos_equal = FALSE;
+static bool        cc_equal  = false;
+static bool        loc_equal = false;
+static bool        pos_equal = false;
 
 static int C_printf_cc (const char            *country_code,
                         const char            *location,
@@ -2604,7 +2604,7 @@ static int C_printf_cc (const char            *country_code,
 
       if (pos)
            pos_equal = !memcmp(pos, &pos_last, sizeof(*pos));
-      else pos_equal = FALSE;
+      else pos_equal = false;
 
       if (pos && !pos_equal)
       {
@@ -2650,7 +2650,7 @@ static int C_printf_cc (const char            *country_code,
 static void cc_info_reset (void)
 {
   cc_last  = loc_last  = NULL;
-  cc_equal = loc_equal = pos_equal = FALSE;
+  cc_equal = loc_equal = pos_equal = false;
   memset (&pos_last, '\0', sizeof(pos_last));
 }
 
@@ -2811,12 +2811,12 @@ void dump_countries_addrinfo (const struct addrinfo *ai)
  * \todo use these to avoid printing several equal IANA records
  */
 static const char *iana_last  = NULL;
-static BOOL        iana_equal = FALSE;
+static bool        iana_equal = false;
 
 /*
  * Common dumper of IANA information for a single address.
  */
-static void dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
+static void dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia6, bool a_single_addr, int num)
 {
   struct IANA_record rec;
   char   IANA_intro [100];
@@ -2844,13 +2844,13 @@ static void dump_IANA_info (const struct in_addr *ia4, const struct in6_addr *ia
 static void iana_info_reset (void)
 {
   iana_last  = NULL;
-  iana_equal = FALSE;
+  iana_equal = false;
 }
 
 /*
  * Common dumper of ASN information for a single address.
  */
-static void dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, BOOL a_single_addr, int num)
+static void dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6, bool a_single_addr, int num)
 {
   char ASN_intro [100];
   int  rc;
@@ -2869,7 +2869,8 @@ static void dump_ASN_info (const struct in_addr *ia4, const struct in6_addr *ia6
  */
 void dump_IANA_addresses (int family, const char **addresses)
 {
-  int num, a_single_addr;
+  int  num;
+  bool a_single_addr;
 
   if (g_cfg.trace_level <= 0)
      return;
@@ -2923,7 +2924,8 @@ void dump_IANA_sockaddr (const struct sockaddr *sa)
  */
 void dump_IANA_addrinfo  (const struct addrinfo *ai)
 {
-  int num, a_single_addr;
+  int  num;
+  bool a_single_addr;
 
   if (g_cfg.trace_level <= 0)
      return;
@@ -2960,7 +2962,8 @@ void dump_IANA_addrinfo  (const struct addrinfo *ai)
  */
 void dump_ASN_addresses (int family, const char **addresses)
 {
-  int num, a_single_addr;
+  int  num;
+  bool a_single_addr;
 
   if (g_cfg.trace_level <= 0)
      return;
@@ -3010,7 +3013,8 @@ void dump_ASN_sockaddr (const struct sockaddr *sa)
 
 void dump_ASN_addrinfo  (const struct addrinfo *ai)
 {
-  int num, a_single_addr;
+  int  num;
+  bool a_single_addr;
 
   if (g_cfg.trace_level <= 0)
      return;
@@ -3091,7 +3095,7 @@ void dump_protoent (const struct protoent *proto)
   C_printf ("aliases: %s~0\n", buf);
 }
 
-static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
+static void _dump_events (bool out, const WSANETWORKEVENTS *events)
 {
   int  i;
   long ev;
@@ -3131,11 +3135,11 @@ static void _dump_events (BOOL out, const WSANETWORKEVENTS *events)
 void dump_events (const WSANETWORKEVENTS *in_events, const WSANETWORKEVENTS *out_events)
 {
 #if 0
-  _dump_events (FALSE, in_events);
+  _dump_events (false, in_events);
 #else
   (void) in_events;
 #endif
-  _dump_events (TRUE, out_events);
+  _dump_events (true, out_events);
 }
 
 void dump_DNSBL (int family, const char **addresses)

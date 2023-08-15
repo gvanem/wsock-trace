@@ -137,7 +137,7 @@ static NO_INLINE void print_one_address (thread_args *args, DWORD64 addr)
    * is present while running a MinGW compiled program, this just returns
    * wrong information from dbghelp.dll.
    */
-  BOOL have_PDB_info = TRUE;
+  bool have_PDB_info = true;
 
   fprintf (vm_bug_stream, "%*s0x%" ADDR_FMT ": ", vm_bug_indent, "", ADDR_CAST(addr));
 
@@ -173,7 +173,7 @@ static NO_INLINE void print_one_address (thread_args *args, DWORD64 addr)
 
 #if !defined(_MSC_VER)
   if (path[0] && !stricmp(our_module, path))
-     have_PDB_info = FALSE;
+     have_PDB_info = false;
 
   /* Otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
    */
@@ -206,7 +206,7 @@ static DWORD WINAPI dump_thread (void *arg)
   CONTEXT      context;
   STACKFRAME64 frame;
   int          rec_count = 0;
-  BOOL         okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
+  bool         okay = (load_dynamic_table(sym_funcs, DIM(sym_funcs)) == DIM(sym_funcs));
 
   if (!okay)
   {
@@ -252,7 +252,7 @@ static DWORD WINAPI dump_thread (void *arg)
   while ((*p_StackWalk64)(WS_TRACE_IMAGE_TYPE, proc, thr, &frame, &context, NULL, NULL, NULL, NULL))
   {
     DWORD64 addr      = frame.AddrPC.Offset;
-    BOOL    recursion = (addr == frame.AddrReturn.Offset);
+    bool    recursion = (addr == frame.AddrReturn.Offset);
     char    rec_buf [40];
 
     if (recursion)
@@ -445,7 +445,7 @@ static void abort_handler (int sig)
    *   16    0x76EEFA24: c:/Windows/System32/kernel32.dll (BaseThreadInitThunk+20)
    *   17    0x77E57A79: c:/Windows/System32/ntdll.dll (__RtlUserThreadStart+42)
    */
-  vm_bug_list (SKIP_FRAMES, NULL);  /* First traced function should become the function with assert(FALSE) */
+  vm_bug_list (SKIP_FRAMES, NULL);  /* First traced function should become the function with assert(false) */
 
   fflush (vm_bug_stream);
 

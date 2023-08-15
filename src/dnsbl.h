@@ -8,8 +8,8 @@
 
 extern void DNSBL_init (void);
 extern void DNSBL_exit (void);
-extern BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref);
-extern BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref);
-extern int  DNSBL_update_files (BOOL force_update);
+extern bool DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref);
+extern bool DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref);
+extern int  DNSBL_update_files (bool force_update);
 
 #endif

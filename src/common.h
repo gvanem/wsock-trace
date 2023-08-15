@@ -136,7 +136,7 @@ struct GUID_search_list {
 /* Generic table for loading DLLs and functions from them.
  */
 struct LoadTable {
-       const BOOL  optional;
+       const bool  optional;
        HINSTANCE   mod_handle;
        const char *mod_name;
        const char *func_name;
@@ -159,8 +159,8 @@ extern char       *fix_drive (char *path);
 extern char       *copy_path (char *out_path, const char *in_path, char use);
 extern const char *get_path (const char    *apath,
                              const wchar_t *wpath,
-                             BOOL          *exist,
-                             BOOL          *is_native);
+                             bool          *exist,
+                             bool          *is_native);
 
 extern const char *shorten_path (const char *path);
 extern const char *list_lookup_name (unsigned value, const struct search_list *list, int num);
@@ -199,7 +199,7 @@ extern const char *get_dll_full_name (void);
 extern const char *set_dll_full_name (HINSTANCE inst_dll);
 extern const char *get_dll_short_name (void);
 extern const char *get_dll_build_date (void);
-extern const char *get_builder (BOOL show_dbg_rel);
+extern const char *get_builder (bool show_dbg_rel);
 
 extern void sock_list_add (SOCKET sock, int family, int type, int protocol);
 extern void sock_list_remove (SOCKET sock);

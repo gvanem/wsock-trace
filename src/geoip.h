@@ -68,10 +68,10 @@ extern void geoip_num_unique_countries (DWORD *num_ip4,     DWORD *num_ip6,
 
 /** Functions defined in `ip2loc.c`.
  */
-extern BOOL  ip2loc_init (void);
+extern bool  ip2loc_init (void);
 extern void  ip2loc_exit (void);
-extern BOOL  ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out);
-extern BOOL  ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out);
+extern bool  ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out);
+extern bool  ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out);
 extern DWORD ip2loc_num_ipv4_entries (void);
 extern DWORD ip2loc_num_ipv6_entries (void);
 extern DWORD ip2loc_index_errors (void);

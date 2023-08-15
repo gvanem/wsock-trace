@@ -31,14 +31,14 @@ typedef enum TS_TYPE {  /* Time-Stamp enum type */
       } TS_TYPE;
 
 struct PCAP_cfg {
-       BOOL    enable;
+       bool    enable;
        char   *dump_fname;
        FILE   *dump_stream;
      };
 
 struct LUA_cfg {
-       BOOL    enable;
-       BOOL    profile;
+       bool    enable;
+       bool    profile;
        int     trace_level;
        WORD    color_head;
        WORD    color_body;
@@ -52,7 +52,7 @@ struct LUA_cfg {
      };
 
 struct DNSBL_cfg {
-       BOOL    enable;
+       bool    enable;
        char   *drop_file;
        char   *edrop_file;
        char   *dropv6_file;
@@ -63,13 +63,13 @@ struct DNSBL_cfg {
      };
 
 struct IANA_cfg {
-       BOOL    enable;
+       bool    enable;
        char   *ip4_file;
        char   *ip6_file;
      };
 
 struct ASN_cfg {
-       BOOL    enable;
+       bool    enable;
        char   *asn_csv_file;
        char   *asn_bin_file;
        char   *asn_bin_url;
@@ -78,17 +78,17 @@ struct ASN_cfg {
     };
 
 struct IDNA_cfg {
-       BOOL    enable;
-       BOOL    use_winidn;
-       BOOL    fix_getaddrinfo;
+       bool    enable;
+       bool    use_winidn;
+       bool    fix_getaddrinfo;
        UINT    codepage;
      };
 
 struct GEOIP_cfg {
-       BOOL    enable;
-       BOOL    show_position;
-       BOOL    show_map_url;
-       BOOL    openstreetmap;
+       bool    enable;
+       bool    show_position;
+       bool    show_map_url;
+       bool    openstreetmap;
        UINT    map_zoom;
        int     max_days;
        char   *ip4_file;
@@ -105,16 +105,16 @@ typedef struct FREQ_MILLISEC {
       } FREQ_MILLISEC;
 
 struct FIREWALL_cfg {
-       BOOL    enable;
-       BOOL    show_ipv4;
-       BOOL    show_ipv6;
-       BOOL    show_all;
-       BOOL    show_user;
-       BOOL    console_title;
+       bool    enable;
+       bool    show_ipv4;
+       bool    show_ipv6;
+       bool    show_all;
+       bool    show_user;
+       bool    console_title;
        int     api_level;
 
        struct {
-         BOOL enable;
+         bool enable;
          struct {
            FREQ_MILLISEC  event_allow;
            FREQ_MILLISEC  event_drop;
@@ -133,50 +133,50 @@ struct config_table {
        int     num_hosts_files;
        char   *services_file [3+1];  /* Handle loading of 3 services files */
        int     num_services_files;
-       BOOL    trace_binmode;
-       BOOL    trace_caller;
-       BOOL    trace_report;
-       BOOL    trace_file_okay;
-       BOOL    trace_file_device;
-       BOOL    trace_file_commit;
-       BOOL    trace_use_ods;
+       bool    trace_binmode;
+       bool    trace_caller;
+       bool    trace_report;
+       bool    trace_file_okay;
+       bool    trace_file_device;
+       bool    trace_file_commit;
+       bool    trace_use_ods;
        int     trace_level;
        int     trace_overlap;
        int     trace_indent;
        int     trace_max_len;
        int     line_buffered;
-       BOOL    show_tid;
-       BOOL    show_caller;
+       bool    show_tid;
+       bool    show_caller;
        int     callee_level;
        int     cpp_demangle;
        int     max_data;
        UINT    max_fd_sets;
        int     max_displacement;
-       BOOL    use_sema;
-       BOOL    start_new_line;
-       BOOL    extra_new_line;
-       BOOL    dump_data;
-       BOOL    dump_select;
-       BOOL    dump_nameinfo;
-       BOOL    dump_addrinfo;
-       BOOL    dump_hostent;
-       BOOL    dump_servent;
-       BOOL    dump_protoent;
-       BOOL    dump_wsaprotocol_info;
-       BOOL    dump_wsanetwork_events;
-       BOOL    dump_namespace_providers;
-       BOOL    dump_modules;
-       BOOL    dump_tcpinfo;
-       BOOL    dump_icmp_info;
-       BOOL    compact;
-       BOOL    short_errors;
-       BOOL    use_full_path;
-       BOOL    use_short_path;
-       BOOL    use_toolhlp32;
-       BOOL    use_ole32;
-       BOOL    pdb_report;
-       BOOL    pdb_symsrv;
-       BOOL    hook_extensions;
+       bool    use_sema;
+       bool    start_new_line;
+       bool    extra_new_line;
+       bool    dump_data;
+       bool    dump_select;
+       bool    dump_nameinfo;
+       bool    dump_addrinfo;
+       bool    dump_hostent;
+       bool    dump_servent;
+       bool    dump_protoent;
+       bool    dump_wsaprotocol_info;
+       bool    dump_wsanetwork_events;
+       bool    dump_namespace_providers;
+       bool    dump_modules;
+       bool    dump_tcpinfo;
+       bool    dump_icmp_info;
+       bool    compact;
+       bool    short_errors;
+       bool    use_full_path;
+       bool    use_short_path;
+       bool    use_toolhlp32;
+       bool    use_ole32;
+       bool    pdb_report;
+       bool    pdb_symsrv;
+       bool    hook_extensions;
        DWORD   recv_delay;
        DWORD   send_delay;
        DWORD   select_delay;
@@ -186,14 +186,14 @@ struct config_table {
        WORD    color_func;
        WORD    color_trace;
        WORD    color_data;
-       BOOL    nice_numbers;
-       BOOL    msvc_only;
-       BOOL    mingw_only;
-       BOOL    cygwin_only;
-       BOOL    no_buffering;
-       BOOL    no_inv_handler;
+       bool    nice_numbers;
+       bool    msvc_only;
+       bool    mingw_only;
+       bool    cygwin_only;
+       bool    no_buffering;
+       bool    no_inv_handler;
        TS_TYPE trace_time_format;
-       BOOL    trace_time_usec;
+       bool    trace_time_usec;
 
        struct LUA_cfg      LUA;
        struct PCAP_cfg     PCAP;
@@ -268,9 +268,9 @@ typedef enum exclude_type {
         EXCL_ADDRESS  = 0x04,
       } exclude_type;
 
-extern BOOL exclude_list_add (const char *name, unsigned exclude_which);
-extern BOOL exclude_list_get (const char *fmt, unsigned exclude_which);
-extern BOOL exclude_list_free (void);
+extern bool exclude_list_add (const char *name, unsigned exclude_which);
+extern bool exclude_list_get (const char *fmt, unsigned exclude_which);
+extern bool exclude_list_free (void);
 
 extern const char *get_timestamp (void);
 extern double      get_timestamp_now (void);
@@ -283,8 +283,8 @@ extern uint64 FILETIME_to_unix_epoch (const FILETIME *ft);
 extern time_t FILETIME_to_time_t     (const FILETIME *ft);
 
 extern size_t write_pcap_header  (void);
-extern size_t write_pcap_packet  (SOCKET s, const void *pkt, size_t len, BOOL out);
-extern size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, BOOL out);
+extern size_t write_pcap_packet  (SOCKET s, const void *pkt, size_t len, bool out);
+extern size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, bool out);
 
 #define ENTER_CRIT()           EnterCriticalSection (&g_data.crit_sect)
 #define LEAVE_CRIT(extra_nl)   do {                                        \

@@ -40,10 +40,10 @@ typedef struct SymbolEntry {
         unsigned   ofs_from_line;
       } SymbolEntry;
 
-extern BOOL  StackWalkInit (void);
-extern BOOL  StackWalkExit (void);
+extern bool  StackWalkInit (void);
+extern bool  StackWalkExit (void);
 extern char *StackWalkShow (HANDLE thread, CONTEXT *ctx);
-extern BOOL  StackWalkOurModule (const char *module);
+extern bool  StackWalkOurModule (const char *module);
 
 /* These returns smartlists for modules and symbols. A list of
  * 'struct ModuleEntry *' and 'struct SymbolEntry *' respectively.

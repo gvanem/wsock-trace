@@ -367,7 +367,7 @@ int geoip_init (DWORD *_num4, DWORD *_num6)
     num6 = geoip_parse_file (g_cfg.GEOIP.ip6_file, AF_INET6);
   }
   if (num4 == 0 && num6 == 0)
-     g_cfg.GEOIP.enable = FALSE;
+     g_cfg.GEOIP.enable = false;
 
   geoip_make_c_lists();
   geoip_stats_init();
@@ -1381,12 +1381,12 @@ uint64 geoip_get_stats_by_number (int number)
  * \param[in] loc_file      The local file to check for an update.
  * \param[in] tmp_file      The temporary file to compare against the `loc_file`.
  * \param[in] url           The URL to download from. Can be `http` or `https`.
- * \param[in] force_update  If TRUE, download the `tmp_file` regardless.
+ * \param[in] force_update  If true, download the `tmp_file` regardless.
  */
-static DWORD update_file (const char *loc_file, const char *tmp_file, const char *url, BOOL force_update)
+static DWORD update_file (const char *loc_file, const char *tmp_file, const char *url, bool force_update)
 {
   struct stat st_tmp,  st_loc;
-  BOOL       _st_tmp, _st_loc, equal = FALSE;
+  bool       _st_tmp, _st_loc, equal = false;
   time_t      now  = time (NULL);
   time_t      past = now - (24 * 3600 * g_cfg.GEOIP.max_days);
   DWORD       rc = 0;
@@ -1438,9 +1438,9 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
  *
  * \param[in] family        If `AF_INET`, check if `g_cfg.GEOIP.ip4_file` needs to be updated.<br>
  *                          If `AF_INET6`, check if `g_cfg.GEOIP.ip6_file` needs to be updated.
- * \param[in] force_update  If TRUE, download the `%TEMP%/geoip.tmp` / `%TEMP%/geoip6.tmp` regardless.
+ * \param[in] force_update  If true, download the `%TEMP%/geoip.tmp` / `%TEMP%/geoip6.tmp` regardless.
  */
-void geoip_update_file (int family, BOOL force_update)
+void geoip_update_file (int family, bool force_update)
 {
   char        tmp_file [_MAX_PATH];
   const char *env = getenv ("TEMP");
@@ -1511,9 +1511,9 @@ static int check_ipv4_unallocated (int dump_cidr,
   struct in_addr addr;
   long   diff = (long)(entry->low - last->high);
   int    len;
-  BOOL   special = FALSE;
-  BOOL   mcast = FALSE;
-  BOOL   global = FALSE;
+  bool   special = false;
+  bool   mcast   = false;
+  bool   global  = false;
   const char *remark = NULL;
 
   if (diff > 1)
@@ -1808,7 +1808,7 @@ const char *geoip_get_map_url (const position *pos)
 static void test_addr_common (const char            *addr_str,
                               const struct in_addr  *a4,
                               const struct in6_addr *a6,
-                              BOOL use_ip2loc)
+                              bool use_ip2loc)
 {
   const char *location = NULL;
   const char *comment  = NULL;
@@ -1816,7 +1816,7 @@ static void test_addr_common (const char            *addr_str,
   const char *cc;
   const BYTE *nibble;
   int    save, flag, ip_width;
-  BOOL   excluded;
+  bool   excluded;
   double ts_now;
   char   buf1 [200];
   char   buf2 [200];
@@ -1940,7 +1940,7 @@ static void test_addr_common (const char            *addr_str,
   if (INET_util_addr_is_global(a4, NULL))
   {
     const char *sbl_ref = NULL;
-    BOOL        rc = DNSBL_check_ipv4 (a4, &sbl_ref);
+    bool        rc = DNSBL_check_ipv4 (a4, &sbl_ref);
     char        addr [MAX_IP4_SZ+1];
 
     if (!sbl_ref)
@@ -1954,7 +1954,7 @@ static void test_addr_common (const char            *addr_str,
   else if (INET_util_addr_is_global(NULL, a6))
   {
     const char *sbl_ref = NULL;
-    BOOL        rc = DNSBL_check_ipv6 (a6, &sbl_ref);
+    bool        rc = DNSBL_check_ipv6 (a6, &sbl_ref);
     char        addr [MAX_IP6_SZ+1];
 
     if (!sbl_ref)
@@ -1980,7 +1980,7 @@ static struct addrinfo *resolve_addr_or_name (const char *addr_or_host, int af)
   return (NULL);
 }
 
-static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
+static void test_addr4 (const char *ip4_addr, bool use_ip2loc)
 {
   struct addrinfo *ai = resolve_addr_or_name (ip4_addr, AF_INET);
 
@@ -1995,7 +1995,7 @@ static void test_addr4 (const char *ip4_addr, BOOL use_ip2loc)
     C_printf ("Error: %s.\n", get_ws_error());
 }
 
-static void test_addr6 (const char *ip6_addr, BOOL use_ip2loc)
+static void test_addr6 (const char *ip6_addr, bool use_ip2loc)
 {
   struct addrinfo *ai = resolve_addr_or_name (ip6_addr, AF_INET6);
 
@@ -2061,9 +2061,9 @@ static int show_help (void)
   return (0);
 }
 
-typedef void (*test_func) (const char *addr, BOOL use_ip2loc);
+typedef void (*test_func) (const char *addr, bool use_ip2loc);
 
-static void test_addr_list (smartlist_t *list, BOOL use_ip2loc, test_func func)
+static void test_addr_list (smartlist_t *list, bool use_ip2loc, test_func func)
 {
   int   i, max = smartlist_len (list);
   DWORD num;
@@ -2084,7 +2084,7 @@ static void test_addr_list (smartlist_t *list, BOOL use_ip2loc, test_func func)
   }
 }
 
-static void rand_test_addr4 (int loops, BOOL use_ip2loc)
+static void rand_test_addr4 (int loops, bool use_ip2loc)
 {
   DWORD num_ip4;
   int   i;
@@ -2105,7 +2105,7 @@ static void rand_test_addr4 (int loops, BOOL use_ip2loc)
   C_printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num_ip4));
 }
 
-static void rand_test_addr6 (int loops, BOOL use_ip2loc)
+static void rand_test_addr6 (int loops, bool use_ip2loc)
 {
   DWORD num_ip6;
   int   i;

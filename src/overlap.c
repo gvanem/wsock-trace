@@ -43,10 +43,10 @@ static char ov_trace_buf [200];
  */
 struct overlapped {
        /**
-        * \li `TRUE:`  this is an overlapped `WSARecv()` or `WSARecvFrom()`.
-        * \li `FALSE:` this an overlapped `WSASend()` or `WSASendTo()`.
+        * \li `true:`  this is an overlapped `WSARecv()` or `WSARecvFrom()`.
+        * \li `false:` this an overlapped `WSASend()` or `WSASendTo()`.
         */
-       BOOL is_recv;
+       bool is_recv;
 
        /**
         * Max number of bytes expected in `WSARecv()` / `WSARecvFrom()` or <br>
@@ -138,14 +138,14 @@ static void overlap_trace (int i, const struct overlapped *ov)
  * \param[in] s          The socket for this overlapped operation.
  * \param[in] o          The overlapped structure itself.
  * \param[in] num_bytes  The number of bytes in the array of `WSABUF` structure the operlapping function was called with.
- * \param[in] is_recv    TRUE: We were called from `WSARecv()` or `WSARecvFrom()`.
- *                       FALSE: We were called from `WSASend()` or `WSASendTo()`.
+ * \param[in] is_recv    true: We were called from `WSARecv()` or `WSARecvFrom()`.
+ *                       false: We were called from `WSASend()` or `WSASendTo()`.
  */
-void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
+void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, bool is_recv)
 {
   struct overlapped *ov = NULL;
   int    i, max = smartlist_len (ov_list);
-  BOOL   modify = FALSE;
+  bool   modify = false;
 
   TRACE ("o: 0x%p,  event: 0x%p, sock: %u\n",
          o, o ? o->hEvent : NULL, SOCKET_CAST(s));
@@ -155,7 +155,7 @@ void overlap_store (SOCKET s, WSAOVERLAPPED *o, DWORD num_bytes, BOOL is_recv)
     ov = smartlist_get (ov_list, i);
     if (ov->ov == o && ov->sock == s && ov->is_recv == is_recv)
     {
-      modify = TRUE;
+      modify = true;
       break;
     }
   }
@@ -188,7 +188,7 @@ void overlap_recall_all (const WSAEVENT *event)
   {
     const struct overlapped *ov = smartlist_get (ov_list, i);
     DWORD bytes = 0;
-    BOOL  rc    = FALSE;
+    bool  rc    = false;
 
     if (p_WSAGetOverlappedResult && ov->event == event)
     {
@@ -289,13 +289,13 @@ char *overlap_trace_buf (void)
 /**
  * Get the transfer count of an overlapped operation.
  */
-BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred)
+bool overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred)
 {
   WSAOVERLAPPED ov_copy;
   char  err_buf [150] = "None";
-  BOOL  completed = FALSE;
   DWORD flags = 0;
-  BOOL  rc = FALSE;
+  bool  completed = false;
+  bool  rc = false;
 
   *transferred = 0;
   ov_trace_buf[0] = '\0';
@@ -303,7 +303,7 @@ BOOL overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred)
   if (p_WSAGetOverlappedResult && HasOverlappedIoCompleted(ov))
   {
     ENTER_CRIT();
-    completed = TRUE;
+    completed = true;
     ov_copy = *ov;
     rc = (*p_WSAGetOverlappedResult) (s, &ov_copy, transferred, FALSE, &flags);
     LEAVE_CRIT (0);

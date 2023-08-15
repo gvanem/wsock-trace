@@ -252,7 +252,7 @@ const char *get_time_now (void)
   return (time);
 }
 
-static BOOL image_opt_header_is_msvc (HMODULE mod)
+static bool image_opt_header_is_msvc (HMODULE mod)
 {
   const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
   const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
@@ -263,7 +263,7 @@ static BOOL image_opt_header_is_msvc (HMODULE mod)
   return (opt->MajorLinkerVersion >= 10 && opt->MinorLinkerVersion == 0);
 }
 
-static BOOL image_opt_header_is_mingw (HMODULE mod)
+static bool image_opt_header_is_mingw (HMODULE mod)
 {
   const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
   const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
@@ -274,13 +274,13 @@ static BOOL image_opt_header_is_mingw (HMODULE mod)
   return (opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30);
 }
 
-static BOOL image_opt_header_is_cygwin (HMODULE mod)
+static bool image_opt_header_is_cygwin (HMODULE mod)
 {
   const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
   const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
   const IMAGE_OPTIONAL_HEADER *opt = (const IMAGE_OPTIONAL_HEADER*) &nt->OptionalHeader;
   const IMAGE_FILE_HEADER     *fh  = (const IMAGE_FILE_HEADER*) &nt->FileHeader;
-  BOOL  wild_tstamp = FALSE;
+  bool  wild_tstamp = false;
 
   /*
    * File-headers in CygWin32's .EXEs often seems to contain junk:
@@ -290,7 +290,7 @@ static BOOL image_opt_header_is_cygwin (HMODULE mod)
    * or some time in the future.
    */
   if (fh->TimeDateStamp == 0x20202020 || fh->TimeDateStamp > (DWORD)time(NULL))
-     wild_tstamp = TRUE;
+     wild_tstamp = true;
 
   TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u, wild_tstamp: %d\n",
          opt->MajorLinkerVersion, opt->MinorLinkerVersion, wild_tstamp);
@@ -301,7 +301,7 @@ static BOOL image_opt_header_is_cygwin (HMODULE mod)
  * Check if we're linked to a program that is a GUI app.
  * If we are, we might need to disable sound etc.
  */
-static BOOL image_opt_header_is_gui_app (HMODULE mod)
+static bool image_opt_header_is_gui_app (HMODULE mod)
 {
   const IMAGE_DOS_HEADER *dos = (const IMAGE_DOS_HEADER*) mod;
   const IMAGE_NT_HEADERS *nt = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
@@ -320,7 +320,7 @@ static int config_get_line (FILE        *fil,
                             const char **section_p)
 {
   static char key [256], val [512], val2 [512], section [40];
-  static BOOL seen_a_section = FALSE;
+  static bool seen_a_section = false;
   char  *p, *q;
   int    len;
 
@@ -350,7 +350,7 @@ static int config_get_line (FILE        *fil,
     {
       (*line)++;
       *section_p = section;
-      seen_a_section = TRUE;
+      seen_a_section = true;
       continue;
     }
 
@@ -392,7 +392,7 @@ static int config_get_line (FILE        *fil,
  * Using `strnicmp()` avoids copying `fmt` into a local
  * buffer first.
  */
-BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
+bool exclude_list_get (const char *fmt, unsigned exclude_which)
 {
   size_t len;
   int    i, max;
@@ -400,7 +400,7 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
   /* If no tracing of any callers, that should exclude everything.
    */
   if (exclude_which == EXCL_FUNCTION && g_cfg.trace_caller <= 0)
-     return (TRUE);
+     return (true);
 
   max = exclude_list ? smartlist_len (exclude_list) : 0;
   for (i = 0; i < max; i++)
@@ -411,13 +411,13 @@ BOOL exclude_list_get (const char *fmt, unsigned exclude_which)
     if ((ex->which & exclude_which) && !strnicmp(fmt, ex->name, len))
     {
       if (ex->only_if_prog && exclude_which == EXCL_FUNCTION && !StackWalkOurModule(ex->only_if_prog))
-         return (FALSE);
+         return (false);
 
       ex->num_excludes++;
-      return (TRUE);
+      return (true);
     }
   }
-  return (FALSE);
+  return (false);
 }
 
 /**
@@ -435,18 +435,18 @@ static void exclude_list_free_one (void *_ex)
 /**
  * Free all elements in `exclude_list`.
  */
-BOOL exclude_list_free (void)
+bool exclude_list_free (void)
 {
   smartlist_wipe (exclude_list, exclude_list_free_one);
   exclude_list = NULL;
-  return (TRUE);
+  return (true);
 }
 
 /*
  * \todo: Make 'FD_ISSET' an alias for '__WSAFDIsSet'.
  *        Print a warning when trying to exclude an unknown Winsock function.
  */
-static BOOL _exclude_list_add (char *name, unsigned exclude_which)
+static bool _exclude_list_add (char *name, unsigned exclude_which)
 {
   static const struct search_list exclude_flags[] = {
                     { EXCL_NONE,     "EXCL_NONE"     },
@@ -549,14 +549,14 @@ static BOOL _exclude_list_add (char *name, unsigned exclude_which)
  * If `(which & EXCL_PROGRAM) == EXCL_PROGRAM`, allow a `name` with quotes (`""`).
  * But remove those before storing the `name`.
  */
-BOOL exclude_list_add (const char *name, unsigned exclude_which)
+bool exclude_list_add (const char *name, unsigned exclude_which)
 {
   const char *tok_fmt = " ,";
   char       *tok_end, *end;
   char       *p, *tok, *copy = strdup (name);
 
   if (!copy)
-     return (FALSE);
+     return (false);
 
   p = copy;
 
@@ -580,7 +580,7 @@ BOOL exclude_list_add (const char *name, unsigned exclude_which)
     _exclude_list_add (tok, exclude_which);
   }
   free (copy);
-  return (TRUE);
+  return (true);
 }
 
 /*
@@ -883,7 +883,7 @@ static void parse_lua_settings (const char *key, const char *val, unsigned line)
 static void parse_geoip_settings (const char *key, const char *val, unsigned line)
 {
   if (!stricmp(key, "enable"))
-       g_cfg.GEOIP.enable = (*val > '0') ? TRUE : FALSE;
+       g_cfg.GEOIP.enable = (*val > '0') ? true : false;
 
   else if (!stricmp(key, "show_position"))
        g_cfg.GEOIP.show_position = atoi (val);
@@ -1136,7 +1136,7 @@ static int parse_config_file (FILE *file)
   char        last_section[40];
   unsigned    line  = 0;
   unsigned    lines = 0;
-  BOOL        done = FALSE;
+  bool        done = false;
 
   str_replace ('\\', '/', g_data.cfg_fname);
 
@@ -1172,9 +1172,9 @@ static int parse_config_file (FILE *file)
 #endif
              TRACE (1, "Parsing config-file \"%s\"\n"
                        "              for \"%s, %s\".\n",
-                    g_data.cfg_fname, get_builder(TRUE), get_dll_build_date());
+                    g_data.cfg_fname, get_builder(true), get_dll_build_date());
            }
-           done = TRUE;
+           done = true;
            break;
       case CFG_LUA:
            parse_lua_settings (key, val, line);
@@ -1228,7 +1228,7 @@ static void trace_report (void)
   int          i, max;
   size_t       len, max_len = 0, max_digits = 0;
 
-  g_cfg.trace_report = FALSE;
+  g_cfg.trace_report = false;
 
   C_puts ("\n  Exclusions:~5");
 
@@ -1337,16 +1337,16 @@ static void trace_report (void)
 void wsock_trace_exit (void)
 {
   int  i;
-  BOOL rc;
+  bool rc;
 
   set_color (NULL);
 
   if (g_data.fatal_error)
-     g_cfg.trace_report = FALSE;
+     g_cfg.trace_report = false;
 
 #if 0
   if (!cleaned_up || startup_count > 0)
-     g_cfg.trace_report = FALSE;
+     g_cfg.trace_report = false;
 #endif
 
   if (g_cfg.trace_report)
@@ -1371,7 +1371,7 @@ void wsock_trace_exit (void)
     TRACE (2, "Calling fw_monitor_stop(), startup_count: %d, cleaned_up:%d.\n",
            startup_count, cleaned_up);
 
-    fw_monitor_stop (TRUE);
+    fw_monitor_stop (true);
   }
 
   rc = TlsFree (g_data.ws_Tls_index);
@@ -1393,7 +1393,7 @@ void wsock_trace_exit (void)
   for (i = 0; i < DIM(g_cfg.services_file); i++)
       FREE (g_cfg.services_file[i]);
 
-  g_cfg.trace_file_okay = FALSE;
+  g_cfg.trace_file_okay = false;
 
   FREE (g_cfg.trace_file);
   FREE (g_cfg.PCAP.dump_fname);
@@ -1479,9 +1479,9 @@ void wsock_trace_init (void)
   FILE       *file;
   char       *end, *env = getenv ("WSOCK_TRACE_LEVEL");
   const char *now;
-  BOOL        okay;
+  bool        okay;
   HMODULE     mod;
-  BOOL        is_msvc, is_mingw, is_cygwin;
+  bool        is_msvc, is_mingw, is_cygwin;
 
   /* Set default values.
    */
@@ -1493,14 +1493,14 @@ void wsock_trace_init (void)
   if (env && isdigit((int)*env))
   {
     g_cfg.trace_level = (*env - '0');
-    g_cfg.show_caller = TRUE;
+    g_cfg.show_caller = true;
   }
   else
     g_cfg.trace_level = 1;
 
   g_cfg.trace_max_len = 9999;      /* Infinite */
   g_cfg.trace_stream  = stdout;
-  g_cfg.trace_file_device = TRUE;
+  g_cfg.trace_file_device = true;
 
   tzset();
 //setlocale (LC_ALL, "");
@@ -1527,7 +1527,7 @@ void wsock_trace_init (void)
   }
 
   if (g_cfg.compact)
-     g_cfg.dump_data = FALSE;
+     g_cfg.dump_data = false;
 
   is_msvc   = image_opt_header_is_msvc (mod);
   is_mingw  = image_opt_header_is_mingw (mod);
@@ -1543,11 +1543,11 @@ void wsock_trace_init (void)
 
     sec.nLength = sizeof (sec);
     sec.lpSecurityDescriptor = NULL;
-    sec.bInheritHandle       = TRUE;
+    sec.bInheritHandle       = true;
     g_data.ws_sema = CreateSemaphore (&sec, 1, 1, g_data.ws_sema_name);
     if (GetLastError() == ERROR_ALREADY_EXISTS)
-         g_data.ws_sema_inherited = TRUE;
-    else g_data.ws_sema_inherited = FALSE;
+         g_data.ws_sema_inherited = true;
+    else g_data.ws_sema_inherited = false;
   }
 
   if (!g_cfg.no_inv_handler)
@@ -1559,21 +1559,21 @@ void wsock_trace_init (void)
   {
     g_data.stealth_mode = true;
     g_cfg.trace_level = 0;
-    g_cfg.trace_report = g_cfg.dump_tcpinfo = FALSE;
-    g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = FALSE;
+    g_cfg.trace_report = g_cfg.dump_tcpinfo = false;
+    g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = false;
   }
 
   if (g_cfg.trace_file && !stricmp(g_cfg.trace_file, "stderr"))
   {
     g_cfg.trace_stream      = stderr;
-    g_cfg.trace_file_device = TRUE;
+    g_cfg.trace_file_device = true;
   }
   else if (g_cfg.trace_file && !stricmp(g_cfg.trace_file, "$ODS"))
   {
     g_cfg.trace_stream      = NULL;
-    g_cfg.trace_file_device = TRUE;
-    g_cfg.trace_use_ods     = TRUE;
-    g_cfg.trace_binmode     = TRUE;
+    g_cfg.trace_file_device = true;
+    g_cfg.trace_use_ods     = true;
+    g_cfg.trace_binmode     = true;
   }
   else if (g_cfg.trace_file && g_cfg.trace_level > 0)
   {
@@ -1586,7 +1586,7 @@ void wsock_trace_init (void)
 
     g_cfg.trace_stream      = fopen_excl (g_cfg.trace_file, mode);
     g_cfg.trace_file_okay   = (g_cfg.trace_stream != NULL);
-    g_cfg.trace_file_device = FALSE;
+    g_cfg.trace_file_device = false;
 
     if (!g_cfg.trace_stream || !file_exists(g_cfg.trace_file))
     {
@@ -1594,7 +1594,7 @@ void wsock_trace_init (void)
                "Printing to stdout.\n", g_cfg.trace_file, strerror(errno));
       g_cfg.trace_stream      = stdout;
       g_cfg.trace_file        = NULL;
-      g_cfg.trace_file_commit = FALSE;
+      g_cfg.trace_file_commit = false;
     }
   }
 
@@ -1621,14 +1621,14 @@ void wsock_trace_init (void)
 
   if (g_cfg.IDNA.enable && !IDNA_init(g_cfg.IDNA.codepage, g_cfg.IDNA.use_winidn))
   {
-    g_cfg.IDNA.enable = FALSE;
+    g_cfg.IDNA.enable = false;
     IDNA_exit();
   }
 
   if (image_opt_header_is_gui_app(mod))
   {
     TRACE (2, "Disabling sound in a GUI-program.\n");
-    g_cfg.FIREWALL.sound.enable = FALSE;
+    g_cfg.FIREWALL.sound.enable = false;
   }
 
   now = get_time_now();
@@ -1637,7 +1637,7 @@ void wsock_trace_init (void)
       (g_cfg.trace_use_ods || (!g_cfg.trace_file_device && g_cfg.trace_file_okay)))
     C_printf ("\n------- Trace started at %s --------\n"
               "------ %s, %s. Build-date: %s.\n",
-             now, get_builder(TRUE), get_dll_short_name(), get_dll_build_date());
+             now, get_builder(true), get_dll_short_name(), get_dll_build_date());
 
   memset (&g_data.console_info, '\0', sizeof(g_data.console_info));
 
@@ -1650,7 +1650,7 @@ void wsock_trace_init (void)
 
   if (!okay || GetFileType(g_data.console_hnd) != FILE_TYPE_CHAR)
   {
-    g_data.stdout_redirected = TRUE;
+    g_data.stdout_redirected = true;
   }
   else
   {
@@ -1720,23 +1720,23 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_level <= 0)
   {
-    g_cfg.show_tid               = FALSE;
-    g_cfg.dump_data              = FALSE;
-    g_cfg.dump_hostent           = FALSE;
-    g_cfg.dump_servent           = FALSE;
-    g_cfg.dump_protoent          = FALSE;
-    g_cfg.dump_nameinfo          = FALSE;
-    g_cfg.dump_addrinfo          = FALSE;
-    g_cfg.dump_wsaprotocol_info  = FALSE;
-    g_cfg.dump_wsanetwork_events = FALSE;
-    g_cfg.dump_data              = FALSE;
-    g_cfg.dump_select            = FALSE;
-    g_cfg.dump_tcpinfo           = FALSE;
-    g_cfg.extra_new_line         = FALSE;
- // g_cfg.ASN.enable             = FALSE;
- // g_cfg.GEOIP.enable           = FALSE;
-    g_cfg.FIREWALL.enable        = FALSE;
-    g_cfg.FIREWALL.sound.enable  = FALSE;
+    g_cfg.show_tid               = false;
+    g_cfg.dump_data              = false;
+    g_cfg.dump_hostent           = false;
+    g_cfg.dump_servent           = false;
+    g_cfg.dump_protoent          = false;
+    g_cfg.dump_nameinfo          = false;
+    g_cfg.dump_addrinfo          = false;
+    g_cfg.dump_wsaprotocol_info  = false;
+    g_cfg.dump_wsanetwork_events = false;
+    g_cfg.dump_data              = false;
+    g_cfg.dump_select            = false;
+    g_cfg.dump_tcpinfo           = false;
+    g_cfg.extra_new_line         = false;
+ // g_cfg.ASN.enable             = false;
+ // g_cfg.GEOIP.enable           = false;
+    g_cfg.FIREWALL.enable        = false;
+    g_cfg.FIREWALL.sound.enable  = false;
   }
 
   TRACE (3, "g_data.curr_prog:     '%s'\n"
@@ -2195,7 +2195,7 @@ size_t write_pcap_header (void)
   return (rc == 0 ? -1 : rc);
 }
 
-size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
+size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, bool out)
 {
   struct pcap_pkt_header pc_hdr;
   size_t rc, pcap_len;
@@ -2242,7 +2242,7 @@ size_t write_pcap_packet (SOCKET s, const void *pkt, size_t len, BOOL out)
  * As above, but an array of packets.
  * \todo.
  */
-size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, BOOL out)
+size_t write_pcap_packetv (SOCKET s, const WSABUF *bufs, DWORD num_bufs, bool out)
 {
   ARGSUSED (s);
   ARGSUSED (bufs);

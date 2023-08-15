@@ -123,8 +123,8 @@ static const char *get_error (void);
 #endif
 
 #if USE_SymEnumSymbolsEx
-  static BOOL  g_long_CPP_syms = FALSE;
-  static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose);
+  static bool  g_long_CPP_syms = false;
+  static DWORD enum_module_symbols (smartlist_t *sl, const char *module, bool is_last, bool verbose);
 #endif
 
 #define MAX_NAMELEN  1024        /* max name length for found symbols */
@@ -686,14 +686,14 @@ static int our_AddAuditHook (const char *event, PyObject *args, void *userdata)
   return (0);
 }
 
-static BOOL load_AddAuditHook (void)
+static bool load_AddAuditHook (void)
 {
-  #define LOAD_FUNC(f)                                            \
-          do {                                                    \
-            func = #f;                                            \
-            p_ ##f = (func_ ##f) GetProcAddress (g_py_hnd, func); \
-            if (!p_ ##f)                                          \
-             goto quit;                                           \
+  #define LOAD_FUNC(f)                                          \
+          do {                                                  \
+            func = #f;                                          \
+            p_##f = (func_##f) GetProcAddress (g_py_hnd, func); \
+            if (!p_##f)                                         \
+               goto quit;                                       \
           } while (0)
 
   const char *func;
@@ -704,7 +704,7 @@ static BOOL load_AddAuditHook (void)
   if (!g_py_hnd)
   {
     TRACE (1, "LoadLibrary (\"%s\") failed: %s.\n", g_py_dll, get_error());
-    return (FALSE);
+    return (false);
   }
 
   /* Needs Python 3.8+. But try anyway
@@ -713,20 +713,20 @@ static BOOL load_AddAuditHook (void)
   LOAD_FUNC (PyArg_ParseTuple);
   LOAD_FUNC (PyUnicode_AsUTF8);
   #undef LOAD_FUNC
-  return (TRUE);
+  return (true);
 
 quit:
   TRACE (1, "Did not find \"%s()\" in \"%s\".\n", func, g_py_dll);
-  return (FALSE);
+  return (false);
 }
 
 /**
  * This requires that a `python*.dll` is in the same directory as `python*exe'.
  * I'm not sure that's the case for all situations (like with `%WinDir\\py.exe`).
  */
-static BOOL is_python_dll (const char *fname)
+static bool is_python_dll (const char *fname)
 {
-  BOOL  equal_dir;
+  bool  equal_dir;
   char *dir;
   const char *base, *ext;
 
@@ -749,9 +749,9 @@ static BOOL is_python_dll (const char *fname)
   if (equal_dir && g_py_dll && (g_py_major_ver == 2 || g_py_major_ver == 3))
   {
     TRACE (1, "equal_dir: %d, g_py_dll: '%s', g_py_major_ver: %d\n", equal_dir, g_py_dll, g_py_major_ver);
-    return (TRUE);
+    return (true);
   }
-  return (FALSE);
+  return (false);
 }
 
 #if USE_Py_inject_code
@@ -1007,7 +1007,7 @@ static DWORD enum_and_load_symbols (const char *module)
 {
   const struct ModuleEntry *me;
   DWORD num;
-  BOOL  is_last = FALSE;
+  bool  is_last = false;
   int   mod_len, sym_len;
 
   mod_len = smartlist_len (g_modules_list);
@@ -1068,7 +1068,7 @@ DWORD StackWalkSymbols (smartlist_t **sl_p)
   return (num);     /*  Total # of symbols */
 }
 
-BOOL StackWalkOurModule (const char *module)
+bool StackWalkOurModule (const char *module)
 {
   static char  module_unix [_MAX_PATH] = { '\0' };
   static char *module_base = NULL;
@@ -1095,7 +1095,7 @@ DWORD StackWalkModules (smartlist_t **sl_p)
   return smartlist_len (g_modules_list);
 }
 
-BOOL StackWalkExit (void)
+bool StackWalkExit (void)
 {
   symbols_list_free();
   modules_list_free();
@@ -1119,7 +1119,7 @@ BOOL StackWalkExit (void)
   g_py_major_ver = 0;
 #endif /* USE_PythonHook */
 
-  return (TRUE);
+  return (true);
 }
 
 static const char *get_error (void)
@@ -1147,7 +1147,7 @@ static int GetModuleList_TLHELP32 (void)
 {
   HANDLE        snap = INVALID_HANDLE_VALUE;
   MODULEENTRY32 me;
-  BOOL          okay = (load_dynamic_table(tlhelp32_funcs, DIM(tlhelp32_funcs)) >= 3);
+  bool          okay = (load_dynamic_table(tlhelp32_funcs, DIM(tlhelp32_funcs)) >= 3);
   int           i;
 
   if (!okay)
@@ -1201,7 +1201,7 @@ static int GetModuleList_PSAPI (void)
 {
   DWORD    i, needed, num_modules;
   HMODULE *mods;
-  BOOL     okay = (load_dynamic_table(psapi_funcs, DIM(psapi_funcs)) >= 3);
+  bool     okay = (load_dynamic_table(psapi_funcs, DIM(psapi_funcs)) >= 3);
   DWORD    rc;
 
   if (!okay || !p_EnumProcessModules)
@@ -1305,7 +1305,7 @@ static char *shorten_path2 (const char *str, size_t max_len)
  * ```
  * This will take some time for the SymbolServer program to download them.
  */
-static void print_modules_and_pdb_info (BOOL do_sort)
+static void print_modules_and_pdb_info (bool do_sort)
 {
   DWORD        total_text = 0;
   DWORD        total_data = 0;
@@ -1422,7 +1422,7 @@ static void print_modules_and_pdb_info (BOOL do_sort)
  * I tried setting up a ^C|^Break handler using 'SetConsoleCtrlHandler()',
  * but that doesn't seems to work in a DLL (?)
  */
-static BOOL check_quit (void)
+static bool check_quit (void)
 {
   if (_kbhit())
   {
@@ -1491,7 +1491,7 @@ static void enum_and_load_modules (void)
 #endif
 }
 
-static BOOL set_symbol_search_path (void)
+static bool set_symbol_search_path (void)
 {
   DWORD  symOptions;
   char   tmp [TBUF_LEN], path [TBUF_LEN];
@@ -1568,7 +1568,7 @@ static BOOL set_symbol_search_path (void)
   if (!(*p_SymInitialize)(g_proc, path, FALSE))
   {
     TRACE (1, "SymInitialize(): %s.\n", get_error());
-    return (FALSE);
+    return (false);
   }
 
   symOptions = (*p_SymGetOptions)();
@@ -1577,7 +1577,7 @@ static BOOL set_symbol_search_path (void)
   symOptions &= ~SYMOPT_DEFERRED_LOADS;
   (*p_SymSetOptions) (symOptions);
 
-  return (TRUE);
+  return (true);
 }
 
 #if USE_SymEnumSymbolsEx
@@ -1619,15 +1619,15 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
 {
   struct SymbolEntry *se;
 
-  BOOL is_cv_cpp, is_gnu_cpp;
+  bool is_cv_cpp, is_gnu_cpp;
 
-  BOOL ok_flags = (sym->Flags == 0 ||
+  bool ok_flags = (sym->Flags == 0 ||
                    sym->Flags == SYMFLAG_THUNK ||
                    sym->Flags == SYMFLAG_EXPORT ||
                    sym->Flags == SYMFLAG_FORWARDER ||
                    sym->Flags == SYMFLAG_PUBLIC_CODE ||
                    sym->Flags == SYMFLAG_FUNC_NO_RETURN);
-  BOOL ok_tag = (sym->Tag == SymTagPublicSymbol ||
+  bool ok_tag = (sym->Tag == SymTagPublicSymbol ||
                  sym->Tag == SymTagInlineSite ||
                  sym->Tag == SymTagFunction);
 
@@ -1645,8 +1645,8 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   const char     *name_fmt;
   IMAGEHLP_LINE64 Line;
 
-  static BOOL is_ours  = FALSE;
-  static BOOL have_PDB = FALSE;
+  static bool is_ours  = false;
+  static bool have_PDB = false;
 
   static ULONG64 last_base_addr;
   static char   *module;
@@ -1655,7 +1655,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   if (check_quit() > 0)
      return (FALSE);
 
-  is_cv_cpp = is_gnu_cpp = FALSE;
+  is_cv_cpp = is_gnu_cpp = false;
 
   if (sym->ModBase != last_base_addr)
   {
@@ -1665,7 +1665,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
     me = smartlist_get (g_modules_list, idx);
     module = me->module_name;
     is_ours = (stricmp(g_module, module) == 0);
-    have_PDB = FALSE;
+    have_PDB = false;
 
 #if defined(_MSC_VER)
     {
@@ -1708,7 +1708,7 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
      goto junk_sym;
 
   if (raw_name[0] == '?')
-     is_cv_cpp = TRUE;
+     is_cv_cpp = true;
 
 #if !defined(_MSC_VER)
   /*
@@ -1716,17 +1716,17 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
    * we were compiled with MSVC or clang-cl.
    */
   if (have_PDB)
-     is_cv_cpp = FALSE;
+     is_cv_cpp = false;
 
    /* If a "module.pdb" is present, do not call 'p_SymGetLineFromAddr64()' below.
     * That will return fake info.
     */
   if (is_ours)
-     have_PDB = FALSE;
+     have_PDB = false;
 #endif
 
   if (raw_name[0] == '$')
-     is_gnu_cpp = TRUE;
+     is_gnu_cpp = true;
 
   if (g_cfg.cpp_demangle)
   {
@@ -1842,8 +1842,8 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
   const char *dot = strrchr (module, '.');
   char  map_file [_MAX_PATH];
   DWORD line = 0, rc = 0;
-  BOOL  found_load = FALSE;  /* Found the " LOAD " line */
-  BOOL  found_text = FALSE;  /* Found a ".text <addr> <size> <.o-file>" line */
+  bool  found_load = false;  /* Found the " LOAD " line */
+  bool  found_text = false;  /* Found a ".text <addr> <size> <.o-file>" line */
   FILE *fil;
 
   if (!dot)
@@ -1871,7 +1871,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
     char   func [101] = { '\0' };
     void  *addr = NULL;
     DWORD  size;
-    BOOL   found_func = FALSE;
+    bool   found_func = false;
 
     if (!fgets(buf, sizeof(buf)-1, fil) ||  /* EOF */
         !strncmp(buf, "*(SORT(", 7))        /* End of ".text" section */
@@ -1881,7 +1881,7 @@ static DWORD parse_map_file (const char *module, smartlist_t *sl)
 
     if (!strncmp(buf, "LOAD ", 5))
     {
-      found_load = TRUE;
+      found_load = true;
       continue;
     }
 
@@ -1955,7 +1955,7 @@ static int compare_on_addr (const void **_a, const void **_b)
  *
  * The callback 'enum_symbols_proc()' adds the 'SymbolEntry' to the smartlist 'sl'.
  */
-static DWORD enum_module_symbols (smartlist_t *sl, const char *module, BOOL is_last, BOOL verbose)
+static DWORD enum_module_symbols (smartlist_t *sl, const char *module, bool is_last, bool verbose)
 {
   struct ModuleEntry *me;
   char  *dot, pattern [_MAX_PATH+3];
@@ -2038,9 +2038,9 @@ check_mingw_map_file:
 /*
  * The user of StackWalkShow() must call StackWalkInit() first.
  */
-BOOL StackWalkInit (void)
+bool StackWalkInit (void)
 {
-  BOOL  ok = (load_dynamic_table(dbghelp_funcs, DIM(dbghelp_funcs)) == DIM(dbghelp_funcs));
+  bool  ok = (load_dynamic_table(dbghelp_funcs, DIM(dbghelp_funcs)) == DIM(dbghelp_funcs));
   char *p;
 
   g_modules_list = smartlist_new();
@@ -2060,7 +2060,7 @@ BOOL StackWalkInit (void)
   #ifdef SCRT_IS_UCRT_DLL_IN_USE
     g_long_CPP_syms = (SCRT_IS_UCRT_DLL_IN_USE() == 0);
   #elif defined(_MT)
-    g_long_CPP_syms = TRUE;
+    g_long_CPP_syms = true;
   #endif
 
   TRACE (2, "g_long_CPP_syms: %d\n", g_long_CPP_syms);
@@ -2082,7 +2082,7 @@ BOOL StackWalkInit (void)
   if (!ok)
   {
     TRACE (1, "StackWalker failed to initialize.\n");
-    return (FALSE);
+    return (false);
   }
 
 #if USE_SymEnumSymbolsEx
@@ -2139,7 +2139,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
    * is present while running a MinGW compiled program, this just returns
    * wrong information from dbghelp.dll.
    */
-  BOOL have_PDB_info = TRUE;
+  bool have_PDB_info = true;
 
   if (g_cfg.max_displacement > 0)
      max_displacement = g_cfg.max_displacement;
@@ -2171,7 +2171,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
 
     if (GetModuleFileName((HANDLE)(uintptr_t)base, path, sizeof(path)) &&
         !stricmp(g_module, path))
-       have_PDB_info = FALSE;
+       have_PDB_info = false;
   }
   /* otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
    */
@@ -2188,7 +2188,6 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
      return (3);
 
 #else
-
   if (!have_PDB_info)
      return (4);
 

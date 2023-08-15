@@ -224,7 +224,7 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
  *         24.233.0.0/21 ; SBL356227
  *       ```
  */
-static BOOL DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr *ip6, const char **sbl_ref)
+static bool DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr *ip6, const char **sbl_ref)
 {
   const struct DNSBL_info *dnsbl;
 
@@ -232,7 +232,7 @@ static BOOL DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr
      *sbl_ref = NULL;
 
   if (!DNSBL_list)
-     return (FALSE);
+     return (false);
 
   dnsbl = smartlist_bsearch (DNSBL_list,
                              ip4 ? (const void*)ip4         : (const void*)ip6,
@@ -240,20 +240,20 @@ static BOOL DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr
   if (sbl_ref && dnsbl)
      *sbl_ref = dnsbl->SBL_ref;
 
-  return (dnsbl ? TRUE : FALSE);
+  return (dnsbl ? true : false);
 }
 
-BOOL DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
+bool DNSBL_check_ipv4 (const struct in_addr *ip4, const char **sbl_ref)
 {
   if (!INET_util_addr_is_global(ip4, NULL))
-     return (FALSE);
+     return (false);
   return DNSBL_check_common (ip4, NULL, sbl_ref);
 }
 
-BOOL DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
+bool DNSBL_check_ipv6 (const struct in6_addr *ip6, const char **sbl_ref)
 {
   if (!INET_util_addr_is_global(NULL, ip6))
-     return (FALSE);
+     return (false);
   return DNSBL_check_common (NULL, ip6, sbl_ref);
 }
 
@@ -360,7 +360,7 @@ struct test_list {
 static int DNSBL_test (const char *addr_str)
 {
   int    i;
-  BOOL   rc;
+  bool   rc;
   WORD   save1, save4, save5;
   static const struct test_list tests[] = {
                     { AF_INET,  "192.219.208.2", "103496" },  /* in drop.txt */
@@ -402,7 +402,7 @@ static int DNSBL_test (const char *addr_str)
     } addr;
     const char *sbl_ref = NULL;
     const char *country_code, *location, *okay;
-    BOOL        res;
+    bool        res;
 
     INET_addr_pton2 (test->family, test->addr, &addr);
 
@@ -571,7 +571,7 @@ static int DNSBL_update_file (const char *fname, const char *tmp_file, const cha
  * file header is a bit too hard to parse. Simply use `g_cfg.DNSBL.max_days`
  * and download it if it's too old.
  */
-int DNSBL_update_files (BOOL force_update)
+int DNSBL_update_files (bool force_update)
 {
   char        tmp_file [_MAX_PATH];
   const char *env = getenv ("TEMP");

@@ -25,7 +25,7 @@
 int _idna_winnls_errno = 0;
 int _idna_errno = 0;
 
-static BOOL         using_winidn = FALSE;
+static bool         using_winidn = false;
 static UINT         cur_cp = CP_ACP;
 static smartlist_t *cp_list;
 
@@ -70,7 +70,7 @@ static smartlist_t *cp_list;
 typedef struct code_page_info {
         UINT  number;
         char  name [100];
-        BOOL  valid;
+        bool  valid;
       } code_page_info;
 
 /**
@@ -220,10 +220,10 @@ static int cp_compare (const void **_a, const void **_b)
 /**
  * Check if given codepage is available.
  */
-BOOL IDNA_CheckCodePage (UINT cp)
+bool IDNA_CheckCodePage (UINT cp)
 {
   code_page_info *cp_info;
-  BOOL            cp_found = FALSE;
+  bool            cp_found = false;
   int             i, max;
 
   cp_list = smartlist_new();
@@ -243,7 +243,7 @@ BOOL IDNA_CheckCodePage (UINT cp)
     if (cp_info->valid && cp_info->number == cp)
     {
       mark = '!';
-      cp_found = TRUE;
+      cp_found = true;
     }
     if (cp_info->name[0])
          TRACE (3, "%cCP-name: %s\n", mark, cp_info->name);
@@ -271,7 +271,7 @@ void IDNA_exit (void)
 /**
  * Get active codpage and optionally initialise WinIDN.
  */
-BOOL IDNA_init (WORD cp, BOOL use_winidn)
+bool IDNA_init (WORD cp, bool use_winidn)
 {
 #if (USE_WINIDN)
   if (use_winidn)
@@ -282,9 +282,9 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
     if (num < 2)
     {
       unload_dynamic_table (dyn_funcs, DIM(dyn_funcs));
-      return (FALSE);
+      return (false);
     }
-    using_winidn = TRUE;
+    using_winidn = true;
   }
 #endif
 
@@ -296,27 +296,27 @@ BOOL IDNA_init (WORD cp, BOOL use_winidn)
     _idna_errno = IDNAERR_ILL_CODEPAGE;
     _idna_winnls_errno = GetLastError();
     TRACE (0, "IDNA_init: %s\n", IDNA_strerror(_idna_errno));
-    return (FALSE);
+    return (false);
   }
   cur_cp = cp;
   TRACE (1, "IDNA_init: Using codepage %u\n", cp);
-  return (TRUE);
+  return (true);
 }
 
 /**
- * Return FALSE if 'name' is not a plain US-ASCII name.
+ * Return false if 'name' is not a plain US-ASCII name.
  * Thus need to call 'IDNA_convert_to_ACE()'.
  */
-BOOL IDNA_is_ASCII (const char *name)
+bool IDNA_is_ASCII (const char *name)
 {
   const BYTE *ch = (const BYTE*) name;
 
   while (*ch)
   {
     if (*ch++ & 0x80)
-       return (FALSE);
+       return (false);
   }
-  return (TRUE);
+  return (true);
 }
 
 /**
@@ -356,7 +356,7 @@ const char *IDNA_strerror (int err)
 /**
  * Convert a single ASCII codepoint from active codepage to Unicode.
  */
-static BOOL conv_to_unicode (char ch, wchar_t *wc)
+static bool conv_to_unicode (char ch, wchar_t *wc)
 {
   int rc = MultiByteToWideChar (cur_cp, 0, (LPCSTR)&ch, 1, wc, 1);
 
@@ -365,16 +365,16 @@ static BOOL conv_to_unicode (char ch, wchar_t *wc)
     _idna_winnls_errno = GetLastError();
     _idna_errno = IDNAERR_WINNLS;
     TRACE (2, "conv_to_unicode failed; %s\n", IDNA_strerror(IDNAERR_WINNLS));
-    return (FALSE);
+    return (false);
   }
-  return (TRUE);
+  return (true);
 }
 
 /**
  * Convert a single Unicode codepoint to ASCII in active codepage.\n
  * Allow 4 byte `GB18030` Simplified Chinese to be converted.
  */
-static BOOL conv_to_ascii (wchar_t wc, char *ch, int *len)
+static bool conv_to_ascii (wchar_t wc, char *ch, int *len)
 {
   int rc = WideCharToMultiByte (cur_cp, 0, &wc, 1, (LPSTR)ch, 4, NULL, NULL);
 
@@ -383,10 +383,10 @@ static BOOL conv_to_ascii (wchar_t wc, char *ch, int *len)
     _idna_winnls_errno = GetLastError();
     _idna_errno = IDNAERR_WINNLS;
     TRACE (2, "conv_to_ascii failed; %s\n", IDNA_strerror(IDNAERR_WINNLS));
-    return (FALSE);
+    return (false);
   }
   *len = rc;
-  return (TRUE);
+  return (true);
 }
 
 /**
@@ -522,9 +522,9 @@ static char *convert_from_ACE (const char *name)
 /**
  * Taken from libcurl's idn_win32.c and rewritten.
  */
-static BOOL win32_idn_to_ascii (const char *in, char **out)
+static bool win32_idn_to_ascii (const char *in, char **out)
 {
-  BOOL     rc = FALSE;
+  bool     rc = false;
   wchar_t *in_w = Curl_convert_UTF8_to_wchar (in);
 
   if (in_w)
@@ -537,15 +537,15 @@ static BOOL win32_idn_to_ascii (const char *in, char **out)
     {
       *out = Curl_convert_wchar_to_UTF8 (punycode);
       if (*out)
-         rc = TRUE;
+         rc = true;
     }
   }
   return (rc);
 }
 
-static BOOL win32_ascii_to_idn (const char *in, char **out)
+static bool win32_ascii_to_idn (const char *in, char **out)
 {
-  BOOL     rc   = FALSE;
+  bool     rc   = false;
   wchar_t *in_w = Curl_convert_UTF8_to_wchar (in);
 
   if (in_w)
@@ -559,7 +559,7 @@ static BOOL win32_ascii_to_idn (const char *in, char **out)
     {
       *out = Curl_convert_wchar_to_UTF8 (unicode);
       if (*out)
-         rc = TRUE;
+         rc = true;
     }
   }
   return (rc);
@@ -582,7 +582,7 @@ static BOOL win32_ascii_to_idn (const char *in, char **out)
  *
  * \sa https://www.norid.no/en/om-domenenavn/regelverk-for-no/vedlegg-l/
  */
-BOOL IDNA_convert_to_ACE (
+bool IDNA_convert_to_ACE (
           char   *name,   /* IN/OUT: native ASCII/ACE name */
           size_t *size)   /* IN:     length of name buf */
 {                         /* OUT:    ACE encoded length */
@@ -592,7 +592,7 @@ BOOL IDNA_convert_to_ACE (
   char **labels;
   int    i;
   size_t len = 0;
-  BOOL   rc = FALSE;
+  bool   rc = false;
 
 #if (USE_WINIDN && 0)
   if (using_winidn)
@@ -648,7 +648,7 @@ BOOL IDNA_convert_to_ACE (
   *name = '\0';
   *size = len;
   TRACE (2, "IDNA_convert_to_ACE() -> `%s', %u bytes\n", in_name, (unsigned)len);
-  rc = TRUE;
+  rc = true;
 
 quit:
   return (rc);
@@ -662,14 +662,14 @@ quit:
  * \li Repeat for all labels with `xn--` prefix.
  * \li Collect Unicode strings and convert to original codepage.
  */
-BOOL IDNA_convert_from_ACE (
+bool IDNA_convert_from_ACE (
           char   *name,    /* IN/OUT: ACE/native ASCII name */
           size_t *size)    /* IN:     ACE raw string length */
 {                          /* OUT:    ASCII decoded length */
   char  *in_name = name;
   char **labels;
   int    i;
-  BOOL   rc = FALSE;
+  bool   rc = false;
 
 #if (USE_WINIDN && 0)
   if (using_winidn)
@@ -695,7 +695,7 @@ BOOL IDNA_convert_from_ACE (
      name--;
   *name = '\0';
   *size = name - in_name;
-  rc = TRUE;
+  rc = true;
 
 quit:
   return (rc);

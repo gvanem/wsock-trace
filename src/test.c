@@ -312,10 +312,10 @@ static void test_getprotobynumber (void)
   TEST_CONDITION (== 0, getprotobynumber (9999));
 }
 
-static BOOL test_IDNA_func (const char *input, const char *expected_ACE)
+static bool test_IDNA_func (const char *input, const char *expected_ACE)
 {
   struct hostent *he = gethostbyname (input);
-  BOOL            rc = FALSE;
+  bool            rc = false;
 
   last_result = 0;
   TEST_CONDITION (!= 0, (int)he);
@@ -349,7 +349,7 @@ static BOOL test_IDNA_func (const char *input, const char *expected_ACE)
   }
 #endif
 
-  rc = (BOOL) last_result;
+  rc = (bool) last_result;
   return (rc);
 }
 
@@ -360,10 +360,10 @@ static BOOL test_IDNA_func (const char *input, const char *expected_ACE)
  */
 static void test_IDNA_functions (void)
 {
-  TEST_CONDITION (== TRUE, test_IDNA_func ("seoghør.no",    "xn--seoghr-fya.no"));      /* Norwegian gossip */
-  TEST_CONDITION (== TRUE, test_IDNA_func ("bücher.de",     "xn--bcher-kva.de"));       /* German bookstore */
-  TEST_CONDITION (== TRUE, test_IDNA_func ("öbb.at",        "xn--bb-eka.at"));          /* Austrian Railways */
-  TEST_CONDITION (== TRUE, test_IDNA_func ("räksmörgås.se", "xn--rksmrgs-5wao1o.se"));  /* Swedish IDN test site */
+  TEST_CONDITION (== true, test_IDNA_func ("seoghør.no",    "xn--seoghr-fya.no"));      /* Norwegian gossip */
+  TEST_CONDITION (== true, test_IDNA_func ("bücher.de",     "xn--bcher-kva.de"));       /* German bookstore */
+  TEST_CONDITION (== true, test_IDNA_func ("öbb.at",        "xn--bb-eka.at"));          /* Austrian Railways */
+  TEST_CONDITION (== true, test_IDNA_func ("räksmörgås.se", "xn--rksmrgs-5wao1o.se"));  /* Swedish IDN test site */
 }
 
 /**
@@ -746,7 +746,7 @@ static void test_WSAAddressToStringA (void)
   TEST_CONDITION (== 1, (size == sizeof(IP6_TEST_ADDR_WITH_PORT_A)));
 }
 
-static void test_WSAAddressToStringW_common (BOOL test_ip6, WSAPROTOCOL_INFOW *p_info)
+static void test_WSAAddressToStringW_common (bool test_ip6, WSAPROTOCOL_INFOW *p_info)
 {
   struct sockaddr_in sa4;
   wchar_t            data [256];
@@ -791,7 +791,7 @@ static void test_WSAAddressToStringW_common (BOOL test_ip6, WSAPROTOCOL_INFOW *p
 
 static void test_WSAAddressToStringW (void)
 {
-  test_WSAAddressToStringW_common (TRUE, NULL);
+  test_WSAAddressToStringW_common (true, NULL);
 }
 
 /**
@@ -828,7 +828,7 @@ static void test_WSAAddressToStringWP (void)
 
   memcpy (&p_info.ProviderId, &guid, sizeof(p_info.ProviderId));
 
-  test_WSAAddressToStringW_common (FALSE, &p_info);
+  test_WSAAddressToStringW_common (false, &p_info);
 }
 
 static void test_WSAStringToAddressA (void)

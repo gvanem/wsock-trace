@@ -147,16 +147,16 @@ static const char *wininet_strerror (DWORD err)
  * I tried setting up a ^C|^Break handler using `SetConsoleCtrlHandler()`,
  * but that doesn't seems to work in a DLL (?)
  */
-static BOOL check_quit (void)
+static bool check_quit (void)
 {
   if (_kbhit())
   {
     int ch = _getch();
 
     if (ch == 'q' || ch == 27) /* `q` or ESC */
-       return (1);
+       return (true);
   }
-  return (0);
+  return (false);
 }
 
 #undef  ADD_VALUE
@@ -201,11 +201,11 @@ typedef struct download_context {
         int                       error;
         HINTERNET                 h1;             /**< Handle from `(*p_InternetOpenA)()` */
         HINTERNET                 h2;             /**< Handle from `(*p_InternetOpenUrlA)()` */
-        volatile BOOL             done;
+        volatile bool             done;
         HANDLE                    event;
-        BOOL                      threaded_mode;
-        BOOL                      async_mode;
-        BOOL                      async_flags;
+        bool                      threaded_mode;
+        bool                      async_mode;
+        DWORD                     async_flags;
         INTERNET_BUFFERSA         inet_buf;
         INTERNET_STATUS_CALLBACK  callback;
       } download_context;
@@ -276,7 +276,7 @@ static void CALLBACK download_callback (HINTERNET hnd,
   }
 }
 
-static BOOL download_init (download_context *ctx)
+static bool download_init (download_context *ctx)
 {
   DWORD       access_type  = INTERNET_OPEN_TYPE_DIRECT;
   DWORD       error, url_flags;
@@ -293,7 +293,7 @@ static BOOL download_init (download_context *ctx)
     {
       error = GetLastError();
       TRACE (0, "CreateEvent() failed: %s.\n", win_strerror(error));
-      return (FALSE);
+      return (false);
     }
   }
 
@@ -312,7 +312,7 @@ static BOOL download_init (download_context *ctx)
   {
     error = GetLastError();
     TRACE (0, "InternetOpenA() failed: %s.\n", wininet_strerror(error));
-    return (FALSE);
+    return (false);
   }
 
   url_flags = INTERNET_FLAG_RELOAD |
@@ -329,7 +329,7 @@ static BOOL download_init (download_context *ctx)
     if (ctx->callback == INTERNET_INVALID_STATUS_CALLBACK)
     {
       TRACE (1, "Invalid callback: %s.\n", wininet_strerror(GetLastError()));
-      return (FALSE);
+      return (false);
     }
     ctx->h2 = (*p_InternetOpenUrlA) (ctx->h1, ctx->url, NULL, 0, url_flags, (DWORD_PTR) ctx);
   }
@@ -342,10 +342,10 @@ static BOOL download_init (download_context *ctx)
   if (!ctx->h2)
   {
     error = GetLastError();
-    if (error != ERROR_IO_PENDING)  /* ctx->async_mode == TRUE */
+    if (error != ERROR_IO_PENDING)  /* ctx->async_mode == true */
     {
       TRACE (1, "InternetOpenA() failed: %s.\n", wininet_strerror(error));
-      return (FALSE);
+      return (false);
     }
 
     while (ctx->async_mode && !ctx->h2)
@@ -354,7 +354,7 @@ static BOOL download_init (download_context *ctx)
       SleepEx (200, TRUE);
     }
   }
-  return (TRUE);
+  return (true);
 }
 
 static DWORD download_exit (download_context *ctx)
@@ -425,7 +425,7 @@ static DWORD WINAPI download_async_loop (download_context *ctx)
     if (check_quit())
     {
       TRACE (1, "Quit'.\n");
-      ctx->done = TRUE;
+      ctx->done = true;
       break;
     }
 
@@ -435,7 +435,7 @@ static DWORD WINAPI download_async_loop (download_context *ctx)
       ctx->bytes_written += (DWORD) fwrite (ctx->file_buf, 1, (size_t)ctx->bytes_read, ctx->fil);
       TRACE (2, "  InternetReadFileExA (0x%p): TRUE, %lu bytes\n", ctx->h2, (unsigned long)ctx->bytes_read);
       if (bytes_read == 0)
-         ctx->done = TRUE;
+         ctx->done = true;
     }
     else
     {
@@ -443,7 +443,7 @@ static DWORD WINAPI download_async_loop (download_context *ctx)
       error = GetLastError();
       TRACE (2, "  InternetReadFileExA (0x%p): FALSE, %s\n", ctx->h2, wininet_strerror(error));
       if (error != ERROR_IO_PENDING)
-         ctx->done = TRUE;
+         ctx->done = true;
     }
 
     TRACE (1, "Got %lu/%lu bytes\n", DWORD_CAST(bytes_read), DWORD_CAST(ctx->bytes_written));
@@ -453,7 +453,7 @@ static DWORD WINAPI download_async_loop (download_context *ctx)
     if (WaitForSingleObject(ctx->event, 10) == WAIT_OBJECT_0)
     {
       TRACE (1, "We got signalled\n");
-      ctx->done = TRUE;
+      ctx->done = true;
     }
   }
   return download_exit (ctx);
@@ -464,7 +464,7 @@ static DWORD WINAPI download_async_loop (download_context *ctx)
  */
 static void download_threaded (download_context *ctx)
 {
-  BOOL   t_timedout = FALSE;
+  bool   t_timedout = false;
   DWORD  t_id;
   HANDLE t_hnd;
 
@@ -477,7 +477,7 @@ static void download_threaded (download_context *ctx)
     if (WaitForSingleObject(t_hnd, 3000) != WAIT_OBJECT_0)
     {
       TerminateThread (t_hnd, 1);
-      t_timedout = TRUE;
+      t_timedout = true;
     }
     CloseHandle (t_hnd);
   }
@@ -498,8 +498,8 @@ static void download_threaded (download_context *ctx)
 DWORD INET_util_download_file (const char *file, const char *url)
 {
   download_context ctx;
-  BOOL use_threaded = FALSE;
-  BOOL use_async    = FALSE;   /* 'download_async_loop()' works unreliably */
+  bool use_threaded = false;
+  bool use_async    = false;   /* 'download_async_loop()' works unreliably */
 
   if (g_data.ws_from_dll_main)
   {
@@ -809,7 +809,7 @@ int INET_util_addr_is_global (const struct in_addr *ip4, const struct in6_addr *
       * \todo But use `iana_find_by_ip6_address()` to verify this.
       */
 #if 0
-     if ((ip6->s6_bytes[0] & 0xE0) == 0x20)   /* FALSE for e.g. '2c00::' */
+     if ((ip6->s6_bytes[0] & 0xE0) == 0x20)   /* false for e.g. '2c00::' */
 #else
      if (swap16(ip6->s6_words[0]) >= 0x2001 && swap16(ip6->s6_words[0]) <= 0x2C00)
 #endif
@@ -946,9 +946,9 @@ const char *INET_util_in6_mask_str (const struct in6_addr *mask)
  * \param[out] ip4       The resulting `struct in_addr`.
  * \param[out] cidr_len  The resulting length of the CIDR network mask.
  *                       This is 0 if `str` is not on a `IPa-IPb` form.
- * \retval TRUE if `str` is valid.
+ * \retval true if `str` is valid.
  */
-BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, int *cidr_len)
+bool INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, int *cidr_len)
 {
   struct in_addr a4_low, a4_high;
   char  *copy, *dash;
@@ -964,7 +964,7 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
   {
     *cidr_len = 0;
     memset (ip4, 0xFF, sizeof(*ip4));
-    return (TRUE);
+    return (true);
   }
 
   *cidr_len = 0;
@@ -975,19 +975,19 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
      *dash = '\0';
 
   if (INET_addr_pton2(AF_INET, copy, &a4_low) != 1)
-     return (FALSE);
+     return (false);
 
   if (!dash)
   {
     *ip4 = a4_low;
-    return (TRUE);
+    return (true);
   }
   if (INET_addr_pton2(AF_INET, dash+1, &a4_high) != 1)
-     return (FALSE);
+     return (false);
 
   *ip4 = a4_low;
   *cidr_len = 32 - INET_util_network_len32 (a4_high.s_addr, a4_low.s_addr);
-  return (TRUE);
+  return (true);
 }
 
 /**
@@ -997,9 +997,9 @@ BOOL INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *ip4, 
  * \param[in]  str       The string to convert to CIDR form.
  * \param[out] ip6       The resulting `struct in6_addr`.
  * \param[out] cidr_len  The resulting length of the CIDR network mask.
- * \retval     TRUE if `str` is valid.
+ * \retval     true if `str` is valid.
  */
-BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6, int *cidr_len)
+bool INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6, int *cidr_len)
 {
   struct in6_addr a6;
   char  *copy, *dash;
@@ -1015,7 +1015,7 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
   {
     *cidr_len = 0;
     memset (ip6, 0xFF, sizeof(*ip6));
-    return (TRUE);
+    return (true);
   }
 
   *cidr_len = 0;
@@ -1026,11 +1026,11 @@ BOOL INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *ip6,
      *dash = '\0';
 
   if (INET_addr_pton2(AF_INET6, copy, &a6) != 1)
-     return (FALSE);
+     return (false);
 
   *ip6 = a6;
   *cidr_len = dash ? atoi (dash+1) : 0;
-  return (TRUE);
+  return (true);
 }
 
 /**
@@ -1103,7 +1103,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
   uint64          total_ips = U64_SUFFIX(0);
   const char     *total_str;
   char            network_str [MAX_IP6_SZ+1];
-  BOOL lshift_prob = FALSE;
+  bool            lshift_prob = false;
 
 #if defined(__GNUC__)
   /**
@@ -1112,7 +1112,7 @@ static void test_mask (int family, int start_ip_width, int ip_width, int cidr_wi
    * for IPv6.
    */
   if (max_bits == 128)
-     lshift_prob = TRUE;
+     lshift_prob = true;
   total_str = "";
 #else
   total_str = "total";

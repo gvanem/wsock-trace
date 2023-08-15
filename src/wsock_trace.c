@@ -69,18 +69,18 @@ int volatile startup_count = 0;
 
 static const char *ts_now = NULL;
 
-static BOOL    exclude_this = FALSE;
+static bool    exclude_this = false;
 static fd_set *last_rd_fd = NULL;
 static fd_set *last_wr_fd = NULL;
 static fd_set *last_ex_fd = NULL;
 
 static const char *socket_number (SOCKET s);
 static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp);
-static const char *get_threadid (BOOL add_space);
+static const char *get_threadid (bool add_space);
 static const char *get_error (SOCK_RC_TYPE rc, int local_err);
 static void        get_tcp_info_v0 (SOCKET s, TCP_INFO_v0 *info, int *err);
 static void        get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err);
-static void        wstrace_printf (BOOL first_line,
+static void        wstrace_printf (bool first_line,
                                    _Printf_format_string_ const char *fmt, ...)
                                    ATTR_PRINTF (2, 3);
 
@@ -109,21 +109,21 @@ static void        wstrace_printf (BOOL first_line,
  *
  *   If `"g_cfg.trace_caller == 0"` or `"WSAStartup"` is in the
  *   `exclude_list` smartlist, the `!exclude_list_get("WSAStartup...", EXCL_FUNCTION)`
- *   returns `TRUE`.
+ *   returns `true`.
  */
 #define WSTRACE(fmt, ...)                                        \
         do {                                                     \
-          exclude_this = TRUE;                                   \
+          exclude_this = true;                                   \
           if (g_cfg.trace_level > 0 &&                           \
               !exclude_list_get (fmt, EXCL_FUNCTION))            \
           {                                                      \
-            exclude_this = FALSE;                                \
-            wstrace_printf (TRUE, "~1* ~3%s%s~5%s ~1",           \
-                            get_threadid (TRUE),                 \
+            exclude_this = false;                                \
+            wstrace_printf (true, "~1* ~3%s%s~5%s ~1",           \
+                            get_threadid (true),                 \
                             ts_now ? ts_now : get_timestamp(),   \
                             get_caller (GET_RET_ADDR(),          \
                                         get_EBP()) );            \
-            wstrace_printf (FALSE, fmt ".~0\n", ## __VA_ARGS__); \
+            wstrace_printf (false, fmt ".~0\n", ## __VA_ARGS__); \
           }                                                      \
           ts_now = NULL;                                         \
         } while (0)
@@ -603,7 +603,7 @@ const struct LoadTable *find_ws2_func_by_name (const char *func)
   return find_dynamic_table (dyn_funcs, DIM(dyn_funcs), func);
 }
 
-static void wstrace_printf (BOOL first_line, const char *fmt, ...)
+static void wstrace_printf (bool first_line, const char *fmt, ...)
 {
   DWORD   err = GetLastError();   /* save error status */
   va_list args;
@@ -614,7 +614,7 @@ static void wstrace_printf (BOOL first_line, const char *fmt, ...)
      * So just wrap if told to do so. Also add an extra newline if writing
      * to a trace-file.
      */
-    BOOL add_nl = (g_cfg.start_new_line && g_cfg.trace_file_device &&
+    bool add_nl = (g_cfg.start_new_line && g_cfg.trace_file_device &&
                    (get_column() > 0 || g_data.stdout_redirected));
 
     /* If `g_cfg.extra_new_line == true` we add an extra newline when leaving a
@@ -1577,7 +1577,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   char    ts_buf [40];
   int     rc;
   size_t  sz;
-  BOOL    _exclude_this;
+  bool    _exclude_this;
 
   CHECK_PTR (p_select);
 
@@ -1650,11 +1650,11 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
      * Not the timestamp for when select() returned. Hence do not
      * use the WSTRACE() macro here.
      */
-    wstrace_printf (TRUE, "~1* ~3%s%s~5%s: ~1",
-                    get_threadid(TRUE), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+    wstrace_printf (true, "~1* ~3%s%s~5%s: ~1",
+                    get_threadid(true), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
     ts_now = NULL;
 
-    wstrace_printf (FALSE, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
+    wstrace_printf (false, "select (n=%d, %s, %s, %s, {%s}) --> (rc=%d) %s.~0\n",
                     nfds,
                     rd_fd ? "rd" : "NULL",
                     wr_fd ? "wr" : "NULL",
@@ -1748,7 +1748,7 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
   }
 
   if (g_cfg.PCAP.enable && rc > 0 && !(flags & MSG_PEEK))
-     write_pcap_packet (s, buf, rc, FALSE);
+     write_pcap_packet (s, buf, rc, false);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -1812,7 +1812,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
   }
 
   if (g_cfg.PCAP.enable && rc > 0 && !(flags & MSG_PEEK))
-     write_pcap_packet (s, buf, rc, FALSE);
+     write_pcap_packet (s, buf, rc, false);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -1853,7 +1853,7 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
   }
 
   if (g_cfg.PCAP.enable && rc > 0)
-     write_pcap_packet (s, buf, rc, TRUE);
+     write_pcap_packet (s, buf, rc, true);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -1901,7 +1901,7 @@ EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, con
   }
 
   if (g_cfg.PCAP.enable && rc > 0)
-     write_pcap_packet (s, buf, rc, TRUE);
+     write_pcap_packet (s, buf, rc, true);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2018,11 +2018,11 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
     handle_recv_data (rc, bufs, num_bytes, size, NULL);
 
     if (ov)
-       overlap_store (s, ov, size, TRUE);
+       overlap_store (s, ov, size, true);
   }
 
   if (g_cfg.PCAP.enable)
-     write_pcap_packetv (s, bufs, num_bufs, FALSE);
+     write_pcap_packetv (s, bufs, num_bufs, false);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2069,11 +2069,11 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
     handle_recv_data (rc, bufs, num_bytes, size, from);
 
     if (ov)
-       overlap_store (s, ov, size, TRUE);
+       overlap_store (s, ov, size, true);
   }
 
   if (g_cfg.PCAP.enable)
-     write_pcap_packetv (s, bufs, num_bufs, FALSE);
+     write_pcap_packetv (s, bufs, num_bufs, false);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2115,7 +2115,7 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
   }
 
   if (g_cfg.PCAP.enable && rc > 0)
-     write_pcap_packet (s, buf, rc, FALSE);
+     write_pcap_packet (s, buf, rc, false);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2187,11 +2187,11 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
        dump_wsabuf (bufs, num_bufs);
 
     if (ov)
-       overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
+       overlap_store (s, ov, count_wsabuf(bufs, num_bufs), false);
   }
 
   if (g_cfg.PCAP.enable)
-     write_pcap_packetv (s, bufs, num_bufs, TRUE);
+     write_pcap_packetv (s, bufs, num_bufs, true);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2253,11 +2253,11 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
        dump_DNSBL_sockaddr (to);
 
     if (ov)
-       overlap_store (s, ov, count_wsabuf(bufs, num_bufs), FALSE);
+       overlap_store (s, ov, count_wsabuf(bufs, num_bufs), false);
   }
 
   if (g_cfg.PCAP.enable)
-     write_pcap_packetv (s, bufs, num_bufs, TRUE);
+     write_pcap_packetv (s, bufs, num_bufs, true);
 
   LEAVE_CRIT (!exclude_this);
 
@@ -2431,7 +2431,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA
   int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersA);
-  exclude_this = TRUE;
+  exclude_this = true;
   rc = (*p_WSAEnumNameSpaceProvidersA) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2462,7 +2462,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW
   int         i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersW);
-  exclude_this = TRUE;
+  exclude_this = true;
   rc = (*p_WSAEnumNameSpaceProvidersW) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2492,7 +2492,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INF
   int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersExA);
-  exclude_this = TRUE;
+  exclude_this = true;
   rc = (*p_WSAEnumNameSpaceProvidersExA) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2522,7 +2522,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INF
   int   i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_namespace_providers);
 
   CHECK_PTR (p_WSAEnumNameSpaceProvidersExW);
-  exclude_this = TRUE;
+  exclude_this = true;
   rc = (*p_WSAEnumNameSpaceProvidersExW) (buf_len, provider_buf);
 
   ENTER_CRIT();
@@ -2603,22 +2603,22 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
      * Not the timestamp for when WSAPoll() returned. Hence do not
      * use the WSTRACE() macro here.
      */
-    wstrace_printf (TRUE, "~1* ~3%s%s~5%s: ~1",
-                    get_threadid(TRUE), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
+    wstrace_printf (true, "~1* ~3%s%s~5%s: ~1",
+                    get_threadid(true), ts_buf, get_caller(GET_RET_ADDR(), get_EBP()));
 
-    wstrace_printf (FALSE, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s\n",
+    wstrace_printf (false, "WSAPoll (0x%" ADDR_FMT ", %lu, %s) --> %s\n",
                     ADDR_CAST(fd_array), DWORD_CAST(fds), ms_buf, socket_or_error(rc));
 
     C_indent (g_cfg.trace_indent+2);
     C_puts ("~4" FD_INPUT " ");
     if (fd_in)
-         dump_wsapollfd (fd_in, fds, g_cfg.trace_indent + 2 + sizeof(FD_INPUT), FALSE);
+         dump_wsapollfd (fd_in, fds, g_cfg.trace_indent + 2 + sizeof(FD_INPUT), false);
     else C_puts ("None!\n");
 
     C_indent (g_cfg.trace_indent+2);
     C_puts (FD_OUTPUT " ");
     if (fd_array)
-         dump_wsapollfd (fd_array, fds, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT), TRUE);
+         dump_wsapollfd (fd_array, fds, g_cfg.trace_indent + 2 + sizeof(FD_OUTPUT), true);
     else C_puts ("None!\n");
     C_puts ("~0");
   }
@@ -3216,7 +3216,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
 
   exclude_this = (g_cfg.trace_level == 0 || exclude_list_get("getaddrinfo", EXCL_FUNCTION));
   if (!host_name || !(g_cfg.IDNA.enable && g_cfg.IDNA.fix_getaddrinfo))
-     exclude_this = TRUE;
+     exclude_this = true;
 
   /**
    * If no address was found for a non-ASCII `host_name`, convert it to ACE-form and call
@@ -3515,7 +3515,7 @@ static void get_tcp_info_v1 (SOCKET s, TCP_INFO_v1 *info, int *err)
   get_tcp_info_v01 (s, NULL, info, err);
 }
 
-static const char *get_threadid (BOOL add_space)
+static const char *get_threadid (bool add_space)
 {
   static char buf [30];
   char  *p = buf;
@@ -3611,7 +3611,7 @@ static const char *get_caller (ULONG_PTR ret_addr, ULONG_PTR ebp)
       if (g_cfg.trace_time_usec)
          indent += 3;
       if (g_cfg.show_tid)
-         indent += (int) strlen (get_threadid(TRUE)) - 1;  /* just need it's length */
+         indent += (int) strlen (get_threadid(true)) - 1;  /* just need it's length */
 
       ret = malloc (strlen(a) + strlen(b) + indent + 3);
       sprintf (ret, "%s\n%*s%s", a, indent, "", b);
@@ -3741,7 +3741,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
 
   /* If we're called from DllMain(), we cannot use WinHTTP in inet_util.c etc.
    */
-  g_data.ws_from_dll_main = TRUE;
+  g_data.ws_from_dll_main = true;
 
   switch (reason)
   {
@@ -3766,8 +3766,8 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
          wslua_DllMain (instDLL, reason);
 #endif
          if (g_cfg.show_tid)
-            wstrace_printf (TRUE, "~1* ~3%s, %s%s~0\n",
-                            get_threadid(FALSE), get_timestamp(), "DLL_PROCESS_DETACH");
+            wstrace_printf (true, "~1* ~3%s, %s%s~0\n",
+                            get_threadid(false), get_timestamp(), "DLL_PROCESS_DETACH");
          wsock_trace_exit();
          crtdbg_exit();
          break;
@@ -3811,7 +3811,7 @@ BOOL WINAPI DllMain (HINSTANCE instDLL, DWORD reason, LPVOID reserved)
   if (reason_str)
   {
     if (g_cfg.show_tid)
-         wstrace_printf (TRUE, "~1* ~3%s, %s%s~0\n", get_threadid(FALSE), get_timestamp(), reason_str);
+         wstrace_printf (true, "~1* ~3%s, %s%s~0\n", get_threadid(false), get_timestamp(), reason_str);
     else TRACE (2, "rc: %d, %s. instDLL: 0x%" ADDR_FMT ", tid: %lu, g_data.ws_sema_inherited: %d.\n",
                 rc, reason_str, ADDR_CAST(instDLL), DWORD_CAST(tid), g_data.ws_sema_inherited);
   }

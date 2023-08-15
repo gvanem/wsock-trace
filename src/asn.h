@@ -38,6 +38,6 @@ extern void ASN_exit   (void);
 extern void ASN_report (void);
 extern void ASN_print  (const char *intro, const struct IANA_record *iana, const struct in_addr *ip4, const struct in6_addr *ip6);
 extern int  ASN_libloc_print (const char *intro, const struct in_addr *ip4, const struct in6_addr *ip6, str_put_func func);
-extern void ASN_update_file  (const char *db_file, BOOL force_update);
+extern void ASN_update_file  (const char *db_file, bool force_update);
 
 #endif

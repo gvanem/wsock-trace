@@ -181,12 +181,12 @@ static DWORD crc_bytes (const char *buf, size_t len);
 static char *C_ptr, *C_end;
 static char  C_buf [TRACE_BUF_SIZE];
 
-static BOOL C_tilde_escape = TRUE;
-static BOOL C_get_color = FALSE;
+static bool C_tilde_escape = true;
+static bool C_get_color = false;
 
 void common_init (void)
 {
-  C_tilde_escape = TRUE;
+  C_tilde_escape = true;
   C_ptr = C_buf;
   C_end = C_ptr + TRACE_BUF_SIZE - 1;
   sock_list = smartlist_new();
@@ -538,7 +538,7 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
 
   int _kbhit (void)
   {
-    BOOL rc;
+    bool rc;
 
     enable_raw_mode();
     ch_waiting = ioctl (STDIN_FILENO, FIONREAD, &bytes_waiting);
@@ -881,7 +881,7 @@ static void get_device_to_paths_mapping (void)
   {
     char        *end = strrchr (vol_buf, '\0');
     const char *first_path;
-    BOOL        ok;
+    bool        ok;
 
    if (vol_buf[0] != '\\' || vol_buf[1] != '\\' || vol_buf[2] != '?' ||
        vol_buf[3] != '\\' || end[-1] != '\\')
@@ -971,7 +971,7 @@ static char *get_native_path (const char *path)
   }
   if (!strnicmp(path, sys_dir, strlen(sys_dir)))
   {
-    BOOL exist;
+    bool exist;
 
     snprintf (ret, sizeof(ret), "%s\\sysnative\\%s", win_root, path + strlen(sys_dir));
     exist = file_exists (ret);
@@ -994,7 +994,7 @@ static char *get_native_path (const char *path)
  * \param[in,out] exist      Optionally check if the file exists.
  * \param[in,out] is_native  If a file `"%WinDir\\System32\xx"` does not exists, check if the
  *                           `"%WinDir\\sysnative\xx"` file exists.
- *                           And return that file-name instead and set `*is_native == TRUE`.
+ *                           And return that file-name instead and set `*is_native == true`.
  *
  * \retval a ASCII-string with the true casing for the `wpath`.
  *
@@ -1002,20 +1002,20 @@ static char *get_native_path (const char *path)
  */
 const char *get_path (const char    *apath,
                       const wchar_t *wpath,
-                      BOOL          *exist,
-                      BOOL          *is_native)
+                      bool          *exist,
+                      bool          *is_native)
 {
   static char ret [_MAX_PATH];
   static char path [_MAX_PATH];
-  static int  done = 0;
+  static bool done = false;
   char   *p;
   int     save;
 
   if (exist)
-     *exist = TRUE;       /* assume the 'apath' or 'wpath' exists */
+     *exist = true;       /* assume the 'apath' or 'wpath' exists */
 
   if (is_native)
-     *is_native = FALSE;  /* assume it's not a native file */
+     *is_native = false;  /* assume it's not a native file */
 
   if (wpath)
        snprintf (path, sizeof(path), "%" WCHAR_FMT, wpath);
@@ -1036,7 +1036,7 @@ const char *get_path (const char    *apath,
       TRACE (2, "path: '%s', device: '%s'\n", map->path, map->device);
     }
   }
-  done = 1;
+  done = true;
 
   if (!strnicmp(path, DEVICE_PFX, sizeof(DEVICE_PFX)-1) && device_to_paths_map)
        p = get_path_from_volume (path, sizeof(path));
@@ -1056,7 +1056,7 @@ const char *get_path (const char    *apath,
     *exist = file_exists (ret);
     if (!*exist && is_native && (p = get_native_path(ret)) != NULL)
     {
-      *exist = *is_native = TRUE;
+      *exist = *is_native = true;
       return (p);
     }
   }
@@ -1469,7 +1469,7 @@ int C_putc (int ch)
     const WORD *color;
     int         col_idx;
 
-    C_get_color = FALSE;
+    C_get_color = false;
 
     /* If we got "~~", print a single "~"
     */
@@ -1527,7 +1527,7 @@ int C_putc (int ch)
 
   if (C_tilde_escape && ch == '~' && !g_data.trace_raw)
   {
-    C_get_color = TRUE;
+    C_get_color = true;
     return (1);
   }
 
@@ -1553,9 +1553,9 @@ put_it:
 int C_putc_raw (int ch)
 {
   int  rc;
-  BOOL save = C_tilde_escape;
+  bool save = C_tilde_escape;
 
-  C_tilde_escape = FALSE;
+  C_tilde_escape = false;
   rc = C_putc (ch);
   C_tilde_escape = save;
   return (rc);
@@ -1564,9 +1564,9 @@ int C_putc_raw (int ch)
 int C_puts_raw (const char *str)
 {
   int  rc;
-  BOOL save = C_tilde_escape;
+  bool save = C_tilde_escape;
 
-  C_tilde_escape = FALSE;
+  C_tilde_escape = false;
   rc = C_puts (str);
   C_tilde_escape = save;
   return (rc);
@@ -2249,7 +2249,7 @@ const char *get_dll_build_date (void)
 /**
  * Returns e.g. "Visual-C, 32-bit"
  */
-const char *get_builder (BOOL show_dbg_rel)
+const char *get_builder (bool show_dbg_rel)
 {
 #if defined(_M_X64) || defined(__x86_64__)
   /*

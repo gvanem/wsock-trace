@@ -9,7 +9,7 @@ extern void services_file_exit (void);
 
 extern const struct servent *ws_getservbyport (uint16_t    port,
                                                const char *proto,
-                                               BOOL        fallback,
-                                               BOOL        do_wstrace);
+                                               bool        fallback,
+                                               bool        do_wstrace);
 
 #endif

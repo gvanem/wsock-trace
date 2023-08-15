@@ -121,7 +121,7 @@ void ASN_init (void)
 
   if (num_AS == 0)
   {
-    g_cfg.ASN.enable = FALSE;
+    g_cfg.ASN.enable = false;
     ASN_bin_close();
   }
 }
@@ -308,13 +308,13 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
  * If the latter is too old; the time-difference is `>= g_cfg.ASN.max_days`,
  * copy `%TEMP%/location.db` to `db_file`.
  */
-void ASN_update_file (const char *db_file, BOOL force_update)
+void ASN_update_file (const char *db_file, bool force_update)
 {
   struct stat st;
   char   db_xz_temp_file [_MAX_PATH];
   char   db_temp_file [_MAX_PATH];
   char  *db_dir;
-  BOOL   db_dir_ok, need_update;
+  bool   db_dir_ok, need_update;
   DWORD  downloaded;
 
   db_dir = dirname (db_file);
@@ -339,12 +339,12 @@ void ASN_update_file (const char *db_file, BOOL force_update)
   memset (&st, '\0', sizeof(st));
   stat (db_temp_file, &st);
 
-  need_update = FALSE;
+  need_update = false;
 
-  /* If `%TEMP%/location.db` does not exist, is 0 bytes or 'force_update == TRUE', update it.
+  /* If `%TEMP%/location.db` does not exist, is 0 bytes or 'force_update == true', update it.
    */
   if (st.st_size == 0 || force_update)
-     need_update = TRUE;
+     need_update = true;
   else
   {
     time_t now = time (NULL);
@@ -379,12 +379,12 @@ void ASN_update_file (const char *db_file, BOOL force_update)
       ASN_xz_decompress (db_xz_temp_file, db_temp_file, db_file);
       return;
     }
-    need_update = TRUE;
+    need_update = true;
   }
 
   if (!need_update)
   {
-    TRACE (2, "Returning since 'need_update == FALSE'.\n");
+    TRACE (2, "Returning since 'need_update == false'.\n");
     return;
   }
 
@@ -411,7 +411,7 @@ static int ASN_check_database (const char *local_db, int trace_level)
   struct stat st;
   time_t time_local_db = 0;
   time_t time_remote_db = 0;
-  BOOL   older = FALSE;
+  bool   older = false;
   char   days_behind [50] = "";
   const char *zone = _tzname[0];
 
@@ -644,13 +644,13 @@ static int libloc_handle_net (struct loc_network    *net,
   char                 print_buf [1000];
   int                  rc = 0;
   uint32_t             AS_num;
-  BOOL                 is_anycast, is_anon_proxy, is_sat_provider, is_hostile;
+  bool                 is_anycast, is_anon_proxy, is_sat_provider, is_hostile;
 
 #if 0
   /** \todo: hopefully, some day this could be possible in 'libloc'
    */
-  BOOL is_tor_exit;  /* Ref: https://en.wikipedia.org/wiki/Tor_(network)#Tor_exit_node_block */
-  BOOL is_bogon;     /* Ref: https://en.wikipedia.org/wiki/Bogon_filtering */
+  bool is_tor_exit;  /* Ref: https://en.wikipedia.org/wiki/Tor_(network)#Tor_exit_node_block */
+  bool is_bogon;     /* Ref: https://en.wikipedia.org/wiki/Bogon_filtering */
 #endif
 
   if (ip4)
@@ -899,23 +899,23 @@ void ASN_print (const char *intro, const struct IANA_record *iana, const struct 
                  iana->status);
 }
 
-static BOOL ASN_match_number (const struct ASN_record *rec, const char *spec)
+static bool ASN_match_number (const struct ASN_record *rec, const char *spec)
 {
   char AS_num_str [20];
 
   if (rec->as_number == 0 && !strcmp(spec, "0")) /* match all or the unknowns */
-     return (TRUE);
+     return (true);
 
   _ultoa (rec->as_number, AS_num_str, 10);
   return (fnmatch(spec, AS_num_str, FNM_NOESCAPE) == 0);
 }
 
-static BOOL ASN_match_name (const struct ASN_record *rec, const char *spec)
+static bool ASN_match_name (const struct ASN_record *rec, const char *spec)
 {
   char *p, *end, AS_name_spec [200];
 
   if (!rec->as_name[0] && *spec == '*')  /* match all or the unknowns */
-     return (TRUE);
+     return (true);
 
   str_ncpy (AS_name_spec, spec, sizeof(AS_name_spec)-1);
 
@@ -933,10 +933,10 @@ static BOOL ASN_match_name (const struct ASN_record *rec, const char *spec)
   return (fnmatch(AS_name_spec, rec->as_name, FNM_NOESCAPE | FNM_CASEFOLD) == 0);
 }
 
-static BOOL ASN_match (const struct ASN_record *rec, const char *spec)
+static bool ASN_match (const struct ASN_record *rec, const char *spec)
 {
   if (!spec)
-     return (TRUE);
+     return (true);
   if (isdigit((int)*spec))
      return ASN_match_number (rec, spec);
   return ASN_match_name (rec, spec);
@@ -1065,13 +1065,13 @@ int asn_main (int argc, char **argv)
 
   if (do_dump)
   {
-    g_cfg.ASN.enable = TRUE;
+    g_cfg.ASN.enable = true;
     ASN_dump (*argv);
   }
   else if (do_update)
   {
     ASN_bin_close();
-    g_cfg.ASN.enable = TRUE;
+    g_cfg.ASN.enable = true;
     ASN_update_file (g_cfg.ASN.asn_bin_file, do_force);
   }
   else if (do_version)

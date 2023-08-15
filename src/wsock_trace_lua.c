@@ -79,8 +79,8 @@ __declspec(dllexport) int luaopen_wsock_trace (lua_State *l);
 /*
  * Globals:
  */
-static BOOL init_script_ok = FALSE;
-static BOOL open_ok        = TRUE;
+static bool init_script_ok = false;
+static bool open_ok        = true;
 
 static void wslua_init (const char *script);
 static void wslua_exit (const char *script);
@@ -194,7 +194,7 @@ int wslua_WSACleanup (void)
  * Execute a script using `lua_pcall()` and
  * report any errors in it.
  */
-static BOOL execute_and_report (lua_State *l)
+static bool execute_and_report (lua_State *l)
 {
   const char *msg = "";
   int         rc = lua_pcall (l, 0, LUA_MULTRET, 0);
@@ -205,7 +205,7 @@ static BOOL execute_and_report (lua_State *l)
      * would be `lua_tonumber(l, -1)`. But we ignore that except for tracing.
      */
     LUA_TRACE (1, "Script OK, ret: %d:\n", (int)lua_tonumber(l, -1));
-    return (TRUE);
+    return (true);
   }
 
   if (!lua_isnil(l, -1))
@@ -218,7 +218,7 @@ static BOOL execute_and_report (lua_State *l)
 
   LUA_WARNING ("Failed to load script (rc = %d):~0\n  %s\n", rc, msg);
   wslua_print_stack();
-  return (FALSE);
+  return (false);
 }
 
 /**
@@ -227,16 +227,16 @@ static BOOL execute_and_report (lua_State *l)
  * Inspired from the example in Swig:
  * <Swig-Root>/Examples/lua/embed/embed.c
  */
-static BOOL wslua_run_script (lua_State *l, const char *script)
+static bool wslua_run_script (lua_State *l, const char *script)
 {
   LUA_TRACE (1, "Launching script: %s\n", script ? script : "<none>");
 
   if (!script)
-     return (FALSE);
+     return (false);
 
   if (luaL_loadfile(l, script) == 0)
      return execute_and_report (l);
-  return (FALSE);
+  return (false);
 }
 
 /**
@@ -246,9 +246,9 @@ static BOOL wslua_run_script (lua_State *l, const char *script)
  *   https://github.com/luaforge/lar/blob/master/lar/lar.lua
  *   https://github.com/davidm/lua-compress-deflatelua
  */
-static BOOL wslua_run_zipfile (lua_State *l, const char *zipfile, const char *script)
+static bool wslua_run_zipfile (lua_State *l, const char *zipfile, const char *script)
 {
-  BOOL  rc = FALSE;
+  bool  rc = false;
   char *buf = mz_zip_extract_archive_file_to_heap (zipfile, script, NULL,
                                                    MZ_ZIP_FLAG_IGNORE_PATH);
   if (buf && luaL_loadstring(l, buf) == 0)
@@ -340,7 +340,7 @@ static int wslua_get_dll_full_name (lua_State *l)
 
 static int wslua_get_builder (lua_State *l)
 {
-  lua_pushstring (l, get_builder(FALSE));
+  lua_pushstring (l, get_builder(false));
   return (1);
 }
 

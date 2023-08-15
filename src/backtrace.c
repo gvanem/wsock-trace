@@ -44,7 +44,7 @@ static func_RtlCaptureStackBackTrace p_RtlCaptureStackBackTrace = NULL;
 
 static HANDLE g_ntdll = INVALID_HANDLE_VALUE;
 static char   g_module [_MAX_PATH];
-static BOOL   g_use_sym_list = FALSE;
+static bool   g_use_sym_list = false;
 
 static smartlist_t *modules_list = NULL;  /* A 'smartlist' of modules in our process. */
 static smartlist_t *symbols_list = NULL;  /* A 'smartlist' of symbols in all modules. */
@@ -129,12 +129,12 @@ static char *get_caller (int frame_num, int *err)
   return StackWalkShow (thr, &ctx);
 }
 
-static BOOL long_CPP_syms (void)
+static bool long_CPP_syms (void)
 {
 #if defined(_MSC_VER) && defined(_MT)
-  return (TRUE);
+  return (true);
 #else
-  return (FALSE);
+  return (false);
 #endif
 }
 
@@ -142,7 +142,7 @@ static BOOL long_CPP_syms (void)
  * Print symbols in our module; symbols with `se->module` matching `g_module`.\n
  * Or print all.
  */
-static void print_symbols (const smartlist_t *sl, BOOL print_all)
+static void print_symbols (const smartlist_t *sl, bool print_all)
 {
   int i, max = smartlist_len (sl);
   const char *short_fmt = "%-50.50s ";
@@ -156,7 +156,7 @@ static void print_symbols (const smartlist_t *sl, BOOL print_all)
   for (i = 0; i < max; i++)
   {
     const struct SymbolEntry *se = smartlist_get (sl, i);
-    BOOL is_ours = (stricmp(se->module, g_module) == 0);
+    bool is_ours = (stricmp(se->module, g_module) == 0);
 
     if (print_all || is_ours)
     {
@@ -581,7 +581,7 @@ int backtrace_main (int argc, char **argv)
            vm_bug_debug++;
            break;
       case 's':
-           g_use_sym_list = TRUE;
+           g_use_sym_list = true;
            break;
       case 'r':
            recursion_depth = atoi (optarg);

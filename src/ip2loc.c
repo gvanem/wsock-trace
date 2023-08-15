@@ -119,7 +119,7 @@
  *  \li `struct ip2loc_entry::latitude`.
  *  \li `struct ip2loc_entry::longitude`.
  *
- * if `g_cfg.GEOIP.show_position` or `g_cfg.GEOIP.show_map_url` is TRUE.
+ * if `g_cfg.GEOIP.show_position` or `g_cfg.GEOIP.show_map_url` is true.
  */
 
 #if 0
@@ -149,7 +149,7 @@ typedef struct IP2Location {
         uint64      sh_mem_max;
         uint64      sh_mem_index_errors;
         HANDLE      sh_mem_fd;
-        BOOL        sh_mem_already;
+        bool        sh_mem_already;
         struct stat stat_buf;
         uint8_t     db_type;
         uint8_t     db_column;
@@ -178,9 +178,9 @@ typedef struct ipv_t {
 static struct IP2Location *ip2loc_handle;
 
 /**
- * Set to TRUE in case `open_file()` found the .bin-file to be junk.
+ * Set to true in case `open_file()` found the .bin-file to be junk.
  */
-static BOOL ip2loc_bad;
+static bool ip2loc_bad;
 
 /** Number of loops in `IP2Location_get_ipv4_record()` to find an IPv4 entry.
  */
@@ -214,7 +214,7 @@ static IP2Location *open_file (const char *fname)
 {
   struct IP2Location *loc = (struct IP2Location*) calloc (1, sizeof(*loc));
   UINT   IPvX;
-  BOOL   is_IPv4_only, is_IPv6_only;
+  bool   is_IPv4_only, is_IPv6_only;
   SYSTEMTIME st;
 
   if (!loc)
@@ -259,12 +259,12 @@ static IP2Location *open_file (const char *fname)
   /* The IPvX count could now mean the count of IPv6 addresses
    * in a database with both IPv4 and IPv6 addresses.
    */
-  is_IPv4_only = is_IPv6_only = FALSE;
+  is_IPv4_only = is_IPv6_only = false;
   if (IPvX == loc->ipv6_db_count && loc->ipv4_db_count == 0)
-     is_IPv6_only = TRUE;
+     is_IPv6_only = true;
 
   else if (IPvX == loc->ipv4_db_count && loc->ipv6_db_count == 0)
-     is_IPv4_only = TRUE;
+     is_IPv4_only = true;
 
   memset (&st, '\0', sizeof(st));
   GetLocalTime (&st);
@@ -273,7 +273,7 @@ static IP2Location *open_file (const char *fname)
       loc->db_month == 0 || loc->db_month > 12 ||
       loc->db_year + 2000 > st.wYear)
   {
-    ip2loc_bad = TRUE;   /* Do not attempt this again */
+    ip2loc_bad = true;   /* Do not attempt this again */
     ip2loc_exit();
 
     memset (&st, '\0', sizeof(st));
@@ -308,10 +308,10 @@ static IP2Location *open_file (const char *fname)
  * Our initialiser for IP2Location library and binary data-file. <br>
  * Called from geoip_init().
  */
-BOOL ip2loc_init (void)
+bool ip2loc_init (void)
 {
   if (!g_cfg.GEOIP.enable || !g_cfg.GEOIP.ip2location_bin_file || ip2loc_bad)
-     return (FALSE);
+     return (false);
 
   if (!ip2loc_handle)
      ip2loc_handle = open_file (g_cfg.GEOIP.ip2location_bin_file);
@@ -509,7 +509,7 @@ static void IP2Location_read_record (IP2Location *loc, uint32_t rowaddr, uint32_
 /**
  * Get record for a IPv4 from database
  */
-static BOOL IP2Location_get_ipv4_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv, struct ip2loc_entry *out)
+static bool IP2Location_get_ipv4_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv, struct ip2loc_entry *out)
 {
   uint32_t baseaddr  = loc->ipv4_db_addr;
   uint32_t dbcolumn  = loc->db_column;
@@ -549,20 +549,20 @@ static BOOL IP2Location_get_ipv4_record (IP2Location *loc, uint32_t mode, ipv_t 
     if (ipno >= ipfrom && ipno < ipto)
     {
       IP2Location_read_record (loc, baseaddr + (mid * column), mode, out);
-      return (TRUE);
+      return (true);
     }
 
     if (ipno < ipfrom)
          high = mid - 1;
     else low  = mid + 1;
   }
-  return (FALSE);
+  return (false);
 }
 
 /**
  * Get record for a IPv6 from database
  */
-static BOOL IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv, struct ip2loc_entry *out)
+static bool IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t parsed_ipv, struct ip2loc_entry *out)
 {
   uint32_t baseaddr  = loc->ipv6_db_addr;
   uint32_t dbcolumn  = loc->db_column;
@@ -576,7 +576,7 @@ static BOOL IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t 
   num_6_loops = 0;
 
   if (!high)
-      return (FALSE);
+      return (false);
 
   if (ipv6index > 0)
   {
@@ -602,14 +602,14 @@ static BOOL IP2Location_get_ipv6_record (IP2Location *loc, uint32_t mode, ipv_t 
     if ((ipv6_compare(&ipno, &ipfrom) >= 0) && ipv6_compare(&ipno, &ipto) < 0)
     {
       IP2Location_read_record (loc, baseaddr + mid * column + 12, mode, out);
-      return (TRUE);
+      return (true);
     }
 
     if (ipv6_compare(&ipno, &ipfrom) < 0)
          high = mid - 1;
     else low = mid + 1;
   }
-  return (FALSE);
+  return (false);
 }
 
 /**
@@ -771,7 +771,7 @@ static float IP2Location_read_float (IP2Location *loc, uint32_t position)
  * This avoids the call to `inet_pton()` since the passed `addr`
  * should be a valid IPv4-address.
  */
-BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
+bool ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out)
 {
   ipv_t parsed_ipv;
 
@@ -780,7 +780,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
 
   memset (out, '\0', sizeof(*out));
   if (!IP2Location_get_ipv4_record(ip2loc_handle, lookup_flags, parsed_ipv, out))
-     return (FALSE);
+     return (false);
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
          INET_util_get_ip_num(addr, NULL), out->country_short, DWORD_CAST(num_4_loops));
@@ -791,7 +791,7 @@ BOOL ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
  * This avoids the call to `inet_pton()` since the passed
  * `addr` should be a valid IPv6-address.
  */
-BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
+bool ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *out)
 {
   ipv_t parsed_ipv;
 
@@ -808,7 +808,7 @@ BOOL ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
 
   memset (out, '\0', sizeof(*out));
   if (!IP2Location_get_ipv6_record(ip2loc_handle, lookup_flags, parsed_ipv, out))
-     return (FALSE);
+     return (false);
 
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",
          INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),

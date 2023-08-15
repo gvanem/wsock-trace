@@ -98,7 +98,7 @@ static int current_services_file;
 /**
  * Copy the `se->file_bits` over in the compare function
  */
-static BOOL copy_file_bits = FALSE;
+static bool copy_file_bits = false;
 
 /**
  * Duplicates found by 'smartlist_make_uniq()'.
@@ -137,10 +137,10 @@ static const char *decode_proto_str (int protocol)
  * Encode a `proto_str` value into a bitvalue. The opposite of decode_proto_str().
  *
  * \param[in] proto_str     the protocol string to parse.
- * \param[in] multi_fields  if TRUE, parse a string like `udp/tcp` recursively into
+ * \param[in] multi_fields  if true, parse a string like `udp/tcp` recursively into
  *                          a bitvalue as `(PROTO_UDP | PROTO_TCP)`.
  */
-static int encode_proto_str (const char *proto_str, BOOL multi_fields)
+static int encode_proto_str (const char *proto_str, bool multi_fields)
 {
   UINT protocol;
   int  rc;
@@ -165,7 +165,7 @@ static int encode_proto_str (const char *proto_str, BOOL multi_fields)
          tok = str_tok_r (NULL, "/", &end), i++)
     {
       TRACE (3, "tok[%d]: '%s'.\n", i, tok);
-      rc |= encode_proto_str (tok, FALSE);
+      rc |= encode_proto_str (tok, false);
     }
     TRACE (3, "rc: 0x%02X.\n", rc);
   }
@@ -245,7 +245,7 @@ static int parse_port_proto (struct service_entry *se, const char *value)
   if (sscanf(value, "%u/%" _STR(MAX_PROTOS_LEN) "s", &port, the_rest) == 2)
   {
     se->port  = port;
-    se->proto = encode_proto_str (the_rest, TRUE);
+    se->proto = encode_proto_str (the_rest, true);
     if (se->proto > PROTO_UNKNOWN)
        se->proto &= ~PROTO_UNKNOWN;  /* clear this bit */
     return (1);
@@ -361,9 +361,9 @@ void services_file_init (void)
   }
 
   smartlist_sort (services_list, services_compare_port_proto);
-  copy_file_bits = TRUE;
+  copy_file_bits = true;
   services_duplicates = smartlist_make_uniq (services_list, services_compare_port_proto, free);
-  copy_file_bits = FALSE;
+  copy_file_bits = false;
 }
 
 /**
@@ -396,16 +396,16 @@ static __inline const struct servent *fill_servent (const struct service_entry *
  * \param[in] protocol    the optional protocol name to look for.
  * \param[in] fallback    call the Winsock function `getservbyport()` if this
  *                        function fails to find a match.
- * \param[in] do_wstrace  TRUE when this function is called from services_run_tests().
+ * \param[in] do_wstrace  true when this function is called from services_run_tests().
  */
-const struct servent *ws_getservbyport (uint16_t port, const char *protocol, BOOL fallback, BOOL do_wstrace)
+const struct servent *ws_getservbyport (uint16_t port, const char *protocol, bool fallback, bool do_wstrace)
 {
   const struct servent *ret = NULL;
   const struct service_entry *se = NULL;
   struct service_entry lookup;
 
   lookup.port  = swap16 (port);
-  lookup.proto = protocol ? encode_proto_str(protocol, FALSE) : PROTO_UNKNOWN;
+  lookup.proto = protocol ? encode_proto_str(protocol, false) : PROTO_UNKNOWN;
 
   /**
    * Give up if:
@@ -468,7 +468,7 @@ static const struct test_table services_tests[] = {
 
 static void services_run_tests (void)
 {
-  BOOL fallback;
+  bool fallback;
   WORD save4, save5;
   int  i;
 
@@ -482,14 +482,14 @@ static void services_run_tests (void)
   C_puts ("\nRunning ~2services_tests[]~0:\n");
 
   if (startup_count > 0)   /* Call Winsock's `getservbyport()` too */
-       fallback = TRUE;
-  else fallback = FALSE;
+       fallback = true;
+  else fallback = false;
 
   for (i = 0; i < DIM(services_tests); i++)
   {
     const struct servent *se = ws_getservbyport (swap16(services_tests[i].port),
-                                                 services_tests[i].protocol, fallback, TRUE);
-    BOOL match = (se == services_tests[i].expect);
+                                                 services_tests[i].protocol, fallback, true);
+    bool match = (se == services_tests[i].expect);
 
     C_printf ("~2%2d~0: %-4s/%5s: %s~0\n", i,
               services_tests[i].service,

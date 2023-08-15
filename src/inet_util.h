@@ -23,7 +23,7 @@ extern void        INET_util_test_mask6 (void);
 
 extern const char *INET_util_get_ip_num (const struct in_addr *ip4, const struct in6_addr *ip6);
 extern const char *INET_util_in6_mask_str (const struct in6_addr *ip6);
-extern BOOL        INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *res, int *cidr_len);
-extern BOOL        INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *res, int *cidr_len);
+extern bool        INET_util_get_CIDR_from_IPv4_string (const char *str, struct in_addr *res, int *cidr_len);
+extern bool        INET_util_get_CIDR_from_IPv6_string (const char *str, struct in6_addr *res, int *cidr_len);
 
 #endif /* INET_UTIL_H */

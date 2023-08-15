@@ -57,7 +57,7 @@ void iana_init (void)
 
   if ((!iana_entries_ip4 || smartlist_len(iana_entries_ip4) == 0) &&
       (!iana_entries_ip6 || smartlist_len(iana_entries_ip6) == 0))
-     g_cfg.IANA.enable = FALSE;
+     g_cfg.IANA.enable = false;
 
   if (g_cfg.trace_level >= 2)
      iana_dump();
@@ -66,7 +66,7 @@ void iana_init (void)
 /**
  * Print-formatters common to both `iana_print_rec()` and `iana_dump()`.
  */
-static const char *iana_format_rec4 (const IANA_record *rec, BOOL aligned)
+static const char *iana_format_rec4 (const IANA_record *rec, bool aligned)
 {
   static const char *fmt[2] = { "%03lu/%d, %s, %s, %s, %s, %s",
                                 "%03lu/%-2d   %-20.20s %-8.8s %-20.20s %-22.22s  %s"
@@ -84,7 +84,7 @@ static const char *iana_format_rec4 (const IANA_record *rec, BOOL aligned)
   return (print_buf);
 }
 
-static const char *iana_format_rec6 (const IANA_record *rec, BOOL aligned)
+static const char *iana_format_rec6 (const IANA_record *rec, bool aligned)
 {
   char   addr_buf1 [MAX_IP6_SZ+1];
   char   addr_buf2 [MAX_IP6_SZ+10];
@@ -126,10 +126,10 @@ void iana_print_rec (const char *intro, const IANA_record *rec)
   switch (rec->family)
   {
     case AF_INET:
-         C_printf ("%s%s\n", intro, iana_format_rec4(rec, FALSE));
+         C_printf ("%s%s\n", intro, iana_format_rec4(rec, false));
          break;
     case AF_INET6:
-         C_printf ("%s%s\n", intro, iana_format_rec6(rec, FALSE));
+         C_printf ("%s%s\n", intro, iana_format_rec6(rec, false));
          break;
     case -1:
          C_printf ("%s%s\n", intro, "<no data>");
@@ -157,7 +157,7 @@ void iana_dump (void)
                  "                     status\n", max4);
 
     rec = smartlist_get (iana_entries_ip4, i);
-    C_printf (" %3d: %s\n", i, iana_format_rec4(rec, TRUE));
+    C_printf (" %3d: %s\n", i, iana_format_rec4(rec, true));
   }
 
   max6 = iana_entries_ip6 ? smartlist_len (iana_entries_ip6) : 0;
@@ -170,7 +170,7 @@ void iana_dump (void)
                  max4 > 0 ? "\n" : "", max6);
 
     rec = smartlist_get (iana_entries_ip6, i);
-    C_printf (" %3d: %s\n", i, iana_format_rec6(rec, TRUE));
+    C_printf (" %3d: %s\n", i, iana_format_rec6(rec, true));
   }
 }
 
@@ -692,8 +692,8 @@ int iana_main (int argc, char **argv)
   if (!*argv)
      return show_help();
 
-  g_cfg.IANA.enable = TRUE;
-  g_cfg.ASN.enable  = TRUE;
+  g_cfg.IANA.enable = true;
+  g_cfg.ASN.enable  = true;
 
   if (do_ip6)
   {
