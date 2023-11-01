@@ -3257,6 +3257,14 @@ void dump_DNSBL_addrinfo (const struct addrinfo *ai)
 #define WSAID_WSAPOLL { 0x18C76F85, 0xDC66, 0x4964, { 0x97,0x2E,0x23,0xC2,0x72,0x38,0x31,0x2B }}
 #endif
 
+/* Refs:
+ *  https://github.com/LenHolgate/RIO
+ *  https://serverframework.com/asynchronousevents/2011/10/windows-8-registered-io-networking-extensions.html
+ */
+#ifndef WSAID_MULTIPLE_RIO
+#define WSAID_MULTIPLE_RIO  { 0x8509E081, 0x96DD, 0x4005, { 0xB1,0x65,0x9E,0x2E,0xE8,0xC7,0x9E,0x3F }}
+#endif
+
 static const struct GUID_search_list extension_guids[] = {
                     ADD_VALUE (WSAID_ACCEPTEX),
                     ADD_VALUE (WSAID_CONNECTEX),
@@ -3266,7 +3274,8 @@ static const struct GUID_search_list extension_guids[] = {
                     ADD_VALUE (WSAID_TRANSMITPACKETS),
                     ADD_VALUE (WSAID_WSARECVMSG),
                     ADD_VALUE (WSAID_WSASENDMSG),
-                    ADD_VALUE (WSAID_WSAPOLL)
+                    ADD_VALUE (WSAID_WSAPOLL),
+                    ADD_VALUE (WSAID_MULTIPLE_RIO)
                   };
 
 void dump_extension_funcs (const GUID *in_guid, const void *out_buf)
