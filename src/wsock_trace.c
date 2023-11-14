@@ -1462,15 +1462,20 @@ EXPORT int WINAPI closesocket (SOCKET s)
 {
   TCP_INFO_v0 info;
   int  rc, rc2 = -1;
+  int  protocol = -1;
 
-  if (p_WSAIoctl && g_cfg.dump_tcpinfo && sock_list_type(s, NULL, NULL) == SOCK_STREAM)
+  if (p_WSAIoctl && g_cfg.dump_tcpinfo && sock_list_type(s, NULL, &protocol) == SOCK_STREAM)
   {
    /**
     * \todo
     * Check for Win-10 Build 20348 (or newer) before calling
     * `get_tcp_info_v1()` instead.
+
+    * Winsock2 does not seem to return `TCP_INFO_v0` on
+    * a `IPPROTO_IP` socket (?).
     */
-    get_tcp_info_v0 (s, &info, &rc2);
+    if (protocol != IPPROTO_IP)
+       get_tcp_info_v0 (s, &info, &rc2);
   }
 
   CHECK_PTR (p_closesocket);
