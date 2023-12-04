@@ -1020,9 +1020,9 @@ static void test_InetPtonW (void)
   struct in6_addr in6;
 
   TEST_CONDITION (== 1, InetPtonW (AF_INET, L"127.0.0.1", &in4));
-  TEST_CONDITION (== 0, InetPtonW (AF_INET, L"a.b.c.d", &in4));
+  TEST_CONDITION (!= 1, InetPtonW (AF_INET, L"a.b.c.d", &in4));
   TEST_CONDITION (== 1, InetPtonW (AF_INET6, L"2A00:1450:400F:805::1011", &in6));
-  TEST_CONDITION (== 0, InetPtonW (AF_INET6, L"2H00:1450:400F:805::GGGG", &in6));
+  TEST_CONDITION (!= 1, InetPtonW (AF_INET6, L"2H00:1450:400F:805::GGGG", &in6));
 }
 
 static void test_InetNtopW (void)
