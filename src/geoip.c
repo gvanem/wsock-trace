@@ -1438,21 +1438,21 @@ static DWORD update_file (const char *loc_file, const char *tmp_file, const char
  *
  * \param[in] family        If `AF_INET`, check if `g_cfg.GEOIP.ip4_file` needs to be updated.<br>
  *                          If `AF_INET6`, check if `g_cfg.GEOIP.ip6_file` needs to be updated.
- * \param[in] force_update  If true, download the `%TEMP%/geoip.tmp` / `%TEMP%/geoip6.tmp` regardless.
+ * \param[in] force_update  If true, download the `%TEMP%/wsock_trace/geoip.tmp` or
+ *                          `%TEMP%/wsock_trace/geoip6.tmp` regardless.
  */
 void geoip_update_file (int family, bool force_update)
 {
-  char        tmp_file [_MAX_PATH];
-  const char *env = getenv ("TEMP");
+  char tmp_file [_MAX_PATH];
 
   if (family == AF_INET)
   {
-    snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, "geoip.tmp");
+    snprintf (tmp_file, sizeof(tmp_file), "%s\\geoip.tmp", g_data.ws_tmp_dir);
     update_file (g_cfg.GEOIP.ip4_file, tmp_file, g_cfg.GEOIP.ip4_url, force_update);
   }
   else if (family == AF_INET6)
   {
-    snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, "geoip6.tmp");
+    snprintf (tmp_file, sizeof(tmp_file), "%s\\geoip6.tmp", g_data.ws_tmp_dir);
     update_file (g_cfg.GEOIP.ip6_file, tmp_file, g_cfg.GEOIP.ip6_url, force_update);
   }
   else

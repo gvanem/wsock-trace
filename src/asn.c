@@ -281,7 +281,7 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
 #ifdef __CYGWIN__
   /*
    * Since 'CopyFile()' does not understand a POSIX-path like
-   * "/cygdrive/c/TEMP\\location.db" or "/c/TEMP\\location.db".
+   * "/cygdrive/c/TEMP/wsock_trace\\location.db" or "/c/TEMP/wsock_trace\\location.db".
    * Just try to convert to Windows-form.
    */
   if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, db_temp_file, win_db_file, sizeof(win_db_file)) == 0)
@@ -301,12 +301,12 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
 }
 
 /**
- * Check if a temporary `%TEMP%/location.db.xz` file exists.
- * Otherwise download and decompress it to `%TEMP%/location.db`.
+ * Check if a temporary `%TEMP%/wsock_trace/location.db.xz` file exists.
+ * Otherwise download and decompress it to `%TEMP%/wsock_trace/location.db`.
  *
- * Then compare the file-time of `%TEMP%/location.db` with the final `db_file`.
+ * Then compare the file-time of `%TEMP%/wsock_trace/location.db` with the final `db_file`.
  * If the latter is too old; the time-difference is `>= g_cfg.ASN.max_days`,
- * copy `%TEMP%/location.db` to `db_file`.
+ * copy `%TEMP%/wsock_trace/location.db` to `db_file`.
  */
 void ASN_update_file (const char *db_file, bool force_update)
 {
@@ -326,9 +326,9 @@ void ASN_update_file (const char *db_file, bool force_update)
     return;
   }
 
-  snprintf (db_temp_file, sizeof(db_temp_file)-3, "%s\\location.db", getenv("TEMP"));
-  strcpy (db_xz_temp_file, db_temp_file);  /* == `%TEMP%/location.db` */
-  strcat (db_xz_temp_file, ".xz");         /* == `%TEMP%/location.db.xz` */
+  snprintf (db_temp_file, sizeof(db_temp_file)-3, "%s\\location.db", g_data.ws_tmp_dir);
+  strcpy (db_xz_temp_file, db_temp_file);  /* == `%TEMP%/wsock_trace/location.db` */
+  strcat (db_xz_temp_file, ".xz");         /* == `%TEMP%/wsock_trace/location.db.xz` */
 
   if (g_cfg.ASN.xz_decompress <= 0)
   {
@@ -341,7 +341,8 @@ void ASN_update_file (const char *db_file, bool force_update)
 
   need_update = false;
 
-  /* If `%TEMP%/location.db` does not exist, is 0 bytes or 'force_update == true', update it.
+  /* If `%TEMP%/wsock_trace/location.db` does not exist, is 0 bytes or
+   * 'force_update == true', update it.
    */
   if (st.st_size == 0 || force_update)
      need_update = true;
@@ -388,7 +389,7 @@ void ASN_update_file (const char *db_file, bool force_update)
     return;
   }
 
-  /* `%TEMP%/location.db.xz` need to be updated.
+  /* `%TEMP%/wsock_trace/location.db.xz` need to be updated.
    * Force a download, XZ-decompress and copy to the final `db_file`.
    */
   downloaded = INET_util_download_file (db_xz_temp_file, ASN_get_url());

@@ -544,7 +544,7 @@ static int DNSBL_update_file (const char *fname, const char *tmp_file, const cha
 
 #ifdef __CYGWIN__
   /*
-   * Since 'CopyFile()' does not understand a POSIX-path like "/cygdrive/c/TEMP\\drop.txt".
+   * Since 'CopyFile()' does not understand a POSIX-path like "/cygdrive/c/TEMP/wsock_trace\\drop.txt".
    */
   if (!strnicmp(tmp_file, "/cygdrive/", 10))
   {
@@ -572,10 +572,9 @@ static int DNSBL_update_file (const char *fname, const char *tmp_file, const cha
  */
 int DNSBL_update_files (bool force_update)
 {
-  char        tmp_file [_MAX_PATH];
-  const char *env = getenv ("TEMP");
-  time_t      now, expiry;
-  int         num = 0;
+  char   tmp_file [_MAX_PATH];
+  time_t now, expiry;
+  int    num = 0;
 
   if (!g_cfg.DNSBL.enable)
   {
@@ -588,13 +587,13 @@ int DNSBL_update_files (bool force_update)
   if (!force_update)
      expiry -= g_cfg.DNSBL.max_days * 24 * 3600;
 
-  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.drop_file));
+  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.drop_file));
   num += DNSBL_update_file (g_cfg.DNSBL.drop_file, tmp_file, g_cfg.DNSBL.drop_url, now, expiry);
 
-  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.edrop_file));
+  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.edrop_file));
   num += DNSBL_update_file (g_cfg.DNSBL.edrop_file, tmp_file, g_cfg.DNSBL.edrop_url, now, expiry);
 
-  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", env, basename(g_cfg.DNSBL.dropv6_file));
+  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.dropv6_file));
   num += DNSBL_update_file (g_cfg.DNSBL.dropv6_file, tmp_file, g_cfg.DNSBL.dropv6_url, now, expiry);
 
   return (num);

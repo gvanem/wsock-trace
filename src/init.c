@@ -1462,6 +1462,12 @@ static void init_g_data (void)
    * and the comments there.
    */
   InitializeCriticalSection (&g_data.crit_sect);
+
+  /* Set and create the temporary directory for 'geoip*.tmp' files etc.
+   */
+  snprintf (g_data.ws_tmp_dir, sizeof(g_data.ws_tmp_dir), "%s/wsock_trace", getenv("TEMP"));
+  if (!CreateDirectory(g_data.ws_tmp_dir, 0) && GetLastError() != ERROR_ALREADY_EXISTS)
+     WARNING ("Failed to create '%s': %s\n", g_data.ws_tmp_dir, win_strerror(GetLastError()));
 }
 
 /**
