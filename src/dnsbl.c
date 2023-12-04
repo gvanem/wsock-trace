@@ -359,8 +359,7 @@ struct test_list {
 
 static int DNSBL_test (const char *addr_str)
 {
-  int    i;
-  bool   rc;
+  int    i, rc;
   WORD   save1, save4, save5;
   static const struct test_list tests[] = {
                     { AF_INET,  "192.219.208.2", "103496" },  /* in drop.txt */
