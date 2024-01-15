@@ -39,8 +39,24 @@
 #include <libloc/database.h>
 #include <libloc/network.h>
 #include <libloc/resolv.h>
-#include <libloc/version.h>
-#include <libloc/windows/syslog.h> /* LOG_DEBUG */
+#include <libloc/windows/syslog.h>   /* LOG_DEBUG */
+
+/*
+ * Since 'Geo-IP/IPFire/src/libloc/version.h' is generated
+ * and no longer under Git revision control, just take the
+ * version numbers as in 'Geo-IP/IPFire/configure.ac':
+ */
+#ifndef LIBLOC_MAJOR_VER
+#define LIBLOC_MAJOR_VER  0
+#endif
+
+#ifndef LIBLOC_MINOR_VER
+#define LIBLOC_MINOR_VER  9
+#endif
+
+#ifndef LIBLOC_MICRO_VER
+#define LIBLOC_MICRO_VER  17
+#endif
 
 #define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
 #define SZ_OK                 0
