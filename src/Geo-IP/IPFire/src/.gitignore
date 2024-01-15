@@ -1,0 +1,17 @@
+.dirstamp
+.deps/
+.libs/
+*.la
+*.lo
+*.trs
+libloc.pc
+test-address.exe
+test-as.exe
+test-libloc.exe
+test-database.exe
+test-country.exe
+test-network.exe
+test-network-list.exe
+test-signature.exe
+test-stringpool.exe
+libloc/version.h
