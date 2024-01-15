@@ -1,7 +1,7 @@
 #
 # GNU Makefile for libloc. Supporting MinGW, MSVC or clang-cl.
 #
-# By G. Vanem <gvanem@yahoo.no> 2020 - 2023.
+# By G. Vanem <gvanem@yahoo.no> 2020 - 2024.
 #
 # Ref: https://git.ipfire.org/pub/git/location/libloc.git
 #      https://location.ipfire.org/how-to-use
@@ -13,9 +13,9 @@ LIBLOC_MINOR = 9
 LIBLOC_MICRO = 17
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
-DATE_STAMP = $(shell date.exe +%d-%B-%Y)
-MINGW_ROOT = $(realpath $(MINGW32))
-THIS_FILE  = $(firstword $(MAKEFILE_LIST))
+TODAY     := $(shell date.exe +%d-%B-%Y)
+THIS_FILE := $(firstword $(MAKEFILE_LIST))
+comma     := ,
 
 #
 # Used in generated Python scripts.
@@ -47,8 +47,7 @@ OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
 #
 # For C-preprocessing.
 #
-USE_ASTYLE_FORMATER ?= 1
-USE_CLANG_FORMATER  ?= 0
+USE_ASTYLE ?= 1
 
 #
 # Set 'USE_STATIC_LIBLOC=1' to link with '$(STATIC_LIB)' for the test programs.
@@ -80,15 +79,32 @@ define Usage
   Specify CC=clang-cl for clang-cl
 endef
 
-TEST_PROGS = test-address.exe      \
-             test-as.exe           \
-             test-country.exe      \
-             test-database.exe     \
-             test-libloc.exe       \
-             test-network.exe      \
-             test-network-list.exe \
-             test-signature.exe    \
-             test-stringpool.exe
+LIBLOC_SRC = address.c      \
+             as.c           \
+             as-list.c      \
+             country.c      \
+             country-list.c \
+             database.c     \
+             libloc.c       \
+             network.c      \
+             network-list.c \
+             resolv.c       \
+             stringpool.c   \
+             writer.c       \
+             win_str.c      \
+             win_mmap.c
+
+TEST_SRC = test-address.c      \
+           test-as.c           \
+           test-country.c      \
+           test-database.c     \
+           test-libloc.c       \
+           test-network-list.c \
+           test-network.c      \
+           test-signature.c    \
+           test-stringpool.c
+
+TEST_PROGS = $(TEST_SRC:.c=.exe)
 
 export CL=
 
@@ -204,7 +220,7 @@ else ifeq ($(CC),clang-cl)
             -Wno-incompatible-pointer-types \
             -Wno-single-bit-bitfield-constant-conversion
 else
-  CFLAGS += -W4 -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
+  CFLAGS += -W4 -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 -wd4152 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
 
   #
   # For warnings such as:
@@ -244,21 +260,6 @@ else
   OPENSSL_LIBS =
 endif
 
-LIBLOC_SRC = address.c      \
-             as.c           \
-             as-list.c      \
-             country.c      \
-             country-list.c \
-             database.c     \
-             libloc.c       \
-             network.c      \
-             network-list.c \
-             resolv.c       \
-             stringpool.c   \
-             writer.c       \
-             win_str.c      \
-             win_mmap.c
-
 LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
                $(notdir $(LIBLOC_SRC:.c=.$(O))))
 
@@ -273,11 +274,11 @@ PY_SRC = $(addprefix python/, \
 PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
            $(notdir $(PY_SRC:.c=.$(O))))
 
-all: $(OBJ_DIR) libloc/version.h $(TARGETS) py3_module epilogue
+all: libloc/version.h $(TARGETS) py3_module epilogue
 
 epilogue:
-	$(call white_msg, \nWelcome to libloc library and test programs.)
-	$(call white_msg, You could do a $(BRIGHT_GREEN)make -f $(THIS_FILE) run_tests | run_export_test $(BRIGHT_WHITE)too.)
+	$(call green_msg, \nWelcome to libloc library and test programs.)
+	$(call green_msg, You could do a $(BRIGHT_WHITE)make -f $(THIS_FILE) CC=$(CC) run_tests | run_export_test $(BRIGHT_GREEN)too.)
 
 $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
 	- mkdir $@
@@ -292,7 +293,7 @@ $(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
             $(OBJ_DIR)/test-stringpool.$(O)   \
             $(OBJ_DIR)/test-signature.$(O)
 
-$(STATIC_LIB): $(OBJ_DIR) $(LIBLOC_OBJ)
+$(STATIC_LIB): $(LIBLOC_OBJ)
 	lib -nologo -out:$@ $(LIBLOC_OBJ)
 	@echo
 
@@ -302,11 +303,11 @@ endif
 
 $(IMPORT_LIB): libloc-$(CPU).dll
 
-libloc-$(CPU).dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
+libloc-$(CPU).dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res | $(OBJ_DIR)/check-for-unused-libs.py
 	$(call link_DLL, $@, $(DEF_ARG)$^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), $(IMPORT_LIB))
 
 libloc/version.h: $(THIS_FILE)
-	$(call generate, $@, //)
+	$(call generate_c, $@)
 	$(file >> $@, #ifndef LIBLOC_VERSION_H)
 	$(file >> $@, #define LIBLOC_VERSION_H)
 	$(file >> $@, #define LIBLOC_MAJOR_VER  $(LIBLOC_MAJOR))
@@ -315,43 +316,48 @@ libloc/version.h: $(THIS_FILE)
 	$(file >> $@, #define PACKAGE_VERSION  "$(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)")
 	$(file >> $@, #endif)
 
-$(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE)
+$(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate, $@, ;)
 	@echo -e 'LIBRARY libloc-$(CPU).dll\nEXPORTS'               >> $@
 	nm $< | grep ' T $(uscore)loc_' | sed 's/^.* $(uscore)/  /' >> $@
 	@echo
 
-$(OBJ_DIR)/libloc.rc: $(THIS_FILE)
-	$(call generate, $@, //)
+$(OBJ_DIR)/libloc.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_c, $@)
 	$(file >> $@, #define RC_FILENAME     "libloc-$(CPU).dll")
 	$(file >> $@, #define RC_DESCRIPTION  "A library to determine the location of someone on the Internet.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
-$(OBJ_DIR)/_location.rc: $(THIS_FILE)
-	$(call generate, $@, //)
+$(OBJ_DIR)/_location.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_c, $@)
 	$(file >> $@, #define RC_FILENAME     "_location.pyd")
 	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for 'libloc-$(CPU).dll'.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
-$(OBJ_DIR)/%.obj: %.c
-	$(CC) -c $(CFLAGS) -Fo./$@ $<
+$(OBJ_DIR)/%.obj: %.c | $(OBJ_DIR) $(CC).args
+	$(CC) @$(CC).args -Fo./$@ $<
 	@echo
 
-$(OBJ_DIR)/%.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR) $(CC).args
+	$(CC) @$(CC).args -o $@ $<
 	@echo
 
-%.i: %.c FORCE cpp-filter.py
+$(CC).args: $(THIS_FILE)
+	$(call green_msg, All CFLAGS are in $@)
+	$(call create_resp_file, $@, -c $(CFLAGS))
+
+%.i: %.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
 	$(call C_preprocess, $@, $<)
 
 FORCE:
 
-cpp-filter.py: $(THIS_FILE)
-	$(call generate, $@, #)
-	$(file >> $@,if 1:)
-	$(file >> $@,$(CPP_FILTER_PY))
+$(OBJ_DIR)/cpp-filter.py: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_py,$@,$(CPP_FILTER_PY))
+
+$(OBJ_DIR)/check-for-unused-libs.py: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_py,$@,$(CHECK_FOR_UNUSED_LIBS_PY))
 
 #
 # Must use Python3.
@@ -363,23 +369,26 @@ cpp-filter.py: $(THIS_FILE)
 PYTHON ?= py -3
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
-$(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py
-	$(CC) -c $(CFLAGS) -I$(PY_ROOT)/include -Fo./$@ $<
+$(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py $(CC).args
+	$(CC) @$(CC).args -I$(PY_ROOT)/include -Fo./$@ $<
 	@echo
 
-$(OBJ_DIR)/py/%.o: python/%.c | $(OBJ_DIR)/py
-	$(CC) -c $(CFLAGS) -I$(PY_ROOT)/include -o $@ $<
+$(OBJ_DIR)/py/%.o: python/%.c | $(OBJ_DIR)/py $(CC).args
+	$(CC) @$(CC).args -I$(PY_ROOT)/include -o $@ $<
 	@echo
+
+py_%.i: python/%.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
+	$(call C_preprocess, $@, -I$(PY_ROOT)/include $<)
 
 $(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
-	$(call make_res, $@, $<)
+	$(call create_res_file, $@, $<)
 
 ifeq ($(USE_STATIC_LIBLOC),1)
-  test-%.exe: $(OBJ_DIR)/test-%.$(O) $(STATIC_LIB)
+  test-%.exe: $(OBJ_DIR)/test-%.$(O) $(STATIC_LIB) | $(OBJ_DIR)/check-for-unused-libs.py
 	$(call link_EXE, $@, $^ $(OPENSSL_LIBS) $(WS2_32))
 
 else
-  test-%.exe: $(OBJ_DIR)/test-%.$(O) $(IMPORT_LIB)
+  test-%.exe: $(OBJ_DIR)/test-%.$(O) $(IMPORT_LIB) | $(OBJ_DIR)/check-for-unused-libs.py
 	$(call link_EXE, $@, $^ $(WS2_32))
 endif
 
@@ -453,7 +462,7 @@ else
   PY_LIB = $(PY_ROOT)/libs/python3$(PY_D).lib
 endif
 
-py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install
+py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install $(OBJ_DIR)/check-for-unused-libs.py
 	$(call link_PYD, $@, $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res $(PY_LIB))
 
 py3_install/location.py: scripts/location.in
@@ -467,7 +476,8 @@ py3_install/location-importer.py: scripts/location-importer.in
 	@echo
 
 clean:
-	rm -f *.pdb *.map test-*.exe.core link.tmp cpp-filter.py libloc/version.h ../man/location.8 ../man/location.html
+	rm -f *.pdb *.map test-*.exe.core link.tmp link.args cl.args clang-cl.args gcc.args \
+	      libloc/version.h ../man/location.8 ../man/location.html
 	rm -fr $(OBJ_DIR)
 	@echo
 
@@ -512,7 +522,7 @@ red_msg    = $(call colour_msg,$(BRIGHT_RED)$(strip $(1)))
 define Warning
   $(1)
   $(1) DO NOT EDIT! This file was automatically generated
-  $(1) from $(realpath $(THIS_FILE)) at $(DATE_STAMP).
+  $(1) from $(realpath $(THIS_FILE)) at $(TODAY).
   $(1) Edit that file instead.
   $(1)
 endef
@@ -522,6 +532,25 @@ define generate
   $(file > $(1),$(call Warning,$(strip $(2))))
 endef
 
+define generate_c
+  $(call generate, $(1),//)
+endef
+
+define generate_py
+  $(call generate, $(1),#)
+  $(file >> $(1),if 1:)
+  $(file >> $(1),$(2))
+endef
+
+#
+# Create a response file $(1).
+# One word from $(2) per line.
+#
+define create_resp_file
+  $(file > $(1))
+  $(foreach f, $(2), $(file >> $(1),$(strip $(f))) )
+endef
+
 #
 # .$(O) -> .exe macro
 #   arg1, $(1): The .exe file.
@@ -529,21 +558,23 @@ endef
 #
 define link_EXE
   $(call green_msg, Linking $(1))
-  $(call link_EXE_$(MSVC_TYPE), $(1), $(2))
+  $(call create_resp_file, link.args, $(LDFLAGS) $(2))
+  $(call link_EXE_$(MSVC_TYPE), $(1))
   @echo
 endef
 
 define link_EXE_0
-  $(CC) $(LDFLAGS) -o $(1) $(2) > $(1:.exe=.map)
+  $(CC) $(LDFLAGS) -o $(1) @link.args > $(1:.exe=.map)
 endef
 
 #
 # Remove the .lib/.exp-files due to the pesky 'OPENSSL_Applink' export symbol.
 #
 define link_EXE_1
-  link $(LDFLAGS) -out:$(strip $(1)) $(2) > link.tmp
+  link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.exe=.map)
   @rm -f $(1:.exe=.lib) $(1:.exe=.exp)
+  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
 #
@@ -559,13 +590,16 @@ define link_DLL
 endef
 
 define link_DLL_0
-  $(CC) $(LDFLAGS) -shared -o $(1) -Wl,--out-implib,$(strip $(3)) $(2) > $(1:.dll=.map)
+  $(call create_resp_file, link.args, $(LDFLAGS) -shared -Wl$(comma)--out-implib$(comma)$(strip $(3)) $(2))
+  $(CC) -o $(1) @link.args > $(1:.dll=.map)
 endef
 
 define link_DLL_1
-  link $(LDFLAGS) -dll -out:$(strip $(1)) -implib:$(strip $(3)) $(2) > link.tmp
+  $(call create_resp_file, link.args, $(LDFLAGS) -dll -implib:$(strip $(3)) $(2))
+  link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.dll=.map)
   @rm -f $(3:.lib=.exp)
+  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
 #
@@ -580,36 +614,41 @@ define link_PYD
 endef
 
 define link_PYD_0
-  $(CC) $(LDFLAGS) -shared -o $(1) $(2) > $(1:.pyd=.map)
+  $(call create_resp_file, link.args, $(LDFLAGS) -shared $(2))
+  $(CC)-o $(1) @link.args > $(1:.pyd=.map)
 endef
 
 define link_PYD_1
-  link $(LDFLAGS) -libpath:$(PY_ROOT)/libs -dll -out:$(strip $(1)) $(2) > link.tmp
+  $(call create_resp_file, link.args, $(LDFLAGS) -dll -libpath:$(PY_ROOT)/libs $(2))
+  link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.pyd=.map)
   @rm -f $(1:.pyd=.lib) $(1:.pyd=.exp)
+  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
-define make_res
-  $(call make_res_$(MSVC_TYPE), $(1), $(2))
+define create_res_file
+  $(call create_res_file_$(MSVC_TYPE), $(1), $(2))
   @echo
 endef
 
-make_res_0 = windres $(RCFLAGS) -o $(1) -i $(2)
-make_res_1 = rc $(RCFLAGS) -Fo $(1) $(2)
+create_res_file_0 = windres $(RCFLAGS) -o $(1) -i $(2)
+create_res_file_1 = rc $(RCFLAGS) -Fo $(1) $(2)
 
-ifeq ($(USE_ASTYLE_FORMATER),1)
-  C_FORMATER = | astyle
-else ifeq ($(USE_CLANG_FORMATER),1)
-  C_FORMATER = | clang-format -style=Mozilla -assume-filename=c
+ifeq ($(USE_ASTYLE),1)
+  pp_filter  = | astyle
+  pp_comment = The preprocessed and AStyled output of '$(filter %.c, $(1))':
 else
-  C_FORMATER =
+  pp_filter =
+  pp_comment = The raw preprocessed output of '$(filter %.c, $(1))':
 endif
 
 define C_preprocess
-  @echo "The result of preprocessing $(strip $(2)) with these CFLAGS:" > $(1)
-  @echo $(CFLAGS)                            >> $(1)
-  @echo "--------------------------------- " >> $(1)
-  $(CC) -E $(CFLAGS) $(2) | $(PYTHON) cpp-filter.py $(C_FORMATER) >> $(1)
+  $(file  > $(1),/* $(call pp_comment, $(2)))
+  $(file >> $(1), * $(CC) -E)
+  @$(foreach f, $(CFLAGS) $(filter-out %.c, $(2)), $(file >> $(1), * $(f)))
+  $(file >> $(1), *----------------------------------------------------------------------------------)
+  $(file >> $(1), */)
+  $(CC) -E @$(CC).args $(strip $(2)) | $(PYTHON) $(OBJ_DIR)/cpp-filter.py $(pp_filter) >> $(1)
 endef
 
 define RC_COMMON
@@ -665,7 +704,7 @@ define RC_COMMON
         VALUE "ProductVersion",   PACKAGE_VERSION " (" CC_STRING ", " DBG_STRING ")"
         VALUE "PrivateBuild",     ""
         VALUE "SpecialBuild",     ""
-        VALUE "Comments",         "Built at $(DATE_STAMP)"
+        VALUE "Comments",         "Built at $(TODAY)"
       END
     END
   BLOCK "VarFileInfo"
@@ -706,14 +745,68 @@ define CPP_FILTER_PY
   print ("Removed %d empty lines." % empty_lines, file=sys.stderr)
 endef
 
-DEP_CFLAGS  = -MM $(filter -D% -I%, $(CFLAGS))
-DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.$$(O): /'
+define CHECK_FOR_UNUSED_LIBS_PY
+  import os, sys
 
-ALL_SOURCES = $(wildcard test-*.c) $(LIBLOC_SRC)
+  map_file    = sys.argv[1]
+  ignore_libs = [ "oldnames.lib" ]
+
+  class State():
+    IDLE   = 0
+    UNUSED = 1
+
+  class Colour():
+    RED = WHITE = RESET = ""
+
+  try:
+    import colorama
+    colorama.init()
+    Colour.RED   = colorama.Fore.RED   + colorama.Style.BRIGHT
+    Colour.WHITE = colorama.Fore.WHITE + colorama.Style.BRIGHT
+    Colour.RESET = colorama.Style.RESET_ALL
+  except:
+    pass
+
+  def cprint (color, s):
+    print ("%s%s%s" % (color, s, Colour.RESET))
+
+  def report (unused):
+    num = len(unused)
+    if num > 0:
+       cprint (Colour.RED, "%d unused %s in %s:" % (num, ["library", "libraries"][num > 1], map_file))
+       for u in unused:
+           print ("  " + u)
+    cprint (Colour.WHITE, "Done.")
+
+  def process_map (state):
+    unused_libs = []
+    f = open (map_file, "rt")
+    lines = f.readlines()
+    f.close()
+    for l in lines:
+      l = l.strip()
+      if l == "Unused libraries:":
+         state = State.UNUSED
+         continue
+      if state == State.UNUSED:
+         if l == "":
+            break
+         if os.path.basename (l).lower() not in ignore_libs:
+            unused_libs.append (l)
+    return unused_libs
+
+  report (process_map(State.IDLE))
+endef
+
+
+DEP_CFLAGS  = -MM $(filter -D% -I%, $(CFLAGS))
+DEP_REPLACE = sed -e 's@\(.*\)\.o: @\n$$(OBJ_DIR)\/\1.$$(O): @' \
+                  -e 's@libloc/version.h@@'
 
 depend:
 	$(call generate, .depend.Windows, #)
-	gcc $(DEP_CFLAGS) $(ALL_SOURCES) | $(DEP_REPLACE) >> .depend.Windows
+	gcc $(DEP_CFLAGS) $(TEST_SRC) $(LIBLOC_SRC) $(PY_SRC) | $(DEP_REPLACE) >> .depend.Windows
+	@echo
 
 -include .depend.Windows
 
