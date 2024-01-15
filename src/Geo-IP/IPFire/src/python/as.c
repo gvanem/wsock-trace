@@ -125,6 +125,12 @@ static PyObject* AS_richcompare(ASObject* self, ASObject* other, int op) {
 	Py_RETURN_NOTIMPLEMENTED;
 }
 
+static Py_hash_t AS_hash(ASObject* self) {
+	uint32_t number = loc_as_get_number(self->as);
+
+	return number;
+}
+
 static struct PyGetSetDef AS_getsetters[] = {
 	{
 		"name",
@@ -156,4 +162,5 @@ PyTypeObject ASType = {
 	.tp_repr =               (reprfunc)AS_repr,
 	.tp_str =                (reprfunc)AS_str,
 	.tp_richcompare =        (richcmpfunc)AS_richcompare,
+	.tp_hash =               (hashfunc)AS_hash,
 };
