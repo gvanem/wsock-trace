@@ -48,7 +48,7 @@ install:
   - cmd: if %BUILDER%-%CPU%. == mingw-x86.  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if %BUILDER%-%CPU%. == mingw-x64.  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
   - cmd: if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% > NUL & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: set PATH=c:\msys64\usr\bin;%PATH%
+  - cmd: if %BUILDER%-%CPU%. == cygwin-x64. set PATH=c:\msys64\usr\bin;%PATH%
 
 build_script:
   - cmd: CI\appveyor-script.bat init

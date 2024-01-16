@@ -83,7 +83,7 @@ _D =
 
 !if "$(USE_LUAJIT)" == "1"
 CFLAGS     = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
-LUAJIT_LIB = $(LUAJIT_ROOT)/lib/luajit_static-$(CPU).lib
+LUAJIT_LIB = $(LUAJIT_ROOT)/src/luajit_static-$(CPU).lib
 EX_LIBS    = $(LUAJIT_LIB)
 WSOCK_DEP  = $(LUAJIT_LIB)
 !endif
@@ -236,7 +236,10 @@ compile_luajit_0:
 	@echo
 
 compile_luajit_1:
-	make --directory $(LUAJIT_ROOT) -f Makefile.Windows CC=cl CPU=$(CPU) static
+	pushd $(LUAJIT_ROOT)\src      &         \
+	if not exist luajit_static-$(CPU).lib ( \
+	   msvcbuild.bat debug static &         \
+	   copy lua51.lib luajit_static-$(CPU).lib )
 	@echo
 
 libloc$(_D)-$(CPU).lib: $(LIBLOC_OBJ)
