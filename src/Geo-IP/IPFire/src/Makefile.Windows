@@ -1,12 +1,12 @@
 #
-# GNU Makefile for libloc. Supporting MinGW, MSVC or clang-cl.
+# GNU Makefile for libloc. Supporting MinGW, Cygwin, MSVC or clang-cl.
 #
 # By G. Vanem <gvanem@yahoo.no> 2020 - 2024.
 #
 # Ref: https://git.ipfire.org/pub/git/location/libloc.git
 #      https://location.ipfire.org/how-to-use
 #
-# From '../configure.ac':
+# From '../configure.ac' and 'AC_INIT()':
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
@@ -14,6 +14,7 @@ LIBLOC_MICRO = 17
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 TODAY     := $(shell date.exe +%d-%B-%Y)
+UNAME     := $(shell uname -o)
 THIS_FILE := $(firstword $(MAKEFILE_LIST))
 comma     := ,
 
@@ -28,6 +29,13 @@ ABS_SRCDIR   = $(realpath ..)
 # Use CRT debug (and 'ENABLE_DEBUG').
 #
 USE_CRT_DEBUG ?= 0
+
+#
+# Enable Lua-JIT support? For MSVC or clang-cl only.
+#
+USE_LUA ?= 1
+LUA_ROOT = ../../../LuaJIT
+LUA_LIB  = $(LUA_ROOT)/lib/luajit_static-$(CPU).lib
 
 #
 # Use Winsock-trace library, MSVC or clang-cl only.
@@ -74,10 +82,13 @@ endif
 define Usage
 
   Usage: "$(MAKE) -f $(THIS_FILE) CC=[gcc | cl | clang-cl] [all | clean | realclean]"
-  Specify CC=gcc      for MinGW
+  Specify CC=gcc      for MinGW / Cygwin
   Specify CC=cl       for MSVC
   Specify CC=clang-cl for clang-cl
 endef
+
+c_to_obj = $(addprefix $(OBJ_DIR)/$(strip $(2)), \
+             $(notdir $(1:.c=.$(O))))
 
 LIBLOC_SRC = address.c      \
              as.c           \
@@ -88,6 +99,7 @@ LIBLOC_SRC = address.c      \
              libloc.c       \
              network.c      \
              network-list.c \
+             network-tree.c \
              resolv.c       \
              stringpool.c   \
              writer.c       \
@@ -109,7 +121,7 @@ TEST_PROGS = $(TEST_SRC:.c=.exe)
 export CL=
 
 ifeq ($(CC),gcc)
-  OBJ_DIR   = MinGW_obj
+  OBJ_DIR   = gcc_obj
   MSVC_TYPE = 0
 
 else ifeq ($(CC),cl)
@@ -119,6 +131,7 @@ else ifeq ($(CC),cl)
 else ifeq ($(CC),clang-cl)
   OBJ_DIR   = clang_obj
   MSVC_TYPE = 1
+
 else
   $(error $(Usage))
 endif
@@ -136,7 +149,6 @@ ifeq ($(CC),gcc)
   else
     RCFLAGS += --target=pe-i386
   endif
-
 
   STATIC_LIB = libloc-$(CPU).a
   IMPORT_LIB = libloc-$(CPU).dll.a
@@ -165,7 +177,7 @@ else
               -D_CRTDBG_MAP_ALLOC \
               -DENABLE_DEBUG      \
               -FIcrtdbg.h
-    PY_D    = _d
+    PY_D = _d
   else
     CFLAGS += -MD -Ot
   endif
@@ -183,17 +195,23 @@ CFLAGS += -I. -I./libloc/windows \
           -DLIBLOC_PRIVATE       \
           -D_WIN32_WINNT=0x601
 
+ifeq ($(UNAME),Cygwin)
+  USE_OPENSSL = 0
+  CFLAGS      += -D__USE_W32_SOCKETS
+else
+  CFLAGS += -DLIBLOC_USING_WINSOCK2
+endif
+
 #
 # Does not work with Cygwin
 #
-ifneq ($(CC),gcc)
+ifeq ($(MSVC_TYPE),1)
   CFLAGS += -DABS_SRCDIR=\"$(ABS_SRCDIR)\" \
             -DLIBLOC_DEFAULT_DATABASE_PATH=\"$(DATABASE_DIR)\"
 endif
 
 ifeq ($(USE_OPENSSL),1)
-  CFLAGS += -I$(OPENSSL_ROOT)/include \
-            -DUSE_OPENSSL
+  CFLAGS += -I$(OPENSSL_ROOT)/include
 else
   CFLAGS += -I../../.. \
             -I./fake-OpenSSL
@@ -207,7 +225,8 @@ ifeq ($(CC),gcc)
             -Wno-format            \
             -Wno-format-extra-args \
             -Wno-strict-aliasing   \
-            -Wno-unused-variable
+            -Wno-unused-variable   \
+            -Wno-implicit-function-declaration
 
 else ifeq ($(CC),clang-cl)
   CFLAGS += -W4                             \
@@ -254,14 +273,13 @@ endif
 DNS_LIB = $(call select, -ldnsapi, dnsapi.lib)
 
 ifeq ($(USE_OPENSSL),1)
-  OPENSSL_LIBS = $(call select, $(OPENSSL_ROOT)/lib/libcrypto.dll-$(CPU).a, \
+  OPENSSL_LIBS = $(call select, -lcrypto, \
                                 $(OPENSSL_ROOT)/lib/libcrypto_imp-$(CPU).lib)
 else
   OPENSSL_LIBS =
 endif
 
-LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
-               $(notdir $(LIBLOC_SRC:.c=.$(O))))
+LIBLOC_OBJ = $(call c_to_obj, $(LIBLOC_SRC),)
 
 PY_SRC = $(addprefix python/, \
            as.c               \
@@ -271,16 +289,45 @@ PY_SRC = $(addprefix python/, \
            network.c          \
            writer.c)
 
-PY_OBJ = $(addprefix $(OBJ_DIR)/py/, \
-           $(notdir $(PY_SRC:.c=.$(O))))
+PY_OBJ = $(call c_to_obj, $(PY_SRC), py/)
+
+ifeq ($(USE_LUA)-$(MSVC_TYPE),1-1)
+  TARGETS += lua_install/location.dll \
+             lua_install/location-lua.lib  # No real need for this
+
+  LUA_SRC = $(addprefix lua/, \
+              as.c            \
+              country.c       \
+              database.c      \
+              location.c      \
+              network.c)
+
+  LUA_OBJ = $(call c_to_obj, $(LUA_SRC), lua/)
+
+  #
+  # Must compile '$(LIBLOC_SRC)' without OpenSSL support
+  #
+  LUA_OBJ += $(call c_to_obj, $(LIBLOC_SRC), libloc-lua/)
+else
+  LUA_SRC =
+endif
+
 
 all: libloc/version.h $(TARGETS) py3_module epilogue
 
 epilogue:
 	$(call green_msg, \nWelcome to libloc library and test programs.)
-	$(call green_msg, You could do a $(BRIGHT_WHITE)make -f $(THIS_FILE) CC=$(CC) run_tests | run_export_test $(BRIGHT_GREEN)too.)
+	$(call green_msg, You could do a $(BRIGHT_WHITE)make -f $(THIS_FILE) CC=$(CC) \
+	                  [ run_tests | run_export_test | run_lua_test ] $(BRIGHT_GREEN)too.)
 
-$(OBJ_DIR) $(OBJ_DIR)/py py3_install py3_install/location:
+$(OBJ_DIR)            \
+$(OBJ_DIR)/lua        \
+$(OBJ_DIR)/libloc-lua \
+$(OBJ_DIR)/py         \
+lua_install           \
+lua_install/luaunit   \
+py3_install           \
+py3_install/location:
 	- mkdir $@
 
 .SECONDARY: $(OBJ_DIR)/test-address.$(O)      \
@@ -299,6 +346,8 @@ $(STATIC_LIB): $(LIBLOC_OBJ)
 
 ifeq ($(MSVC_TYPE),1)
   DEF_ARG = -def:
+else
+  DEF_ARG =
 endif
 
 $(IMPORT_LIB): libloc-$(CPU).dll
@@ -336,13 +385,15 @@ $(OBJ_DIR)/_location.rc: $(THIS_FILE) | $(OBJ_DIR)
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
-$(OBJ_DIR)/%.obj: %.c | $(OBJ_DIR) $(CC).args
-	$(CC) @$(CC).args -Fo./$@ $<
+$(OBJ_DIR)/location.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_c, $@)
+	$(file >> $@, #define RC_FILENAME     "location.dll")
+	$(file >> $@, #define RC_DESCRIPTION  "LuaJIT module for 'libloc-$(CPU).dll'.")
+	$(file >> $@, $(RC_COMMON))
 	@echo
 
-$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR) $(CC).args
-	$(CC) @$(CC).args -o $@ $<
-	@echo
+$(OBJ_DIR)/%.$(O): %.c | $(OBJ_DIR) $(CC).args
+	$(call C_compile, $@, $<)
 
 $(CC).args: $(THIS_FILE)
 	$(call green_msg, All CFLAGS are in $@)
@@ -369,17 +420,65 @@ $(OBJ_DIR)/check-for-unused-libs.py: $(THIS_FILE) | $(OBJ_DIR)
 PYTHON ?= py -3
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
-$(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py $(CC).args
-	$(CC) @$(CC).args -I$(PY_ROOT)/include -Fo./$@ $<
-	@echo
-
-$(OBJ_DIR)/py/%.o: python/%.c | $(OBJ_DIR)/py $(CC).args
-	$(CC) @$(CC).args -I$(PY_ROOT)/include -o $@ $<
-	@echo
+$(OBJ_DIR)/py/%.$(O): python/%.c | $(OBJ_DIR)/py $(CC).args
+	$(call C_compile, $@, -I$(PY_ROOT)/include $<)
 
 py_%.i: python/%.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
 	$(call C_preprocess, $@, -I$(PY_ROOT)/include $<)
 
+#
+# LuaJIT stuff for MSVC/clang-cl:
+#
+lua_install/location-lua.lib: lua_install/location.dll
+
+lua_install/location.dll: $(LUA_OBJ) $(OBJ_DIR)/location.res $(LUA_ROOT)/lib/luajit_static-$(CPU).lib | $(OBJ_DIR)/check-for-unused-libs.py lua_install
+	$(call link_DLL, $@, -export:luaopen_location $^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), lua_install/location-lua.lib)
+
+LUA_CFLAGS = -I$(LUA_ROOT)/src \
+             -DLIBLOC_LUAJIT_HACKS
+
+$(OBJ_DIR)/lua/%.obj: lua/%.c | $(OBJ_DIR)/lua $(CC).args
+	$(call C_compile, $@, $(LUA_CFLAGS) $<)
+
+$(OBJ_DIR)/libloc-lua/%.obj: %.c | $(OBJ_DIR)/libloc-lua $(CC).args
+	$(call C_compile, $@, $(LUA_CFLAGS) $<)
+
+lua_%.i: %.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
+	$(call C_preprocess, $@, $(LUA_CFLAGS) $<)
+
+lua_%.i: lua/%.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
+	$(call C_preprocess, $@, $(LUA_CFLAGS) $<)
+
+run_lua_test: lua_module      \
+              install_luaunit \
+              $(LUA_ROOT)/bin/luajit.exe
+	$(call green_msg, Running $(BRIGHT_WHITE)$(LUA_ROOT)/bin/luajit.exe ../tests/lua/main.lua)
+	@export LOC_LOG=6                                              \
+	 export LUA_TRACE=0                                            \
+	 export LUA_CPATH=$(realpath lua_install)/?.dll                \
+	 export LUA_PATH=$(realpath lua_install)/luaunit/?.lua         \
+	 export TEST_DATABASE=$(realpath ../data/database.db)          \
+	 export TEST_SIGNING_KEY=$(realpath ../data/signing-key.pem) ; \
+	$(LUA_ROOT)/bin/luajit.exe ../tests/lua/main.lua
+	@echo
+
+lua_module: lua_install/location.dll
+	cp --update $(LUA_DLL_FILES) lua_install/
+	@echo
+
+install_luaunit: lua_install/luaunit
+	$(call green_msg, Cloning $(BRIGHT_WHITE)https://github.com/bluebird75/luaunit.git)
+	- git clone https://github.com/bluebird75/luaunit.git lua_install/luaunit
+	@echo
+
+lua_module: lua_install/location.dll lua_install
+
+$(LUA_ROOT)/bin/luajit.exe $(LUA_ROOT)/lib/luajit_static-$(CPU).lib:
+	$(MAKE) --directory $(LUA_ROOT) --file Makefile.Windows CC=$(CC) all
+
+#
+# Misc stuff:
+#
 $(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
 	$(call create_res_file, $@, $<)
 
@@ -418,7 +517,6 @@ PY_FILES = $(addprefix python/location/, \
              downloader.py               \
              export.py                   \
              i18n.py                     \
-             importer.py                 \
              logger.py)
 
 PY_GEN_FILES = $(addprefix py3_install/, \
@@ -429,21 +527,27 @@ PY_GEN_FILES = $(addprefix py3_install/, \
 $(PY_GEN_FILES): $(THIS_FILE)
 
 #
-# Needed by '_location.pyd'
+# Needed by 'py3_install/_location.pyd'
 #
 PY_DLL_FILES = libloc-$(CPU).dll
 
 #
-# This could be handy for debugging
+# Needed by 'lua_install/location.dll'
+#
+LUA_DLL_FILES = libloc-$(CPU).dll
+
+#
+# These could be handy for debugging
 #
 ifneq ($(CC),gcc)
-  PY_DLL_FILES += libloc-$(CPU).pdb
+  PY_DLL_FILES  += libloc-$(CPU).pdb
+  LUA_DLL_FILES += libloc-$(CPU).pdb
 endif
 
-cyg_test:
-	@echo `$(shell uname -o)`
+uname_test:
+	@echo 'UNAME: $(UNAME)'
 
-ifeq ($(shell uname -o)-$(CC),Cygwin-gcc)
+ifeq ($(UNAME)-$(CC),Cygwin-gcc)
   py3_module:
 	$(call red_msg, $@ not possible for Cygwin)
 else
@@ -454,7 +558,7 @@ else
 endif
 
 #
-# Hopefully there is only 1 Python library for MinGW matching this:
+# Hopefully there is only 1 Python library for MinGW / Cygwin matching this:
 #
 ifeq ($(CC),gcc)
   PY_LIB = $(word 1, $(wildcard $(PY_ROOT)/libs/libpython3*.a))
@@ -477,15 +581,15 @@ py3_install/location-importer.py: scripts/location-importer.in
 
 clean:
 	rm -f *.pdb *.map test-*.exe.core link.tmp link.args cl.args clang-cl.args gcc.args \
-	      libloc/version.h ../man/location.8 ../man/location.html
+	      libloc/version.h ../man/location.1 ../man/location.html
 	rm -fr $(OBJ_DIR)
 	@echo
 
 vclean realclean: clean
-	rm -fr py3_install
+	rm -fr py3_install lua_install
 	rm -f $(TARGETS) .depend.Windows
 
-man_doc:  ../man/location.8
+man_doc:  ../man/location.1
 html_doc: ../man/location.html
 
 ../man/location.xml: ../man/location.txt ../man/asciidoc.conf
@@ -497,9 +601,10 @@ XSLTPROC_FLAGS = --stringparam man.output.quietly 1          \
                  --stringparam man.authors.section.enabled 1 \
                  --stringparam man.copyright.section.enabled 1
 
-XSLTPROC_FLAGS += http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
+# XSLTPROC_FLAGS += http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
+XSLTPROC_FLAGS += --nonet docbook.xsl
 
-../man/location.8: ../man/location.xml
+../man/location.1: ../man/location.xml
 	xsltproc.exe -o $@ $(XSLTPROC_FLAGS) $<
 
 ../man/location.html: ../man/location.txt ../man/asciidoc.conf
@@ -634,6 +739,18 @@ endef
 create_res_file_0 = windres $(RCFLAGS) -o $(1) -i $(2)
 create_res_file_1 = rc $(RCFLAGS) -Fo $(1) $(2)
 
+ifeq ($(MSVC_TYPE),1)
+  define C_compile
+    $(CC) @$(CC).args -Fo./$(strip $(1) $(2))
+    @echo
+  endef
+else
+  define C_compile
+    $(CC) @$(CC).args -o $(strip $(1) $(2))
+    @echo
+  endef
+endif
+
 ifeq ($(USE_ASTYLE),1)
   pp_filter  = | astyle
   pp_comment = The preprocessed and AStyled output of '$(filter %.c, $(1))':
@@ -673,10 +790,14 @@ define RC_COMMON
 
   #if defined(__MINGW32__)
     #define CC_STRING  "MinGW"
+  #elif defined(__CYGWIN__)
+    #define CC_STRING  "Cygwin"
   #elif defined(__clang__)
     #define CC_STRING  "clang-cl"
-  #else
+  #elif defined(_MSC_VER)
     #define CC_STRING  "MSVC"
+  #else
+    #error "Unsupported compiler"
   #endif
 
   VS_VERSION_INFO VERSIONINFO
@@ -805,7 +926,7 @@ DEP_REPLACE = sed -e 's@\(.*\)\.o: @\n$$(OBJ_DIR)\/\1.$$(O): @' \
 
 depend:
 	$(call generate, .depend.Windows, #)
-	gcc $(DEP_CFLAGS) $(TEST_SRC) $(LIBLOC_SRC) $(PY_SRC) | $(DEP_REPLACE) >> .depend.Windows
+	gcc $(DEP_CFLAGS) $(TEST_SRC) $(LIBLOC_SRC) $(LUA_SRC) $(PY_SRC) | $(DEP_REPLACE) >> .depend.Windows
 	@echo
 
 -include .depend.Windows
