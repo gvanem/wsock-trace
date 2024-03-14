@@ -38,7 +38,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   Wsock-trace is able to trace these too.
 
 * *IP-Country* information thanks to the **[MaxMind](https://www.maxmind.com/en/geoip2-services-and-databases)**
-  Lite databases. Thanks to the **[Tor-project](https://gitweb.torproject.org/tor.git/plain/src/config/)**
+  Lite databases. Thanks to the **[Tor-project](https://gitlab.torproject.org/tpo/core/tor/-/tree/main/src/config?ref_type=heads)**
   for a simplified CSV version of these MaxMind GeoIP-databases.
   (using the CSV files [`GeoIP.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L213)
   and [`GeoIP6.csv`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L214)
