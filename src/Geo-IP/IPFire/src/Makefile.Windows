@@ -318,7 +318,7 @@ all: libloc/version.h $(TARGETS) py3_module epilogue
 epilogue:
 	$(call green_msg, \nWelcome to libloc library and test programs.)
 	$(call green_msg, You could do a $(BRIGHT_WHITE)make -f $(THIS_FILE) CC=$(CC) \
-	                  [ run_tests | run_export_test | run_lua_test ] $(BRIGHT_GREEN)too.)
+	                  [ run_tests | run_export_test | run_dedup_test | run_lua_test ] $(BRIGHT_GREEN)too.)
 
 $(OBJ_DIR)            \
 $(OBJ_DIR)/lua        \
@@ -504,6 +504,10 @@ run_export_test: py3_module
 	export PYTHONPATH=$(realpath py3_install) ; \
 	export TEST_DATA_DIR=$(realpath ../data)  ; \
 	$(PYTHON) ../tests/python/test-export.py
+
+run_dedup_test: py3_module
+	export PYTHONPATH=$(realpath py3_install) ; \
+	$(PYTHON) ../tests/python/networks-dedup.py
 
 #
 # Rules for building the Python3 module.
