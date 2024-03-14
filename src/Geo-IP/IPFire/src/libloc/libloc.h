@@ -17,7 +17,15 @@
 #ifndef LIBLOC_H
 #define LIBLOC_H
 
-#if defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS))
+#if !defined(LIBLOC_USING_WINSOCK2)    /* if not defined in makefile */
+  #if defined(_WIN32)                  /* not a built-in in Cygwin */
+    #define LIBLOC_USING_WINSOCK2
+  #elif defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)
+    #define LIBLOC_USING_WINSOCK2      /* if not using POSIX sockets in Cygwin */
+  #endif
+#endif
+
+#if defined(LIBLOC_USING_WINSOCK2)
   #include <sys/types.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>
@@ -27,6 +35,12 @@
 #else
   #include <arpa/inet.h>
   #include <netinet/in.h>
+#endif
+
+#if defined(LIBLOC_LUAJIT_HACKS)
+  #include <lua.h>
+  #include <lauxlib.h>
+  #include <libloc/luajit-hacks.h>
 #endif
 
 #include <stdarg.h>

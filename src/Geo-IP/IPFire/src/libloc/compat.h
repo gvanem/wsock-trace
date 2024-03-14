@@ -82,6 +82,9 @@
     #if !defined(__CYGWIN__)
       extern char  *strsep  (char **stringp, const char *delim);
       extern time_t timegm (struct tm *tm);
+      extern char  *get_neterr (void);
+
+      #define LIBLOC_NETERR() get_neterr()
     #endif
 
     #if !defined(Py_PYTHON_H) && !defined(ssize_t) && !defined(_SSIZE_T_DEFINED)
@@ -98,4 +101,9 @@
     #endif
   #endif    /* LIBLOC_PRIVATE */
 #endif      /* _WIN32 || __CYGWIN__ */
+
+#ifndef LIBLOC_NETERR
+#define LIBLOC_NETERR() strerror(errno)
 #endif
+
+#endif  /* LIBLOC_COMPAT_H */

@@ -26,11 +26,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#if !(defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)))
-#  include <arpa/inet.h>
-#  include <netinet/in.h>
-#endif
-
 #ifdef HAVE_ENDIAN_H
 #  include <endian.h>
 #endif
@@ -40,6 +35,12 @@
 #include <openssl/pem.h>
 
 #include <libloc/libloc.h>
+
+#ifndef LIBLOC_USING_WINSOCK2
+#  include <arpa/inet.h>
+#  include <netinet/in.h>
+#endif
+
 #include <libloc/address.h>
 #include <libloc/as.h>
 #include <libloc/as-list.h>
@@ -247,7 +248,7 @@ static int loc_database_mmap(struct loc_database* db) {
 	// Determine the length of the database
 	db->length = lseek(fd, 0, SEEK_END);
 	if (db->length < 0) {
-		ERROR(db->ctx, "Could not determine the length of the database: %m\n");
+		ERROR(db->ctx, "Could not determine the length of the database: %s\n", strerror(errno));
 		return 1;
 	}
 
@@ -256,7 +257,7 @@ static int loc_database_mmap(struct loc_database* db) {
 	// Map all data
 	db->data = mmap(NULL, db->length, PROT_READ, MAP_SHARED, fd, 0);
 	if (db->data == MAP_FAILED) {
-		ERROR(db->ctx, "Could not map the database: %m\n");
+		ERROR(db->ctx, "Could not map the database: %s\n", strerror(errno));
 		db->data = NULL;
 		return 1;
 	}
@@ -468,7 +469,7 @@ static void loc_database_free(struct loc_database* db) {
 	if (db->data) {
 		r = munmap(db->data, db->length);
 		if (r)
-			ERROR(db->ctx, "Could not unmap the database: %m\n");
+			ERROR(db->ctx, "Could not unmap the database: %s\n", strerror(errno));
 	}
 
 	// Free the stringpool
@@ -575,7 +576,7 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 	struct loc_database_magic magic;
 	bytes_read = fread(&magic, 1, sizeof(magic), db->f);
 	if (bytes_read < sizeof(magic)) {
-		ERROR(db->ctx, "Could not read header: %m\n");
+		ERROR(db->ctx, "Could not read header: %s\n", strerror(errno));
 		r = 1;
 		goto CLEANUP;
 	}
@@ -860,8 +861,8 @@ static int __loc_database_lookup_handle_leaf(struct loc_database* db, const stru
 	// Fetch the network
 	int r = loc_database_fetch_network(db, network, network_address, prefix, network_index);
 	if (r) {
-		ERROR(db->ctx, "Could not fetch network %jd from database: %m\n",
-			(intmax_t)network_index);
+		ERROR(db->ctx, "Could not fetch network %jd from database: %s\n",
+			(intmax_t)network_index, strerror(errno));
 		return r;
 	}
 
@@ -1119,7 +1120,7 @@ LOC_EXPORT int loc_database_enumerator_new(struct loc_database_enumerator** enum
 	e->network_stack_depth = 1;
 	e->networks_visited = calloc(db->network_node_objects.count, sizeof(*e->networks_visited));
 	if (!e->networks_visited) {
-		ERROR(db->ctx, "Could not allocated visited networks: %m\n");
+		ERROR(db->ctx, "Could not allocated visited networks: %s\n", strerror(errno));
 		r = 1;
 		goto ERROR;
 	}

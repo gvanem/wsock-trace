@@ -39,6 +39,7 @@ loc_log_null(struct loc_ctx *ctx, const char *format, ...) {}
 #undef INFO   /* Some of these are in some Windows SDK headers too */
 #undef ERROR
 #undef DEBUG
+#undef DELETE
 
 #ifdef ENABLE_DEBUG
 #  define DEBUG(ctx, ...) loc_log_cond(ctx, LOG_DEBUG, ## __VA_ARGS__)

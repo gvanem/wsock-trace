@@ -51,7 +51,7 @@ static int loc_stringpool_grow(struct loc_stringpool* pool, const size_t size) {
 	// Reallocate blocks
 	pool->blocks = realloc(pool->blocks, pool->size);
 	if (!pool->blocks) {
-		ERROR(pool->ctx, "Could not grow string pool: %m\n");
+		ERROR(pool->ctx, "Could not grow string pool: %s\n", strerror(errno));
 		return 1;
 	}
 

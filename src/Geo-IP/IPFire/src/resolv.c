@@ -14,18 +14,18 @@
 	Lesser General Public License for more details.
 */
 
-#if !(defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)))
-#  include <arpa/nameser.h>
-#  include <arpa/nameser_compat.h>
-#  include <resolv.h>
-#endif
-
 #include <string.h>
 #include <time.h>
 
 #include <libloc/format.h>
 #include <libloc/private.h>
 #include <libloc/resolv.h>
+
+#ifndef LIBLOC_USING_WINSOCK2
+#  include <arpa/nameser.h>
+#  include <arpa/nameser_compat.h>
+#  include <resolv.h>
+#endif
 
 static int parse_timestamp(const unsigned char* txt, time_t* t) {
     struct tm ts;
@@ -46,7 +46,7 @@ static int parse_timestamp(const unsigned char* txt, time_t* t) {
     return 0;
 }
 
-#if !(defined(_WIN32) || (defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)))
+#if !defined(LIBLOC_USING_WINSOCK2)
 LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
         unsigned int version, time_t* t) {
     // Initialise the resolver
@@ -153,7 +153,7 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
     return r;
 }
 
-#else /* The much simpler _WIN32 version */
+#else /* The much simpler Windows version */
 
 LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
                                             unsigned int version, time_t* t)
@@ -210,4 +210,5 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
   DEBUG(ctx, "Resolved to: %s\n", answer);
   return parse_timestamp ((const unsigned char*)&answer, t);
 }
-#endif
+#endif /* !LIBLOC_USING_WINSOCK2 */
+

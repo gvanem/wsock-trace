@@ -109,6 +109,16 @@ time_t timegm (struct tm *tm)
   return (ret);
 }
 
+/**
+ * Return last error from Winsock as "WSAE: xxx"
+ */
+char *get_neterr (void)
+{
+  static char err_buf [30];
+  strcpy (err_buf, "WSAE: ");
+  return _itoa (WSAGetLastError(), err_buf + sizeof("WSAE: ")-1, 10);
+}
+
 /*-
  * Copyright (c) 1997, 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
