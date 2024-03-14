@@ -83,9 +83,6 @@ static void loc_network_list_free(struct loc_network_list* list) {
 }
 
 LOC_EXPORT struct loc_network_list* loc_network_list_unref(struct loc_network_list* list) {
-	if (!list)
-		return NULL;
-
 	if (--list->refcount > 0)
 		return list;
 
