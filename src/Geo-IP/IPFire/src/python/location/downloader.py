@@ -18,6 +18,7 @@
 
 import sys
 import logging
+import gzip
 import lzma
 import os
 import random
@@ -132,6 +133,7 @@ class Downloader(object):
 				try:
 					with self._send_request(req) as res:
 						decompressor = lzma.LZMADecompressor()
+						print("Decompressing file: '%s'" % t.name)
 
 						# Read all data
 						while True:
@@ -149,27 +151,29 @@ class Downloader(object):
 
 				# Catch decompression errors
 				except lzma.LZMAError as e:
-					log.warning("Could not decompress downloaded file: %s" % e)
+					print("Could not decompress downloaded file: '%s', e: %s" % (t.name, e))
 					continue
 
 				except urllib.error.HTTPError as e:
 					# The file on the server was too old
 					if e.code == 304:
-						log.warning("%s is serving an outdated database. Trying next mirror..." % mirror)
+						print("%s is serving an outdated database. Trying next mirror..." % mirror)
 
 					# Log any other HTTP errors
 					else:
-						log.warning("%s reported: %s" % (mirror, e))
+						print("%s reported: %s" % (mirror, e))
 
 					# Throw away any downloaded content and try again
+					# print("(1): truncating '%s'" % t.name)
 					t.truncate()
 
 				else:
 					# Check if the downloaded database is recent
 					if not self._check_database(t, public_key, timestamp):
-						log.warning("Downloaded database is outdated. Trying next mirror...")
+						print("Downloaded database is outdated. Trying next mirror...")
 
 						# Throw away the data and try again
+						# print("(2): truncating '%s'" % t.name)
 						t.truncate()
 						continue
 
@@ -181,6 +185,7 @@ class Downloader(object):
 					return t
 
 		# Delete the temporary file after unsuccessful downloads
+		print("deleting '%s'" % t.name)
 		os.unlink(t.name)
 
 		raise FileNotFoundError(url)
@@ -190,7 +195,7 @@ class Downloader(object):
 			Checks the downloaded database if it can be opened,
 			verified and if it is recent enough
 		"""
-		log.debug("Opening downloaded database at %s" % f.name)
+		print("Opening downloaded database at %s" % f.name)
 
 		db = Database(f.name)
 
@@ -203,9 +208,64 @@ class Downloader(object):
 		)))
 
 		# Verify the database
+		print("verifying '%s' agains public_key: '%s'" % (f.name, public_key))
+
 		with open(public_key, "r") as f:
 			if not db.verify(f):
-				log.error("Could not verify database")
+				print("Could not verify database")
 				return False
 
 		return True
+
+	def retrieve(self, url, timeout=None, **kwargs):
+		"""
+			This method will fetch the content at the given URL
+			and will return a file-object to a temporary file.
+
+			If the content was compressed, it will be decompressed on the fly.
+		"""
+		# Open a temporary file to buffer the downloaded content
+		t = tempfile.SpooledTemporaryFile(max_size=100 * 1024 * 1024)
+
+		# Create a new request
+		req = self._make_request(url, **kwargs)
+
+		# Send request
+		res = self._send_request(req, timeout=timeout)
+
+		# Write the payload to the temporary file
+		with res as f:
+			while True:
+				buf = f.read(65536)
+				if not buf:
+					break
+
+				t.write(buf)
+
+		# Rewind the temporary file
+		t.seek(0)
+
+		gzip_compressed = False
+
+		# Fetch the content type
+		content_type = res.headers.get("Content-Type")
+
+		# Decompress any gzipped response on the fly
+		if content_type in ("application/x-gzip", "application/gzip"):
+			gzip_compressed = True
+
+		# Check for the gzip magic in case web servers send a different MIME type
+		elif t.read(2) == b"\x1f\x8b":
+			gzip_compressed = True
+
+		# Reset again
+		t.seek(0)
+
+		# Decompress the temporary file
+		if gzip_compressed:
+			log.debug("Gzip compression detected")
+
+			t = gzip.GzipFile(fileobj=t, mode="rb")
+
+		# Return the temporary file handle
+		return t

@@ -456,19 +456,23 @@ class CLI(object):
 			return
 
 		# Download the database into the TEMP directory
-		tmpdir = tempfile.gettempdir()
+		tmpdir = os.path.join (tempfile.gettempdir(), "libloc")
+		os.makedirs (tmpdir, exist_ok=True)
 
 		# Create a downloader
 		d = location.downloader.Downloader()
 
 		# Try downloading a new database
-		try:
-			t = d.download(public_key=ns.public_key, timestamp=t, tmpdir=tmpdir)
+		if 1:
+		   t = d.download(public_key=ns.public_key, timestamp=t, tmpdir=tmpdir)
+		else:
+		  try:
+		     t = d.download(public_key=ns.public_key, timestamp=t, tmpdir=tmpdir)
 
-		# If no file could be downloaded, log a message
-		except FileNotFoundError as e:
-			log.error("Could not download a new database")
-			return 1
+		     # If no file could be downloaded, log a message
+		  except FileNotFoundError as e:
+		     log.error("Could not download a new database into '%s/%s'" % (tmpdir, t.name))
+		     return 1
 
 		# If we have not received a new file, there is nothing to do
 		if not t:

@@ -40,6 +40,7 @@
 #include <libloc/database.h>
 #include <libloc/format.h>
 #include <libloc/network.h>
+#include <libloc/network-tree.h>
 #include <libloc/private.h>
 #include <libloc/writer.h>
 
@@ -573,7 +574,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 	struct loc_database_magic magic;
 	bytes_read = fread(&magic, 1, sizeof(magic), f);
 	if (bytes_read < sizeof(magic)) {
-		ERROR(writer->ctx, "Could not read header: %m\n");
+		ERROR(writer->ctx, "Could not read header: %s\n", strerror(errno));
 		r = 1;
 		goto END;
 	}
@@ -605,7 +606,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 		bytes_read = fread(buffer, 1, sizeof(buffer), f);
 
 		if (ferror(f)) {
-			ERROR(writer->ctx, "Error reading from file: %m\n");
+			ERROR(writer->ctx, "Error reading from file: %s\n", strerror(errno));
 			r = 1;
 			goto END;
 		}

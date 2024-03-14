@@ -301,7 +301,6 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Could look up 2001:db8:fffe:1::, but I shouldn't\n");
 		exit(EXIT_FAILURE);
 	}
-	loc_network_unref(network1);
 
 	const struct bit_length_test {
 		const char* network;

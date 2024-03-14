@@ -248,6 +248,37 @@ static PyObject* Network_get__last_address(NetworkObject* self) {
 	return PyBytes_FromAddress(address);
 }
 
+static PyObject* Network_richcompare(NetworkObject* self, PyObject* other, int op) {
+	int r;
+
+	// Check for type
+	if (!PyObject_IsInstance(other, (PyObject *)&NetworkType))
+		Py_RETURN_NOTIMPLEMENTED;
+
+	NetworkObject* o = (NetworkObject*)other;
+
+	r = loc_network_cmp(self->network, o->network);
+
+	switch (op) {
+		case Py_EQ:
+			if (r == 0)
+				Py_RETURN_TRUE;
+
+			Py_RETURN_FALSE;
+
+		case Py_LT:
+			if (r < 0)
+				Py_RETURN_TRUE;
+
+			Py_RETURN_FALSE;
+
+		default:
+			break;
+	}
+
+	Py_RETURN_NOTIMPLEMENTED;
+}
+
 static struct PyMethodDef Network_methods[] = {
 	{
 		"exclude",
@@ -342,4 +373,5 @@ PyTypeObject NetworkType = {
 	.tp_getset =             Network_getsetters,
 	.tp_repr =               (reprfunc)Network_repr,
 	.tp_str =                (reprfunc)Network_str,
+	.tp_richcompare =        (richcmpfunc)Network_richcompare,
 };

@@ -3,6 +3,7 @@ CLEANFILES =
 INSTALL_DIRS =
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_MAKEFLAGS = --no-print-directory
+check_SCRIPTS =
 
 SUBDIRS = . po
 BINDINGS =
@@ -87,6 +88,7 @@ po/POTFILES.in: Makefile
 		sed -e "s@$(abs_srcdir)/@@g" | LC_ALL=C sort > $@
 
 EXTRA_DIST += \
+	README.md \
 	examples/private-key.pem \
 	examples/public-key.pem \
 	examples/python/create-database.py \
@@ -104,6 +106,7 @@ pkginclude_HEADERS = \
 	src/libloc/format.h \
 	src/libloc/network.h \
 	src/libloc/network-list.h \
+	src/libloc/network-tree.h \
 	src/libloc/private.h \
 	src/libloc/stringpool.h \
 	src/libloc/resolv.h \
@@ -122,6 +125,7 @@ src_libloc_la_SOURCES = \
 	src/database.c \
 	src/network.c \
 	src/network-list.c \
+	src/network-tree.c \
 	src/resolv.c \
 	src/stringpool.c \
 	src/writer.c
@@ -191,7 +195,6 @@ dist_pkgpython_PYTHON = \
 	src/python/location/downloader.py \
 	src/python/location/export.py \
 	src/python/location/i18n.py \
-	src/python/location/importer.py \
 	src/python/location/logger.py
 
 pyexec_LTLIBRARIES = \
@@ -224,6 +227,62 @@ src_python__location_la_LDFLAGS = \
 src_python__location_la_LIBADD = \
 	src/libloc.la \
 	$(PYTHON_LIBS)
+
+# ------------------------------------------------------------------------------
+
+if ENABLE_LUA
+lua_LTLIBRARIES = \
+	src/lua/location.la
+
+luadir = $(LUA_INSTALL_CMOD)
+
+src_lua_location_la_SOURCES = \
+	src/lua/as.c \
+	src/lua/as.h \
+	src/lua/country.c \
+	src/lua/country.h \
+	src/lua/database.c \
+	src/lua/database.h \
+	src/lua/location.c \
+	src/lua/location.h \
+	src/lua/network.c \
+	src/lua/network.h
+
+src_lua_location_la_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(LUA_CFLAGS)
+
+src_lua_location_la_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	$(LUA_LDFLAGS) \
+	-shared \
+	-module \
+	-avoid-version
+
+src_lua_location_la_LIBADD = \
+	src/libloc.la \
+	$(LUA_LIBS)
+endif
+
+EXTRA_DIST += \
+	src/lua/as.c \
+	src/lua/as.h \
+	src/lua/country.c \
+	src/lua/country.h \
+	src/lua/database.c \
+	src/lua/database.h \
+	src/lua/location.c \
+	src/lua/location.h \
+	src/lua/network.c \
+	src/lua/network.h
+
+LUA_TESTS = \
+	tests/lua/main.lua
+
+EXTRA_DIST += \
+	$(LUA_TESTS)
+
+# ------------------------------------------------------------------------------
 
 # Compile & install bindings
 all-local: $(foreach binding,$(BINDINGS),build-$(binding))
@@ -344,11 +403,15 @@ TESTS_LDADD = \
 	src/libloc-internal.la
 
 TESTS_ENVIRONMENT = \
+	LUA_CPATH="$(abs_builddir)/src/lua/.libs/?.so;;" \
 	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
-	TEST_DATA_DIR="$(abs_top_srcdir)/data"
+	TEST_DATA_DIR="$(abs_top_srcdir)/data" \
+	TEST_DATABASE="$(abs_top_srcdir)/data/database.db" \
+	TEST_SIGNING_KEY="$(abs_top_srcdir)/data/signing-key.pem"
 
 TESTS = \
 	$(check_PROGRAMS) \
+	$(check_SCRIPTS) \
 	$(dist_check_SCRIPTS)
 
 CLEANFILES += \
@@ -360,8 +423,15 @@ testdata.db: examples/python/create-database.py
 		$(PYTHON) $< $@
 
 dist_check_SCRIPTS = \
+	tests/python/country.py \
+	tests/python/networks-dedup.py \
 	tests/python/test-database.py \
 	tests/python/test-export.py
+
+if ENABLE_LUA
+check_SCRIPTS += \
+	$(LUA_TESTS)
+endif
 
 check_PROGRAMS = \
 	src/test-libloc \
@@ -538,6 +608,9 @@ man/%.html: man/%.txt man/asciidoc.conf
 .PHONY: upload-man
 upload-man: $(MANPAGES_HTML)
 	rsync -avHz --delete --progress $(MANPAGES_HTML) ms@fs01.haj.ipfire.org:/pub/man-pages/$(PACKAGE_NAME)/
+
+EXTRA_DIST += \
+	tools/copy.py
 
 EXTRA_DIST += \
 	debian/build.sh \

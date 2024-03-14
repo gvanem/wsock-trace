@@ -99,6 +99,9 @@ LOC_EXPORT const char* loc_country_get_code(struct loc_country* country) {
 }
 
 LOC_EXPORT const char* loc_country_get_continent_code(struct loc_country* country) {
+	if (!*country->continent_code)
+		return NULL;
+
 	return country->continent_code;
 }
 

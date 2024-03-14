@@ -81,6 +81,10 @@ static PyObject* Country_str(CountryObject* self) {
 static PyObject* Country_get_name(CountryObject* self) {
 	const char* name = loc_country_get_name(self->country);
 
+	// Return None if no name has been set
+	if (!name)
+		Py_RETURN_NONE;
+
 	return PyUnicode_FromString(name);
 }
 
@@ -99,6 +103,9 @@ static int Country_set_name(CountryObject* self, PyObject* value) {
 static PyObject* Country_get_continent_code(CountryObject* self) {
 	const char* code = loc_country_get_continent_code(self->country);
 
+	if (!code)
+		Py_RETURN_NONE;
+
 	return PyUnicode_FromString(code);
 }
 
@@ -114,8 +121,16 @@ static int Country_set_continent_code(CountryObject* self, PyObject* value) {
 	return 0;
 }
 
-static PyObject* Country_richcompare(CountryObject* self, CountryObject* other, int op) {
-	int r = loc_country_cmp(self->country, other->country);
+static PyObject* Country_richcompare(CountryObject* self, PyObject* other, int op) {
+	int r;
+
+	// Check for type
+	if (!PyObject_IsInstance(other, (PyObject *)&CountryType))
+		Py_RETURN_NOTIMPLEMENTED;
+
+	CountryObject* o = (CountryObject*)other;
+
+	r = loc_country_cmp(self->country, o->country);
 
 	switch (op) {
 		case Py_EQ:
@@ -135,6 +150,22 @@ static PyObject* Country_richcompare(CountryObject* self, CountryObject* other, 
 	}
 
 	Py_RETURN_NOTIMPLEMENTED;
+}
+
+static Py_hash_t Country_hash(CountryObject* self) {
+	PyObject* code = NULL;
+	Py_hash_t hash = 0;
+
+	// Fetch the code as Python string
+	code = Country_get_code(self);
+	if (!code)
+		return -1;
+
+	// Fetch the hash of that string
+	hash = PyObject_Hash(code);
+	Py_DECREF(code);
+
+	return hash;
 }
 
 static struct PyGetSetDef Country_getsetters[] = {
@@ -175,4 +206,5 @@ PyTypeObject CountryType = {
 	.tp_repr =               (reprfunc)Country_repr,
 	.tp_str =                (reprfunc)Country_str,
 	.tp_richcompare =        (richcmpfunc)Country_richcompare,
+	.tp_hash =               (hashfunc)Country_hash,
 };

@@ -202,9 +202,30 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test "x$have_systemd" = "xyes"])
 
 # ------------------------------------------------------------------------------
 
+AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+
 # Python
 AM_PATH_PYTHON([3.4])
 PKG_CHECK_MODULES([PYTHON], [python-${PYTHON_VERSION}])
+
+# Lua
+AC_ARG_ENABLE(lua,
+	AS_HELP_STRING([--disable-lua], [do not build the Lua modules]), [], [enable_lua=yes])
+
+AM_CONDITIONAL(ENABLE_LUA, test "$enable_lua" = "yes")
+
+AS_IF(
+	[test "$enable_lua" = "yes"], [
+		PKG_CHECK_MODULES([LUA], [lua])
+
+		AX_PROG_LUA_MODULES([luaunit],, [AC_MSG_ERROR([Lua modules are missing])])
+
+		LUA_INSTALL_LMOD=$($PKG_CONFIG --define-variable=prefix=${prefix} --variable=INSTALL_LMOD lua)
+		AC_SUBST(LUA_INSTALL_LMOD)
+		LUA_INSTALL_CMOD=$($PKG_CONFIG --define-variable=prefix=${prefix} --variable=INSTALL_CMOD lua)
+		AC_SUBST(LUA_INSTALL_CMOD)
+	],
+)
 
 # Perl
 AC_PATH_PROG(PERL, perl, no)
@@ -267,6 +288,9 @@ AC_MSG_RESULT([
 	bash-completion:        ${enable_bash_completion}
 
 	Bindings:
+	  Lua:			${enable_lua}
+	  Lua shared path:	${LUA_INSTALL_LMOD}
+	  Lua module path:	${LUA_INSTALL_CMOD}
 	  Perl:			${enable_perl}
 	  Perl module path:     ${PERL_MODPATH}
 	  Perl manual path:     ${PERL_MANPATH}

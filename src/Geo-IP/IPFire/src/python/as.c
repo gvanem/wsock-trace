@@ -102,8 +102,16 @@ static int AS_set_name(ASObject* self, PyObject* value) {
 	return 0;
 }
 
-static PyObject* AS_richcompare(ASObject* self, ASObject* other, int op) {
-	int r = loc_as_cmp(self->as, other->as);
+static PyObject* AS_richcompare(ASObject* self, PyObject* other, int op) {
+	int r;
+
+	// Check for type
+	if (!PyObject_IsInstance(other, (PyObject *)&ASType))
+		Py_RETURN_NOTIMPLEMENTED;
+
+	ASObject* o = (ASObject*)other;
+
+	r = loc_as_cmp(self->as, o->as);
 
 	switch (op) {
 		case Py_EQ:

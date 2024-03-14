@@ -66,31 +66,14 @@ struct loc_network_list* loc_network_exclude_list(
 
 #ifdef LIBLOC_PRIVATE
 
+int loc_network_properties_cmp(struct loc_network* self, struct loc_network* other);
+unsigned int loc_network_raw_prefix(struct loc_network* network);
+
 int loc_network_to_database_v1(struct loc_network* network, struct loc_database_network_v1* dbobj);
 int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** network,
 		struct in6_addr* address, unsigned int prefix, const struct loc_database_network_v1* dbobj);
 
-struct loc_network_tree;
-int loc_network_tree_new(struct loc_ctx* ctx, struct loc_network_tree** tree);
-struct loc_network_tree* loc_network_tree_unref(struct loc_network_tree* tree);
-struct loc_network_tree_node* loc_network_tree_get_root(struct loc_network_tree* tree);
-int loc_network_tree_walk(struct loc_network_tree* tree,
-		int(*filter_callback)(struct loc_network* network, void* data),
-		int(*callback)(struct loc_network* network, void* data), void* data);
-int loc_network_tree_dump(struct loc_network_tree* tree);
-int loc_network_tree_add_network(struct loc_network_tree* tree, struct loc_network* network);
-size_t loc_network_tree_count_nodes(struct loc_network_tree* tree);
-
-struct loc_network_tree_node;
-int loc_network_tree_node_new(struct loc_ctx* ctx, struct loc_network_tree_node** node);
-struct loc_network_tree_node* loc_network_tree_node_ref(struct loc_network_tree_node* node);
-struct loc_network_tree_node* loc_network_tree_node_unref(struct loc_network_tree_node* node);
-struct loc_network_tree_node* loc_network_tree_node_get(struct loc_network_tree_node* node, unsigned int index);
-
-int loc_network_tree_node_is_leaf(struct loc_network_tree_node* node);
-struct loc_network* loc_network_tree_node_get_network(struct loc_network_tree_node* node);
-
-int loc_network_tree_cleanup(struct loc_network_tree* tree);
+int loc_network_merge(struct loc_network** n, struct loc_network* n1, struct loc_network* n2);
 
 #endif
 #endif
