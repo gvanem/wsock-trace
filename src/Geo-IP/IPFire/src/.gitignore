@@ -1,6 +1,9 @@
 .dirstamp
 .deps/
 .libs/
+lua_install/
+py3_install/
+*.args
 *.la
 *.lo
 *.trs
