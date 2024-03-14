@@ -125,9 +125,6 @@ LOC_EXPORT struct loc_ctx* loc_ref(struct loc_ctx* ctx) {
 }
 
 LOC_EXPORT struct loc_ctx* loc_unref(struct loc_ctx* ctx) {
-	if (!ctx)
-		return NULL;
-
 	if (--ctx->refcount > 0)
 		return NULL;
 
