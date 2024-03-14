@@ -4667,6 +4667,13 @@ static int show_help (void)
           "      %s -f \"wget -d -o- -O NUL www.google.com & sleep 3\"\n",
           g_data.program_name, FW_API_LOW, FW_API_HIGH, FW_API_DEFAULT,
           g_data.program_name, g_data.program_name, g_data.program_name);
+
+  /**
+   * \todo Implement a feature similar to
+   *  ws_tool.exe firewall <prog> | grep --after-context=4 "_DROP"
+   *
+   * An option '-D'?
+   */
   return (0);
 }
 

@@ -64,8 +64,6 @@ typedef struct device_to_path_entry {
         char path [10];
       } device_to_path_entry;
 
-static void get_device_to_paths_mapping (void);
-
 static void device_to_paths_map_remove_all (void)
 {
   smartlist_wipe (device_to_paths_map, free);
