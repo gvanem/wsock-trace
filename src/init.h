@@ -186,6 +186,7 @@ struct config_table {
        WORD    color_func;
        WORD    color_trace;
        WORD    color_data;
+       WORD    fail_WSAStartup;
        bool    nice_numbers;
        bool    msvc_only;
        bool    mingw_only;

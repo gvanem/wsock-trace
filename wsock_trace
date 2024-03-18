@@ -151,6 +151,18 @@
   nice_numbers = 0                   # Print a number in some traces like '2147483647' as '2,147,483,647'.
 
   #
+  # Test programs with a failing 'WSAStartup()'.
+  # The value should one of these error-codes:
+  #   10091 == WSASYSNOTREADY
+  #   10092 == WSAVERNOTSUPPORTED
+  #   10036 == WSAEINPROGRESS
+  #   10067 == WSAEPROCLIM
+  #   10014 == WSAEFAULT
+  #   11003 == WSANO_RECOVERY  (MSDN does not document this as possible, but it can)
+  #
+  fail_WSAStartup = 0
+
+  #
   # Don't trace these functions:
   #
   exclude = htons

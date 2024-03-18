@@ -798,6 +798,9 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
   else if (!stricmp(key, "dump_icmp_info"))
      g_cfg.dump_icmp_info = atoi (val);
 
+  else if (!stricmp(key, "fail_WSAStartup"))
+     g_cfg.fail_WSAStartup = atoi (val);
+
   else if (!stricmp(key, "max_data"))
      g_cfg.max_data = atoi (val);
 

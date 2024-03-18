@@ -751,7 +751,23 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   cleaned_up = 0;
 
   CHECK_PTR (p_WSAStartup);
-  rc = (*p_WSAStartup) (ver, data);
+
+  if (g_cfg.fail_WSAStartup)
+  {
+    static WSADATA fail_data = {   /* faked ver. 1.1 WSADATA */
+                  .wVersion       = (1 << 8) + 1,
+                  .wHighVersion   = (1 << 8) + 1,
+                  .iMaxSockets    = 100,
+                  .iMaxUdpDg      = 200,
+                  .lpVendorInfo   = "No-one",
+                  .szDescription  = "test failing WSAStartup",
+                  .szSystemStatus = "test failing WSAStartup",
+                 };
+    rc = g_cfg.fail_WSAStartup;
+    data = &fail_data;
+  }
+  else
+    rc = (*p_WSAStartup) (ver, data);
 
   if (startup_count < INT_MAX)
      startup_count++;
