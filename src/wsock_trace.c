@@ -745,7 +745,8 @@ static const char *socket_number (SOCKET s)
  */
 EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
 {
-  int rc;
+  char details [300] = "";
+  int  rc;
 
   cleaned_up = 0;
 
@@ -761,8 +762,24 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   // test_get_caller (&WSAStartup);
 #endif
 
-  WSTRACE ("WSAStartup (%u.%u) --> %s",
-           loBYTE(data->wVersion), hiBYTE(data->wVersion), get_error(rc, 0));
+  if (g_cfg.trace_level >= 2)
+  {
+    const char *vendor_info = data->lpVendorInfo;
+
+    if (loBYTE(data->wVersion) >= 2)
+       vendor_info = "N/A";
+
+    snprintf (details, sizeof(details),
+              "\n      iMaxSockets=%u, iMaxUdpDg=%u\n"
+              "      lpVendorInfo=\"%s\", szDescription=\"%.*s\", "
+              "szSystemStatus=\"%.*s\"",
+              data->iMaxSockets, data->iMaxUdpDg, vendor_info,
+              WSADESCRIPTION_LEN, data->szDescription,
+              WSASYS_STATUS_LEN, data->szSystemStatus);
+  }
+
+  WSTRACE ("WSAStartup (%u.%u) --> %s%s",
+           loBYTE(data->wVersion), hiBYTE(data->wVersion), get_error(0, rc), details);
 
   WSLUA_HOOK (rc, wslua_WSAStartup(ver,data));
   LEAVE_CRIT (!exclude_this);
