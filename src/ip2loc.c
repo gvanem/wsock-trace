@@ -821,7 +821,7 @@ bool ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
  *
  * This seems to be an issue when >= 2 processes are accessing the
  * `g_cfg.GEOIP.ip2location_bin_file` at the same time. The latter process
- * (using wsock_trace.dll) will get junk returned for locations.
+ * (using `wsock_trace-*.dll`) will get junk returned for locations.
  * This is just an attempt to detect it.
  */
 DWORD ip2loc_index_errors (void)

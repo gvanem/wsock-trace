@@ -3,8 +3,9 @@
  * \ingroup Misc
  *
  * \brief
- * The resulting `wsock_trace.lib` (or `libwsock_trace_mw.a` etc.) is an import-lib for
- * `wsock_trace.dll` (or `wsock_trace_mw.dll` / `wsock_trace_cyg.dll` etc.).
+ * The resulting `wsock_trace-x86.lib`, `wsock_trace-x64.lib` (or
+ * `libwsock_trace_mw.a` etc.) is an import-lib for `wsock_trace-x86.dll`,
+ * `wsock_trace-x64.dll`, (or `wsock_trace_mw.dll` etc.).
  *
  * Since the SDK header `<ws2ipdef.h>` declares the below data with no export
  * declaration, this `non-export.obj` is simply added to the import-library.

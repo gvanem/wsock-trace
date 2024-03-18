@@ -7,7 +7,7 @@
 #include "wsock_defs.h"
 
 /*
- * Because I had problems exporting "__WSAFDIsSet@8" to wsock_trace.dll,
+ * Because I had problems exporting "__WSAFDIsSet@8" to wsock_trace-*.dll,
  * I was forced to use a .def-file to export all functions.
  */
 #if defined(USE_DEF_FILE)
@@ -65,8 +65,8 @@
  * if 'g_cfg.trace_level' is above or equal 'level'.
  *
  * Do not confuse this with the 'WSTRACE()' macro in wsock_trace.c.
- * The 'TRACE()'   macro shows what wsock_trace.dll is doing.
- * The 'WSTRACE()' macro shows what the *user* of wsock_trace.dll is doing.
+ * The 'TRACE()'   macro shows what wsock_trace-*.dll is doing.
+ * The 'WSTRACE()' macro shows what the *user* of wsock_trace-*.dll is doing.
  *
  */
 #define TRACE(level, fmt, ...)                                      \

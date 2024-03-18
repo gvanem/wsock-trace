@@ -235,7 +235,7 @@ struct global_data {
        char                       curr_dir  [_MAX_PATH];     /**< Current working directory */
        char                       curr_prog [_MAX_PATH];     /**< Current running program */
        char                       prog_dir  [_MAX_PATH];     /**< And it's program directory */
-       char                       full_name [_MAX_PATH];     /**< Full name of program that loaded `wsock_trace.dll` */
+       char                       full_name [_MAX_PATH];     /**< Full name of program that loaded `wsock_trace-*.dll` */
        char                       cfg_fname [_MAX_PATH];     /**< Full name of `wsock_trace` config-file */
        char                       ws_tmp_dir[_MAX_PATH];     /**< The temporary directory == `%TEMP%/wsock_trace` */
        HINSTANCE                  ws_trace_base;             /**< Our base-address */

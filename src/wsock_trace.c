@@ -10,7 +10,8 @@
 
 /**
  * Usage (MSVC): <br>
- *   link with `wsock_trace.lib` instead of the system's `ws32_2.lib`.
+ *   link with `wsock_trace-x86.lib` or `wsock_trace-x64.lib` instead of
+ *   the system's `ws32_2.lib`.
  *
  * Usage (MinGW/CygWin): <br>
  *   link with libwsock_trace.a instead of the system's `libws2_32.a`. <br>
