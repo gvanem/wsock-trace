@@ -295,6 +295,8 @@ ifeq ($(USE_LUA)-$(MSVC_TYPE),1-1)
   TARGETS += lua_install/location.dll \
              lua_install/location-lua.lib  # No real need for this
 
+  CFLAGS += -I$(LUA_ROOT)/src
+
   LUA_SRC = $(addprefix lua/, \
               as.c            \
               country.c       \
@@ -434,32 +436,37 @@ lua_install/location-lua.lib: lua_install/location.dll
 lua_install/location.dll: $(LUA_OBJ) $(OBJ_DIR)/location.res $(LUA_ROOT)/lib/luajit_static-$(CPU).lib | $(OBJ_DIR)/check-for-unused-libs.py lua_install
 	$(call link_DLL, $@, -export:luaopen_location $^ $(OPENSSL_LIBS) $(DNS_LIB) $(WS2_32), lua_install/location-lua.lib)
 
-LUA_CFLAGS = -I$(LUA_ROOT)/src \
-             -DLIBLOC_LUAJIT_HACKS
-
 $(OBJ_DIR)/lua/%.obj: lua/%.c | $(OBJ_DIR)/lua $(CC).args
-	$(call C_compile, $@, $(LUA_CFLAGS) $<)
+	$(call C_compile, $@, $<)
 
 $(OBJ_DIR)/libloc-lua/%.obj: %.c | $(OBJ_DIR)/libloc-lua $(CC).args
-	$(call C_compile, $@, $(LUA_CFLAGS) $<)
+	$(call C_compile, $@, $<)
 
 lua_%.i: %.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
-	$(call C_preprocess, $@, $(LUA_CFLAGS) $<)
+	$(call C_preprocess, $@, $<)
 
 lua_%.i: lua/%.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
-	$(call C_preprocess, $@, $(LUA_CFLAGS) $<)
+	$(call C_preprocess, $@, $<)
 
-run_lua_test: lua_module      \
-              install_luaunit \
-              $(LUA_ROOT)/bin/luajit.exe
-	$(call green_msg, Running $(BRIGHT_WHITE)$(LUA_ROOT)/bin/luajit.exe ../tests/lua/main.lua)
+run_lua_test: lua_module                 \
+              install_luaunit            \
+              $(LUA_ROOT)/bin/luajit.exe \
+              lua_install/test.lua
+	$(call green_msg, Running $(BRIGHT_WHITE)$(LUA_ROOT)/bin/luajit.exe lua_install/test.lua)
 	@export LOC_LOG=6                                              \
 	 export LUA_TRACE=0                                            \
 	 export LUA_CPATH=$(realpath lua_install)/?.dll                \
 	 export LUA_PATH=$(realpath lua_install)/luaunit/?.lua         \
 	 export TEST_DATABASE=$(realpath ../data/database.db)          \
 	 export TEST_SIGNING_KEY=$(realpath ../data/signing-key.pem) ; \
-	$(LUA_ROOT)/bin/luajit.exe ../tests/lua/main.lua
+	$(LUA_ROOT)/bin/luajit.exe lua_install/test.lua
+	@echo
+
+lua_install/test.lua: ../tests/lua/main.lua.in $(THIS_FILE)
+	$(call generate, $@, --)
+	$(file >> $@, -- Generated from $<)
+	sed -e 's|#!/usr/bin/lua@LUA_VERSION@||' \
+	    -e 's|.*db:verify.*|-- Not for Windows|' < $< >> $@
 	@echo
 
 lua_module: lua_install/location.dll
@@ -467,9 +474,13 @@ lua_module: lua_install/location.dll
 	@echo
 
 install_luaunit: lua_install/luaunit
+  ifeq ($(wildcard lua_install/luaunit/*),)
 	$(call green_msg, Cloning $(BRIGHT_WHITE)https://github.com/bluebird75/luaunit.git)
-	- git clone https://github.com/bluebird75/luaunit.git lua_install/luaunit
+	- git clone https://github.com/bluebird75/luaunit.git $<
 	@echo
+  else
+	$(call green_msg, Assuming $(BRIGHT_WHITE)https://github.com/bluebird75/luaunit.git $(BRIGHT_GREEN)was cloned OK)
+  endif
 
 lua_module: lua_install/location.dll lua_install
 
@@ -492,12 +503,12 @@ else
 endif
 
 run_tests runtests: $(TEST_PROGS)
-	for p in $^ ; do                          \
-	  echo -e "\n\e[1;32mRunning $$p:\e[0m" ; \
-	  ./$$p ;                                 \
-	  if [ $$? -ne 0 ]; then                  \
-	    echo -e "\e[1;31mFailed!\e[0m" ;      \
-	  fi ;                                    \
+	for p in $^ ; do                            \
+	    echo -e "\n\e[1;32mRunning $$p:\e[0m" ; \
+	    ./$$p ;                                 \
+	    if [ $$? -ne 0 ]; then                  \
+	       echo -e "\e[1;31mFailed!\e[0m" ;     \
+	  fi ;                                      \
 	done
 
 run_export_test: py3_module
