@@ -846,7 +846,7 @@ static int __ASN_libloc_print (const char            *intro,
   }
   else
   {
-    (*func) ("<no info>\n");
+    (*func) ("<no info>");
     TRACE (2, "No data for address: %s, err: %d/%s.\n", addr_str, -rc, strerror(-rc));
     rc = 0;
   }
