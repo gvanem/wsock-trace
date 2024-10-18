@@ -35,10 +35,15 @@
 
 struct loc_ctx {
 	int refcount;
-	void (*log_fn)(struct loc_ctx* ctx,
-		int priority, const char *file, int line, const char *fn,
-		const char *format, va_list args);
-	int log_priority;
+
+	// Logging
+	struct loc_ctx_logging {
+		int priority;
+
+		// Callback
+		loc_log_callback callback;
+		void* data;
+	} log;
 };
 
 void loc_log(struct loc_ctx* ctx,
@@ -47,11 +52,11 @@ void loc_log(struct loc_ctx* ctx,
 	va_list args;
 
 	va_start(args, format);
-	ctx->log_fn(ctx, priority, file, line, fn, format, args);
+	ctx->log.callback(ctx, ctx->log.data, priority, file, line, fn, format, args);
 	va_end(args);
 }
 
-static void log_stderr(struct loc_ctx* ctx,
+static void log_stderr(struct loc_ctx* ctx, void* data,
 		int priority, const char* file, int line, const char* fn,
 		const char* format, va_list args) {
 	fprintf(stderr, "libloc: %s(): ", fn);
@@ -84,8 +89,8 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 		return 1;
 
 	c->refcount = 1;
-	c->log_fn = log_stderr;
-	c->log_priority = LOG_ERR;
+	c->log.callback = log_stderr;
+	c->log.priority = LOG_ERR;
 
 #ifdef _WIN32
 	// Start Winsock if not done
@@ -96,6 +101,7 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 		WSAStartup(MAKEWORD(2,2), &wsa);
 		OpenSSL_add_all_algorithms();
 		done = 1;
+		(void) wsa;
 	}
 
 	const char* env = NULL;
@@ -109,7 +115,7 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 		loc_set_log_priority(c, log_priority(env));
 
 	INFO(c, "ctx %p created\n", c);
-	DEBUG(c, "log_priority=%d\n", c->log_priority);
+	DEBUG(c, "log_priority=%d\n", c->log.priority);
 	*ctx = c;
 
 	return 0;
@@ -134,18 +140,23 @@ LOC_EXPORT struct loc_ctx* loc_unref(struct loc_ctx* ctx) {
 	return NULL;
 }
 
+LOC_EXPORT void loc_set_log_callback(struct loc_ctx* ctx, loc_log_callback callback, void* data) {
+	ctx->log.callback = callback;
+	ctx->log.data     = data;
+}
+
 LOC_EXPORT void loc_set_log_fn(struct loc_ctx* ctx,
 		void (*log_fn)(struct loc_ctx* ctx, int priority, const char* file,
 		int line, const char* fn, const char* format, va_list args)) {
-	ctx->log_fn = log_fn;
+	//ctx->log_fn = log_fn;
 	INFO(ctx, "custom logging function %p registered\n", log_fn);
 }
 
 LOC_EXPORT int loc_get_log_priority(struct loc_ctx* ctx) {
-	return ctx->log_priority;
+	return ctx->log.priority;
 }
 
 LOC_EXPORT void loc_set_log_priority(struct loc_ctx* ctx, int priority) {
-	ctx->log_priority = priority;
+	ctx->log.priority = priority;
 }
 

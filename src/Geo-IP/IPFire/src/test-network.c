@@ -28,6 +28,67 @@
 #include <libloc/private.h>
 #include <libloc/writer.h>
 
+static int test_reverse_pointers(struct loc_ctx* ctx) {
+	const struct test {
+		const char* network;
+		const char* rp;
+	} tests[] = {
+		// IPv6
+		{ "::1/128", "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." },
+		{ "2001:db8::/32", "*.8.b.d.0.1.0.0.2.ip6.arpa." },
+
+		// IPv4
+		{ "10.0.0.0/32", "0.0.0.10.in-addr.arpa." },
+		{ "10.0.0.0/24", "*.0.0.10.in-addr.arpa." },
+		{ "10.0.0.0/16", "*.0.10.in-addr.arpa." },
+		{ "10.0.0.0/8", "*.10.in-addr.arpa." },
+		{ "10.0.0.0/0", "*.in-addr.arpa." },
+		{ "10.0.0.0/1", NULL, },
+		{ NULL, NULL },
+	};
+
+	struct loc_network* network = NULL;
+	char* rp = NULL;
+	int r;
+
+	for (const struct test* test = tests; test->network; test++) {
+		// Create a new network
+		r = loc_network_new_from_string(ctx, &network, test->network);
+		if (r)
+			return r;
+
+		// Fetch the reverse pointer
+		rp = loc_network_reverse_pointer(network, NULL);
+
+		// No RP expected and got none
+		if (!test->rp && !rp)
+			continue;
+
+		// Got a result when expecting none
+		else if (!test->rp && rp) {
+			fprintf(stderr, "Got an RP for %s when expecting none\n", test->network);
+			return EXIT_FAILURE;
+
+		// Got nothing when expecting a result
+		} else if (test->rp && !rp) {
+			fprintf(stderr, "Got no RP for %s when expecting one\n", test->network);
+			return EXIT_FAILURE;
+
+		// Compare values
+		} else if (strcmp(test->rp, rp) != 0) {
+			fprintf(stderr, "Got an unexpected RP for %s: Got %s, expected %s\n",
+				test->network, rp, test->rp);
+			return EXIT_FAILURE;
+		}
+
+		loc_network_unref(network);
+		if (rp)
+			free(rp);
+	}
+
+	return 0;
+}
+
 int main(int argc, char** argv) {
 	int err;
 
@@ -297,7 +358,7 @@ int main(int argc, char** argv) {
 
 	// Lookup an address outside the subnet
 	err = loc_database_lookup_from_string(db, "2001:db8:fffe:1::", &network1);
-	if (err == 0) {
+	if (err || network1) {
 		fprintf(stderr, "Could look up 2001:db8:fffe:1::, but I shouldn't\n");
 		exit(EXIT_FAILURE);
 	}
@@ -307,9 +368,9 @@ int main(int argc, char** argv) {
 		unsigned int bit_length;
 	} bit_length_tests[] = {
 		{ "::/0", 0 },
-		{ "2001::/128", 126 },
-		{ "1.0.0.0/32", 25 },
-		{ "0.0.0.1/32", 1 },
+		{ "2001::/128", 16 },
+		{ "1.0.0.0/32", 8 },
+		{ "0.0.0.1/32", 32 },
 		{ "255.255.255.255/32", 32 },
 		{ NULL, 0, },
 	};
@@ -334,6 +395,11 @@ int main(int argc, char** argv) {
 
 		loc_network_unref(network1);
 	}
+
+	// Test reverse pointers
+	err = test_reverse_pointers(ctx);
+	if (err)
+		exit(err);
 
 	loc_unref(ctx);
 	fclose(f);

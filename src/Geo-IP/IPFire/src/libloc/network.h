@@ -64,6 +64,8 @@ struct loc_network_list* loc_network_exclude(
 struct loc_network_list* loc_network_exclude_list(
 		struct loc_network* network, struct loc_network_list* list);
 
+char* loc_network_reverse_pointer(struct loc_network* network, const char* suffix);
+
 #ifdef LIBLOC_PRIVATE
 
 int loc_network_properties_cmp(struct loc_network* self, struct loc_network* other);

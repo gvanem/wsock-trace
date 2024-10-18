@@ -24,6 +24,7 @@
 
 #include "location.h"
 #include "as.h"
+#include "compat.h"
 #include "country.h"
 #include "database.h"
 #include "network.h"
@@ -51,6 +52,7 @@ static int Database_open(lua_State* L) {
 
 	// Allocate a new object
 	Database* self = (Database*)lua_newuserdata(L, sizeof(*self));
+	self->db = NULL;
 
 	// Set metatable
 	luaL_setmetatable(L, "location.Database");
@@ -83,6 +85,20 @@ static int Database_gc(lua_State* L) {
 	}
 
 	return 0;
+}
+
+// Created At
+
+static int Database_created_at(lua_State* L) {
+	Database* self = luaL_checkdatabase(L, 1);
+
+	// Fetch the time
+	time_t created_at = loc_database_created_at(self->db);
+
+	// Push the time onto the stack
+	lua_pushnumber(L, created_at);
+
+	return 1;
 }
 
 // Description
@@ -176,6 +192,12 @@ static int Database_lookup(lua_State* L) {
 	if (r)
 		return luaL_error(L, "Could not lookup address %s: %s\n", address, strerror(errno));
 
+	// Nothing found
+	if (!network) {
+		lua_pushnil(L);
+		return 1;
+	}
+
 	// Create a network object
 	r = create_network(L, network);
 	loc_network_unref(network);
@@ -207,7 +229,77 @@ static int Database_verify(lua_State* L) {
 	return 1;
 }
 
+typedef struct enumerator {
+	struct loc_database_enumerator* e;
+} DatabaseEnumerator;
+
+static DatabaseEnumerator* luaL_checkdatabaseenumerator(lua_State* L, int i) {
+	void* userdata = luaL_checkudata(L, i, "location.DatabaseEnumerator");
+
+	// Throw an error if the argument doesn't match
+	luaL_argcheck(L, userdata, i, "DatabaseEnumerator expected");
+
+	return (DatabaseEnumerator*)userdata;
+}
+
+static int DatabaseEnumerator_gc(lua_State* L) {
+	DatabaseEnumerator* self = luaL_checkdatabaseenumerator(L, 1);
+
+	if (self->e) {
+		loc_database_enumerator_unref(self->e);
+		self->e = NULL;
+	}
+
+	return 0;
+}
+
+static int DatabaseEnumerator_next_network(lua_State* L) {
+	struct loc_network* network = NULL;
+	int r;
+
+	DatabaseEnumerator* self = luaL_checkdatabaseenumerator(L, lua_upvalueindex(1));
+
+	// Fetch the next network
+	r = loc_database_enumerator_next_network(self->e, &network);
+	if (r)
+		return luaL_error(L, "Could not fetch network: %s\n", strerror(errno));
+
+	// If we have received no network, we have reached the end
+	if (!network) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	// Create a network object
+	r = create_network(L, network);
+	loc_network_unref(network);
+
+	return r;
+}
+
+static int Database_list_networks(lua_State* L) {
+	DatabaseEnumerator* e = NULL;
+	int r;
+
+	Database* self = luaL_checkdatabase(L, 1);
+
+	// Allocate a new enumerator
+	e = lua_newuserdata(L, sizeof(*e));
+	luaL_setmetatable(L, "location.DatabaseEnumerator");
+
+	// Create a new enumerator
+	r = loc_database_enumerator_new(&e->e, self->db, LOC_DB_ENUMERATE_NETWORKS, 0);
+	if (r)
+		return luaL_error(L, "Could not create enumerator: %s\n", strerror(errno));
+
+	// Push the closure onto the stack
+	lua_pushcclosure(L, DatabaseEnumerator_next_network, 1);
+
+	return 1;
+}
+
 static const struct luaL_Reg database_functions[] = {
+	{ "created_at", Database_created_at },
 	{ "get_as", Database_get_as },
 	{ "get_description", Database_get_description },
 	{ "get_country", Database_get_country },
@@ -215,6 +307,7 @@ static const struct luaL_Reg database_functions[] = {
 	{ "get_vendor", Database_get_vendor },
 	{ "open", Database_open },
 	{ "lookup", Database_lookup },
+	{ "list_networks", Database_list_networks },
 	{ "verify", Database_verify },
 	{ "__gc", Database_gc },
 	{ NULL, NULL },
@@ -222,4 +315,13 @@ static const struct luaL_Reg database_functions[] = {
 
 int register_database(lua_State* L) {
 	return register_class(L, "location.Database", database_functions);
+}
+
+static const struct luaL_Reg database_enumerator_functions[] = {
+	{ "__gc", DatabaseEnumerator_gc },
+	{ NULL, NULL },
+};
+
+int register_database_enumerator(lua_State* L) {
+	return register_class(L, "location.DatabaseEnumerator", database_enumerator_functions);
 }

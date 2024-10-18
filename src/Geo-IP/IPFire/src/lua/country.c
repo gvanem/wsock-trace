@@ -24,6 +24,7 @@
 #include <libloc/country.h>
 
 #include "location.h"
+#include "compat.h"
 #include "country.h"
 
 typedef struct country {

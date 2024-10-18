@@ -21,6 +21,8 @@
 
 #include <libloc/libloc.h>
 
+#include "compat.h"
+
 extern struct loc_ctx* ctx;
 
 int luaopen_location(lua_State* L);

@@ -322,6 +322,7 @@ LOC_EXPORT int loc_network_list_merge(
 
 int loc_network_list_summarize(struct loc_ctx* ctx,
 		const struct in6_addr* first, const struct in6_addr* last, struct loc_network_list** list) {
+	int bits;
 	int r;
 
 	if (!list) {
@@ -351,41 +352,27 @@ int loc_network_list_summarize(struct loc_ctx* ctx,
 	struct loc_network* network = NULL;
 	struct in6_addr start = *first;
 
-	const int family_bit_length = loc_address_family_bit_length(family1);
-
 	while (loc_address_cmp(&start, last) <= 0) {
-		struct in6_addr num;
-		int bits1;
+		// Count how many leading bits the IP addresses have in common
+		bits = loc_address_common_bits(&start, last);
+		if (bits < 0)
+			return bits;
 
-		// Find the number of trailing zeroes of the start address
-		if (loc_address_all_zeroes(&start))
-			bits1 = family_bit_length;
-		else {
-			bits1 = loc_address_count_trailing_zero_bits(&start);
-			if (bits1 > family_bit_length)
-				bits1 = family_bit_length;
-		}
-
-		// Subtract the start address from the last address and add one
-		// (i.e. how many addresses are in this network?)
-		r = loc_address_sub(&num, last, &start);
-		if (r)
-			return r;
-
-		loc_address_increment(&num);
-
-		// How many bits do we need to represent this address?
-		int bits2 = loc_address_bit_length(&num) - 1;
-
-		// Select the smaller one
-		int bits = (bits1 > bits2) ? bits2 : bits1;
+		// If the start and end address don't have any bits in common, we try
+		// to cut the subnet into halves and try again...
+		else if (bits == 0)
+			bits = 1;
 
 		// Create a network
-		r = loc_network_new(ctx, &network, &start, family_bit_length - bits);
+		r = loc_network_new(ctx, &network, &start, bits);
 		if (r)
 			return r;
 
-		DEBUG(ctx, "Found network %s\n", loc_network_str(network));
+		DEBUG(ctx, "Found network %s, %s -> %s\n",
+			loc_network_str(network),
+			loc_address_str(loc_network_get_first_address(network)),
+			loc_address_str(loc_network_get_last_address(network))
+		);
 
 		// Push network on the list
 		r = loc_network_list_push(*list, network);

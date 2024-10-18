@@ -1,5 +1,5 @@
 /*
- * `strsep()`, `strcasestr()`, `timegm()` and `strptime()` for Windows.
+ * `strsep()`, `strcasestr()`, `timegm()`, `strptime()`, `asprintf()` for Windows.
  * (But not for Cygwin which have all these functions elsewhere).
  */
 #include <string.h>
@@ -492,5 +492,57 @@ static int conv_num (const char **buf, int *dest, int llim, int ulim)
 
   *dest = result;
   return (1);
+}
+
+/*
+ * Ripped from libpcap's 'missing/asprintf.c' and modified:
+ *
+ * vasprintf() and asprintf() for platforms with a C99-compliant
+ * snprintf() - so that, if you format into a 1-byte buffer, it
+ * will return how many characters it would have produced had
+ * it been given an infinite-sized buffer.
+ */
+int vasprintf (char **strp, const char *format, va_list args)
+{
+  char   buf, *str;
+  int    ret, len;
+  size_t str_size;
+
+  len = vsnprintf (&buf, sizeof(buf), format, args);
+  if (len == -1)
+  {
+    *strp = NULL;
+    return (-1);
+  }
+
+  str_size = len + 1;
+  str = malloc (str_size);
+  if (!str)
+  {
+    *strp = NULL;
+    return (-1);
+  }
+
+  ret = vsnprintf (str, str_size, format, args);
+  if (ret == -1)
+  {
+    free (str);
+    *strp = NULL;
+    return (-1);
+  }
+
+  *strp = str;
+  return (ret);
+}
+
+int asprintf (char **strp, const char *format, ...)
+{
+  va_list args;
+  int     ret;
+
+  va_start (args, format);
+  ret = vasprintf (strp, format, args);
+  va_end (args);
+  return (ret);
 }
 #endif  /* __CYGWIN__ */

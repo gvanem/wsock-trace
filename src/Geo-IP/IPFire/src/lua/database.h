@@ -21,5 +21,6 @@
 #include <lauxlib.h>
 
 int register_database(lua_State* L);
+int register_database_enumerator(lua_State* L);
 
 #endif /* LUA_LOCATION_DATABASE_H */

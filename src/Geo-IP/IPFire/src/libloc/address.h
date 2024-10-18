@@ -167,13 +167,60 @@ static inline struct in6_addr loc_prefix_to_bitmask(const unsigned int prefix) {
 }
 
 static inline unsigned int loc_address_bit_length(const struct in6_addr* address) {
+	unsigned int bitlength = 0;
+
 	int octet = 0;
-	foreach_octet_in_address(octet, address) {
-		if (address->s6_addr[octet])
-			return (15 - octet) * 8 + 32 - __builtin_clz(address->s6_addr[octet]);
+
+	// Initialize the bit length
+	if (IN6_IS_ADDR_V4MAPPED(address))
+		bitlength = 32;
+	else
+		bitlength = 128;
+
+	// Walk backwards until we find the first one
+	foreach_octet_in_address_reverse(octet, address) {
+		// Count all trailing zeroes
+		int trailing_zeroes = __builtin_ctz(address->s6_addr[octet]);
+
+		// We only have one byte
+		if (trailing_zeroes > 8)
+			trailing_zeroes = 8;
+
+		// Remove any trailing zeroes from the total length
+		bitlength -= trailing_zeroes;
+
+		if (trailing_zeroes < 8)
+			return bitlength;
 	}
 
 	return 0;
+}
+
+static inline int loc_address_common_bits(const struct in6_addr* a1, const struct in6_addr* a2) {
+	int bits = 0;
+
+	// Both must be of the same family
+	if (IN6_IS_ADDR_V4MAPPED(a1) && !IN6_IS_ADDR_V4MAPPED(a2))
+		return -EINVAL;
+
+	else if (!IN6_IS_ADDR_V4MAPPED(a1) && IN6_IS_ADDR_V4MAPPED(a2))
+		return -EINVAL;
+
+	// Walk through both addresses octet by octet
+	for (unsigned int i = (IN6_IS_ADDR_V4MAPPED(a1) ? 12 : 0); i <= 15; i++) {
+		// Fast path if the entire octet matches
+		if (a1->s6_addr[i] == a2->s6_addr[i]) {
+			bits += 8;
+
+		// Otherwise we XOR the octets and count the leading zeroes
+		// (where both octets have been identical).
+		} else {
+			bits += __builtin_clz(a1->s6_addr[i] ^ a2->s6_addr[i]) - 24;
+			break;
+		}
+	}
+
+	return bits;
 }
 
 static inline int loc_address_reset(struct in6_addr* address, int family) {
@@ -303,19 +350,35 @@ static inline void loc_address_decrement(struct in6_addr* address) {
 	}
 }
 
-static inline int loc_address_count_trailing_zero_bits(const struct in6_addr* address) {
-	int zeroes = 0;
+static inline int loc_address_get_octet(const struct in6_addr* address, const unsigned int i) {
+	if (IN6_IS_ADDR_V4MAPPED(address)) {
+		if (i >= 4)
+			return -ERANGE;
 
-	int octet = 0;
-	foreach_octet_in_address_reverse(octet, address) {
-		if (address->s6_addr[octet]) {
-			zeroes += __builtin_ctz(address->s6_addr[octet]);
-			break;
-		} else
-			zeroes += 8;
+		return (IN6_DWORD(address, 3) >> (i * 8)) & 0xff;
+
+	} else {
+		if (i >= 32)
+			return -ERANGE;
+
+		return address->s6_addr[i];
 	}
+}
 
-	return zeroes;
+static inline int loc_address_get_nibble(const struct in6_addr* address, const unsigned int i) {
+	int octet = 0;
+
+	// Fetch the octet
+	octet = loc_address_get_octet(address, i / 2);
+	if (octet < 0)
+		return octet;
+
+	// Shift if we want an uneven nibble
+	if (i % 2 == 0)
+		octet >>= 4;
+
+	// Return the nibble
+	return octet & 0x0f;
 }
 
 #endif /* LIBLOC_PRIVATE */

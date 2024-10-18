@@ -279,6 +279,32 @@ static PyObject* Network_richcompare(NetworkObject* self, PyObject* other, int o
 	Py_RETURN_NOTIMPLEMENTED;
 }
 
+static PyObject* Network_reverse_pointer(NetworkObject* self, PyObject* args, PyObject* kwargs) {
+	char* kwlist[] = { "suffix", NULL };
+	const char* suffix = NULL;
+	char* rp = NULL;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|z", kwlist, &suffix))
+		return NULL;
+
+	rp = loc_network_reverse_pointer(self->network, suffix);
+	if (!rp) {
+		switch (errno) {
+			case ENOTSUP:
+				Py_RETURN_NONE;
+
+			default:
+				PyErr_SetFromErrno(PyExc_OSError);
+				return NULL;
+		}
+	}
+
+	PyObject* ret = PyUnicode_FromString(rp);
+	free(rp);
+
+	return ret;
+}
+
 static struct PyMethodDef Network_methods[] = {
 	{
 		"exclude",
@@ -296,6 +322,12 @@ static struct PyMethodDef Network_methods[] = {
 		"is_subnet_of",
 		(PyCFunction)Network_is_subnet_of,
 		METH_VARARGS,
+		NULL,
+	},
+	{
+		"reverse_pointer",
+		(PyCFunction)Network_reverse_pointer,
+		METH_VARARGS|METH_KEYWORDS,
 		NULL,
 	},
 	{

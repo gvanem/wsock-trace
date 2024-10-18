@@ -207,35 +207,34 @@ static PyObject* Database_get_country(DatabaseObject* self, PyObject* args) {
 static PyObject* Database_lookup(DatabaseObject* self, PyObject* args) {
 	struct loc_network* network = NULL;
 	const char* address = NULL;
+	int r;
 
 	if (!PyArg_ParseTuple(args, "s", &address))
 		return NULL;
 
 	// Try to retrieve a matching network
-	int r = loc_database_lookup_from_string(self->db, address, &network);
+	r = loc_database_lookup_from_string(self->db, address, &network);
+	if (r) {
+		// Handle any errors
+		switch (errno) {
+			case EINVAL:
+				PyErr_Format(PyExc_ValueError, "Invalid IP address: %s", address);
 
-	// We got a network
-	if (r == 0) {
-		PyObject* obj = new_network(&NetworkType, network);
-		loc_network_unref(network);
-
-		return obj;
+			default:
+				PyErr_SetFromErrno(PyExc_OSError);
+		}
+		return NULL;
 	}
 
 	// Nothing found
-	if (!errno)
+	if (!network)
 		Py_RETURN_NONE;
 
-	// Handle any errors
-	switch (errno) {
-		case EINVAL:
-			PyErr_Format(PyExc_ValueError, "Invalid IP address: %s", address);
+	// We got a network
+	PyObject* obj = new_network(&NetworkType, network);
+	loc_network_unref(network);
 
-		default:
-			PyErr_SetFromErrno(PyExc_OSError);
-	}
-
-	return NULL;
+	return obj;
 }
 
 static PyObject* new_database_enumerator(PyTypeObject* type, struct loc_database_enumerator* enumerator) {

@@ -25,6 +25,7 @@
 
 #include "location.h"
 #include "as.h"
+#include "compat.h"
 
 typedef struct as {
 	struct loc_as* as;

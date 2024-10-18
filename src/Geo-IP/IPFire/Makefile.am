@@ -45,6 +45,7 @@ DISTCHECK_CONFIGURE_FLAGS = \
 
 SED_PROCESS = \
 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(SED) \
+	-e 's,@LUA_VERSION\@,$(LUA_VERSION),g' \
 	-e 's,@VERSION\@,$(VERSION),g' \
 	-e 's,@prefix\@,$(prefix),g' \
 	-e 's,@exec_prefix\@,$(exec_prefix),g' \
@@ -135,16 +136,16 @@ EXTRA_DIST += src/libloc.sym
 src_libloc_la_CFLAGS = \
 	$(AM_CFLAGS) \
 	-DLIBLOC_PRIVATE \
-	-fvisibility=hidden
+	-fvisibility=hidden \
+	$(OPENSSL_CFLAGS)
 
 src_libloc_la_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	-version-info $(LIBLOC_CURRENT):$(LIBLOC_REVISION):$(LIBLOC_AGE)
+	-version-info $(LIBLOC_CURRENT):$(LIBLOC_REVISION):$(LIBLOC_AGE) \
+	$(OPENSSL_LDFLAGS)
 
 if HAVE_LD_VERSION_SCRIPT
 src_libloc_la_LDFLAGS += -Wl,--version-script=$(top_srcdir)/src/libloc.sym
-else
-src_libloc_la_LDFLAGS += -export-symbols $(top_srcdir)/src/libloc.sym
 endif
 
 src_libloc_la_LIBADD = \
@@ -239,6 +240,7 @@ luadir = $(LUA_INSTALL_CMOD)
 src_lua_location_la_SOURCES = \
 	src/lua/as.c \
 	src/lua/as.h \
+	src/lua/compat.h \
 	src/lua/country.c \
 	src/lua/country.h \
 	src/lua/database.c \
@@ -280,7 +282,14 @@ LUA_TESTS = \
 	tests/lua/main.lua
 
 EXTRA_DIST += \
-	$(LUA_TESTS)
+	tests/lua/main.lua.in
+
+CLEANFILES += \
+	tests/lua/main.lua
+
+tests/lua/main.lua: tests/lua/main.lua.in Makefile
+	$(SED_PROCESS)
+	chmod o+x $@
 
 # ------------------------------------------------------------------------------
 
@@ -403,6 +412,7 @@ TESTS_LDADD = \
 	src/libloc-internal.la
 
 TESTS_ENVIRONMENT = \
+	LD_LIBRARY_PATH="$(abs_builddir)/src/.libs" \
 	LUA_CPATH="$(abs_builddir)/src/lua/.libs/?.so;;" \
 	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
 	TEST_DATA_DIR="$(abs_top_srcdir)/data" \

@@ -271,6 +271,8 @@ static int loc_database_mmap(struct loc_database* db) {
 		ERROR(db->ctx, "madvise() failed: %m\n");
 		return r;
 	}
+#else
+	(void) r;
 #endif
 
 	return 0;
@@ -568,6 +570,7 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 
 		goto CLEANUP;
 	}
+	(void) mdctx;
 
 	// Reset file to start
 	rewind(db->f);
@@ -930,11 +933,12 @@ static int __loc_database_lookup(struct loc_database* db, const struct in6_addr*
 	// If this node has a leaf, we will check if it matches
 	if (__loc_database_node_is_leaf(node_v1)) {
 		r = __loc_database_lookup_handle_leaf(db, address, network, network_address, level, node_v1);
-		if (r <= 0)
+		if (r < 0)
 			return r;
 	}
 
-	return 1;
+	// Return no error - even if nothing was found
+	return 0;
 }
 
 LOC_EXPORT int loc_database_lookup(struct loc_database* db,
@@ -1631,7 +1635,6 @@ static int __loc_database_enumerator_next_bogon(
 	return 0;
 
 FINISH:
-
 	if (!loc_address_all_zeroes(&enumerator->gap6_start)) {
 		r = loc_address_reset_last(&gap_end, AF_INET6);
 		if (r)

@@ -197,8 +197,10 @@ class CLI(object):
 					first_seen_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
 					last_seen_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP);
 				CREATE UNIQUE INDEX IF NOT EXISTS announcements_networks ON announcements(network);
-				CREATE INDEX IF NOT EXISTS announcements_family ON announcements(family(network));
-				CREATE INDEX IF NOT EXISTS announcements_search ON announcements USING GIST(network inet_ops);
+				CREATE INDEX IF NOT EXISTS announcements_search2 ON announcements
+					USING SPGIST(network inet_ops);
+				ALTER TABLE announcements ALTER COLUMN first_seen_at SET NOT NULL;
+				ALTER TABLE announcements ALTER COLUMN last_seen_at  SET NOT NULL;
 
 				-- autnums
 				CREATE TABLE IF NOT EXISTS autnums(number bigint, name text NOT NULL);
@@ -215,8 +217,8 @@ class CLI(object):
 				ALTER TABLE networks ADD COLUMN IF NOT EXISTS original_countries text[];
 				ALTER TABLE networks ADD COLUMN IF NOT EXISTS source text;
 				CREATE UNIQUE INDEX IF NOT EXISTS networks_network ON networks(network);
-				CREATE INDEX IF NOT EXISTS networks_family ON networks USING BTREE(family(network));
-				CREATE INDEX IF NOT EXISTS networks_search ON networks USING GIST(network inet_ops);
+				CREATE INDEX IF NOT EXISTS networks_search2 ON networks
+					USING SPGIST(network inet_ops);
 
 				-- geofeeds
 				CREATE TABLE IF NOT EXISTS geofeeds(
@@ -237,17 +239,12 @@ class CLI(object):
 				);
 				CREATE INDEX IF NOT EXISTS geofeed_networks_geofeed_id
 					ON geofeed_networks(geofeed_id);
-				CREATE INDEX IF NOT EXISTS geofeed_networks_search
-					ON geofeed_networks USING GIST(network inet_ops);
 				CREATE TABLE IF NOT EXISTS network_geofeeds(network inet, url text);
 				ALTER TABLE network_geofeeds ADD COLUMN IF NOT EXISTS source text NOT NULL;
 				CREATE UNIQUE INDEX IF NOT EXISTS network_geofeeds_unique2
 					ON network_geofeeds(network, url);
-				CREATE INDEX IF NOT EXISTS network_geofeeds_search
-					ON network_geofeeds USING GIST(network inet_ops);
 				CREATE INDEX IF NOT EXISTS network_geofeeds_url
 					ON network_geofeeds(url);
-				DROP INDEX IF EXISTS network_geofeeds_unique;
 
 				-- feeds
 				CREATE TABLE IF NOT EXISTS autnum_feeds(
@@ -274,8 +271,6 @@ class CLI(object):
 				);
 				CREATE UNIQUE INDEX IF NOT EXISTS network_feeds_unique
 					ON network_feeds(network, source);
-				CREATE INDEX IF NOT EXISTS network_feeds_search
-					ON network_feeds USING GIST(network inet_ops);
 
 				-- overrides
 				CREATE TABLE IF NOT EXISTS autnum_overrides(
@@ -300,12 +295,20 @@ class CLI(object):
 				);
 				CREATE UNIQUE INDEX IF NOT EXISTS network_overrides_network
 					ON network_overrides(network);
-				CREATE INDEX IF NOT EXISTS network_overrides_search
-					ON network_overrides USING GIST(network inet_ops);
 				ALTER TABLE network_overrides ADD COLUMN IF NOT EXISTS is_drop boolean;
 				ALTER TABLE network_overrides DROP COLUMN IF EXISTS source;
 
+				-- Cleanup things we no longer need
 				DROP TABLE IF EXISTS geofeed_overrides;
+				DROP INDEX IF EXISTS announcements_family;
+				DROP INDEX IF EXISTS announcements_search;
+				DROP INDEX IF EXISTS geofeed_networks_search;
+				DROP INDEX IF EXISTS networks_family;
+				DROP INDEX IF EXISTS networks_search;
+				DROP INDEX IF EXISTS network_feeds_search;
+				DROP INDEX IF EXISTS network_geofeeds_unique;
+				DROP INDEX IF EXISTS network_geofeeds_search;
+				DROP INDEX IF EXISTS network_overrides_search;
 			""")
 
 		return db
@@ -335,6 +338,9 @@ class CLI(object):
 
 		if ns.license:
 			writer.license = ns.license
+
+		# Analyze everything for the query planner hopefully making better decisions
+		self.db.execute("ANALYZE")
 
 		# Add all Autonomous Systems
 		log.info("Writing Autonomous Systems...")
@@ -366,296 +372,416 @@ class CLI(object):
 		# Add all networks
 		log.info("Writing networks...")
 
-		# Select all known networks
-		rows = self.db.query("""
-			WITH known_networks AS (
-				SELECT network FROM announcements
-				UNION
-				SELECT network FROM networks
-				UNION
-				SELECT network FROM network_feeds
-				UNION
-				SELECT network FROM network_overrides
-				UNION
-				SELECT network FROM geofeed_networks
-			),
+		# Create a new temporary table where we collect
+		# the networks that we are interested in
+		self.db.execute("""
+			CREATE TEMPORARY TABLE
+				n
+			(
+				network               inet NOT NULL,
+				autnum                integer,
+				country               text,
+				is_anonymous_proxy    boolean,
+				is_satellite_provider boolean,
+				is_anycast            boolean,
+				is_drop               boolean
+			)
+			WITH (FILLFACTOR = 50)
+		""")
 
-			ordered_networks AS (
-				SELECT
-					known_networks.network AS network,
-					announcements.autnum AS autnum,
-					networks.country AS country,
-
-					-- Must be part of returned values for ORDER BY clause
-					masklen(announcements.network) AS sort_a,
-					masklen(networks.network) AS sort_b
-				FROM
-					known_networks
-				LEFT JOIN
-					announcements ON known_networks.network <<= announcements.network
-				LEFT JOIN
-					networks ON known_networks.network <<= networks.network
-				ORDER BY
-					known_networks.network,
-					sort_a DESC,
-					sort_b DESC
+		# Add all known networks
+		self.db.execute("""
+			INSERT INTO
+				n
+			(
+				network
 			)
 
-			-- Return a list of those networks enriched with all
-			-- other information that we store in the database
 			SELECT
-				DISTINCT ON (network)
-				network,
-				autnum,
-
-				-- Country
-				COALESCE(
-					(
-						SELECT
-							country
-						FROM
-							network_overrides overrides
-						WHERE
-							networks.network <<= overrides.network
-						ORDER BY
-							masklen(overrides.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							country
-						FROM
-							autnum_overrides overrides
-						WHERE
-							networks.autnum = overrides.number
-					),
-					(
-						SELECT
-							country
-						FROM
-							network_feeds feeds
-						WHERE
-							networks.network <<= feeds.network
-						ORDER BY
-							masklen(feeds.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							country
-						FROM
-							autnum_feeds feeds
-						WHERE
-							networks.autnum = feeds.number
-						ORDER BY
-							source
-						LIMIT 1
-					),
-					(
-						SELECT
-							geofeed_networks.country AS country
-						FROM
-							network_geofeeds
-
-						-- Join the data from the geofeeds
-						LEFT JOIN
-							geofeeds ON network_geofeeds.url = geofeeds.url
-						LEFT JOIN
-							geofeed_networks ON geofeeds.id = geofeed_networks.geofeed_id
-
-						-- Check whether we have a geofeed for this network
-						WHERE
-							networks.network <<= network_geofeeds.network
-						AND
-							networks.network <<= geofeed_networks.network
-
-						-- Filter for the best result
-						ORDER BY
-							masklen(geofeed_networks.network) DESC
-						LIMIT 1
-					),
-					networks.country
-				) AS country,
-
-				-- Flags
-				COALESCE(
-					(
-						SELECT
-							is_anonymous_proxy
-						FROM
-							network_overrides overrides
-						WHERE
-							networks.network <<= overrides.network
-						ORDER BY
-							masklen(overrides.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_anonymous_proxy
-						FROM
-							network_feeds feeds
-						WHERE
-							networks.network <<= feeds.network
-						ORDER BY
-							masklen(feeds.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_anonymous_proxy
-						FROM
-							autnum_feeds feeds
-						WHERE
-							networks.autnum = feeds.number
-						ORDER BY
-							source
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_anonymous_proxy
-						FROM
-							autnum_overrides overrides
-						WHERE
-							networks.autnum = overrides.number
-					),
-					FALSE
-				) AS is_anonymous_proxy,
-				COALESCE(
-					(
-						SELECT
-							is_satellite_provider
-						FROM
-							network_overrides overrides
-						WHERE
-							networks.network <<= overrides.network
-						ORDER BY
-							masklen(overrides.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_satellite_provider
-						FROM
-							network_feeds feeds
-						WHERE
-							networks.network <<= feeds.network
-						ORDER BY
-							masklen(feeds.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_satellite_provider
-						FROM
-							autnum_feeds feeds
-						WHERE
-							networks.autnum = feeds.number
-						ORDER BY
-							source
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_satellite_provider
-						FROM
-							autnum_overrides overrides
-						WHERE
-							networks.autnum = overrides.number
-					),
-					FALSE
-				) AS is_satellite_provider,
-				COALESCE(
-					(
-						SELECT
-							is_anycast
-						FROM
-							network_overrides overrides
-						WHERE
-							networks.network <<= overrides.network
-						ORDER BY
-							masklen(overrides.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_anycast
-						FROM
-							network_feeds feeds
-						WHERE
-							networks.network <<= feeds.network
-						ORDER BY
-							masklen(feeds.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_anycast
-						FROM
-							autnum_feeds feeds
-						WHERE
-							networks.autnum = feeds.number
-						ORDER BY
-							source
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_anycast
-						FROM
-							autnum_overrides overrides
-						WHERE
-							networks.autnum = overrides.number
-					),
-					FALSE
-				) AS is_anycast,
-				COALESCE(
-					(
-						SELECT
-							is_drop
-						FROM
-							network_overrides overrides
-						WHERE
-							networks.network <<= overrides.network
-						ORDER BY
-							masklen(overrides.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_drop
-						FROM
-							network_feeds feeds
-						WHERE
-							networks.network <<= feeds.network
-						ORDER BY
-							masklen(feeds.network) DESC
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_drop
-						FROM
-							autnum_feeds feeds
-						WHERE
-							networks.autnum = feeds.number
-						ORDER BY
-							source
-						LIMIT 1
-					),
-					(
-						SELECT
-							is_drop
-						FROM
-							autnum_overrides overrides
-						WHERE
-							networks.autnum = overrides.number
-					),
-					FALSE
-				) AS is_drop
+				network
 			FROM
-				ordered_networks networks
+				announcements
+
+			UNION
+
+			SELECT
+				network
+			FROM
+				networks
+
+			UNION
+
+			SELECT
+				network
+			FROM
+				network_feeds
+
+			UNION
+
+			SELECT
+				network
+			FROM
+				network_overrides
+
+			UNION
+
+			SELECT
+				network
+			FROM
+				geofeed_networks
+		""")
+
+		# Create an index to search through networks faster
+		self.db.execute("""
+			CREATE INDEX
+				n_search
+			ON
+				n
+			USING
+				SPGIST(network)
+		""")
+
+		# Analyze n
+		self.db.execute("ANALYZE n")
+
+		# Apply the AS number to all networks
+		self.db.execute("""
+			-- Join all networks together with their most specific announcements
+			WITH announcements AS (
+				SELECT
+					n.network,
+					announcements.autnum,
+
+					-- Sort all merges and number them so
+					-- that we can later select the best one
+					ROW_NUMBER()
+					OVER
+					(
+						PARTITION BY
+							n.network
+						ORDER BY
+							masklen(announcements.network) DESC
+					) AS row
+				FROM
+					n
+				JOIN
+					announcements
+				ON
+					announcements.network >>= n.network
+			)
+
+			-- Store the result
+			UPDATE
+				n
+			SET
+				autnum = announcements.autnum
+			FROM
+				announcements
+			WHERE
+				announcements.network = n.network
+			AND
+				announcements.row = 1
+			""",
+		)
+
+		# Apply country information
+		self.db.execute("""
+			WITH networks AS (
+				SELECT
+					n.network,
+					networks.country,
+
+					ROW_NUMBER()
+					OVER
+					(
+						PARTITION BY
+							n.network
+						ORDER BY
+							masklen(networks.network) DESC
+					) AS row
+				FROM
+					n
+				JOIN
+					networks
+				ON
+					networks.network >>= n.network
+			)
+
+			UPDATE
+				n
+			SET
+				country = networks.country
+			FROM
+				networks
+			WHERE
+				networks.network = n.network
+			AND
+				networks.row = 1
+			""",
+		)
+
+		# Add all country information from Geofeeds
+		self.db.execute("""
+			WITH geofeeds AS (
+				SELECT
+					DISTINCT ON (geofeed_networks.network)
+					geofeed_networks.network,
+					geofeed_networks.country
+				FROM
+					geofeeds
+				JOIN
+					network_geofeeds networks
+				ON
+					geofeeds.url = networks.url
+				JOIN
+					geofeed_networks
+				ON
+					geofeeds.id = geofeed_networks.geofeed_id
+				AND
+					networks.network >>= geofeed_networks.network
+			),
+
+			networks AS (
+				SELECT
+					n.network,
+					geofeeds.country,
+
+					ROW_NUMBER()
+					OVER
+					(
+						PARTITION BY
+							n.network
+						ORDER BY
+							masklen(geofeeds.network) DESC
+					) AS row
+				FROM
+					n
+				JOIN
+					geofeeds
+				ON
+					geofeeds.network >>= n.network
+			)
+
+			UPDATE
+				n
+			SET
+				country = networks.country
+			FROM
+				networks
+			WHERE
+				networks.network = n.network
+			AND
+				networks.row = 1
+			""",
+		)
+
+		# Apply country and flags from feeds
+		self.db.execute("""
+			WITH networks AS (
+				SELECT
+					n.network,
+					network_feeds.country,
+
+					-- Flags
+					network_feeds.is_anonymous_proxy,
+					network_feeds.is_satellite_provider,
+					network_feeds.is_anycast,
+					network_feeds.is_drop,
+
+					ROW_NUMBER()
+					OVER
+					(
+						PARTITION BY
+							n.network
+						ORDER BY
+							masklen(network_feeds.network) DESC
+					) AS row
+				FROM
+					n
+				JOIN
+					network_feeds
+				ON
+					network_feeds.network >>= n.network
+			)
+
+			UPDATE
+				n
+			SET
+				country =
+					COALESCE(networks.country, n.country),
+
+				is_anonymous_proxy =
+					COALESCE(networks.is_anonymous_proxy, n.is_anonymous_proxy),
+
+				is_satellite_provider =
+					COALESCE(networks.is_satellite_provider, n.is_satellite_provider),
+
+				is_anycast =
+					COALESCE(networks.is_anycast, n.is_anycast),
+
+				is_drop =
+					COALESCE(networks.is_drop, n.is_drop)
+			FROM
+				networks
+			WHERE
+				networks.network = n.network
+			AND
+				networks.row = 1
+			""",
+		)
+
+		# Apply country and flags from AS feeds
+		self.db.execute("""
+			WITH networks AS (
+				SELECT
+					n.network,
+					autnum_feeds.country,
+
+					-- Flags
+					autnum_feeds.is_anonymous_proxy,
+					autnum_feeds.is_satellite_provider,
+					autnum_feeds.is_anycast,
+					autnum_feeds.is_drop
+				FROM
+					n
+				JOIN
+					autnum_feeds
+				ON
+					autnum_feeds.number = n.autnum
+			)
+
+			UPDATE
+				n
+			SET
+				country =
+					COALESCE(networks.country, n.country),
+
+				is_anonymous_proxy =
+					COALESCE(networks.is_anonymous_proxy, n.is_anonymous_proxy),
+
+				is_satellite_provider =
+					COALESCE(networks.is_satellite_provider, n.is_satellite_provider),
+
+				is_anycast =
+					COALESCE(networks.is_anycast, n.is_anycast),
+
+				is_drop =
+					COALESCE(networks.is_drop, n.is_drop)
+			FROM
+				networks
+			WHERE
+				networks.network = n.network
+		""")
+
+		# Apply network overrides
+		self.db.execute("""
+			WITH networks AS (
+				SELECT
+					n.network,
+					network_overrides.country,
+
+					-- Flags
+					network_overrides.is_anonymous_proxy,
+					network_overrides.is_satellite_provider,
+					network_overrides.is_anycast,
+					network_overrides.is_drop,
+
+					ROW_NUMBER()
+					OVER
+					(
+						PARTITION BY
+							n.network
+						ORDER BY
+							masklen(network_overrides.network) DESC
+					) AS row
+				FROM
+					n
+				JOIN
+					network_overrides
+				ON
+					network_overrides.network >>= n.network
+			)
+
+			UPDATE
+				n
+			SET
+				country =
+					COALESCE(networks.country, n.country),
+
+				is_anonymous_proxy =
+					COALESCE(networks.is_anonymous_proxy, n.is_anonymous_proxy),
+
+				is_satellite_provider =
+					COALESCE(networks.is_satellite_provider, n.is_satellite_provider),
+
+				is_anycast =
+					COALESCE(networks.is_anycast, n.is_anycast),
+
+				is_drop =
+					COALESCE(networks.is_drop, n.is_drop)
+			FROM
+				networks
+			WHERE
+				networks.network = n.network
+			AND
+				networks.row = 1
+		""")
+
+		# Apply AS overrides
+		self.db.execute("""
+			WITH networks AS (
+				SELECT
+					n.network,
+					autnum_overrides.country,
+
+					-- Flags
+					autnum_overrides.is_anonymous_proxy,
+					autnum_overrides.is_satellite_provider,
+					autnum_overrides.is_anycast,
+					autnum_overrides.is_drop
+				FROM
+					n
+				JOIN
+					autnum_overrides
+				ON
+					autnum_overrides.number = n.autnum
+			)
+
+			UPDATE
+				n
+			SET
+				country =
+					COALESCE(networks.country, n.country),
+
+				is_anonymous_proxy =
+					COALESCE(networks.is_anonymous_proxy, n.is_anonymous_proxy),
+
+				is_satellite_provider =
+					COALESCE(networks.is_satellite_provider, n.is_satellite_provider),
+
+				is_anycast =
+					COALESCE(networks.is_anycast, n.is_anycast),
+
+				is_drop =
+					COALESCE(networks.is_drop, n.is_drop)
+			FROM
+				networks
+			WHERE
+				networks.network = n.network
+		""")
+
+		# Here we could remove some networks that we no longer need, but since we
+		# already have implemented our deduplication/merge algorithm this would not
+		# be necessary.
+
+		# Export the entire temporary table
+		rows = self.db.query("""
+			SELECT
+				*
+			FROM
+				n
+			ORDER BY
+				network
 		""")
 
 		for row in rows:
@@ -684,7 +810,17 @@ class CLI(object):
 
 		# Add all countries
 		log.info("Writing countries...")
-		rows = self.db.query("SELECT * FROM countries ORDER BY country_code")
+
+		# Select all countries
+		rows = self.db.query("""
+			SELECT
+				*
+			FROM
+				countries
+			ORDER BY
+				country_code
+			""",
+		)
 
 		for row in rows:
 			c = writer.add_country(row.country_code)
@@ -1644,13 +1780,6 @@ class CLI(object):
 							network_geofeeds.url
 						FROM
 							network_geofeeds
-
-						UNION
-
-						SELECT
-							geofeed_overrides.url
-						FROM
-							geofeed_overrides
 					)
 				""",
 			)
@@ -1662,13 +1791,6 @@ class CLI(object):
 						network_geofeeds.url
 					FROM
 						network_geofeeds
-
-					UNION
-
-					SELECT
-						geofeed_overrides.url
-					FROM
-						geofeed_overrides
 				)
 				INSERT INTO
 					geofeeds
@@ -1979,10 +2101,12 @@ class CLI(object):
 
 								networks.append(n)
 
-							# Log a warning if not networks have been permitted
+							# If no networks have been specified, permit for everything
 							if not networks:
-								log.warning("Geofeed %s is not permitted for any networks. Ignoring." % url)
-								continue
+								networks = [
+									ipaddress.ip_network("::/0"),
+									ipaddress.ip_network("0.0.0.0/0"),
+								]
 
 							# Check the URL
 							url = self._check_geofeed_url(url)
@@ -2041,7 +2165,6 @@ class CLI(object):
 
 			# Spamhaus DROP
 			("SPAMHAUS-DROP",   self._import_spamhaus_drop, "https://www.spamhaus.org/drop/drop.txt"),
-			("SPAMHAUS-EDROP",  self._import_spamhaus_drop, "https://www.spamhaus.org/drop/edrop.txt"),
 			("SPAMHAUS-DROPV6", self._import_spamhaus_drop, "https://www.spamhaus.org/drop/dropv6.txt"),
 
 			# Spamhaus ASNDROP
@@ -2115,9 +2238,10 @@ class CLI(object):
 			"ap-southeast-1" : "SG",
 			"ap-southeast-2" : "AU",
 			"ap-southeast-3" : "MY",
-			"ap-southeast-4" : "AU",
-			"ap-southeast-5" : "NZ", # Auckland, NZ
+			"ap-southeast-4" : "AU", # Melbourne
+			"ap-southeast-5" : "MY", # Malaysia
 			"ap-southeast-6" : "AP", # XXX: Precise location not documented anywhere
+			"ap-southeast-7" : "AP", # XXX: Precise location unknown
 
 			# Canada
 			"ca-central-1"   : "CA",
@@ -2136,6 +2260,9 @@ class CLI(object):
 			# Middle East
 			"me-central-1"   : "AE",
 			"me-south-1"     : "BH",
+
+			# Mexico
+			"mx-central-1"   : "MX",
 
 			# South America
 			"sa-east-1"      : "BR",

@@ -66,6 +66,9 @@
     #define htobe64(x)  _byteswap_uint64 (x)
 
     #define reallocarray(ptr, nmemb, size)  realloc (ptr, (nmemb) * (size))
+
+    int asprintf  (char **buf, const char *fmt, ...);
+    int vasprintf (char **buf, const char *fmt, va_list args);
   #endif
 
   #if defined(LIBLOC_PRIVATE)
@@ -104,6 +107,18 @@
 
 #ifndef LIBLOC_NETERR
 #define LIBLOC_NETERR() strerror(errno)
+#endif
+
+#ifndef s6_addr16
+#define s6_addr16 __u6_addr.__u6_addr16
+#endif
+
+#ifndef s6_addr32
+#define s6_addr32 __u6_addr.__u6_addr32
+#endif
+
+#ifndef reallocarray
+#define reallocarray(ptr, nmemb, size) realloc(ptr, nmemb * size)
 #endif
 
 #endif  /* LIBLOC_COMPAT_H */

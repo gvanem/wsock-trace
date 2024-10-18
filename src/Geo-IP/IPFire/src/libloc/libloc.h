@@ -54,6 +54,18 @@ struct loc_ctx *loc_ref(struct loc_ctx* ctx);
 struct loc_ctx *loc_unref(struct loc_ctx* ctx);
 
 int loc_new(struct loc_ctx** ctx);
+
+typedef void (*loc_log_callback)(
+	struct loc_ctx* ctx,
+	void* data,
+	int priority,
+	const char* file,
+	int line,
+	const char* fn,
+	const char* format,
+	va_list args);
+void loc_set_log_callback(struct loc_ctx* ctx, loc_log_callback callback, void* data);
+
 void loc_set_log_fn(struct loc_ctx* ctx,
 	void (*log_fn)(struct loc_ctx* ctx,
 	int priority, const char* file, int line, const char* fn,
