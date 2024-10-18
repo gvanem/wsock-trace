@@ -141,7 +141,7 @@ GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
 
 /**
  * \def FW_FUNC_ENOSYS
- *  The error-code (120) to use if `g_cfg.FIREWALL.enable == FALSE`.
+ *  The error-code (120) to use if `g_cfg.FIREWALL.enable == false`.
  */
 #define FW_FUNC_ENOSYS  ERROR_CALL_NOT_IMPLEMENTED
 
@@ -180,7 +180,7 @@ static int   fw_api = FW_API_DEFAULT;
 static bool  fw_force_init = false;
 
 /**
- * TRUE if we've been called from `firewall_main()`.
+ * `true` if we've been called from `firewall_main()`.
  */
 static bool from_firewall_main = false;
 
@@ -1239,7 +1239,7 @@ DEF_FUNC (ULONG, FWClosePolicyStore, (HANDLE *policy_store));
  * Add the function-pointer value `p_XXfunc` to the `fw_funcs[]` array.
  */
 #undef  ADD_VALUE
-#define ADD_VALUE(dll, func)   { TRUE, NULL, dll, #func, (void**)&p_##func }
+#define ADD_VALUE(dll, func)   { true, NULL, dll, #func, (void**)&p_##func }
 
 static struct LoadTable fw_funcs[] = {
               ADD_VALUE ("FirewallAPI.dll", FWOpenPolicyStore),
@@ -2028,7 +2028,7 @@ static bool fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
   FWP_VALUE value;
   DWORD     rc;
 
-  /* If 'fw_init()' wasn't called or succeeded, return FALSE.
+  /* If 'fw_init()' wasn't called or succeeded, return false.
    */
   if (fw_policy_handle == INVALID_HANDLE_VALUE)
   {
@@ -2095,7 +2095,7 @@ static bool fw_monitor_init (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
 }
 
 /**
- * Try all available `FwpmNetEventSubscribeX()` functions and return TRUE if one succeedes.
+ * Try all available `FwpmNetEventSubscribeX()` functions and return `true` if one succeedes.
  * Start with the one above or equal the given API-level in `fw_api`.
  */
 static bool fw_monitor_subscribe (_FWPM_NET_EVENT_SUBSCRIPTION0 *subscription)
@@ -2631,7 +2631,7 @@ static int rule_compare_name (const void **_a, const void **_b)
  * ```
  *   HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Defaults\FirewallPolicy\FirewallRules
  * ```
- * and if `g_cfg.FIREWALL.show_all == TRUE`:
+ * and if `g_cfg.FIREWALL.show_all == true`:
  * ```
  *   HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"
  * ```
@@ -4266,9 +4266,9 @@ static void print_eff_name_id (const _FWPM_NET_EVENT_HEADER3 *header)
  * Lookup the account and domain for a SID to get
  * a more sensible account and domain-name.
  *
- * \retval TRUE  The account and domain for the SID was found.
- *               Also returns TRUE if there is no mapping of the SID.
- * \retval FALSE The account and domain for the SID was not found.
+ * \retval true  The account and domain for the SID was found.
+ *               Also returns `true` if there is no mapping of the SID.
+ * \retval false The account and domain for the SID was not found.
  */
 static bool lookup_account_SID (const SID *sid, const char *sid_str, char *account, char *domain)
 {
@@ -4414,6 +4414,16 @@ static void print_reauth_reason (const _FWPM_NET_EVENT_HEADER3         *header,
   else fw_buf_addf ("%lu\n", DWORD_CAST(allow_event->reauthReason));
 }
 
+/*
+ * Map a 'FWP_IP_VERSION_V4' / 'FWP_IP_VERSION_V6'
+ * to "4", "6" or "?".
+ */
+static const char *ip_ver_str (int fw_ip_ver)
+{
+  return (fw_ip_ver == FWP_IP_VERSION_V4 ? "4" :
+          fw_ip_ver == FWP_IP_VERSION_V6 ? "6" : "?");
+}
+
 static void CALLBACK
   fw_event_callback (const UINT                               event_type,
                      const _FWPM_NET_EVENT_HEADER3           *header,
@@ -4449,7 +4459,7 @@ static void CALLBACK
         (header->ipVersion == FWP_IP_VERSION_V6 && !g_cfg.FIREWALL.show_ipv6))
     {
       fw_num_ignored++;
-      TRACE (2, "Ignoring IPv%d event.\n", header->ipVersion);
+      TRACE (2, "Ignoring IPv%s event.\n", ip_ver_str(header->ipVersion));
       return;
     }
   }
@@ -4459,7 +4469,7 @@ static void CALLBACK
    * of `exclude_list_get (address_str, EXCL_ADDRESS)` before deciding to print anything.
    * The same goes for `exclude_list_get (appId, EXCL_PROGRAM)`.
    *
-   * If all `X_printed` are `FALSE`, `fw_buf_reset()` is called and nothing gets printed to `C_puts()`.
+   * If all `X_printed` are `false`, `fw_buf_reset()` is called and nothing gets printed to `C_puts()`.
    */
   event_name = list_lookup_name (event_type, events, DIM(events));
 
@@ -4796,7 +4806,8 @@ int firewall_main (int argc, char **argv)
 
   set_program_name (argv[0]);
 
-  g_cfg.FIREWALL.show_ipv6 = false; /* override the config-file */
+  g_cfg.FIREWALL.show_ipv6 = false;   /* override the config-file */
+  g_cfg.FIREWALL.show_all  = false;   /* ditto */
 
   while ((ch = getopt(argc, argv, "46a:Afh?cel:prRstv")) != EOF)
     switch (ch)
@@ -4862,8 +4873,8 @@ int firewall_main (int argc, char **argv)
 
   program = set_net_program (argc-optind, argv+optind);
 
-  g_cfg.FIREWALL.enable = true; /* should be redundant */
-  g_cfg.trace_report = true;    /* enable statistics in 'fw_report()' */
+  g_cfg.FIREWALL.enable = true;   /* should be redundant */
+  g_cfg.trace_report    = true;   /* enable statistics in 'fw_report()' */
 
   if (dump_events || dump_rules || dump_callouts || log_file ||
       g_data.stdout_redirected || g_cfg.trace_use_ods)

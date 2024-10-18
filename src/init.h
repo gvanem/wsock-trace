@@ -124,7 +124,7 @@ struct FIREWALL_cfg {
      };
 
 /**
- * Keep ALL user-configurable data to this structure:
+ * Keep ALL user-configurable data in this structure:
  */
 struct config_table {
        char   *trace_file;
@@ -209,7 +209,7 @@ struct config_table {
 extern struct config_table g_cfg;
 
 /**
- * Keep ALL other global data to this structure:
+ * Keep ALL other global data in this structure:
  */
 struct global_data {
        bool                       fatal_error;
