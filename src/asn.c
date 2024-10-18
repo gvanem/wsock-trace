@@ -65,13 +65,14 @@
  * Ignore some MinGW/gcc warnings below.
  */
 #if defined(__MINGW32__)
-  GCC_PRAGMA (GCC diagnostic ignored  "-Wformat")             /* does not understand '%zu'! */
-  GCC_PRAGMA (GCC diagnostic ignored  "-Wformat-extra-args")  /* ditto */
+  GCC_PRAGMA (GCC diagnostic ignored "-Wformat")             /* does not understand '%zu'! */
+  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-extra-args")  /* ditto */
 #endif
 
 #if defined(__GNUC__)
-  GCC_PRAGMA (GCC diagnostic ignored  "-Wstrict-aliasing")
-  GCC_PRAGMA (GCC diagnostic ignored  "-Wmissing-braces")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
+  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
 #endif
 
 struct libloc_data {

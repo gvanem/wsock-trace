@@ -41,7 +41,14 @@
 #include "dnsbl.h"
 
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>
+  #include <sys/cygwin.h>
+
+  /*
+   * Ignore some Cygwin warnings below:
+   *   warning: 'snprintf' output may be truncated before the last format character [-Wformat-truncation=]
+   *  590 |   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.drop_file));
+   */
+  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
 #endif
 
 typedef enum {

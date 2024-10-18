@@ -88,6 +88,9 @@
       extern char  *get_neterr (void);
 
       #define LIBLOC_NETERR() get_neterr()
+    #else
+      int asprintf  (char **buf, const char *fmt, ...);
+      int vasprintf (char **buf, const char *fmt, va_list args);
     #endif
 
     #if !defined(Py_PYTHON_H) && !defined(ssize_t) && !defined(_SSIZE_T_DEFINED)

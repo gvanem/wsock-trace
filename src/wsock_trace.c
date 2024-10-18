@@ -742,6 +742,16 @@ static const char *socket_number (SOCKET s)
 }
 
 /*
+ * Ignore Cygwin warnings like:
+ *   warning: '%.*s' directive output may be truncated writing up to 256
+ *   bytes into a region of size between 217 and 228
+ */
+#ifdef __CYGWIN__
+  GCC_PRAGMA (GCC diagnostic push)
+  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
+#endif
+
+/*
  * The actual Winsock functions we trace.
  */
 EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
@@ -802,6 +812,10 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   LEAVE_CRIT (!exclude_this);
   return (rc);
 }
+
+#ifdef __CYGWIN__
+  GCC_PRAGMA (GCC diagnostic pop)
+#endif
 
 EXPORT int WINAPI WSACleanup (void)
 {
