@@ -323,7 +323,7 @@ TARGETS = $(LJ_DLL)      \
 all:    $(GENERATED) $(TARGETS)
 static: $(GENERATED) $(LJ_STAT_LIB) bin/luajit.exe
 
-test: test_suite test_scimark test_life
+test: all test_suite test_scimark test_life
 
 #
 # This test shows 1 error:
