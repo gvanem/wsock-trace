@@ -339,8 +339,7 @@ test_suite: bin/luajit.exe
 
 test_life: bin/luajit.exe
 	$(call green_msg, Running $(BRIGHT_WHITE)bin/luajit.exe tests/bench/life.lua ...)
-	$(call run_test, tests/bench/life.lua > life.txt)
-	@cat ./life.txt
+	$(call run_test, tests/bench/life.lua)
 
 #
 # SciMark results of 'test_scimark' on my AMD Ryzen 9 3900X (3.7 GHz):
@@ -449,7 +448,7 @@ cpp-filter.py: $(THIS_FILE)
 
 clean:
 	rm -f vc1*.pdb clang-cl.args cl.args icx.args mingw-gcc.args cyg-gcc.args \
-	      life.txt link.args link.tmp lib.args cpp-filter.py
+	      link.args link.tmp lib.args cpp-filter.py
 	rm -fr $(OBJ_DIR)
 
 vclean realclean: clean
