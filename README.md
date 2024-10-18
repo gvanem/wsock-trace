@@ -71,8 +71,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
 * **[LuaJIT](https://github.com/LuaJIT/LuaJIT.git)** script support is very
   preliminary at the moment. The idea is that `.lua` scripts could change the
   behaviour of Wsock-trace at runtime without rebuilding it. Only the absolute minimum
-  of the needed files are in **[./LuaJIT](https://github.com/gvanem/wsock-trace/tree/master/LuaJIT)**.
-  Goto **[here](https://github.com/LuaJIT/LuaJIT.git)** for the complete LuaJIT.
+  of the needed files are in **[./LuaJIT](https://github.com/gvanem/wsock-trace/tree/master/src/LuaJIT)**.
 
 
 ### Installation
@@ -390,8 +389,7 @@ Note that some virus scanners may find the behaviour of programs linked to
       `socket(AF_INET6,...)`).
 
    6. Make it possible to switch network stacks at run-time:
-      select amongst Winsock2, **[lwIP](https://savannah.nongnu.org/projects/lwip/)**,
-      **[SwsSock](http://www.softsystem.co.uk/products/swssock.htm)** and/or <br>
+      select amongst Winsock2, **[lwIP](https://savannah.nongnu.org/projects/lwip/)** and/or <br>
       **[Cyclone TCP](https://www.oryx-embedded.com/cyclone_tcp.html)**.
 
    7. Make a GUI trace viewer for it. Ref:
@@ -423,7 +421,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2023.
+G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2024.
 
 ### Footnotes:
 
