@@ -3,14 +3,21 @@
 -- modified to use ANSI terminal escape sequences
 -- modified to use for instead of while
 
-local write=io.write
+local write = io.write
 
-ALIVE="¥"	DEAD="þ"
-ALIVE="O"	DEAD="-"
+ALIVE   = "\27[1;32mO\27[0m"
+DEAD    = "\27[37m-\27[0m"
+MAX_GEN = 500
 
-function delay() -- NOTE: SYSTEM-DEPENDENT, adjust as necessary
-  for i=1,10000 do end
-  -- local i=os.clock()+1 while(os.clock()<i) do end
+function delay(msec)
+  local now     = os.clock()
+  local timeout = now + (msec / 1000)
+
+  -- write("now:     ", now, "\n")
+  -- write("timeout: ", timeout, "\n")
+  while (now < timeout) do
+    now = os.clock()
+  end
 end
 
 function ARRAY2D(w,h)
@@ -53,12 +60,12 @@ end
 
 -- output the array to screen
 function _CELLS:draw()
-  local out="" -- accumulate to reduce flicker
+  local out = "" -- accumulate to reduce flicker
   for y=1,self.h do
    for x=1,self.w do
-      out=out..(((self[y][x]>0) and ALIVE) or DEAD)
+      out = out .. (((self[y][x] > 0) and ALIVE) or DEAD)
     end
-    out=out.."\n"
+    out = out.."\n"
   end
   write(out)
 end
@@ -75,10 +82,10 @@ end
 --
 -- shapes suitable for use with spawn() above
 --
-HEART = { 1,0,1,1,0,1,1,1,1; w=3,h=3 }
-GLIDER = { 0,0,1,1,0,1,0,1,1; w=3,h=3 }
-EXPLODE = { 0,1,0,1,1,1,1,0,1,0,1,0; w=3,h=4 }
-FISH = { 0,1,1,1,1,1,0,0,0,1,0,0,0,0,1,1,0,0,1,0; w=5,h=4 }
+HEART     = { 1,0,1,1,0,1,1,1,1; w=3,h=3 }
+GLIDER    = { 0,0,1,1,0,1,0,1,1; w=3,h=3 }
+EXPLODE   = { 0,1,0,1,1,1,1,0,1,0,1,0; w=3,h=4 }
+FISH      = { 0,1,1,1,1,1,0,0,0,1,0,0,0,0,1,1,0,0,1,0; w=5,h=4 }
 BUTTERFLY = { 1,0,0,0,1,0,1,1,1,0,1,0,0,0,1,1,0,1,0,1,1,0,0,0,1; w=5,h=5 }
 
 -- the main routine
@@ -88,24 +95,24 @@ function LIFE(w,h)
   local nextgen = CELLS(w,h)
 
   -- create some life
-  -- about 1000 generations of fun, then a glider steady-state
-  thisgen:spawn(GLIDER,5,4)
-  thisgen:spawn(EXPLODE,25,10)
-  thisgen:spawn(FISH,4,12)
+  -- about MAX_GEN/2 generations of fun, then a glider steady-state
+  thisgen:spawn (GLIDER,5,4)
+  thisgen:spawn (EXPLODE,25,10)
+  thisgen:spawn (FISH,4,12)
 
   -- run until break
-  local gen=1
+  local gen = 1
   write("\027[2J")	-- ANSI clear screen
   while 1 do
     thisgen:evolve(nextgen)
     thisgen,nextgen = nextgen,thisgen
-    write("\027[H")	-- ANSI home cursor
+    write("\027[H") -- ANSI home cursor
     thisgen:draw()
     write("Life - generation ",gen,"\n")
-    gen=gen+1
-    if gen>2000 then break end
-    --delay()		-- no delay
+    gen = gen + 1
+    if gen > MAX_GEN then break end
+    delay (100)
   end
 end
 
-LIFE(40,20)
+LIFE (60,40)
