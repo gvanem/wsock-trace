@@ -139,6 +139,7 @@ IPFIRE_SRC = $(addprefix IPFire/src/, \
                libloc.c               \
                network.c              \
                network-list.c         \
+               network-tree.c         \
                resolv.c               \
                stringpool.c           \
                writer.c               \
@@ -204,7 +205,7 @@ $(OBJ_DIR)/geoip-$(CPU).def: $(GEOIP_STAT_LIB) Makefile.Windows
 test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
-test-geoip.exe: $(OBJ_DIR)/test-geoip.$(O) $(GEOIP_IMP_LIB)
+test-geoip.exe: $(OBJ_DIR)/test-geoip.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
 install: all

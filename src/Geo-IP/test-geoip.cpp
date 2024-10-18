@@ -18,6 +18,7 @@ extern "C" {
   #include "../inet_addr.h"
   #include "../inet_util.h"
   #include "../geoip.h"
+  #include "../getopt.h"
   #include "../ip2loc.c"
 }
 
@@ -294,6 +295,7 @@ int geoip_dump_provider (int i)
       printf ("  p->files[%d]: '%s'. %s.\n",
               f, db_file, access(db_file, 0) == 0 ?
               "Does exist" : " Does not exist");
+  puts ("");
   return (1);
 }
 
@@ -689,10 +691,13 @@ static bool geoip_DROP_close (geoip_handle_st *geoip)
 /* -- Usage example: ------------------------------------------------------------------------------------------- */
 
 struct config_table g_cfg;
+struct global_data  g_data;
+char               *program_name;   /* for '../getopt.c' */
 
 void debug_printf (const char *file, unsigned line, const char *fmt, ...)
 {
   va_list args;
+
   printf ("%s(%u): ", file, line);
   va_start (args, fmt);
   vprintf (fmt, args);
@@ -765,19 +770,25 @@ static const struct geoip_provider_st drop_handler = {
 int main (int argc, char **argv)
 {
   struct geoip_data_rec rec;
+  int    c;
 
+  program_name = argv[0];
   memset (&g_cfg, '\0', sizeof(g_cfg));
   g_cfg.GEOIP.enable = true;
 
-  if (argc >= 2)
+  while ((c = getopt(argc, argv, "d")) != EOF)
   {
-    if (!strcmp(argv[1], "-d"))
-       g_cfg.trace_level = 1;
-    else if (!strcmp(argv[1], "-dd"))
-       g_cfg.trace_level = 2;
-    argc--;
-    argv[1] = argv[2];
+    switch (c)
+    {
+      case 'd':
+           g_cfg.trace_level++;
+           break;
+      default:
+           puts ("Illegal option.");
+           return (1);
+    }
   }
+  argv += optind;
 
   geoip_add_provider ("IP2LOC", &ip2loc_handler);
   geoip_add_provider ("MMDB", &mmdb_handler);
@@ -796,7 +807,7 @@ int main (int argc, char **argv)
   struct sockaddr sa  = { .sa_family = AF_INET };
   struct in_addr  ia4 = { 8, 8, 8, 8 };
 
-  if (argc >= 2 && inet_pton(AF_INET, argv[1], &ia4) != 1)
+  if (argv[0] && inet_pton(AF_INET, argv[0], &ia4) != 1)
   {
     printf ("Illegal IPv4 address: %s\n", argv[1]);
     return (1);
