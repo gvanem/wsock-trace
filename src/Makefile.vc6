@@ -236,10 +236,9 @@ compile_luajit_0:
 	@echo
 
 compile_luajit_1:
-	pushd $(LUAJIT_ROOT)\src      &         \
-	if not exist luajit_static-$(CPU).lib ( \
-	   msvcbuild.bat debug static &         \
-	   copy lua51.lib luajit_static-$(CPU).lib )
+	pushd $(LUAJIT_ROOT)\src   & \
+	msvcbuild.bat debug static & \
+	copy lua51.lib luajit_static-$(CPU).lib
 	@echo
 
 libloc$(_D)-$(CPU).lib: $(LIBLOC_OBJ)
