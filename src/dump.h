@@ -62,7 +62,7 @@ extern const char *ioctlsocket_cmd_name (long cmd);
 extern const char *wsasocket_flags_decode (int flags);
 extern const char *ai_flags_decode (int flags);
 extern const char *getnameinfo_flags_decode (int flags);
-extern const char *event_bits_decode (__LONG32 flag);
+extern const char *event_bits_decode (long flag);
 extern const char *get_sio_name (DWORD code);
 extern const char *get_addrinfo_hint  (const struct addrinfo *hint, size_t indent);
 extern const char *get_addrinfo_hintW (const struct addrinfoW *hint, size_t indent);

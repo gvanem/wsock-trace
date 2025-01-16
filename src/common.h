@@ -16,14 +16,6 @@
   #define EXPORT  __declspec(dllexport)
 #endif
 
-#ifdef _MSC_VER
-  #define NO_INLINE     __declspec(noinline)
-  #define THREAD_LOCAL  __declspec(thread)
-#else
-  #define NO_INLINE     __attribute__((noinline))
-  #define THREAD_LOCAL  __thread
-#endif
-
 #if defined(IN_WSOCK_TRACE_C) && (defined(UNICODE) || defined(_UNICODE))
   #error "Compiling this as UNICODE breaks in countless ways."
 #endif
@@ -58,7 +50,6 @@
           SHORT   revents;
         } WSAPOLLFD, *LPWSAPOLLFD;
 #endif
-
 
 /*
  * Generic debug and trace macro. Print to 'g_cfg.trace_stream' (default 'stdout')
@@ -205,22 +196,15 @@ extern void sock_list_add (SOCKET sock, int family, int type, int protocol);
 extern void sock_list_remove (SOCKET sock);
 extern int  sock_list_type (SOCKET sock, int *family, int *protocol);
 
-#if defined(__CYGWIN__)
-  extern char *_itoa (int value, char *buf, int radix);
-  extern char *_ultoa (unsigned long value, char *buf, int radix);
-  extern int   _kbhit (void);
-  extern int   _getch (void);
-#else
-  /*
-   * fnmatch() for non-Cygwin:
-   */
-  #define FNM_NOMATCH   1
-  #define FNM_NOESCAPE  0x01
-  #define FNM_PATHNAME  0x02
-  #define FNM_CASEFOLD  0x04
+/*
+ * fnmatch() stuff:
+ */
+#define FNM_NOMATCH   1
+#define FNM_NOESCAPE  0x01
+#define FNM_PATHNAME  0x02
+#define FNM_CASEFOLD  0x04
 
-  extern int fnmatch (const char *pattern, const char *string, int flags);
-#endif
+extern int fnmatch (const char *pattern, const char *string, int flags);
 
 /*
  * For decoding 'WSAIoctl (sock, SIO_TCP_INFO, ...)':

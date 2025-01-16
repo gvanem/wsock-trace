@@ -13,56 +13,30 @@ environment:
   # global:
   #   CL: -nologo -MP
   matrix:
-    - BUILDER: msvc
-      CPU:     x86
-    - BUILDER: msvc
-      CPU:     x64
-    - BUILDER: mingw
-      CPU:     x86
-    - BUILDER: mingw
-      CPU:     x64
-    - BUILDER: cygwin
-      CPU:     x86
-    - BUILDER: cygwin
-      CPU:     x64
+    - CPU: x86
+    - CPU: x64
 
 matrix:
   #
   # Immediately finish build if one of the above jobs fails.
   #
   fast_finish: true
-  allow_failures:
-     - BUILDER: cygwin
 
 install:
   #
-  # Cygwin install options etc.
-  #
-  - cmd: set DISABLEDELAYEDEXPANSION=0
-  - cmd: set CYGWIN_OPT=-qgnNdOA -l c:\cygwin\var\cache\setup -R c:\cygwin -s http://cygwin.mirror.constant.com
-
-  #
   # Set compiler environment for MSVC first.
   #
-  - cmd: if %BUILDER%.       == msvc.       call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
-  - cmd: if %BUILDER%-%CPU%. == mingw-x86.  set PATH=c:\msys64\MinGW32\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: if %BUILDER%-%CPU%. == mingw-x64.  set PATH=c:\msys64\MinGW64\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: if %BUILDER%-%CPU%. == cygwin-x86. c:\cygwin\setup-x86.exe %CYGWIN_OPT% > NUL & set PATH=c:\cygwin\bin;c:\msys64\usr\bin;%PATH%
-  - cmd: if %BUILDER%-%CPU%. == cygwin-x64. set PATH=c:\msys64\usr\bin;%PATH%
+  - cmd: call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %CPU%
 
 build_script:
   - cmd: CI\appveyor-script.bat init
   - cmd: cd src
   - cmd: set USE_LUAJIT=1
   - cmd: set PLATFORM=%CPU%
-  - cmd: set CYGWIN=nodosfilewarning
 
-  - cmd: if %BUILDER%. == msvc.   nmake -nologo -f Makefile.vc6
-  - cmd: if %BUILDER%. == mingw.  make          -f Makefile.MinGW  CPU=%CPU%
-  - cmd: if %BUILDER%. == cygwin. make          -f Makefile.CygWin CPU=%CPU% USE_LUAJIT=0
+  - cmd: nmake -nologo -f Makefile.vc6
 
 test_script:
-  - cmd: if %BUILDER%. == cygwin. (set USE_LUAJIT=0) else (set USE_LUAJIT=1)
   - cmd: set WSOCK_TRACE_LEVEL=1 & ws_tool.exe test -v
   - cmd: set WSOCK_TRACE_LEVEL=0 & set USE_LUAJIT=0
 
@@ -79,13 +53,13 @@ test_script:
   #
   # A simple test of the 'mhook' code:
   #
-  # - cmd: if %BUILDER%. == msvc. (set WSOCK_TRACE_LEVEL=1 & mhook-test.exe)
+  # - cmd: set WSOCK_TRACE_LEVEL=1 & mhook-test.exe
 
 #
 # Create a %ZIP_FILE% of the files needed to run the produced .exe-files (no source-files).
 #
 # after_test:
-#   - cmd: set ZIP_FILE=wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+#   - cmd: set ZIP_FILE=wsock_trace-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
 #   - cmd: 7z a %ZIP_FILE% .\README.md  .\wsock_trace .\geoip .\geoip6 .\drop.txt .\dropv6.txt .\edrop.txt src\*.dll src\*.pdb src\*.lib src\*.a src\*.exe src\*.lua > NUL
 
 #
@@ -93,7 +67,7 @@ test_script:
 # (cannot use the ZIP_FILE env-var here!)
 #
 # artifacts:
-#   - path: wsock_trace-%BUILDER%-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
+#   - path: wsock_trace-%CPU%-%APPVEYOR_BUILD_NUMBER%.zip
 #     name: Wsock-Trace
 
 #

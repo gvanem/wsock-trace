@@ -26,14 +26,8 @@
 #include "dnsbl.h"
 #include "dump.h"
 
-#if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
-  #include <mstcpip.h>
-  #include <ws2bth.h>
-
-#elif defined(__MINGW32__)
-  typedef struct pollfd WSAPOLLFD;  /* Missing in MinGW.org */
-#endif
-
+#include <mstcpip.h>
+#include <ws2bth.h>
 #include <MSWSock.h>
 
 #define ADD_VALUE(v)  { v, #v }
@@ -1476,7 +1470,7 @@ const char *getnameinfo_flags_decode (int flags)
   return flags_decode (flags, getnameinfo_flgs, DIM(getnameinfo_flgs));
 }
 
-const char *event_bits_decode (__LONG32 flag)
+const char *event_bits_decode (long flag)
 {
   if (flag == 0)
      return ("0");
@@ -1504,7 +1498,7 @@ const char *get_sio_name (DWORD code)
   for (i = 0; i < DIM(sio_codes); i++, sl++)
       if (code == sl->value)
          return (sl->name);
-  snprintf (buf, sizeof(buf), "code 0x%08lX", DWORD_CAST(code));
+  snprintf (buf, sizeof(buf), "code 0x%08lX", code);
   return (buf);
 }
 
@@ -1580,7 +1574,7 @@ static const char *dump_ip_multicast_if (char *buf, size_t buf_sz, const char *o
 
 static const char *dump_ipv6_multicast_if (char *buf, size_t buf_sz, const char *opt_val)
 {
-  snprintf (buf, buf_sz, "{scope:%lu}", DWORD_CAST(*(ULONG*)opt_val));
+  snprintf (buf, buf_sz, "{scope:%lu}", *(ULONG*)opt_val);
   return (buf);
 }
 
@@ -1598,7 +1592,7 @@ static const char *dump_ipv6_add_membership (char *buf, size_t buf_sz, const cha
  * dump.c: warning: trigraph ??> ignored, use -trigraphs to enable [-Wtrigraphs]
  *         str_ncpy (buf, "<??>", buf_sz);
  */
-GCC_PRAGMA (GCC diagnostic ignored "-Wtrigraphs")
+_PRAGMA (clang diagnostic ignored "-Wtrigraphs")
 
 /**
  * Print a `SOCKET_ADDRESS` to given buffer.
@@ -1727,14 +1721,14 @@ const char *sockopt_value (int level, int opt, const char *opt_val, int opt_len)
               strcpy (buf, "DWORD_MAX");
          else if (g_cfg.nice_numbers && val > 1000)
               snprintf (buf, sizeof(buf), "'%s'", dword_str(val));
-         else snprintf (buf, sizeof(buf), "%lu", DWORD_CAST(val));
+         else snprintf (buf, sizeof(buf), "%lu", val);
          break;
 
     case sizeof(ULONG64):
          val64 = *(const ULONG64*) opt_val;
          if (g_cfg.nice_numbers && val64 > 1000)
               snprintf (buf, sizeof(buf), "'%s'", qword_str(val64));
-         else snprintf (buf, sizeof(buf), "%" U64_FMT, val64);
+         else snprintf (buf, sizeof(buf), "%llu", val64);
          break;
 
     default:
@@ -1908,7 +1902,7 @@ void dump_wsamsg (const WSAMSG *msg, int rc)
 
   C_printf ("~4%*sremote: %*s%s, dwFlags: 0x%04lX~0\n",
             g_cfg.trace_indent+2, "", have_control, "",
-            remote, DWORD_CAST(msg->dwFlags));
+            remote, msg->dwFlags);
 
   if (have_control)
      print_control_buf (&msg->Control);
@@ -2127,7 +2121,7 @@ void dump_addrinfoW (const wchar_t *name, const struct addrinfoW *ai)
     else comment = "";
 
     C_indent (g_cfg.trace_indent+2);
-    C_printf ("ai_canonname: %" WCHAR_FMT ", ai_addr: %s%s\n",
+    C_printf ("ai_canonname: %ws, ai_addr: %s%s\n",
               ai->ai_canonname ? ai->ai_canonname : L"<none>",
               INET_addr_sockaddr(ai->ai_addr), comment);
   }
@@ -2400,9 +2394,9 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   C_puts (buf1);
   print_long_flags (buf2, g_cfg.trace_indent + strlen(buf1) + sizeof("dwServiceFlags1:   "), '|');
 
-  dump_one_proto_infof ("dwServiceFlags2:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags2));
-  dump_one_proto_infof ("dwServiceFlags3:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags3));
-  dump_one_proto_infof ("dwServiceFlags4:    0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwServiceFlags4));
+  dump_one_proto_infof ("dwServiceFlags2:    0x%08lX (reserved)\n", pi_a->dwServiceFlags2);
+  dump_one_proto_infof ("dwServiceFlags3:    0x%08lX (reserved)\n", pi_a->dwServiceFlags3);
+  dump_one_proto_infof ("dwServiceFlags4:    0x%08lX (reserved)\n", pi_a->dwServiceFlags4);
 
   flags = pi_a->dwProviderFlags;
   if (flags == 0)
@@ -2411,7 +2405,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
                                  DIM(wsaprotocol_info_ProviderFlags));
 
   dump_one_proto_infof ("dwProviderFlags:    %s\n", flags_str);
-  dump_one_proto_infof ("dwCatalogEntryId:   %lu\n", DWORD_CAST(pi_a->dwCatalogEntryId));
+  dump_one_proto_infof ("dwCatalogEntryId:   %lu\n", pi_a->dwCatalogEntryId);
   dump_one_proto_infof ("ProtocolChain:      len: %d, %s\n", pi_a->ProtocolChain.ChainLen,
                                                              (pi_a->ProtocolChain.ChainLen == 1) ?
                                                              "Base Service Provider" : "Layered Chain Entry");
@@ -2427,13 +2421,13 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
   dump_one_proto_infof ("iNetworkByteOrder:  %d = %s\n", pi_a->iNetworkByteOrder,
                                                          pi_a->iNetworkByteOrder == 0 ? "BIGENDIAN" : "LITTLEENDIAN");
   dump_one_proto_infof ("iSecurityScheme:    %d\n",      pi_a->iSecurityScheme);
-  dump_one_proto_infof ("dwMessageSize:      %lu\n",     DWORD_CAST(pi_a->dwMessageSize));
-  dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", DWORD_CAST(pi_a->dwProviderReserved));
+  dump_one_proto_infof ("dwMessageSize:      %lu\n",     pi_a->dwMessageSize);
+  dump_one_proto_infof ("dwProviderReserved: 0x%08lX (reserved)\n", pi_a->dwProviderReserved);
 
   if (ascii_or_wide == 'A')
        dump_one_proto_infof ("szProtocol:         \"%.*s\"\n",
                              WSAPROTOCOL_LEN, pi_a->szProtocol[0] ? pi_a->szProtocol : "<none>");
-  else dump_one_proto_infof ("szProtocol:         \"%.*" WCHAR_FMT "\"\n",
+  else dump_one_proto_infof ("szProtocol:         \"%.*ws\"\n",
                              WSAPROTOCOL_LEN, pi_w->szProtocol[0] ? pi_w->szProtocol : L"<none>");
 
   dump_one_proto_infof ("ProviderId:         %s\n", get_guid_string(&pi_a->ProviderId));
@@ -2457,7 +2451,7 @@ void dump_wsaprotocol_info (char ascii_or_wide, const void *proto_info, const vo
         C_indent (g_cfg.trace_indent+2);                                                                   \
         C_printf ("Active:     %d\n", info->fActive);                                                      \
         C_indent (g_cfg.trace_indent+2);                                                                   \
-        C_printf ("Version:    %lu\n", DWORD_CAST(info->dwVersion));                                       \
+        C_printf ("Version:    %lu\n", info->dwVersion);                                                   \
         C_indent (g_cfg.trace_indent+2);                                                                   \
         C_printf ("Identifier: %" fmt "~0\n", info->lpszIdentifier);                                       \
       } while (0)
@@ -2469,7 +2463,7 @@ void dump_wsanamespace_infoA (const WSANAMESPACE_INFOA *info, int index)
 
 void dump_wsanamespace_infoW (const WSANAMESPACE_INFOW *info, int index)
 {
-  DUMP_WSANAMESPACE_INFO (info, index, WCHAR_FMT);
+  DUMP_WSANAMESPACE_INFO (info, index, "ws");
 }
 
 void dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index)
@@ -2481,7 +2475,7 @@ void dump_wsanamespace_infoExA (const WSANAMESPACE_INFOEXA *info, int index)
 
 void dump_wsanamespace_infoExW (const WSANAMESPACE_INFOEXW *info, int index)
 {
-  DUMP_WSANAMESPACE_INFO (info, index, WCHAR_FMT);
+  DUMP_WSANAMESPACE_INFO (info, index, "ws");
   C_indent (g_cfg.trace_indent+2);
   C_printf ("~4Specifics:  0x%p~0\n", (const void*) &info->ProviderSpecific);
 }

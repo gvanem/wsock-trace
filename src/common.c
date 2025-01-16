@@ -15,13 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <errno.h>
-
-#if defined(__CYGWIN__)
-  #include <sys/ioctl.h>
-  #include <termios.h>
-#else
-  #include <share.h>
-#endif
+#include <share.h>
 
 #include "common.h"
 #include "smartlist.h"
@@ -345,11 +339,11 @@ char *ws_strerror (DWORD err, char *buf, size_t len)
       {
       fill:
         if (g_cfg.short_errors)
-             snprintf (buf, len, "%s (%lu)", el->short_name, DWORD_CAST(err));
-        else snprintf (buf, len, "%s: %s (%lu)", el->short_name, el->full_name, DWORD_CAST(err));
+             snprintf (buf, len, "%s (%lu)", el->short_name, err);
+        else snprintf (buf, len, "%s: %s (%lu)", el->short_name, el->full_name, err);
         return (buf);
       }
-  snprintf (buf, len, "Unknown error: %lu", DWORD_CAST(err));
+  snprintf (buf, len, "Unknown error: %lu", err);
   return (buf);
 }
 
@@ -497,67 +491,6 @@ const struct LoadTable *find_dynamic_table (const struct LoadTable *tab, int tab
   return (NULL);
 }
 
-#if defined(__CYGWIN__)
-  char *_itoa (int value, char *buf, int radix)
-  {
-    assert (radix == 8 || radix == 10);
-    sprintf (buf, (radix == 8) ? "%o" : "%d", value);
-    return (buf);
-  }
-
-  char *_ultoa (unsigned long value, char *buf, int radix)
-  {
-    assert (radix == 8 || radix == 10);
-    sprintf (buf, (radix == 8) ? "%lo" : "%lu", value);
-    return (buf);
-  }
-
-  /*
-   * '_kbhit()' and '_getch()' for CygWin based on:
-   *   https://stackoverflow.com/questions/29335758/using-kbhit-and-getch-on-linux
-   */
-  static int ch_waiting, bytes_waiting;
-  static struct termios old_term;
-
-  static void enable_raw_mode (void)
-  {
-    struct termios term;
-
-    tcgetattr (STDIN_FILENO, &old_term);
-    memcpy (&term, &old_term, sizeof(term));
-    term.c_lflag &= ~(ICANON | ECHO);   /* Disable echo as well */
-    tcsetattr (STDIN_FILENO, TCSANOW, &term);
-  }
-
-  static void disable_raw_mode (void)
-  {
-    tcsetattr (STDIN_FILENO, TCSANOW, &old_term);
-  }
-
-  int _kbhit (void)
-  {
-    bool rc;
-
-    enable_raw_mode();
-    ch_waiting = ioctl (STDIN_FILENO, FIONREAD, &bytes_waiting);
-    rc = (bytes_waiting > 0);
-    disable_raw_mode();
-    tcflush (STDIN_FILENO, TCIFLUSH);
-    TRACE (2, "ch_waiting: %d, bytes_waiting: %d\n", ch_waiting, bytes_waiting);
-    return (rc);
-  }
-
-  int _getch (void)
-  {
-    if (bytes_waiting > 0)
-    {
-      bytes_waiting--;
-      return (ch_waiting);
-    }
-    return (0);
-  }
-#endif /* __CYGWIN__ */
-
 /*
  * 'unsigned int' to string with leading zeros specified in 'width'.
  * _utoa10w (1234,5,buf) -> "01234".
@@ -629,7 +562,7 @@ const char *flags_decode (DWORD flags, const struct search_list *list, int num)
         flags &= ~list->value;
       }
   if (flags)           /* print unknown flag-bits */
-     ret += snprintf (ret, left, "0x%08lX|", DWORD_CAST(flags));
+     ret += snprintf (ret, left, "0x%08lX|", flags);
   if (ret > buf)
      *(--ret) = '\0';   /* remove '|' */
   return (buf);
@@ -943,16 +876,6 @@ static char *get_path_from_volume (char *path, size_t size)
   return (path);
 }
 
-/*
- * Ignore stuff like:
- *   warning: '\System32\' directive output may be truncated writing 10 bytes into a
- *            region of size between 1 and 256 [-Wformat-truncation=]
- */
-#ifndef __clang__
-  GCC_PRAGMA (GCC diagnostic push)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
-#endif
-
 static char *get_native_path (const char *path)
 {
   static char win_root[_MAX_PATH] = { "" };
@@ -979,10 +902,6 @@ static char *get_native_path (const char *path)
   }
   return (NULL);
 }
-
-#ifndef __clang__
-  GCC_PRAGMA (GCC diagnostic pop)
-#endif
 
 /**
  * Returns the true casing for a file or path.
@@ -1016,7 +935,7 @@ const char *get_path (const char    *apath,
      *is_native = false;  /* assume it's not a native file */
 
   if (wpath)
-       snprintf (path, sizeof(path), "%" WCHAR_FMT, wpath);
+       snprintf (path, sizeof(path), "%ws", wpath);
   else str_ncpy (path, apath, sizeof(path));
 
   if (!stricmp(path, "System"))    /* No more to do for this path */
@@ -1319,8 +1238,7 @@ static void fname_cache_dump (void)
 
     C_printf ("%2d: orig: '%s'\n"
               "    real: '%s',   CRC32: 0x%08lX\n",
-              i, fn->orig_name, fn->real_name,
-              DWORD_CAST(fn->crc32));
+              i, fn->orig_name, fn->real_name, fn->crc32);
   }
 }
 
@@ -1502,9 +1420,9 @@ int C_putc (int ch)
            color = &g_cfg.LUA.color_body;
            break;
       default:
-#if defined(_DEBUG) || defined(__NO_INLINE__)
+#if defined(_DEBUG)
           /*
-           * Some strangness with 'gcc -O0' or 'cl -MDd'
+           * Some strangness with 'cl -MDd'
            */
            if (ch == ' ')
               return (1);
@@ -1603,14 +1521,9 @@ int C_level_save_restore (int pop)
 /**
  * Open an existing file (or create) in share-mode but deny other
  * processes to write to the file.
- *
- * CygWin does not have `_sopen()`. Simply call `fopen()`.
  */
 FILE *fopen_excl (const char *file, const char *mode)
 {
-#if defined(__CYGWIN__)
-  return fopen (file, mode);
-#else
   int fd, open_flags, share_flags;
 
   switch (*mode)
@@ -1645,7 +1558,6 @@ FILE *fopen_excl (const char *file, const char *mode)
   if (fd <= -1)
      return (NULL);
   return fdopen (fd, mode);
-#endif  /* __CYGWIN__ */
 }
 
 /**
@@ -1685,17 +1597,17 @@ const char *qword_str (unsigned __int64 val)
   }
   else if (val < U64_SUFFIX(1000000000))    /* < 1E9 */
   {
-    sprintf (tmp, "%9" U64_FMT, val);
+    sprintf (tmp, "%9llu", val);
     sprintf (rc, "%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6);
   }
   else if (val < U64_SUFFIX(1000000000000)) /* < 1E12 */
   {
-    sprintf (tmp, "%12" U64_FMT, val);
+    sprintf (tmp, "%12llu", val);
     sprintf (rc, "%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9);
   }
   else                                      /* >= 1E12 */
   {
-    sprintf (tmp, "%15" U64_FMT, val);
+    sprintf (tmp, "%15llu", val);
     sprintf (rc, "%.3s,%.3s,%.3s,%.3s,%.3s", tmp, tmp+3, tmp+6, tmp+9, tmp+12);
   }
   idx &= 7;
@@ -1883,12 +1795,7 @@ char *getenv_expand (const char *variable, char *buf, size_t size, unsigned line
 
 int ws_setenv (const char *env, const char *val, int overwrite)
 {
-  int rc;
-
-#if defined(__CYGWIN__)
-  rc = setenv (env,  val, overwrite);
-
-#else
+  int    rc;
   size_t len, i = 0;
   char  *e, value [MAX_ENV_VAR] = { "?" };
 
@@ -1928,22 +1835,16 @@ int ws_setenv (const char *env, const char *val, int overwrite)
       return (-1);
     }
 
-    /* Some crash-issue on MinGW-w64 (x64) with this 'free()'.
-     */
-#if !(defined(__MINGW64_VERSION_MAJOR) && IS_WIN64)
     free (_environ[i]);
-#endif
     _environ[i] = e;
   }
   SetEnvironmentVariable (env, e);
   rc = 0;
-#endif  /* __CYGWIN__ */
 
   TRACE (3, "getenv(env): '%s'.\n", getenv(env));
   return (rc);
 }
 
-#if !defined(__CYGWIN__)
 /**
  * Find the first slash in a file-name.
  * \param[in] s the file-name to search in.
@@ -2096,7 +1997,6 @@ int fnmatch (const char *pattern, const char *string, int flags)
     } /* switch (c) */
   }   /* while (1) */
 }
-#endif /* __CYGWIN__ */
 
 /*
  * These CRC functions are derived from code in chapter 19 of the book
@@ -2170,11 +2070,6 @@ static DWORD crc_bytes (const char *buf, size_t len)
 
 /**
  * Simple check for file-existence.
- *
- * Using `access()` for CygWin in case the file is on a
- * Posix `"/usr/bin/foo"` form. But try `GetFileAttributes()`
- * also in case it's on Windows form (but that would match a directory
- * too).
  */
 int file_exists (const char *fname)
 {
@@ -2218,12 +2113,8 @@ const char *get_dll_full_name (void)
  * Returns the `.dll` basename.
  *
  * \retval
- *   "wsock_trace-x86.dll"      for 32-bit Visual-C / clang-cl
- *   "wsock_trace-x64.dll"      for 64-bit Visual-C / clang-cl
- *   "wsock_trace_mw.dll"       for 32-bit MinGW
- *   "wsock_trace_mw-x64.dll"   for 64-bit MinGW
- *   "wsock_trace_cyg.dll"      for 32-bit CygWin
- *   "wsock_trace_cyg-x64.dll"  for 64-bit CygWin
+ *   "wsock_trace-x86.dll"  for 32-bit Visual-C / clang-cl
+ *   "wsock_trace-x64.dll"  for 64-bit Visual-C / clang-cl
  *
  * And an extra `"_d"` after `"wsock_trace"` for a CRT-DEBUG version.
  *
@@ -2249,7 +2140,7 @@ const char *get_dll_build_date (void)
  */
 const char *get_builder (bool show_dbg_rel)
 {
-#if defined(_M_X64) || defined(__x86_64__)
+#if defined(_M_X64)
   /*
    * Do this since a '-DBITNESS=64' could be missing from makefiles
    */
@@ -2258,7 +2149,7 @@ const char *get_builder (bool show_dbg_rel)
   const char *platform = RC_BITNESS; /* from 'wsock_trace.rc' included above */
 #endif
 
-#if defined(_DEBUG) || defined(__NO_INLINE__)
+#if defined(_DEBUG)
   const char *dbg_rel = "debug";
 #else
   const char *dbg_rel = "release";

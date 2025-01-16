@@ -1457,9 +1457,6 @@ static int CSV_rand_range (int min, int max)
  */
 FILE *CSV_fopen_excl (const char *file, const char *mode)
 {
-#if defined(__CYGWIN__)
-  return fopen (file, mode);
-#else
   int fd, open_flags, share_flags;
 
   switch (*mode)
@@ -1490,14 +1487,9 @@ FILE *CSV_fopen_excl (const char *file, const char *mode)
   open_flags |= _O_SEQUENTIAL;
 #endif
 
-#ifndef SH_DENYWR
-#define SH_DENYWR  0x20   /* In <share.h> on MinGW */
-#endif
-
   fd = _sopen (file, open_flags, SH_DENYWR, share_flags);
   if (fd <= -1)
      return (NULL);
   return fdopen (fd, mode);
-#endif  /* __CYGWIN__ */
 }
 

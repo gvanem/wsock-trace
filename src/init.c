@@ -20,7 +20,6 @@
 #include "config.h"
 #include "common.h"
 #include "wsock_trace.h"
-#include "bfd_gcc.h"
 #include "dump.h"
 #include "geoip.h"
 #include "idna.h"
@@ -250,51 +249,6 @@ const char *get_time_now (void)
   snprintf (time, sizeof(time), "%s, %02u:%02u:%02u",
             get_date_str(&now), now.wHour, now.wMinute, now.wSecond);
   return (time);
-}
-
-static bool image_opt_header_is_msvc (HMODULE mod)
-{
-  const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
-  const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
-  const IMAGE_OPTIONAL_HEADER *opt = (const IMAGE_OPTIONAL_HEADER*) &nt->OptionalHeader;
-
-  TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u\n",
-         opt->MajorLinkerVersion, opt->MinorLinkerVersion);
-  return (opt->MajorLinkerVersion >= 10 && opt->MinorLinkerVersion == 0);
-}
-
-static bool image_opt_header_is_mingw (HMODULE mod)
-{
-  const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
-  const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
-  const IMAGE_OPTIONAL_HEADER *opt = (const IMAGE_OPTIONAL_HEADER*) &nt->OptionalHeader;
-
-  TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u\n",
-         opt->MajorLinkerVersion, opt->MinorLinkerVersion);
-  return (opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30);
-}
-
-static bool image_opt_header_is_cygwin (HMODULE mod)
-{
-  const IMAGE_DOS_HEADER      *dos = (const IMAGE_DOS_HEADER*) mod;
-  const IMAGE_NT_HEADERS      *nt  = (const IMAGE_NT_HEADERS*) ((const BYTE*)mod + dos->e_lfanew);
-  const IMAGE_OPTIONAL_HEADER *opt = (const IMAGE_OPTIONAL_HEADER*) &nt->OptionalHeader;
-  const IMAGE_FILE_HEADER     *fh  = (const IMAGE_FILE_HEADER*) &nt->FileHeader;
-  bool  wild_tstamp = false;
-
-  /*
-   * File-headers in CygWin32's .EXEs often seems to contain junk:
-   *
-   *   TimeDateStamp:     20202020 -> Fri Jan 30 03:38:08 1987
-   *
-   * or some time in the future.
-   */
-  if (fh->TimeDateStamp == 0x20202020 || fh->TimeDateStamp > (DWORD)time(NULL))
-     wild_tstamp = true;
-
-  TRACE (2, "opt->MajorLinkerVersion: %u, opt->MinorLinkerVersion: %u, wild_tstamp: %d\n",
-         opt->MajorLinkerVersion, opt->MinorLinkerVersion, wild_tstamp);
-  return ((opt->MajorLinkerVersion >= 2 && opt->MajorLinkerVersion < 30) || wild_tstamp);
 }
 
 /*
@@ -591,16 +545,6 @@ bool exclude_list_add (const char *name, unsigned exclude_which)
  * then in %APPDATA%.
  */
 
-/*
- * Ignore stuff like:
- *   warning: '%.30s' directive output may be truncated writing 11 bytes into a region
- *            of size between 0 and 259 [-Wformat-truncation=]
- */
-#if !defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic push)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
-#endif
-
 static FILE *open_config_file (const char *base_name)
 {
   char *appdata, *env = getenv_expand ("WSOCK_TRACE", g_data.cfg_fname, sizeof(g_data.cfg_fname), 0);
@@ -632,10 +576,6 @@ static FILE *open_config_file (const char *base_name)
   TRACE (2, "config-file: \"%s\". %sfound.\n", g_data.cfg_fname, fil ? "" : "not ");
   return (fil);
 }
-
-#if !defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic pop)
-#endif
 
 /*
  * Handler for default section or '[core]' section.
@@ -815,15 +755,6 @@ static void parse_core_settings (const char *key, const char *val, unsigned line
 
   else if (!stricmp(key, "extra_new_line"))
      g_cfg.extra_new_line = atoi (val);
-
-  else if (!stricmp(key, "msvc_only"))
-     g_cfg.msvc_only = atoi (val);
-
-  else if (!stricmp(key, "mingw_only"))
-     g_cfg.mingw_only = atoi (val);
-
-  else if (!stricmp(key, "cygwin_only"))
-     g_cfg.cygwin_only = atoi (val);
 
   else if (!stricmp(key, "no_buffering"))
      g_cfg.no_buffering = atoi (val);
@@ -1264,12 +1195,12 @@ static void trace_report (void)
   }
 
   if (g_data.reentries > 0)
-     C_printf ("  get_caller() reentered %lu times.\n", DWORD_CAST(g_data.reentries));
+     C_printf ("  get_caller() reentered %lu times.\n", g_data.reentries);
 
 //if (g_data.counts.dll_attach > 0 || g_data.counts.dll_detach > 0)
   {
-    C_printf ("  DLL attach %" U64_FMT " times.\n", g_data.counts.dll_attach);
-    C_printf ("  DLL detach %" U64_FMT " times.\n", g_data.counts.dll_detach);
+    C_printf ("  DLL attach %llu times.\n", g_data.counts.dll_attach);
+    C_printf ("  DLL detach %llu times.\n", g_data.counts.dll_detach);
   }
   C_puts ("~0");
 
@@ -1317,11 +1248,8 @@ static void trace_report (void)
     DWORD num_ip4, num_ip6, num_ip2loc4, num_ip2loc6;
 
     geoip_num_unique_countries (&num_ip4, &num_ip6, &num_ip2loc4, &num_ip2loc6);
-    C_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n",
-              DWORD_CAST(num_ip4), DWORD_CAST(num_ip2loc4));
-
-    C_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n",
-              DWORD_CAST(num_ip6), DWORD_CAST(num_ip2loc6));
+    C_printf ("  # of unique countries (IPv4): %3lu, by ip2loc: %3lu.\n", num_ip4, num_ip2loc4);
+    C_printf ("  # of unique countries (IPv6): %3lu, by ip2loc: %3lu.\n", num_ip6, num_ip2loc6);
   }
 
   if (g_cfg.IANA.enable)
@@ -1378,7 +1306,7 @@ void wsock_trace_exit (void)
   }
 
   rc = TlsFree (g_data.ws_Tls_index);
-  TRACE (2, "TlsFree (%lu) -> %d.\n", DWORD_CAST(g_data.ws_Tls_index), rc);
+  TRACE (2, "TlsFree (%lu) -> %d.\n", g_data.ws_Tls_index, rc);
 
   common_exit();
 
@@ -1490,7 +1418,6 @@ void wsock_trace_init (void)
   const char *now;
   bool        okay;
   HMODULE     mod;
-  bool        is_msvc, is_mingw, is_cygwin;
 
   /* Set default values.
    */
@@ -1538,10 +1465,6 @@ void wsock_trace_init (void)
   if (g_cfg.compact)
      g_cfg.dump_data = false;
 
-  is_msvc   = image_opt_header_is_msvc (mod);
-  is_mingw  = image_opt_header_is_mingw (mod);
-  is_cygwin = image_opt_header_is_cygwin (mod);
-
   if (g_cfg.use_sema)
   {
     /* Check if we've already got an instance of ourself.
@@ -1562,16 +1485,6 @@ void wsock_trace_init (void)
   if (!g_cfg.no_inv_handler)
      set_invalid_handler();
 
-  if ((g_cfg.msvc_only   && !is_msvc)  ||
-      (g_cfg.mingw_only  && !is_mingw) ||
-      (g_cfg.cygwin_only && !is_cygwin) )
-  {
-    g_data.stealth_mode = true;
-    g_cfg.trace_level = 0;
-    g_cfg.trace_report = g_cfg.dump_tcpinfo = false;
-    g_cfg.FIREWALL.sound.enable = g_cfg.extra_new_line = false;
-  }
-
   if (g_cfg.trace_file && !stricmp(g_cfg.trace_file, "stderr"))
   {
     g_cfg.trace_stream      = stderr;
@@ -1588,10 +1501,8 @@ void wsock_trace_init (void)
   {
     const char *mode = "at+";
 
-#ifdef _MSC_VER
     if (g_cfg.trace_file_commit)
        mode = "atc+";
-#endif
 
     g_cfg.trace_stream      = fopen_excl (g_cfg.trace_file, mode);
     g_cfg.trace_file_okay   = (g_cfg.trace_stream != NULL);
@@ -1609,10 +1520,6 @@ void wsock_trace_init (void)
 
   if (g_cfg.trace_stream)
   {
-#if defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 3001000)
-    g_cfg.no_buffering = 1;
-#endif
-
     if (g_cfg.no_buffering)
        setvbuf (g_cfg.trace_stream, NULL, _IONBF, 0);
 
@@ -1666,7 +1573,7 @@ void wsock_trace_init (void)
     DWORD mode;
 
     GetConsoleMode (g_data.console_hnd, &mode);
-    TRACE (3, "GetConsoleMode(): 0x%08lX\n", DWORD_CAST(mode));
+    TRACE (3, "GetConsoleMode(): 0x%08lX\n", mode);
   }
 
   /* These env-var override the actual screen-height and width.
@@ -1703,8 +1610,8 @@ void wsock_trace_init (void)
 
   g_data.ws_Tls_index = TlsAlloc();
   if (g_data.ws_Tls_index == TLS_OUT_OF_INDEXES)
-       TRACE (1, "TlsAlloc() -> TLS_OUT_OF_INDEXES! GetLastError(): %lu.\n", DWORD_CAST(GetLastError()));
-  else TRACE (2, "TlsAlloc() -> %lu.\n", DWORD_CAST(g_data.ws_Tls_index));
+       TRACE (1, "TlsAlloc() -> TLS_OUT_OF_INDEXES! GetLastError(): %lu.\n", GetLastError());
+  else TRACE (2, "TlsAlloc() -> %lu.\n", g_data.ws_Tls_index);
 
   if (!g_data.stdout_redirected)
   {
@@ -1765,10 +1672,6 @@ void wsock_trace_init (void)
   load_ws2_funcs();
   hosts_file_init();
   services_file_init();
-
-#if defined(USE_BFD)
-  BFD_init();
-#endif
 
   StackWalkInit();
   overlap_init();
@@ -1982,11 +1885,7 @@ int get_column (void)
 #define DLT_IPV4            228
 #define DLT_IPV6            229
 
-#if defined(_MSC_VER) || defined(__CYGWIN__)
-  #pragma pack(push,1)
-#else
-  #pragma pack(1)
-#endif
+#pragma pack(push,1)
 
 struct pcap_file_header {
        DWORD  magic;
@@ -1999,8 +1898,7 @@ struct pcap_file_header {
      };
 
 /* The 'struct timeval' layout in a 32-bit NPF.SYS driver
- * uses 'long'. In CygWin64, a 'struct timeval' has 'long' which
- * are 64-bits. Hence our 'struct timeval' must be unique.
+ * uses 'long'. Hence our 'struct timeval' must be unique.
  * So use this:
  */
 struct pcap_timeval {
@@ -2060,11 +1958,7 @@ struct udp_header {
        WORD   uh_sum;          /* udp checksum */
      };
 
-#if defined(_MSC_VER) || defined(__CYGWIN__)
-  #pragma pack(pop)
-#else
-  #pragma pack()
-#endif
+#pragma pack(pop)
 
 static int make_ip_chksum (const void *buf, size_t len)
 {
@@ -2284,7 +2178,7 @@ static void __cdecl invalid_parameter_handler (const wchar_t *expression,
                                                unsigned int   line,
                                                uintptr_t      dummy)
 {
-  TRACE (1, "%s (%" WCHAR_FMT ", %" WCHAR_FMT ", %" WCHAR_FMT ", %u, %p)\n",
+  TRACE (1, "%s (%ws , %ws , %ws , %u, %p)\n",
          __FUNCTION__, expression, function, file, line, (void*)dummy);
   RaiseException (STATUS_GNULIB_INVALID_PARAMETER, 0, 0, NULL);
 }

@@ -13,37 +13,15 @@
 #include <string.h>
 #include <malloc.h>
 #include <io.h>
+#include <conio.h>
 #include <assert.h>
 #include <sys/utime.h>
 #include <sys/stat.h>
 
-#if defined(__CYGWIN__)
-  #include <cygwin/version.h>
-  #include <sys/stat.h>
-  #include <unistd.h>
-  #include <limits.h>
-  #include <wchar.h>
-
-  #if defined(__x86_64__) && !defined(_WIN64)
-  #define _WIN64 1
-  #endif
-
-  #if !defined(_MAX_PATH)
-  #define _MAX_PATH   _POSIX_PATH_MAX   /* 256 */
-  #endif
-
-#else
-  #include <conio.h>
-#endif
-
-#if defined(__MINGW32__)
-  #include <specstrings.h>
-#endif
-
-#if defined(_MSC_VER) && defined(_DEBUG)  /* use CrtDebug in MSVC debug-mode */
+#if defined(_DEBUG)           /* use CrtDebug in debug-mode */
   #undef  _CRTDBG_MAP_ALLOC
   #define _CRTDBG_MAP_ALLOC
-  #undef _malloca                         /* Avoid MSVC-9 <malloc.h>/<crtdbg.h> name-clash */
+  #undef _malloca             /* Avoid MSVC-9 <malloc.h>/<crtdbg.h> name-clash */
   #include <crtdbg.h>
 #endif
 
@@ -53,46 +31,25 @@
  *   https://sourceforge.net/p/predef/wiki/Compilers
  *   https://sourceforge.net/p/predef/wiki/Architectures
  */
-#if defined(_MSC_VER)   /* This includes 'clang-cl' and Intel's 'icx' too */
-  #if defined(_M_IX86)
-    #define WS_TRACE_I386
+#if defined(_M_IX86)
+  #define WS_TRACE_I386
 
-  #elif defined(_M_AMD64)
-    #define WS_TRACE_AMD64
+#elif defined(_M_AMD64)
+  #define WS_TRACE_AMD64
 
-  #elif defined(_M_IA64)
-    #define WS_TRACE_IA64
+#elif defined(_M_IA64)
+  #define WS_TRACE_IA64
 
-  #elif defined(_M_ARM)
-    #define WS_TRACE_ARM
+#elif defined(_M_ARM)
+  #define WS_TRACE_ARM
 
-  #elif defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC)
-    #define WS_TRACE_ARM64
+#elif defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC)
+  #define WS_TRACE_ARM64
 
-  #else
-    #error "Unsupported CPU"
-  #endif
-
-#elif defined(__GNUC__)
-  #if defined(__i386__)
-    #define WS_TRACE_I386
-
-  #elif defined(__amd64__)
-    #define WS_TRACE_AMD64
-
-  #elif defined(__ia64__)
-    #define WS_TRACE_IA64
-
-  #elif defined(__arm__)
-    #define WS_TRACE_ARM
-
-  #elif defined(__aarch64__)
-    #define WS_TRACE_ARM64
-
-  #else
-    #error "Unsupported CPU"
-  #endif
+#else
+  #error "Unsupported CPU"
 #endif
+
 
 #if defined(WS_TRACE_I386)
   #define WS_TRACE_IMAGE_TYPE  IMAGE_FILE_MACHINE_I386
@@ -148,6 +105,8 @@
 #define SIZEOF(x)       (int) sizeof(x)
 #define TOUPPER(c)      toupper ((int)(c))
 #define ARGSUSED(foo)   (void)foo
+#define S64_SUFFIX(x)   (x##i64)
+#define U64_SUFFIX(x)   (x##Ui64)
 
 /*
  * According to:
@@ -170,105 +129,16 @@
 #endif
 
 #ifndef QWORD_MAX
-#define QWORD_MAX  U64_SUFFIX (0xFFFFFFFFFFFFFFFF)
+#define QWORD_MAX  0xFFFFFFFFFFFFFFFFULL
 #endif
 
-#if defined(__GNUC__) && !defined(__CYGWIN__) /* Implies MinGW */
-  #define WCHAR_FMT      "S"
-  #define S64_FMT        "I64d"
-  #define U64_FMT        "I64u"
-  #define X64_FMT        "I64X"
-  #define S64_SUFFIX(x)  (x##LL)
-  #define U64_SUFFIX(x)  (x##ULL)
-
-#elif defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
-  #define WCHAR_FMT      "ws"
-  #define S64_FMT        "I64d"
-  #define U64_FMT        "I64u"
-  #define X64_FMT        "I64X"
-  #define S64_SUFFIX(x)  (x##i64)
-  #define U64_SUFFIX(x)  (x##Ui64)
-
+#if defined(__clang__)
+  #define _PRAGMA(x)            _Pragma (#x)
+  #define ATTR_PRINTF(_1, _2)   __attribute__((format(printf, _1, _2)))
 #else
-  #if defined(__CYGWIN__)
-    #define WCHAR_FMT    "S"
-  #else
-    #define WCHAR_FMT    "ws"
-  #endif
-  #define S64_FMT        "Ld"
-  #define U64_FMT        "Lu"
-  #define X64_FMT        "Lx"
-  #define S64_SUFFIX(x)  (x##LL)
-  #define U64_SUFFIX(x)  (x##ULL)
+  #define _PRAGMA(x)
+  #define ATTR_PRINTF(_1, _2)
 #endif
-
-#if defined(__GNUC__)
-  #define GCC_VERSION  (10000 * __GNUC__ + 100 * __GNUC_MINOR__ + __GNUC_PATCHLEVEL__)
-#else
-  #define GCC_VERSION  0
-#endif
-
-#if (GCC_VERSION >= 40600) || defined(__clang__)
-  #define GCC_PRAGMA(x)  _Pragma (#x)
-#else
-  #define GCC_PRAGMA(x)
-#endif
-
-#if defined(IN_WSOCK_TRACE_C)
-  #if defined(WIN64) || defined(_WIN64)
-    #define SOCK_RC_TYPE SOCKET
-  #else
-    #define SOCK_RC_TYPE unsigned
-  #endif
-
-  /*
-   * There is some difference between some Winsock prototypes in MS-SDK's
-   * versus MinGW-w64/MinGW-TDM headers. This is to fit the 'const struct timeval*'
-   * parameter in 'select()' etc.
-   */
-  #if (defined(__MINGW32__) && defined(__MINGW64_VERSION_MAJOR)) || \
-      (defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED >= 2002001)) /* Not sure about this value */
-    #define CONST_PTIMEVAL   const PTIMEVAL
-  #else
-    #define CONST_PTIMEVAL   const struct timeval *
-  #endif
-
-  /*
-   * More hacks for string parameters to 'WSAConnectByNameA()'. According to
-   * MSDN:
-   *   https://msdn.microsoft.com/en-us/library/windows/desktop/ms741557(v=vs.85).aspx
-   *
-   * they want an 'LPSTR' for 'node_name' and 'service_name'. Hence so does MinGW.
-   * But the <winsock2.h> in the WindowsKit wants an 'LPCSTR'.
-   *
-   * Funny enough, 'WSAConnectByNameW()' doesn't want a 'const wide-string'.
-   */
-  #if defined(_MSC_VER)
-    #define CONST_LPSTR  LPCSTR
-  #else
-    #define CONST_LPSTR  LPSTR    /* non-const 'char*' as per MSDN */
-  #endif
-#endif  /* IN_WSOCK_TRACE_C */
-
-
-/**
- * \def DWORD_CAST
- *
- * To fix the warnings for the use of `%lu` with a DWORD-arg.\n
- * Or warnings with `%ld` and an `int` argument.
- *
- * Especially noisy for `x64` builds since CygWin is a LP64-platform: \n
- *   https://en.wikipedia.org/wiki/64-bit_computing
- */
-#if defined(__CYGWIN__)
-  #define DWORD_CAST(x)   ((unsigned long)(x))
-  #define LONG_CAST(x)    ((long int)(x))
-
-#else
-  #define DWORD_CAST(x)   x
-  #define LONG_CAST(x)    x
-#endif
-
 
 /*
  * Printing an hex linear address.
@@ -278,26 +148,14 @@
  * todo: Maybe print a 64-bit address as 'cdb' does:
  *       "00000001`0040175a"
  */
-#if defined(WIN64) || defined(_WIN64)
-  #if defined(_MSC_VER) ||   /* MSVC/WIN64 little tested */ \
-      defined(__MINGW32__)
-    #define ADDR_FMT      "016I64X"
-    #define ADDR_CAST(x)  ((unsigned __int64)(x))
-
-  #elif defined(__CYGWIN__)
-    #define ADDR_FMT      "016llX"
-    #define ADDR_CAST(x)  ((unsigned __int64)(x))
-
-  #else
-    #error "Help me!"
-  #endif
-
-  #define IS_WIN64 1
+#if defined(_WIN64)
+  #define ADDR_FMT      "016I64X"
+  #define ADDR_CAST(x)  ((unsigned __int64)(x))
+  #define IS_WIN64      1
 
   /*
    * A 'SOCKET' is defined as 'unsigned long long' on Win64.
-   * But we hardly ever need to print all bits. Just cast to
-   * silence MinGW-w64 / CygWin64.
+   * But we hardly ever need to print all bits.
    */
   #define SOCKET_CAST(s)  ((unsigned int)(s))
 
@@ -308,81 +166,27 @@
   #define IS_WIN64        0
 #endif
 
-/*
- * And now the 'long' versus '32-bit long' insanity to suite
- * 64-bit CygWin.
- */
-#define __ULONG32  unsigned __LONG32
-
-#if !defined(__CYGWIN__)
-  #if !defined(__MINGW32__)
-  #define __LONG32  long   /* Several <winsock2.h> functions for CygWin uses this */
-  #endif
-
-  #define __ms_u_long  u_long
-
-#elif defined(__i386__)
-   /*
-    * Add this for all 32-bit CygWin.
-    */
-  #define __ms_u_long  u_long
+#ifndef _DEBUG
+#define strdup       _strdup
 #endif
 
-#if defined(_MSC_VER)
-  #ifndef _CRTDBG_MAP_ALLOC
-  #define strdup       _strdup
-  #endif
-
-  #define strnicmp     _strnicmp
-  #define stricmp      _stricmp
-  #define strlwr       _strlwr
-  #define strupr       _strupr
-  #define snprintf     _snprintf
-  #define vsnprintf    _vsnprintf
-  #define fdopen       _fdopen
-  #define tzset()      _tzset()
-  #define isatty(fd)   _isatty (fd)
-  #define fileno(f)    _fileno (f)
-  #define access(f, m) _access (f, m)
-
-#elif defined(__CYGWIN__)
-  #ifndef _fileno
-  #define _fileno(fil)            fileno (fil)
-  #endif
-
-  #ifndef _popen
-  #define _popen(cmd, mode)       popen (cmd, mode)
-  #endif
-
-  #ifndef _pclose
-  #define _pclose(fil)            pclose (fil)
-  #endif
-
-  #define _atoi64(str)            strtoull (str, NULL, 10)
-  #define stricmp(str1, str2)     strcasecmp (str1, str2)
-  #define strnicmp(str1, str2, n) strncasecmp (str1, str2, n)
-  #define _utime(path, buf)       utime (path, buf)
-  #define _write(fd, buf, len)    write (fd, buf, len)
-
-#elif defined(__MINGW32__)
-  /*
-   * I want the MSVC version of vsnprintf() since there is some trouble
-   * with MinGW's version in C_printf(). No idea what.
-   */
-  #define vsnprintf _vsnprintf
-#endif
+#define strnicmp     _strnicmp
+#define stricmp      _stricmp
+#define strlwr       _strlwr
+#define strupr       _strupr
+#define snprintf     _snprintf
+#define vsnprintf    _vsnprintf
+#define fdopen       _fdopen
+#define tzset()      _tzset()
+#define isatty(fd)   _isatty (fd)
+#define fileno(f)    _fileno (f)
+#define access(f, m) _access (f, m)
 
 /*
- * Defined in newer <sal.h> for MSVC.
+ * Defined in newer <sal.h>
  */
 #ifndef _Printf_format_string_
 #define _Printf_format_string_
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
-  #define ATTR_PRINTF(_1,_2)   __attribute__((format(printf,_1,_2)))
-#else
-  #define ATTR_PRINTF(_1,_2)   /* nothing */
 #endif
 
 #endif /* _WSOCK_DEFS_H */

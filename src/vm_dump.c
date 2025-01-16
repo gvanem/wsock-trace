@@ -123,7 +123,7 @@ static char our_module [_MAX_PATH];
 
 static void (*orig_abort_handler)(int) = SIG_DFL;
 
-static NO_INLINE void print_one_address (thread_args *args, DWORD64 addr)
+static __declspec(noinline) void print_one_address (thread_args *args, DWORD64 addr)
 {
   SYMBOL_INFO    *info;
   char            buf [sizeof(*info) + MAX_SYM_NAME];
@@ -171,30 +171,19 @@ static NO_INLINE void print_one_address (thread_args *args, DWORD64 addr)
   if (GetModuleFileName((HANDLE)(uintptr_t)base, path, sizeof(path)))
      fprintf (vm_bug_stream, "%-15s", shorten_path(path));
 
-#if !defined(_MSC_VER)
-  if (path[0] && !stricmp(our_module, path))
-     have_PDB_info = false;
-
-  /* Otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
-   */
-#endif
-
   if (have_PDB_info && (*p_SymFromAddr)(args->proc, addr, &displacement, info))
-     fprintf (vm_bug_stream, " (%s+%lu)", info->Name, DWORD_CAST((DWORD)displacement));
+     fprintf (vm_bug_stream, " (%s+%lu)", info->Name, (DWORD)displacement);
 
   if (have_PDB_info)
   {
     memset (&line, 0, sizeof(line));
     line.SizeOfStruct = sizeof(line);
     if ((*p_SymGetLineFromAddr64)(args->proc, addr, &tmp, &line))
-       fprintf (vm_bug_stream, "  %s(%lu)", shorten_path(line.FileName), DWORD_CAST(line.LineNumber));
+       fprintf (vm_bug_stream, "  %s(%lu)", shorten_path(line.FileName), line.LineNumber);
   }
   else
   {
     fprintf (vm_bug_stream, " <No PDB>");
-#if !defined(_MSC_VER)
-     /* look in map_file_list */
-#endif
   }
   fputc ('\n', vm_bug_stream);
 }
@@ -464,8 +453,6 @@ void vm_bug_abort_init (void)
   if (orig_abort_handler == SIG_DFL && !IsDebuggerPresent())
   {
     orig_abort_handler = signal (SIGABRT, abort_handler);
-#if defined(_MSC_VER)
     _set_abort_behavior (0, _WRITE_ABORT_MSG);
-#endif
   }
 }

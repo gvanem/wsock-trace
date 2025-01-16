@@ -86,7 +86,7 @@ void overlap_exit (void)
     {
       ov = smartlist_get (ov_list, i);
       TRACE ("  o: 0x%p, event: 0x%p, sock: %u, is_recv: %d, bytes: %lu\n",
-             ov->ov, ov->event, SOCKET_CAST(ov->sock), ov->is_recv, DWORD_CAST(ov->bytes));
+             ov->ov, ov->event, SOCKET_CAST(ov->sock), ov->is_recv, ov->bytes);
     }
   }
   else if (num_overlaps)
@@ -205,7 +205,7 @@ void overlap_recall_all (const WSAEVENT *event)
     }
     if (i < smartlist_len(ov_list))
        TRACE ("ov_list[%d]: event: 0x%p, is_recv: %d, rc: %d, got %lu bytes.\n",
-              i, ov->event, ov->is_recv, rc, DWORD_CAST(bytes));
+              i, ov->event, ov->is_recv, rc, bytes);
     else
       TRACE ("ov_list[%d]: is_recv: %d, was recalled.\n", i, ov->is_recv);
   }
@@ -234,14 +234,12 @@ void overlap_recall (SOCKET s, const WSAOVERLAPPED *o, DWORD bytes)
     if (ov->is_recv)
     {
       g_data.counts.recv_bytes += bytes;
-      TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n",
-             i, DWORD_CAST(ov->bytes), DWORD_CAST(bytes));
+      TRACE ("ov_list[%d]: room for %lu bytes, got %lu bytes.\n", i, ov->bytes, bytes);
     }
     else
     {
       g_data.counts.send_bytes += bytes;
-      TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n",
-             i, DWORD_CAST(ov->bytes), DWORD_CAST(bytes));
+      TRACE ("ov_list[%d]: sent %lu bytes, actual sent %lu bytes.\n", i, ov->bytes, bytes);
     }
     free (ov);
     smartlist_del (ov_list, i);
@@ -315,7 +313,7 @@ bool overlap_transferred (SOCKET s, const WSAOVERLAPPED *ov, DWORD *transferred)
   {
     snprintf (ov_trace_buf, sizeof(ov_trace_buf),
               "%*soverlap.c(%u): rc: %d, sock: %u, ov: 0x%p, transferred: %lu, err: %s, completed: %d\n",
-              g_cfg.trace_indent+2, "", __LINE__, rc, (unsigned int)s, ov, DWORD_CAST(*transferred),
+              g_cfg.trace_indent+2, "", __LINE__, rc, (unsigned int)s, ov, *transferred,
               err_buf, completed);
   }
   return (rc && completed);

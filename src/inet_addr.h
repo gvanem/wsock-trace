@@ -38,31 +38,13 @@
 #define MAX_IPV6_CIDR_MASK 128
 #endif
 
-#if !defined(s6_bytes)  /* mingw.org */
-#define s6_bytes _s6_bytes
-#endif
-
-#if !defined(s6_words)  /* mingw.org */
-#define s6_words _s6_words
-#endif
-
 /**
  * In MicroSoft's `<ws2tcpip.h>` header, the `addr` parameter to `inet_ntop()`
  * is defined as `const void *`. <br>
  * But in some older MinGW it is defined as `void *`.
  */
-#if (defined(__MINGW64_VERSION_MAJOR) && (__MINGW64_VERSION_MAJOR <= 4))
-  #define INET_NTOP_ADDR void *
-  #define INET_NTOP_RET  PCSTR
-
-#elif defined(__CYGWIN__) && (CYGWIN_VERSION_DLL_COMBINED < 3000000)
-  #define INET_NTOP_ADDR void *
-  #define INET_NTOP_RET  LPCSTR
-
-#else
-  #define INET_NTOP_ADDR const void *
-  #define INET_NTOP_RET  const char *
-#endif
+#define INET_NTOP_ADDR const void *
+#define INET_NTOP_RET  const char *
 
 extern int IPv6_leading_zeroes;
 

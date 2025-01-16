@@ -185,7 +185,7 @@ void print_process_times (void)
     /* 'exit_time' is not printed since the process has not exited yet.
      * Therefore it is zero.
      */
-    C_printf ("\ncreation-time: %s.%06" U64_FMT ", kernel-time: %.6fs, user-time: %.6fs\n",
+    C_printf ("\ncreation-time: %s.%06llu, kernel-time: %.6fs, user-time: %.6fs\n",
               time_str, fract_t, FILETIME_to_sec(&krnl_time), FILETIME_to_sec(&usr_time));
   }
   CloseHandle (proc);

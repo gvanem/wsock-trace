@@ -2,9 +2,8 @@
  *  \ingroup Misc
  *
  *  \brief
- *    Another stack-walker implementation for Win32 (MSVC, clang-cl and MinGW).
- *    Will completely replace the functions in stkwalk.c when finished in
- *    the hope that this one works better for *all* Windows targets.
+ *    Another stack-walker implementation for MSVC and clang-cl.
+ *    Will completely replace the functions in stkwalk.c when finished.
  *    Will also replace `get_caller()` in wsock_trace.c.
  */
 #include <stdio.h>
@@ -52,7 +51,7 @@ static smartlist_t *symbols_list = NULL;  /* A 'smartlist' of symbols in all mod
 static char *strdup2 (const char *s1, const char *s2);
 static char *search_symbols_list (ULONG_PTR addr);
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if !defined(__clang__)
   #pragma optimize("y", off)   /* Disable "elimination of frame pointer generation"; 'cl -Oy-' */
 #endif
 
@@ -131,7 +130,7 @@ static char *get_caller (int frame_num, int *err)
 
 static bool long_CPP_syms (void)
 {
-#if defined(_MSC_VER) && defined(_MT)
+#if defined(_MT)
   return (true);
 #else
   return (false);
@@ -447,15 +446,9 @@ static void test_unwind_fooX (void)
   }
 }
 
-#if (defined(_MSC_VER) || (__MSVCRT_VERSION__ >= 0x800) || defined(__MINGW64_VERSION_MAJOR)) && !defined(__CYGWIN__)
-#define HAVE_INVALID_HANDLER 1
-
 static DWORD old_err_mode;
 
-#if defined(_DEBUG) || defined(__MINGW64_VERSION_MAJOR)
-/*
- * In case it's MinGW-w64, include this here.
- */
+#if defined(_DEBUG)
 #include <crtdbg.h>
 
 /*
@@ -474,7 +467,7 @@ static int crt_dbg_report_handler (int report_type, char *message, int *ret_val)
    */
   return (TRUE);
 }
-#endif
+#endif /* _DEBUG */
 
 static void __cdecl invalid_parameter_handler (const wchar_t *expression,
                                                const wchar_t *function,
@@ -490,9 +483,9 @@ static void __cdecl invalid_parameter_handler (const wchar_t *expression,
 
   fprintf (vm_bug_stream,
            "invalid_parameter_handler() invoked%s:\n"
-           "  expression: %" WCHAR_FMT "\n"
-           "  function:   %" WCHAR_FMT "\n"
-           "  file:       %" WCHAR_FMT "\n"
+           "  expression: %ws\n"
+           "  function:   %ws\n"
+           "  file:       %ws\n"
            "  line:       %u)\n",
            comment, expression, function, file, line);
 
@@ -538,20 +531,17 @@ static void setup_handlers (void)
   vm_bug_stream = stderr;
   vm_bug_indent = 2;
 
-#if !defined(__CYGWIN__)
   setvbuf (vm_bug_stream, NULL, _IONBF, 0);
-#endif
 
   old_err_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
   _set_invalid_parameter_handler (invalid_parameter_handler);
 
   /* Also need to setup our CRT-debug report handler.
    */
-#if defined(_DEBUG) || defined(__MINGW64_VERSION_MAJOR)
+#if defined(_DEBUG)
   _CrtSetReportHook (crt_dbg_report_handler);
 #endif
 }
-#endif
 
 int backtrace_main (int argc, char **argv)
 {
@@ -595,10 +585,6 @@ int backtrace_main (int argc, char **argv)
   argc -= optind;
   argv += optind;
 
-#if !defined(__CYGWIN__)
-  setvbuf (stdout, NULL, _IONBF, 0);
-#endif
-
   if (test_vm_abort)
   {
     smartlist_t *sl;
@@ -632,7 +618,6 @@ int backtrace_main (int argc, char **argv)
 
   if (test_inv_parameter_handler)
   {
-#if defined(HAVE_INVALID_HANDLER)
     setup_handlers();
 
     /**
@@ -690,9 +675,6 @@ int backtrace_main (int argc, char **argv)
     fwrite ("hello world", 11, 1, NULL);
 
     fputs ("This compiler does not seems to trap 'invalid parameters'!\n", stderr);
-#else
-    fputs ("This compiler lacks support for the '-i' option\n", stderr);
-#endif
     return (1);
   }
 

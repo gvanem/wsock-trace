@@ -159,10 +159,10 @@
 #include "wsock_defs.h"
 #include "miniz.h"
 
-GCC_PRAGMA (GCC diagnostic ignored "-Wcomma")
-GCC_PRAGMA (GCC diagnostic ignored "-Wunused-value")
-GCC_PRAGMA (GCC diagnostic ignored "-Wextra-semi-stmt")
-GCC_PRAGMA (GCC diagnostic ignored "-Wtautological-type-limit-compare")
+_PRAGMA (clang diagnostic ignored "-Wcomma")
+_PRAGMA (clang diagnostic ignored "-Wunused-value")
+_PRAGMA (clang diagnostic ignored "-Wextra-semi-stmt")
+_PRAGMA (clang diagnostic ignored "-Wtautological-type-limit-compare")
 
 typedef unsigned char mz_validate_uint16[sizeof(mz_uint16)==2 ? 1 : -1];
 typedef unsigned char mz_validate_uint32[sizeof(mz_uint32)==4 ? 1 : -1];

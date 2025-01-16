@@ -107,7 +107,7 @@ struct IntegerTypeAsserts {
   int UInt32IsUnsigned : (UInt32)-1 > 0;
 };
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if defined(_WIN32)
   #define write(fd, buf, sz)  _write (fd, buf, sz)
   #define read(fd, buf, sz)   _read (fd, buf, sz)
 #endif

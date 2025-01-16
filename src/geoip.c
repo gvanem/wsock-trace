@@ -399,8 +399,8 @@ void geoip_exit (void)
  */
 static int geoip4_CSV_add (struct CSV_context *ctx, const char *value)
 {
-  static char        country[3];
-  static __ms_u_long low, high;
+  static char   country[3];
+  static u_long low, high;
   int    rc = 1;
 
   switch (ctx->field_num)
@@ -1335,9 +1335,7 @@ void geoip_num_unique_countries (DWORD *num_ip4, DWORD *num_ip6, DWORD *num_ip2l
      *num_ip2loc6 = ip2loc_n6;
 
   TRACE (2, "%s() n4: %lu, n6: %lu, ip2loc_n4: %lu, ip2loc_n6: %lu.\n",
-         __FUNCTION__,
-         DWORD_CAST(n4),        DWORD_CAST(n6),
-         DWORD_CAST(ip2loc_n4), DWORD_CAST(ip2loc_n6));
+         __FUNCTION__, n4, n6, ip2loc_n4, ip2loc_n6);
 }
 
 /**
@@ -1530,8 +1528,7 @@ static int check_ipv4_unallocated (int dump_cidr,
     }
     else
     {
-      C_printf ("%10lu  %10lu %8ld",
-                DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
+      C_printf ("%10lu  %10lu %8ld", last->high + 1, entry->low - 1, diff);
       len = 22;
     }
 
@@ -1592,8 +1589,7 @@ static void dump_ipv4_entries (int dump_cidr)
     else
     {
       C_printf ("%6d: %10lu  %10lu %8ld",
-                i, DWORD_CAST(entry->low), DWORD_CAST(entry->high),
-                (long)(entry->high - entry->low));
+                i, entry->low, entry->high, (long)(entry->high - entry->low));
       len = 30;
     }
     C_printf (" %*s %2.2s - %s\n", 30-len, "", entry->country, geoip_get_long_name_by_A2(entry->country));
@@ -1623,7 +1619,7 @@ static int check_ipv6_unallocated (int dump_cidr, const struct ipv6_node *entry,
     }
     else
     {
-      C_printf ("%10lu  %10lu %8ld", DWORD_CAST(last->high+1), DWORD_CAST(entry->low-1), LONG_CAST(diff));
+      C_printf ("%10lu  %10lu %8ld", last->high + 1, entry->low - 1, diff);
       len = 22;
     }
     C_printf ("%*sUnallocated block\n", 24-len, "");
@@ -1889,9 +1885,9 @@ static void test_addr_common (const char            *addr_str,
       snprintf (buf1, sizeof(buf1), "%s", comment);
 
     if (a4 && geoip_ipv4_entries)
-         snprintf (buf2, sizeof(buf2), "%lu compares", DWORD_CAST(num_4_compare));
+         snprintf (buf2, sizeof(buf2), "%lu compares", num_4_compare);
     else if (a6 && geoip_ipv6_entries)
-         snprintf (buf2, sizeof(buf2), "%lu compares", DWORD_CAST(num_6_compare));
+         snprintf (buf2, sizeof(buf2), "%lu compares", num_6_compare);
     else strcpy (buf2, "??");
   }
 
@@ -2080,7 +2076,7 @@ static void test_addr_list (smartlist_t *list, bool use_ip2loc, test_func func)
          geoip_num_unique_countries (&num, NULL, NULL, NULL);
     else geoip_num_unique_countries (NULL, &num, NULL, NULL);
     C_printf ("# of unique IPv%c countries: %lu\n",
-              (func == test_addr4 ? '4' : '6'), DWORD_CAST(num));
+              (func == test_addr4 ? '4' : '6'), num);
   }
 }
 
@@ -2102,7 +2098,7 @@ static void rand_test_addr4 (int loops, bool use_ip2loc)
     C_putc ('\n');
   }
   geoip_num_unique_countries (&num_ip4, NULL, NULL, NULL);
-  C_printf ("# of unique IPv4 countries: %lu\n", DWORD_CAST(num_ip4));
+  C_printf ("# of unique IPv4 countries: %lu\n", num_ip4);
 }
 
 static void rand_test_addr6 (int loops, bool use_ip2loc)
@@ -2123,7 +2119,7 @@ static void rand_test_addr6 (int loops, bool use_ip2loc)
     C_putc ('\n');
   }
   geoip_num_unique_countries (NULL, &num_ip6, NULL, NULL);
-  C_printf ("# of unique IPv6 countries: %lu\n", DWORD_CAST(num_ip6));
+  C_printf ("# of unique IPv6 countries: %lu\n", num_ip6);
 }
 
 /**

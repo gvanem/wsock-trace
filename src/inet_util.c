@@ -360,7 +360,7 @@ static bool download_init (download_context *ctx)
 static DWORD download_exit (download_context *ctx)
 {
   TRACE (1, "download_exit (%s) -> bytes_written: %lu\n",
-         ctx->file_name, DWORD_CAST(ctx->bytes_written));
+         ctx->file_name, ctx->bytes_written);
 
   if (ctx->fil)
      fclose (ctx->fil);
@@ -446,7 +446,7 @@ static DWORD WINAPI download_async_loop (download_context *ctx)
          ctx->done = true;
     }
 
-    TRACE (1, "Got %lu/%lu bytes\n", DWORD_CAST(bytes_read), DWORD_CAST(ctx->bytes_written));
+    TRACE (1, "Got %lu/%lu bytes\n", bytes_read, ctx->bytes_written);
 
     ctx->inet_buf.dwBufferLength = sizeof(ctx->file_buf);
 
@@ -561,54 +561,6 @@ int INET_util_touch_file (const char *file)
 /*
  * IPv6-address classify functions:
  *
- * Fix for building with `gcc -O0` and the GCC `extern __inline__`
- * insanity.
- */
-#if defined(__GNUC__) && defined(__NO_INLINE__)   /* -O0 */
-  int IN6_IS_ADDR_UNSPECIFIED (const struct in6_addr *a)
-  {
-    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
-            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
-            (a->s6_words[4] == 0) && (a->s6_words[5] == 0) &&
-            (a->s6_words[6] == 0) && (a->s6_words[7] == 0));
-  }
-
-  int IN6_IS_ADDR_LOOPBACK (const struct in6_addr *a)
-  {
-    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
-            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
-            (a->s6_words[4] == 0) && (a->s6_words[5] == 0) &&
-            (a->s6_words[6] == 0) && (a->s6_words[7] == 0x0100));
-  }
-
-  int IN6_IS_ADDR_LINKLOCAL (const struct in6_addr *a)
-  {
-    return ((a->s6_bytes[0] == 0xFE) && ((a->s6_bytes[1] & 0xC0) == 0x80));
-  }
-
-  int IN6_IS_ADDR_SITELOCAL (const struct in6_addr *a)
-  {
-    return ((a->s6_bytes[0] == 0xFE) && ((a->s6_bytes[1] & 0xC0) == 0xC0));
-  }
-
-  int IN6_IS_ADDR_V4MAPPED (const struct in6_addr *a)
-  {
-    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
-            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
-            (a->s6_words[4] == 0) && (a->s6_words[5] == 0xFFFF));
-  }
-
-  int IN6_IS_ADDR_V4COMPAT (const struct in6_addr *a)
-  {
-    return ((a->s6_words[0] == 0) && (a->s6_words[1] == 0) &&
-            (a->s6_words[2] == 0) && (a->s6_words[3] == 0) &&
-            (a->s6_words[4] == 0) && (a->s6_words[5] == 0) &&
-            !((a->s6_words[6] == 0) && (a->s6_addr[14] == 0) &&
-             ((a->s6_addr[15] == 0) || (a->s6_addr[15] == 1))));
-  }
-#endif
-
-/*
  * Modified from <mstcpip.h> since not all targets or SDKs contain these:
  */
 int IN6_IS_ADDR_6TO4 (const struct in6_addr *a)

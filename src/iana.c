@@ -197,7 +197,7 @@ void iana_report (void)
 {
   C_printf ("\n  IANA statistics:\n"
             "    Got %lu IPv4 records, %lu IPv6 records.\n",
-            DWORD_CAST(g_num_ipv4), DWORD_CAST(g_num_ipv6));
+            g_num_ipv4, g_num_ipv6);
 }
 
 /**
@@ -505,14 +505,14 @@ static void iana_sort_lists (void)
   {
     g_num_compares = 0;
     smartlist_sort (iana_entries_ip4, compare_on_netnum_ip4);
-    TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+    TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
     g_num_compares = 0;
   }
   if (iana_entries_ip6)
   {
     g_num_compares = 0;
     smartlist_sort (iana_entries_ip6, compare_on_netnum_ip6);
-    TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+    TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
     g_num_compares = 0;
   }
 }
@@ -536,7 +536,7 @@ int iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *out
   g_num_compares = 0;
   rec = smartlist_bsearch (iana_entries_ip4, ip4, iana_compare_on_netnum_prefix_ip4);
 
-  TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+  TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
   g_num_compares = 0;
 
   if (rec)
@@ -548,12 +548,7 @@ int iana_find_by_ip4_address (const struct in_addr *ip4, struct IANA_record *out
   return (0);
 }
 
-/*
- * Ignore the gcc warning on 'loop' initialisation.
- */
-#if defined(__GNUC__)
-GCC_PRAGMA (GCC diagnostic ignored  "-Wmissing-braces")
-#endif
+_PRAGMA (clang diagnostic ignored  "-Wmissing-braces")
 
 /**
  * Find an IANA record based on an IPv6 address.
@@ -591,7 +586,7 @@ int iana_find_by_ip6_address (const struct in6_addr *ip6, struct IANA_record *ou
   g_num_compares = 0;
   rec = smartlist_bsearch (iana_entries_ip6, ip6, iana_compare_on_netnum_prefix_ip6);
 
-  TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+  TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
   g_num_compares = 0;
 
   if (rec)

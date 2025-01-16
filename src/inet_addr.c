@@ -26,14 +26,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#if defined(__CYGWIN__)
-  /*
-   * A hack to hide the different prototypes of 'InetNtopW()' in
-   * various version of CygWin's <ws2tcpip.h>.
-   */
-  #define InetNtopW orig_InetNtopW
-#endif
-
 #include "common.h"
 #include "init.h"
 #include "inet_addr.h"

@@ -6,16 +6,16 @@
  *
  * A WSock LuaJIT script could be run like:
  * ```
- *   c:\wsock_trace> set LUA_CPATH=?_mw-x64.dll
- *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe wsock_trace_init.lua
+ *   c:\wsock_trace> set LUA_CPATH=?-x64.dll
+ *   c:\wsock_trace> .\LuaJIT\bin\luajit.exe wsock_trace_init.lua
  * ```
  *
- * Ref. the `$(WSOCK_DLL)` name in `Makefile.MinGW` for the suffix.
+ * Ref. the `$(WSOCK_DLL)` name in `Makefile.VC6` for the suffix.
  *
  * Or to enter interactive mode after loading:
  * ```
- *   c:\wsock_trace> set LUA_CPATH=?_mw-x64.dll
- *   c:\wsock_trace> ..\LuaJIT\src\luajit.exe -l wsock_trace -i
+ *   c:\wsock_trace> set LUA_CPATH=?-x64.dll
+ *   c:\wsock_trace> .\LuaJIT\bin\luajit.exe -l wsock_trace -i
  * ```
  *
  * A nice intro to Lua embedding:
@@ -103,7 +103,7 @@ BOOL wslua_DllMain (HINSTANCE instDLL, DWORD reason)
   if (reason == DLL_PROCESS_ATTACH)
   {
     /* Set by the real 'DllMain()'.
-     * Of 'main()' in 'ws_tool.exe'.
+     * Or 'main()' in 'ws_tool.exe'.
      */
     const char *dll = get_dll_short_name();
     const char *loaded = basename (full_name);

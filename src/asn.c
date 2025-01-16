@@ -22,19 +22,6 @@
 #include "iana.h"
 #include "asn.h"
 
-#if defined(__CYGWIN__)
-  #include <sys/cygwin.h>
-  #include <fnmatch.h>
-
-  #ifndef FNM_CASEFOLD
-  #define FNM_CASEFOLD  0x10  /* Needs `__GNU_VISIBLE` to be set */
-  #endif
-
-  #ifndef _WIN32
-  #define _WIN32   /* Needed in '$(LIBLOC_ROOT)/src/libloc/libloc.h' only */
-  #endif
-#endif
-
 #include <libloc/libloc.h>
 #include <libloc/database.h>
 #include <libloc/network.h>
@@ -60,20 +47,6 @@
 
 #define LOCATION_DEFAULT_URL  "https://location.ipfire.org/databases/1/location.db.xz"
 #define SZ_OK                 0
-
-/*
- * Ignore some MinGW/gcc warnings below.
- */
-#if defined(__MINGW32__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wformat")             /* does not understand '%zu'! */
-  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-extra-args")  /* ditto */
-#endif
-
-#if defined(__GNUC__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
-  GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
-  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
-#endif
 
 struct libloc_data {
        struct loc_ctx      *ctx;
@@ -274,7 +247,6 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
 {
   struct stat st;
   DWORD  compr_size, uncompr_size;
-  char   win_db_file [_MAX_PATH];   /* For Cygwin only */
   int    rc;
 
   rc = XZ_decompress (db_xz_temp_file, db_temp_file);
@@ -294,21 +266,6 @@ static void ASN_xz_decompress (const char *db_xz_temp_file, const char *db_temp_
   uncompr_size = st.st_size;
 
   TRACE (1, "Compressed: %s bytes. Uncompressed %s bytes.\n", dword_str(compr_size), dword_str(uncompr_size));
-
-#ifdef __CYGWIN__
-  /*
-   * Since 'CopyFile()' does not understand a POSIX-path like
-   * "/cygdrive/c/TEMP/wsock_trace\\location.db" or "/c/TEMP/wsock_trace\\location.db".
-   * Just try to convert to Windows-form.
-   */
-  if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, db_temp_file, win_db_file, sizeof(win_db_file)) == 0)
-  {
-    TRACE (1, "cygwin_conv_path(): %s -> %s.\n", db_temp_file, win_db_file);
-    db_temp_file = win_db_file;
-  }
-#else
-   ARGSUSED (win_db_file);
-#endif
 
   /* The `CopyFile()` fails if `db_file` is open.
    */
@@ -462,12 +419,7 @@ static int ASN_check_database (const char *local_db, int trace_level)
 
   time_local_db += _timezone;
 
-#if defined(__CYGWIN__) /* Cygwin doesn't always set '_tzname[0]' */
-  TRACE (trace_level, "local time-stamp: %.24s\n", ctime(&time_local_db));
-  ARGSUSED (zone);
-#else
   TRACE (trace_level, "local time-stamp: %.24s (%s)\n", ctime(&time_local_db), zone);
-#endif
   return (1);
 }
 
@@ -802,7 +754,7 @@ static int __ASN_libloc_print (const char            *intro,
                }};
 
     memcpy (&addr, &_in6addr_v4mappedprefix, sizeof(_in6addr_v4mappedprefix));
-    *(__ms_u_long*) &addr.s6_words[6] = ip4->s_addr;
+    *(u_long*) &addr.s6_words[6] = ip4->s_addr;
   }
   else if (ip6)
   {
@@ -1005,7 +957,7 @@ static void ASN_dump (const char *spec)
       C_printf ("  %*d: <bogus>\n", width, i);
   }
   if (no_match > 0)
-     C_printf ("  %lu matches for \"%s\" out of %d.\n", DWORD_CAST(max - no_match), spec, max);
+     C_printf ("  %lu matches for \"%s\" out of %d.\n", max - no_match, spec, max);
 }
 
 /**

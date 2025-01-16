@@ -6,8 +6,7 @@
 
 /**
  * These are a rewrite of the enums in `<ws2def.h>` and `<wsrm.h>`. <br>
- * Since many of these are missing in e.g. MinGW, using
- * `#ifndef IPPROTO_x` around them are not safe.
+ * Since many of these are missing in some SDKs.
  */
 #define _IPPROTO_IP                    0
 #define _IPPROTO_HOPOPTS               0

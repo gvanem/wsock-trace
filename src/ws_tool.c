@@ -37,10 +37,6 @@ extern int idna_main          (int argc, char **argv);
 extern int services_file_main (int argc, char **argv);
 extern int test_main          (int argc, char **argv);
 
-/* Prevent MinGW + Cygwin from globbing the cmd-line.
- */
-int _dowildcard = 0;
-
 static const struct {
        int (*main_func) (int, char**);
        char *main_name;
@@ -70,9 +66,6 @@ static int run_sub_command (int argc, char **argv)
        continue;
 
     optind = 1;         /* Restart 'getopt()' */
-#if defined(__CYGWIN__)
-    optreset = 1;
-#endif
 
     rc = (*sub_commands[i].main_func) (argc, argv);
     break;

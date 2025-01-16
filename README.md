@@ -4,13 +4,10 @@
 
 A drop-in tracing library / DLL for most normal Winsock calls.
 It sits between your program and the Winsock library (`ws2_32.dll`).
-It works best for MSVC since the stack-walking code requires the program's
-**PDB** symbol-file to be present. And unfortunately MinGW/CygWin doesn't produce
-PDB-symbols (GNU-debugger instead relies on the archaic **BFD** library). So currently,
-the MinGW and CygWin targets will only show raw addresses for the traced
-functions.
+It works only for MSVC and clang-cl; the stack-walking code requires the program's
+**PDB** symbol-file to be present. Hence MinGW and CygWin support has been dropped.
 
-A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com` <br>
+An example output from `c:\> ahost msdn.com` showing all the addresses of `msdn.com` <br>
 (`ahost` is part of the DNS library **[C-ares](https://c-ares.haxx.se/)**):
 
 [![screenshot](screenshot_ahost-msdn-com.png?raw=true)](screenshot_ahost-msdn-com.png?raw=true)
@@ -30,7 +27,7 @@ A MSVC example output from `c:\> ahost msdn.com` showing all the addresses of `m
   from [`QueryPerformanceCounter()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms644904(v=vs.85).aspx).<br>
   The timestamp is controlled by `trace_time` in the
   [`wsock_trace`](https://github.com/gvanem/wsock-trace/blob/master/wsock_trace#L32)
-  config-file.
+ config-file.
 
 * *Extension functions*: Winsock has several Microsoft-specific extension functions
   (like [`AcceptEx()`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524.aspx)
@@ -110,34 +107,19 @@ do this:
 
 ### Building
 
-Enter the `src` sub-directory and do the respective *make* `all`command.<br>
-If the `all` command succeeded, you can do the respective *make* `install` command:
-
-| **Builder**  | `make all`command | `make install` result |
-| :----------- | :---------------- | :--- |
-| CygWin  | make -f Makefile.CygWin | `cp wsock_trace_cyg*.dll` to `/usr/bin` and<br> `cp libwsock_trace_cyg*.a` to `/usr/lib`  |
-| MinGW32 | make -f Makefile.MinGW | `cp wsock_trace_mw.dll` to `$(MINGW32)/bin` and<br> `cp libwsock_trace_mw*.a` to  `$(MINGW32)/lib`|
-| MSVC  | nmake -f makefile.vc6 | `copy wsock_trace*.dll` to `%VCINSTALLDIR%\bin` and<br> `copy wsock_trace.lib` to `%VCINSTALLDIR%\lib` |
+Enter the `src` sub-directory and do:
+ `nmake -f makefile.vc6`
 
 *Notes:*
   * For a `WIN32` build, the above files will have an `-x86` suffix.
   * For a `WIN64` build, the above files will have an `-x64` suffix.
   * And for a `USE_CRT_DEBUG = 1` build, the above files will have an extra `_d` suffix.
-  * So for a MinGW, `WIN64` debug-build, the files are named `wsock_trace_mw_d-x64.dll` and
-    `libwsock_trace_mw_d-x64.a`.
 
 ### Usage
 
-Link with one of these libraries (instead of the default `libws32_2.a` or `ws2_32.lib`):
-
-| Builder  | Platform | Library |
-| :------- | :------  | :------ |
-| CygWin   | `x86`    | `libwsock_trace_cyg-x86.a` |
-| CygWin   | `x64`    | `libwsock_trace_cyg-x64.a` |
-| MinGW    | `x86`    | `libwsock_trace_mw-x86.a`  |
-| MinGW    | `x64`    | `libwsock_trace_mw-x64.a`  |
-| MSVC     | `x86`    | `wsock_trace-x86.lib`      |
-| MSVC     | `x64`    | `wsock_trace-x64.lib`      |
+Link with one of these libraries (instead of the default `ws2_32.lib`):
+  * `wsock_trace-x86.lib`  for `x86`
+  * `wsock_trace-x86.lib`  for `x64`
 
 Thus most normal Winsock calls are traced on entry and exit.
 
@@ -349,15 +331,9 @@ is running. You'll see a lot of **DROP**-events like:
 
 ### Implementation notes
 
-The names of the import libraries and the names of the 32-bit .DLLs are:
-  * For MSVC:      `wsock_trace.lib` and `wsock_trace-x86.dll` .
-  * For MinGW:     `libwsock_trace.a` and `wsock_trace_mw-x86.dll` .
-  * For CygWin32:  `libwsock_trace.a` and `wsock_trace_cyg-x86.dll`.
-
-And the 64-bit equivalents:
-  * For MSVC:      `wsock_trace_x64.lib` and `wsock_trace-x64.dll` .
-  * For MinGW:     `libwsock_trace_x64.a` and `wsock_trace_mw-x64.dll` .
-  * For CygWin64:  `libwsock_trace_x64.a` and `wsock_trace_cyg-x64.dll`.
+The names of the import libraries and the names of the .DLLs are:
+  * For 32-bit: `wsock_trace.lib` and `wsock_trace-x86.dll`.
+  * For 64-bit: `wsock_trace_x64.lib` and `wsock_trace-x64.dll`.
 
 These DLLs off-course needs to be in current directory or on `%PATH`. The reason
 I've chosen to make it a DLL and not a static-lib is that applications
@@ -372,30 +348,27 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 ### Future plans:
 
-   1. Get the decoding of calling function, file-name and lines in the MinGW/CygWin
-      ports working.
-
-   2. LuaJIT-script integration; use a `*.lua` file to exclude/include processes and/or
+   1. LuaJIT-script integration; use a `*.lua` file to exclude/include processes and/or
       functions to trace.
 
-   3. Injecting `wsock_trace-*.dll` into a remote process. Ref:
+   2. Injecting `wsock_trace-*.dll` into a remote process. Ref:
       [**https://www.viksoe.dk/code/wepmetering.htm**](https://www.viksoe.dk/code/wepmetering.htm).
 
-   4. Optionally load [**Wireshark's**](https://www.wireshark.org) `libwireshark.dll` to dissect
+   3. Optionally load [**Wireshark's**](https://www.wireshark.org) `libwireshark.dll` to dissect
       transport and application protocols. <br>
       Do it for selected processes only.
 
-   5. Deny certain applications to use `AF_INET6` protocols (return `-1` on
+   4. Deny certain applications to use `AF_INET6` protocols (return `-1` on
       `socket(AF_INET6,...)`).
 
-   6. Make it possible to switch network stacks at run-time:
+   5. Make it possible to switch network stacks at run-time:
       select amongst Winsock2, **[lwIP](https://savannah.nongnu.org/projects/lwip/)** and/or <br>
       **[Cyclone TCP](https://www.oryx-embedded.com/cyclone_tcp.html)**.
 
-   7. Make a GUI trace viewer for it. Ref:
+   6. Make a GUI trace viewer for it. Ref:
       [**https://www.viksoe.dk/code/windowless1.htm**](https://www.viksoe.dk/code/windowless1.htm)
 
-   8. Add a Json type config feature to support the above features. E.g.:
+   7. Add a Json type config feature to support the above features. E.g.:
       ```
       wireshark_dissect {
         wget.exe : 1    # Wireshark dissection in wget and curl only.
@@ -421,7 +394,7 @@ Note that some virus scanners may find the behaviour of programs linked to
 
 -------------
 
-G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2024.
+G. Vanem ``<gvanem@yahoo.no>`` 2013 - 2025.
 
 ### Footnotes:
 

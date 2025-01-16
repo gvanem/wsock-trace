@@ -3,27 +3,14 @@
  * \ingroup Misc
  *
  * \brief
- * The resulting `wsock_trace-x86.lib`, `wsock_trace-x64.lib` (or
- * `libwsock_trace_mw.a` etc.) is an import-lib for `wsock_trace-x86.dll`,
- * `wsock_trace-x64.dll`, (or `wsock_trace_mw.dll` etc.).
- *
  * Since the SDK header `<ws2ipdef.h>` declares the below data with no export
  * declaration, this `non-export.obj` is simply added to the import-library.
  */
 
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  /*
-   * A hack to hide the different MinGW/CygWin's prototype of
-   * 'gai_strerror[A|W]' in <ws2tcpip.h>.
-   */
-  #define gai_strerrorA orig_gai_strerrorA
-  #define gai_strerrorW orig_gai_strerrorW
-#endif
-
 #include "common.h"
 #include "inet_addr.h"
 
-GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
+_PRAGMA (clang diagnostic ignored "-Wmissing-braces")
 
 const IN_ADDR in4addr_any                     = { 0,0,0,0 };
 const IN_ADDR in4addr_loopback                = { 127,0,0,1 };
@@ -91,7 +78,7 @@ const IN6_ADDR in6addr_teredoprefix_old = {{
       0x3F,0xFE,0x83,0x1F,0,0,0,0,0,0,0,0,0,0,0,0
     }};
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || defined(__DOXYGEN__)   /* Rest of file */
+#if defined(__DOXYGEN__) && 0   /* Rest of file */
 
 /**
  * Similar to the one in common.c.
@@ -156,5 +143,5 @@ wchar_t *gai_strerrorW (int err)
   return str_ripw2 (err_buf);
 }
 
-#endif  /* __MINGW32__ || __CYGWIN__ || __DOXYGEN__ */
+#endif  /* __DOXYGEN__ */
 

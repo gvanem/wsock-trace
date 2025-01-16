@@ -119,7 +119,7 @@ const char *flags_decode (DWORD flags, const struct search_list *list, int num)
         flags &= ~list->value;
       }
   if (flags)           /* print unknown flag-bits */
-     ret += snprintf (ret, left, "0x%08lX|", DWORD_CAST(flags));
+     ret += snprintf (ret, left, "0x%08lX|", flags);
   if (ret > buf)
      *(--ret) = '\0';   /* remove '|' */
   return (buf);

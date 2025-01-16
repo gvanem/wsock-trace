@@ -33,11 +33,6 @@
 #ifndef _GETOPT_H_
 #define _GETOPT_H_
 
-#if defined(__CYGWIN__) || defined(__MINGW32__)
-  #include_next <getopt.h>
-
-#else  /* Rest of file */
-
 /**
  * GNU-like getopt_long() / getopt_long_only() with 4.4BSD optreset extension.
  * getopt() is declared here too for GNU programs.
@@ -74,7 +69,5 @@ extern char *optarg;  /**< the argument to an option in `optsstring`. */
 extern int   optind;  /**< the index of the next element to be processed in `argv`. */
 extern int   opterr;  /**< if caller set this to zero, an error-message will never be printed. */
 extern int   optopt;  /**< on errors, an unrecognised option character is stored in `optopt`. */
-
-#endif  /* __CYGWIN__ || __MINGW32__ */
 
 #endif  /* !_GETOPT_H_ */

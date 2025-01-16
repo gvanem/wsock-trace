@@ -65,8 +65,6 @@
 #include "init.h"
 #include "getopt.h"
 
-#if !defined(__CYGWIN__) && !defined(__MINGW32__) /* Rest of file */
-
 #define PRINT_ERROR ((opterr) && (*options != ':'))
 
 /**
@@ -592,4 +590,3 @@ int getopt_long_only (int nargc, char * const *nargv, const char *options,
   return getopt_internal (nargc, nargv, options, long_options, idx,
                           FLAG_PERMUTE|FLAG_LONGONLY);
 }
-#endif /* !__CYGWIN__ && !__MINGW32__ */

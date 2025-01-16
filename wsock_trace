@@ -138,10 +138,6 @@
   max_displacement = 100             # maximum distance for a public symbol to accept in SymGetLineFromAddr64()
   max_fd_sets      = 500             # Max number of 'fd_set' (i.e. sockets) to print in and out of 'select()'
 
-  msvc_only   = 0                    # Trace only MSVC programs using the wsock_trace.dll
-  mingw_only  = 0                    # Trace only MinGW programs using the wsock_trace_mw.dll
-  cygwin_only = 0                    # Trace only Cygwin programs using the wsock_trace_cyg.dll
-
   color_time  = bright red           # Color of time-stamp. E.g. '* 125.654 msec:'
   color_file  = bright white         # Color of file/line. E.g.: ' sendf.c(319)'
   color_func  = bright cyan          # Color of 1st traced line. E.g.: '(Curl_recv_plain+37):'

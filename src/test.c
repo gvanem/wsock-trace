@@ -17,10 +17,6 @@
 #include "inet_addr.h"
 #include "init.h"
 
-#ifndef s6_bytes     /* mingw.org */
-#define s6_bytes     _s6_bytes
-#endif
-
 #ifndef SO_BSP_STATE /* Normally in 'ws2def.h' */
 #define SO_BSP_STATE 0x1009
 #endif
@@ -33,39 +29,27 @@
 #define TCP_FAIL_CONNECT_ON_ICMP_ERROR 18
 #endif
 
-#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
-  #define USE_WSAPoll 0
-#elif defined(__CYGWIN__) && defined(__i386__)
-  #define USE_WSAPoll 0
-#elif defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
+#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
   #define USE_WSAPoll 1
 #else
   #define USE_WSAPoll 0
 #endif
 
-GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
-GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
-
-#if (GCC_VERSION >= 50100)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wincompatible-pointer-types")
-#endif
+_PRAGMA (clang diagnostic ignored "-Wstrict-aliasing")
+_PRAGMA (clang diagnostic ignored "-Wpointer-to-int-cast")
 
 /* Because of warning:
  *   test.c:46:14: warning: 'inet_pton' redeclared without dllimport attribute:
  *                          previous dllimport ignored [-Wattributes]
  */
-GCC_PRAGMA (GCC diagnostic ignored "-Wattributes")
+_PRAGMA (clang diagnostic ignored "-Wattributes")
 
-#if defined(_MSC_VER) && defined(_WIN64)
+#if defined(_WIN64)
   /*
    * Ignore warnings like:
    *   'type cast': pointer truncation from 'hostent *' to 'int'
    */
   #pragma warning (disable: 4311)
-#endif
-
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  int WSAAPI inet_pton (int Family, PCSTR pszAddrString, void *pAddrBuf);
 #endif
 
 typedef void (*test_func) (void);
@@ -505,10 +489,6 @@ static void test_gai_strerror (void)
 
   rc = getaddrinfo ("www.no-such-host.com", NULL, &hints, &res);
 
-  /* For non-MinGW, the 'gai_strerror[A|W]()' return-strings comes from inline
-   * functions in <ws2tcpip.h>. So these should always pass (a test that
-   * 'test_string()' + 'test_wstring()' works okay)
-   */
   TEST_STRING  (err_buf1, gai_strerrorA (rc));
   TEST_WSTRING (err_buf2, gai_strerrorW (rc), "gai_strerrorW (rc)");
 }
@@ -725,7 +705,7 @@ static void test_WSAAddressToStringA (void)
   WSAAddressToStringA ((SOCKADDR*)&sa4, sizeof(sa4), NULL, (LPTSTR)&data, &size);
 
   if (verbose >= 1)
-     printf ("  data: '%s', size: %lu.\n", data, DWORD_CAST(size));
+     printf ("  data: '%s', size: %lu.\n", data, size);
 
   TEST_CONDITION (== 0, strcmp (data, "127.0.0.1:80"));
   TEST_CONDITION (== 1, (size == sizeof("127.0.0.1:80")));
@@ -740,7 +720,7 @@ static void test_WSAAddressToStringA (void)
   WSAAddressToStringA ((SOCKADDR*)&sa6, sizeof(sa6), NULL, (LPTSTR)&data, &size);
 
   if (verbose >= 1)
-     printf ("  data: '%s', size: %lu.\n", data, DWORD_CAST(size));
+     printf ("  data: '%s', size: %lu.\n", data, size);
 
   TEST_CONDITION (== 0, strcmp (data, IP6_TEST_ADDR_WITH_PORT_A));
   TEST_CONDITION (== 1, (size == sizeof(IP6_TEST_ADDR_WITH_PORT_A)));
@@ -763,7 +743,7 @@ static void test_WSAAddressToStringW_common (bool test_ip6, WSAPROTOCOL_INFOW *p
   WSAAddressToStringW ((SOCKADDR*)&sa4, sizeof(sa4), p_info, data, &size);
 
   if (verbose >= 1)
-     printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
+     printf ("  data: '%S', size: %lu.\n", data, size);
 
   TEST_CONDITION (== 0, wcscmp (data, L"127.0.0.1:80"));
   TEST_CONDITION (== 1, (size == sizeof(L"127.0.0.1:80")/2));
@@ -782,7 +762,7 @@ static void test_WSAAddressToStringW_common (bool test_ip6, WSAPROTOCOL_INFOW *p
     WSAAddressToStringW ((SOCKADDR*)&sa6, sizeof(sa6), NULL, data, &size);
 
     if (verbose >= 1)
-       printf ("  data: '%S', size: %lu.\n", data, DWORD_CAST(size));
+       printf ("  data: '%S', size: %lu.\n", data, size);
 
     TEST_CONDITION (== 0, wcscmp (data, IP6_TEST_ADDR_WITH_PORT_W));
     TEST_CONDITION (== 1, (size == sizeof(IP6_TEST_ADDR_WITH_PORT_W) / 2));
@@ -940,7 +920,7 @@ static void test_WSAIoctl_1 (void)
   for (i = 0; last_result == 0 && verbose >= 1 && i < num; i++)
   {
     printf ("  %d: flags: 0x%04lX, fam: %d, addr: %-16s",
-            i, DWORD_CAST(if_info[i].iiFlags), if_info[i].iiAddress.Address.sa_family,
+            i, if_info[i].iiFlags, if_info[i].iiAddress.Address.sa_family,
             get_addr_str(&if_info[i].iiAddress));
 
     printf ("BCast: %-16s", get_addr_str(&if_info[i].iiBroadcastAddress));
@@ -1066,7 +1046,7 @@ void thread_sub_func (const struct thr_data *td)
    */
   WSASetLastError (td->t_err);
 
-  printf ("In %s thread (%lu)\n", td->t_name, DWORD_CAST(td->t_id));
+  printf ("In %s thread (%lu)\n", td->t_name, td->t_id);
 
   TEST_CONDITION (== td->t_err, WSAGetLastError());
   fflush (stdout);
@@ -1196,9 +1176,7 @@ int test_main (int argc, char **argv)
   argc -= optind;
   argv += optind;
 
-#if !defined(__CYGWIN__)
   setvbuf (stdout, NULL, _IONBF, 0);
-#endif
 
   if (argc >= 1)
   {
@@ -1335,16 +1313,11 @@ static void set_colour (int col)
   static CONSOLE_SCREEN_BUFFER_INFO c_info;
   static HANDLE c_hnd = INVALID_HANDLE_VALUE;
   static int    use_wincon = -1;
-  static int    use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under CygWin and AppVeyor */
+  static int    use_SGR = -1;     /* Use 'Select Graphic Rendition' codes under AppVeyor */
 
   if (use_SGR == -1 && use_wincon == -1)  /* Do this once */
   {
-#if defined(__CYGWIN__)
-    use_SGR = 1;
-#else
     use_SGR = on_appveyor ? 1: 0;
-#endif
-
     c_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
     if (c_hnd != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(c_hnd, &c_info))
          use_wincon = 1;

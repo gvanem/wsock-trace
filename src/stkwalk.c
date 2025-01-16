@@ -1,7 +1,7 @@
 /** \file   stkwalk.c
  *  \ingroup Misc
  *  \brief
- *    StackWalker (simple backtrace) for Win32 (MSVC, clang-cl and MinGW)
+ *    StackWalker (simple backtrace) for Win32 (MSVC and clang-cl)
  */
 
 /**
@@ -56,10 +56,9 @@
 
 #include "common.h"
 #include "init.h"
-#include "bfd_gcc.h"
 #include "stkwalk.h"
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(__clang__)
+#if (_MSC_VER >= 1900) && !defined(__clang__)
  /**
   * With the Universal CRT in Windows/MSVC and with 'cl' CFLAGS:
   *  '-MD' or '-MDd' -> __scrt_is_ucrt_dll_in_use() = 1.
@@ -256,26 +255,6 @@ typedef struct _STACKFRAME64 {
     KDHELP64    KdHelp;
   } STACKFRAME64;
 
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  typedef struct _SYMBOL_INFO {
-      ULONG   SizeOfStruct;
-      ULONG   TypeIndex;
-      ULONG64 Reserved[2];
-      ULONG   Index;
-      ULONG   Size;
-      ULONG64 ModBase;
-      ULONG   Flags;
-      ULONG64 Value;
-      ULONG64 Address;
-      ULONG   Register;
-      ULONG   Scope;
-      ULONG   Tag;
-      ULONG   NameLen;
-      ULONG   MaxNameLen;
-      TCHAR   Name[1];
-    } SYMBOL_INFO;
-#endif
-
 typedef PVOID (WINAPI *PFUNCTION_TABLE_ACCESS_ROUTINE64) (
                        HANDLE process, DWORD64 AddrBase);
 
@@ -441,25 +420,6 @@ static struct LoadTable dbghelp_funcs[] = {
  *
  * Ref: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680686(v=vs.85).aspx
  */
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  #define SYMFLAG_VALUEPRESENT 0x00000001
-  #define SYMFLAG_REGISTER     0x00000008
-  #define SYMFLAG_REGREL       0x00000010
-  #define SYMFLAG_FRAMEREL     0x00000020
-  #define SYMFLAG_PARAMETER    0x00000040
-  #define SYMFLAG_LOCAL        0x00000080
-  #define SYMFLAG_CONSTANT     0x00000100
-  #define SYMFLAG_EXPORT       0x00000200
-  #define SYMFLAG_FUNCTION     0x00000800
-  #define SYMFLAG_VIRTUAL      0x00001000
-  #define SYMFLAG_THUNK        0x00002000
-  #define SYMFLAG_TLSREL       0x00004000
-  #define SYMFLAG_SLOT         0x00008000
-  #define SYMFLAG_ILREL        0x00010000
-  #define SYMFLAG_METADATA     0x00020000
-  #define SYMFLAG_CLR_TOKEN    0x00040000
-#endif
-
 #ifndef SYMFLAG_NULL
 #define SYMFLAG_NULL               0x00080000
 #endif
@@ -510,7 +470,7 @@ static const char *sym_flags_decode (DWORD flags)
   return flags_decode (flags, symbol_info_flags, DIM(symbol_info_flags));
 }
 
-#if !defined(_MSC_VER) || !defined(_NO_CVCONST_H)
+#if !defined(_NO_CVCONST_H)
   enum SymTagEnum {
        SymTagNull,
        SymTagExe,
@@ -966,9 +926,6 @@ static void module_free (void *m)
 {
   struct ModuleEntry *me = (struct ModuleEntry*) m;
 
-#ifdef USE_BFD
-  BFD_unload_debug_symbols (me->module_name);
-#endif
   free (me);
 }
 
@@ -1018,7 +975,7 @@ static DWORD enum_and_load_symbols (const char *module)
   num     = enum_module_symbols (g_symbols_list, module, is_last, g_cfg.pdb_report);
 
   TRACE (2, "num: %5lu, sym_len: %5d, num+sym_len: %5lu.\n",
-         DWORD_CAST(num), sym_len, DWORD_CAST(num+sym_len));
+         num, sym_len, num + sym_len);
 
 //assert (num + len == smartlist_len(g_symbols_list));
 
@@ -1179,7 +1136,7 @@ static int GetModuleList_TLHELP32 (void)
       {
         if (te.th32OwnerProcessID == g_proc_id)
            TRACE (1, "  %d: thread-info for this process: TID: %lu, PID: %lu\n",
-                  i, DWORD_CAST(te.th32ThreadID), DWORD_CAST(te.th32OwnerProcessID));
+                  i, te.th32ThreadID, te.th32OwnerProcessID);
         if (!(*p_Thread32Next)(thr_snap, &te))
            break;
       }
@@ -1336,7 +1293,7 @@ static void print_modules_and_pdb_info (bool do_sort)
     smartlist_append (modules_copy, g_modules_list);
     g_num_compares = 0;
     smartlist_sort (modules_copy, compare_on_baseaddr);
-    TRACE (2, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+    TRACE (2, "g_num_compares: %lu.\n", g_num_compares);
     g_num_compares = 0;
     orig_modules   = g_modules_list;
     g_modules_list = modules_copy;
@@ -1353,10 +1310,7 @@ static void print_modules_and_pdb_info (bool do_sort)
     if (g_cfg.pdb_report)
     {
       C_printf ("      %5lu %5lu %5lu %5lu",
-                DWORD_CAST(me->stat.num_syms),
-                DWORD_CAST(me->stat.num_data_syms),
-                DWORD_CAST(me->stat.num_cpp_syms),
-                DWORD_CAST(me->stat.num_junk_syms));
+                me->stat.num_syms, me->stat.num_data_syms, me->stat.num_cpp_syms, me->stat.num_junk_syms);
       total_text += me->stat.num_syms;
       total_data += me->stat.num_data_syms;
       total_cpp  += me->stat.num_cpp_syms;
@@ -1409,10 +1363,7 @@ static void print_modules_and_pdb_info (bool do_sort)
                26 + (int)mod_len + 8*IS_WIN64, "",
                str_repeat('-',  25),
                26 + (int)mod_len + 8*IS_WIN64, "",
-               DWORD_CAST(total_text),
-               DWORD_CAST(total_data),
-               DWORD_CAST(total_cpp),
-               DWORD_CAST(total_junk));
+               total_text, total_data, total_cpp, total_junk);
 }
 
 /**
@@ -1463,10 +1414,6 @@ static void enum_and_load_modules (void)
       g_data.ws_trace_base = (HINSTANCE) me->base_addr;
     }
 
-#ifdef USE_BFD
-    BFD_load_debug_symbols (me->module_name, me->base_addr, me->size);
-#endif
-
 #if USE_PythonHook
     if (g_py_exe && !g_py_dll && is_python_dll(me->module_name))
     {
@@ -1485,10 +1432,6 @@ static void enum_and_load_modules (void)
        enum_and_load_symbols (me->module_name);
 #endif
   }
-
-#ifdef USE_BFD
-  BFD_dump();
-#endif
 }
 
 static bool set_symbol_search_path (void)
@@ -1612,8 +1555,7 @@ static int null_C_printf (const char *fmt, ...)
 
 /**
  * This callback called from 'SymEnumSymbolsEx()' should be called only for
- * modules possibly containing PDB-symbols. I.e. in a MinGW compiled program
- * 'test.exe', this should never look for symbols in 'test.pdb'.
+ * modules possibly containing PDB-symbols.
  */
 static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *arg)
 {
@@ -1659,27 +1601,23 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
 
   if (sym->ModBase != last_base_addr)
   {
-    int idx = find_module_index (NULL, sym->ModBase);
+    const char *dot;
+    char        pdb_file [_MAX_PATH];
+    int         idx = find_module_index (NULL, sym->ModBase);
 
     assert (idx >= 0);
     me = smartlist_get (g_modules_list, idx);
     module = me->module_name;
     is_ours = (stricmp(g_module, module) == 0);
     have_PDB = false;
+    dot = strrchr (module, '.');
 
-#if defined(_MSC_VER)
+    if (dot > module)
     {
-      const char *dot = strrchr (module, '.');
-      char  pdb_file [_MAX_PATH];
-
-      if (dot > module)
-      {
-        str_ncpy (pdb_file, module, dot-module+1);
-        strcat (pdb_file, ".pdb");
-        have_PDB = file_exists (pdb_file);
-      }
+      str_ncpy (pdb_file, module, dot-module+1);
+      strcat (pdb_file, ".pdb");
+      have_PDB = file_exists (pdb_file);
     }
-#endif
   }
 
   last_base_addr = sym->ModBase;
@@ -1710,37 +1648,11 @@ static BOOL CALLBACK enum_symbols_proc (SYMBOL_INFO *sym, ULONG sym_size, void *
   if (raw_name[0] == '?')
      is_cv_cpp = true;
 
-#if !defined(_MSC_VER)
-  /*
-   * dbghelp.dll can decode C++ symbols in our module only if
-   * we were compiled with MSVC or clang-cl.
-   */
-  if (have_PDB)
-     is_cv_cpp = false;
-
-   /* If a "module.pdb" is present, do not call 'p_SymGetLineFromAddr64()' below.
-    * That will return fake info.
-    */
-  if (is_ours)
-     have_PDB = false;
-#endif
-
   if (raw_name[0] == '$')
      is_gnu_cpp = true;
 
   if (g_cfg.cpp_demangle)
   {
-#ifdef USE_BFD
-   /*
-    * Gnu style C++ symbols must be passed to bfd_gcc.c.
-    */
-    if (is_gnu_cpp && BFD_demangle(module, raw_name, und_name, sizeof(und_name)))
-    {
-      me->stat.num_cpp_syms++;
-      (*_C_printf) (name_fmt, und_name);
-    }
-    else
-#endif
     if (is_cv_cpp && (*p_UnDecorateSymbolName)(raw_name, und_name, sizeof(und_name), UNDNAME_COMPLETE))
     {
       if (!strncmp(und_name, "`string", 7))
@@ -1812,125 +1724,6 @@ junk_sym:
   return (TRUE);
 }
 
-#if defined(__MINGW32__)
-/*
- * It is a real PITA to get the public symbols out of a MinGW compiled PE-file.
- * Would have to use the archaic libbfd.a library (which is hard to use).
- * Use the easy way out and parse the <module>.map file.
- *
- * The parts we're interested in look like:
- *
- * LOAD F:/MingW32/TDM-gcc/bin/../lib/gcc/x86_64-w64-mingw32/5.1.0/32/crtend.o
- *  ...
- * .text          0x00000000702c14c0     0x236c MinGW_obj/common.o
- *                0x00000000702c14f7                common_init
- *                0x00000000702c1539                common_exit
- *
- *  Start parsing lines after a 'LOAD xx' is found.
- *  Match only lines on the form:
- *    ".text   0x00000000702c14c0    0x236c    MinGW_obj/common.o"
- *             <addr>                <size>    <.o-file>
- *
- *  or if the above is found:
- *     "  0x00000000702c1539   common_exit"
- *
- *  which is assumed to be an continuation of the first.
- *  I.e. .o-file is the same.
- */
-static DWORD parse_map_file (const char *module, smartlist_t *sl)
-{
-  const char *dot = strrchr (module, '.');
-  char  map_file [_MAX_PATH];
-  DWORD line = 0, rc = 0;
-  bool  found_load = false;  /* Found the " LOAD " line */
-  bool  found_text = false;  /* Found a ".text <addr> <size> <.o-file>" line */
-  FILE *fil;
-
-  if (!dot)
-     return (0);
-
-  str_ncpy (map_file, module, dot-module+1);
-  strcat (map_file, ".map");
-  if (!file_exists(map_file))
-  {
-    TRACE (2, "No %s file.\n", map_file);
-    return (0);
-  }
-
-  fil = fopen (map_file, "rt");
-  if (!fil)
-  {
-    TRACE (1, "Failed to open %s; errno: %d\n", map_file, errno);
-    return (0);
-  }
-
-  while (!feof(fil))
-  {
-    char   buf [500], *p;
-    char   file [_MAX_PATH];
-    char   func [101] = { '\0' };
-    void  *addr = NULL;
-    DWORD  size;
-    bool   found_func = false;
-
-    if (!fgets(buf, sizeof(buf)-1, fil) ||  /* EOF */
-        !strncmp(buf, "*(SORT(", 7))        /* End of ".text" section */
-       break;
-
-    line++;
-
-    if (!strncmp(buf, "LOAD ", 5))
-    {
-      found_load = true;
-      continue;
-    }
-
-    if (!found_load)
-       continue;
-
-    p = 1 + str_rip (buf);
-
-#define TEXT_SECTION   ".text          0x"
-#define TEXT_CONTINUE  "               0x"
-
-    if (!found_text && !strncmp(p, TEXT_SECTION, sizeof(TEXT_SECTION)))
-    {
-      p += sizeof(TEXT_SECTION);
-      found_text = (sscanf(p, "%p 0x%lx %s", &addr, &size, file) == 3);
-      TRACE (1, "line: %lu, addr: %p, file: %s.\n", line, addr, file);
-      dot = strrchr (file, '.');
-      if (!dot || dot[1] != 'o')
-         file[0] = '\0';
-      continue;
-    }
-
-    if (found_text && !strncmp(p, TEXT_CONTINUE, sizeof(TEXT_CONTINUE)))
-    {
-      p += sizeof(TEXT_CONTINUE);
-      found_func = (sscanf(p, "%p %100s", &addr, func) == 2);
-      TRACE (1, "line: %lu, addr: %p, func: %s.\n", line, addr, func);
-    }
-
-    TRACE (3, "line: %lu, addr: %p, found_load: %d, found_text: %d, found_func: %d, p: '%s'.\n",
-           line, addr, found_load, found_text, found_func, p);
-
-    if (addr && found_func)
-    {
-      struct SymbolEntry *se = calloc (1, sizeof(*se));
-
-      se->addr      = (ULONG_PTR) addr;
-      se->module    = (char*) module;
-      se->func_name = strdup (func);
-      se->file_name = strdup (fix_path(file));
-      smartlist_add (sl, se);
-      rc++;
-    }
-  }
-  fclose (fil);
-  return (rc);
-}
-#endif  /* __MINGW32__ */
-
 /*
  * smartlist_sort() helper: return -1, 1, or 0 based on comparison of two
  * 'struct SymbolEntry'.
@@ -1959,7 +1752,7 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, bool is_l
 {
   struct ModuleEntry *me;
   char  *dot, pattern [_MAX_PATH+3];
-  int    idx, save, num_mingw_syms = 0;
+  int    idx, save;
 
   TRACE (3, "\nEnumerating all PDB symbols for %s:\n", module);
 
@@ -1979,14 +1772,6 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, bool is_l
   save = g_data.trace_raw;
   g_data.trace_raw = true;
 
-#if !defined(_MSC_VER)
-  if (!stricmp(g_module, module))
-  {
-    TRACE (3, "Not searching for PDB-symbols in module %s.\n", module);
-    goto check_mingw_map_file;
-  }
-#endif
-
   str_ncpy (pattern, basename(module), _MAX_PATH);
   dot = strrchr (pattern, '.');
   if (dot)
@@ -1997,14 +1782,6 @@ static DWORD enum_module_symbols (smartlist_t *sl, const char *module, bool is_l
                               SYMENUM_OPTIONS_DEFAULT | SYMENUM_OPTIONS_INLINE))
      TRACE (2, "SymEnumSymbolsEx() failed for %s: %s\n", basename(module), get_error());
 
-#if !defined(_MSC_VER)
-check_mingw_map_file:
-
-#if defined(__MINGW32__)
-  num_mingw_syms = parse_map_file (module, sl);
-#endif
-#endif
-
   g_data.trace_raw = save;
 
   /* Only do the sorting when the last module is processed.
@@ -2014,7 +1791,7 @@ check_mingw_map_file:
   {
     g_num_compares = 0;
     smartlist_sort (sl, compare_on_addr);
-    TRACE (3, "g_num_compares: %lu.\n", DWORD_CAST(g_num_compares));
+    TRACE (3, "g_num_compares: %lu.\n", g_num_compares);
     g_num_compares = 0;
   }
 
@@ -2022,13 +1799,13 @@ check_mingw_map_file:
   assert (idx >= 0);
   me = smartlist_get (g_modules_list, idx);
 
-  me->stat.num_syms = me->stat.num_our_syms + me->stat.num_other_syms + num_mingw_syms;
+  me->stat.num_syms = me->stat.num_our_syms + me->stat.num_other_syms;
 
   TRACE (3, " num_our_syms: %lu, num_other_syms: %lu, num_cpp_syms: %lu, num_junk_syms: %lu,\n"
          "                    num_data_syms: %lu, num_syms_lines: %lu, is_last: %d, g_quit_count: %d.\n",
-         DWORD_CAST(me->stat.num_our_syms), DWORD_CAST(me->stat.num_other_syms),
-         DWORD_CAST(me->stat.num_cpp_syms), DWORD_CAST(me->stat.num_junk_syms),
-         DWORD_CAST(me->stat.num_data_syms), DWORD_CAST(me->stat.num_syms_lines),
+         me->stat.num_our_syms, me->stat.num_other_syms,
+         me->stat.num_cpp_syms, me->stat.num_junk_syms,
+         me->stat.num_data_syms, me->stat.num_syms_lines,
          is_last, g_quit_count);
 
   return (me->stat.num_syms);
@@ -2056,15 +1833,14 @@ bool StackWalkInit (void)
 
   TRACE (1, "g_module: %s, g_sym_dir: %s\n", g_module, g_sym_dir);
 
-#if defined(_MSC_VER)
-  #ifdef SCRT_IS_UCRT_DLL_IN_USE
+
+#ifdef SCRT_IS_UCRT_DLL_IN_USE
     g_long_CPP_syms = (SCRT_IS_UCRT_DLL_IN_USE() == 0);
-  #elif defined(_MT)
+#elif defined(_MT)
     g_long_CPP_syms = true;
-  #endif
+#endif
 
   TRACE (2, "g_long_CPP_syms: %d\n", g_long_CPP_syms);
-#endif
 
   if (ok && set_symbol_search_path())
   {
@@ -2099,11 +1875,6 @@ bool StackWalkInit (void)
  */
 static char ret_buf [MAX_NAMELEN+100];
 
-#if defined(__GNUC__)
-  GCC_PRAGMA (GCC diagnostic ignored  "-Wunused-variable")
-  GCC_PRAGMA (GCC diagnostic ignored  "-Wunused-but-set-variable")
-#endif
-
 static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *ctx)
 {
   struct {
@@ -2134,10 +1905,8 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
   char   *str             = ret_buf;
   char   *p, *end         = str + left;
 
-  /* Assume the module is MSVC/clang-cl compiled. Call 'p_SymFromAddr' and
-   * 'p_SymGetLineFromAddr64()' if this is the case. If the '<module>.pdb'
-   * is present while running a MinGW compiled program, this just returns
-   * wrong information from dbghelp.dll.
+  /* Assume the module is MSVC/clang-cl compiled. Call 'p_SymFromAddr'
+   * and 'p_SymGetLineFromAddr64()' if this is the case.
    */
   bool have_PDB_info = true;
 
@@ -2164,30 +1933,12 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
   if (addr == 0)    /* If we are here, we have no valid callstack entry! */
      return (2);
 
-#if !defined(_MSC_VER)
-  {
-    DWORD64 base = (*p_SymGetModuleBase64) (g_proc, addr);
-    char    path [MAX_PATH] = { '\0' };
-
-    if (GetModuleFileName((HANDLE)(uintptr_t)base, path, sizeof(path)) &&
-        !stricmp(g_module, path))
-       have_PDB_info = false;
-  }
-  /* otherwise the module can be a MSVC/clang-cl compiled module in a MinGW program.
-   */
-#endif
-
   /* 'addr' is address of the returning location. Subtracting the address-width
    * (width of the address bus) will give a more precise location of the address
    * we were called *from*.
    */
   addr -= sizeof(void*);
 
-#ifdef USE_BFD
-  if (BFD_get_function_name(addr, str, left) != 0)
-     return (3);
-
-#else
   if (!have_PDB_info)
      return (4);
 
@@ -2224,8 +1975,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
      displacement = temp_dispacement;
 
   str += snprintf (str, left, "~2%s(%lu)~1 (",
-                   shorten_path(Line.FileName),
-                   DWORD_CAST(Line.LineNumber));
+                   shorten_path(Line.FileName), Line.LineNumber);
   left = end - str;
 
   /* If 'undec_name[]' contains a "~" (a C++ destructor),
@@ -2244,7 +1994,7 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
   *str = '\0';
 
   if (displacement)
-     snprintf (str, left, "+%lu)", DWORD_CAST(displacement));
+     snprintf (str, left, "+%lu)", displacement);
   else if (ofs_from_symbol && undec_name[0])
   {
     /* The 'ofs_from_symbol' is the address past the call (the return address). E.g.:
@@ -2253,9 +2003,8 @@ static DWORD decode_one_stack_frame (HANDLE thread, STACKFRAME64 *stk, CONTEXT *
      * So to be correct we should decode the instruction and subtract it's size
      * (6 bytes in this case).
      */
-    snprintf (str, left, "+%" U64_FMT ")", ofs_from_symbol);
+    snprintf (str, left, "+%llu)", ofs_from_symbol);
   }
-#endif          /* USE_BFD */
   return (0);   /* Okay */
 }
 
@@ -2287,13 +2036,11 @@ char *StackWalkShow (HANDLE thread, CONTEXT *ctx)
   str += snprintf (ret_buf, sizeof(ret_buf), "0x%" ADDR_FMT, ADDR_CAST(stk.AddrPC.Offset));
   left = end - str;
 
-#ifdef _MSC_VER
   /*
    * \todo: In this case figure out the module-name (from the base-addresses in
    *        g_modules_list) and print which module that is missing a .PDB file.
    */
   snprintf (str, left, " (no PDB, err: %lu)", err);
-#endif
 
   return (ret_buf);
 }

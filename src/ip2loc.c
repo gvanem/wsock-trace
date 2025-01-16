@@ -28,23 +28,13 @@
 #include "inet_util.h"
 #include "geoip.h"
 
-#if defined(__clang__)
-  #pragma clang diagnostic ignored "-Wstrict-prototypes"
-
-#elif defined(__GNUC__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wpointer-to-int-cast")
-#endif
+_PRAGMA (clang diagnostic ignored "-Wstrict-prototypes")
 
 #if !defined(IN6_IS_ADDR_V4MAPPED)
   #define IN6_IS_ADDR_V4MAPPED(a) \
           (BOOLEAN) ( ((a)->s6_words[0] == 0) && ((a)->s6_words[1] == 0) && \
                       ((a)->s6_words[2] == 0) && ((a)->s6_words[3] == 0) && \
                       ((a)->s6_words[4] == 0) && ((a)->s6_words[5] == 0xFFFF) )
-#endif
-
-#if defined(__CYGWIN__)
-  #include <bits/byteswap.h>
-  #define _byteswap_ulong(x)  (unsigned long) __bswap_32 (x)
 #endif
 
 /*
@@ -358,17 +348,12 @@ DWORD ip2loc_num_ipv6_entries (void)
  *
  * And turn off some warnings:
  */
-#if defined(__GNUC__) || defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-variable")
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-parameter")
-
-  #if defined(__clang__)
-    #pragma clang diagnostic ignored "-Wcast-qual"
-    #pragma clang diagnostic ignored "-Wconditional-uninitialized"
-  #else
-    GCC_PRAGMA (GCC diagnostic ignored   "-Wunused-but-set-variable")
-  #endif
+#if defined(__clang__)
+  _PRAGMA (clang diagnostic ignored "-Wunused-function")
+  _PRAGMA (clang diagnostic ignored "-Wunused-variable")
+  _PRAGMA (clang diagnostic ignored "-Wunused-parameter")
+  _PRAGMA (clang diagnostic ignored "-Wcast-qual")
+  _PRAGMA (clang diagnostic ignored "-Wconditional-uninitialized")
 
 #elif defined(_MSC_VER)
   #pragma warning (disable: 4101 4244)
@@ -783,7 +768,7 @@ bool ip2loc_get_ipv4_entry (const struct in_addr *addr, struct ip2loc_entry *out
      return (false);
 
   TRACE (3, "Record for IPv4-number %s; country_short: \"%.2s\", num_4_loops: %lu.\n",
-         INET_util_get_ip_num(addr, NULL), out->country_short, DWORD_CAST(num_4_loops));
+         INET_util_get_ip_num(addr, NULL), out->country_short, num_4_loops);
   return (out->country_short[0] != '\0' && out->country_short[1] != '\0');
 }
 
@@ -812,7 +797,7 @@ bool ip2loc_get_ipv6_entry (const struct in6_addr *addr, struct ip2loc_entry *ou
 
   TRACE (3, "Record for IPv6-number %s; country_short: \"%.2s\", num_6_loops: %lu.\n",
          INET_util_get_ip_num(NULL, (const struct in6_addr*)&parsed_ipv.ipv6),
-         out->country_short, DWORD_CAST(num_6_loops));
+         out->country_short, num_6_loops);
   return (out->country_short[0] != '\0' && out->country_short[1] != '\0');
 }
 

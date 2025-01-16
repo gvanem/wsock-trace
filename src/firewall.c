@@ -37,20 +37,9 @@
  *        {3BB6DA1D-AC0C-4972-AC05-B22F49DEA9B6}  NSHWFP.DLL     wfp
  * ```
  */
-
-/*
- * For MSVC/clang We need at least a Win-Vista SDK here.
- * But for MinGW (tdm-gcc) we need a Win-7 SDK (0x601).
- */
-#if defined(__MINGW32__)
-  #define MIN_WINNT_VALUE 0x601
-#else
-  #define MIN_WINNT_VALUE 0x600
-#endif
-
-#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < MIN_WINNT_VALUE)
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x600)
   #undef  _WIN32_WINNT
-  #define _WIN32_WINNT MIN_WINNT_VALUE
+  #define _WIN32_WINNT 0x600
 #endif
 
 #include <signal.h>
@@ -77,10 +66,7 @@ typedef LONG NTSTATUS;
 #include <sddl.h>   /* For `ConvertSidToStringSid()` */
 #include <fwpmu.h>
 #include <MMsystem.h>
-
-#if !defined(__MINGW32__) && !defined(__CYGWIN__)
 #include <fwpsu.h>
-#endif
 
 /**
  * \todo Handle these keys too:
@@ -90,33 +76,7 @@ typedef LONG NTSTATUS;
  *  HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\RestrictedServices\Static\System
  * ```
  */
-
-/*
- * The code 'ip = _byteswap_ulong (*(DWORD*)&header->localAddrV4);' causes
- * a gcc warning. Ignore it.
- */
-GCC_PRAGMA (GCC diagnostic ignored "-Wstrict-aliasing")
-GCC_PRAGMA (GCC diagnostic ignored "-Wunused-function")
-GCC_PRAGMA (GCC diagnostic ignored "-Wunused-value")
-GCC_PRAGMA (GCC diagnostic ignored "-Wenum-compare")
-GCC_PRAGMA (GCC diagnostic ignored "-Wmissing-braces")
-
-#if !defined(__clang__)
-  GCC_PRAGMA (GCC diagnostic ignored "-Wunused-but-set-variable")
-#endif
-
-#if defined(__CYGWIN__)
-  #include <errno.h>
-  #include <wctype.h>
-
- /*
-  * These are prototyped in '<w32api/intrin.h>', but found nowhere.
-  * Besides including <asm/byteorder.h> fails since <winsock2.h>
-  * was already included. Sigh!
-  */
-  #define _byteswap_ulong(x)   swap32 (x)
-  #define _byteswap_ushort(x)  swap16 (x)
-#endif
+_PRAGMA (clang diagnostic ignored "-Wenum-compare")
 
 /**
  * \def FW_API_LOW
@@ -908,87 +868,8 @@ typedef struct _FWPM_NET_EVENT_SUBSCRIPTION0 {
         GUID                            sessionKey;
       } _FWPM_NET_EVENT_SUBSCRIPTION0;
 
-#if defined(__MINGW32__) || defined(__CYGWIN__)
-  typedef struct FWPM_LAYER_STATISTICS0 {
-          GUID    layerId;
-          UINT32  classifyPermitCount;
-          UINT32  classifyBlockCount;
-          UINT32  classifyVetoCount;
-          UINT32  numCacheEntries;
-        } FWPM_LAYER_STATISTICS0;
-
-  typedef struct FWPM_STATISTICS0 {
-          UINT32                  numLayerStatistics;
-          FWPM_LAYER_STATISTICS0 *layerStatistics;
-          UINT32                  inboundAllowedConnectionsV4;
-          UINT32                  inboundBlockedConnectionsV4;
-          UINT32                  outboundAllowedConnectionsV4;
-          UINT32                  outboundBlockedConnectionsV4;
-          UINT32                  inboundAllowedConnectionsV6;
-          UINT32                  inboundBlockedConnectionsV6;
-          UINT32                  outboundAllowedConnectionsV6;
-          UINT32                  outboundBlockedConnectionsV6;
-          UINT32                  inboundActiveConnectionsV4;
-          UINT32                  outboundActiveConnectionsV4;
-          UINT32                  inboundActiveConnectionsV6;
-          UINT32                  outboundActiveConnectionsV6;
-          UINT64                  reauthDirInbound;
-          UINT64                  reauthDirOutbound;
-          UINT64                  reauthFamilyV4;
-          UINT64                  reauthFamilyV6;
-          UINT64                  reauthProtoOther;
-          UINT64                  reauthProtoIPv4;
-          UINT64                  reauthProtoIPv6;
-          UINT64                  reauthProtoICMP;
-          UINT64                  reauthProtoICMP6;
-          UINT64                  reauthProtoUDP;
-          UINT64                  reauthProtoTCP;
-          UINT64                  reauthReasonPolicyChange;
-          UINT64                  reauthReasonNewArrivalInterface;
-          UINT64                  reauthReasonNewNextHopInterface;
-          UINT64                  reauthReasonProfileCrossing;
-          UINT64                  reauthReasonClassifyCompletion;
-          UINT64                  reauthReasonIPSecPropertiesChanged;
-          UINT64                  reauthReasonMidStreamInspection;
-          UINT64                  reauthReasonSocketPropertyChanged;
-          UINT64                  reauthReasonNewInboundMCastBCastPacket;
-          UINT64                  reauthReasonEDPPolicyChanged;
-          UINT64                  reauthReasonPreclassifyLocalAddrLayerChange;
-          UINT64                  reauthReasonPreclassifyRemoteAddrLayerChange;
-          UINT64                  reauthReasonPreclassifyLocalPortLayerChange;
-          UINT64                  reauthReasonPreclassifyRemotePortLayerChange;
-          UINT64                  reauthReasonProxyHandleChanged;
-        } FWPM_STATISTICS0;
-
-  #define FWPM_NET_EVENT                           FWPM_NET_EVENT2
-  #define FWPM_SESSION                             FWPM_SESSION0
-  #define FWPM_STATISTICS                          FWPM_STATISTICS0
-  #define FWP_VALUE                                FWP_VALUE0
-
-  #define FWPM_NET_EVENT_KEYWORD_CAPABILITY_DROP   0x00000004
-  #define FWPM_NET_EVENT_KEYWORD_CAPABILITY_ALLOW  0x00000008
-  #define FWPM_NET_EVENT_KEYWORD_CLASSIFY_ALLOW    0x00000010
-
-  #define FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET      0x00000001
-  #define FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET       0x00000002
-  #define FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET      0x00000004
-  #define FWPM_NET_EVENT_FLAG_LOCAL_PORT_SET       0x00000008
-  #define FWPM_NET_EVENT_FLAG_REMOTE_PORT_SET      0x00000010
-  #define FWPM_NET_EVENT_FLAG_APP_ID_SET           0x00000020
-  #define FWPM_NET_EVENT_FLAG_USER_ID_SET          0x00000040
-  #define FWPM_NET_EVENT_FLAG_SCOPE_ID_SET         0x00000080
-  #define FWPM_NET_EVENT_FLAG_IP_VERSION_SET       0x00000100
-  #define FWPM_NET_EVENT_FLAG_REAUTH_REASON_SET    0x00000200
-  #define FWPM_NET_EVENT_FLAG_PACKAGE_ID_SET       0x00000400
-  #define FWPM_NET_EVENT_FLAG_ENTERPRISE_ID_SET    0x00000800
-  #define FWPM_NET_EVENT_FLAG_POLICY_FLAGS_SET     0x00001000
-  #define FWPM_NET_EVENT_FLAG_EFFECTIVE_NAME_SET   0x00002000
-
-  #define FWPM_ENGINE_MONITOR_IPSEC_CONNECTIONS    3
-#endif  /* __MINGW32__ || __CYGWIN__ */
-
 /*
- * These are not in any MinGW SDK. So just define them here.
+ * These are not in all SDKs. So just define them here.
  */
 typedef struct _FWPM_NET_EVENT0 {
         _FWPM_NET_EVENT_HEADER0 header;
@@ -1482,11 +1363,7 @@ static smartlist_t *rule_orphans;
  *
  * Is the `_set_printf_count_output()` available?
  */
-#if defined(_MSC_VER) || (defined(__MINGW_MAJOR_VERSION) && __USE_MINGW_ANSI_STDIO == 0)
-  #define _SET_PRINTF_COUNT_OUTPUT(x)   _set_printf_count_output (x)
-#else
-  #define _SET_PRINTF_COUNT_OUTPUT(x)   0
-#endif
+#define _SET_PRINTF_COUNT_OUTPUT(x)   _set_printf_count_output (x)
 
 static bool fw_have_n_format = false;
 
@@ -1667,7 +1544,7 @@ static void fw_add_long_line (const char *start, size_t indent, int brk_ch)
                C_printf ("\n------------------------------------------"                                      \
                          "-----------------------------------------\n"                                       \
                          "%s(): thr-id: %lu.\n",                                                             \
-                         __FUNCTION__, DWORD_CAST(GetCurrentThreadId()));                                    \
+                         __FUNCTION__, GetCurrentThreadId());                                                \
                                                                                                              \
             fw_event_callback (event->type,                                                                  \
                                (const _FWPM_NET_EVENT_HEADER3*) &event->header,                              \
@@ -1897,7 +1774,7 @@ static bool fw_init (void)
 
   fw_errno = (*p_FWOpenPolicyStore) (api_version, NULL, FW_STORE_TYPE_DEFAULTS, FW_POLICY_ACCESS_RIGHT_READ,
                                      FW_POLICY_STORE_FLAGS_NONE, &fw_policy_handle);
-  TRACE (2, "FWOpenPolicyStore(): fw_errno: %lu.\n", DWORD_CAST(fw_errno));
+  TRACE (2, "FWOpenPolicyStore(): fw_errno: %lu.\n", fw_errno);
   return (fw_errno == ERROR_SUCCESS);
 }
 
@@ -1952,8 +1829,7 @@ static void fw_free_data (void)
 void fw_report (void)
 {
   C_printf ("\n  Firewall statistics:\n"
-            "    Got %lu events, %lu ignored.\n",
-            DWORD_CAST(fw_num_events), DWORD_CAST(fw_num_ignored));
+            "    Got %lu events, %lu ignored.\n", fw_num_events, fw_num_ignored);
 
   if (fw_num_events > 0UL || fw_num_ignored > 0UL)
   {
@@ -1966,9 +1842,9 @@ void fw_report (void)
     geoip_num_unique_countries (&num_ip4, &num_ip6, NULL, NULL);
 
     if (g_cfg.FIREWALL.show_ipv4)
-       C_printf ("    Unique IPv4 countries: %lu.\n", DWORD_CAST(num_ip4));
+       C_printf ("    Unique IPv4 countries: %lu.\n", num_ip4);
     if (g_cfg.FIREWALL.show_ipv6)
-       C_printf ("    Unique IPv6 countries: %lu.\n", DWORD_CAST(num_ip6));
+       C_printf ("    Unique IPv6 countries: %lu.\n", num_ip6);
 
     max = SBL_entries ? smartlist_len (SBL_entries) : 0;
     if (max == 0)
@@ -2187,11 +2063,9 @@ static bool fw_check_sizes (void)
   CHK_SIZE (FWPM_NET_EVENT5, ==, _FWPM_NET_EVENT5);
 #endif
 
-#if !defined(__CYGWIN__)
   CHK_OFS (FWPM_NET_EVENT_HEADER0,        _FWPM_NET_EVENT_HEADER0, appId);
   CHK_OFS (FWPM_NET_EVENT_HEADER1,        _FWPM_NET_EVENT_HEADER1, appId);
   CHK_OFS (FWPM_NET_EVENT_CLASSIFY_DROP1, _FWPM_NET_EVENT_CLASSIFY_DROP1, msFwpDirection);
-#endif
 
 #if (_WIN32_WINNT >= 0x0602)
   CHK_OFS (FWPM_NET_EVENT_HEADER2,        _FWPM_NET_EVENT_HEADER2, appId);
@@ -2318,8 +2192,8 @@ static void fw_dump_rule (const FW_RULE *rule)
      strcpy (ascii, "?");
 
   if (fw_have_n_format)
-       fw_buf_addf ("~4%3lu: ~1%s:~0%*s%n", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "", &indent);
-  else indent = fw_buf_addf ("~4%3lu: ~1%s:~0%*s", DWORD_CAST(++fw_num_rules), dir, 8-strlen(dir), "");
+       fw_buf_addf ("~4%3lu: ~1%s:~0%*s%n", ++fw_num_rules, dir, 8-strlen(dir), "", &indent);
+  else indent = fw_buf_addf ("~4%3lu: ~1%s:~0%*s", ++fw_num_rules, dir, 8-strlen(dir), "");
 
   fw_add_long_line (ascii, indent-6, ' ');
   fw_buf_flush();
@@ -2389,7 +2263,7 @@ static void SID_dump (const SID *sid)
 
   C_printf ("SID->SubAuthority[%u]:     ", sid->SubAuthorityCount);
   for (i = 0; i < sid->SubAuthorityCount; i++)
-      C_printf ("%lu ", DWORD_CAST(sid->SubAuthority[i]));
+      C_printf ("%lu ", sid->SubAuthority[i]);
   C_putc ('\n');
 }
 
@@ -2541,7 +2415,7 @@ static void print_program_rule (struct rule_entry *r, bool RA4_only)
   if (RA4_only && !r->RA4.s_addr)
      return;
 
-  C_printf ("%4lu: Name:     %s\n", DWORD_CAST(fw_num_rules), r->name);
+  C_printf ("%4lu: Name:     %s\n", fw_num_rules, r->name);
   C_printf ("      Action:   %s\n", r->action);
   C_printf ("      Dir:      %s\n", r->dir);
 
@@ -2705,7 +2579,7 @@ static int fw_enumerate_programs (const char *key_name, smartlist_t *rule_entrie
   num = smartlist_len (rule_orphans);
   if (num > 0)
   {
-    C_printf ("\nFound %lu orphaned programs (run CCleaner?):\n", DWORD_CAST(num));
+    C_printf ("\nFound %lu orphaned programs (run CCleaner?):\n", num);
     for (i = 0; i < (int)num; i++)
         C_printf ("  %s\n", (const char*) smartlist_get(rule_orphans, i));
     C_putc ('\n');
@@ -2748,7 +2622,7 @@ static int fw_enumerate_rules (void)
     return (-1);
   }
 
-  TRACE (2, "Got rule_count: %lu.\n", DWORD_CAST(rule_count));
+  TRACE (2, "Got rule_count: %lu.\n", rule_count);
 
   fw_check_n_format (false, true);
   fw_num_rules = 0;
@@ -2762,7 +2636,7 @@ static int fw_enumerate_rules (void)
     (*p_FWFreeFirewallRules) (rules);
 
   if (num != (int)rule_count)
-     TRACE (1, "num: %d, rule_count: %lu.\n", num, DWORD_CAST(rule_count));
+     TRACE (1, "num: %d, rule_count: %lu.\n", num, rule_count);
   return (num);
 }
 
@@ -3586,7 +3460,7 @@ bool fw_enumerate_callouts (void)
   }
 
   if (fw_unknown_layers)
-     fw_buf_addf ("Found %lu unknown callout layer GUIDs.\n", DWORD_CAST(fw_unknown_layers));
+     fw_buf_addf ("Found %lu unknown callout layer GUIDs.\n", fw_unknown_layers);
 
   fw_buf_flush();
   fw_unknown_layers = 0;
@@ -3684,7 +3558,7 @@ static bool fw_dump_events (void)
               if (fw_check_ignore((_FWPM_NET_EVENT_TYPE)entry->type))                                  \
                  continue;                                                                             \
                                                                                                        \
-              switch ((_FWPM_NET_EVENT_TYPE)entry->type)  /* Cast to shut-up MinGW/CygWin */           \
+              switch ((_FWPM_NET_EVENT_TYPE)entry->type)                                               \
               {                                                                                        \
                 case _FWPM_NET_EVENT_TYPE_CLASSIFY_DROP:                                               \
                      fw_event_callback (entry->type, header,                                           \
@@ -3826,8 +3700,8 @@ static const struct filter_entry *lookup_or_add_filter (UINT64 filter)
   return (fe);
 }
 
-static NO_INLINE bool print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
-                                         const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
+static __declspec(noinline) bool print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_event,
+                                                    const _FWPM_NET_EVENT_CLASSIFY_ALLOW0 *allow_event)
 {
   FWPM_LAYER0 *layer_item = NULL;
   UINT16       id = 0;
@@ -3845,8 +3719,8 @@ static NO_INLINE bool print_layer_item2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *
   return (id != 0);
 }
 
-static NO_INLINE bool print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
-                                         const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
+static __declspec(noinline) bool print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_event,
+                                                    const _FWPM_NET_EVENT_CAPABILITY_ALLOW0 *allow_event)
 {
   const char *capability_id_str   = "?";
   char        is_loopback_str[10] = "?";
@@ -3871,7 +3745,7 @@ static NO_INLINE bool print_layer_item0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0 
   {
     const struct filter_entry *fe = lookup_or_add_filter (filter_id);
 
-    fw_buf_addf ("(%" U64_FMT ") %s, ", fe->value, fe->name);
+    fw_buf_addf ("(%llu) %s, ", fe->value, fe->name);
   }
   fw_buf_addf ("%s, isLoopback: %s\n", capability_id_str, is_loopback_str);
   return (filter_id != 0);
@@ -3894,7 +3768,7 @@ static bool print_filter_rule2 (const _FWPM_NET_EVENT_CLASSIFY_DROP2  *drop_even
     if (exclude_list_get(fe->name, EXCL_PROGRAM))  /* short file-name */
        return (false);
 
-    fw_buf_addf ("%-*sfilter:  (%" U64_FMT ") %s\n", fw_indent_sz, "", fe->value, fe->name);
+    fw_buf_addf ("%-*sfilter:  (%llu) %s\n", fw_indent_sz, "", fe->value, fe->name);
     return (true);
   }
   return (false);
@@ -3917,7 +3791,7 @@ static bool print_filter_rule0 (const _FWPM_NET_EVENT_CAPABILITY_DROP0  *drop_ev
     if (exclude_list_get(fe->name, EXCL_PROGRAM))  /* short file-name */
        return (false);
 
-    fw_buf_addf ("%-*sfilter:  (%" U64_FMT ") %s\n", fw_indent_sz, "", fe->value, fe->name);
+    fw_buf_addf ("%-*sfilter:  (%llu) %s\n", fw_indent_sz, "", fe->value, fe->name);
     return (true);
   }
   return (false);
@@ -4410,8 +4284,8 @@ static void print_reauth_reason (const _FWPM_NET_EVENT_HEADER3         *header,
 
   fw_buf_addf ("%-*sreauth:  ", fw_indent_sz, "");
   if (drop_event)
-       fw_buf_addf ("%lu\n", DWORD_CAST(drop_event->reauthReason));
-  else fw_buf_addf ("%lu\n", DWORD_CAST(allow_event->reauthReason));
+       fw_buf_addf ("%lu\n", drop_event->reauthReason);
+  else fw_buf_addf ("%lu\n", allow_event->reauthReason);
 }
 
 /*
@@ -4723,7 +4597,7 @@ static void fw_console_stats (void)
   else strcpy (num_DNSBL, "-");
 
   snprintf (buf, sizeof(buf), "%s, events: %lu, DNSBL: %s",
-            fw_module, DWORD_CAST(fw_num_events), num_DNSBL);
+            fw_module, fw_num_events, num_DNSBL);
   SetConsoleTitle (buf);
   last_num_events = fw_num_events;
 }

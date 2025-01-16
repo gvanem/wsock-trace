@@ -40,17 +40,6 @@
 #include "inet_util.h"
 #include "dnsbl.h"
 
-#ifdef __CYGWIN__
-  #include <sys/cygwin.h>
-
-  /*
-   * Ignore some Cygwin warnings below:
-   *   warning: 'snprintf' output may be truncated before the last format character [-Wformat-truncation=]
-   *  590 |   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.drop_file));
-   */
-  GCC_PRAGMA (GCC diagnostic ignored "-Wformat-truncation=")
-#endif
-
 typedef enum {
         DNSBL_DROP,
         DNSBL_EDROP,
@@ -548,19 +537,6 @@ static int DNSBL_update_file (const char *fname, const char *tmp_file, const cha
     if (st.st_mtime > 0)
        TRACE (2, "Updating \"%s\" from \"%s\"\n", tmp_file, url);
   }
-
-#ifdef __CYGWIN__
-  /*
-   * Since 'CopyFile()' does not understand a POSIX-path like "/cygdrive/c/TEMP/wsock_trace\\drop.txt".
-   */
-  if (!strnicmp(tmp_file, "/cygdrive/", 10))
-  {
-    char tmp_result [_MAX_PATH];
-
-    if (cygwin_conv_path (CCP_POSIX_TO_WIN_A, tmp_file, tmp_result, sizeof(tmp_result)) == 0)
-       tmp_file = tmp_result;
-  }
-#endif
 
   if (INET_util_download_file(tmp_file, url) > 0)
   {
