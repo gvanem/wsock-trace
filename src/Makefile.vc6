@@ -1,6 +1,6 @@
 #
 # Wsock-trace makefile for MSVC6+
-# G. Vanem <gvanem@yahoo.no> 2018 - 2024.
+# G. Vanem <gvanem@yahoo.no> 2018 - 2025.
 #
 # Usage:
 #   Open a "MSVC Developer Command Prompt" and set the compiler environment:
