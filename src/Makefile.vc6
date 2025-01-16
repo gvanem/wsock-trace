@@ -256,9 +256,8 @@ vclean realclean: clean
 	      wsock_trace$(_D)-$(CPU).pdb
 	- del ws_tool.exe    ws_tool.map    ws_tool.pdb
 	- del mhook-test.exe mhook-test.map mhook-test.pdb
-!if "$(USE_LUAJIT)" == "1"
-	- del $(LUAJIT_ROOT)\src\lua*.lib
-!endif
+	- del $(LUAJIT_ROOT)\src\lua*.lib $(LUAJIT_ROOT)\src\luajit.h
+	- del $(LUAJIT_ROOT)\src\luajit_relver.txt $(LUAJIT_ROOT)\src\luajit_rolling.h
 
 help:
 	@type <<
