@@ -152,15 +152,15 @@ echo Generating %CD%\CI\appveyor-hosts file...
 type %CD%\CI\appveyor-hosts-contents.txt > %CD%\CI\appveyor-hosts
 
 ::
-:: These should survive until 'build_script' for 'msvc', 'mingw' or 'cygwin' get to run.
+:: These should survive until 'build_script' for 'msvc', get to run.
 ::
 set WSOCK_TRACE=%CD%\wsock_trace.appveyor
 set WSOCK_TRACE_LEVEL=2
 set COLUMNS=120
 
 ::
-:: Some issue with the Cygwin builds forces me to put the generated
-:: 'wsock_trace.appveyor' in AppVeyor's %APPDATA% directory.
+:: Some issue forces me to put the generated 'wsock_trace.appveyor'
+:: in AppVeyor's %APPDATA% directory.
 ::
 if exist c:\Users\appveyor\AppData\Roaming\. copy wsock_trace.appveyor c:\Users\appveyor\AppData\Roaming\wsock_trace > NUL
 exit /b 0
