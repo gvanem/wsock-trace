@@ -23,7 +23,7 @@ void ljit_restore_color (void)
 
 int *ljit_trace_level (void)
 {
-   return (&trace_level);
+  return (&trace_level);
 }
 
 int ljit_trace_init (void)
@@ -46,4 +46,5 @@ int ljit_trace_init (void)
   }
   return (trace_level);
 }
-#endif
+#endif /* _WIN32 || __CYGWIN__ */
+

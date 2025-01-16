@@ -1,6 +1,6 @@
 /*
 ** x86/x64 IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Guard handling ------------------------------------------------------ */
@@ -93,7 +93,7 @@ static int asm_isk32(ASMState *as, IRRef ref, int32_t *k)
 /* Check if there's no conflicting instruction between curins and ref.
 ** Also avoid fusing loads if there are multiple references.
 */
-static int noconflict(ASMState *as, IRRef ref, IROp conflict, int noload)
+static int noconflict(ASMState *as, IRRef ref, IROp conflict, int check)
 {
   IRIns *ir = as->ir;
   IRRef i = as->curins;
@@ -102,7 +102,9 @@ static int noconflict(ASMState *as, IRRef ref, IROp conflict, int noload)
   while (--i > ref) {
     if (ir[i].o == conflict)
       return 0;  /* Conflict found. */
-    else if (!noload && (ir[i].op1 == ref || ir[i].op2 == ref))
+    else if ((check & 1) && ir[i].o == IR_NEWREF)
+      return 0;
+    else if ((check & 2) && (ir[i].op1 == ref || ir[i].op2 == ref))
       return 0;
   }
   return 1;  /* Ok, no conflict. */
@@ -118,7 +120,7 @@ static IRRef asm_fuseabase(ASMState *as, IRRef ref)
     lua_assert(irb->op2 == IRFL_TAB_ARRAY);
     /* We can avoid the FLOAD of t->array for colocated arrays. */
     if (ira->o == IR_TNEW && ira->op1 <= LJ_MAX_COLOSIZE &&
-	!neverfuse(as) && noconflict(as, irb->op1, IR_NEWREF, 1)) {
+	!neverfuse(as) && noconflict(as, irb->op1, IR_NEWREF, 0)) {
       as->mrm.ofs = (int32_t)sizeof(GCtab);  /* Ofs to colocated array. */
       return irb->op1;  /* Table obj. */
     }
@@ -337,7 +339,7 @@ static Reg asm_fuseload(ASMState *as, IRRef ref, RegSet allow)
     RegSet xallow = (allow & RSET_GPR) ? allow : RSET_GPR;
     if (ir->o == IR_SLOAD) {
       if (!(ir->op2 & (IRSLOAD_PARENT|IRSLOAD_CONVERT)) &&
-	  noconflict(as, ref, IR_RETF, 0)) {
+	  noconflict(as, ref, IR_RETF, 2)) {
 	as->mrm.base = (uint8_t)ra_alloc1(as, REF_BASE, xallow);
 	as->mrm.ofs = 8*((int32_t)ir->op1-1) + ((ir->op2&IRSLOAD_FRAME)?4:0);
 	as->mrm.idx = RID_NONE;
@@ -346,12 +348,12 @@ static Reg asm_fuseload(ASMState *as, IRRef ref, RegSet allow)
     } else if (ir->o == IR_FLOAD) {
       /* Generic fusion is only ok for 32 bit operand (but see asm_comp). */
       if ((irt_isint(ir->t) || irt_isu32(ir->t) || irt_isaddr(ir->t)) &&
-	  noconflict(as, ref, IR_FSTORE, 0)) {
+	  noconflict(as, ref, IR_FSTORE, 2)) {
 	asm_fusefref(as, ir, xallow);
 	return RID_MRM;
       }
     } else if (ir->o == IR_ALOAD || ir->o == IR_HLOAD || ir->o == IR_ULOAD) {
-      if (noconflict(as, ref, ir->o + IRDELTA_L2S, 0)) {
+      if (noconflict(as, ref, ir->o + IRDELTA_L2S, 2+(ir->o != IR_ULOAD))) {
 	asm_fuseahuref(as, ir->op1, xallow);
 	return RID_MRM;
       }
@@ -360,7 +362,7 @@ static Reg asm_fuseload(ASMState *as, IRRef ref, RegSet allow)
       ** Fusing unaligned memory operands is ok on x86 (except for SIMD types).
       */
       if ((!irt_typerange(ir->t, IRT_I8, IRT_U16)) &&
-	  noconflict(as, ref, IR_XSTORE, 0)) {
+	  noconflict(as, ref, IR_XSTORE, 2)) {
 	asm_fusexref(as, ir->op1, xallow);
 	return RID_MRM;
       }
@@ -674,6 +676,7 @@ static void asm_tointg(ASMState *as, IRIns *ir, Reg left)
   emit_rr(as, XO_CVTSI2SD, tmp, dest);
   if (!(as->flags & JIT_F_SPLIT_XMM))
     emit_rr(as, XO_XORPS, tmp, tmp);  /* Avoid partial register stall. */
+  checkmclim(as);
   emit_rr(as, XO_CVTTSD2SI, dest, left);
   /* Can't fuse since left is needed twice. */
 }
@@ -713,6 +716,7 @@ static void asm_conv(ASMState *as, IRIns *ir)
       emit_rr(as, XO_SUBSD, dest, bias);  /* Subtract 2^52+2^51 bias. */
       emit_rr(as, XO_XORPS, dest, bias);  /* Merge bias and integer. */
       emit_loadn(as, bias, k);
+      checkmclim(as);
       emit_mrm(as, XO_MOVD, dest, asm_fuseload(as, lref, RSET_GPR));
       return;
     } else {  /* Integer to FP conversion. */
@@ -1025,6 +1029,7 @@ static void asm_href(ASMState *as, IRIns *ir)
     emit_jcc(as, CC_E, nilexit);
   else
     emit_sjcc(as, CC_E, l_end);
+  checkmclim(as);
   if (irt_isnum(kt)) {
     if (isk) {
       /* Assumes -0.0 is already canonicalized to +0.0. */
@@ -1065,7 +1070,6 @@ static void asm_href(ASMState *as, IRIns *ir)
     emit_rmro(as, XO_ARITHi8, XOg_CMP, dest, offsetof(Node, key.it));
   }
   emit_sfixup(as, l_loop);
-  checkmclim(as);
 
   /* Load main position relative to tab->node into dest. */
   khash = isk ? ir_khash(irkey) : 1;
@@ -1091,6 +1095,7 @@ static void asm_href(ASMState *as, IRIns *ir)
       emit_rr(as, XO_ARITH(XOg_SUB), dest, tmp);
       emit_shifti(as, XOg_ROL, tmp, HASH_ROT3);
       emit_rr(as, XO_ARITH(XOg_XOR), dest, tmp);
+      checkmclim(as);
       emit_shifti(as, XOg_ROL, dest, HASH_ROT2);
       emit_rr(as, XO_ARITH(XOg_SUB), tmp, dest);
       emit_shifti(as, XOg_ROL, dest, HASH_ROT1);
@@ -1375,6 +1380,7 @@ static void asm_ahuvload(ASMState *as, IRIns *ir)
   if (irt_islightud(ir->t)) {
     Reg dest = asm_load_lightud64(as, ir, 1);
     if (ra_hasreg(dest)) {
+      checkmclim(as);
       asm_fuseahuref(as, ir->op1, RSET_GPR);
       emit_mrm(as, XO_MOV, dest|REX_64, RID_MRM);
     }
@@ -1394,6 +1400,7 @@ static void asm_ahuvload(ASMState *as, IRIns *ir)
   asm_guardcc(as, irt_isnum(ir->t) ? CC_AE : CC_NE);
   if (LJ_64 && irt_type(ir->t) >= IRT_NUM) {
     lua_assert(irt_isinteger(ir->t) || irt_isnum(ir->t));
+    checkmclim(as);
     emit_u32(as, LJ_TISNUM);
     emit_mrm(as, XO_ARITHi, XOg_CMP, RID_MRM);
   } else {
@@ -2502,7 +2509,7 @@ static void asm_head_root_base(ASMState *as)
 }
 
 /* Coalesce or reload BASE register for a side trace. */
-static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
+static Reg asm_head_side_base(ASMState *as, IRIns *irp)
 {
   IRIns *ir = IR(REF_BASE);
   Reg r = ir->r;
@@ -2511,15 +2518,15 @@ static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
     if (rset_test(as->modset, r) || irt_ismarked(ir->t))
       ir->r = RID_INIT;  /* No inheritance for modified BASE register. */
     if (irp->r == r) {
-      rset_clear(allow, r);  /* Mark same BASE register as coalesced. */
+      return r;  /* Same BASE register already coalesced. */
     } else if (ra_hasreg(irp->r) && rset_test(as->freeset, irp->r)) {
-      rset_clear(allow, irp->r);
       emit_rr(as, XO_MOV, r, irp->r);  /* Move from coalesced parent reg. */
+      return irp->r;
     } else {
       emit_getgl(as, r, jit_base);  /* Otherwise reload BASE. */
     }
   }
-  return allow;
+  return RID_NONE;
 }
 
 /* -- Tail of trace ------------------------------------------------------- */

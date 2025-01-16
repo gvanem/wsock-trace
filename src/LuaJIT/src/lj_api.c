@@ -1,6 +1,6 @@
 /*
 ** Public Lua/C API.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -975,6 +975,7 @@ LUA_API int lua_setmetatable(lua_State *L, int idx)
     /* Flush cache, since traces specialize to basemt. But not during __gc. */
     if (lj_trace_flushall(L))
       lj_err_caller(L, LJ_ERR_NOGCMM);
+    o = index2adr(L, idx);  /* Stack may have been reallocated. */
     if (tvisbool(o)) {
       /* NOBARRIER: basemt is a GC root. */
       setgcref(basemt_it(g, LJ_TTRUE), obj2gco(mt));
@@ -1073,6 +1074,8 @@ LUA_API int lua_cpcall(lua_State *L, lua_CFunction func, void *ud)
   uint8_t oldh = hook_save(g);
   int status;
   api_check(L, L->status == 0 || L->status == LUA_ERRERR);
+  if (!func || !ud)
+     LJ_TRACE (1, "func: 0x%p, ud: 0x%p\n", func, ud);
   status = lj_vm_cpcall(L, func, ud, cpcall);
   if (status) hook_restore(g, oldh);
   return status;

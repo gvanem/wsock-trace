@@ -1,6 +1,6 @@
 /*
 ** Lua parser (source code -> bytecode).
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -2532,6 +2532,7 @@ static int predict_next(LexState *ls, FuncState *fs, BCPos pc)
   cTValue *o;
   switch (bc_op(ins)) {
   case BC_MOV:
+    if (bc_d(ins) >= fs->nactvar) return 0;
     name = gco2str(gcref(var_get(ls, fs, bc_d(ins)).name));
     break;
   case BC_UGET:
@@ -2576,7 +2577,7 @@ static void parse_for_iter(LexState *ls, GCstr *indexname)
   line = ls->linenumber;
   assign_adjust(ls, 3, expr_list(ls, &e), &e);
   bcreg_bump(fs, 3);  /* The iterator needs another 3 slots (func + 2 args). */
-  isnext = (nvars <= 5 && predict_next(ls, fs, exprpc));
+  isnext = (nvars <= 5 && fs->pc > exprpc && predict_next(ls, fs, exprpc));
   var_add(ls, 3);  /* Hidden control variables. */
   lex_check(ls, TK_do);
   loop = bcemit_AJ(fs, isnext ? BC_ISNEXT : BC_JMP, base, NO_JMP);

@@ -1,6 +1,6 @@
 /*
 ** ARM IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -1947,6 +1947,7 @@ static void asm_hiop(ASMState *as, IRIns *ir)
 static void asm_stack_check(ASMState *as, BCReg topslot,
 			    IRIns *irp, RegSet allow, ExitNo exitno)
 {
+  int savereg = 0;
   Reg pbase;
   uint32_t k;
   if (irp) {
@@ -1957,12 +1958,14 @@ static void asm_stack_check(ASMState *as, BCReg topslot,
       pbase = rset_pickbot(allow);
     } else {
       pbase = RID_RET;
-      emit_lso(as, ARMI_LDR, RID_RET, RID_SP, 0);  /* Restore temp. register. */
+      savereg = 1;
     }
   } else {
     pbase = RID_BASE;
   }
   emit_branch(as, ARMF_CC(ARMI_BL, CC_LS), exitstub_addr(as->J, exitno));
+  if (savereg)
+    emit_lso(as, ARMI_LDR, RID_RET, RID_SP, 0);  /* Restore temp. register. */
   k = emit_isk12(0, (int32_t)(8*topslot));
   lua_assert(k);
   emit_n(as, ARMI_CMP^k, RID_TMP);
@@ -1974,7 +1977,7 @@ static void asm_stack_check(ASMState *as, BCReg topslot,
     if (ra_hasspill(irp->s))
       emit_lso(as, ARMI_LDR, pbase, RID_SP, sps_scale(irp->s));
     emit_lso(as, ARMI_LDR, RID_TMP, RID_TMP, (i & 4095));
-    if (ra_hasspill(irp->s) && !allow)
+    if (savereg)
       emit_lso(as, ARMI_STR, RID_RET, RID_SP, 0);  /* Save temp. register. */
     emit_loadi(as, RID_TMP, (i & ~4095));
   } else {
@@ -1988,11 +1991,12 @@ static void asm_stack_restore(ASMState *as, SnapShot *snap)
   SnapEntry *map = &as->T->snapmap[snap->mapofs];
   SnapEntry *flinks = &as->T->snapmap[snap_nextofs(as->T, snap)-1];
   MSize n, nent = snap->nent;
+  int32_t bias = 0;
   /* Store the value of all modified slots to the Lua stack. */
   for (n = 0; n < nent; n++) {
     SnapEntry sn = map[n];
     BCReg s = snap_slot(sn);
-    int32_t ofs = 8*((int32_t)s-1);
+    int32_t ofs = 8*((int32_t)s-1) - bias;
     IRRef ref = snap_ref(sn);
     IRIns *ir = IR(ref);
     if ((sn & SNAP_NORESTORE))
@@ -2010,6 +2014,12 @@ static void asm_stack_restore(ASMState *as, SnapShot *snap)
       emit_lso(as, ARMI_STR, tmp, RID_BASE, ofs+4);
 #else
       Reg src = ra_alloc1(as, ref, RSET_FPR);
+      if (LJ_UNLIKELY(ofs < -1020 || ofs > 1020)) {
+	int32_t adj = ofs & 0xffffff00;  /* K12-friendly. */
+	bias += adj;
+	ofs -= adj;
+	emit_addptr(as, RID_BASE, -adj);
+      }
       emit_vlso(as, ARMI_VSTR_D, src, RID_BASE, ofs);
 #endif
     } else {
@@ -2035,6 +2045,7 @@ static void asm_stack_restore(ASMState *as, SnapShot *snap)
     }
     checkmclim(as);
   }
+  emit_addptr(as, RID_BASE, bias);
   lua_assert(map + nent == flinks);
 }
 
@@ -2114,7 +2125,7 @@ static void asm_head_root_base(ASMState *as)
 }
 
 /* Coalesce BASE register for a side trace. */
-static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
+static Reg asm_head_side_base(ASMState *as, IRIns *irp)
 {
   IRIns *ir;
   asm_head_lreg(as);
@@ -2122,16 +2133,15 @@ static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
   if (ra_hasreg(ir->r) && (rset_test(as->modset, ir->r) || irt_ismarked(ir->t)))
     ra_spill(as, ir);
   if (ra_hasspill(irp->s)) {
-    rset_clear(allow, ra_dest(as, ir, allow));
+    return ra_dest(as, ir, RSET_GPR);
   } else {
     Reg r = irp->r;
     lua_assert(ra_hasreg(r));
-    rset_clear(allow, r);
     if (r != ir->r && !rset_test(as->freeset, r))
       ra_restore(as, regcost_ref(as->cost[r]));
     ra_destreg(as, ir, r);
+    return r;
   }
-  return allow;
 }
 
 /* -- Tail of trace ------------------------------------------------------- */

@@ -1,5 +1,5 @@
 @rem Script to build LuaJIT with MSVC.
-@rem Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+@rem Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 @rem
 @rem Open a "Visual Studio Command Prompt" (either x86 or x64).
 @rem Then cd to this directory and run this script. Use the following
@@ -20,7 +20,9 @@ set PROMPT=$p$g
 
 @set LJCOMPILE=cl /nologo /c /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__declspec(dllexport)__inline
 @set LJCOMPILE=cl /nologo /c /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE
-@set LJLINK=link /nologo /incremental:no
+@set LJLINK=link /nologo /libpath:%LIB% /incremental:no
+@set LJDYNBUILD=/MD /DLUA_BUILD_AS_DLL
+
 @set LJMT=mt /nologo
 @set LJLIB=lib /nologo /nodefaultlib
 @set DASMDIR=..\dynasm
@@ -46,6 +48,9 @@ if exist minilua.exe.manifest^
 :X64
 minilua %DASM% -LN %DASMFLAGS% -o host\buildvm_arch.h vm_x86.dasc
 @if errorlevel 1 goto :BAD
+
+if exist ..\.git ( git show -s --format=%%ct >luajit_relver.txt ) else ( type ..\.relver >luajit_relver.txt )
+minilua host\genversion.lua
 
 %LJCOMPILE% /I "." /I %DASMDIR% host\buildvm*.c
 @if errorlevel 1 goto :BAD

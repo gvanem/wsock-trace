@@ -1,6 +1,6 @@
 /*
 ** IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_asm_c
@@ -826,11 +826,11 @@ static int asm_sunk_store(ASMState *as, IRIns *ira, IRIns *irs)
 static void asm_snap_alloc1(ASMState *as, IRRef ref)
 {
   IRIns *ir = IR(ref);
-  if (!irref_isk(ref) && ir->r != RID_SUNK) {
+  if (!irref_isk(ref)) {
     bloomset(as->snapfilt1, ref);
     bloomset(as->snapfilt2, hashrot(ref, ref + HASH_BIAS));
     if (ra_used(ir)) return;
-    if (ir->r == RID_SINK) {
+    if (ir->r == RID_SINK || ir->r == RID_SUNK) {
       ir->r = RID_SUNK;
 #if LJ_HASFFI
       if (ir->o == IR_CNEWI) {  /* Allocate CNEWI value. */
@@ -1365,6 +1365,8 @@ static void asm_head_side(ASMState *as)
   IRRef1 sloadins[RID_MAX];
   RegSet allow = RSET_ALL;  /* Inverse of all coalesced registers. */
   RegSet live = RSET_EMPTY;  /* Live parent registers. */
+  RegSet pallow = RSET_GPR;  /* Registers needed by the parent stack check. */
+  Reg pbase;
   IRIns *irp = &as->parent->ir[REF_BASE];  /* Parent base. */
   int32_t spadj, spdelta;
   int pass2 = 0;
@@ -1376,7 +1378,11 @@ static void asm_head_side(ASMState *as)
     as->snapno = 0;
     asm_snap_alloc(as);
   }
-  allow = asm_head_side_base(as, irp, allow);
+  pbase = asm_head_side_base(as, irp);
+  if (pbase != RID_NONE) {
+    rset_clear(allow, pbase);
+    rset_clear(pallow, pbase);
+  }
 
   /* Scan all parent SLOADs and collect register dependencies. */
   for (i = as->stopins; i > REF_BASE; i--) {
@@ -1404,6 +1410,7 @@ static void asm_head_side(ASMState *as)
       sloadins[rs] = (IRRef1)i;
       rset_set(live, rs);  /* Block live parent register. */
     }
+    if (!ra_hasspill(regsp_spill(rs))) rset_clear(pallow, regsp_reg(rs));
   }
 
   /* Calculate stack frame adjustment. */
@@ -1520,7 +1527,7 @@ static void asm_head_side(ASMState *as)
     ExitNo exitno = as->J->exitno;
 #endif
     as->T->topslot = (uint8_t)as->topslot;  /* Remember for child traces. */
-    asm_stack_check(as, as->topslot, irp, allow & RSET_GPR, exitno);
+    asm_stack_check(as, as->topslot, irp, pallow, exitno);
   }
 }
 

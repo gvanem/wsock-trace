@@ -1,6 +1,6 @@
 /*
 ** LuaJIT core and libraries amalgamation.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /*
@@ -90,4 +90,4 @@
 #include "lib_jit.c"
 #include "lib_ffi.c"
 #include "lib_init.c"
-#include "lj_win.c"
+

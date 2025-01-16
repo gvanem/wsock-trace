@@ -1,6 +1,6 @@
 /*
 ** Garbage collector.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -93,6 +93,9 @@ static void gc_mark_start(global_State *g)
   gc_markobj(g, tabref(mainthread(g)->env));
   gc_marktv(g, &g->registrytv);
   gc_mark_gcroot(g);
+#if LJ_HASFFI
+  if (ctype_ctsG(g)) gc_markobj(g, ctype_ctsG(g)->finalizer);
+#endif
   g->gc.state = GCSpropagate;
 }
 
@@ -561,12 +564,11 @@ void lj_gc_finalize_cdata(lua_State *L)
 /* Free all remaining GC objects. */
 void lj_gc_freeall(global_State *g)
 {
-  MSize i, strmask;
+  MSize i;
   /* Free everything, except super-fixed objects (the main thread). */
   g->gc.currentwhite = LJ_GC_WHITES | LJ_GC_SFIXED;
   gc_fullsweep(g, &g->gc.root);
-  strmask = g->strmask;
-  for (i = 0; i <= strmask; i++)  /* Free all string hash chains. */
+  for (i = g->strmask; i != ~(MSize)0; i--)  /* Free all string hash chains. */
     gc_fullsweep(g, &g->strhash[i]);
 }
 

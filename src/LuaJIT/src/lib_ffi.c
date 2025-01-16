@@ -1,6 +1,6 @@
 /*
 ** FFI library.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lib_ffi_c
@@ -304,7 +304,7 @@ LJLIB_CF(ffi_meta___tostring)
       p = *(void **)p;
     } else if (ctype_isenum(ct->info)) {
       msg = "cdata<%s>: %d";
-      p = (void *)(uintptr_t)*(uint32_t **)p;
+      p = (void *)(uintptr_t)*(uint32_t *)p;
     } else {
       if (ctype_isptr(ct->info)) {
 	p = cdata_getptr(p, ct->size);
@@ -749,7 +749,7 @@ LJLIB_CF(ffi_metatype)
   if (!(ctype_isstruct(ct->info) || ctype_iscomplex(ct->info) ||
 	ctype_isvector(ct->info)))
     lj_err_arg(L, 1, LJ_ERR_FFI_INVTYPE);
-  tv = lj_tab_setinth(L, t, -(int32_t)id);
+  tv = lj_tab_setinth(L, t, -(int32_t)ctype_typeid(cts, ct));
   if (!tvisnil(tv))
     lj_err_caller(L, LJ_ERR_PROTMT);
   settabV(L, tv, mt);

@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT module to save/list bytecode.
 --
--- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2025 Mike Pall. All rights reserved.
 -- Released under the MIT license. See Copyright Notice in luajit.h
 ----------------------------------------------------------------------------
 --
@@ -11,7 +11,7 @@
 ------------------------------------------------------------------------------
 
 local jit = require("jit")
-assert(jit.version_num == 20005, "LuaJIT core/library version mismatch")
+assert(jit.version_num == 20099, "LuaJIT core/library version mismatch")
 local bit = require("bit")
 
 -- Symbol name prefix for LuaJIT bytecode.
@@ -553,7 +553,7 @@ typedef struct {
   o.sym_entry.strx = 1
   ffi.copy(o.space+1, symname)
 
-  -- Write Macho-O object file.
+  -- Write Mach-O object file.
   local fp = savefile(output, "wb")
   fp:write(ffi.string(o, mach_size))
   bcsave_tail(fp, output, s)

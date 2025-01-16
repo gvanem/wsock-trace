@@ -1,6 +1,6 @@
 /*
 ** Snapshot handling.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_snap_c
@@ -412,6 +412,7 @@ static TRef snap_replay_const(jit_State *J, IRIns *ir)
   case IR_KNUM: return lj_ir_k64(J, IR_KNUM, ir_knum(ir));
   case IR_KINT64: return lj_ir_k64(J, IR_KINT64, ir_kint64(ir));
   case IR_KPTR: return lj_ir_kptr(J, ir_kptr(ir));  /* Continuation. */
+  case IR_KNULL: return lj_ir_knull(J, irt_type(ir->t));
   default: lua_assert(0); return TREF_NIL; break;
   }
 }
@@ -510,12 +511,14 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
       IRRef refp = snap_ref(sn);
       IRIns *ir = &T->ir[refp];
       if (regsp_reg(ir->r) == RID_SUNK) {
+	uint8_t m;
 	if (J->slot[snap_slot(sn)] != snap_slot(sn)) continue;
 	pass23 = 1;
 	lua_assert(ir->o == IR_TNEW || ir->o == IR_TDUP ||
 		   ir->o == IR_CNEW || ir->o == IR_CNEWI);
-	if (ir->op1 >= T->nk) snap_pref(J, T, map, nent, seen, ir->op1);
-	if (ir->op2 >= T->nk) snap_pref(J, T, map, nent, seen, ir->op2);
+	m = lj_ir_mode[ir->o];
+	if (irm_op1(m) == IRMref) snap_pref(J, T, map, nent, seen, ir->op1);
+	if (irm_op2(m) == IRMref) snap_pref(J, T, map, nent, seen, ir->op2);
 	if (LJ_HASFFI && ir->o == IR_CNEWI) {
 	  if (LJ_32 && refp+1 < T->nins && (ir+1)->o == IR_HIOP)
 	    snap_pref(J, T, map, nent, seen, (ir+1)->op2);
@@ -542,14 +545,16 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
       IRIns *ir = &T->ir[refp];
       if (regsp_reg(ir->r) == RID_SUNK) {
 	TRef op1, op2;
+	uint8_t m;
 	if (J->slot[snap_slot(sn)] != snap_slot(sn)) {  /* De-dup allocs. */
 	  J->slot[snap_slot(sn)] = J->slot[J->slot[snap_slot(sn)]];
 	  continue;
 	}
 	op1 = ir->op1;
-	if (op1 >= T->nk) op1 = snap_pref(J, T, map, nent, seen, op1);
+	m = lj_ir_mode[ir->o];
+	if (irm_op1(m) == IRMref) op1 = snap_pref(J, T, map, nent, seen, op1);
 	op2 = ir->op2;
-	if (op2 >= T->nk) op2 = snap_pref(J, T, map, nent, seen, op2);
+	if (irm_op2(m) == IRMref) op2 = snap_pref(J, T, map, nent, seen, op2);
 	if (LJ_HASFFI && ir->o == IR_CNEWI) {
 	  if (LJ_32 && refp+1 < T->nins && (ir+1)->o == IR_HIOP) {
 	    lj_needsplit(J);  /* Emit joining HIOP. */
@@ -575,9 +580,21 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
 		if (irr->o == IR_HREFK || irr->o == IR_AREF) {
 		  IRIns *irf = &T->ir[irr->op1];
 		  tmp = emitir(irf->ot, tmp, irf->op2);
+		} else if (irr->o == IR_NEWREF) {
+		  IRRef allocref = tref_ref(tr);
+		  IRRef keyref = tref_ref(key);
+		  IRRef newref_ref = J->chain[IR_NEWREF];
+		  IRIns *newref = &J->cur.ir[newref_ref];
+		  lua_assert(irref_isk(keyref));
+		  if (newref_ref > allocref && newref->op2 == keyref) {
+		    lua_assert(newref->op1 == allocref);
+		    tmp = newref_ref;
+		    goto skip_newref;
+		  }
 		}
 	      }
 	      tmp = emitir(irr->ot, tmp, key);
+	    skip_newref:
 	      val = snap_pref(J, T, map, nent, seen, irs->op2);
 	      if (val == 0) {
 		IRIns *irc = &T->ir[irs->op2];
@@ -714,7 +731,6 @@ static void snap_restoredata(GCtrace *T, ExitState *ex,
 	*(lua_Number *)dst = (lua_Number)*(int32_t *)dst;
 	return;
       }
-      src = (int32_t *)&ex->gpr[r-RID_MIN_GPR];
 #if !LJ_SOFTFP
       if (r >= RID_MAX_GPR) {
 	src = (int32_t *)&ex->fpr[r-RID_MIN_FPR];
@@ -726,8 +742,11 @@ static void snap_restoredata(GCtrace *T, ExitState *ex,
 #else
 	if (LJ_BE && sz == 4) src++;
 #endif
-      }
+      } else
 #endif
+      {
+	src = (int32_t *)&ex->gpr[r-RID_MIN_GPR];
+      }
     }
   }
   lua_assert(sz == 1 || sz == 2 || sz == 4 || sz == 8);
@@ -796,17 +815,30 @@ static void snap_unsink(jit_State *J, GCtrace *T, ExitState *ex,
 				  lj_tab_dup(J->L, ir_ktab(&T->ir[ir->op1]));
     settabV(J->L, o, t);
     irlast = &T->ir[T->snap[snapno].ref];
-    for (irs = ir+1; irs < irlast; irs++)
+    for (irs = ir+1; irs < irlast; irs++) {
       if (irs->r == RID_SINK && snap_sunk_store(T, ir, irs)) {
 	IRIns *irk = &T->ir[irs->op1];
 	TValue tmp, *val;
 	lua_assert(irs->o == IR_ASTORE || irs->o == IR_HSTORE ||
 		   irs->o == IR_FSTORE);
 	if (irk->o == IR_FREF) {
-	  lua_assert(irk->op2 == IRFL_TAB_META);
-	  snap_restoreval(J, T, ex, snapno, rfilt, irs->op2, &tmp);
-	  /* NOBARRIER: The table is new (marked white). */
-	  setgcref(t->metatable, obj2gco(tabV(&tmp)));
+	  switch (irk->op2) {
+	  case IRFL_TAB_META:
+	    if (T->ir[irs->op2].o == IR_KNULL) {
+	      setgcrefnull(t->metatable);
+	    } else {
+	      snap_restoreval(J, T, ex, snapno, rfilt, irs->op2, &tmp);
+	      /* NOBARRIER: The table is new (marked white). */
+	      setgcref(t->metatable, obj2gco(tabV(&tmp)));
+	    }
+	    break;
+	  case IRFL_TAB_NOMM:
+	    /* Negative metamethod cache invalidated by lj_tab_set() below. */
+	    break;
+	  default:
+	    lua_assert(0);
+	    break;
+	  }
 	} else {
 	  irk = &T->ir[irk->op2];
 	  if (irk->o == IR_KSLOT) irk = &T->ir[irk->op1];
@@ -820,6 +852,7 @@ static void snap_unsink(jit_State *J, GCtrace *T, ExitState *ex,
 	  }
 	}
       }
+    }
   }
 }
 
@@ -840,7 +873,8 @@ const BCIns *lj_snap_restore(jit_State *J, void *exptr)
   lua_State *L = J->L;
 
   /* Set interpreter PC to the next PC to get correct error messages. */
-  setcframe_pc(cframe_raw(L->cframe), pc+1);
+  setcframe_pc(L->cframe, pc+1);
+  setcframe_pc(cframe_raw(cframe_prev(L->cframe)), pc);
 
   /* Make sure the stack is big enough for the slots from the snapshot. */
   if (LJ_UNLIKELY(L->base + snap->topslot >= tvref(L->maxstack))) {

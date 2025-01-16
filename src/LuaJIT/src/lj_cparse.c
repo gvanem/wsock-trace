@@ -1,6 +1,6 @@
 /*
 ** C declaration parser.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -1747,9 +1747,11 @@ static void cp_pragma(CPState *cp, BCLine pragmaline)
     cp_check(cp, '(');
     if (cp->tok == CTOK_IDENT) {
       if (cp->str->hash == H_(738e923c,a1b65954)) {  /* push */
-	if (cp->curpack < CPARSE_MAX_PACKSTACK) {
+	if (cp->curpack < CPARSE_MAX_PACKSTACK-1) {
 	  cp->packstack[cp->curpack+1] = cp->packstack[cp->curpack];
 	  cp->curpack++;
+	} else {
+	  cp_errmsg(cp, cp->tok, LJ_ERR_XLEVELS);
 	}
       } else if (cp->str->hash == H_(6c71cf27,6c71cf27)) {  /* pop */
 	if (cp->curpack > 0) cp->curpack--;

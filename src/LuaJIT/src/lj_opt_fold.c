@@ -2,7 +2,7 @@
 ** FOLD: Constant Folding, Algebraic Simplifications and Reassociation.
 ** ABCelim: Array Bounds Check Elimination.
 ** CSE: Common-Subexpression Elimination.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_fold_c
@@ -1702,9 +1702,10 @@ LJFOLDF(abc_k)
 LJFOLD(ABC any any)
 LJFOLDF(abc_invar)
 {
-  /* Invariant ABC marked as PTR. Drop if op1 is invariant, too. */
+  /* Invariant ABC marked as P32 or U32. Drop if op1 is invariant too. */
   if (!irt_isint(fins->t) && fins->op1 < J->chain[IR_LOOP] &&
-      !irt_isphi(IR(fins->op1)->t))
+      (irt_isu32(fins->t) ||
+       (!irref_isk(fins->op1) && !irt_isphi(IR(fins->op1)->t))))
     return DROPFOLD;
   return NEXTFOLD;
 }
@@ -1739,7 +1740,10 @@ LJFOLD(NE any any)
 LJFOLDF(comm_equal)
 {
   /* For non-numbers only: x == x ==> drop; x ~= x ==> fail */
-  if (fins->op1 == fins->op2 && !irt_isnum(fins->t))
+  if (fins->op1 == fins->op2 &&
+      (!irt_isnum(fins->t) ||
+       (fleft->o == IR_CONV &&  /* Converted integers cannot be NaN. */
+	(uint32_t)(fleft->op2 & IRCONV_SRCMASK) - (uint32_t)IRT_I8 <= (uint32_t)(IRT_U64 - IRT_U8))))
     return CONDFOLD(fins->o == IR_EQ);
   return fold_comm_swap(J);
 }
@@ -2167,6 +2171,17 @@ LJFOLD(TDUP any)
 LJFOLD(CNEW any any)
 LJFOLD(XSNEW any any)
 LJFOLDX(lj_ir_emit)
+
+/* -- Miscellaneous ------------------------------------------------------- */
+
+LJFOLD(CARG any any)
+LJFOLDF(cse_carg)
+{
+  TRef tr = lj_opt_cse(J);
+  if (tref_ref(tr) < J->chain[IR_LOOP])  /* CSE across loop? */
+    return EMITFOLD;  /* Raw emit. Assumes fins is left intact by CSE. */
+  return tr;
+}
 
 /* ------------------------------------------------------------------------ */
 
