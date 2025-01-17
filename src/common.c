@@ -2128,7 +2128,7 @@ const char *get_dll_short_name (void)
 
 const char *get_dll_build_date (void)
 {
-#ifdef BUILD_DATE     /* from 'date +%d-%B-%Y' in a Makefile */
+#ifdef BUILD_DATE     /* from 'date +%d-%B-%Y' in Makefile */
   return (BUILD_DATE);
 #else
   return (__DATE__);

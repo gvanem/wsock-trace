@@ -67,7 +67,7 @@ INSTALL_ROOT = $(VSINSTALLDIR)
 #
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -I$(LIBLOC_ROOT) -W3 -Zi \
-          -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -DUSE_DEF_FILE
+          -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
 LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console -verbose \
           -machine:$(CPU) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
 
@@ -83,7 +83,7 @@ _D =
 
 !if "$(USE_LUAJIT)" == "1"
 CFLAGS     = $(CFLAGS) -I$(LUAJIT_ROOT)/src -DUSE_LUAJIT
-LUAJIT_LIB = $(LUAJIT_ROOT)/src/luajit_static-$(CPU).lib
+LUAJIT_LIB = $(LUAJIT_ROOT)/lib/luajit_static-$(CPU).lib
 EX_LIBS    = $(LUAJIT_LIB)
 WSOCK_DEP  = $(LUAJIT_LIB)
 !endif
@@ -236,9 +236,10 @@ compile_luajit_0:
 	@echo
 
 compile_luajit_1:
-	pushd $(LUAJIT_ROOT)\src   & \
-	msvcbuild.bat debug static & \
-	copy lua51.lib luajit_static-$(CPU).lib
+	pushd $(LUAJIT_ROOT)\src &                     \
+	if not exist ..\lib\luajit_static-$(CPU).lib ( \
+	   msvcbuild.bat debug static &                \
+	   copy lua51.lib ..\lib\luajit_static-$(CPU).lib )
 	@echo
 
 libloc$(_D)-$(CPU).lib: $(LIBLOC_OBJ)
@@ -256,8 +257,8 @@ vclean realclean: clean
 	      wsock_trace$(_D)-$(CPU).pdb
 	- del ws_tool.exe    ws_tool.map    ws_tool.pdb
 	- del mhook-test.exe mhook-test.map mhook-test.pdb
-	- del $(LUAJIT_ROOT)\src\lua*.lib $(LUAJIT_ROOT)\src\luajit.h
-	- del $(LUAJIT_ROOT)\src\luajit_relver.txt $(LUAJIT_ROOT)\src\luajit_rolling.h
+	- del $(LUAJIT_ROOT)\src\lua*.lib $(LUAJIT_ROOT)\lib\lua*.lib $(LUAJIT_ROOT)\src\luajit.h
+	- del $(LUAJIT_ROOT)\src\luajit_relver.txt
 
 help:
 	@type <<
@@ -276,11 +277,13 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = -DENABLE_DEBUG                  \
-                -DUSE_WSOCK_TRACE               \
-                -I$(LIBLOC_ROOT)/libloc/windows \
-                -I$(LIBLOC_ROOT)/fake-OpenSSL   \
-                -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
+LIBLOC_CFLAGS = -DENABLE_DEBUG                                   \
+                -DUSE_WSOCK_TRACE                                \
+                -I$(LIBLOC_ROOT)/libloc/windows                  \
+                -I$(LIBLOC_ROOT)/fake-OpenSSL                    \
+                -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c \
+                -wd4018 -wd4100 -wd4101 -wd4115 -wd4146          \
+                -wd4152 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
 
 {$(LIBLOC_ROOT)}.c{$(OBJ_DIR)}.obj:
 	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo./$*.obj $<

@@ -10,11 +10,7 @@
  * Because I had problems exporting "__WSAFDIsSet@8" to wsock_trace-*.dll,
  * I was forced to use a .def-file to export all functions.
  */
-#if defined(USE_DEF_FILE)
-  #define EXPORT
-#else
-  #define EXPORT  __declspec(dllexport)
-#endif
+#define EXPORT
 
 #if defined(IN_WSOCK_TRACE_C) && (defined(UNICODE) || defined(_UNICODE))
   #error "Compiling this as UNICODE breaks in countless ways."

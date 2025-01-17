@@ -52,6 +52,7 @@ end
 function dump_obj (name, obj)
   printf ("Type of '%s' is a %s:", name, type(obj))
   for key, val in pairs(obj) do
+      --- TODO: print a "file(line)" for "function: " values
       printf ("  key: '%s', val: %s", key, val)
   end
   print ("")

@@ -2206,30 +2206,7 @@ static void reset_invalid_handler (void)
 #endif
 }
 
-#if defined(_MSC_VER) && defined(USE_VLD)
-  /*
-   * Using "Visual Leak Detector" in _RELEASE mode is possible via the
-   * '-DVLD_FORCE_ENABLE' flag. But not advisable according to:
-   *   https://github.com/KindDragon/vld/wiki
-   *
-   * VLD is useful for '_MSC_VER' only.
-   */
-  #include <vld.h>
-
-  void crtdbg_init (void)
-  {
-    VLD_UINT opts;
-
-    VLDSetReportOptions (VLD_OPT_REPORT_TO_STDOUT, NULL); /* Force all reports to "stdout" in "ASCII" */
-    opts = VLDGetOptions();
-    VLDSetOptions (opts, 100, 4);   /* Dump max 100 bytes data. And walk max 4 stack frames */
-  }
-
-  void crtdbg_exit (void)
-  {
-  }
-
-#elif defined(_MSC_VER) && defined(_DEBUG)
+#if defined(_MSC_VER) && defined(_DEBUG)
   static _CrtMemState last_state;
 
   void crtdbg_init (void)
