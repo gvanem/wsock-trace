@@ -4,7 +4,7 @@
   #define LJ_TRACE_API extern
 #endif
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32)
   #include <stdio.h>
 
   LJ_TRACE_API int  ljit_trace_init (void);

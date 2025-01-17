@@ -20,7 +20,7 @@ set PROMPT=$p$g
 
 @set LJCOMPILE=cl /nologo /c /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__declspec(dllexport)__inline
 @set LJCOMPILE=cl /nologo /c /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE
-@set LJLINK=link /nologo /libpath:"%LIB%" /incremental:no
+@set LJLINK=link /nologo /incremental:no
 @set LJDYNBUILD=/MD /DLUA_BUILD_AS_DLL
 
 @set LJMT=mt /nologo
@@ -49,7 +49,8 @@ if exist minilua.exe.manifest^
 minilua %DASM% -LN %DASMFLAGS% -o host\buildvm_arch.h vm_x86.dasc
 @if errorlevel 1 goto :BAD
 
-if exist ..\.git ( git show -s --format=%%ct >luajit_relver.txt ) else ( type ..\.relver >luajit_relver.txt )
+type ..\.relver > luajit_relver.txt
+
 minilua host\genversion.lua
 
 %LJCOMPILE% /I "." /I %DASMDIR% host\buildvm*.c

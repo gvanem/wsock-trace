@@ -1,7 +1,7 @@
 
 #include "lj_win.h"
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32)
 #include <windows.h>
 
 static HANDLE stdout_hnd = INVALID_HANDLE_VALUE;
@@ -46,5 +46,5 @@ int ljit_trace_init (void)
   }
   return (trace_level);
 }
-#endif /* _WIN32 || __CYGWIN__ */
+#endif /* _WIN32 */
 

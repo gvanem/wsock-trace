@@ -16,7 +16,7 @@ USE_ASTYLE     ?= 1
 USE_MP_COMPILE ?= 1
 
 #
-# From 'src/luajit.h':
+# From 'src/luajit_rolling.h':
 #
 VER_MAJOR = 2
 VER_MINOR = 0
@@ -142,17 +142,17 @@ LDFLAGS += -libpath:$(realpath $(WindowsSdkDir))/Lib/$(WindowsSdkVer)/um/$(CPU) 
 c_to_obj = $(addprefix $(OBJ_DIR)/$(strip $(2)), \
              $(notdir $(1:.c=.obj)))
 
-GENERATED = $(addprefix $(OBJ_DIR)/, \
-              buildvm_arch.h         \
-              lj_bcdef.h             \
-              lj_ffdef.h             \
-              lj_folddef.h           \
-              lj_libdef.h            \
-              lj_recdef.h            \
-              lj_vm.obj              \
-              vmdef.lua)
+GENERATED = src/luajit.h
 
-GENERATED += src/luajit.h
+GENERATED += $(addprefix $(OBJ_DIR)/, \
+               buildvm_arch.h         \
+               lj_bcdef.h             \
+               lj_ffdef.h             \
+               lj_folddef.h           \
+               lj_libdef.h            \
+               lj_recdef.h            \
+               lj_vm.obj              \
+               vmdef.lua)
 
 vpath %.c src
 
@@ -269,8 +269,7 @@ test_suite: bin/luajit.exe
 
 test_life: bin/luajit.exe
 	$(call green_msg, Running $(BRIGHT_WHITE)bin/luajit.exe tests/bench/life.lua ...)
-	$(call run_test, tests/bench/life.lua > life.txt)
-	@cat ./life.txt
+	$(call run_test, tests/bench/life.lua)
 
 #
 # SciMark results of 'test_scimark' on my AMD Ryzen 9 3900X (3.7 GHz):
@@ -294,9 +293,16 @@ $(OBJ_DIR)/buildvm_arch.h: $(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua src/vm_x86
 	$(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua -o $@ $(vm_FLAGS) src/vm_x86.dasc
 	@echo
 
-src/luajit.h: $(OBJ_DIR)/minilua.exe
-	@echo '' > src/luajit_relver.txt
-	cd src ; ../$< host/genversion.lua
+src/luajit.h: $(OBJ_DIR)/minilua.exe src/luajit_rolling.h $(OBJ_DIR)/luajit_relver.txt
+	$(call gen_to_from, $@, src/luajit_rolling.h $(OBJ_DIR)/luajit_relver.txt)
+	cd src ; \
+	../$< host/genversion.lua luajit_rolling.h ../$(OBJ_DIR)/luajit_relver.txt luajit.h
+
+#
+# 'src/host/genversion.lua' wants to match "(%d+)"
+#
+$(OBJ_DIR)/luajit_relver.txt: $(THIS_FILE) | $(OBJ_DIR)
+	@echo '($(VER_MICRO))' > $@
 
 $(OBJ_DIR)/buildvm.exe: src/luajit.h $(VM_OBJ)
 	$(call link_EXE, $@, $(VM_OBJ))
@@ -350,14 +356,14 @@ $(OBJ_DIR)/static/%.obj: %.c | $(CC).args $(OBJ_DIR)/static
 %.i: %.c FORCE $(GENERATED) $(OBJ_DIR)/cpp-filter.py
 	$(call C_preprocess, $@, $<)
 
-$(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc | $(OBJ_DIR)
-	$(call make_res_file, $@, $<)
+$(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
+	$(call create_res_file, $@, $<)
 
-$(LJ_RC): $(THIS_FILE)
-	$(call make_rc_file, $@, "LuaJIT; a Just-In-Time (JIT) compiler for the Lua programming language", VFT_DLL)
+$(LJ_RC): $(THIS_FILE) | $(OBJ_DIR)
+	$(call create_rc_file, $@, "LuaJIT; a Just-In-Time (JIT) compiler for the Lua programming language", VFT_DLL)
 
-$(OBJ_DIR)/luajit.rc: $(THIS_FILE)
-	$(call make_rc_file, $@, "The LuaJIT program", VFT_APP)
+$(OBJ_DIR)/luajit.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call create_rc_file, $@, "The LuaJIT program", VFT_APP)
 
 $(CC).args: $(THIS_FILE)
 	$(call white_msg, All CFLAGS are in $@.)
@@ -366,15 +372,16 @@ $(CC).args: $(THIS_FILE)
 $(OBJ_DIR)/cpp-filter.py: $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate_py,$@,$(CPP_FILTER_PY))
 
+clean: clean_msvcbuild
+	rm -f vc14*.pdb clang-cl.args cl.args link.args link.tmp lib.args src/luajit.h
+	rm -fr $(OBJ_DIR)
+
 #
 # clean-up after 'src/msvcbuild.bat' too.
 #
-clean:
-	rm -f vc1*.pdb clang-cl.args cl.args \
-	      life.txt link.args link.tmp lib.args \
-	      src/luajit.exe src/luajit.h src/luajit_relver.txt \
-	      src/jit/vmdef.lua src/lua51.dll src/lua51.lib
-	rm -fr $(OBJ_DIR)
+clean_msvcbuild:
+	rm -f src/luajit.exe src/lua51.dll src/lua51.lib \
+	      src/luajit_relver.txt src/jit/vmdef.lua
 
 vclean realclean: clean
 	rm -fr bin lib
@@ -461,20 +468,24 @@ endef
 
 define link_EXE
   $(call green_msg, Linking $(1))
+  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
+  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBS_PY))
   $(call create_resp_file, link.args, $(LDFLAGS) $(2))
   link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.exe=.map)
   @rm -f $(1:.exe=.exp) $(1:.exe=.lib)
-  @echo
+  - @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp &> /dev/null
 endef
 
 define link_DLL
   $(call green_msg, Linking $(1))
+  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
+  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBS_PY))
   $(call create_resp_file, link.args, -dll $(LDFLAGS) -implib:$(strip $(3)) $(2))
   link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.dll=.map)
   @rm -f $(3:.lib=.exp)
-  @echo
+  - @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp &> /dev/null
 endef
 
 define create_static_lib
@@ -485,7 +496,7 @@ define create_static_lib
   @echo
 endef
 
-define make_res_file
+define create_res_file
   rc -nologo $(RCFLAGS) -fo $(1) $(2)
   @echo
 endef
@@ -496,7 +507,7 @@ endef
 #  arg2, $(2): The 'RC_DESCRIPTION' enclosed in '"'.
 #  arg3, $(3): The 'RC_FILETYPE'; 'VFT_APP' or 'VFT_DLL'.
 #
-define make_rc_file
+define create_rc_file
   $(call generate, $(1), //)
   $(file >> $(1),  // Should become '1' if '$$USER==gv')
   $(file >> $(1),  #define RC_USER_IS_GV   $(if $(findstring gv,$(USER)),1,0))
@@ -590,6 +601,59 @@ define CPP_FILTER_PY
        print ("")
 
   print ("Removed %d empty lines." % empty_lines, file=sys.stderr)
+endef
+
+define CHECK_FOR_UNUSED_LIBS_PY
+  import os, sys
+
+  map_file    = sys.argv[1]
+  ignore_libs = [ "oldnames.lib" ]
+
+  class State():
+    IDLE   = 0
+    UNUSED = 1
+
+  class Colour():
+    RED = WHITE = RESET = ""
+
+  try:
+    import colorama
+    colorama.init()
+    Colour.RED   = colorama.Fore.RED   + colorama.Style.BRIGHT
+    Colour.WHITE = colorama.Fore.WHITE + colorama.Style.BRIGHT
+    Colour.RESET = colorama.Style.RESET_ALL
+  except:
+    pass
+
+  def cprint (color, s):
+    print ("%s%s%s" % (color, s, Colour.RESET))
+
+  def report (unused):
+    num = len(unused)
+    if num > 0:
+       cprint (Colour.RED, "%d unused %s in %s:" % (num, ["library", "libraries"][num > 1], map_file))
+       for u in unused:
+           print ("  " + u)
+    cprint (Colour.WHITE, "Done.\n")
+
+  def process_map (state):
+    unused_libs = []
+    f = open (map_file, "rt")
+    lines = f.readlines()
+    f.close()
+    for l in lines:
+      l = l.strip()
+      if l == "Unused libraries:":
+         state = State.UNUSED
+         continue
+      if state == State.UNUSED:
+         if l == "":
+            break
+         if os.path.basename (l).lower() not in ignore_libs:
+            unused_libs.append (l)
+    return unused_libs
+
+  report (process_map(State.IDLE))
 endef
 
 DEP_CFLAGS = -MM
