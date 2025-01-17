@@ -8,23 +8,24 @@
 #  *) IPFire's libloc. The main code of this is under 'IPFire/src'.
 #  *) DB-IP and IP-to-ASN.
 #
+DATE      := $(shell date +%d-%B-%Y)
+THIS_FILE := Makefile.Windows
+MAKEFLAGS += --warn-undefined-variables
+
 export CL=
 
 USE_CRT_DEBUG ?= 0
+OBJ_DIR       ?= geoip_obj
 
 define Usage
 
-  Usage: $(MAKE) -f Makefile.Windows <CC=gcc | cl | clang-cl> [all | clean]
+  Usage: $(MAKE) -f $(THIS_FILE) <CC=cl | clang-cl> [all | clean | vclean | install | runtests]
 endef
 
-ifeq ($(CC),clang-cl)
-  O  = obj
-else ifeq ($(CC),cl)
-  O  = obj
-else ifeq ($(CC),gcc)
-  O  = o
-else
-  $(error $(Usage))
+ifneq ($(CC),clang-cl)
+  ifneq ($(CC),cl)
+    $(error $(Usage))
+  endif
 endif
 
 #
@@ -38,55 +39,35 @@ else
   bits   := 32
 endif
 
-OBJ_DIR = geoip_obj
-
 #
-# Warn on undefined variables.
-#
-MAKEFLAGS += --warn-undefined-variables
-
-#
-# Get a list of .$(O)-files from .c-files:
+# Get a list of .obj-files from .c-files:
 #
 c_to_obj = $(addprefix $(OBJ_DIR)/, \
-             $(notdir $(1:.c=.$(O))))
+             $(notdir $(1:.c=.obj)))
 
-ifeq ($(CC),gcc)
-  #
-  # This ass-u-mes a Cygwin 'gcc'.
-  #
-  CFLAGS       = -m$(bits) -O2 -ggdb -D__USE_W32_SOCKETS -DHAVE_ENDIAN_H -Wno-write-strings
-  LDFLAGS      = -m$(bits) -Wl,--print-map
-  INSTALL_ROOT = /usr
-  MSVC_TYPE    = 0
+CFLAGS       = -nologo -Zi -W3
+LDFLAGS      = -debug -map -verbose -nologo -incremental:no
+INSTALL_ROOT = $(realpath $(VSINSTALLDIR))
 
+ifeq ($(USE_CRT_DEBUG),1)
+  CFLAGS += -MDd -D_CRTDBG_MAP_ALLOC -FIcrtdbg.h
 else
-  DEF_ARG      = -def:
-  CFLAGS       = -nologo -Zi -W3
-  LDFLAGS      = -debug -map -verbose -nologo -incremental:no
-  INSTALL_ROOT = $(realpath $(VSINSTALLDIR))
-  MSVC_TYPE    = 1
+  CFLAGS += -MD
+endif
 
-  ifeq ($(USE_CRT_DEBUG),1)
-    CFLAGS += -MDd -D_CRTDBG_MAP_ALLOC -FIcrtdbg.h
-  else
-    CFLAGS += -MD
-  endif
+CFLAGS += -D_CRT_SECURE_NO_WARNINGS  \
+          -D_CRT_NONSTDC_NO_WARNINGS \
+          -D_CRT_OBSOLETE_NO_WARNINGS
 
-  CFLAGS += -D_CRT_SECURE_NO_WARNINGS  \
-            -D_CRT_NONSTDC_NO_WARNINGS \
-            -D_CRT_OBSOLETE_NO_WARNINGS
-
-  ifeq ($(CC),clang-cl)
-    CFLAGS += -ferror-limit=5       \
-              -Wno-unused-function  \
-              -Wno-unused-variable  \
-              -Wno-writable-strings \
-              -Wno-missing-braces   \
-              -Wno-unused-command-line-argument
-  else
-    CFLAGS += -wd4018 -wd4146 -wd4267
-  endif
+ifeq ($(CC),clang-cl)
+  CFLAGS += -ferror-limit=5       \
+            -Wno-unused-function  \
+            -Wno-unused-variable  \
+            -Wno-writable-strings \
+            -Wno-missing-braces   \
+            -Wno-unused-command-line-argument
+else
+  CFLAGS += -wd4018 -wd4101 -wd4146 -wd4267
 endif
 
 #
@@ -96,12 +77,6 @@ CFLAGS += -I.. -I.              \
           -D_WIN32_WINNT=0x0601 \
           -DWIN32_LEAN_AND_MEAN \
           -D_WINSOCK_DEPRECATED_NO_WARNINGS
-
-#
-# Flag for 'IPFire/src/fake-OpenSSL/applink.c'.
-# Let it use the real 'Winsock2' DLL.
-#
-CFLAGS += -DUSE_Winsock2
 
 #
 # CFLAG for 'test-MMDB.c', '../getopt.c' and '$(MMDB_SRC)':
@@ -118,10 +93,10 @@ CFLAGS += -I./IPFire/src                \
           -I./IPFire/src/fake-OpenSSL   \
           -DLIBLOC_PRIVATE
 
-VPATH = GeoipMMDB   \
-        IP2Location \
-        IPFire/src  \
-        ..
+vpath %.c GeoipMMDB   \
+          IP2Location \
+          IPFire/src  \
+          ..
 
 GEOIP_SRC = geoip-stub.c
 
@@ -165,9 +140,13 @@ else
   DNSAPI_LIB     = dnsapi.lib
 endif
 
-TARGETS = $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB) geoip-$(CPU).dll test-MMDB.exe test-geoip.exe
+TARGETS = $(GEOIP_STAT_LIB) \
+          $(GEOIP_IMP_LIB)  \
+          geoip-$(CPU).dll  \
+          test-MMDB.exe     \
+          test-geoip.exe
 
-all: $(OBJ_DIR) $(TARGETS)
+all: $(TARGETS)
 
 $(OBJ_DIR):
 	- mkdir $@
@@ -178,42 +157,38 @@ $(GEOIP_STAT_LIB): $(GEOIP_OBJ) $(MMDB_OBJ) $(IPFIRE_OBJ) $(IP2LOCATION_OBJ)
 $(GEOIP_IMP_LIB): geoip-$(CPU).dll
 
 geoip-$(CPU).dll: $(OBJ_DIR)/geoip-$(CPU).def $(GEOIP_STAT_LIB)
-	$(call link_DLL, $@, $(GEOIP_IMP_LIB), $(DEF_ARG)$^ $(WS2_32_LIB) $(DNSAPI_LIB))
+	$(call link_DLL, $@, -def:$^ $(WS2_32_LIB) $(DNSAPI_LIB), $(GEOIP_IMP_LIB))
 
-$(MMDB_OBJ) $(OBJ_DIR)/getopt.$(O) $(OBJ_DIR)/test-MMDB.$(O): CFLAGS += $(MMDB_CFLAGS)
+$(MMDB_OBJ) $(OBJ_DIR)/getopt.obj $(OBJ_DIR)/test-MMDB.obj: CFLAGS += $(MMDB_CFLAGS)
 
-$(OBJ_DIR)/%.obj: %.c
+$(OBJ_DIR)/%.obj: %.c | $(OBJ_DIR)
 	$(CC) -c $(CFLAGS) -Fo./$@ $<
 	@echo
 
-$(OBJ_DIR)/%.obj: %.cpp
+$(OBJ_DIR)/%.obj: %.cpp | $(OBJ_DIR)
 	$(CC) -c -std:c++20 -Zc:strictStrings- -EHsc $(CFLAGS) -Fo./$@ $<
 	@echo
 
-$(OBJ_DIR)/%.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
-	@echo
+$(OBJ_DIR)/geoip-$(CPU).def: $(GEOIP_STAT_LIB) $(THIS_FILE) | $(OBJ_DIR)
+	$(call create_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_ INET_ \
+	                        win_strerror dword_str flags_decode fopen_excl get_date_str list_lookup_name)
 
-$(OBJ_DIR)/%.o: %.cpp
-	$(CC) -c -x c++ $(CFLAGS) -o $@ $<
-	@echo
-
-$(OBJ_DIR)/geoip-$(CPU).def: $(GEOIP_STAT_LIB) Makefile.Windows
-	$(call make_def_file, $@, $(GEOIP_STAT_LIB), geoip_ MMDB_ ip2loc_ loc_ INET_ \
-	                      win_strerror dword_str flags_decode fopen_excl get_date_str list_lookup_name)
-
-test-MMDB.exe: $(OBJ_DIR)/test-MMDB.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
+test-MMDB.exe: $(OBJ_DIR)/test-MMDB.obj $(OBJ_DIR)/getopt.obj $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
-test-geoip.exe: $(OBJ_DIR)/test-geoip.$(O) $(OBJ_DIR)/getopt.$(O) $(GEOIP_IMP_LIB)
+test-geoip.exe: $(OBJ_DIR)/test-geoip.obj $(OBJ_DIR)/getopt.obj $(GEOIP_IMP_LIB)
 	$(call link_EXE, $@, $^ $(WS2_32_LIB))
+
+runtests: test-geoip.exe test-MMDB.exe
+	$(call green_msg, Running ./test-geoip.exe)
+	./test-geoip.exe
+	$(call green_msg, Running ./test-MMDB.exe)
+	./test-MMDB.exe
 
 install: all
 	- $(call copy_file, $(GEOIP_STAT_LIB) $(GEOIP_IMP_LIB), $(INSTALL_ROOT)/lib)
 	- $(call copy_file, geoip-$(CPU).dll,                   $(INSTALL_ROOT)/bin)
-ifeq ($(MSVC_TYPE),1)
 	- $(call copy_file, geoip-$(CPU).pdb,                   $(INSTALL_ROOT)/bin)
-endif
 
 #
 # '$(sort ..)' create a unique list.
@@ -234,62 +209,26 @@ clean realclean vclean:
 colour_msg = @echo -e "$(1)\e[0m"
 green_msg  = $(call colour_msg,\e[1;32m$(strip $(1)))
 
-#
-# .$(O) -> .exe macro
-#   arg1, $(1): The .exe file.
-#   arg2, $(2): The .$(O) file(s), extra options and libs.
-#
 define link_EXE
   $(call green_msg, Linking $(1))
-  $(call link_EXE_$(MSVC_TYPE), $(1), $(2))
-  @echo
-endef
-
-define link_EXE_0
-  $(CC) $(LDFLAGS) -o $(1) $(2) > $(1:.exe=.map)
-endef
-
-define link_EXE_1
   link $(LDFLAGS) -out:$(strip $(1)) $(2) > link.tmp
   @cat link.tmp >> $(1:.exe=.map)
+  @echo
 endef
 
-#
-# Macro to create a DLL + import-lib from objects.
-# Syntax: $(call link_DLL, ...):
-#   arg1, $(1): The .dll file.
-#   arg2, $(2): The import-lib.
-#   arg3, $(3): The .obj file(s), extra arguments and libraries.
-#
 define link_DLL
   $(call green_msg, Linking $(1))
-  $(call link_DLL_$(MSVC_TYPE), $(1), $(2), $(3))
+  link -out:$(strip $(1)) $(LDFLAGS) -dll -implib:$(strip $(3)) $(2) > link.tmp
+  @cat link.tmp >> $(1:.dll=.map)
+  @rm -f $(3:.lib=.exp)
   @echo
 endef
 
-define link_DLL_1
-  link -out:$(strip $(1)) $(LDFLAGS) -dll -implib:$(strip $(2)) $(3) > link.tmp
-  @cat link.tmp >> $(1:.dll=.map)
-  @rm -f $(2:.lib=.exp)
-endef
-
-define link_DLL_0
-  $(CC) -shared $(LDFLAGS) -o $(1) -Wl,--out-implib,$(strip $(2)) $(3) > $(1:.dll=.map)
-endef
-
-#
-# Create a static library:
-#   arg1, $(1): The .a/.lib file.
-#   arg2, $(2): The .$(O) files.
-#
 define create_static_lib
   $(call green_msg, Creating static lib $(1))
-  $(call create_static_lib_$(MSVC_TYPE), $(1), $(2))
+  lib -nologo -out:$(strip $(1)) -machine:$(CPU) $(2)
   @echo
 endef
-
-create_static_lib_0 = ar rs $(1) $(2)
-create_static_lib_1 = lib -nologo -out:$(strip $(1)) $(2)
 
 define copy_file
   cp --update $(strip $(1) $(2))
@@ -314,10 +253,10 @@ extract_data_syms = nm $(1)                                  | \
                     sed -e 's/^.* $(uscore)\([_a-zA-Z0-9]*\)/  \1  DATA/'  | \
                     sort | uniq
 
-define make_def_file
+define create_def_file
   $(call green_msg, Generating $(1).)
   $(file >  $(1), ;)
-  $(file >> $(1), ; This file was generated by $(realpath Makefile.Windows))
+  $(file >> $(1), ; This file was generated by $(realpath $(THIS_FILE)))
   $(file >> $(1), ; at $(DATE).)
   $(file >> $(1), ;)
   $(file >> $(1), ; DO NOT EDIT. YOUR CHANGED WILL BE LOST.)
@@ -329,7 +268,7 @@ define make_def_file
 endef
 
 DEP_CFLAGS  = -MM $(filter -D% -I%, $(CFLAGS))
-DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.$$(O): /'
+DEP_REPLACE = sed -e 's/\(.*\)\.o: /\n$$(OBJ_DIR)\/\1.obj: /'
 
 ALL_SOURCES = $(GEOIP_SRC) $(MMDB_SRC) $(IPFIRE_SRC) $(IP2LOCATION_SRC)
 
