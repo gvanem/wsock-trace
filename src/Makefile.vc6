@@ -67,7 +67,7 @@ INSTALL_ROOT = $(VSINSTALLDIR)
 #
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -I$(LIBLOC_ROOT) -W3 -Zi \
-          -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
+          -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600 -wd4273
 LDFLAGS = -nologo -map -debug -incremental:no -subsystem:console -verbose \
           -machine:$(CPU) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
 
@@ -221,6 +221,7 @@ uninstall:
 ws_tool.exe: $(WS_TOOL_OBJ) $(WSOCK_DEP)
 	link.exe $(LDFLAGS) -out:$@ $** dnsapi.lib advapi32.lib ole32.lib winmm.lib > link.tmp
 	@type link.tmp >> ws_tool.map
+	@del ws_tool.lib ws_tool.exp
 	@echo
 
 mhook-test.exe: $(OBJ_DIR)\mhook-test.obj $(OBJ_DIR)\disasm.obj $(WSOCK_TRACE_LIB)
