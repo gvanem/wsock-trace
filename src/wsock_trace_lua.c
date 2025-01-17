@@ -164,7 +164,7 @@ static const char *get_func_sig (void)
 
   strcpy (buf, wslua_func_sig);
 
-#if !(defined(_MSC_VER) && defined(__FUNCSIG__))
+#if !defined(__FUNCSIG__)
   strcat (buf, "()");
 #endif
   return (buf);

@@ -33,7 +33,6 @@ build_script:
   - cmd: cd src
   - cmd: set USE_LUAJIT=1
   - cmd: set PLATFORM=%CPU%
-
   - cmd: nmake -nologo -f Makefile.vc6
 
 test_script:

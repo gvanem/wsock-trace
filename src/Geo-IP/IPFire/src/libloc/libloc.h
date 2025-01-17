@@ -18,6 +18,7 @@
 #define LIBLOC_H
 
 #if defined(_WIN32)
+  #include <stdlib.h>
   #include <sys/types.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>

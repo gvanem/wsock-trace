@@ -1317,7 +1317,7 @@ static void set_colour (int col)
 
   if (use_SGR == -1 && use_wincon == -1)  /* Do this once */
   {
-    use_SGR = on_appveyor ? 1: 0;
+    use_SGR = on_appveyor ? 1 : 0;
     c_hnd = GetStdHandle (STD_OUTPUT_HANDLE);
     if (c_hnd != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(c_hnd, &c_info))
          use_wincon = 1;

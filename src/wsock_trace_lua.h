@@ -15,7 +15,7 @@
   extern int  wslua_WSAStartup (WORD ver, WSADATA *data);
   extern int  wslua_WSACleanup (void);
 
-  #if defined(_MSC_VER) && defined(__FUNCSIG__)
+  #if defined(__FUNCSIG__)
    /*
     * MSVC supports '__FUNCSIG__' and includes full list of arguments.
     * E.g. in 'void foo(int bar)', __FUNCSIG__' gives "void foo(int bar)".
