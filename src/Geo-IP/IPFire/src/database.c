@@ -36,7 +36,7 @@
 
 #include <libloc/libloc.h>
 
-#ifndef LIBLOC_USING_WINSOCK2
+#ifndef _WIN32
 #  include <arpa/inet.h>
 #  include <netinet/in.h>
 #endif
@@ -264,7 +264,7 @@ static int loc_database_mmap(struct loc_database* db) {
 
 	DEBUG(db->ctx, "Mapped database of %zu byte(s) at %p\n", (size_t)db->length, db->data);
 
-#if !defined(_WIN32) && !defined(__CYGWIN__)
+#if !defined(_WIN32)
 	// Tell the system that we expect to read data randomly
 	r = madvise(db->data, db->length, MADV_RANDOM);
 	if (r) {

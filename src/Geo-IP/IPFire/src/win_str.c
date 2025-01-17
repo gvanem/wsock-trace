@@ -1,6 +1,5 @@
 /*
  * `strsep()`, `strcasestr()`, `timegm()`, `strptime()`, `asprintf()` for Windows.
- * (But not for Cygwin which have all these functions elsewhere).
  */
 #include <string.h>
 #include <ctype.h>
@@ -11,7 +10,6 @@
 #include <libloc/libloc.h>
 #include <libloc/private.h>
 
-#if !defined(__CYGWIN__) /* rest of file */
 /**
  * Get next token from string `*stringp`, where tokens are possibly empty
  * strings separated by characters from `delim`.
@@ -545,4 +543,3 @@ int asprintf (char **strp, const char *format, ...)
   va_end (args);
   return (ret);
 }
-#endif  /* __CYGWIN__ */

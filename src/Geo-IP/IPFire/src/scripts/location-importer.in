@@ -1678,11 +1678,25 @@ class CLI(object):
 			# Fetch the extracted network and ASN
 			network, autnum = m.groups()
 
+			# Skip the line if there is no network
+			if not network:
+				continue
+
 			# Decode into strings
-			if network:
-				network = network.decode()
-			if autnum:
-				autnum = autnum.decode()
+			network = network.decode()
+
+			# Parse as network object
+			network = ipaddress.ip_network(network)
+
+			# Skip announcements that are too large
+			if isinstance(network, ipaddress.IPv6Network):
+				if network.prefixlen < 10:
+					log.warning("Skipping unusually large network %s" % network)
+					continue
+			elif isinstance(network, ipaddress.IPv4Network):
+				if network.prefixlen < 4:
+					log.warning("Skipping unusually large network %s" % network)
+					continue
 
 			# Collect all aggregated networks
 			if not autnum:
@@ -1690,11 +1704,14 @@ class CLI(object):
 				aggregated_networks.append(network)
 				continue
 
+			# Decode ASN
+			autnum = autnum.decode()
+
 			# Insert it into the database
 			self.db.execute("INSERT INTO announcements(network, autnum) \
 				VALUES(%s, %s) ON CONFLICT (network) DO \
 				UPDATE SET autnum = excluded.autnum, last_seen_at = CURRENT_TIMESTAMP",
-				network, autnum,
+				"%s" % network, autnum,
 			)
 
 		# Process any aggregated networks
@@ -1973,7 +1990,7 @@ class CLI(object):
 							WHERE geofeed_id = %s", geofeed.id)
 
 				# Catch any other errors and connection timeouts
-				except (http.client.InvalidURL, urllib.request.URLError, TimeoutError) as e:
+				except (http.client.InvalidURL, http.client.RemoteDisconnected, urllib.request.URLError, TimeoutError) as e:
 					log.debug("Could not fetch URL %s: %s" % (geofeed.url, e))
 
 					self.db.execute("UPDATE geofeeds SET status = %s, error = %s \

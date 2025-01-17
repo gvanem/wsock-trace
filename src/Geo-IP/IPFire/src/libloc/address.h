@@ -21,7 +21,7 @@
 #error "Include <libloc/address.h> before me"
 #endif
 
-#if defined(LIBLOC_USING_WINSOCK2)
+#if defined(_WIN32)
 #define IN6_DWORD(addr, idx)  *(u_long*) &addr->s6_words [2*(idx)]
 #else
 #define IN6_DWORD(addr, idx)  addr->s6_addr32 [idx]
@@ -260,7 +260,7 @@ static inline struct in6_addr loc_address_and(
 	struct in6_addr a;
 
 	// Perform bitwise AND
-#if defined(LIBLOC_USING_WINSOCK2)
+#if defined(_WIN32)
 	for (unsigned int i = 0; i < 8; i++)
 		a.s6_words[i] = address->s6_words[i] & bitmask->s6_words[i];
 #else
@@ -276,7 +276,7 @@ static inline struct in6_addr loc_address_or(
 	struct in6_addr a;
 
 	// Perform bitwise OR
-#if defined(LIBLOC_USING_WINSOCK2)
+#if defined(_WIN32)
 	for (unsigned int i = 0; i < 8; i++)
 		a.s6_words[i] = address->s6_words[i] | ~bitmask->s6_words[i];
 #else

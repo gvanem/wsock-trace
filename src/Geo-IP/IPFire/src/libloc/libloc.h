@@ -17,15 +17,7 @@
 #ifndef LIBLOC_H
 #define LIBLOC_H
 
-#if !defined(LIBLOC_USING_WINSOCK2)    /* if not defined in makefile */
-  #if defined(_WIN32)                  /* not a built-in in Cygwin */
-    #define LIBLOC_USING_WINSOCK2
-  #elif defined(__CYGWIN__) && defined(__USE_W32_SOCKETS)
-    #define LIBLOC_USING_WINSOCK2      /* if not using POSIX sockets in Cygwin */
-  #endif
-#endif
-
-#if defined(LIBLOC_USING_WINSOCK2)
+#if defined(_WIN32)
   #include <sys/types.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>

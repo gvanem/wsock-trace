@@ -21,7 +21,7 @@
 #include <libloc/private.h>
 #include <libloc/resolv.h>
 
-#ifndef LIBLOC_USING_WINSOCK2
+#ifndef _WIN32
 #  include <arpa/nameser.h>
 #  include <arpa/nameser_compat.h>
 #  include <resolv.h>
@@ -46,7 +46,7 @@ static int parse_timestamp(const unsigned char* txt, time_t* t) {
     return 0;
 }
 
-#if !defined(LIBLOC_USING_WINSOCK2)
+#if !defined(_WIN32)
 LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
         unsigned int version, time_t* t) {
     // Initialise the resolver
@@ -210,5 +210,5 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
   DEBUG(ctx, "Resolved to: %s\n", answer);
   return parse_timestamp ((const unsigned char*)&answer, t);
 }
-#endif /* !LIBLOC_USING_WINSOCK2 */
+#endif /* !_WIN32 */
 
