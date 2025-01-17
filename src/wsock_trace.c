@@ -702,7 +702,7 @@ static const char *socket_number (SOCKET s)
 /*
  * The actual Winsock functions we trace.
  */
-EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
+int WINAPI WSAStartup (WORD ver, WSADATA *data)
 {
   char details [300] = "";
   int  rc;
@@ -762,7 +762,7 @@ EXPORT int WINAPI WSAStartup (WORD ver, WSADATA *data)
   return (rc);
 }
 
-EXPORT int WINAPI WSACleanup (void)
+int WINAPI WSACleanup (void)
 {
   int rc;
 
@@ -784,7 +784,7 @@ EXPORT int WINAPI WSACleanup (void)
   return (rc);
 }
 
-EXPORT int WINAPI WSAGetLastError (void)
+int WINAPI WSAGetLastError (void)
 {
   int rc;
 
@@ -797,7 +797,7 @@ EXPORT int WINAPI WSAGetLastError (void)
   return (rc);
 }
 
-EXPORT void WINAPI WSASetLastError (int err)
+void WINAPI WSASetLastError (int err)
 {
   CHECK_PTR (p_WSASetLastError);
   (*p_WSASetLastError) (err);
@@ -807,9 +807,8 @@ EXPORT void WINAPI WSASetLastError (int err)
   LEAVE_CRIT (!exclude_this);
 }
 
-EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
-                                 WSAPROTOCOL_INFOA *proto_info,
-                                 GROUP group, DWORD flags)
+SOCKET WINAPI WSASocketA (int af, int type, int protocol, WSAPROTOCOL_INFOA *proto_info,
+                          GROUP group, DWORD flags)
 {
   SOCKET rc;
 
@@ -833,9 +832,8 @@ EXPORT SOCKET WINAPI WSASocketA (int af, int type, int protocol,
   return (rc);
 }
 
-EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol,
-                                 WSAPROTOCOL_INFOW *proto_info,
-                                 GROUP group, DWORD flags)
+SOCKET WINAPI WSASocketW (int af, int type, int protocol, WSAPROTOCOL_INFOW *proto_info,
+                          GROUP group, DWORD flags)
 {
   SOCKET rc;
 
@@ -859,7 +857,7 @@ EXPORT SOCKET WINAPI WSASocketW (int af, int type, int protocol,
   return (rc);
 }
 
-EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_INFOA *proto_info)
+int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_INFOA *proto_info)
 {
   int rc;
 
@@ -878,7 +876,7 @@ EXPORT int WINAPI WSADuplicateSocketA (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   return (rc);
 }
 
-EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_INFOW *proto_info)
+int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_INFOW *proto_info)
 {
   int rc;
 
@@ -897,11 +895,11 @@ EXPORT int WINAPI WSADuplicateSocketW (SOCKET s, DWORD process_id, WSAPROTOCOL_I
   return (rc);
 }
 
-EXPORT INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
-                                       DWORD              address_len,
-                                       WSAPROTOCOL_INFOA *proto_info,
-                                       char              *result_string,
-                                       DWORD             *result_string_len)
+INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
+                                DWORD              address_len,
+                                WSAPROTOCOL_INFOA *proto_info,
+                                char              *result_string,
+                                DWORD             *result_string_len)
 {
   INT rc;
 
@@ -919,11 +917,11 @@ EXPORT INT WINAPI WSAAddressToStringA (SOCKADDR          *address,
   return (rc);
 }
 
-EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
-                                       DWORD              address_len,
-                                       WSAPROTOCOL_INFOW *proto_info,
-                                       wchar_t           *result_string,
-                                       DWORD             *result_string_len)
+INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
+                                DWORD              address_len,
+                                WSAPROTOCOL_INFOW *proto_info,
+                                wchar_t           *result_string,
+                                DWORD             *result_string_len)
 {
   INT rc;
 
@@ -943,11 +941,11 @@ EXPORT INT WINAPI WSAAddressToStringW (SOCKADDR          *address,
   return (rc);
 }
 
-EXPORT INT WINAPI WSAStringToAddressA (char              *address_str,
-                                       INT                address_fam,
-                                       WSAPROTOCOL_INFOA *protocol_info,
-                                       SOCKADDR          *address,
-                                       INT               *address_len)
+INT WINAPI WSAStringToAddressA (char              *address_str,
+                                INT                address_fam,
+                                WSAPROTOCOL_INFOA *protocol_info,
+                                SOCKADDR          *address,
+                                INT               *address_len)
 {
   INT rc;
 
@@ -963,11 +961,11 @@ EXPORT INT WINAPI WSAStringToAddressA (char              *address_str,
   return (rc);
 }
 
-EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *address_str,
-                                       INT                address_fam,
-                                       WSAPROTOCOL_INFOW *protocol_info,
-                                       SOCKADDR          *address,
-                                       INT               *address_len)
+INT WINAPI WSAStringToAddressW (wchar_t           *address_str,
+                                INT                address_fam,
+                                WSAPROTOCOL_INFOW *protocol_info,
+                                SOCKADDR          *address,
+                                INT               *address_len)
 {
   INT rc;
 
@@ -984,9 +982,9 @@ EXPORT INT WINAPI WSAStringToAddressW (wchar_t           *address_str,
 }
 
 
-EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, void *vals, DWORD size_in,
-                            void *out_buf, DWORD out_size, DWORD *size_ret,
-                            WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+int WINAPI WSAIoctl (SOCKET s, DWORD code, void *vals, DWORD size_in,
+                     void *out_buf, DWORD out_size, DWORD *size_ret,
+                     WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   const char *in_out = "";
   int   rc;
@@ -1033,8 +1031,8 @@ EXPORT int WINAPI WSAIoctl (SOCKET s, DWORD code, void *vals, DWORD size_in,
   return (rc);
 }
 
-EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen,
-                              WSABUF *caller_data, WSABUF *callee_data, QOS *SQOS, QOS *GQOS)
+int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen,
+                       WSABUF *caller_data, WSABUF *callee_data, QOS *SQOS, QOS *GQOS)
 {
   int rc;
 
@@ -1066,15 +1064,15 @@ EXPORT int WINAPI WSAConnect (SOCKET s, const struct sockaddr *name, int namelen
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET                s,
-                                      const char           *node_name,
-                                      const char           *service_name,
-                                      DWORD                *local_addr_len,
-                                      SOCKADDR             *local_addr,
-                                      DWORD                *remote_addr_len,
-                                      SOCKADDR             *remote_addr,
-                                      const struct timeval *tv,
-                                      WSAOVERLAPPED        *reserved)
+BOOL WINAPI WSAConnectByNameA (SOCKET                s,
+                               const char           *node_name,
+                               const char           *service_name,
+                               DWORD                *local_addr_len,
+                               SOCKADDR             *local_addr,
+                               DWORD                *remote_addr_len,
+                               SOCKADDR             *remote_addr,
+                               const struct timeval *tv,
+                               WSAOVERLAPPED        *reserved)
 {
   BOOL rc;
   char tv_buf [30];
@@ -1111,15 +1109,15 @@ EXPORT BOOL WINAPI WSAConnectByNameA (SOCKET                s,
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET               s,
-                                      LPWSTR               node_name,
-                                      LPWSTR               service_name,
-                                      DWORD                *local_addr_len,
-                                      SOCKADDR             *local_addr,
-                                      DWORD                *remote_addr_len,
-                                      SOCKADDR             *remote_addr,
-                                      const struct timeval *tv,
-                                      WSAOVERLAPPED        *reserved)
+BOOL WINAPI WSAConnectByNameW (SOCKET               s,
+                               LPWSTR               node_name,
+                               LPWSTR               service_name,
+                               DWORD                *local_addr_len,
+                               SOCKADDR             *local_addr,
+                               DWORD                *remote_addr_len,
+                               SOCKADDR             *remote_addr,
+                               const struct timeval *tv,
+                               WSAOVERLAPPED        *reserved)
 {
   BOOL rc;
   char tv_buf [30];
@@ -1156,14 +1154,14 @@ EXPORT BOOL WINAPI WSAConnectByNameW (SOCKET               s,
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSAConnectByList (SOCKET                s,
-                                     SOCKET_ADDRESS_LIST  *socket_addr_list,
-                                     DWORD                *local_addr_len,
-                                     SOCKADDR             *local_addr,
-                                     DWORD                *remote_addr_len,
-                                     SOCKADDR             *remote_addr,
-                                     const struct timeval *tv,
-                                     WSAOVERLAPPED        *reserved)
+BOOL WINAPI WSAConnectByList (SOCKET                s,
+                              SOCKET_ADDRESS_LIST  *socket_addr_list,
+                              DWORD                *local_addr_len,
+                              SOCKADDR             *local_addr,
+                              DWORD                *remote_addr_len,
+                              SOCKADDR             *remote_addr,
+                              const struct timeval *tv,
+                              WSAOVERLAPPED        *reserved)
 {
   BOOL rc;
   char tv_buf [30];
@@ -1200,7 +1198,7 @@ EXPORT BOOL WINAPI WSAConnectByList (SOCKET                s,
   return (rc);
 }
 
-EXPORT WSAEVENT WINAPI WSACreateEvent (void)
+WSAEVENT WINAPI WSACreateEvent (void)
 {
   WSAEVENT ev;
 
@@ -1215,7 +1213,7 @@ EXPORT WSAEVENT WINAPI WSACreateEvent (void)
   return (ev);
 }
 
-EXPORT BOOL WINAPI WSASetEvent (WSAEVENT ev)
+BOOL WINAPI WSASetEvent (WSAEVENT ev)
 {
   BOOL rc;
 
@@ -1230,7 +1228,7 @@ EXPORT BOOL WINAPI WSASetEvent (WSAEVENT ev)
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSACloseEvent (WSAEVENT ev)
+BOOL WINAPI WSACloseEvent (WSAEVENT ev)
 {
   BOOL rc;
 
@@ -1245,7 +1243,7 @@ EXPORT BOOL WINAPI WSACloseEvent (WSAEVENT ev)
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSAResetEvent (WSAEVENT ev)
+BOOL WINAPI WSAResetEvent (WSAEVENT ev)
 {
   BOOL rc;
 
@@ -1260,7 +1258,7 @@ EXPORT BOOL WINAPI WSAResetEvent (WSAEVENT ev)
   return (rc);
 }
 
-EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
+int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
 {
   int rc;
 
@@ -1276,7 +1274,7 @@ EXPORT int WINAPI WSAEventSelect (SOCKET s, WSAEVENT ev, long net_ev)
   return (rc);
 }
 
-EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, long net_ev)
+int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, long net_ev)
 {
   int rc;
 
@@ -1310,8 +1308,8 @@ EXPORT int WINAPI WSAAsyncSelect (SOCKET s, HWND wnd, unsigned int msg, long net
  * From:
  *   https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaaccept
  */
-EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
-                                LPCONDITIONPROC condition, DWORD_PTR callback_data)
+SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
+                         LPCONDITIONPROC condition, DWORD_PTR callback_data)
 {
   SOCKET rc;
 
@@ -1343,9 +1341,6 @@ EXPORT SOCKET WINAPI WSAAccept (SOCKET s, struct sockaddr *addr, int *addr_len,
   return (rc);
 }
 
-#if !defined(_MSC_VER)
-EXPORT
-#endif
 int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
 {
   int     rc;
@@ -1368,7 +1363,7 @@ int WINAPI __WSAFDIsSet (SOCKET s, fd_set *fd)
   return (rc);
 }
 
-EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
+SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
 {
   int    family, type, protocol;
   SOCKET rc;
@@ -1412,7 +1407,7 @@ EXPORT SOCKET WINAPI accept (SOCKET s, struct sockaddr *addr, int *addr_len)
   return (rc);
 }
 
-EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
+int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
 {
   int rc;
 
@@ -1451,7 +1446,7 @@ EXPORT int WINAPI bind (SOCKET s, const struct sockaddr *addr, int addr_len)
   return (rc);
 }
 
-EXPORT int WINAPI closesocket (SOCKET s)
+int WINAPI closesocket (SOCKET s)
 {
   TCP_INFO_v0 info;
   int  rc, rc2 = -1;
@@ -1488,7 +1483,7 @@ EXPORT int WINAPI closesocket (SOCKET s)
   return (rc);
 }
 
-EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
+int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
 {
   /*
    * todo: we may need to record (in ioctlsocket() below) if socket is non-blocking.
@@ -1542,7 +1537,7 @@ EXPORT int WINAPI connect (SOCKET s, const struct sockaddr *addr, int addr_len)
   return (rc);
 }
 
-EXPORT int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
+int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
 {
   char arg[10] = "?";
   int  rc;
@@ -1565,7 +1560,7 @@ EXPORT int WINAPI ioctlsocket (SOCKET s, long opt, u_long *argp)
 #define FD_INPUT   "fd_input  ->"
 #define FD_OUTPUT  "fd_output ->"
 
-EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, const struct timeval *tv)
+int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd, const struct timeval *tv)
 {
   fd_set *rd_copy = NULL;
   fd_set *wr_copy = NULL;
@@ -1680,7 +1675,7 @@ EXPORT int WINAPI select (int nfds, fd_set *rd_fd, fd_set *wr_fd, fd_set *ex_fd,
   return (rc);
 }
 
-EXPORT int WINAPI gethostname (char *buf, int buf_len)
+int WINAPI gethostname (char *buf, int buf_len)
 {
   int rc;
 
@@ -1695,7 +1690,7 @@ EXPORT int WINAPI gethostname (char *buf, int buf_len)
   return (rc);
 }
 
-EXPORT int WINAPI listen (SOCKET s, int backlog)
+int WINAPI listen (SOCKET s, int backlog)
 {
   int rc;
 
@@ -1710,7 +1705,7 @@ EXPORT int WINAPI listen (SOCKET s, int backlog)
   return (rc);
 }
 
-EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
+int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
 {
   int rc;
 
@@ -1756,7 +1751,7 @@ EXPORT int WINAPI recv (SOCKET s, char *buf, int buf_len, int flags)
   return (rc);
 }
 
-EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len)
+int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct sockaddr *from, int *from_len)
 {
   int rc;
 
@@ -1820,7 +1815,7 @@ EXPORT int WINAPI recvfrom (SOCKET s, char *buf, int buf_len, int flags, struct 
   return (rc);
 }
 
-EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
+int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
 {
   int rc;
 
@@ -1861,7 +1856,7 @@ EXPORT int WINAPI send (SOCKET s, const char *buf, int buf_len, int flags)
   return (rc);
 }
 
-EXPORT int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, const struct sockaddr *to, int to_len)
+int WINAPI sendto (SOCKET s, const char *buf, int buf_len, int flags, const struct sockaddr *to, int to_len)
 {
   int rc;
 
@@ -1980,9 +1975,9 @@ static void handle_recv_data (int rc, const WSABUF *bufs, const DWORD *num_bytes
   }
 }
 
-EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                           DWORD *flags, WSAOVERLAPPED *ov,
-                           LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
+                    DWORD *flags, WSAOVERLAPPED *ov,
+                    LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   DWORD size;
   int   rc;
@@ -2030,9 +2025,9 @@ EXPORT int WINAPI WSARecv (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   return (rc);
 }
 
-EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                               DWORD *flags, struct sockaddr *from, INT *from_len,
-                               WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
+                        DWORD *flags, struct sockaddr *from, INT *from_len,
+                        WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   DWORD size;
   int   rc;
@@ -2081,7 +2076,7 @@ EXPORT int WINAPI WSARecvFrom (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *nu
   return (rc);
 }
 
-EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
+int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
 {
   int rc;
 
@@ -2123,7 +2118,7 @@ EXPORT int WINAPI WSARecvEx (SOCKET s, char *buf, int buf_len, int *flags)
   return (rc);
 }
 
-EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
+int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
 {
   int rc;
 
@@ -2146,8 +2141,8 @@ EXPORT int WINAPI WSARecvDisconnect (SOCKET s, WSABUF *disconnect_data)
   return (rc);
 }
 
-EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                           DWORD flags, WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
+                    DWORD flags, WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   int rc;
 
@@ -2199,9 +2194,9 @@ EXPORT int WINAPI WSASend (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_by
   return (rc);
 }
 
-EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
-                             DWORD flags, const struct sockaddr *to, int to_len,
-                             WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_bytes,
+                      DWORD flags, const struct sockaddr *to, int to_len,
+                      WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   int rc;
 
@@ -2265,8 +2260,8 @@ EXPORT int WINAPI WSASendTo (SOCKET s, WSABUF *bufs, DWORD num_bufs, DWORD *num_
   return (rc);
 }
 
-EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_bytes,
-                              WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
+int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_bytes,
+                       WSAOVERLAPPED *ov, LPWSAOVERLAPPED_COMPLETION_ROUTINE func)
 {
   int rc;
 
@@ -2294,8 +2289,8 @@ EXPORT int WINAPI WSASendMsg (SOCKET s, WSAMSG *msg, DWORD flags, DWORD *num_byt
   return (rc);
 }
 
-EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *transferred,
-                                           BOOL wait, DWORD *flags)
+BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *transferred,
+                                    BOOL wait, DWORD *flags)
 {
   BOOL  rc;
   DWORD bytes = 0;
@@ -2329,7 +2324,7 @@ EXPORT BOOL WINAPI WSAGetOverlappedResult (SOCKET s, WSAOVERLAPPED *ov, DWORD *t
   return (rc);
 }
 
-EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
+int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS *events)
 {
   int rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsanetwork_events);
   WSANETWORKEVENTS in_events;
@@ -2356,7 +2351,7 @@ EXPORT int WINAPI WSAEnumNetworkEvents (SOCKET s, WSAEVENT ev, WSANETWORKEVENTS 
 /*
  * This function is what the command "netsh WinSock Show Catalog" uses.
  */
-EXPORT int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_info, DWORD *buf_len)
+int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_info, DWORD *buf_len)
 {
   char buf[50], *p = buf;
   int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsaprotocol_info);
@@ -2389,7 +2384,7 @@ EXPORT int WINAPI WSAEnumProtocolsA (int *protocols, WSAPROTOCOL_INFOA *proto_in
   return (rc);
 }
 
-EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_info, DWORD *buf_len)
+int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_info, DWORD *buf_len)
 {
   char buf[50], *p = buf;
   int  i, rc, do_it = (g_cfg.trace_level > 0 && g_cfg.dump_wsaprotocol_info);
@@ -2422,7 +2417,7 @@ EXPORT int WINAPI WSAEnumProtocolsW (int *protocols, WSAPROTOCOL_INFOW *proto_in
   return (rc);
 }
 
-EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA *provider_buf)
+int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA *provider_buf)
 {
   char  buf [50], *p = buf;
   DWORD buf_len_in = buf_len ? *buf_len : 0;
@@ -2452,7 +2447,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersA (DWORD *buf_len, WSANAMESPACE_INFOA
   return (rc);
 }
 
-EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW *provider_buf)
+int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW *provider_buf)
 {
   char        buf [50];
   const char *p = buf;
@@ -2483,7 +2478,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersW (DWORD *buf_len, WSANAMESPACE_INFOW
   return (rc);
 }
 
-EXPORT int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INFOEXA *provider_buf)
+int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INFOEXA *provider_buf)
 {
   char  buf [50], *p = buf;
   DWORD buf_len_in = buf_len ? *buf_len : 0;
@@ -2513,7 +2508,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersExA (DWORD *buf_len, WSANAMESPACE_INF
   return (rc);
 }
 
-EXPORT int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INFOEXW *provider_buf)
+int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INFOEXW *provider_buf)
 {
   char  buf [50], *p = buf;
   DWORD buf_len_in = buf_len ? *buf_len : 0;
@@ -2543,7 +2538,7 @@ EXPORT int WINAPI WSAEnumNameSpaceProvidersExW (DWORD *buf_len, WSANAMESPACE_INF
   return (rc);
 }
 
-EXPORT int WINAPI WSACancelBlockingCall (void)
+int WINAPI WSACancelBlockingCall (void)
 {
   int rc;
 
@@ -2558,7 +2553,7 @@ EXPORT int WINAPI WSACancelBlockingCall (void)
   return (rc);
 }
 
-EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
+int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
 {
   int        rc;
   WSAPOLLFD *fd_in = NULL;
@@ -2632,20 +2627,20 @@ EXPORT int WINAPI WSAPoll (LPWSAPOLLFD fd_array, ULONG fds, int timeout_ms)
 /* \todo:
  */
 #if 0
-EXPORT DWORD WaitForMultipleObjectsEx (DWORD         num_ev,
-                                       const HANDLE *hnd,
-                                       BOOL          wait_all,
-                                       DWORD         timeout,
-                                       BOOL          alertable)
+DWORD WaitForMultipleObjectsEx (DWORD         num_ev,
+                                const HANDLE *hnd,
+                                BOOL          wait_all,
+                                DWORD         timeout,
+                                BOOL          alertable)
 {
 }
 #endif
 
-EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
-                                              const WSAEVENT *ev,
-                                              BOOL            wait_all,
-                                              DWORD           timeout,
-                                              BOOL            alertable)
+DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
+                                       const WSAEVENT *ev,
+                                       BOOL            wait_all,
+                                       DWORD           timeout,
+                                       BOOL            alertable)
 {
   DWORD rc;
 
@@ -2702,7 +2697,7 @@ EXPORT DWORD WINAPI WSAWaitForMultipleEvents (DWORD           num_ev,
   return (rc);
 }
 
-EXPORT int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val, int opt_len)
+int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val, int opt_len)
 {
   int rc;
 
@@ -2719,7 +2714,7 @@ EXPORT int WINAPI setsockopt (SOCKET s, int level, int opt, const char *opt_val,
   return (rc);
 }
 
-EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *opt_len)
+int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *opt_len)
 {
   int rc, _opt_len;
 
@@ -2759,7 +2754,7 @@ EXPORT int WINAPI getsockopt (SOCKET s, int level, int opt, char *opt_val, int *
   return (rc);
 }
 
-EXPORT int WINAPI shutdown (SOCKET s, int how)
+int WINAPI shutdown (SOCKET s, int how)
 {
   int rc;
 
@@ -2774,7 +2769,7 @@ EXPORT int WINAPI shutdown (SOCKET s, int how)
   return (rc);
 }
 
-EXPORT SOCKET WINAPI socket (int family, int type, int protocol)
+SOCKET WINAPI socket (int family, int type, int protocol)
 {
   SOCKET rc;
 
@@ -2794,7 +2789,7 @@ EXPORT SOCKET WINAPI socket (int family, int type, int protocol)
   return (rc);
 }
 
-EXPORT struct servent *WINAPI getservbyport (int port, const char *proto)
+struct servent *WINAPI getservbyport (int port, const char *proto)
 {
   struct servent *rc;
 
@@ -2813,7 +2808,7 @@ EXPORT struct servent *WINAPI getservbyport (int port, const char *proto)
   return (rc);
 }
 
-EXPORT struct servent *WINAPI getservbyname (const char *serv, const char *proto)
+struct servent *WINAPI getservbyname (const char *serv, const char *proto)
 {
   struct servent *rc;
 
@@ -2832,7 +2827,7 @@ EXPORT struct servent *WINAPI getservbyname (const char *serv, const char *proto
   return (rc);
 }
 
-EXPORT struct hostent *WINAPI gethostbyname (const char *name)
+struct hostent *WINAPI gethostbyname (const char *name)
 {
   struct hostent *rc;
 
@@ -2864,7 +2859,7 @@ EXPORT struct hostent *WINAPI gethostbyname (const char *name)
   return (rc);
 }
 
-EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type)
+struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type)
 {
   struct hostent *rc;
 
@@ -2922,7 +2917,7 @@ EXPORT struct hostent *WINAPI gethostbyaddr (const char *addr, int len, int type
   return (rc);
 }
 
-EXPORT u_short WINAPI htons (u_short x)
+u_short WINAPI htons (u_short x)
 {
   u_short rc;
 
@@ -2935,7 +2930,7 @@ EXPORT u_short WINAPI htons (u_short x)
   return (rc);
 }
 
-EXPORT u_short WINAPI ntohs (u_short x)
+u_short WINAPI ntohs (u_short x)
 {
   u_short rc;
 
@@ -2948,7 +2943,7 @@ EXPORT u_short WINAPI ntohs (u_short x)
   return (rc);
 }
 
-EXPORT u_long WINAPI htonl (u_long x)
+u_long WINAPI htonl (u_long x)
 {
   u_long rc;
 
@@ -2961,7 +2956,7 @@ EXPORT u_long WINAPI htonl (u_long x)
   return (rc);
 }
 
-EXPORT u_long WINAPI ntohl (u_long x)
+u_long WINAPI ntohl (u_long x)
 {
   u_long rc;
 
@@ -2974,7 +2969,7 @@ EXPORT u_long WINAPI ntohl (u_long x)
   return (rc);
 }
 
-EXPORT int WINAPI WSAHtons (SOCKET s, u_short value, u_short *result)
+int WINAPI WSAHtons (SOCKET s, u_short value, u_short *result)
 {
   int rc;
 
@@ -2986,7 +2981,7 @@ EXPORT int WINAPI WSAHtons (SOCKET s, u_short value, u_short *result)
   return (rc);
 }
 
-EXPORT int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
+int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
 {
   int rc;
 
@@ -2998,7 +2993,7 @@ EXPORT int WINAPI WSANtohs (SOCKET s, u_short value, u_short *result)
   return (rc);
 }
 
-EXPORT int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
+int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
 {
   int rc;
 
@@ -3010,7 +3005,7 @@ EXPORT int WINAPI WSAHtonl (SOCKET s, u_long value, u_long *result)
   return (rc);
 }
 
-EXPORT int WINAPI WSANtohl (SOCKET s, u_long value, u_long *result)
+int WINAPI WSANtohl (SOCKET s, u_long value, u_long *result)
 {
   int rc;
 
@@ -3022,7 +3017,7 @@ EXPORT int WINAPI WSANtohl (SOCKET s, u_long value, u_long *result)
   return (rc);
 }
 
-EXPORT DWORD WINAPI inet_addr (const char *addr)
+DWORD WINAPI inet_addr (const char *addr)
 {
   DWORD rc;
 
@@ -3035,7 +3030,7 @@ EXPORT DWORD WINAPI inet_addr (const char *addr)
   return (rc);
 }
 
-EXPORT char * WINAPI inet_ntoa (struct in_addr addr)
+char * WINAPI inet_ntoa (struct in_addr addr)
 {
   char *rc;
 
@@ -3054,7 +3049,7 @@ EXPORT char * WINAPI inet_ntoa (struct in_addr addr)
   return (rc);
 }
 
-EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
+int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
 {
   int rc;
 
@@ -3085,7 +3080,7 @@ EXPORT int WINAPI getpeername (SOCKET s, struct sockaddr *name, int *name_len)
   return (rc);
 }
 
-EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
+int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
 {
   int rc;
 
@@ -3116,7 +3111,7 @@ EXPORT int WINAPI getsockname (SOCKET s, struct sockaddr *name, int *name_len)
   return (rc);
 }
 
-EXPORT struct protoent * WINAPI getprotobynumber (int num)
+struct protoent * WINAPI getprotobynumber (int num)
 {
   struct protoent *rc;
 
@@ -3134,7 +3129,7 @@ EXPORT struct protoent * WINAPI getprotobynumber (int num)
   return (rc);
 }
 
-EXPORT struct protoent * WINAPI getprotobyname (const char *name)
+struct protoent * WINAPI getprotobyname (const char *name)
 {
   struct protoent *rc;
 
@@ -3152,9 +3147,9 @@ EXPORT struct protoent * WINAPI getprotobyname (const char *name)
   return (rc);
 }
 
-EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
-                               char *host, DWORD host_size, char *serv_buf,
-                               DWORD serv_buf_size, int flags)
+int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
+                        char *host, DWORD host_size, char *serv_buf,
+                        DWORD serv_buf_size, int flags)
 {
   char ts_buf [40];
   int  rc;
@@ -3192,8 +3187,8 @@ EXPORT int WINAPI getnameinfo (const struct sockaddr *sa, socklen_t sa_len,
   return (rc);
 }
 
-EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
-                               const struct addrinfo *hints, struct addrinfo **res)
+int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
+                        const struct addrinfo *hints, struct addrinfo **res)
 {
   char ts_buf [40];
   int  rc;
@@ -3260,7 +3255,7 @@ EXPORT int WINAPI getaddrinfo (const char *host_name, const char *serv_name,
   return (rc);
 }
 
-EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
+void WINAPI freeaddrinfo (struct addrinfo *ai)
 {
   CHECK_PTR (p_freeaddrinfo);
   (*p_freeaddrinfo) (ai);
@@ -3272,7 +3267,7 @@ EXPORT void WINAPI freeaddrinfo (struct addrinfo *ai)
   LEAVE_CRIT (!exclude_this);
 }
 
-EXPORT void WINAPI FreeAddrInfoW (ADDRINFOW *ai)
+void WINAPI FreeAddrInfoW (ADDRINFOW *ai)
 {
   CHECK_PTR (p_FreeAddrInfoW);
   (*p_FreeAddrInfoW) ((ADDRINFOW*)ai);
@@ -3284,8 +3279,8 @@ EXPORT void WINAPI FreeAddrInfoW (ADDRINFOW *ai)
   LEAVE_CRIT (!exclude_this);
 }
 
-EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_name,
-                                const ADDRINFOW *hints, ADDRINFOW **res)
+INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_name,
+                         const ADDRINFOW *hints, ADDRINFOW **res)
 {
   char ts_buf [40];
   int  rc;
@@ -3334,13 +3329,13 @@ EXPORT INT WINAPI GetAddrInfoW (const wchar_t *host_name, const wchar_t *serv_na
 
 #define UNIMPLEMENTED() FATAL ("Call to unimplemented function %s().\n", __FUNCTION__)
 
-EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
-                                socklen_t       sockaddr_len,
-                                PWCHAR          node_buf,
-                                DWORD           node_buf_size,
-                                PWCHAR          service_buf,
-                                DWORD           service_buf_size,
-                                INT             flags)
+INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
+                         socklen_t       sockaddr_len,
+                         PWCHAR          node_buf,
+                         DWORD           node_buf_size,
+                         PWCHAR          service_buf,
+                         DWORD           service_buf_size,
+                         INT             flags)
 {
   UNIMPLEMENTED();
   ARGSUSED (sockaddr);
@@ -3353,7 +3348,7 @@ EXPORT INT WINAPI GetNameInfoW (const SOCKADDR *sockaddr,
   return (-1);
 }
 
-EXPORT INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, size_t size)
+INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, size_t size)
 {
   INET_NTOP_RET ret;
   int err = 0;
@@ -3374,7 +3369,7 @@ EXPORT INET_NTOP_RET WINAPI inet_ntop (INT af, INET_NTOP_ADDR src, PSTR dst, siz
   return (ret);
 }
 
-EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
+int WINAPI inet_pton (int af, const char *src, void *dst)
 {
   int ret, err = 0;
 
@@ -3411,7 +3406,7 @@ EXPORT int WINAPI inet_pton (int af, const char *src, void *dst)
 /**
  * These may be needed by some Win-Vista+ applications
  */
-EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
+int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
 {
   int ret;
 
@@ -3432,7 +3427,7 @@ EXPORT int WINAPI InetPtonW (int family, PCWSTR waddr, void *waddr_dest)
  *  #define InetNtopA  inet_ntop
  * ```
  */
-EXPORT PCWSTR WINAPI InetNtopW (int af, const void *addr, PWSTR res_buf, size_t res_buf_size)
+PCWSTR WINAPI InetNtopW (int af, const void *addr, PWSTR res_buf, size_t res_buf_size)
 {
   PCWSTR ret;
 

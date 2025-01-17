@@ -6,18 +6,9 @@
 
 #include "wsock_defs.h"
 
-/*
- * Because I had problems exporting "__WSAFDIsSet@8" to wsock_trace-*.dll,
- * I was forced to use a .def-file to export all functions.
- */
-#define EXPORT
-
 #if defined(IN_WSOCK_TRACE_C) && (defined(UNICODE) || defined(_UNICODE))
   #error "Compiling this as UNICODE breaks in countless ways."
 #endif
-
-#undef  WINSOCK_API_LINKAGE
-#define WINSOCK_API_LINKAGE  EXPORT
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
