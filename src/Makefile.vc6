@@ -236,6 +236,7 @@ compile_luajit_0:
 	@echo
 
 compile_luajit_1:
+	if not exist $(LUAJIT_ROOT)\lib mkdir $(LUAJIT_ROOT)\lib
 	pushd $(LUAJIT_ROOT)\src &                     \
 	if not exist ..\lib\luajit_static-$(CPU).lib ( \
 	   msvcbuild.bat debug static &                \
