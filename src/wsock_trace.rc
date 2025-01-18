@@ -43,6 +43,18 @@
   #define FILE_FLG       0
 #endif
 
+#if defined(USE_ASAN)
+  #define RC_ASAN     ", ASAN"
+#else
+  #define RC_ASAN     ""
+#endif
+
+#if defined(USE_UBSAN)
+  #define RC_UBSAN     ", UBSAN"
+#else
+  #define RC_UBSAN     ""
+#endif
+
 #if (IS_WIN64 == 1) && !defined(BITNESS) && !defined(RC_INVOKED)
   #define BITNESS 64
 #endif
@@ -87,7 +99,7 @@ BEGIN
     BLOCK "040904b0"
     BEGIN
       VALUE "CompanyName",      "Wsock_trace DLL v" RC_VER_STR ". Hosted at https://github.com/gvanem/wsock-trace"
-      VALUE "FileDescription",  "Winsock tracing DLL (" RC_BUILDER ", " RC_DBG_REL ", " RC_BITNESS ")"
+      VALUE "FileDescription",  "Winsock tracing DLL (" RC_BUILDER ", " RC_DBG_REL RC_ASAN RC_UBSAN ", " RC_BITNESS ")"
       VALUE "FileVersion",      RC_VER_STR
       VALUE "InternalName",     RC_DLL_NAME
       VALUE "OriginalFilename", RC_DLL_NAME ".dll"
