@@ -25,7 +25,7 @@
 
 #if defined(USE_LUAJIT)  /* Rest of file */
 
-#define LUA_USE_ASSERT
+#define LUA_USE_ASSERT 1
 
 #include "init.h"
 #include "wsock_trace_lua.h"
