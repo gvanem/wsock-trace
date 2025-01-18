@@ -2135,6 +2135,11 @@ const char *get_dll_build_date (void)
 #endif
 }
 
+const char *get_dll_version (void)
+{
+  return (RC_VER_STR);
+}
+
 /**
  * Returns e.g. "Visual-C, 32-bit"
  */
