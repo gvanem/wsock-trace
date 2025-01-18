@@ -158,7 +158,6 @@ to your `%APPDATA%` directory:
   IPv4-address-space.csv
   IPv6-unicast-address-assignments.csv
   DROP.txt
-  EDROP.txt
   DROPv6.txt
   IPFire-database.db
 ```

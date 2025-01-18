@@ -326,11 +326,9 @@
   enable      = 0
   max_days    = 10                # max allowed age (in days) for an update check (not automatic).
   drop_file   = %APPDATA%\drop.txt
-  edrop_file  = %APPDATA%\edrop.txt
   dropv6_file = %APPDATA%\dropv6.txt
 
   drop_url   = http://www.spamhaus.org/drop/drop.txt
-  edrop_url  = http://www.spamhaus.org/drop/edrop.txt
   dropv6_url = http://www.spamhaus.org/drop/dropv6.txt
 
 #

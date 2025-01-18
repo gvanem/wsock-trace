@@ -1,6 +1,0 @@
-; This list has been merged into https://www.spamhaus.org/drop/drop.txt
-; Spamhaus EDROP List 2024/10/18 - (c) 2024 The Spamhaus Project SLU
-; https://www.spamhaus.org/drop/edrop.txt
-; Last-Modified: Fri, 18 Oct 2024 10:22:39 GMT
-; Expires: Sat, 19 Oct 2024 10:22:39 GMT
-; EOF

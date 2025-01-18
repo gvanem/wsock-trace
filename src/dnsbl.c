@@ -3,7 +3,7 @@
  *
  * \brief
  *   A simple DNSBL (Domain Name System Blacklist) implementation.
- *   Parses and uses the the Spamhaus DROP / EDROP / DROPv6 files to
+ *   Parses and uses the the Spamhaus DROP / DROPv6 files to
  *   check an IPv4/IPv6-address for membership of a "spam network".
  *   Used in dump.c to print the SBL (Spamhaus Block Reference)
  *   if found in the `DNSBL_list` smartlist.
@@ -42,7 +42,6 @@
 
 typedef enum {
         DNSBL_DROP,
-        DNSBL_EDROP,
         DNSBL_DROPv6,
         DNSBL_MAX
       } DNSBL_type;
@@ -68,12 +67,10 @@ static smartlist_t *DNSBL_list = NULL;
 
 static void DNSBL_parse_DROP   (smartlist_t *sl, const char *line);
 static void DNSBL_parse_DROPv6 (smartlist_t *sl, const char *line);
-static void DNSBL_parse_EDROP  (smartlist_t *sl, const char *line);
 
 static const char *DNSBL_type_name (DNSBL_type type)
 {
   return (type == DNSBL_DROP   ? "DROP"   :
-          type == DNSBL_EDROP  ? "EDROP"  :
           type == DNSBL_DROPv6 ? "DROPv6" : "?");
 }
 
@@ -213,11 +210,10 @@ static int DNSBL_compare_is_on_net6 (const void *key, const void **member)
  * \note An IPv4/IPv6 address can have more than 1 SBL reference.
  *       This is currently unsupported.
  *       \eg{.}:
- *       Currently (as of August 2018), the IPv4 block `24.233.0.0/19`
- *       is listed in both `drop.txt` and `edrop.txt` as:
+ *       Currently (as of January 2025), the IPv4 block `24.233.0.0/19`
+ *       is listed in `drop.txt` as:
  *       ```
  *         24.233.0.0/19 ; SBL210084
- *         24.233.0.0/21 ; SBL356227
  *       ```
  */
 static bool DNSBL_check_common (const struct in_addr *ip4, const struct in6_addr *ip6, const char **sbl_ref)
@@ -336,10 +332,6 @@ static int DNSBL_test_single (const char *addr_str)
  * Verify that Google's NS is not in any DNSBL
  *   8.8.8.8/xx
  *
- * Test some lines from edrop.txt:
- *   120.46.0.0/15  ; SBL262362
- *   208.12.64.0/19 ; SBL201196
- *
  * Test some lines from dropv6.txt:
  *   2a06:5280::/29 ; SBL334219
  *   2607:d100::/32 ; SBL347495
@@ -362,8 +354,6 @@ static int DNSBL_test (const char *addr_str)
                     { AF_INET,  "24.233.0.21",   "210084" },
                     { AF_INET,  "8.8.8.8",       "<none>" },  /* Google's NS */
                     { AF_INET,  "193.25.48.3",   "211796" },
-                    { AF_INET,  "120.46.4.1",    "262362" },  /* in edrop.txt */
-                    { AF_INET,  "208.12.64.5",   "201196" },
                     { AF_INET6, "2a06:e480::1",  "301771" },  /* in dropv6.txt */
                     { AF_INET6, "2a06:e480::ff", "301771" },
                     { AF_INET6, "2607:d100::1",  "347495" }
@@ -478,10 +468,9 @@ void DNSBL_init (void)
   }
 
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.drop_file, DNSBL_parse_DROP);
-  DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.edrop_file, DNSBL_parse_EDROP);
   DNSBL_parse_and_add (&DNSBL_list, g_cfg.DNSBL.dropv6_file, DNSBL_parse_DROPv6);
 
-  /* Each of the 'drop.txt', 'edrop.txt' and 'dropv6.txt' are already sorted.
+  /* Each of the 'drop.txt', 'dropv6.txt' are already sorted.
    * But after merging them into one list, we must sort them ourself.
    */
   if (DNSBL_list)
@@ -573,9 +562,6 @@ int DNSBL_update_files (bool force_update)
   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.drop_file));
   num += DNSBL_update_file (g_cfg.DNSBL.drop_file, tmp_file, g_cfg.DNSBL.drop_url, now, expiry);
 
-  snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.edrop_file));
-  num += DNSBL_update_file (g_cfg.DNSBL.edrop_file, tmp_file, g_cfg.DNSBL.edrop_url, now, expiry);
-
   snprintf (tmp_file, sizeof(tmp_file), "%s\\%s", g_data.ws_tmp_dir, basename(g_cfg.DNSBL.dropv6_file));
   num += DNSBL_update_file (g_cfg.DNSBL.dropv6_file, tmp_file, g_cfg.DNSBL.dropv6_url, now, expiry);
 
@@ -583,9 +569,9 @@ int DNSBL_update_files (bool force_update)
 }
 
 /**
- * Parser for "drop.txt" and "edrop.txt" files.
+ * Parser for "drop.txt" file.
  */
-static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
+static void DNSBL_parse_DROP (smartlist_t *sl, const char *line)
 {
   struct DNSBL_info *dnsbl;
   int                bits = 0;
@@ -605,27 +591,11 @@ static void DNSBL_parse4 (smartlist_t *sl, const char *line, DNSBL_type type)
   INET_util_get_mask4 (&dnsbl->u.ip4.mask, bits);
 
   dnsbl->bits   = bits;
-  dnsbl->type   = type;
+  dnsbl->type   = DNSBL_DROP;
   dnsbl->family = AF_INET;
 
   str_ncpy (dnsbl->SBL_ref, strchr(line, 'L') + 1, sizeof(dnsbl->SBL_ref));
   smartlist_add (sl, dnsbl);
-}
-
-/**
- * Parser for a "drop.txt" file.
- */
-static void DNSBL_parse_DROP (smartlist_t *sl, const char *line)
-{
-  DNSBL_parse4 (sl, line, DNSBL_DROP);
-}
-
-/**
- * Parser for a "edrop.txt" file.
- */
-static void DNSBL_parse_EDROP (smartlist_t *sl, const char *line)
-{
-  DNSBL_parse4 (sl, line, DNSBL_EDROP);
 }
 
 /**
@@ -668,7 +638,7 @@ static int show_help (void)
           "       -f:  force an update with the '-u' option.\n"
           "       -t:  run 'DNSBL_test()' for a simple test.\n"
           "            if an <address> is specified, test that.\n"
-          "       -u:  update the SpamHaus' 'DROP.txt', 'DROPv6.txt' and 'EDROP.txt' files.\n",
+          "       -u:  update the SpamHaus' 'DROP.txt' and 'DROPv6.txt' files.\n",
           g_data.program_name);
   return (0);
 }

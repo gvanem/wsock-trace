@@ -127,10 +127,8 @@ echo [dnsbl]                                                                 >> 
 echo   enable       = 1                                                      >> wsock_trace.appveyor
 echo   max_days     = 1                                                      >> wsock_trace.appveyor
 echo   drop_file    = %CD%\DROP.txt                                          >> wsock_trace.appveyor
-echo   edrop_file   = %CD%\EDROP.txt                                         >> wsock_trace.appveyor
 echo   dropv6_file  = %CD%\DROPv6.txt                                        >> wsock_trace.appveyor
 echo   drop_url     = http://www.spamhaus.org/drop/drop.txt                  >> wsock_trace.appveyor
-echo   edrop_url    = http://www.spamhaus.org/drop/edrop.txt                 >> wsock_trace.appveyor
 echo   dropv6_url   = http://www.spamhaus.org/drop/dropv6.txt                >> wsock_trace.appveyor
 
 echo [firewall]                                                              >> wsock_trace.appveyor
