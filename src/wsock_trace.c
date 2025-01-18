@@ -105,7 +105,7 @@ static void        wstrace_printf (bool first_line,
           ts_now = NULL;                                         \
         } while (0)
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__clang__)
   #define GET_RET_ADDR()  (ULONG_PTR)__builtin_return_address (0)
 #else
   #define GET_RET_ADDR()  0

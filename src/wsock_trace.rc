@@ -2,8 +2,8 @@
  * \ingroup Main
  *
  * \brief
- * The *Windows Resource* file that gets passed through the `rc` or `windres`
- * programs to create `winsock_trace.res`.
+ * The *Windows Resource* file that gets passed through the `rc`
+ * program to create `$(OBJ_DIR)/wsock_trace.res`.
  *
  * This file is also included from common.c and wsock_trace_lua.c for
  * obtaining the `RC_BASENAME`. Only the code inside the `RC_INVOKED` block
@@ -13,22 +13,10 @@
 
 /* LANGUAGE 0x09,0x01 */
 
-#define RC_VERSION  0,3,7,0
-#define RC_VER_STR "0.3.7"
+#define RC_VERSION  0,3,8,0
+#define RC_VER_STR "0.3.8"
 
-#if defined(__MINGW64__)        /* seems to be a built-in in MinGW64 no matter what the CPU target is */
-  #define RC_BUILDER  "MinGW-w64"
-  #define RC_BASENAME "wsock_trace_mw"
-
-#elif defined(__MINGW32__)
-  #define RC_BUILDER  "MinGW"
-  #define RC_BASENAME "wsock_trace_mw"
-
-#elif defined(__CYGWIN__)
-  #define RC_BUILDER  "CygWin"
-  #define RC_BASENAME "wsock_trace_cyg"
-
-#elif defined(__INTEL_CLANG_COMPILER)
+#if defined(__INTEL_CLANG_COMPILER)
   #define RC_BUILDER  "Intel oneAPI"
   #define RC_BASENAME "wsock_trace"
 
@@ -106,7 +94,7 @@ BEGIN
       VALUE "ProductName",      RC_DLL_NAME ".dll Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
-                                "\t\t\tCopyright 2012-2022, Gisle Vanem <gvanem@yahoo.no>."
+                                "\t\t\tCopyright 2012-2025, Gisle Vanem <gvanem@yahoo.no>."
     END
   END
 
