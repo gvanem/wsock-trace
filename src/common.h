@@ -10,6 +10,9 @@
   #error "Compiling this as UNICODE breaks in countless ways."
 #endif
 
+#undef  WINSOCK_API_LINKAGE
+#define WINSOCK_API_LINKAGE
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <objbase.h>
@@ -178,6 +181,7 @@ extern const char *set_dll_full_name (HINSTANCE inst_dll);
 extern const char *get_dll_short_name (void);
 extern const char *get_dll_build_date (void);
 extern const char *get_builder (bool show_dbg_rel);
+extern const char *get_dll_version (void);
 
 extern void sock_list_add (SOCKET sock, int family, int type, int protocol);
 extern void sock_list_remove (SOCKET sock);

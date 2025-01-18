@@ -141,7 +141,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS;DISABLE_WinHTTP%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /wd4273 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -165,7 +165,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS;DISABLE_WinHTTP%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /wd4273 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -189,7 +189,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS;DISABLE_WinHTTP%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /wd4273 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -213,7 +213,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS;DISABLE_WinHTTP%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /wd4273 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -237,7 +237,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS;DISABLE_WinHTTP%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /wd4273 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <CustomBuildStep>
@@ -261,7 +261,7 @@
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;WIN32;_WIN32_WINNT=0x0600;LIBLOC_PRIVATE;ENABLE_DEBUG;USE_TRACE;USE_WSOCK_TRACE;_CRT_NONSTDC_NO_WARNINGS;DISABLE_WinHTTP%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /wd4273 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
+      <AdditionalOptions>/wd4018 /wd4146 /wd4267 /I. /I./LuaJIT/src /I./Geo-IP/IPFire/src /I./Geo-IP/IPFire/src/libloc/windows /I./Geo-IP/IPFire/src/fake-OpenSSL</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
