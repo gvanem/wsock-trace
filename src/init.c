@@ -1105,8 +1105,9 @@ static int parse_config_file (FILE *file)
                 C_putc ('\n');
 #endif
              TRACE (1, "Parsing config-file \"%s\"\n"
-                       "              for \"%s, %s\".\n",
-                    g_data.cfg_fname, get_builder(true), get_dll_build_date());
+                       "              for \"%s\", built at %s. Version %s\n",
+                    g_data.cfg_fname, get_builder(true), get_dll_build_date(),
+                    get_dll_version());
            }
            done = true;
            break;
