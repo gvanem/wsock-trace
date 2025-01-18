@@ -843,7 +843,7 @@ quit:
  */
 void INET_util_get_mask4 (struct in_addr *out, int bits)
 {
-  *(DWORD*)out = bits ? swap32 (~0 << (32 - bits)) : 0;
+  *(DWORD*)out = bits ? swap32 (~0UL << (DWORD)(32 - bits)) : 0;
 }
 
 /**

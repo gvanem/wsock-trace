@@ -2003,7 +2003,7 @@ int fnmatch (const char *pattern, const char *string, int flags)
  * "C Programmer's Guide to Serial Communications", by Joe Campbell.
  */
 #define CRC_BITS    32
-#define CRC_HIBIT   ((DWORD) (1L << (CRC_BITS-1)))
+#define CRC_HIBIT   ((DWORD) (1UL << (CRC_BITS-1)))
 #define CRC_SHIFTS  (CRC_BITS-8)
 
 /* Our PRZ's 24-bit CRC generator polynomial. Ref:
