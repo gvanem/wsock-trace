@@ -14,13 +14,14 @@ MAKEFLAGS += --warn-undefined-variables
 USE_AMALGATED  ?= 0
 USE_ASTYLE     ?= 1
 USE_MP_COMPILE ?= 1
+USE_52COMPAT   ?= 0
 
 #
 # From 'src/luajit_rolling.h':
 #
 VER_MAJOR = 2
-VER_MINOR = 0
-VER_MICRO = 5
+VER_MINOR = 1
+VER_MICRO = 0
 VERSION   = $(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
 
 PYTHON  = py -3
@@ -83,17 +84,23 @@ CFLAGS = -I./src            \
          -I./dynasm         \
          -I./$(OBJ_DIR)     \
          -DLJ_ARCH_HASFPU=1 \
-         -DLUAJIT_ENABLE_LUA52COMPAT
+         -DLUA_USE_ASSERT
+
+ifeq ($(USE_52COMPAT),1)
+  CFLAGS += -DLUAJIT_ENABLE_LUA52COMPAT
+endif
 
 #
-# Flags for '$(OBJ_DIR)/minilua.exe'
+# Flags for '$(OBJ_DIR)/minilua.exe' generating '$(OBJ_DIR)/buildvm_arch.h'
 #
-vm_FLAGS = -D JIT -D FFI -D WIN -D FPU -D VER=
+vm_FLAGS = -LN -D JIT -D FFI -D WIN -D FPU -D VER= -D ENDIAN_LE
 
 ifeq ($(CPU),x64)
   vm_FLAGS += -D P64
+  vm_CODE   = src/vm_x64.dasc
 else
   vm_FLAGS += -D SSE
+  vm_CODE   = src/vm_x86.dasc
 endif
 
 #
@@ -158,6 +165,7 @@ vpath %.c src
 
 LJ_LIB_SRC = $(addprefix src/, \
                lib_base.c      \
+               lib_buffer.c    \
                lib_math.c      \
                lib_bit.c       \
                lib_string.c    \
@@ -178,9 +186,11 @@ else
               lj_alloc.c      \
               lj_api.c        \
               lj_asm.c        \
+              lj_assert.c     \
               lj_bc.c         \
               lj_bcread.c     \
               lj_bcwrite.c    \
+              lj_buf.c        \
               lj_carith.c     \
               lj_ccall.c      \
               lj_ccallback.c  \
@@ -213,10 +223,15 @@ else
               lj_opt_sink.c   \
               lj_opt_split.c  \
               lj_parse.c      \
+              lj_prng.c       \
+              lj_profile.c    \
               lj_record.c     \
+              lj_serialize.c  \
               lj_snap.c       \
               lj_state.c      \
               lj_str.c        \
+              lj_strfmt.c     \
+              lj_strfmt_num.c \
               lj_strscan.c    \
               lj_tab.c        \
               lj_trace.c      \
@@ -288,9 +303,9 @@ bin lib $(OBJ_DIR) $(OBJ_DIR)/dynamic $(OBJ_DIR)/static:
 $(OBJ_DIR)/minilua.exe: $(OBJ_DIR)/static/minilua.obj
 	$(call link_EXE, $@, $^)
 
-$(OBJ_DIR)/buildvm_arch.h: $(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua src/vm_x86.dasc
-	$(call gen_to_from, $@, src/vm_x86.dasc)
-	$(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua -o $@ $(vm_FLAGS) src/vm_x86.dasc
+$(OBJ_DIR)/buildvm_arch.h: $(OBJ_DIR)/minilua.exe ./dynasm/dynasm.lua $(vm_CODE)
+	$(call gen_to_from, $@, $(vm_CODE))
+	$< ./dynasm/dynasm.lua -o $@ $(vm_FLAGS) $(vm_CODE)
 	@echo
 
 src/luajit.h: $(OBJ_DIR)/minilua.exe src/luajit_rolling.h $(OBJ_DIR)/luajit_relver.txt
@@ -380,7 +395,8 @@ clean: clean_msvcbuild
 # clean-up after 'src/msvcbuild.bat' too.
 #
 clean_msvcbuild:
-	rm -f src/luajit.exe src/lua51.dll src/lua51.lib \
+	rm -f src/vc1*.pdb src/luajit.exe src/luajit.pdb \
+	      src/lua51.dll src/lua51.pdb src/lua51.lib \
 	      src/luajit_relver.txt src/jit/vmdef.lua
 
 vclean realclean: clean
@@ -434,7 +450,7 @@ define run_test
 endef
 
 define run_buildvm
-  $(call green_msg, Generating VM definition file$(BRIGHT_WHITE)$(1))
+  $(call green_msg, Generating VM definition file $(BRIGHT_WHITE)$(strip $(1)))
   $(OBJ_DIR)/buildvm.exe $(strip -m $(2) -o $(1) $(3))
   @echo
 endef
@@ -474,7 +490,7 @@ define link_EXE
   link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.exe=.map)
   @rm -f $(1:.exe=.exp) $(1:.exe=.lib)
-  - @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp &> /dev/null
+  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
 define link_DLL
@@ -485,7 +501,7 @@ define link_DLL
   link -out:$(strip $(1)) @link.args > link.tmp
   @cat link.tmp >> $(1:.dll=.map)
   @rm -f $(3:.lib=.exp)
-  - @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp &> /dev/null
+  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
 define create_static_lib
@@ -503,7 +519,7 @@ endef
 
 #
 # Generate a .rc-file with the below common content.
-#  arg1, $(1): The name of the .rc-file. Used for the .exe/.dll name too.
+#  arg1, $(1): The name of the .rc-file. Used for the 'RC_BASENAME' too.
 #  arg2, $(2): The 'RC_DESCRIPTION' enclosed in '"'.
 #  arg3, $(3): The 'RC_FILETYPE'; 'VFT_APP' or 'VFT_DLL'.
 #
@@ -667,5 +683,23 @@ depend: $(GENERATED)
 	$(call generate, .depend.Windows, #)
 	gcc $(DEP_CFLAGS) $(ALL_SRC) | sed $(DEP_REPLACE) >> .depend.Windows
 	@echo
+
+#
+# Fixed dependencies:
+#
+$(addprefix $(OBJ_DIR)/, \
+  lib_base.obj           \
+  lib_debug.obj          \
+  lib_jit.obj            \
+  lib_package.obj        \
+  lj_api.obj             \
+  lj_debug.obj           \
+  lj_dispatch.obj        \
+  lj_err.obj             \
+  lj_gdbjit.obj          \
+  lj_parse.obj           \
+  lj_profile.obj         \
+  lj_record.obj          \
+  lj_trace.obj): src/lj_debug.h src/lj_win.h
 
 -include .depend.Windows

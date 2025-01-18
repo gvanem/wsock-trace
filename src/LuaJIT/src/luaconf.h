@@ -9,7 +9,7 @@
 #ifndef WINVER
 #define WINVER 0x0501
 #endif
-#include <limits.h>
+//#include <limits.h>
 #include <stddef.h>
 
 /* Default path for loading Lua and C modules with require(). */
@@ -44,7 +44,6 @@
 #endif
 #define LUA_LROOT	"/usr/local"
 #define LUA_LUADIR	"/lua/5.1/"
-#define LUA_LJDIR	"/luajit-2.0/"
 
 #ifdef LUA_ROOT
 #define LUA_JROOT	LUA_ROOT
@@ -58,7 +57,11 @@
 #define LUA_RCPATH
 #endif
 
-#define LUA_JPATH	";" LUA_JROOT "/share" LUA_LJDIR "?.lua"
+#ifndef LUA_LJDIR
+#define LUA_LJDIR	LUA_JROOT "/share/luajit-2.1"
+#endif
+
+#define LUA_JPATH	";" LUA_LJDIR "/?.lua"
 #define LUA_LLDIR	LUA_LROOT "/share" LUA_LUADIR
 #define LUA_LCDIR	LUA_LROOT "/" LUA_LMULTILIB LUA_LUADIR
 #define LUA_LLPATH	";" LUA_LLDIR "?.lua;" LUA_LLDIR "?/init.lua"
@@ -86,7 +89,7 @@
 #define LUA_IGMARK	"-"
 #define LUA_PATH_CONFIG \
   LUA_DIRSEP "\n" LUA_PATHSEP "\n" LUA_PATH_MARK "\n" \
-  LUA_EXECDIR "\n" LUA_IGMARK
+  LUA_EXECDIR "\n" LUA_IGMARK "\n"
 
 /* Quoting in error messages. */
 #define LUA_QL(x)	"'" x "'"
@@ -98,10 +101,6 @@
 #define LUAI_GCPAUSE	200	/* Pause GC until memory is at 200%. */
 #define LUAI_GCMUL	200	/* Run GC at 200% of allocation speed. */
 #define LUA_MAXCAPTURES	32	/* Max. pattern captures. */
-
-/* Compatibility with older library function names. */
-#define LUA_COMPAT_MOD		/* OLD: math.mod, NEW: math.fmod */
-#define LUA_COMPAT_GFIND	/* OLD: string.gfind, NEW: string.gmatch */
 
 /* Configuration for the frontend (the luajit executable). */
 #if defined(luajit_c)
@@ -147,7 +146,7 @@
 
 #define LUALIB_API	LUA_API
 
-/* Support for internal assertions. */
+/* Compatibility support for assertions. */
 #if defined(LUA_USE_ASSERT) || defined(LUA_USE_APICHECK)
 #include <assert.h>
 #endif

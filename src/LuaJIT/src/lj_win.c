@@ -46,5 +46,30 @@ int ljit_trace_init (void)
   }
   return (trace_level);
 }
+
+/**
+ * Return the filename without any path or drive specifiers.
+ */
+const char *ljit_basename (const char *fname)
+{
+  const char *base = fname;
+
+  if (fname && *fname)
+  {
+    if (fname[1] == ':')
+    {
+      fname += 2;
+      base = fname;
+    }
+
+    while (*fname)
+    {
+      if (*fname == '\\' || *fname == '/')
+         base = fname + 1;
+      fname++;
+    }
+  }
+  return (base);
+}
 #endif /* _WIN32 */
 
