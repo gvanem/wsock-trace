@@ -304,8 +304,8 @@ DEF_FUNC (BOOL, WSAConnectByNameA, (SOCKET                s,
                                     WSAOVERLAPPED        *reserved));
 
 DEF_FUNC (BOOL, WSAConnectByNameW, (SOCKET                s,
-                                    LPWSTR                node_name,
-                                    LPWSTR                service_name,
+                                    const wchar_t       *node_name,
+                                    const wchar_t       *service_name,
                                     DWORD                *local_addr_len,
                                     SOCKADDR             *local_addr,
                                     DWORD                *remote_addr_len,
@@ -1110,8 +1110,8 @@ BOOL WINAPI WSAConnectByNameA (SOCKET                s,
 }
 
 BOOL WINAPI WSAConnectByNameW (SOCKET               s,
-                               LPWSTR               node_name,
-                               LPWSTR               service_name,
+                               const wchar_t       *node_name,
+                               const wchar_t       *service_name,
                                DWORD                *local_addr_len,
                                SOCKADDR             *local_addr,
                                DWORD                *remote_addr_len,
