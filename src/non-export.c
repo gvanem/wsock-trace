@@ -12,15 +12,15 @@
 
 _PRAGMA (clang diagnostic ignored "-Wmissing-braces")
 
-const IN_ADDR in4addr_any                     = { 0,0,0,0 };
-const IN_ADDR in4addr_loopback                = { 127,0,0,1 };
-const IN_ADDR in4addr_broadcast               = { 255,255,255,255 };
-const IN_ADDR in4addr_allnodesonlink          = { 224,0,0,1 };
-const IN_ADDR in4addr_allroutersonlink        = { 224,0,0,2 };
-const IN_ADDR in4addr_alligmpv3routersonlink  = { 224,0,0,22 };
-const IN_ADDR in4addr_allteredohostsonlink    = { 224,0,0,253 };
-const IN_ADDR in4addr_linklocalprefix         = { 169,254,0,0 };
-const IN_ADDR in4addr_multicastprefix         = { 224,0,0,0 };
+const IN_ADDR in4addr_any                    = { 0,0,0,0 };
+const IN_ADDR in4addr_loopback               = { 127,0,0,1 };
+const IN_ADDR in4addr_broadcast              = { 255,255,255,255 };
+const IN_ADDR in4addr_allnodesonlink         = { 224,0,0,1 };
+const IN_ADDR in4addr_allroutersonlink       = { 224,0,0,2 };
+const IN_ADDR in4addr_alligmpv3routersonlink = { 224,0,0,22 };
+const IN_ADDR in4addr_allteredohostsonlink   = { 224,0,0,253 };
+const IN_ADDR in4addr_linklocalprefix        = { 169,254,0,0 };
+const IN_ADDR in4addr_multicastprefix        = { 224,0,0,0 };
 
 const IN6_ADDR in6addr_any = {{
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -102,32 +102,23 @@ static wchar_t *str_ripw2 (wchar_t *s)
 }
 
 /**
- * These are `static __inline` function in MinGW.org's `<ws2tcpip.h>`.
- * But in other MinGW distribution they are not.
+ * These functions could be in inlined in the Windows-SDK.
  *
- * Under CygWin these functions seems to be in several places: \n
- * `libc.a`, `libcygwin.a` and `libg.a`.
- *
- * In any case, they are part of `libws2_32.a` even though `gai_strerror[A|W]`
- * is not part of the system `ws2_32.dll`. So for `libwsock_trace_mw.a` (and
- * `libwsock_trace_cyg.a`) to be a replacement for `libws2_32.a`, we must also
- * add these functions to it.
- *
- * But tracing these calls would be difficult since the needed functions
- * for that is in `wsock_trace.c`.
+ * They are also part of `ws2_32.dll` and should be added
+ * to `wsock_trace*.dll` too.
  */
+#undef gai_strerrorA
+#undef gai_strerrorW
+
 #define FORMAT_FLAGS (FORMAT_MESSAGE_FROM_SYSTEM    | \
                       FORMAT_MESSAGE_IGNORE_INSERTS | \
                       FORMAT_MESSAGE_MAX_WIDTH_MASK)
-
-#undef gai_strerrorA
-#undef gai_strerrorW
 
 char *gai_strerrorA (int err)
 {
   static char err_buf [512];
 
-  err_buf[0] = '\0';
+  err_buf [0] = '\0';
   FormatMessageA (FORMAT_FLAGS, NULL, err, LANG_NEUTRAL,
                   err_buf, sizeof(err_buf)-1, NULL);
   return str_rip2 (err_buf);
@@ -137,7 +128,7 @@ wchar_t *gai_strerrorW (int err)
 {
   static wchar_t err_buf [512];
 
-  err_buf[0] = L'\0';
+  err_buf [0] = L'\0';
   FormatMessageW (FORMAT_FLAGS, NULL, err, LANG_NEUTRAL,
                   err_buf, DIM(err_buf)-1, NULL);
   return str_ripw2 (err_buf);
