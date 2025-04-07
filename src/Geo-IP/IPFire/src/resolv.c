@@ -137,7 +137,7 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
     }
 
     if (!size || (len = *payload) >= size || !len) {
-        ERROR(ctx, "Broken TXT record (len = %d, size = %d)\n", len, size);
+        ERROR(ctx, "Broken TXT record (len = %d, size = %u)\n", len, size);
         return -1;
     }
 

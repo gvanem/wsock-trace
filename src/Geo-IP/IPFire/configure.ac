@@ -1,6 +1,6 @@
 AC_PREREQ(2.60)
 AC_INIT([libloc],
-        [0.9.17],
+        [0.9.18],
         [location@lists.ipfire.org],
         [libloc],
         [https://location.ipfire.org/])
@@ -105,53 +105,89 @@ AC_CHECK_HEADERS_ONCE([
 	arpa/nameser_compat.h \
 	endian.h \
 	netinet/in.h \
-    resolv.h \
+	resolv.h \
 	string.h \
 ])
 
 AC_CHECK_FUNCS([ \
-    be16toh \
-    be32toh \
-    be64toh \
-    htobe16 \
-    htobe32 \
-    htobe64 \
-    madvise \
-    mmap \
-    munmap \
-    res_query \
+	be16toh \
+	be32toh \
+	be64toh \
+	htobe16 \
+	htobe32 \
+	htobe64 \
+	madvise \
+	mmap \
+	munmap \
+	res_query \
 	__secure_getenv \
 	secure_getenv \
-    qsort \
+	qsort \
 ])
 
-my_CFLAGS="\
--Wall \
--Wchar-subscripts \
--Wformat-security \
--Wmissing-declarations \
--Wmissing-prototypes \
--Wnested-externs \
--Wpointer-arith \
--Wshadow \
--Wsign-compare \
--Wstrict-prototypes \
--Wtype-limits \
-"
-AC_SUBST([my_CFLAGS])
-AC_SUBST([my_LDFLAGS])
+CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [\
+	-std=gnu17 \
+	-Wall \
+	-Wextra \
+	-Warray-bounds=2 \
+	-Wdate-time \
+	-Wendif-labels \
+	-Werror=format=2 \
+	-Werror=format-signedness \
+	-Werror=implicit-function-declaration \
+	-Werror=implicit-int \
+	-Werror=incompatible-pointer-types \
+	-Werror=int-conversion \
+	-Werror=missing-declarations \
+	-Werror=missing-prototypes \
+	-Werror=overflow \
+	-Werror=override-init \
+	-Werror=return-type \
+	-Werror=shift-count-overflow \
+	-Werror=shift-overflow=2 \
+	-Werror=strict-flex-arrays \
+	-Werror=undef \
+	-Wfloat-equal \
+	-Wimplicit-fallthrough=5 \
+	-Winit-self \
+	-Wlogical-op \
+	-Wmissing-include-dirs \
+	-Wmissing-noreturn \
+	-Wnested-externs \
+	-Wold-style-definition \
+	-Wpointer-arith \
+	-Wredundant-decls \
+	-Wshadow \
+	-Wstrict-aliasing=2 \
+	-Wstrict-prototypes \
+	-Wsuggest-attribute=noreturn \
+	-Wunused-function \
+	-Wwrite-strings \
+	-Wzero-length-bounds \
+	-Wno-unused-parameter \
+	-Wno-missing-field-initializers \
+	-fdiagnostics-show-option \
+	-fno-common \
+])
+CC_CHECK_FLAGS_APPEND([with_ldflags], [LDFLAGS], [\
+	-Wl,--as-needed \
+	-Wl,--gc-sections \
+])
+
+# Enable -fno-semantic-interposition (if available)
+CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [-fno-semantic-interposition])
+CC_CHECK_FLAGS_APPEND([with_ldflags], [LDFLAGS], [-fno-semantic-interposition])
 
 # Enable -fanalyzer if requested
 AC_ARG_ENABLE([analyzer],
 	AS_HELP_STRING([--enable-analyzer], [enable static analyzer (-fanalyzer) @<:@default=disabled@:>@]),
 	[], [enable_analyzer=no])
 AS_IF([test "x$enable_analyzer" = "xyes"],
-	CC_CHECK_FLAGS_APPEND([my_CFLAGS], [CFLAGS], [-fanalyzer])
+	CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [-fanalyzer])
 )
 
-# Enable -fno-semantic-interposition (if available)
-CC_CHECK_FLAGS_APPEND([my_CFLAGS], [CFLAGS], [-fno-semantic-interposition])
-CC_CHECK_FLAGS_APPEND([my_LDFLAGS], [LDFLAGS], [-fno-semantic-interposition])
+AC_SUBST([OUR_CFLAGS], $with_cflags)
+AC_SUBST([OUR_LDFLAGS], $with_ldflags)
 
 # ------------------------------------------------------------------------------
 
@@ -178,26 +214,6 @@ AS_IF([test "x$with_systemd" != "xno"],
       [have_systemd=no]
 )
 
-AS_IF([test "x$have_systemd" = "xyes"],
-      [AC_MSG_CHECKING([for systemd system unit directory])
-	AC_ARG_WITH([systemdsystemunitdir],
-		AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
-		[], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)]
-	)
-
-	AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
-
-	if test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno; then
-		AC_MSG_RESULT([$systemdsystemunitdir])
-	else
-		AC_MSG_ERROR([not found (try --with-systemdsystemunitdir)])
-	fi
-      ],
-      [AS_IF([test "x$with_systemd" = "xyes"],
-             [AC_MSG_ERROR([Systemd support is enabled but no systemd has been found.])
-      ])
-])
-
 AM_CONDITIONAL(HAVE_SYSTEMD, [test "x$have_systemd" = "xyes"])
 
 # ------------------------------------------------------------------------------
@@ -212,24 +228,42 @@ PKG_CHECK_MODULES([PYTHON], [python-${PYTHON_VERSION}])
 AC_ARG_ENABLE(lua,
 	AS_HELP_STRING([--disable-lua], [do not build the Lua modules]), [], [enable_lua=yes])
 
-AM_CONDITIONAL(ENABLE_LUA, test "$enable_lua" = "yes")
-
 AS_IF(
-	[test "$enable_lua" = "yes"], [
+	[test "x$enable_lua" = "xyes"], [
 		for lua in lua lua5.4 lua5.3 lua5.2 lua5.1; do
 			PKG_CHECK_MODULES([LUA], [${lua}], [break], [true])
 		done
 
-		AX_PROG_LUA_MODULES([luaunit],, [AC_MSG_ERROR([Lua modules are missing])])
-
 		LUA_VERSION=$($PKG_CONFIG --variable=major_version ${lua})
+		if test -z "${LUA_VERSION}"; then
+			LUA_VERSION=$($PKG_CONFIG --variable=V ${lua})
+		fi
+
+		# Fail if we could not find anything to link against
+		if test "x${LUA_VERSION}" = "x"; then
+			AC_MSG_ERROR([Could not find Lua])
+		fi
+
 		AC_SUBST(LUA_VERSION)
+
 		LUA_INSTALL_LMOD=$($PKG_CONFIG --define-variable=prefix=${prefix} --variable=INSTALL_LMOD ${lua})
+		if test -z "${LUA_INSTALL_LMOD}"; then
+			LUA_INSTALL_LMOD="${datadir}/lua/${LUA_VERSION}"
+		fi
 		AC_SUBST(LUA_INSTALL_LMOD)
+
 		LUA_INSTALL_CMOD=$($PKG_CONFIG --define-variable=prefix=${prefix} --variable=INSTALL_CMOD ${lua})
+		if test -z "${LUA_INSTALL_CMOD}"; then
+			LUA_INSTALL_CMOD="${libdir}/lua/${LUA_VERSION}"
+		fi
 		AC_SUBST(LUA_INSTALL_CMOD)
+
+		AX_PROG_LUA_MODULES([luaunit], [enable_lua_tests=yes], [AC_MSG_WARN([luaunit is missing, won't run tests])])
 	],
 )
+
+AM_CONDITIONAL(ENABLE_LUA, [test "x$enable_lua" = "xyes"])
+AM_CONDITIONAL(ENABLE_LUA_TESTS, [test "x$enable_lua_tests" = "xyes"])
 
 # Perl
 AC_PATH_PROG(PERL, perl, no)

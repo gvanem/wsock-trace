@@ -25,6 +25,7 @@
 #include <libloc/libloc.h>
 #include <libloc/network.h>
 #include <libloc/version.h>
+#include <libloc/private.h> /* For '__attribute__' */
 
 #include "location.h"
 #include "as.h"
@@ -36,6 +37,9 @@
 struct loc_ctx* ctx = NULL;
 
 static int log_callback_ref = 0;
+
+static void log_callback(struct loc_ctx* _ctx, void* data, int priority, const char* file,
+	int line, const char* fn, const char* format, va_list args) __attribute__((format(printf, 7, 0)));
 
 static void log_callback(struct loc_ctx* _ctx, void* data, int priority, const char* file,
 		int line, const char* fn, const char* format, va_list args) {

@@ -479,7 +479,7 @@ static int loc_database_write_networks(struct loc_writer* writer,
 		}
 
 		// Write the current node
-		DEBUG(writer->ctx, "Writing node %p (0 = %d, 1 = %d)\n",
+		DEBUG(writer->ctx, "Writing node %p (0 = %u, 1 = %u)\n",
 			node, node->index_zero, node->index_one);
 
 		*offset += fwrite(&db_node, 1, sizeof(db_node), f);
@@ -656,11 +656,11 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 			break;
 
 		default:
-			ERROR(writer->ctx, "Invalid database version: %d\n", version);
+			ERROR(writer->ctx, "Invalid database version: %u\n", version);
 			return -1;
 	}
 
-	DEBUG(writer->ctx, "Writing database in version %d\n", version);
+	DEBUG(writer->ctx, "Writing database in version %u\n", version);
 
 	struct loc_database_magic magic;
 	make_magic(writer, &magic, version);

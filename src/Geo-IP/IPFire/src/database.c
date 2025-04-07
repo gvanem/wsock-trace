@@ -83,7 +83,7 @@ struct loc_database {
 
 	// Data mapped into memory
 	char* data;
-	off_t length;
+	ssize_t length;
 
 	struct loc_stringpool* pool;
 
@@ -153,17 +153,17 @@ struct loc_database_enumerator {
 
 static inline int __loc_database_check_boundaries(struct loc_database* db,
 		const char* p, const size_t length) {
-	size_t offset = p - db->data;
+	ssize_t offset = p - db->data;
 
 	// Return if everything is within the boundary
-	if (offset <= db->length - length)
+	if (offset <= (ssize_t)(db->length - length))
 		return 1;
 
 	DEBUG(db->ctx, "Database read check failed at %p for %zu byte(s)\n", p, length);
 	DEBUG(db->ctx, "  p      = %p (offset = %zd, length = %zu)\n", p, offset, length);
 	DEBUG(db->ctx, "  data   = %p (length = %zu)\n", db->data, (size_t)db->length);
 	DEBUG(db->ctx, "  end    = %p\n", db->data + db->length);
-	DEBUG(db->ctx, "  overflow of %zu byte(s)\n", (size_t)(offset + length - db->length));
+	DEBUG(db->ctx, "  overflow of %zd byte(s)\n", (ssize_t)(offset + length - db->length));
 
 	// Otherwise raise EFAULT
 	errno = EFAULT;
@@ -411,7 +411,7 @@ static int loc_database_clone_handle(struct loc_database* db, FILE* f) {
 
 	// Clone file descriptor
 	fd = dup(fd);
-	if (!fd) {
+	if (fd < 0) {
 		ERROR(db->ctx, "Could not duplicate file descriptor\n");
 		return 1;
 	}
@@ -627,7 +627,7 @@ LOC_EXPORT int loc_database_verify(struct loc_database* db, FILE* f) {
 			break;
 
 		default:
-			ERROR(db->ctx, "Cannot compute hash for database with format %d\n",
+			ERROR(db->ctx, "Cannot compute hash for database with format %u\n",
 				db->version);
 			r = -EINVAL;
 			goto CLEANUP;
@@ -1245,7 +1245,7 @@ LOC_EXPORT int loc_database_enumerator_next_as(
 
 		r = loc_as_match_string(*as, enumerator->string);
 		if (r == 1) {
-			DEBUG(enumerator->ctx, "AS%d (%s) matches %s\n",
+			DEBUG(enumerator->ctx, "AS%u (%s) matches %s\n",
 				loc_as_get_number(*as), loc_as_get_name(*as), enumerator->string);
 
 			return 0;

@@ -10,12 +10,11 @@
 #
 LIBLOC_MAJOR = 0
 LIBLOC_MINOR = 9
-LIBLOC_MICRO = 17
+LIBLOC_MICRO = 18
 VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
 
 TODAY     := $(shell date.exe +%d-%B-%Y)
 THIS_FILE := $(firstword $(MAKEFILE_LIST))
-comma     := ,
 
 #
 # Used in generated Python scripts.
@@ -37,6 +36,11 @@ LUA_ROOT = ../../../LuaJIT
 LUA_LIB  = $(LUA_ROOT)/lib/luajit_static-$(CPU).lib
 
 #
+# Enable "Address Sanitizer"?
+#
+USE_ASAN ?= 0
+
+#
 # Use Winsock-trace library.
 #
 USE_WSOCK_TRACE ?= 0
@@ -55,12 +59,6 @@ OPENSSL_ROOT ?= f:/MinGW32/src/inet/Crypto/OpenSSL
 # For C-preprocessing.
 #
 USE_ASTYLE ?= 1
-
-#
-# Set 'USE_STATIC_LIBLOC=1' to link with '$(STATIC_LIB)' for the test programs.
-# Otherwise link to '$(IMPORT_LIB)'.
-#
-USE_STATIC_LIBLOC ?= 1
 
 #
 # Use 'cl -MP ...'
@@ -134,6 +132,7 @@ TEST_PROGS = $(TEST_SRC:.c=.exe)
 PY_D =
 
 CFLAGS = -nologo -W4 -Zi -GS-       \
+         -Fd./$(OBJ_DIR)/vc140.pdb  \
          -D_CRT_SECURE_NO_WARNINGS  \
          -D_CRT_NONSTDC_NO_WARNINGS \
          -D_CRT_OBSOLETE_NO_WARNINGS
@@ -141,6 +140,7 @@ CFLAGS = -nologo -W4 -Zi -GS-       \
 LDFLAGS = -debug -map -verbose -nologo -incremental:no -nodefaultlib:uuid.lib
 RCFLAGS = -nologo
 
+LIBLOC_DLL = libloc-$(CPU).dll
 STATIC_LIB = libloc-$(CPU).lib
 IMPORT_LIB = libloc_imp-$(CPU).lib
 
@@ -160,12 +160,23 @@ else
   CFLAGS += -MD -Ot
 endif
 
+ifeq ($(USE_ASAN),1)
+  CFLAGS  += -DUSE_ASAN -fsanitize=address
+  RCFLAGS += -DUSE_ASAN
+
+  #
+  # The default for 'x86 / Release' is 'clang_rt.asan_dynamic_runtime_thunk-i386.lib'
+  # (and clang_rt.asan_dbg_dynamic_runtime_thunk-i386.lib for 'x86 / Debug')
+  #
+  LDFLAGS += -inferasanlibs
+endif
+
 #
 # What to build:
 #
-TARGETS = $(STATIC_LIB)     \
-          $(IMPORT_LIB)     \
-          libloc-$(CPU).dll \
+TARGETS = $(STATIC_LIB) \
+          $(IMPORT_LIB) \
+          $(LIBLOC_DLL) \
           $(TEST_PROGS)
 
 CFLAGS += -I. -I./libloc/windows         \
@@ -208,14 +219,14 @@ else
 endif
 
 #
-# External lib(s) to use for 'libloc-$(CPU).dll'.
-# And possibly 'test-*.exe' if 'USE_STATIC_LIBLOC = 1'.
+# External lib(s) to use for '$(LIBLOC_DLL)'.
 #
 ifeq ($(USE_WSOCK_TRACE),1)
-  CFLAGS += -DUSE_WSOCK_TRACE
-  WS2_32  = wsock_trace-$(CPU).lib
+  CFLAGS    += -DUSE_WSOCK_TRACE
+  LDFLAGS   += -nodefaultlib:ws2_32.lib
+  WS2_32_LIB = wsock_trace-$(CPU).lib
 else
-  WS2_32 = ws2_32.lib
+  WS2_32_LIB = ws2_32.lib
 endif
 
 LIBLOC_OBJ = $(call c_to_obj, $(LIBLOC_SRC),)
@@ -234,7 +245,8 @@ ifeq ($(USE_LUA),1)
   TARGETS += lua_install/location.dll \
              lua_install/location-lua.lib  # No real need for this
 
-  CFLAGS += -I$(LUA_ROOT)/src
+  CFLAGS += -I$(LUA_ROOT)/src \
+            -DLUA_VERSION_RELEASE_NUM=502
 
   LUA_SRC = $(addprefix lua/, \
               as.c            \
@@ -284,10 +296,10 @@ $(STATIC_LIB): $(LIBLOC_OBJ)
 	lib -nologo -out:$@ $(LIBLOC_OBJ)
 	@echo
 
-$(IMPORT_LIB): libloc-$(CPU).dll
+$(IMPORT_LIB): $(LIBLOC_DLL)
 
-libloc-$(CPU).dll: $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res | $(OBJ_DIR)/check-for-unused-libs.py
-	$(call link_DLL, $@, -def:$^ dnsapi.lib $(OPENSSL_LIBS) $(WS2_32), $(IMPORT_LIB))
+$(LIBLOC_DLL): $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res
+	$(call link_DLL, $@, -def:$^ dnsapi.lib $(OPENSSL_LIBS) $(WS2_32_LIB), $(IMPORT_LIB))
 
 libloc/version.h: $(THIS_FILE)
 	$(call generate_c, $@)
@@ -301,13 +313,13 @@ libloc/version.h: $(THIS_FILE)
 
 $(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate, $@, ;)
-	@echo -e 'LIBRARY libloc-$(CPU).dll\nEXPORTS'               >> $@
+	@echo -e 'LIBRARY $(notdir $(LIBLOC_DLL))\nEXPORTS'         >> $@
 	nm $< | grep ' T $(uscore)loc_' | sed 's/^.* $(uscore)/  /' >> $@
 	@echo
 
 $(OBJ_DIR)/libloc.rc: $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate_c, $@)
-	$(file >> $@, #define RC_FILENAME     "libloc-$(CPU).dll")
+	$(file >> $@, #define RC_FILENAME     "$(notdir $(LIBLOC_DLL))")
 	$(file >> $@, #define RC_DESCRIPTION  "A library to determine the location of someone on the Internet.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
@@ -315,14 +327,14 @@ $(OBJ_DIR)/libloc.rc: $(THIS_FILE) | $(OBJ_DIR)
 $(OBJ_DIR)/_location.rc: $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate_c, $@)
 	$(file >> $@, #define RC_FILENAME     "_location.pyd")
-	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for 'libloc-$(CPU).dll'.")
+	$(file >> $@, #define RC_DESCRIPTION  "Python3 module for '$(notdir $(LIBLOC_DLL))'.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
 $(OBJ_DIR)/location.rc: $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate_c, $@)
 	$(file >> $@, #define RC_FILENAME     "location.dll")
-	$(file >> $@, #define RC_DESCRIPTION  "LuaJIT module for 'libloc-$(CPU).dll'.")
+	$(file >> $@, #define RC_DESCRIPTION  "LuaJIT module for '$(notdir $(LIBLOC_DLL))'.")
 	$(file >> $@, $(RC_COMMON))
 	@echo
 
@@ -346,16 +358,13 @@ FORCE:
 $(OBJ_DIR)/cpp-filter.py: $(THIS_FILE) | $(OBJ_DIR)
 	$(call generate_py,$@,$(CPP_FILTER_PY))
 
-$(OBJ_DIR)/check-for-unused-libs.py: $(THIS_FILE) | $(OBJ_DIR)
-	$(call generate_py,$@,$(CHECK_FOR_UNUSED_LIBS_PY))
-
 #
-# Must use Python3.
+# We must use Python3.
 # Use the Python launcher to find the default version 3 Python.
 #
 # And with 'USE_CRT_DEBUG = 1', use the debug-version of Python3.
 #
-PYTHON ?= py -3
+PYTHON := py -3
 PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
 
 $(OBJ_DIR)/py/%.obj: python/%.c | $(OBJ_DIR)/py $(CC).args
@@ -369,8 +378,8 @@ py_%.i: python/%.c FORCE $(OBJ_DIR)/cpp-filter.py $(CC).args
 #
 lua_install/location-lua.lib: lua_install/location.dll
 
-lua_install/location.dll: $(LUA_OBJ) $(OBJ_DIR)/location.res $(LUA_ROOT)/lib/luajit_static-$(CPU).lib | $(OBJ_DIR)/check-for-unused-libs.py lua_install
-	$(call link_DLL, $@, -export:luaopen_location $^ dnsapi.lib $(OPENSSL_LIBS) $(WS2_32), lua_install/location-lua.lib)
+lua_install/location.dll: $(LUA_OBJ) $(OBJ_DIR)/location.res $(LUA_ROOT)/lib/luajit_static-$(CPU).lib | lua_install
+	$(call link_DLL, $@, -export:luaopen_location $^ dnsapi.lib $(OPENSSL_LIBS) $(WS2_32_LIB), lua_install/location-lua.lib)
 
 $(OBJ_DIR)/lua/%.obj: lua/%.c | $(OBJ_DIR)/lua $(CC).args
 	$(call C_compile, $@, $<)
@@ -429,14 +438,14 @@ $(LUA_ROOT)/bin/luajit.exe $(LUA_ROOT)/lib/luajit_static-$(CPU).lib:
 $(OBJ_DIR)/%.res: $(OBJ_DIR)/%.rc
 	$(call create_res_file, $@, $<)
 
-ifeq ($(USE_STATIC_LIBLOC),1)
-  test-%.exe: $(OBJ_DIR)/test-%.obj $(STATIC_LIB) | $(OBJ_DIR)/check-for-unused-libs.py
-	$(call link_EXE, $@, $^ $(OPENSSL_LIBS) $(WS2_32))
+test-address.exe: $(OBJ_DIR)/test-address.obj $(IMPORT_LIB)
+	$(call link_EXE, $@, $^ $(WS2_32_LIB))
 
-else
-  test-%.exe: $(OBJ_DIR)/test-%.obj $(IMPORT_LIB) | $(OBJ_DIR)/check-for-unused-libs.py
-	$(call link_EXE, $@, $^ $(WS2_32))
-endif
+test-network.exe: $(OBJ_DIR)/test-network.obj $(IMPORT_LIB)
+	$(call link_EXE, $@, $^ $(WS2_32_LIB))
+
+test-%.exe: $(OBJ_DIR)/test-%.obj $(IMPORT_LIB)
+	$(call link_EXE, $@, $^)
 
 run_tests runtests: $(TEST_PROGS)
 	for p in $^ ; do                            \
@@ -480,12 +489,12 @@ $(PY_GEN_FILES): $(THIS_FILE)
 #
 # Needed by 'py3_install/_location.pyd'
 #
-PY_DLL_FILES = libloc-$(CPU).dll
+PY_DLL_FILES = $(LIBLOC_DLL)
 
 #
 # Needed by 'lua_install/location.dll'
 #
-LUA_DLL_FILES = libloc-$(CPU).dll
+LUA_DLL_FILES = $(LIBLOC_DLL)
 
 #
 # These could be handy for debugging
@@ -493,14 +502,14 @@ LUA_DLL_FILES = libloc-$(CPU).dll
 PY_DLL_FILES  += libloc-$(CPU).pdb
 LUA_DLL_FILES += libloc-$(CPU).pdb
 
-py3_module: py3_install py3_install/location $(PY_GEN_FILES) libloc-$(CPU).dll
+py3_module: py3_install py3_install/location $(PY_GEN_FILES) $(LIBLOC_DLL)
 	cp --update $(PY_DLL_FILES)  py3_install
 	cp --update $(PY_FILES)      py3_install/location
 	@echo
 
 PY_LIB = $(PY_ROOT)/libs/python3$(PY_D).lib
 
-py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install $(OBJ_DIR)/check-for-unused-libs.py
+py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install
 	$(call link_PYD, $@, $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res $(PY_LIB))
 
 py3_install/location.py: scripts/location.in
@@ -598,6 +607,8 @@ endef
 # And remove the .lib/.exp-files due to the pesky 'OPENSSL_Applink' export symbol.
 #
 define link_EXE
+  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
+  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBS_PY))
   $(call green_msg, Linking $(1))
   $(call create_resp_file, link.args, $(LDFLAGS) $(2))
   link -out:$(strip $(1)) @link.args > link.tmp
@@ -613,6 +624,8 @@ endef
 #   arg3, $(3): The import library
 #
 define link_DLL
+  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
+  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBS_PY))
   $(call green_msg, Linking $(1))
   $(call create_resp_file, link.args, $(LDFLAGS) -dll -implib:$(strip $(3)) $(2))
   link -out:$(strip $(1)) @link.args > link.tmp
@@ -627,6 +640,8 @@ endef
 #   arg2, $(2): The .obj file(s), extra options and libs.
 #
 define link_PYD
+  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
+  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBS_PY))
   $(call green_msg, Linking $@)
   $(call create_resp_file, link.args, $(LDFLAGS) -dll -libpath:$(PY_ROOT)/libs $(2))
   link -out:$(strip $(1)) @link.args > link.tmp

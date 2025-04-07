@@ -85,7 +85,7 @@
 #endif      /* __APPLE__ */
 
 #ifndef LIBLOC_NETERR
-#define LIBLOC_NETERR() strerror(errno)
+#define LIBLOC_NETERR() strerror (errno)
 #endif
 
 #ifndef s6_addr16
@@ -97,7 +97,7 @@
 #endif
 
 #ifndef reallocarray
-#define reallocarray(ptr, nmemb, size) realloc(ptr, nmemb * size)
+#define reallocarray(ptr, nmemb, size) realloc (ptr, (nmemb) * (size))
 #endif
 
 #endif  /* LIBLOC_COMPAT_H */

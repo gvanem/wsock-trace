@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 	for (unsigned int i = 1; i <= 10; i++) {
 		err = loc_database_get_as(db, &as, i);
 		if (err) {
-			fprintf(stderr, "Could not find AS%d\n", i);
+			fprintf(stderr, "Could not find AS%u\n", i);
 			exit(EXIT_FAILURE);
 		}
 
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
 	}
 
 	while (as) {
-		printf("Found AS%d: %s\n", loc_as_get_number(as), loc_as_get_name(as));
+		printf("Found AS%u: %s\n", loc_as_get_number(as), loc_as_get_name(as));
 
 		err = loc_database_enumerator_next_as(enumerator, &as);
 		if (err) {

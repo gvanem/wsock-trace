@@ -219,10 +219,12 @@ static PyObject* Database_lookup(DatabaseObject* self, PyObject* args) {
 		switch (errno) {
 			case EINVAL:
 				PyErr_Format(PyExc_ValueError, "Invalid IP address: %s", address);
+				return NULL;
 
 			default:
 				PyErr_SetFromErrno(PyExc_OSError);
 		}
+
 		return NULL;
 	}
 
@@ -303,14 +305,14 @@ static PyObject* Database_networks_flattened(DatabaseObject *self) {
 }
 
 static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
-	char* kwlist[] = { "country_codes", "asns", "flags", "family", "flatten", NULL };
+	const char* kwlist[] = { "country_codes", "asns", "flags", "family", "flatten", NULL };
 	PyObject* country_codes = NULL;
 	PyObject* asn_list = NULL;
 	int flags = 0;
 	int family = 0;
 	int flatten = 0;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!iip", kwlist,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!iip", (char**)kwlist,
 			&PyList_Type, &country_codes, &PyList_Type, &asn_list, &flags, &family, &flatten))
 		return NULL;
 
@@ -464,11 +466,11 @@ static PyObject* Database_countries(DatabaseObject* self) {
 }
 
 static PyObject* Database_list_bogons(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
-	char* kwlist[] = { "family", NULL };
+	const char* kwlist[] = { "family", NULL };
 	int family = AF_UNSPEC;
 
 	// Parse arguments
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i", kwlist, &family))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i", (char**)kwlist, &family))
 		return NULL;
 
 	return Database_iterate_all(self, LOC_DB_ENUMERATE_BOGONS, family, 0);

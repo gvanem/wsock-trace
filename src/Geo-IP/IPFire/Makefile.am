@@ -21,20 +21,13 @@ AM_CPPFLAGS = \
 	-DSYSCONFDIR=\""$(sysconfdir)"\" \
 	-I${top_srcdir}/src
 
-AM_CFLAGS = ${my_CFLAGS} \
+AM_CFLAGS = \
+	$(OUR_CFLAGS) \
 	-ffunction-sections \
 	-fdata-sections
 
-AM_LDFLAGS = ${my_LDFLAGS}
-
-# leaving a space here to work around automake's conditionals
- ifeq ($(OS),Darwin)
-	AM_LDFLAGS += -Wl,-dead_strip
- else
-	AM_LDFLAGS += \
-		-Wl,--as-needed \
-		-Wl,--gc-sections
- endif
+AM_LDFLAGS = \
+	$(OUR_LDFLAGS)
 
 LIBLOC_CURRENT=1
 LIBLOC_REVISION=3
@@ -58,6 +51,7 @@ SED_PROCESS = \
 cron_dailydir = $(sysconfdir)/cron.daily
 databasedir = $(localstatedir)/lib/location
 pkgconfigdir = $(libdir)/pkgconfig
+systemdsystemunitdir = $(prefix)/lib/systemd/system
 
 # Overwrite Python path
 pkgpythondir = $(pythondir)/location
@@ -84,7 +78,8 @@ update-po: po/POTFILES.in
 	$(MAKE) -C po update-po
 
 po/POTFILES.in: Makefile
-	find $(abs_srcdir)/src -type f \( -name '*.in' -o -name '*.py' \) \
+	find $(abs_srcdir)/src $(abs_srcdir)/tools \
+		-type f \( -name '*.in' -o -name '*.py' \) \
 		\! -exec git check-ignore -q {} \; -print | \
 		sed -e "s@$(abs_srcdir)/@@g" | LC_ALL=C sort > $@
 
@@ -217,7 +212,10 @@ src_python__location_la_SOURCES = \
 
 src_python__location_la_CFLAGS = \
 	$(AM_CFLAGS) \
-	$(PYTHON_CFLAGS)
+	$(PYTHON_CFLAGS) \
+	-Wno-cast-function-type \
+	-Wno-redundant-decls \
+	-Wno-strict-aliasing
 
 src_python__location_la_LDFLAGS = \
 	$(AM_LDFLAGS) \
@@ -438,7 +436,7 @@ dist_check_SCRIPTS = \
 	tests/python/test-database.py \
 	tests/python/test-export.py
 
-if ENABLE_LUA
+if ENABLE_LUA_TESTS
 check_SCRIPTS += \
 	$(LUA_TESTS)
 endif

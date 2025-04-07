@@ -280,11 +280,11 @@ static PyObject* Network_richcompare(NetworkObject* self, PyObject* other, int o
 }
 
 static PyObject* Network_reverse_pointer(NetworkObject* self, PyObject* args, PyObject* kwargs) {
-	char* kwlist[] = { "suffix", NULL };
+	const char* kwlist[] = { "suffix", NULL };
 	const char* suffix = NULL;
 	char* rp = NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|z", kwlist, &suffix))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|z", (char**)kwlist, &suffix))
 		return NULL;
 
 	rp = loc_network_reverse_pointer(self->network, suffix);

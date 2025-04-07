@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
 		unsigned int bit_length = loc_address_bit_length(addr);
 
 		if (bit_length != t->bit_length) {
-			printf("Bit length of %s didn't match: %u != %u\n",
+			printf("Bit length of %s didn't match: expected %u, got %u\n",
 				t->network, t->bit_length, bit_length);
 			loc_network_unref(network1);
 			exit(EXIT_FAILURE);

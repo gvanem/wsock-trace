@@ -39,8 +39,10 @@ struct loc_network_tree_node {
 
 	struct loc_network* network;
 
-	// Set if deleted
-	int deleted:1;
+	// Flags
+	enum loc_network_tree_node_flags {
+		NETWORK_TREE_NODE_DELETED = (1 << 0),
+	} flags;
 };
 
 int loc_network_tree_new(struct loc_ctx* ctx, struct loc_network_tree** tree) {
@@ -61,6 +63,10 @@ int loc_network_tree_new(struct loc_ctx* ctx, struct loc_network_tree** tree) {
 	DEBUG(t->ctx, "Network tree allocated at %p\n", t);
 	*tree = t;
 	return 0;
+}
+
+static int loc_network_tree_node_has_flag(struct loc_network_tree_node* node, int flag) {
+	return node->flags & flag;
 }
 
 struct loc_network_tree_node* loc_network_tree_get_root(struct loc_network_tree* tree) {
@@ -86,8 +92,8 @@ static struct loc_network_tree_node* loc_network_tree_get_node(struct loc_networ
 	}
 
 	// If the node existed, but has been deleted, we undelete it
-	if (*n && (*n)->deleted) {
-		(*n)->deleted = 0;
+	if (*n && loc_network_tree_node_has_flag(*n, NETWORK_TREE_NODE_DELETED)) {
+		(*n)->flags &= ~NETWORK_TREE_NODE_DELETED;
 
 	// If the desired node doesn't exist, yet, we will create it
 	} else if (!*n) {
@@ -116,7 +122,7 @@ static int __loc_network_tree_walk(struct loc_ctx* ctx, struct loc_network_tree_
 	int r;
 
 	// If the node has been deleted, don't process it
-	if (node->deleted)
+	if (loc_network_tree_node_has_flag(node, NETWORK_TREE_NODE_DELETED))
 		return 0;
 
 	// Finding a network ends the walk here
@@ -244,7 +250,7 @@ static int loc_network_tree_delete_network(
 
 	// Mark the node as deleted if it was a leaf
 	if (!node->zero && !node->one)
-		node->deleted = 1;
+		node->flags |= NETWORK_TREE_NODE_DELETED;
 
 	return 0;
 }
@@ -253,7 +259,7 @@ static size_t __loc_network_tree_count_nodes(struct loc_network_tree_node* node)
 	size_t counter = 1;
 
 	// Don't count deleted nodes
-	if (node->deleted)
+	if (loc_network_tree_node_has_flag(node, NETWORK_TREE_NODE_DELETED))
 		return 0;
 
 	if (node->zero)
@@ -396,11 +402,6 @@ static int loc_network_tree_merge_step(struct loc_network* network, void* data) 
 			if (r)
 				goto ERROR;
 
-			// Add the new network to the stack
-			r = loc_network_list_push(ctx->networks, m);
-			if (r)
-				goto ERROR;
-
 			// Remove the previous network from the stack
 			r = loc_network_list_remove(ctx->networks, n);
 			if (r)
@@ -411,6 +412,11 @@ static int loc_network_tree_merge_step(struct loc_network* network, void* data) 
 
 			// Try merging the new network with others
 			r = loc_network_tree_merge_step(m, data);
+			if (r)
+				goto ERROR;
+
+			// Add the new network to the stack
+			r = loc_network_list_push(ctx->networks, m);
 			if (r)
 				goto ERROR;
 
@@ -451,6 +457,7 @@ static int loc_network_tree_merge(struct loc_network_tree* tree) {
 		.networks = NULL,
 		.merged   = 0,
 	};
+	unsigned int total_merged = 0;
 	int r;
 
 	// Create a new list
@@ -458,12 +465,23 @@ static int loc_network_tree_merge(struct loc_network_tree* tree) {
 	if (r)
 		goto ERROR;
 
-	// Walk through the entire tree
-	r = loc_network_tree_walk(tree, NULL, loc_network_tree_merge_step, &ctx);
-	if (r)
-		goto ERROR;
+	// This is a fix for a very interesting problem which only occurs on non-Debian
+	// systems where the algorithm seems to miss some merges. If we run it multiple
+	// times it will however find them...
+	do {
+		// Reset merges
+		ctx.merged = 0;
 
-	DEBUG(tree->ctx, "%u network(s) have been merged\n", ctx.merged);
+		// Walk through the entire tree
+		r = loc_network_tree_walk(tree, NULL, loc_network_tree_merge_step, &ctx);
+		if (r)
+			goto ERROR;
+
+		// Count all merges
+		total_merged += ctx.merged;
+	} while (ctx.merged > 0);
+
+	DEBUG(tree->ctx, "%u network(s) have been merged\n", total_merged);
 
 ERROR:
 	if (ctx.networks)
@@ -591,7 +609,7 @@ static int loc_network_tree_delete_node(struct loc_network_tree* tree,
 	int r1 = 1;
 
 	// Return for nodes that have already been deleted
-	if (n->deleted)
+	if (loc_network_tree_node_has_flag(n, NETWORK_TREE_NODE_DELETED))
 		goto DELETE;
 
 	// Delete zero

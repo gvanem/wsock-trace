@@ -18,7 +18,7 @@
 #define LIBLOC_ADDRESS_H
 
 #ifndef LIBLOC_H
-#error "Include <libloc/address.h> before me"
+#error "Include <libloc/libloc.h> before me"
 #endif
 
 #if defined(_WIN32)
@@ -168,6 +168,7 @@ static inline struct in6_addr loc_prefix_to_bitmask(const unsigned int prefix) {
 
 static inline unsigned int loc_address_bit_length(const struct in6_addr* address) {
 	unsigned int bitlength = 0;
+	int trailing_zeroes;
 
 	int octet = 0;
 
@@ -179,8 +180,14 @@ static inline unsigned int loc_address_bit_length(const struct in6_addr* address
 
 	// Walk backwards until we find the first one
 	foreach_octet_in_address_reverse(octet, address) {
+		// __builtin_ctz does not support zero as input
+		if (!address->s6_addr[octet]) {
+			bitlength -= 8;
+			continue;
+		}
+
 		// Count all trailing zeroes
-		int trailing_zeroes = __builtin_ctz(address->s6_addr[octet]);
+		trailing_zeroes = __builtin_ctz(address->s6_addr[octet]);
 
 		// We only have one byte
 		if (trailing_zeroes > 8)
@@ -355,7 +362,11 @@ static inline int loc_address_get_octet(const struct in6_addr* address, const un
 		if (i >= 4)
 			return -ERANGE;
 
-		return (IN6_DWORD(address, 3) >> (i * 8)) & 0xff;
+		// Format the IPv4 in host-byte order
+		unsigned int a4 = be32toh(IN6_DWORD(address, 3));
+
+		// Return the nth byte from the left
+		return a4 >> ((3 - i) * 8) & 0xff;
 
 	} else {
 		if (i >= 32)

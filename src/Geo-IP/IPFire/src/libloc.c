@@ -56,6 +56,10 @@ void loc_log(struct loc_ctx* ctx,
 	va_end(args);
 }
 
+static void log_stderr(struct loc_ctx* ctx, void* data, int priority,
+	const char* file, int line, const char* fn, const char* format, va_list args)
+	__attribute__((format(printf, 7, 0)));
+
 static void log_stderr(struct loc_ctx* ctx, void* data,
 		int priority, const char* file, int line, const char* fn,
 		const char* format, va_list args) {

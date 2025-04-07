@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 		free(string);
 
 		if (pos < 0) {
-			fprintf(stderr, "Could not add string %d: %s\n", i, strerror(errno));
+			fprintf(stderr, "Could not add string %u: %s\n", i, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	}

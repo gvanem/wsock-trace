@@ -17,8 +17,8 @@
 ###############################################################################
 
 import sys
-import logging
 import gzip
+import logging
 import lzma
 import os
 import random

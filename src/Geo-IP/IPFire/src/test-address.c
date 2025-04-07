@@ -54,7 +54,7 @@ static int perform_tests(struct loc_ctx* ctx, const int family) {
 	for (unsigned int i = 0; i < 100; i++) {
 		s = loc_address_str(&address);
 
-		printf("Iteration %d: %s\n", i, s);
+		printf("Iteration %u: %s\n", i, s);
 
 		if (strcmp(s, e) != 0) {
 			fprintf(stderr, "IP address was formatted in an invalid format: %s\n", s);
