@@ -26,7 +26,7 @@
 #include <libloc/database.h>
 #include <libloc/network.h>
 #include <libloc/resolv.h>
-#include <libloc/windows/syslog.h>   /* LOG_DEBUG */
+#include <libloc/windows/syslog.h>     /* LOG_DEBUG */
 
 /*
  * Since 'Geo-IP/IPFire/src/libloc/version.h' is generated
@@ -56,18 +56,6 @@ struct libloc_data {
      };
 
 struct libloc_data libloc;
-
-struct _loc_network {   /* Scraped from '$(LIBLOC_ROOT)/src/network.c' */
-       struct loc_ctx *ctx;
-       int             refcount;
-       int             family;
-       struct in6_addr first_address;
-       struct in6_addr last_address;
-       unsigned int    prefix;
-       char            country_code[3];
-       uint32_t        asn;
-       int             flags;
-     };
 
 static void ASN_bin_close (void);
 
@@ -604,9 +592,8 @@ static int libloc_handle_net (struct loc_network    *net,
                               str_put_func           func)
 {
   struct loc_as       *as = NULL;
-  struct _loc_network *_net = (struct _loc_network*) net;
-  char                 _net_name [MAX_IP6_SZ+1+4];
-  int                  _prefix = _net->prefix;
+  char                _net_name [INET6_ADDRSTRLEN + 10];
+  unsigned int        _prefix = loc_network_prefix (net);
   const char          *net_name;
   const char          *remark;
   const char          *AS_name;
@@ -623,13 +610,11 @@ static int libloc_handle_net (struct loc_network    *net,
   bool is_bogon;     /* Ref: https://en.wikipedia.org/wiki/Bogon_filtering */
 #endif
 
-  if (ip4)
-     _prefix -= 96;
-
-  snprintf (_net_name, sizeof(_net_name), "%s/%d", INET_addr_ntop2(AF_INET6, &_net->first_address), _prefix);
+  snprintf (_net_name, sizeof(_net_name), "%s/%u",
+            loc_network_format_first_address(net), _prefix);
 
   if (ip4)
-       net_name = _net_name + strlen("::ffff:");
+       net_name = _net_name /* + strlen ("::ffff:") */ ;
   else net_name = _net_name;
 
   AS_num = loc_network_get_asn (net);
