@@ -25,6 +25,7 @@
 static int perform_tests(struct loc_ctx* ctx, const int family) {
 	struct in6_addr address = IN6ADDR_ANY_INIT;
 	const char* e = NULL;
+	char buffer[LOC_ADDRESS_STRING_LENGTH];
 	const char* s = NULL;
 
 	// Reset IP address
@@ -52,7 +53,7 @@ static int perform_tests(struct loc_ctx* ctx, const int family) {
 
 	// Convert this to a string a few times
 	for (unsigned int i = 0; i < 100; i++) {
-		s = loc_address_str(&address);
+		s = loc_address_format(&address, buffer, sizeof(buffer));
 
 		printf("Iteration %u: %s\n", i, s);
 
@@ -75,7 +76,7 @@ static int perform_tests(struct loc_ctx* ctx, const int family) {
 			break;
 	}
 
-	s = loc_address_str(&address);
+	s = loc_address_format(&address, buffer, sizeof(buffer));
 
 	printf("Incremented IP address to %s\n", s);
 
@@ -97,14 +98,98 @@ static int perform_tests(struct loc_ctx* ctx, const int family) {
 	// Decrement the IP address
 	loc_address_decrement(&address);
 
-	s = loc_address_str(&address);
+	s = loc_address_format(&address, buffer, sizeof(buffer));
 
 	printf("Incremented IP address to %s\n", s);
 
 	if (!loc_address_all_zeroes(&address)) {
 		printf("IP address hasn't been decremented correctly: %s\n",
-			loc_address_str(&address));
+			loc_address_format(&address, buffer, sizeof(buffer)));
 		return 1;
+	}
+
+	return 0;
+}
+
+static int test_parse(void) {
+	const struct parse {
+		const char* string;
+		const char* address;
+		unsigned int prefix;
+	} tests[] = {
+		// Valid
+		{ "::", "::", 128 },
+		{ "::/0", "::", 0 },
+		{ "2001:db8::/32", "2001:db8::", 32 },
+		{ "2001:db8::1/128", "2001:db8::1", 128 },
+		{ "10.0.0.0/8", "10.0.0.0", 8 },
+		{ "192.0.2.1", "192.0.2.1", 32 },
+		{ "192.0.2.1/32", "192.0.2.1", 32 },
+		{ "0.0.0.0/0", "0.0.0.0", 0 },
+		{ "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/128",
+			"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", 128 },
+
+		// IPv4 addresses in IPv6 notation are IPv4 addresses
+		{ "::ffff:192.0.2.1", "192.0.2.1", 32 },
+		{ "::ffff:192.0.2.0/24", "192.0.2.0", 24 },
+
+		// The longest possible input
+		{ "0000:0000:0000:0000:0000:ffff:255.255.255.255/32", "255.255.255.255", 32 },
+
+		// Invalid
+		{ "", NULL, 0 },
+		{ "/24", NULL, 0 },
+		{ "example.org", NULL, 0 },
+		{ "192.0.2.1/", NULL, 0 },
+		{ "192.0.2.1/abc", NULL, 0 },
+		{ "192.0.2.1/24x", NULL, 0 },
+		{ "192.0.2.1/-1", NULL, 0 },
+		{ "192.0.2.1/+24", NULL, 0 },
+		{ "192.0.2.1/ 24", NULL, 0 },
+		{ "192.0.2.1/33", NULL, 0 },
+		{ "192.0.2.1/4294967320", NULL, 0 },
+		{ "192.0.2.256", NULL, 0 },
+		{ "2001:db8::/129", NULL, 0 },
+		{ "2001:db8::/32/48", NULL, 0 },
+		{ "::ffff:192.0.2.1/128", NULL, 0 },
+		{ "0000:0000:0000:0000:0000:ffff:255.255.255.255/128", NULL, 0 },
+		{ "0000:0000:0000:0000:0000:0000:0000:0000:0000:0000:0000/64", NULL, 0 },
+		{ "0000:0000:0000:0000:0000:ffff:255.255.255.255/0032", NULL, 0 },
+		{ "192.0.2.1:80", NULL, 0 },
+
+		{ NULL },
+	};
+	char buffer[LOC_ADDRESS_STRING_LENGTH];
+	struct in6_addr address;
+	unsigned int prefix;
+	int r;
+
+	for (const struct parse* test = tests; test->string; test++) {
+		r = loc_address_parse(&address, &prefix, test->string);
+
+		// Invalid input must fail
+		if (!test->address) {
+			if (r == 0) {
+				fprintf(stderr, "'%s' was parsed as %s/%u\n",
+					test->string, loc_address_format(&address, buffer, sizeof(buffer)), prefix);
+				return 1;
+			}
+
+			continue;
+		}
+
+		if (r) {
+			fprintf(stderr, "Could not parse '%s'\n", test->string);
+			return 1;
+		}
+
+		const char* s = loc_address_format(&address, buffer, sizeof(buffer));
+
+		if (strcmp(s, test->address) != 0 || prefix != test->prefix) {
+			fprintf(stderr, "'%s' was parsed as %s/%u instead of %s/%u\n",
+				test->string, s, prefix, test->address, test->prefix);
+			return 1;
+		}
 	}
 
 	return 0;
@@ -128,6 +213,11 @@ int main(int argc, char** argv) {
 
 	// Perform all tests for IPv4
 	r = perform_tests(ctx, AF_INET);
+	if (r)
+		goto ERROR;
+
+	// Parse some addresses
+	r = test_parse();
 	if (r)
 		goto ERROR;
 

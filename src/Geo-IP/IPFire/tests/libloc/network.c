@@ -61,8 +61,10 @@ static int test_reverse_pointers(struct loc_ctx* ctx) {
 		rp = loc_network_reverse_pointer(network, NULL);
 
 		// No RP expected and got none
-		if (!test->rp && !rp)
+		if (!test->rp && !rp) {
+			loc_network_unref(network);
 			continue;
+		}
 
 		// Got a result when expecting none
 		else if (!test->rp && rp) {
@@ -84,6 +86,98 @@ static int test_reverse_pointers(struct loc_ctx* ctx) {
 		loc_network_unref(network);
 		if (rp)
 			free(rp);
+	}
+
+	return 0;
+}
+
+static int test_exclude_list(struct loc_ctx* ctx) {
+	const struct test {
+		const char* network;
+		const char* exclude[3];
+		const char* result;
+	} tests[] = {
+		// Nothing to exclude
+		{ "192.0.2.0/24", { NULL }, "192.0.2.0/24" },
+
+		// Nothing overlaps
+		{ "192.0.2.0/24", { "198.51.100.0/24", NULL }, "192.0.2.0/24" },
+
+		// One subnet
+		{ "192.0.2.0/24", { "192.0.2.64/26", NULL }, "192.0.2.0/26 192.0.2.128/25" },
+
+		// One subnet and one network that does not overlap
+		{ "192.0.2.0/24", { "192.0.2.64/26", "198.51.100.0/24", NULL },
+			"192.0.2.0/26 192.0.2.128/25" },
+
+		// A network that only partly overlaps
+		{ "192.0.2.0/25", { "192.0.2.0/24", NULL }, "" },
+
+		// Everything
+		{ "192.0.2.0/24", { "192.0.2.0/24", NULL }, "" },
+
+		// IPv6
+		{ "2001:db8::/32", { "2001:db8:8000::/33", NULL }, "2001:db8::/33" },
+
+		{ NULL },
+	};
+
+	struct loc_network_list* excluded = NULL;
+	struct loc_network_list* list = NULL;
+	struct loc_network* network = NULL;
+	struct loc_network* n = NULL;
+	char result[256];
+	int r;
+
+	for (const struct test* test = tests; test->network; test++) {
+		r = loc_network_new_from_string(ctx, &network, test->network);
+		if (r)
+			return r;
+
+		r = loc_network_list_new(ctx, &list);
+		if (r)
+			return r;
+
+		for (const char* const* e = test->exclude; *e; e++) {
+			r = loc_network_new_from_string(ctx, &n, *e);
+			if (r)
+				return r;
+
+			r = loc_network_list_push(list, n);
+			if (r)
+				return r;
+
+			loc_network_unref(n);
+		}
+
+		excluded = loc_network_exclude_list(network, list);
+		if (!excluded) {
+			fprintf(stderr, "Could not exclude from %s\n", test->network);
+			return EXIT_FAILURE;
+		}
+
+		// Format the result
+		*result = '\0';
+
+		for (size_t i = 0; i < loc_network_list_size(excluded); i++) {
+			n = loc_network_list_get(excluded, i);
+
+			if (*result)
+				strcat(result, " ");
+			strcat(result, loc_network_str(n));
+
+			loc_network_unref(n);
+		}
+
+		if (strcmp(result, test->result) != 0) {
+			fprintf(stderr, "Unexpected result when excluding from %s: Got \"%s\", expected \"%s\"\n",
+				test->network, result, test->result);
+			return EXIT_FAILURE;
+		}
+
+		loc_network_list_unref(excluded);
+		loc_network_list_unref(list);
+		loc_network_unref(network);
 	}
 
 	return 0;
@@ -317,6 +411,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "It was impossible to add an single IP address (err = %d)\n", err);
 		exit(EXIT_FAILURE);
 	}
+	loc_network_unref(network);
 
 	FILE* f = tmpfile();
 	if (!f) {
@@ -350,7 +445,7 @@ int main(int argc, char** argv) {
 
 	// Lookup an address in the subnet
 	err = loc_database_lookup_from_string(db, "2001:db8::", &network1);
-	if (err) {
+	if (err || !network1) {
 		fprintf(stderr, "Could not look up 2001:db8::\n");
 		exit(EXIT_FAILURE);
 	}
@@ -401,6 +496,12 @@ int main(int argc, char** argv) {
 	if (err)
 		exit(err);
 
+	// Test excluding networks
+	err = test_exclude_list(ctx);
+	if (err)
+		exit(err);
+
+	loc_database_unref(db);
 	loc_unref(ctx);
 	fclose(f);
 

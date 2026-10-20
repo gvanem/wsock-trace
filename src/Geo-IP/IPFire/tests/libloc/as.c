@@ -25,6 +25,11 @@
 
 #define TEST_AS_COUNT 5000
 
+// AS numbers from all over the 32 bit space
+static const uint32_t large_asns[] = {
+	65536, 2147483647, 2147483648, 4200000000, 4294967294, 0,
+};
+
 int main(int argc, char** argv) {
 	int err;
 
@@ -53,6 +58,30 @@ int main(int argc, char** argv) {
 		loc_as_unref(as);
 	}
 
+	for (const uint32_t* number = large_asns; *number; number++) {
+		struct loc_as* as;
+
+		err = loc_writer_add_as(writer, &as, *number);
+		if (err) {
+			fprintf(stderr, "Could not add AS%u\n", *number);
+			exit(EXIT_FAILURE);
+		}
+
+		loc_as_unref(as);
+	}
+
+	// Adding an AS again returns the one that has been added before
+	struct loc_as* again = NULL;
+
+	err = loc_writer_add_as(writer, &again, 10);
+	if (err) {
+		fprintf(stderr, "Could not add AS10 again\n");
+		exit(EXIT_FAILURE);
+	}
+
+	loc_as_set_name(again, "Renamed AS10");
+	loc_as_unref(again);
+
 	FILE* f = tmpfile();
 	if (!f) {
 		fprintf(stderr, "Could not open file for writing: %s\n", strerror(errno));
@@ -61,7 +90,7 @@ int main(int argc, char** argv) {
 
 	err = loc_writer_write(writer, f, LOC_DATABASE_VERSION_UNSET);
 	if (err) {
-		fprintf(stderr, "Could not write database: %s\n", strerror(errno));
+		fprintf(stderr, "Could not write database: %s\n", strerror(-err));
 		exit(EXIT_FAILURE);
 	}
 
@@ -71,12 +100,12 @@ int main(int argc, char** argv) {
 	struct loc_database* db;
 	err = loc_database_new(ctx, &db, f);
 	if (err) {
-		fprintf(stderr, "Could not open database: %s\n", strerror(errno));
+		fprintf(stderr, "Could not open database: %s\n", strerror(-err));
 		exit(EXIT_FAILURE);
 	}
 
 	size_t as_count = loc_database_count_as(db);
-	if (as_count != TEST_AS_COUNT) {
+	if (as_count != TEST_AS_COUNT + (sizeof(large_asns) / sizeof(*large_asns)) - 1) {
 		fprintf(stderr, "Could not read all ASes\n");
 		exit(EXIT_FAILURE);
 	}
@@ -86,6 +115,31 @@ int main(int argc, char** argv) {
 		err = loc_database_get_as(db, &as, i);
 		if (err) {
 			fprintf(stderr, "Could not find AS%u\n", i);
+			exit(EXIT_FAILURE);
+		}
+
+		loc_as_unref(as);
+	}
+
+	// AS10 must have the name that it has been given when it was added again
+	err = loc_database_get_as(db, &as, 10);
+	if (err || !loc_as_get_name(as) || strcmp(loc_as_get_name(as), "Renamed AS10") != 0) {
+		fprintf(stderr, "AS10 does not have the name that it has been given\n");
+		exit(EXIT_FAILURE);
+	}
+
+	loc_as_unref(as);
+
+	for (const uint32_t* number = large_asns; *number; number++) {
+		err = loc_database_get_as(db, &as, *number);
+		if (err) {
+			fprintf(stderr, "Could not find AS%u\n", *number);
+			exit(EXIT_FAILURE);
+		}
+
+		if (loc_as_get_number(as) != *number) {
+			fprintf(stderr, "Searched for AS%u, but got AS%u\n",
+				*number, loc_as_get_number(as));
 			exit(EXIT_FAILURE);
 		}
 
@@ -111,6 +165,7 @@ int main(int argc, char** argv) {
 
 	while (as) {
 		printf("Found AS%u: %s\n", loc_as_get_number(as), loc_as_get_name(as));
+		loc_as_unref(as);
 
 		err = loc_database_enumerator_next_as(enumerator, &as);
 		if (err) {

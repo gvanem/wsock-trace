@@ -116,6 +116,53 @@ int main(int argc, char** argv) {
 	// Dump pool
 	loc_stringpool_dump(pool);
 
+	// Don't log megabytes of random characters
+	loc_set_log_priority(ctx, LOG_ERR);
+
+	// Add strings that are longer than what we allocate at a time
+	for (unsigned int i = 1; i <= 5; i++) {
+		const size_t length = i * 300000;
+
+		char* string = random_string(length);
+
+		pos = loc_stringpool_add(pool, string);
+		if (pos < 0) {
+			fprintf(stderr, "Could not add a string of %zu bytes: %s\n",
+				length, strerror(-pos));
+			exit(EXIT_FAILURE);
+		}
+
+		// Read it back
+		s = loc_stringpool_get(pool, pos);
+		if (!s || strcmp(s, string) != 0) {
+			fprintf(stderr, "Could not read back a string of %zu bytes\n", length);
+			exit(EXIT_FAILURE);
+		}
+
+		free(string);
+	}
+
+	// The first string must still be there
+	s = loc_stringpool_get(pool, 0);
+	if (!s || strcmp(s, "ABC") != 0) {
+		fprintf(stderr, "The first string has changed: %s\n", s);
+		exit(EXIT_FAILURE);
+	}
+
+	// The empty string is a string like any other
+	pos = loc_stringpool_add(pool, "");
+	if (pos < 0 || pos != loc_stringpool_add(pool, "")) {
+		fprintf(stderr, "The empty string has been added twice\n");
+		exit(EXIT_FAILURE);
+	}
+
+	// There is no string to add
+	pos = loc_stringpool_add(pool, NULL);
+	if (pos >= 0) {
+		fprintf(stderr, "Added NULL at %jd\n", (intmax_t)pos);
+		exit(EXIT_FAILURE);
+	}
+
 	loc_stringpool_unref(pool);
 	loc_unref(ctx);
 

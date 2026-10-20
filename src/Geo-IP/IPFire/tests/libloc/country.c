@@ -27,6 +27,11 @@
 #include <libloc/network.h>
 #include <libloc/writer.h>
 
+// More countries, in no particular order
+static const char* countries[] = {
+	"US", "AT", "ZA", "FR", "AU", "GB", NULL,
+};
+
 int main(int argc, char** argv) {
 	struct loc_country* country;
 	int flag;
@@ -122,6 +127,25 @@ int main(int argc, char** argv) {
 	}
 	loc_country_unref(country);
 
+	for (const char** code = countries; *code; code++) {
+		err = loc_writer_add_country(writer, &country, *code);
+		if (err) {
+			fprintf(stderr, "Could not create country: %s\n", *code);
+			exit(EXIT_FAILURE);
+		}
+		loc_country_unref(country);
+	}
+
+	// Adding a country again returns the one that has been added before
+	err = loc_writer_add_country(writer, &country, "AT");
+	if (err) {
+		fprintf(stderr, "Could not add country AT again\n");
+		exit(EXIT_FAILURE);
+	}
+
+	loc_country_set_name(country, "Austria");
+	loc_country_unref(country);
+
 	FILE* f = tmpfile();
 	if (!f) {
 		fprintf(stderr, "Could not open file for writing: %s\n", strerror(errno));
@@ -130,7 +154,7 @@ int main(int argc, char** argv) {
 
 	err = loc_writer_write(writer, f, LOC_DATABASE_VERSION_UNSET);
 	if (err) {
-		fprintf(stderr, "Could not write database: %s\n", strerror(errno));
+		fprintf(stderr, "Could not write database: %s\n", strerror(-err));
 		exit(EXIT_FAILURE);
 	}
 	loc_writer_unref(writer);
@@ -139,7 +163,7 @@ int main(int argc, char** argv) {
 	struct loc_database* db;
 	err = loc_database_new(ctx, &db, f);
 	if (err) {
-		fprintf(stderr, "Could not open database: %s\n", strerror(errno));
+		fprintf(stderr, "Could not open database: %s\n", strerror(-err));
 		exit(EXIT_FAILURE);
 	}
 
@@ -151,12 +175,31 @@ int main(int argc, char** argv) {
 	}
 	loc_country_unref(country);
 
+	// The country must have the name that it has been given when it was added again
+	err = loc_database_get_country(db, &country, "AT");
+	if (err || !country || !loc_country_get_name(country)
+			|| strcmp(loc_country_get_name(country), "Austria") != 0) {
+		fprintf(stderr, "Country AT does not have the name that it has been given\n");
+		exit(EXIT_FAILURE);
+	}
+	loc_country_unref(country);
+
+	// We must find all countries, regardless of the order in which they were added
+	for (const char** code = countries; *code; code++) {
+		err = loc_database_get_country(db, &country, *code);
+		if (err || !country) {
+			fprintf(stderr, "Could not find country: %s\n", *code);
+			exit(EXIT_FAILURE);
+		}
+		loc_country_unref(country);
+	}
+
 	struct loc_network* network = NULL;
 
 	// Create a test network
 	err = loc_network_new_from_string(ctx, &network, "2001:db8::/64");
 	if (err) {
-		fprintf(stderr, "Could not create network: %s\n", strerror(errno));
+		fprintf(stderr, "Could not create network: %s\n", strerror(-err));
 		exit(EXIT_FAILURE);
 	}
 

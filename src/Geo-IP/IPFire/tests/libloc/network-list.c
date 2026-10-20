@@ -22,8 +22,138 @@
 #include <syslog.h>
 
 #include <libloc/libloc.h>
+#include <libloc/address.h>
 #include <libloc/network.h>
 #include <libloc/network-list.h>
+
+#define MAX_NETWORKS 64
+
+static int test_summarize(struct loc_ctx* ctx) {
+	const struct summarize {
+		const char* first;
+		const char* last;
+		const char* networks[MAX_NETWORKS];
+	} tests[] = {
+		// An entire network
+		{ "10.0.0.0", "10.0.0.255", { "10.0.0.0/24", NULL } },
+
+		// A single address
+		{ "10.0.0.1", "10.0.0.1", { "10.0.0.1/32", NULL } },
+		{ "2001:db8::1", "2001:db8::1", { "2001:db8::1/128", NULL } },
+
+		// Ranges that neither start nor end where a network does
+		{ "10.0.0.1", "10.0.0.6", {
+			"10.0.0.1/32", "10.0.0.2/31", "10.0.0.4/31", "10.0.0.6/32", NULL,
+		} },
+		{ "10.0.1.0", "10.0.15.255", {
+			"10.0.1.0/24", "10.0.2.0/23", "10.0.4.0/22", "10.0.8.0/21", NULL,
+		} },
+
+		// Everything around 10.0.0.0/8
+		{ "0.0.0.0", "9.255.255.255", { "0.0.0.0/5", "8.0.0.0/7", NULL } },
+		{ "11.0.0.0", "255.255.255.255", {
+			"11.0.0.0/8", "12.0.0.0/6", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2",
+			"128.0.0.0/1", NULL,
+		} },
+
+		// Everything
+		{ "0.0.0.0", "255.255.255.255", { "0.0.0.0/0", NULL } },
+		{ "::", "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", { "::/0", NULL } },
+
+		// IPv6
+		{ "2001:db8::", "2001:db8:1:ffff:ffff:ffff:ffff:ffff", { "2001:db8::/47", NULL } },
+		{ "2001:db8:0:ffff:ffff:ffff:ffff:ffff", "2001:db8:1::", {
+			"2001:db8:0:ffff:ffff:ffff:ffff:ffff/128", "2001:db8:1::/128", NULL,
+		} },
+
+		{ NULL },
+	};
+	struct loc_network_list* list = NULL;
+	struct in6_addr first;
+	struct in6_addr last;
+	int r;
+
+	for (const struct summarize* test = tests; test->first; test++) {
+		r = loc_address_parse(&first, NULL, test->first);
+		if (r)
+			return r;
+
+		r = loc_address_parse(&last, NULL, test->last);
+		if (r)
+			return r;
+
+		r = loc_network_list_new(ctx, &list);
+		if (r)
+			return r;
+
+		r = loc_network_list_summarize(ctx, &first, &last, &list);
+		if (r) {
+			fprintf(stderr, "Could not summarize %s - %s: %d\n", test->first, test->last, r);
+			goto ERROR;
+		}
+
+		// Count how many networks we expect
+		size_t expected = 0;
+		while (test->networks[expected])
+			expected++;
+
+		if (loc_network_list_size(list) != expected) {
+			fprintf(stderr, "Summarizing %s - %s returned %zu network(s), expected %zu\n",
+				test->first, test->last, loc_network_list_size(list), expected);
+			loc_network_list_dump(list);
+			r = 1;
+			goto ERROR;
+		}
+
+		// The list is sorted, and so is what we expect
+		for (size_t i = 0; i < expected; i++) {
+			struct loc_network* network = loc_network_list_get(list, i);
+
+			r = strcmp(loc_network_str(network), test->networks[i]);
+			if (r) {
+				fprintf(stderr, "Summarizing %s - %s returned %s, expected %s\n",
+					test->first, test->last, loc_network_str(network), test->networks[i]);
+				r = 1;
+			}
+
+			loc_network_unref(network);
+
+			if (r)
+				goto ERROR;
+		}
+
+		loc_network_list_unref(list);
+		list = NULL;
+	}
+
+	// The range must not be backwards
+	r = loc_address_parse(&first, NULL, "10.0.0.2");
+	if (r)
+		return r;
+
+	r = loc_address_parse(&last, NULL, "10.0.0.1");
+	if (r)
+		return r;
+
+	r = loc_network_list_new(ctx, &list);
+	if (r)
+		return r;
+
+	r = loc_network_list_summarize(ctx, &first, &last, &list);
+	if (r == 0) {
+		fprintf(stderr, "Summarized a range that ends before it starts\n");
+		r = 1;
+		goto ERROR;
+	}
+
+	r = 0;
+
+ERROR:
+	if (list)
+		loc_network_list_unref(list);
+
+	return r;
+}
 
 int main(int argc, char** argv) {
 	int err;
@@ -160,6 +290,7 @@ int main(int argc, char** argv) {
 	}
 
 	loc_network_list_dump(excluded);
+	loc_network_list_unref(excluded);
 
 	// Exclude all subnets from network1
 	excluded = loc_network_exclude_list(network1, subnets);
@@ -177,6 +308,16 @@ int main(int argc, char** argv) {
 	loc_network_unref(network1);
 	loc_network_unref(subnet1);
 	loc_network_unref(subnet2);
+	loc_network_unref(subnet3);
+	loc_network_unref(subnet4);
+	loc_network_unref(subnet5);
+	loc_network_unref(subnet6);
+
+	// Summarize some ranges
+	err = test_summarize(ctx);
+	if (err)
+		exit(EXIT_FAILURE);
+
 	loc_unref(ctx);
 
 	return EXIT_SUCCESS;
