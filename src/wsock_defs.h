@@ -14,6 +14,7 @@
 #include <malloc.h>
 #include <io.h>
 #include <conio.h>
+#include <intsafe.h>
 #include <assert.h>
 #include <sys/utime.h>
 #include <sys/stat.h>
