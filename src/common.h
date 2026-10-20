@@ -16,6 +16,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <objbase.h>
+#include <share.h>   /* _SH_DENYWR */
 
 #if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600) || !defined(POLLRDNORM)
   /*
@@ -182,6 +183,7 @@ extern const char *get_dll_short_name (void);
 extern const char *get_dll_build_date (void);
 extern const char *get_builder (bool show_dbg_rel);
 extern const char *get_dll_version (void);
+extern const char *get_compiler_ver (void);
 
 extern void sock_list_add (SOCKET sock, int family, int type, int protocol);
 extern void sock_list_remove (SOCKET sock);
@@ -304,6 +306,10 @@ struct local_sockaddr_un {
 
 #ifndef TCP_ICMP_ERROR_INFO
 #define TCP_ICMP_ERROR_INFO 19
+#endif
+
+#ifndef _SH_DENYWR
+#define _SH_DENYWR  0x20    /* deny write */
 #endif
 
 #endif  /* _COMMON_H */

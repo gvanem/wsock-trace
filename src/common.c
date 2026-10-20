@@ -1568,7 +1568,7 @@ FILE *fopen_excl (const char *file, const char *mode)
   open_flags |= _O_SEQUENTIAL;
 #endif
 
-  fd = _sopen (file, open_flags, SH_DENYWR, share_flags);
+  fd = _sopen (file, open_flags, _SH_DENYWR, share_flags);
   if (fd <= -1)
      return (NULL);
   return fdopen (fd, mode);
@@ -2154,6 +2154,34 @@ const char *get_dll_version (void)
   return (RC_VER_STR);
 }
 
+#if defined(__clang__)
+const char *get_compiler_ver (void)
+{
+  static char buf [50];
+
+  snprintf (buf, sizeof(buf), "%d.%d.%d, _MSC_VER: %d.%d",
+            __clang_major__, __clang_minor__, __clang_patchlevel__,
+            _MSC_VER / 100, _MSC_VER % 100);
+  return (buf);
+}
+
+#else
+const char *get_compiler_ver (void)
+{
+  static char buf [30];   /* room for "19.11.25507" = VV.RR.PPPPP\0 */
+  char  *p   = buf;
+  char  *end = p + sizeof(buf) - 1;
+
+#if defined(_MSC_FULL_VER)
+  p += snprintf (p, end - p, "%d.%02d.%d", _MSC_VER / 100, _MSC_VER % 100, _MSC_FULL_VER % 100000);
+#else
+  p += snprintf (p, end - p, "%d.%02d", _MSC_VER / 100, _MSC_VER % 100);
+#endif
+
+  return (buf);
+}
+#endif
+
 /**
  * Returns e.g. "Visual-C, 32-bit"
  */
@@ -2174,10 +2202,10 @@ const char *get_builder (bool show_dbg_rel)
   const char *dbg_rel = "release";
 #endif
 
-  static char buf[100];
+  static char buf [200];
 
   if (show_dbg_rel)
-       snprintf (buf, sizeof(buf), "%s (%s, %s)", RC_BUILDER, platform, dbg_rel);
+       snprintf (buf, sizeof(buf), "%s (%s, %s, %s)", RC_BUILDER, platform, dbg_rel, get_compiler_ver());
   else snprintf (buf, sizeof(buf), "%s (%s)", RC_BUILDER, platform);
   return (buf);
 }
