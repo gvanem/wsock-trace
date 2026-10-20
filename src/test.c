@@ -352,7 +352,7 @@ static const struct {
           { u8"b\xc3\xbc\cher.de",                  /* bücher.de, German bookstore */
             "xn--bcher-kva.de"
           },
-          { u8"\xc3\xb6bb.at",                      /* öbb.at, Austrian Railways */
+          { u8"\xc3\xb6" "bb.at",                   /* öbb.at, Austrian Railways */
             "xn--bb-eka.at"
           },
           { u8"r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se", /* räksmörgås.se, Swedish IDN test site */
