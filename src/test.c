@@ -342,23 +342,25 @@ static bool test_IDNA_func (const char *input, const char *expected_ACE)
  *
  * Works best with a 'c:\> chcp 1252' first.
  */
-static const struct {
-         const char *utf8_text;
-         const char *expected;
-       } idn_test[] = {
-          { u8"seogh\xc3\xb8r.no",                  /* seoghør.no,  Norwegian gossip site */
-            "xn--seoghr-fya.no"
-          },
-          { u8"b\xc3\xbc\cher.de",                  /* bücher.de, German bookstore */
-            "xn--bcher-kva.de"
-          },
-          { u8"\xc3\xb6" "bb.at",                   /* öbb.at, Austrian Railways */
-            "xn--bb-eka.at"
-          },
-          { u8"r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se", /* räksmörgås.se, Swedish IDN test site */
-            "xn--rksmrgs-5wao1o.se"
-          }
-       };
+#if (_MSC_VER > 1800) /* No 'u8' support in VC-2013 */
+  static const struct {
+           const char *utf8_text;
+           const char *expected;
+         } idn_test[] = {
+            { u8"seogh\xc3\xb8r.no",                  /* seoghør.no,  Norwegian gossip site */
+              "xn--seoghr-fya.no"
+            },
+            { u8"b\xc3\xbc\cher.de",                  /* bücher.de, German bookstore */
+              "xn--bcher-kva.de"
+            },
+            { u8"\xc3\xb6" "bb.at",                   /* öbb.at, Austrian Railways */
+              "xn--bb-eka.at"
+            },
+            { u8"r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se", /* räksmörgås.se, Swedish IDN test site */
+              "xn--rksmrgs-5wao1o.se"
+            }
+         };
+#endif
 
 static void test_IDNA_functions (void)
 {
@@ -749,6 +751,22 @@ static void test_WSAAddressToStringA (void)
   TEST_CONDITION (== 1, (size == sizeof(IP6_TEST_ADDR_WITH_PORT_A)));
 }
 
+#if (_MSC_VER < 1900)
+  #define UNSUPPORTED(func) \
+          printf ("  %s(): unsupported for this 'cl' %s version\n", \
+                  func, get_compiler_ver())
+
+static void test_WSAAddressToStringW (void)
+{
+  UNSUPPORTED (__FUNCTION__);
+}
+
+static void test_WSAAddressToStringWP (void)
+{
+  UNSUPPORTED (__FUNCTION__);
+}
+
+#else
 static void test_WSAAddressToStringW_common (bool test_ip6, WSAPROTOCOL_INFOW *p_info)
 {
   struct sockaddr_in sa4;
@@ -833,6 +851,7 @@ static void test_WSAAddressToStringWP (void)
 
   test_WSAAddressToStringW_common (false, &p_info);
 }
+#endif /* _MSC_VER >= 1900 */
 
 static void test_WSAStringToAddressA (void)
 {

@@ -48,10 +48,6 @@
   #pragma intrinsic (_byteswap_ulong)
   #pragma intrinsic (_byteswap_uint64)
 
-  /* Drop dependency on 'oldnames.lib'
-   */
-  #define lseek(fd, ofs, whence) _lseek (fd, ofs, whence)
-
   #define be16toh(x)  _byteswap_ushort (x)
   #define htobe16(x)  _byteswap_ushort (x)
   #define be32toh(x)  _byteswap_ulong (x)
@@ -63,6 +59,17 @@
   #define CLOCK_MONOTONIC 0
   #endif
 
+  /* Missing in older Visual-C.
+   * Not sure about the '_MSC_VER' value.
+   * Also for 'clang-cl' when '-fms-compatibility-version=18' is used.
+   */
+  #if (_MSC_VER <= 1800)
+    struct timespec {
+        time_t tv_sec;   /* Seconds - >= 0 */
+        long   tv_nsec;  /* Nanoseconds - [0, 999999999] */
+    };
+  #endif
+
   int asprintf  (char **buf, const char *fmt, ...);
   int vasprintf (char **buf, const char *fmt, va_list args);
 
@@ -72,7 +79,7 @@
   #define clock_gettime(id, tp) loc_clock_gettime (id, tp)
   #define memory(what, p1, p2)  loc_memory (what, p1, p2)
 
-  #if !defined(__clang__) /* Move to 'libloc/msvc-hacks.h'? */
+  #if !defined(__clang__)    /* Move to 'libloc/msvc-hacks.h'? */
     #ifndef __attribute__
     #define __attribute__(x)
     #endif
@@ -83,7 +90,7 @@
      *
      * Returns the number of leading 0-bits in `value`, starting at the most significant bit position.
      */
-    static inline uint32_t __builtin_clz(unsigned long value)
+    static __inline uint32_t __builtin_clz(unsigned long value)
     {
       unsigned long ret = 0;
       if (_BitScanReverse(&ret, value) == 0)
@@ -94,7 +101,7 @@
     /*
      * Returns the number of trailing 0-bits in `value`, starting at the most significant bit position.
      */
-    static inline uint32_t __builtin_ctz(unsigned long value)
+    static __inline uint32_t __builtin_ctz(unsigned long value)
     {
       unsigned long ret = 0;
       if (_BitScanForward(&ret, value) == 0)

@@ -395,7 +395,7 @@ static int loc_database_write_as_section(struct loc_writer* writer,
 	DEBUG(writer->ctx, "AS section starts at %jd bytes\n", (intmax_t)*offset);
 	header->as_offset = htobe32(*offset);
 
-	struct loc_database_as_v1 block = {};
+	struct loc_database_as_v1 block = { 0 };
 	size_t block_length = 0;
 	int r;
 
@@ -567,7 +567,7 @@ static int loc_database_write_networks(struct loc_writer* writer,
 
 	uint32_t network_index = 0;
 
-	struct loc_database_network_v1 db_network = {};
+	struct loc_database_network_v1 db_network = { 0 };
 
 	// The nodes that we have to write next
 	struct node nodes[NODE_STACK_SIZE];
@@ -579,7 +579,7 @@ static int loc_database_write_networks(struct loc_writer* writer,
 	size_t tree_size = 0;
 
 	// The data of all networks
-	struct network_data networks = {};
+	struct network_data networks = { 0 };
 
 	// Cleanup the tree before writing it
 	r = loc_network_tree_cleanup(writer->networks);
@@ -729,7 +729,7 @@ static int loc_database_write_countries(struct loc_writer* writer,
 	const size_t countries_count = loc_country_list_size(writer->country_list);
 	int r;
 
-	struct loc_database_country_v1 block = {};
+	struct loc_database_country_v1 block = { 0 };
 	size_t block_length = 0;
 
 	for (unsigned int i = 0; i < countries_count; i++) {
@@ -887,11 +887,11 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 
 	DEBUG(writer->ctx, "Writing database in version %u\n", version);
 
-	struct loc_database_magic magic = {};
+	struct loc_database_magic magic = { 0 };
 	make_magic(writer, &magic, version);
 
 	// Make the header
-	struct loc_database_header_v1 header = {};
+	struct loc_database_header_v1 header = { 0 };
 	header.vendor      = htobe32(writer->vendor);
 	header.description = htobe32(writer->description);
 	header.license     = htobe32(writer->license);

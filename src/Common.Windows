@@ -139,11 +139,48 @@ ifeq ($(CC),cl)
   #
   ifeq ($(VCVARS_VER),110)
     #
-    # For Visual-Studio 2013 (32-bit only):
+    # For Visual-Studio 2013 (x86 / x64 / ARM):
     #
     MSVC_ROOT = $(realpath $(VC_OLD_ROOT))
-    _CC       = $(MSVC_ROOT)/bin/cl.exe
-    CFLAGS   += -Dinline=__inline
+
+    #
+    # It does not have '-PD -Zc:preprocessor'
+    #
+    USE_PP_DEBUG = 0
+
+    #
+    # Assumed 'MSVC_ROOT' layout for the various 'cl' compilers:
+    #   $(MSVC_ROOT)/bin/amd64/cl.exe
+    #   $(MSVC_ROOT)/bin/amd64_arm/cl.exe
+    #   $(MSVC_ROOT)/bin/amd64_x86/cl.exe
+    #   $(MSVC_ROOT)/bin/x86_amd64/cl.exe
+    #   $(MSVC_ROOT)/bin/x86_arm/cl.exe
+    #
+    ifeq ($(CPU),x64)
+      _CC = $(MSVC_ROOT)/bin/amd64/cl.exe
+    else ifeq ($(CPU),x86)
+      _CC = $(MSVC_ROOT)/bin/x86_amd64/cl.exe
+    else
+      $(error Unsupported CPU=$(CPU))
+    endif
+
+    #
+    # It may not support 'inline' (but '__inline')
+    #
+    CFLAGS += -Dinline=__inline
+
+    #
+    # It may not support '__func__' either
+    #
+    CFLAGS += -D__func__=__FUNCTION__
+
+    #
+    # And worst of all, there are many '$(VC_OLD_ROOT)/include' files
+    # (like 'time.h') that shadows the wanted files in WinKit.
+    # Hence this -I-path must be added first to CFLAGS:
+    #
+    # CFLAGS += -I$(realpath $(WindowsSdkDir))/include/$(WindowsSdkVer)/ucrt
+
   else
     #
     # For Visual-Studio 2017+:
@@ -160,8 +197,19 @@ else ifeq ($(CC),clang-cl)
   #
   _CC = $(CLANG$(BITS)_ROOT)/bin/clang-cl.exe
 
-  CFLAGS += -fms-compatibility     \
-            -ferror-limit=5        \
+  #
+  # We must use the same '_MSC_VER' value for 'clang-cl' too
+  #
+  ifeq ($(VCVARS_VER),110)
+    CFLAGS += -fms-compatibility-version=18
+  else
+    #
+    # Assumes any '_MSC_VER' version?
+    #
+    CFLAGS += -fms-compatibility
+  endif
+
+  CFLAGS += -ferror-limit=5        \
             -fno-color-diagnostics \
             -Wno-unused-command-line-argument
 

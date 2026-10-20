@@ -25,10 +25,11 @@ CFLAGS += -I./src            \
           -I./dynasm         \
           -I./$(OBJ_DIR)     \
           -DLJ_ARCH_HASFPU=1 \
-          -DLUA_USE_ASSERT
+          -DLUA_USE_ASSERT   \
+          -D_CRT_STDIO_INLINE=__declspec(dllexport)__inline
 
 ifeq ($(CC),cl)
-  CFLAGS += -wd4005 -wd4244 -wd5287
+  CFLAGS += -wd4005 -wd4244
 else
   CFLAGS += -Wno-macro-redefined
 endif
@@ -248,7 +249,7 @@ $(LJ_DLL): $(DYNAMIC_OBJ) $(OBJ_DIR)/lj_vm.obj $(OBJ_DIR)/luajit-$(CPU).res | bi
 	$(call link_DLL, $@, $^, $(LJ_IMP_LIB))
 
 $(LUAJIT_LIB): $(STATIC_OBJ) $(OBJ_DIR)/lj_vm.obj | lib
-	$(call create_static_lib, $@, $^)
+	$(call create_static_lib, $@, -ignore:4221 $^)
 
 ifeq ($(CC)-$(USE_MP_COMPILE),cl-1)
   $(DYNAMIC_OBJ): $(ALL_SRC) | $(OBJ_DIR)/dynamic

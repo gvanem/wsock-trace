@@ -376,7 +376,7 @@ static int loc_database_check_magic(struct loc_database_file* db) {
 	Maps the entire database into memory
 */
 static int loc_database_mmap(struct loc_database_file* db) {
-	struct stat stat = {};
+	struct stat stat = { 0 };
 	int fd = -EBADF;
 	int r;
 
@@ -878,7 +878,7 @@ static struct loc_database_file* loc_database_file_unref(struct loc_database_fil
 	a handful of nanoseconds and never has to ask the kernel.
 */
 static inline long loc_database_now(void) {
-	struct timespec now = {};
+	struct timespec now = { 0 };
 
 #ifdef CLOCK_MONOTONIC_COARSE
 	clock_gettime(CLOCK_MONOTONIC_COARSE, &now);
@@ -1088,7 +1088,7 @@ ERROR:
 LOC_EXPORT int loc_database_reload(struct loc_database* db) {
 	struct loc_database_file* file = NULL;
 	struct loc_database_file* old = NULL;
-	struct stat st = {};
+	struct stat st = { 0 };
 	FILE* f = NULL;
 	int r;
 
@@ -1212,7 +1212,7 @@ LOC_EXPORT struct loc_database* loc_database_unref(struct loc_database* db) {
 static int loc_database_file_verify(struct loc_database_file* db, FILE* f) {
 	const struct loc_database_magic* magic =
 		(const struct loc_database_magic*)db->data;
-	struct loc_database_header_v1 header_v1 = {};
+	struct loc_database_header_v1 header_v1 = { 0 };
 	char* p = db->data;
 	size_t l = db->length;
 	int r;

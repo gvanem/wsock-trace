@@ -68,7 +68,7 @@ INSTALL_ROOT = $(VSINSTALLDIR)
 #
 CC      = cl.exe
 CFLAGS  = -nologo $(CFLAGS) -I. -I$(LIBLOC_SRC) \
-          -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
+          -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0602
 LDFLAGS = -nologo -debug -incremental:no -subsystem:console -verbose \
           -machine:$(CPU) -nodefaultlib:uuid.lib
 
@@ -80,6 +80,13 @@ _D = _d
 !else
 CFLAGS = $(CFLAGS) -MD -Ot -Gs
 _D =
+!endif
+
+#
+# Support for old Visual-Studio 2013:
+#
+!if "$(VCVARS_VER)" != ""
+CFLAGS = $(CFLAGS) -D__func__=__FUNCTION__ -Dinline=__inline
 !endif
 
 !if "$(USE_LUAJIT)" == "1"
@@ -275,16 +282,20 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = -DENABLE_DEBUG                                  \
-                -DUSE_WSOCK_TRACE                               \
-                -I$(LIBLOC_SRC)/libloc/windows                  \
-                -I$(LIBLOC_SRC)/fake-OpenSSL                    \
-                -FI$(LIBLOC_SRC)/fake-OpenSSL/openssl/applink.c \
-                -wd4018 -wd4100 -wd4101 -wd4115 -wd4146         \
-                -wd4152 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
+LIBLOC_CFLAGS = \
+  -DENABLE_DEBUG                 \
+  -DUSE_WSOCK_TRACE              \
+  -Dinline=__inline              \
+  -I$(LIBLOC_SRC)/libloc/windows \
+  -I$(LIBLOC_SRC)/fake-OpenSSL   \
+  -FI$(LIBLOC_SRC)/fake-OpenSSL/openssl/applink.c \
+  -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 -wd4152 \
+  -wd4189 -wd4201 -wd4244 -wd4267 -wd4311 -wd4702
 
 {$(LIBLOC_SRC)}.c{$(OBJ_DIR)}.obj:
-	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo./$*.obj $<
+	$(CC) -c -Fo./$*.obj $< @<<
+          $(CFLAGS) $(LIBLOC_CFLAGS)
+<<
 	@echo
 
 MHOOK_CFLAGS = $(CFLAGS) -DUSE_TRACE
