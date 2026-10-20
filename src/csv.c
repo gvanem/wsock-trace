@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 
 #include "common.h"
 #include "init.h"
@@ -1486,7 +1485,7 @@ FILE *CSV_fopen_excl (const char *file, const char *mode)
   open_flags |= _O_SEQUENTIAL;
 #endif
 
-  fd = _sopen (file, open_flags, SH_DENYWR, share_flags);
+  fd = _sopen (file, open_flags, _SH_DENYWR, share_flags);
   if (fd <= -1)
      return (NULL);
   return fdopen (fd, mode);
