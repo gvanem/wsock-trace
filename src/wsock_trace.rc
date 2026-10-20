@@ -13,8 +13,8 @@
 
 /* LANGUAGE 0x09,0x01 */
 
-#define RC_VERSION  0,3,8,0
-#define RC_VER_STR "0.3.8"
+#define RC_VERSION  0,4,0,0
+#define RC_VER_STR "0.4.0"
 
 #if defined(__INTEL_LLVM_COMPILER)
   #define RC_BUILDER  "Intel oneAPI"
@@ -106,7 +106,7 @@ BEGIN
       VALUE "ProductName",      RC_DLL_NAME ".dll Dynamic library"
       VALUE "ProductVersion",   RC_VER_STR
       VALUE "LegalCopyright",   "This library carries a BSD-style licence.\r\n"
-                                "\t\t\tCopyright 2012-2025, Gisle Vanem <gvanem@yahoo.no>."
+                                "\t\t\tCopyright 2012-2026, Gisle Vanem <gvanem@yahoo.no>."
     END
   END
 
