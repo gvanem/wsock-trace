@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <time.h>
 
 #include <libloc/libloc.h>
 #include <libloc/network.h>
@@ -32,6 +33,9 @@ extern "C" {
 
 struct loc_database;
 int loc_database_new(struct loc_ctx* ctx, struct loc_database** database, FILE* f);
+int loc_database_open(struct loc_ctx* ctx, struct loc_database** database, const char* path);
+int loc_database_reload(struct loc_database* db);
+int loc_database_set_reload_interval(struct loc_database* db, unsigned int interval);
 struct loc_database* loc_database_ref(struct loc_database* db);
 struct loc_database* loc_database_unref(struct loc_database* db);
 

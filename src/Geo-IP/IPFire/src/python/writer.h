@@ -24,6 +24,9 @@
 typedef struct {
 	PyObject_HEAD
 	struct loc_writer* writer;
+
+	// Set while the database is being written without holding the GIL
+	int busy;
 } WriterObject;
 
 extern PyTypeObject WriterType;

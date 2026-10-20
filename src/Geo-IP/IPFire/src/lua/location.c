@@ -25,7 +25,6 @@
 #include <libloc/libloc.h>
 #include <libloc/network.h>
 #include <libloc/version.h>
-#include <libloc/private.h> /* For '__attribute__' */
 
 #include "location.h"
 #include "as.h"
@@ -57,7 +56,7 @@ static void log_callback(struct loc_ctx* _ctx, void* data, int priority, const c
 	lua_rawgeti(L, LUA_REGISTRYINDEX, log_callback_ref);
 
 	// Pass the priority as first argument
-	lua_pushnumber(L, priority);
+	location_pushinteger(L, priority);
 
 	// Pass the message as second argument
 	lua_pushstring(L, message);
@@ -111,7 +110,7 @@ int luaopen_location(lua_State* L) {
 	r = loc_new(&ctx);
 	if (r)
 		return luaL_error(L,
-			"Could not initialize location context: %s\n", strerror(errno));
+			"Could not initialize location context: %s\n", strerror(-r));
 
 	// Register functions
 	luaL_newlib(L, location_functions);
@@ -146,16 +145,16 @@ int luaopen_location(lua_State* L) {
 	lua_setfield(L, -2, "DATABASE_PATH");
 
 	// Add flags
-	lua_pushnumber(L, LOC_NETWORK_FLAG_ANONYMOUS_PROXY);
+	location_pushinteger(L, LOC_NETWORK_FLAG_ANONYMOUS_PROXY);
 	lua_setfield(L, -2, "NETWORK_FLAG_ANONYMOUS_PROXY");
 
-	lua_pushnumber(L, LOC_NETWORK_FLAG_SATELLITE_PROVIDER);
+	location_pushinteger(L, LOC_NETWORK_FLAG_SATELLITE_PROVIDER);
 	lua_setfield(L, -2, "NETWORK_FLAG_SATELLITE_PROVIDER");
 
-	lua_pushnumber(L, LOC_NETWORK_FLAG_ANYCAST);
+	location_pushinteger(L, LOC_NETWORK_FLAG_ANYCAST);
 	lua_setfield(L, -2, "NETWORK_FLAG_ANYCAST");
 
-	lua_pushnumber(L, LOC_NETWORK_FLAG_DROP);
+	location_pushinteger(L, LOC_NETWORK_FLAG_DROP);
 	lua_setfield(L, -2, "NETWORK_FLAG_DROP");
 
 	return 1;

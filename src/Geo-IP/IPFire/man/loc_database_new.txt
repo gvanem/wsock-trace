@@ -2,43 +2,53 @@
 
 == Name
 
-loc_database_new - Create a new libloc context
+loc_database_new, loc_database_open, loc_database_ref, loc_database_unref,
+loc_database_created_at, loc_database_get_vendor, loc_database_get_description,
+loc_database_get_license - Open a location database
 
 == Synopsis
-[verse]
-
+----
 #include <libloc/libloc.h>
 #include <libloc/database.h>
 
 struct loc_database;
 
-int loc_database_new(struct loc_ctx{empty}* ctx,
-	struct loc_database{empty}*{empty}* database, FILE{empty}* f);
+int loc_database_new(struct loc_ctx* ctx,
+	struct loc_database** database, FILE* f);
+
+int loc_database_open(struct loc_ctx* ctx,
+	struct loc_database** database, const char* path);
 
 Reference Counting:
 
-struct loc_database{empty}* loc_database_ref(struct loc_database{empty}* db);
+struct loc_database* loc_database_ref(struct loc_database* db);
 
-struct loc_database{empty}* loc_database_unref(struct loc_database{empty}* db);
+struct loc_database* loc_database_unref(struct loc_database* db);
 
 Access some data:
 
-time_t loc_database_created_at(struct loc_database{empty}* db);
+time_t loc_database_created_at(struct loc_database* db);
 
-const char{empty}* loc_database_get_vendor(struct loc_database{empty}* db);
+const char* loc_database_get_vendor(struct loc_database* db);
 
-const char{empty}* loc_database_get_description(struct loc_database{empty}* db);
+const char* loc_database_get_description(struct loc_database* db);
 
-const char{empty}* loc_database_get_license(struct loc_database{empty}* db);
+const char* loc_database_get_license(struct loc_database* db);
+----
 
 == Description
 
-loc_database_new() opens a new database from the given file descriptor.
-The file descriptor can be closed after this operation because the function is creating
-its own copy.
+loc_database_new() opens a new database from the given file handle.
+The file handle can be closed after this operation because the function duplicates
+the underlying file descriptor.
 
-If the database could be opened successfully, zero is returned. Otherwise a non-zero
-return code will indicate an error and errno will be set appropriately.
+loc_database_open() opens the database at the given path. A database that has been
+opened like this knows where its file is.
+
+If the database could be opened successfully, zero is returned. Otherwise a negative
+error number (see errno(3)) is returned, for example _-ENOMSG_ if the file is not a
+database, _-ENOTSUP_ if it has a version that is not supported, or _-EFAULT_ if
+parts of it are missing. _errno_ itself is not being set.
 
 Various meta-data about the database can be retrieved with
 loc_database_created_at(), loc_database_get_vendor(), loc_database_get_description(),

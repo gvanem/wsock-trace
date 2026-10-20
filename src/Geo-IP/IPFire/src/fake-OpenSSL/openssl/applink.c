@@ -12,14 +12,19 @@
 #define _CRT_NONSTDC_NO_WARNINGS
 #endif
 
-#include "../../../../../common.h"
-#include "../../../../../inet_addr.h"
+#if 0
+  #include "../../../../../common.h"
+  #include "../../../../../inet_addr.h"
+#else
+  #include "common.h"
+  #include "inet_addr.h"
+#endif
 
 #undef  LIBLOC_PRIVATE
 #define LIBLOC_PRIVATE
 
 /**
- * Avoid the dependency on this OpenSSL function called in libloc.c.
+ * Avoid the dependency on this OpenSSL function called in 'src/libloc.c'.
  * And avoid `WSAStartup()` etc. too.
  */
 #define OpenSSL_add_all_algorithms()    ((void) 0)

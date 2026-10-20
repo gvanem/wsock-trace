@@ -11,6 +11,10 @@ fi
 intltoolize --force --automake
 autoreconf --force --install --symlink
 
+# autoreconf from autoconf before 2.70 does not run intltoolize, but it runs
+# autopoint, which replaces po/Makefile.in.in from intltool with its own
+intltoolize --force --automake
+
 libdir() {
         echo $(cd $1/$(gcc -print-multi-os-directory); pwd)
 }

@@ -1,130 +1,108 @@
 pipeline {
 	agent none
 
+	options {
+		// Only build one commit of a branch at a time. Whatever is being pushed
+		// in the meantime waits, and is then being built together by the next
+		// build. Nothing that has been started is ever being aborted, so that
+		// we can always see what the last build was that has passed.
+		disableConcurrentBuilds()
+	}
+
 	stages {
 		/*
 			Run the build and test suite on various distributions...
 		*/
 		stage("Run Tests on Multiple Distributions") {
-			matrix {
-				axes {
-					axis {
-						name "DISTRO"
-						values \
-							"archlinux:base-devel", \
-							"debian:trixie", \
-							"debian:bookworm", \
-							"fedora:41", \
-							"fedora:42", \
-							"ubuntu:25.04", \
-							"ubuntu:25.10"
-					}
-
-					axis {
-						name "COMPILER"
-						values "gcc", "clang"
-					}
-				}
-
-				agent {
-					docker {
-						image "${DISTRO}"
-
-						// Run as root inside the containers to install dependencies
-						args "-u root"
-
-						customWorkspace "${JOB_NAME}/${BUILD_ID}/${env.DISTRO.replace(":", "-")}/${env.COMPILER}"
-					}
-				}
-
-				stages {
-					stage("Install Dependencies") {
-						steps {
-							script {
-								// Arch Linux
-								if (env.DISTRO.contains("archlinux")) {
-									installBuildDepsArchLinux(env.DISTRO, env.COMPILER)
-
-								// Fedora, etc.
-								} else if (env.DISTRO.contains("fedora")) {
-									installBuildDepsRedHat(env.DISTRO, env.COMPILER)
-
-								// Debian & Ubuntu
-								} else if (env.DISTRO.contains("debian") || env.DISTRO.contains("ubuntu")) {
-									installBuildDepsDebian(env.DISTRO, env.COMPILER, "amd64")
-								}
-							}
-						}
-					}
-
-					stage("Configure") {
-						steps {
-							// Run autogen
-							sh "./autogen.sh"
-
-							// Run ./configure...
-							sh """
-								CC=${env.COMPILER} \
-								./configure \
-									--prefix=/usr \
-									--enable-debug \
-									--enable-lua \
-									--enable-perl
-							"""
-						}
-
-						post {
-							failure {
-								archiveArtifacts artifacts: "config.log",
-									allowEmptyArchive: true
-
-								echo "config.log has been archived"
-							}
-						}
-					}
-
-					stage("Build") {
-						steps {
-							sh "make"
-						}
-					}
-
-					stage("Check") {
-						steps {
-							script {
-								sh "make check"
-							}
-						}
-
-						post {
-							always {
-								// Copy test logs into a special directory
-								sh """
-									mkdir -pv tests/${DISTRO}/${COMPILER}
-									find src tests -name "*.log" | xargs --no-run-if-empty \
-										cp --verbose --parents --target-directory=tests/${DISTRO}/${COMPILER}/
-								"""
-
-								// Archive the logs only if the stage fails
-								archiveArtifacts artifacts: "tests/${DISTRO}/${COMPILER}/**/*"
-
-								echo "The test logs have been archived"
-							}
-						}
-					}
-				}
-
-				// Cleanup the workspace afterwards
-				post {
-					always {
-						cleanWs()
-					}
+			steps {
+				script {
+					runAllTests()
 				}
 			}
 		}
 
 		stage("Coverage Tests") {
 			parallel {
+				/*
+					Run the tests with the address and undefined behavior sanitizers,
+					which fail them on invalid memory accesses and leaks...
+				*/
+				stage("Address Sanitizer") {
+					agent {
+						docker {
+							image "debian:trixie"
+
+							// Run as root inside the containers to install dependencies
+							args "--init --privileged -u root"
+
+							customWorkspace "${JOB_NAME}/${BUILD_ID}/asan"
+						}
+					}
+
+					stages {
+						stage("Install Dependencies") {
+							steps {
+								script {
+									installBuildDepsDebian("trixie", "gcc", "amd64")
+								}
+							}
+						}
+
+						stage("Configure") {
+							steps {
+								sh "./autogen.sh"
+								sh """
+									./configure \
+										--prefix=/usr \
+										--enable-asan \
+										--enable-ubsan \
+										--enable-debug \
+										--enable-lua \
+										--enable-perl
+								"""
+							}
+						}
+
+						stage("Build") {
+							steps {
+								sh "make -j\$(nproc)"
+							}
+						}
+
+						stage("Check") {
+							steps {
+								// Don't let a test that hangs block the agent forever
+								timeout(time: 30, unit: "MINUTES") {
+									sh "make -j\$(nproc) check"
+								}
+							}
+
+							post {
+								failure {
+									// Copy test logs into a special directory
+									sh """
+										mkdir -pv asan
+										find src tests -name "*.log" | xargs --no-run-if-empty \
+											cp --verbose --parents --target-directory=asan/
+									"""
+
+									// Archive the logs only if the stage fails
+									archiveArtifacts artifacts: "asan/**/*"
+
+									echo "The test logs have been archived"
+								}
+							}
+						}
+					}
+
+					// Cleanup the workspace afterwards
+					post {
+						always {
+							cleanupWorkspace()
+						}
+					}
+				}
+
 				/*
 					Run through Clang's Static Analyzer...
 				*/
@@ -182,7 +160,319 @@ pipeline {
 					// Cleanup the workspace afterwards
 					post {
 						always {
-							cleanWs()
+							cleanupWorkspace()
+						}
+					}
+				}
+
+				/*
+					Feed random data to everything that parses something...
+				*/
+				stage("Fuzzing") {
+					agent {
+						docker {
+							image "debian:trixie"
+
+							// Run as root inside the containers to install dependencies
+							args "--init --privileged -u root"
+
+							customWorkspace "${JOB_NAME}/${BUILD_ID}/fuzzing"
+						}
+					}
+
+					stages {
+						stage("Install Dependencies") {
+							steps {
+								script {
+									installBuildDepsDebian("trixie", "clang", "amd64")
+
+									// Install the fuzzing engine
+									sh "apt-get install -y libclang-rt-dev"
+								}
+							}
+						}
+
+						stage("Configure") {
+							steps {
+								sh "./autogen.sh"
+								sh """
+									CC=clang ./configure \
+										--prefix=/usr \
+										--enable-asan \
+										--enable-fuzzing \
+										--enable-debug \
+										--disable-perl
+								"""
+							}
+						}
+
+						stage("Build") {
+							steps {
+								sh "make -j\$(nproc)"
+							}
+						}
+
+						stage("Fuzz") {
+							steps {
+								// Run each fuzzer for a couple of minutes
+								sh "make fuzz FUZZ_TIME=180"
+							}
+
+							post {
+								failure {
+									// Archive whatever made the fuzzers fail
+									archiveArtifacts artifacts: "tests/fuzz/crashes/**/*",
+										allowEmptyArchive: true
+
+									echo "The inputs that made the fuzzers fail have been archived"
+								}
+							}
+						}
+					}
+
+					// Cleanup the workspace afterwards
+					post {
+						always {
+							cleanupWorkspace()
+						}
+					}
+				}
+
+				/*
+					Run the tests in valgrind...
+				*/
+				stage("Valgrind") {
+					agent {
+						docker {
+							image "debian:trixie"
+
+							// Run as root inside the containers to install dependencies
+							args "--init --privileged -u root"
+
+							customWorkspace "${JOB_NAME}/${BUILD_ID}/valgrind"
+						}
+					}
+
+					stages {
+						stage("Install Dependencies") {
+							steps {
+								script {
+									installBuildDepsDebian("trixie", "gcc", "amd64")
+
+									// Install valgrind
+									sh "apt-get install -y valgrind"
+								}
+							}
+						}
+
+						stage("Configure") {
+							steps {
+								sh "./autogen.sh"
+								sh """
+									./configure \
+										--prefix=/usr \
+										--enable-debug \
+										--enable-lua \
+										--enable-perl
+								"""
+							}
+						}
+
+						stage("Build") {
+							steps {
+								sh "make -j\$(nproc)"
+							}
+						}
+
+						stage("Check") {
+							steps {
+								// Don't let a test that hangs block the agent forever
+								timeout(time: 30, unit: "MINUTES") {
+									sh "make -j\$(nproc) check-valgrind"
+								}
+							}
+
+							post {
+								failure {
+									// Copy test logs into a special directory
+									sh """
+										mkdir -pv valgrind
+										find src tests -name "*.log" | xargs --no-run-if-empty \
+											cp --verbose --parents --target-directory=valgrind/
+									"""
+
+									// Archive the logs only if the stage fails
+									archiveArtifacts artifacts: "valgrind/**/*"
+
+									echo "The test logs have been archived"
+								}
+							}
+						}
+					}
+
+					// Cleanup the workspace afterwards
+					post {
+						always {
+							cleanupWorkspace()
+						}
+					}
+				}
+
+				/*
+					Check that the tarball has everything it needs and that
+					we can build outside of the source tree...
+				*/
+				stage("Distribution Check") {
+					agent {
+						docker {
+							image "debian:trixie"
+
+							// Run as root inside the containers to install dependencies
+							args "--init -u root"
+
+							customWorkspace "${JOB_NAME}/${BUILD_ID}/distcheck"
+						}
+					}
+
+					stages {
+						stage("Install Dependencies") {
+							steps {
+								script {
+									installBuildDepsDebian("trixie", "gcc", "amd64")
+
+									// We ask Git whether this is a release
+									sh "apt-get install -y git"
+								}
+							}
+						}
+
+						stage("Configure") {
+							steps {
+								sh "./autogen.sh"
+								sh """
+									./configure \
+										--prefix=/usr \
+										--enable-debug \
+										--enable-lua \
+										--enable-perl
+								"""
+							}
+						}
+
+						stage("Check") {
+							steps {
+								// Don't let a test that hangs block the agent forever
+								timeout(time: 30, unit: "MINUTES") {
+									sh "make -j\$(nproc) distcheck"
+								}
+							}
+						}
+
+						// Keep the tarball that has just been checked. If this is
+						// a release, it is being published later.
+						stage("Source Tarball") {
+							steps {
+								script {
+									archiveSourceTarball()
+								}
+							}
+						}
+					}
+
+					// Cleanup the workspace afterwards
+					post {
+						always {
+							cleanupWorkspace()
+						}
+					}
+				}
+
+				/*
+					Find out how much of the code the tests reach...
+				*/
+				stage("LCOV") {
+					agent {
+						docker {
+							image "debian:trixie"
+
+							// Run as root inside the containers to install dependencies
+							args "--init -u root"
+
+							customWorkspace "${JOB_NAME}/${BUILD_ID}/lcov"
+						}
+					}
+
+					stages {
+						stage("Install Dependencies") {
+							steps {
+								script {
+									installBuildDepsDebian("trixie", "gcc", "amd64")
+
+									// Install lcov
+									sh "apt-get install -y lcov"
+								}
+							}
+						}
+
+						stage("Configure") {
+							steps {
+								sh "./autogen.sh"
+								sh """
+									./configure \
+										--prefix=/usr \
+										--enable-coverage \
+										--enable-debug \
+										--enable-lua \
+										--enable-perl
+								"""
+							}
+						}
+
+						stage("Build") {
+							steps {
+								sh "make -j\$(nproc)"
+							}
+						}
+
+						stage("Check") {
+							steps {
+								// Don't let a test that hangs block the agent forever
+								timeout(time: 30, unit: "MINUTES") {
+									sh "make -j\$(nproc) check || true"
+								}
+							}
+						}
+
+						stage("Publish Report") {
+							steps {
+								// Capture coverage data
+								sh """
+									lcov \
+										--capture \
+										--directory . \
+										--no-external \
+										--ignore-errors inconsistent,inconsistent \
+										--output-file coverage.info
+								"""
+
+								// Generate HTML report
+								sh """
+									genhtml \
+										coverage.info \
+										--ignore-errors inconsistent,corrupt \
+										--output-directory lcov
+								"""
+
+								// Upload the report
+								archiveArtifacts artifacts: "lcov/**/*"
+							}
+						}
+					}
+
+					// Cleanup the workspace afterwards
+					post {
+						always {
+							cleanupWorkspace()
 						}
 					}
 				}
@@ -190,152 +480,28 @@ pipeline {
 		}
 
 		stage("Debian Packages") {
-			// Only build packages when we are in the master branch
-			// when {
-			//	expression {
-			//		env.GIT_BRANCH == "origin/master"
-			//	}
-			// }
-
 			stages {
+				// The packages are being built for all branches, but they are only
+				// being published for the master branch and for releases (see below).
 				stage("Build Debian Packages") {
-					matrix {
-						axes {
-							axis {
-								name "IMAGE"
-								values "debian:trixie", "debian:bookworm"
-							}
-
-							axis {
-								name "ARCH"
-								values "amd64", "arm64", "armel", "armhf", "i386", "ppc64el", "s390x"
-							}
-						}
-
-						agent {
-							docker {
-								image "${IMAGE}"
-
-								// Run as root inside the containers to install dependencies
-								args "-u root"
-
-								customWorkspace "${JOB_NAME}/${BUILD_ID}/${IMAGE.replace(":", "-")}/${ARCH}"
-							}
-						}
-
-						stages {
-							stage("Setup Build Environment") {
-								steps {
-									// Add the architecture
-									sh "dpkg --add-architecture ${env.ARCH}"
-									sh "apt-get update"
-
-									// Install required packages
-									sh """
-										apt-get install -y \
-											apt-utils \
-											build-essential \
-											crossbuild-essential-${env.ARCH} \
-											devscripts \
-											qemu-user-static
-									"""
-								}
-							}
-
-							stage("Install Build Dependencies") {
-								steps {
-									// Install all build dependencies
-									sh "apt-get build-dep -y -a${env.ARCH} ."
-								}
-							}
-
-							stage("Tag") {
-								steps {
-									sh "dch -m \"Jenkins Build ${BUILD_ID}\" -l .build-${BUILD_ID}."
-								}
-							}
-
-							stage("Build") {
-								environment {
-									VERSION = ""
-								}
-
-								steps {
-									// Create the source tarball from the checked out source
-									sh """
-										version="\$(dpkg-parsechangelog --show-field Version | sed "s/-[^-]*\$//")";
-										tar \
-											--create \
-											--verbose \
-											--xz \
-											--file="../libloc_\$version.orig.tar.xz" \
-											--transform="s|^|libloc-\$version/|" \
-											*
-									"""
-
-									// Build the packages
-									sh """
-										dpkg-buildpackage \
-											--host-arch ${env.ARCH} \
-											--build=full
-									"""
-								}
-							}
-
-							stage("Create Repository") {
-								environment {
-									DISTRO = "${IMAGE.replace("debian:", "")}"
-								}
-
-								steps {
-									// Create a repository and generate Packages
-									sh "mkdir -pv \
-										packages/debian/dists/${DISTRO}/main/binary-${ARCH} \
-										packages/debian/dists/${DISTRO}/main/source \
-										packages/debian/pool/${DISTRO}/main/${ARCH}"
-
-									// Copy all packages
-									sh "cp -v ../*.deb packages/debian/pool/${DISTRO}/main/${ARCH}"
-
-									// Generate Packages
-									sh "cd packages/debian && apt-ftparchive packages pool/${DISTRO}/main/${ARCH} \
-										> dists/${DISTRO}/main/binary-${ARCH}/Packages"
-
-									// Compress Packages
-									sh "xz -v9 < packages/debian/dists/${DISTRO}/main/binary-${ARCH}/Packages \
-										> packages/debian/dists/${DISTRO}/main/binary-${ARCH}/Packages.xz"
-
-									// Generate Sources
-									sh "cd packages/debian && apt-ftparchive sources pool/${DISTRO}/main/${ARCH} \
-										> dists/${DISTRO}/main/source/Sources"
-
-									// Compress Sources
-									sh "xz -v9 < packages/debian/dists/${DISTRO}/main/source/Sources \
-										> packages/debian/dists/${DISTRO}/main/source/Sources.xz"
-
-									// Generate Contents
-									sh "cd packages/debian && apt-ftparchive contents pool/${DISTRO}/main/${ARCH} \
-										> dists/${DISTRO}/main/Contents-${ARCH}"
-
-									// Compress Contents
-									sh "xz -v9 < packages/debian/dists/${DISTRO}/main/Contents-${ARCH} \
-										> packages/debian/dists/${DISTRO}/main/Contents-${ARCH}.xz"
-
-									// Stash the packages
-									stash includes: "packages/debian/**/*", name: "${DISTRO}-${ARCH}"
-								}
-							}
-						}
-
-						// Cleanup the workspace afterwards
-						post {
-							always {
-								cleanWs()
-							}
+					steps {
+						script {
+							debianBuildAllPackages()
 						}
 					}
 				}
 
+				/*
+					Signs the packages and publishes them on
+					https://repo.ipfire.org/debian/libloc/
+
+					There are two repositories: "master" gets every build of the
+					master branch, and "stable" only gets what has been built from
+					a tag, which is a release. To use one of them, import the key
+					and add this to /etc/apt/sources.list.d/libloc.list:
+
+					  deb [signed-by=/usr/share/keyrings/libloc.asc] https://repo.ipfire.org/debian/libloc/stable trixie main
+				*/
 				stage("Master Debian Repository") {
 					agent any
 
@@ -350,6 +516,22 @@ pipeline {
 
 						// Our signing key
 						GPG_KEY_ID = "E4D20FA6FAA108D54ABDFC6541836ADF9D5E2AD9"
+					}
+
+					// Only what is in the master branch and releases are being
+					// published. Other branches are there to find out whether
+					// something builds. (There is no name of a branch if this
+					// is not a multibranch job, which then only builds master.)
+					when {
+						beforeAgent true
+
+						anyOf {
+							branch "master"
+							buildingTag()
+							expression {
+								return env.BRANCH_NAME == null
+							}
+						}
 					}
 
 					steps {
@@ -370,22 +552,48 @@ pipeline {
 
 						// Unstash all stashed packages from the matrix build
 						script {
-							for (distro in ["trixie", "bookworm"]) {
-								for (arch in ["amd64", "arm64", "armel", "armhf", "i386", "ppc64el", "s390x"]) {
-									unstash "${distro}-${arch}"
+							// What we have built for each of them
+							def releases = debianReleases()
+
+							for (distro in releases.keySet()) {
+								def suite = debianSuite(distro)
+
+								// The architectures that we have packages for
+								def arches = []
+
+								for (arch in releases[distro]) {
+									try {
+										unstash "${distro}-${arch}"
+
+									// Nothing will have been stashed if the build has failed
+									} catch (e) {
+										if (!debianMayFail(distro))
+											throw e
+
+										echo "Nothing has been built for ${distro} (${arch})"
+										continue
+									}
+
+									arches.add(arch)
 								}
+
+								// Skip a release that has nothing at all
+								if (!arches)
+									continue
+
+								def architectures = arches.join(" ")
 
 								// Create the Release file
 								sh """
 									(
-										echo "Origin: Pakfire Repository"
-										echo "Label: Pakfire Repository"
-										echo "Suite: stable"
+										echo "Origin: libloc Repository"
+										echo "Label: libloc Repository"
+										echo "Suite: ${suite}"
 										echo "Codename: $distro"
 										echo "Version: 1.0"
-										echo "Architectures: amd64 arm64"
+										echo "Architectures: ${architectures}"
 										echo "Components: main"
-										echo "Description: Pakfire Jenkins Repository"
+										echo "Description: libloc Jenkins Repository"
 
 										# Do the rest automatically
 										cd packages/debian && apt-ftparchive release dists/$distro
@@ -428,21 +636,252 @@ pipeline {
 							sh 'kinit -kV -t $KEYTAB jenkins@IPFIRE.ORG'
 						}
 
-						// Publish files
+						// Publish files. There is one repository for what is in the
+						// master branch, which gets every build, and one for releases,
+						// which only gets what has been built from a tag.
 						sh """
-							rsync \
-								--verbose \
-								--recursive \
-								--delete \
-								--delete-excluded \
-								--delay-updates \
-								packages/debian/ \
-								pakfire@fs01.haj.ipfire.org:/pub/mirror/packages/debian/libloc
+							channels="master"
+
+							# This has been built from a tag of its own
+							if [ -n "\${TAG_NAME:-}" ]; then
+								channels="stable"
+
+							# This is the master branch, and what is in it has a tag
+							elif [ -e packages/debian/RELEASE ]; then
+								channels="master stable"
+							fi
+
+							rm -f packages/debian/RELEASE
+
+							for channel in \$channels; do
+								rsync \
+									--verbose \
+									--recursive \
+									--mkpath \
+									--delete \
+									--delete-excluded \
+									--delay-updates \
+									packages/debian/ \
+									pakfire@fs01.haj.ipfire.org:/pub/repo/debian/libloc/\$channel
+							done
 						"""
 
 						// Destroy the Kerberos credentials
 						sh "kdestroy"
 					}
+
+					// Don't leave any keys or tickets behind if anything has failed
+					post {
+						always {
+							sh "rm -rf $GNUPGHOME"
+							sh "kdestroy || :"
+						}
+					}
+				}
+			}
+		}
+
+		stage("Arch Linux Packages") {
+			stages {
+				// The packages are being built for all branches, but they are only
+				// being published for the master branch and for releases (see below).
+				stage("Build Arch Linux Packages") {
+					steps {
+						script {
+							archlinuxBuildPackages()
+						}
+					}
+				}
+
+				/*
+					Signs the packages and publishes them on
+					https://repo.ipfire.org/archlinux/libloc/master/ (and on
+					.../stable/ if this is a release)
+
+					They are being signed with the same key as the packages
+					for Pakfire. To use the repository, import the key and add
+					this to /etc/pacman.conf:
+
+					  [libloc]
+					  Server = https://repo.ipfire.org/archlinux/libloc/stable/$arch
+				*/
+				stage("Master Arch Linux Repository") {
+					agent any
+
+					// We don't need to check out the source for this stage
+					options {
+						skipDefaultCheckout()
+					}
+
+					environment {
+						GNUPGHOME  = "${WORKSPACE}/.gnupg"
+						KRB5CCNAME = "${WORKSPACE}/.krb5cc"
+
+						// The key that signs the packages for Arch Linux
+						ARCHLINUX_GPG_KEY_ID = "04366A42320C4376B1C77B1711FE8DB66A724099"
+					}
+
+					// See "Master Debian Repository"
+					when {
+						beforeAgent true
+
+						anyOf {
+							branch "master"
+							buildingTag()
+							expression {
+								return env.BRANCH_NAME == null
+							}
+						}
+					}
+
+					steps {
+						// Cleanup the workspace
+						cleanWs()
+
+						script {
+							archlinuxPublishPackages()
+						}
+					}
+
+					// Don't leave any keys or tickets behind if anything has failed
+					post {
+						always {
+							sh "rm -rf $GNUPGHOME"
+							sh "kdestroy || :"
+						}
+					}
+				}
+			}
+		}
+
+		stage("RPM Packages") {
+			stages {
+				// The packages are being built for all branches, but they are only
+				// being published for the master branch and for releases (see below).
+				stage("Build RPM Packages") {
+					steps {
+						script {
+							rpmBuildAllPackages()
+						}
+					}
+				}
+
+				/*
+					Signs the packages and publishes them on
+					https://repo.ipfire.org/<distro>/libloc/master/<release>/ (and
+					on .../stable/... if this is a release)
+
+					Fedora, RHEL and openSUSE have a key each, which Jenkins
+					expects as "Secret file" credentials (without a passphrase)
+					called "libloc-rpm-fedora-key", "libloc-rpm-el-key", and
+					"libloc-rpm-opensuse-key". The public key is being published as
+					RPM-GPG-KEY-libloc in each repository. To use one of them on
+					Fedora or RHEL, add this to /etc/yum.repos.d/libloc.repo:
+
+					  [libloc]
+					  name=libloc
+					  baseurl=https://repo.ipfire.org/fedora/libloc/stable/$releasever/
+					  gpgcheck=1
+					  repo_gpgcheck=1
+					  gpgkey=https://repo.ipfire.org/fedora/libloc/stable/$releasever/RPM-GPG-KEY-libloc
+				*/
+				stage("Master RPM Repository") {
+					agent any
+
+					// We don't need to check out the source for this stage
+					options {
+						skipDefaultCheckout()
+					}
+
+					environment {
+						GNUPGHOME  = "${WORKSPACE}/.gnupg"
+						KRB5CCNAME = "${WORKSPACE}/.krb5cc"
+					}
+
+					// See "Master Debian Repository"
+					when {
+						beforeAgent true
+
+						anyOf {
+							branch "master"
+							buildingTag()
+							expression {
+								return env.BRANCH_NAME == null
+							}
+						}
+					}
+
+					steps {
+						// Cleanup the workspace
+						cleanWs()
+
+						script {
+							rpmPublishPackages()
+						}
+					}
+
+					// Don't leave any keys or tickets behind if anything has failed
+					post {
+						always {
+							sh "rm -rf $GNUPGHOME"
+							sh "kdestroy || :"
+						}
+					}
+				}
+			}
+		}
+
+		/*
+			Signs the source tarball of a release and publishes it on
+			https://source.ipfire.org/releases/libloc/
+
+			This is the last stage, so that a release is only being
+			published if everything else has passed.
+		*/
+		stage("Publish Source Tarball") {
+			agent any
+
+			// We don't need to check out the source for this stage
+			options {
+				skipDefaultCheckout()
+			}
+
+			environment {
+				GNUPGHOME  = "${WORKSPACE}/.gnupg"
+				KRB5CCNAME = "${WORKSPACE}/.krb5cc"
+
+				// The key that signs our releases, which is not the one
+				// that signs the package repositories
+				GPG_KEY = "libloc-release-key"
+			}
+
+			// See "Master Debian Repository"
+			when {
+				beforeAgent true
+
+				anyOf {
+					branch "master"
+					buildingTag()
+					expression {
+						return env.BRANCH_NAME == null
+					}
+				}
+			}
+
+			steps {
+				// Cleanup the workspace
+				cleanWs()
+
+				script {
+					publishSourceTarball()
+				}
+			}
+
+			// Don't leave any keys or tickets behind
+			post {
+				always {
+					sh "rm -rf $GNUPGHOME"
+					sh "kdestroy || :"
 				}
 			}
 		}
@@ -450,7 +889,11 @@ pipeline {
 }
 
 // Installs everything we need on RHEL/Fedora/etc.
-def installBuildDepsRedHat(distro, compier) {
+def installBuildDepsRedHat(distro, compiler) {
+	// Ensure the system is up to date
+	sh "dnf upgrade -y"
+
+	// Install development tools
 	sh "dnf group install -y development-tools"
 
 	// Install our own build and runtime dependencies
@@ -473,6 +916,39 @@ def installBuildDepsRedHat(distro, compier) {
 			"perl(Test::More)" \
 			python3-devel \
 			systemd-devel
+	"""
+}
+
+// Installs everything we need on Alpine Linux
+def installBuildDepsAlpine(distro, compiler) {
+	// build-base brings GCC, which also Perl wants to build its module
+	sh """
+		apk add --no-cache \
+			asciidoc \
+			autoconf \
+			automake \
+			bash \
+			build-base \
+			coreutils \
+			docbook-xsl \
+			findutils \
+			gettext \
+			gettext-dev \
+			intltool \
+			libtool \
+			libxslt \
+			linux-headers \
+			pkgconf \
+			${compiler} \
+			\
+			lua5.4 \
+			lua5.4-dev \
+			lua-unit \
+			openssl-dev \
+			perl \
+			perl-dev \
+			python3 \
+			python3-dev
 	"""
 }
 
@@ -511,6 +987,7 @@ def installBuildDepsDebian(distro, compiler, arch) {
 			automake \
 			autopoint \
 			build-essential \
+			docbook-xml \
 			intltool \
 			libtool \
 			pkg-config \
@@ -521,6 +998,864 @@ def installBuildDepsDebian(distro, compiler, arch) {
 			libpython3-dev \
 			libssl-dev \
 			libsystemd-dev \
-			lua-unit
+			lua-unit \
+			lua5.4
 	"""
+}
+
+
+/*
+	Collects the tarball that "make distcheck" has created.
+
+	If the commit that we are building has a tag, this is a release and the
+	tarball is going to be published. The tag has to be the version, as the
+	tarball is being named after what configure.ac says.
+*/
+def archiveSourceTarball() {
+	sh """
+		mkdir -pv source
+
+		cp -v libloc-*.tar.gz source/
+
+		cd source
+
+		# Without Git we would never find out that this is a release
+		if ! command -v git >/dev/null; then
+			echo "git is not installed" >&2
+			exit 1
+		fi
+
+		if tag="\$(git -c safe.directory='*' describe --exact-match --tags HEAD 2>/dev/null)"; then
+			if [ ! -e "libloc-\$tag.tar.gz" ]; then
+				echo "The tag (\$tag) does not match the version of the tarball:" >&2
+				ls >&2
+				exit 1
+			fi
+
+			touch RELEASE
+		fi
+	"""
+
+	// Keep the tarball with the build
+	archiveArtifacts artifacts: "source/libloc-*"
+
+	// Stash it for when it is being published
+	stash includes: "source/**/*", name: "source"
+}
+
+/*
+	Signs the tarball of a release and uploads it together with its
+	signature. Nothing happens if this is not a release.
+
+	A release that has been published is never being changed again.
+*/
+def publishSourceTarball() {
+	unstash "source"
+
+	if (!fileExists("source/RELEASE")) {
+		echo "This is not a release, not publishing the source tarball"
+		return
+	}
+
+	sh "rm -f source/RELEASE"
+
+	// Create the GPG stash directory
+	sh """
+		mkdir -p \$GNUPGHOME
+		chmod 700 \$GNUPGHOME
+	"""
+
+	// Import the GPG key
+	withCredentials([file(credentialsId: "${env.GPG_KEY}", variable: "GPG_KEY_FILE")]) {
+		// Jenkins prefers to have single quotes here so that $GPG_KEY_FILE won't be expanded
+		sh 'gpg --import --batch < $GPG_KEY_FILE'
+	}
+
+	// Sign the tarball. The key that we have just imported is the only one there is.
+	sh """
+		for tarball in source/libloc-*.tar.gz; do
+			gpg --batch \
+				--armor \
+				--detach-sign \
+				--output \$tarball.asc \
+				\$tarball
+		done
+	"""
+
+	// Export the public key, so that the signatures can be verified
+	sh "gpg --batch --armor --export > source/libloc-release-key.asc"
+
+	// Remove the GPG key material as soon as possible
+	sh "rm -rf \$GNUPGHOME"
+
+	// Keep the signature with the build
+	archiveArtifacts artifacts: "source/libloc-*"
+
+	// Fetch a Kerberos ticket
+	withCredentials([file(credentialsId: "jenkins.keytab", variable: "KEYTAB")]) {
+		sh 'kinit -kV -t $KEYTAB jenkins@IPFIRE.ORG'
+	}
+
+	// Publish files
+	sh """
+		rsync \
+			--verbose \
+			--recursive \
+			--mkpath \
+			--ignore-existing \
+			source/ \
+			pakfire@fs01.haj.ipfire.org:/pub/sources/releases/libloc
+	"""
+
+	// Destroy the Kerberos credentials
+	sh "kdestroy"
+}
+
+/*
+	Jenkins compiles everything in the "pipeline" block above into one method,
+	which cannot be larger than 64 kB. A "matrix" is being copied for each of its
+	cells and so we ran out of space with as many distributions and architectures
+	as we build for.
+
+	That is why everything that runs once per distribution, compiler or
+	architecture is down here: the lists of what we build for, and functions
+	that run all of it in parallel.
+*/
+
+/*
+	Removes the workspace of a stage that has been running in a container.
+
+	Whatever has been created in there belongs to root, but the agent runs as
+	an unprivileged user and cannot remove it. cleanWs() does not tell, and
+	leaves everything behind on the agent. That is why we have to remove it
+	from the inside where we are root.
+*/
+def cleanupWorkspace() {
+	sh "find . -xdev -mindepth 1 -delete || :"
+
+	cleanWs()
+}
+
+/*
+	Runs something in a container of its own, with the source checked out.
+
+	Everything gets a workspace of its own which nothing else has ever used,
+	in a directory of its own: the packages for Debian are being written to
+	the directory above the source and must not find anything there that
+	another build has left behind or is writing at the same time.
+*/
+def inContainer(image, name, Closure body) {
+	node {
+		ws("${env.JOB_NAME}/${env.BUILD_ID}/${name}/libloc") {
+			try {
+				checkout scm
+
+				// Run as root inside the containers to install dependencies
+				docker.image(image).inside("-u root") {
+					// Who owns the workspace outside of the container
+					def owner = sh(returnStdout: true, script: "stat -c %u:%g .").trim()
+
+					try {
+						body()
+
+					// Everything that has been created in here belongs to root, which
+					// Jenkins cannot delete, because it does not run as root outside
+					} finally {
+						sh "chown -R ${owner} ."
+					}
+				}
+
+			// Cleanup the workspace afterwards
+			} finally {
+				cleanWs()
+			}
+		}
+	}
+}
+
+// Runs the build and the test suite on all distributions, with all compilers
+def runAllTests() {
+	def distros = [
+		// Alpine Linux uses musl instead of glibc
+		"alpine:latest",
+		"archlinux:base-devel",
+		"debian:forky",
+		"debian:trixie",
+		"debian:bookworm",
+		"fedora:rawhide",
+		"fedora:45",
+		"fedora:44",
+		"ubuntu:26.04",
+		"ubuntu:25.10",
+	]
+
+	def compilers = ["gcc", "clang"]
+
+	def branches = [:]
+
+	for (d in distros) {
+		for (c in compilers) {
+			// These must not change while we are waiting to be run
+			def distro = d
+			def compiler = c
+
+			branches["${distro} (${compiler})"] = {
+				inContainer(distro, "${distro.replace(":", "-")}/${compiler}") {
+					runTests(distro, compiler)
+				}
+			}
+		}
+	}
+
+	parallel branches
+}
+
+// Builds and tests everything on one distribution with one compiler
+def runTests(distro, compiler) {
+	stage("Install Dependencies") {
+		// Alpine Linux
+		if (distro.contains("alpine")) {
+			installBuildDepsAlpine(distro, compiler)
+
+		// Arch Linux
+		} else if (distro.contains("archlinux")) {
+			installBuildDepsArchLinux(distro, compiler)
+
+		// Fedora, etc.
+		} else if (distro.contains("fedora")) {
+			installBuildDepsRedHat(distro, compiler)
+
+		// Debian & Ubuntu
+		} else if (distro.contains("debian") || distro.contains("ubuntu")) {
+			installBuildDepsDebian(distro, compiler, "amd64")
+		}
+	}
+
+	stage("Configure") {
+		try {
+			// Run autogen
+			sh "./autogen.sh"
+
+			// Run ./configure...
+			sh """
+				CC=${compiler} \
+				./configure \
+					--prefix=/usr \
+					--enable-debug \
+					--enable-lua \
+					--enable-perl
+			"""
+
+		// Keep config.log if this has failed
+		} catch (e) {
+			archiveArtifacts artifacts: "config.log",
+				allowEmptyArchive: true
+
+			echo "config.log has been archived"
+
+			throw e
+		}
+	}
+
+	stage("Build") {
+		sh "make"
+	}
+
+	stage("Check") {
+		try {
+			sh "make check"
+
+		// Always keep the logs of the tests
+		} finally {
+			// Copy test logs into a special directory
+			sh """
+				mkdir -pv tests/${distro}/${compiler}
+				find src tests -name "*.log" | xargs --no-run-if-empty \
+					cp --verbose --parents --target-directory=tests/${distro}/${compiler}/
+			"""
+
+			archiveArtifacts artifacts: "tests/${distro}/${compiler}/**/*"
+
+			echo "The test logs have been archived"
+		}
+	}
+}
+
+/*
+	The releases of Debian that we build packages for, and their architectures.
+
+	libloc is part of Debian, so we build for every architecture that each
+	release has, and run the tests for them. Everything but amd64 is being
+	cross-compiled, and the tests are being run in QEMU if the agent is able
+	to do that. See "Architectures" in https://deb.debian.org/debian/dists/
+
+	What we cannot build:
+
+	* bookworm also has armel, mips64el, mipsel and s390x, but it only gets
+	  security updates for the architectures below. The libraries for the
+	  other ones are older than the ones for amd64 and cannot be installed
+	  next to them any more, which is what cross-compiling needs.
+
+	* Debian Ports (alpha, hppa, hurd-amd64, hurd-i386, m68k, powerpc, ppc64,
+	  sh4, sparc64 and x32). Their archive is not in sync with unstable, which
+	  has the same effect, and there are no cross-compilers for hurd-amd64
+	  and x32.
+*/
+def debianReleases() {
+	return [
+		"sid"      : ["amd64", "arm64", "armhf", "i386", "loong64", "ppc64el", "riscv64", "s390x"],
+		"forky"    : ["amd64", "arm64", "armhf", "i386", "loong64", "ppc64el", "riscv64", "s390x"],
+		"trixie"   : ["amd64", "arm64", "armel", "armhf", "i386", "ppc64el", "riscv64", "s390x"],
+		"bookworm" : ["amd64", "arm64", "armhf", "i386", "ppc64el"],
+	]
+}
+
+/*
+	Whether building for a release of Debian may fail without failing the build
+
+	sid changes every day, and some of its packages cannot be installed together
+	every once in a while, until the next upload has fixed it.
+*/
+def debianMayFail(release) {
+	return release == "sid"
+}
+
+// The suite that a release of Debian is in
+def debianSuite(release) {
+	def suites = [
+		"sid"      : "unstable",
+		"forky"    : "testing",
+		"trixie"   : "stable",
+		"bookworm" : "oldstable",
+	]
+
+	return suites[release]
+}
+
+// Builds the packages for all releases of Debian and all of their architectures
+def debianBuildAllPackages() {
+	def releases = debianReleases()
+
+	def branches = [:]
+
+	for (r in releases.keySet()) {
+		for (a in releases[r]) {
+			// These must not change while we are waiting to be run
+			def release = r
+			def arch = a
+
+			branches["${release} (${arch})"] = {
+				if (debianMayFail(release)) {
+					// Only mark the build as unstable, so that everything else is
+					// still being published
+					catchError(buildResult: "UNSTABLE", stageResult: "FAILURE") {
+						inContainer("debian:${release}", "debian-${release}/${arch}") {
+							debianBuildPackages(release, arch)
+						}
+					}
+				} else {
+					inContainer("debian:${release}", "debian-${release}/${arch}") {
+						debianBuildPackages(release, arch)
+					}
+				}
+			}
+		}
+	}
+
+	parallel branches
+}
+
+// Builds the packages for Arch Linux, which we only do on x86_64
+def archlinuxBuildPackages() {
+	inContainer("archlinux:base-devel", "archlinux/x86_64") {
+		stage("Setup Build Environment") {
+			// Ensure that the keyring is always up to date
+			sh "pacman -Sy --needed --noconfirm archlinux-keyring"
+
+			// Install all updates
+			sh "pacman -Syu --needed --noconfirm"
+
+			// makepkg refuses to run as root, so we need an unprivileged
+			// user which is allowed to install the build dependencies
+			sh """
+				useradd --create-home build
+				echo "build ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build
+				chown -R build .
+			"""
+		}
+
+		stage("Build") {
+			sh """
+				su build -c "cd contrib/archlinux && \
+					MAKEFLAGS=-j\$(nproc) makepkg --syncdeps --noconfirm"
+			"""
+		}
+
+		stage("Create Repository") {
+			sh "mkdir -pv packages/archlinux/x86_64"
+
+			// Copy all packages
+			sh "cp -v contrib/archlinux/*.pkg.tar.zst packages/archlinux/x86_64"
+
+			// Create the repository database
+			sh """
+				repo-add \
+					packages/archlinux/x86_64/libloc.db.tar.zst \
+					packages/archlinux/x86_64/*.pkg.tar.zst
+			"""
+
+			// pacman asks for libloc.db and libloc.files, which are
+			// symbolic links. Those do not survive being stashed and
+			// being copied to the server, so we make them files.
+			sh """
+				cd packages/archlinux/x86_64
+
+				for name in libloc.db libloc.files; do
+					rm -f \$name \$name.tar.zst.old
+					cp -v \$name.tar.zst \$name
+				done
+			"""
+
+			// Keep the packages with the build
+			archiveArtifacts artifacts: "packages/archlinux/**/*"
+
+			// Tell whoever publishes this if it is a release
+			sh """
+				if git -c safe.directory='*' describe --exact-match --tags HEAD >/dev/null 2>&1; then
+					touch packages/archlinux/RELEASE
+				fi
+			"""
+
+			// Stash the packages
+			stash includes: "packages/archlinux/**/*", name: "archlinux-x86_64"
+		}
+	}
+}
+
+/*
+	Signs the packages for Arch Linux and uploads them to the repository for
+	the master branch, and to the one for releases if this is one
+*/
+def archlinuxPublishPackages() {
+	// Create the GPG stash directory
+	sh """
+		mkdir -p \$GNUPGHOME
+		chmod 700 \$GNUPGHOME
+	"""
+
+	// Import the GPG key
+	withCredentials([file(credentialsId: "${env.ARCHLINUX_GPG_KEY_ID}", variable: "GPG_KEY_FILE")]) {
+		// Jenkins prefers to have single quotes here so that $GPG_KEY_FILE won't be expanded
+		sh 'gpg --import --batch < $GPG_KEY_FILE'
+	}
+
+	unstash "archlinux-x86_64"
+
+	// pacman wants a detached signature next to every package
+	// and next to the databases, and it does not read ASCII armor
+	sh """
+		for file in packages/archlinux/*/*.pkg.tar.zst \
+				packages/archlinux/*/libloc.db \
+				packages/archlinux/*/libloc.db.tar.zst \
+				packages/archlinux/*/libloc.files \
+				packages/archlinux/*/libloc.files.tar.zst; do
+			gpg --batch \
+				--detach-sign \
+				--no-armor \
+				--local-user ${env.ARCHLINUX_GPG_KEY_ID} \
+				--output \$file.sig \
+				\$file
+		done
+	"""
+
+	// Export the public key
+	sh "gpg --batch --export --armor ${env.ARCHLINUX_GPG_KEY_ID} \
+		> packages/archlinux/${env.ARCHLINUX_GPG_KEY_ID}.asc"
+
+	// Remove the GPG key material as soon as possible
+	sh "rm -rf \$GNUPGHOME"
+
+	// Keep the signatures with the build
+	archiveArtifacts artifacts: "packages/archlinux/**/*"
+
+	// Fetch a Kerberos ticket
+	withCredentials([file(credentialsId: "jenkins.keytab", variable: "KEYTAB")]) {
+		sh 'kinit -kV -t $KEYTAB jenkins@IPFIRE.ORG'
+	}
+
+	// Publish files (see "Master Debian Repository")
+	sh """
+		channels="master"
+
+		# This has been built from a tag of its own
+		if [ -n "\${TAG_NAME:-}" ]; then
+			channels="stable"
+
+		# This is the master branch, and what is in it has a tag
+		elif [ -e packages/archlinux/RELEASE ]; then
+			channels="master stable"
+		fi
+
+		rm -f packages/archlinux/RELEASE
+
+		for channel in \$channels; do
+			rsync \
+				--verbose \
+				--recursive \
+				--mkpath \
+				--delete \
+				--delete-excluded \
+				--delay-updates \
+				packages/archlinux/ \
+				pakfire@fs01.haj.ipfire.org:/pub/repo/archlinux/libloc/\$channel
+		done
+	"""
+
+	// Destroy the Kerberos credentials
+	sh "kdestroy"
+}
+
+/*
+	The distributions that we build RPM packages for, and the repository that
+	they go into, which is https://repo.ipfire.org/<distro>/libloc/<channel>/<release>/
+
+	The release is what dnf and zypper call $releasever, so that one
+	configuration works for all releases of a distribution, except for
+	Tumbleweed, whose $releasever is the date of the snapshot.
+*/
+def rpmReleases() {
+	return [
+		[ image : "fedora:45",           distro : "fedora",   release : "45" ],
+		[ image : "fedora:44",           distro : "fedora",   release : "44" ],
+		[ image : "almalinux:10",        distro : "el",       release : "10" ],
+		[ image : "almalinux:9",         distro : "el",       release : "9" ],
+		[ image : "opensuse/tumbleweed", distro : "opensuse", release : "tumbleweed" ],
+		[ image : "opensuse/leap:16.0",  distro : "opensuse", release : "16.0" ],
+	]
+}
+
+// The distributions that we build RPM packages for
+def rpmDistros() {
+	def distros = []
+
+	for (release in rpmReleases()) {
+		if (!distros.contains(release.distro))
+			distros.add(release.distro)
+	}
+
+	return distros
+}
+
+// Builds the RPM packages for all distributions, which we only do on x86_64
+def rpmBuildAllPackages() {
+	def branches = [:]
+
+	for (r in rpmReleases()) {
+		// This must not change while we are waiting to be run
+		def release = r
+
+		branches["${release.distro}-${release.release}"] = {
+			inContainer(release.image, "rpm/${release.distro}-${release.release}") {
+				rpmBuildPackages(release)
+			}
+		}
+	}
+
+	parallel branches
+}
+
+/*
+	Signs all packages of one release, creates the repository, signs that,
+	too, and exports the public key into it
+*/
+def rpmSignRepository(release) {
+	def repo = "packages/${release.distro}/${release.release}"
+
+	// Create the GPG stash directory
+	sh """
+		mkdir -p \$GNUPGHOME
+		chmod 700 \$GNUPGHOME
+	"""
+
+	// Import the GPG key
+	// Every distribution has a key of its own
+	withCredentials([file(credentialsId: "libloc-rpm-${release.distro}-key", variable: "GPG_KEY_FILE")]) {
+		// Jenkins prefers to have single quotes here so that $GPG_KEY_FILE won't be expanded
+		sh 'gpg --import --batch < $GPG_KEY_FILE'
+	}
+
+	// The key that we have just imported is the only one there is
+	sh """
+		key="\$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr/ { print \$10; exit }')"
+
+		rpmsign --define "_gpg_name \$key" --addsign ${repo}/*.rpm
+
+		createrepo_c ${repo}
+
+		gpg --batch \
+			--armor \
+			--detach-sign \
+			--local-user \$key \
+			--output ${repo}/repodata/repomd.xml.asc \
+			${repo}/repodata/repomd.xml
+
+		# Export the public key
+		gpg --batch --export --armor \$key > ${repo}/RPM-GPG-KEY-libloc
+	"""
+
+	// Remove the GPG key material as soon as possible
+	sh "rm -rf \$GNUPGHOME"
+}
+
+/*
+	Signs the RPM packages, creates a repository for each distribution, signs
+	that, and uploads everything to the repository for the master branch, and
+	to the one for releases if this is one
+*/
+def rpmPublishPackages() {
+	for (release in rpmReleases()) {
+		unstash "rpm-${release.distro}-${release.release}"
+	}
+
+	// The tools for this are not on the host
+	docker.image("fedora:latest").inside("-u root") {
+		sh "dnf install -y createrepo_c gnupg2 rpm-sign"
+
+		for (release in rpmReleases()) {
+			rpmSignRepository(release)
+		}
+
+		// Give everything back to the user that Jenkins runs as
+		sh "chown -R \$(stat -c %u:%g .) packages"
+	}
+
+	// Keep the signed packages with the build
+	archiveArtifacts artifacts: "packages/**/*"
+
+	// Fetch a Kerberos ticket
+	withCredentials([file(credentialsId: "jenkins.keytab", variable: "KEYTAB")]) {
+		sh 'kinit -kV -t $KEYTAB jenkins@IPFIRE.ORG'
+	}
+
+	// Publish files (see "Master Debian Repository")
+	sh """
+		channels="master"
+
+		# This has been built from a tag of its own
+		if [ -n "\${TAG_NAME:-}" ]; then
+			channels="stable"
+
+		# This is the master branch, and what is in it has a tag
+		elif [ -e packages/RELEASE ]; then
+			channels="master stable"
+		fi
+
+		rm -f packages/RELEASE
+
+		for distro in ${rpmDistros().join(" ")}; do
+			for channel in \$channels; do
+				rsync \
+					--verbose \
+					--recursive \
+					--mkpath \
+					--delete \
+					--delete-excluded \
+					--delay-updates \
+					packages/\$distro/ \
+					pakfire@fs01.haj.ipfire.org:/pub/repo/\$distro/libloc/\$channel
+			done
+		done
+	"""
+
+	// Destroy the Kerberos credentials
+	sh "kdestroy"
+}
+
+// Builds the RPM packages for one release of a distribution
+def rpmBuildPackages(release) {
+	def repo = "packages/${release.distro}/${release.release}"
+
+	stage("Install Build Dependencies") {
+		if (release.distro == "opensuse") {
+			sh "zypper --non-interactive install rpm-build git"
+			sh "rpmspec -q --buildrequires contrib/rpm/libloc.spec \
+				| xargs -d '\\n' zypper --non-interactive install"
+
+		} else {
+			// RHEL and its derivatives need EPEL and CodeReady Builder
+			if (release.distro == "el") {
+				sh "dnf install -y epel-release dnf-plugins-core"
+				sh "dnf config-manager --set-enabled crb"
+			}
+
+			sh "dnf install -y rpm-build git"
+			sh "rpmspec -q --buildrequires contrib/rpm/libloc.spec \
+				| xargs -d '\\n' dnf install -y"
+		}
+	}
+
+	stage("Build") {
+		sh "contrib/rpm/build.sh ${repo}"
+	}
+
+	stage("Create Repository") {
+		// Keep the packages with the build
+		archiveArtifacts artifacts: "${repo}/*"
+
+		// Tell whoever publishes this if it is a release
+		sh """
+			if git -c safe.directory='*' describe --exact-match --tags HEAD >/dev/null 2>&1; then
+				touch packages/RELEASE
+			fi
+		"""
+
+		// Stash the packages
+		stash includes: "packages/**/*", name: "rpm-${release.distro}-${release.release}"
+	}
+}
+
+// Builds the packages for one architecture of one release of Debian
+def debianBuildPackages(release, arch) {
+	stage("Setup Build Environment") {
+		// Add the architecture
+		sh "dpkg --add-architecture ${arch}"
+		sh "apt-get update"
+
+		// Install required packages
+		sh """
+			apt-get install -y \
+				apt-utils \
+				build-essential \
+				devscripts \
+				git \
+				qemu-user-static
+		"""
+
+		// Install the compilers. There is no crossbuild-essential
+		// for all architectures, but the compilers that it would
+		// have installed are there.
+		sh """
+			if [ "${arch}" != "\$(dpkg --print-architecture)" ]; then
+				if ! apt-get install -y crossbuild-essential-${arch}; then
+					triplet="\$(dpkg-architecture -a${arch} -qDEB_HOST_GNU_TYPE)"
+
+					apt-get install -y gcc-\$triplet g++-\$triplet dpkg-cross
+				fi
+			fi
+		"""
+	}
+
+	stage("Install Build Dependencies") {
+		// In testing and unstable, a library is not always being rebuilt for
+		// all architectures at the same time, and its documentation then
+		// differs between them. dpkg refuses to install those next to each
+		// other, which is what we have to do. This does not matter to what
+		// we build.
+		sh """
+			options=""
+
+			case "${release}" in
+				sid|forky)
+					options="-o Dpkg::Options::=--force-overwrite"
+					;;
+			esac
+
+			# Tell apt that we are cross-compiling. asciidoc cannot be
+			# installed then, so we cannot build the manual pages.
+			if [ "${arch}" != "\$(dpkg --print-architecture)" ]; then
+				options="\$options -Pcross,nodoc"
+			fi
+
+			apt-get build-dep -y \$options -a${arch} .
+		"""
+	}
+
+	stage("Tag") {
+		// A release has the version that the changelog says. Everything
+		// else has the number of the build appended to that, so that it
+		// is newer than what has been built before.
+		sh """
+			if git -c safe.directory='*' describe --exact-match --tags HEAD >/dev/null 2>&1; then
+				echo "This is a release"
+			else
+				dch -m "Jenkins Build ${env.BUILD_ID}" -l .build-${env.BUILD_ID}.
+			fi
+		"""
+	}
+
+	stage("Build") {
+		// Create the source tarball from the checked out source
+		sh """
+			version="\$(dpkg-parsechangelog --show-field Version | sed "s/-[^-]*\$//")";
+			tar \
+				--create \
+				--verbose \
+				--xz \
+				--file="../libloc_\$version.orig.tar.xz" \
+				--transform="s|^|libloc-\$version/|" \
+				*
+		"""
+
+		// Build the packages
+		sh """
+			options=""
+
+			# Tell dpkg that we are cross-compiling. qemu runs the tests.
+			if [ "${arch}" != "\$(dpkg --print-architecture)" ]; then
+				options="-Pcross,nodoc"
+
+				export DEB_BUILD_OPTIONS="crossbuildcanrunhostbinaries"
+			fi
+
+			dpkg-buildpackage \
+				--host-arch ${arch} \
+				--build=full \
+				\$options
+		"""
+	}
+
+	stage("Create Repository") {
+		// Create a repository and generate Packages
+		sh "mkdir -pv \
+			packages/debian/dists/${release}/main/binary-${arch} \
+			packages/debian/dists/${release}/main/source \
+			packages/debian/pool/${release}/main/${arch}"
+
+		// Copy all packages
+		sh "cp -v ../*.deb packages/debian/pool/${release}/main/${arch}"
+
+		// Generate Packages
+		sh "cd packages/debian && apt-ftparchive packages pool/${release}/main/${arch} \
+			> dists/${release}/main/binary-${arch}/Packages"
+
+		// Compress Packages
+		sh "xz -v9 < packages/debian/dists/${release}/main/binary-${arch}/Packages \
+			> packages/debian/dists/${release}/main/binary-${arch}/Packages.xz"
+
+		// Generate Sources
+		sh "cd packages/debian && apt-ftparchive sources pool/${release}/main/${arch} \
+			> dists/${release}/main/source/Sources"
+
+		// Compress Sources
+		sh "xz -v9 < packages/debian/dists/${release}/main/source/Sources \
+			> packages/debian/dists/${release}/main/source/Sources.xz"
+
+		// Generate Contents
+		sh "cd packages/debian && apt-ftparchive contents pool/${release}/main/${arch} \
+			> dists/${release}/main/Contents-${arch}"
+
+		// Compress Contents
+		sh "xz -v9 < packages/debian/dists/${release}/main/Contents-${arch} \
+			> packages/debian/dists/${release}/main/Contents-${arch}.xz"
+
+		// Tell whoever publishes this if it is a release
+		sh """
+			if git -c safe.directory='*' describe --exact-match --tags HEAD >/dev/null 2>&1; then
+				touch packages/debian/RELEASE
+			fi
+		"""
+
+		// Stash the packages
+		stash includes: "packages/debian/**/*", name: "${release}-${arch}"
+	}
 }

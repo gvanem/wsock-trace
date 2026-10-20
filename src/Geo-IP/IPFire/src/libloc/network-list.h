@@ -31,14 +31,14 @@ struct loc_network* loc_network_list_get(struct loc_network_list* list, size_t i
 int loc_network_list_push(struct loc_network_list* list, struct loc_network* network);
 struct loc_network* loc_network_list_pop(struct loc_network_list* list);
 struct loc_network* loc_network_list_pop_first(struct loc_network_list* list);
-int loc_network_list_remove(struct loc_network_list* list, struct loc_network* network);
 int loc_network_list_contains(struct loc_network_list* list, struct loc_network* network);
 int loc_network_list_merge(struct loc_network_list* self, struct loc_network_list* other);
 
+#ifdef LIBLOC_PRIVATE
+
+int loc_network_list_remove(struct loc_network_list* list, struct loc_network* network);
 void loc_network_list_remove_with_prefix_smaller_than(
 	struct loc_network_list* list, const unsigned int prefix);
-
-#ifdef LIBLOC_PRIVATE
 
 int loc_network_list_summarize(struct loc_ctx* ctx,
 	const struct in6_addr* first, const struct in6_addr* last, struct loc_network_list** list);

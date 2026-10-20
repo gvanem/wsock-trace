@@ -1,9 +1,9 @@
 AC_PREREQ(2.60)
 AC_INIT([libloc],
-        [0.9.18],
+        [0.9.19],
         [location@lists.ipfire.org],
         [libloc],
-        [https://location.ipfire.org/])
+        [https://www.ipfire.org/location/])
 
 AC_CONFIG_SRCDIR([src/libloc.c])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -14,8 +14,6 @@ AM_INIT_AUTOMAKE([
 	-Wno-portability
 	silent-rules
 	tar-pax
-	no-dist-gzip
-	dist-xz
 	subdir-objects
 ])
 AC_PROG_CC
@@ -102,6 +100,32 @@ AS_IF([test "x$enable_debug" = "xyes"], [
         AC_DEFINE(ENABLE_DEBUG, [1], [Debug messages.])
 ])
 
+dnl Switch to enable build with address sanitization
+AC_ARG_ENABLE([asan],
+	AS_HELP_STRING([--enable-asan], [build with -fsanitize=address @<:@default=disabled@:>@]),
+	[],
+	[enable_asan=no]
+)
+
+dnl Switch to enable build with the undefined behavior sanitizer
+AC_ARG_ENABLE([ubsan],
+	AS_HELP_STRING([--enable-ubsan], [build with -fsanitize=undefined @<:@default=disabled@:>@]),
+	[],
+	[enable_ubsan=no]
+)
+
+dnl Switch to build the fuzzers
+AC_ARG_ENABLE([fuzzing],
+	AS_HELP_STRING([--enable-fuzzing], [build the fuzzers (requires clang) @<:@default=disabled@:>@]),
+	[],
+	[enable_fuzzing=no]
+)
+
+dnl Switch to enable build with --coverage
+AC_ARG_ENABLE([coverage],
+	AS_HELP_STRING([--enable-coverage], [build with --coverage @<:@default=disabled@:>@]),
+	[], [enable_coverage=no])
+
 AC_CHECK_HEADERS_ONCE([
 	arpa/inet.h \
 	arpa/nameser.h \
@@ -133,7 +157,12 @@ CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [\
 	-Wall \
 	-Wextra \
 	-Warray-bounds=2 \
+	-Wbad-function-cast \
+	-Wcomma \
 	-Wdate-time \
+	-Wdouble-promotion \
+	-Wduplicated-branches \
+	-Wduplicated-cond \
 	-Wendif-labels \
 	-Werror=format=2 \
 	-Werror=format-signedness \
@@ -148,23 +177,32 @@ CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [\
 	-Werror=return-type \
 	-Werror=shift-count-overflow \
 	-Werror=shift-overflow=2 \
+	-Werror=switch \
 	-Werror=strict-flex-arrays \
 	-Werror=undef \
 	-Wfloat-equal \
+	-Wformat-overflow=2 \
 	-Wimplicit-fallthrough=5 \
 	-Winit-self \
 	-Wlogical-op \
+	-Wloop-analysis \
 	-Wmissing-include-dirs \
 	-Wmissing-noreturn \
 	-Wnested-externs \
+	-Wnull-dereference \
 	-Wold-style-definition \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wshadow \
 	-Wstrict-aliasing=2 \
 	-Wstrict-prototypes \
+	-Wstringop-overflow=4 \
 	-Wsuggest-attribute=noreturn \
+	-Wtautological-compare \
+	-Wtrampolines \
+	-Wunused-const-variable \
 	-Wunused-function \
+	-Wvla \
 	-Wwrite-strings \
 	-Wzero-length-bounds \
 	-Wno-unused-parameter \
@@ -172,10 +210,18 @@ CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [\
 	-fdiagnostics-show-option \
 	-fno-common \
 ])
-CC_CHECK_FLAGS_APPEND([with_ldflags], [LDFLAGS], [\
-	-Wl,--as-needed \
-	-Wl,--gc-sections \
-])
+
+# --as-needed / --gc-sections are GNU ld flags. Apple's ld ignores them with a
+# warning, which the link probe can't detect, so only offer them off-Darwin.
+AS_CASE([$host_os],
+	[darwin*], [],
+	[
+		CC_CHECK_FLAGS_APPEND([with_ldflags], [LDFLAGS], [\
+			-Wl,--as-needed \
+			-Wl,--gc-sections \
+		])
+	]
+)
 
 # Enable -fno-semantic-interposition (if available)
 CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [-fno-semantic-interposition])
@@ -191,6 +237,66 @@ AS_IF([test "x$enable_analyzer" = "xyes"],
 
 AC_SUBST([OUR_CFLAGS], $with_cflags)
 AC_SUBST([OUR_LDFLAGS], $with_ldflags)
+
+dnl Check for support for -fsanitize=address
+if test "x${enable_asan}" = "xyes"; then
+	CC_CHECK_FLAGS_APPEND([asan_cflags],  [CFLAGS],  [-fsanitize=address])
+	CC_CHECK_FLAGS_APPEND([asan_ldflags], [LDFLAGS], [-fsanitize=address])
+fi
+
+dnl Check for support for -fsanitize=undefined
+if test "x${enable_ubsan}" = "xyes"; then
+	CC_CHECK_FLAGS_APPEND([asan_cflags],  [CFLAGS],  [-fsanitize=undefined -fno-sanitize-recover=undefined])
+	CC_CHECK_FLAGS_APPEND([asan_ldflags], [LDFLAGS], [-fsanitize=undefined])
+fi
+
+dnl The fuzzers need everything to be instrumented, but only they are being
+dnl linked against the fuzzing engine (which brings its own main function).
+if test "x${enable_fuzzing}" = "xyes"; then
+	CC_CHECK_FLAGS_APPEND([asan_cflags], [CFLAGS], [-fsanitize=fuzzer-no-link])
+
+	AS_IF([test "x${asan_cflags}" = "x${asan_cflags%fuzzer-no-link}"], [
+		AC_MSG_ERROR([*** The compiler does not support -fsanitize=fuzzer-no-link. Fuzzing requires clang.])
+	])
+
+	CC_CHECK_FLAGS_APPEND([asan_ldflags], [LDFLAGS], [-fsanitize=fuzzer-no-link])
+fi
+
+AM_CONDITIONAL([ENABLE_FUZZING], [test "x${enable_fuzzing}" = "xyes"])
+
+dnl The interpreters of the bindings are not linked against the sanitizers, so
+dnl that their runtime has to be preloaded if we want to load our modules. They
+dnl also leak memory by design, which is why we cannot check for any leaks there.
+bindings_test_env=""
+
+if test "x${enable_asan}" = "xyes"; then
+	asan_runtime="$(${CC} -print-file-name=libasan.so)"
+
+	dnl Clang has a different name for it
+	AS_CASE([${asan_runtime}], [*/*], [], [
+		asan_runtime="$(${CC} -print-file-name=libclang_rt.asan-$(uname -m).so)"
+	])
+
+	bindings_test_env="LD_PRELOAD=${asan_runtime} ASAN_OPTIONS=detect_leaks=0"
+fi
+
+AC_SUBST([BINDINGS_TEST_ENV], ${bindings_test_env})
+
+AC_SUBST([ASAN_CFLAGS], ${asan_cflags})
+AC_SUBST([ASAN_LDFLAGS], ${asan_ldflags})
+
+dnl Check for support for --coverage
+if test "x${enable_coverage}" = "xyes"; then
+	CC_CHECK_FLAGS_APPEND([coverage_cflags],  [CFLAGS],  [--coverage])
+	CC_CHECK_FLAGS_APPEND([coverage_ldflags], [LDFLAGS], [--coverage])
+
+	dnl Count correctly when more than one thread runs the same code
+	CC_CHECK_FLAGS_APPEND([coverage_cflags],  [CFLAGS],  [-fprofile-update=atomic])
+	CC_CHECK_FLAGS_APPEND([coverage_ldflags], [LDFLAGS], [-fprofile-update=atomic])
+fi
+
+AC_SUBST([COVERAGE_CFLAGS],  ${coverage_cflags})
+AC_SUBST([COVERAGE_LDFLAGS], ${coverage_ldflags})
 
 # ------------------------------------------------------------------------------
 
@@ -208,20 +314,22 @@ AC_DEFINE_UNQUOTED([LIBLOC_DEFAULT_DATABASE_PATH], ["${with_database_path}"],
 AC_SUBST([DEFAULT_DATABASE_PATH], [${with_database_path}])
 
 AC_ARG_WITH([systemd],
-	AS_HELP_STRING([--with-systemd], [Enable systemd support.])
+	AS_HELP_STRING([--with-systemd],
+		[install the systemd units that update the database @<:@default=auto@:>@]),
+	[], [with_systemd=auto]
 )
 
-AS_IF([test "x$with_systemd" != "xno"],
-      [PKG_CHECK_MODULES(systemd, [libsystemd],
-      [have_systemd=yes], [have_systemd=no])],
-      [have_systemd=no]
+# The units are only files that we install and we don't need anything from
+# systemd to build. So we only look for it if nobody has told us what to do.
+AS_CASE([$with_systemd],
+	[yes], [have_systemd=yes],
+	[no],  [have_systemd=no],
+	[PKG_CHECK_MODULES([systemd], [libsystemd], [have_systemd=yes], [have_systemd=no])]
 )
 
 AM_CONDITIONAL(HAVE_SYSTEMD, [test "x$have_systemd" = "xyes"])
 
 # ------------------------------------------------------------------------------
-
-AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 
 # Python
 AM_PATH_PYTHON([3.4])
@@ -240,6 +348,12 @@ AS_IF(
 		LUA_VERSION=$($PKG_CONFIG --variable=major_version ${lua})
 		if test -z "${LUA_VERSION}"; then
 			LUA_VERSION=$($PKG_CONFIG --variable=V ${lua})
+		fi
+
+		# Not everybody has those variables (Alpine Linux for example), but
+		# we can always take the first two parts of the version of the package
+		if test -z "${LUA_VERSION}"; then
+			LUA_VERSION=$($PKG_CONFIG --modversion ${lua} | $SED -n 's/^\(@<:@0-9@:>@*\.@<:@0-9@:>@*\).*/\1/p')
 		fi
 
 		# Fail if we could not find anything to link against
@@ -261,7 +375,18 @@ AS_IF(
 		fi
 		AC_SUBST(LUA_INSTALL_CMOD)
 
-		AX_PROG_LUA_MODULES([luaunit], [enable_lua_tests=yes], [AC_MSG_WARN([luaunit is missing, won't run tests])])
+		# The tests are being run by the Lua interpreter of the system that we
+		# are building on, which cannot load a module that we have built for
+		# another architecture.
+		AS_IF([test "x$cross_compiling" = "xyes"], [
+			AC_MSG_WARN([cross-compiling, won't run the Lua tests])
+		], [
+			# The interpreter does not have the same name everywhere
+			AC_CHECK_PROGS([LUA], [lua${LUA_VERSION} lua])
+
+			AX_PROG_LUA_MODULES([luaunit], [enable_lua_tests=yes],
+				[AC_MSG_WARN([luaunit is missing, won't run tests])])
+		])
 	],
 )
 
@@ -322,6 +447,10 @@ AC_MSG_RESULT([
 
         database path:          ${with_database_path}
         debug:                  ${enable_debug}
+        address sanitizer:      ${enable_asan}
+        undefined behavior:     ${enable_ubsan}
+        fuzzing:                ${enable_fuzzing}
+        coverage:               ${enable_coverage}
         systemd support:        ${have_systemd}
 	bash-completion:        ${enable_bash_completion}
 

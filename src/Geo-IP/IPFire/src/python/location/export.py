@@ -219,8 +219,7 @@ class XTGeoIPOutputWriter(OutputWriter):
 	"""
 	mode = "wb"
 
-	@property
-	def tag(self):
+	def _make_tag(self):
 		return self.name
 
 	@property

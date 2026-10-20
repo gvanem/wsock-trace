@@ -31,7 +31,7 @@
 
 struct loc_stringpool {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
 	// Reference to any mapped data
 	const char* data;
@@ -40,44 +40,58 @@ struct loc_stringpool {
 	// Reference to own storage
 	char* blocks;
 	size_t size;
+
+	// A hash table to find the strings that we have added. Slots hold the
+	// offset of a string plus one, or zero if they are free.
+	size_t* slots;
+	size_t num_slots;
+	size_t num_strings;
 };
 
-static int loc_stringpool_grow(struct loc_stringpool* pool, const size_t size) {
-	DEBUG(pool->ctx, "Growing string pool by %zu byte(s)\n", size);
+/*
+	Makes sure that the pool can hold at least length bytes
+*/
+static int loc_stringpool_grow(struct loc_stringpool* pool, const size_t length) {
+	// Nothing to do if we already have enough space
+	if (length <= pool->size)
+		return 0;
 
-	// Increment size
-	pool->size += size;
+	// Allocate entire blocks
+	const size_t blocks = (length + LOC_STRINGPOOL_BLOCK_SIZE - 1) / LOC_STRINGPOOL_BLOCK_SIZE;
+	const size_t size = blocks * LOC_STRINGPOOL_BLOCK_SIZE;
+
+	DEBUG(pool->ctx, "Growing string pool from %zu to %zu byte(s)\n", pool->size, size);
 
 	// Reallocate blocks
-	pool->blocks = realloc(pool->blocks, pool->size);
-	if (!pool->blocks) {
+	char* p = realloc(pool->blocks, size);
+	if (!p) {
 		ERROR(pool->ctx, "Could not grow string pool: %s\n", strerror(errno));
-		return 1;
+		return -ENOMEM;
 	}
 
 	// Update data pointer
-	pool->data = pool->blocks;
+	pool->blocks = p;
+	pool->data   = p;
+	pool->size   = size;
 
 	return 0;
 }
 
 static off_t loc_stringpool_append(struct loc_stringpool* pool, const char* string) {
-	if (!string) {
-		errno = EINVAL;
-		return -1;
-	}
+	int r;
+
+	if (!string)
+		return -EINVAL;
 
 	DEBUG(pool->ctx, "Appending '%s' to string pool at %p\n", string, pool);
 
 	// How much space to we need?
 	const size_t length = strlen(string) + 1;
 
-	// Make sure we have enough space
-	if (pool->length + length > pool->size) {
-		int r = loc_stringpool_grow(pool, LOC_STRINGPOOL_BLOCK_SIZE);
-		if (r)
-			return r;
-	}
+	// Make sure we have enough space, however long the string is
+	r = loc_stringpool_grow(pool, pool->length + length);
+	if (r < 0)
+		return r;
 
 	off_t offset = pool->length;
 
@@ -97,6 +111,8 @@ static void loc_stringpool_free(struct loc_stringpool* pool) {
 	if (pool->blocks)
 		free(pool->blocks);
 
+	free(pool->slots);
+
 	loc_unref(pool->ctx);
 	free(pool);
 }
@@ -104,7 +120,7 @@ static void loc_stringpool_free(struct loc_stringpool* pool) {
 int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool) {
 	struct loc_stringpool* p = calloc(1, sizeof(*p));
 	if (!p)
-		return 1;
+		return -ENOMEM;
 
 	p->ctx = loc_ref(ctx);
 	p->refcount = 1;
@@ -117,6 +133,12 @@ int loc_stringpool_new(struct loc_ctx* ctx, struct loc_stringpool** pool) {
 int loc_stringpool_open(struct loc_ctx* ctx, struct loc_stringpool** pool,
 		const char* data, const size_t length) {
 	struct loc_stringpool* p = NULL;
+
+	// The last string must be terminated or we would read past the end of the pool
+	if (length && data[length - 1]) {
+		ERROR(ctx, "The string pool is not terminated\n");
+		return -EBADMSG;
+	}
 
 	// Allocate a new stringpool
 	int r = loc_stringpool_new(ctx, &p);
@@ -140,13 +162,13 @@ ERROR:
 }
 
 struct loc_stringpool* loc_stringpool_ref(struct loc_stringpool* pool) {
-	pool->refcount++;
+	loc_refcount_inc(&pool->refcount);
 
 	return pool;
 }
 
 struct loc_stringpool* loc_stringpool_unref(struct loc_stringpool* pool) {
-	if (--pool->refcount > 0)
+	if (loc_refcount_dec(&pool->refcount) > 0)
 		return NULL;
 
 	loc_stringpool_free(pool);
@@ -169,41 +191,97 @@ size_t loc_stringpool_get_size(struct loc_stringpool* pool) {
 	return pool->length;
 }
 
-static off_t loc_stringpool_find(struct loc_stringpool* pool, const char* s) {
-	if (!s || !*s) {
-		errno = EINVAL;
-		return -1;
+static size_t loc_stringpool_hash(const char* s) {
+	size_t hash = 2166136261u;
+
+	// FNV-1a
+	for (const unsigned char* p = (const unsigned char*)s; *p; p++) {
+		hash ^= *p;
+		hash *= 16777619u;
 	}
 
-	off_t offset = 0;
-	while (offset < pool->length) {
-		const char* string = loc_stringpool_get(pool, offset);
-
-		// Error!
-		if (!string)
-			return 1;
-
-		// Is this a match?
-		if (strcmp(s, string) == 0)
-			return offset;
-
-		// Shift offset
-		offset += strlen(string) + 1;
-	}
-
-	// Nothing found
-	errno = ENOENT;
-	return -1;
+	return hash;
 }
 
-off_t loc_stringpool_add(struct loc_stringpool* pool, const char* string) {
-	off_t offset = loc_stringpool_find(pool, string);
-	if (offset >= 0) {
-		DEBUG(pool->ctx, "Found '%s' at position %jd\n", string, (intmax_t)offset);
-		return offset;
+// Returns the slot that holds the string, or the free slot where it belongs
+static size_t* loc_stringpool_slot(struct loc_stringpool* pool, const char* s) {
+	size_t i = loc_stringpool_hash(s) & (pool->num_slots - 1);
+
+	for (;;) {
+		size_t* slot = &pool->slots[i];
+
+		if (!*slot)
+			return slot;
+
+		if (strcmp(pool->data + *slot - 1, s) == 0)
+			return slot;
+
+		i = (i + 1) & (pool->num_slots - 1);
+	}
+}
+
+static int loc_stringpool_grow_slots(struct loc_stringpool* pool) {
+	size_t num_slots = 1024;
+
+	if (pool->num_slots)
+		num_slots = pool->num_slots * 2;
+
+	size_t* slots = calloc(num_slots, sizeof(*slots));
+	if (!slots)
+		return -ENOMEM;
+
+	size_t* old_slots = pool->slots;
+	const size_t old_num_slots = pool->num_slots;
+
+	pool->slots = slots;
+	pool->num_slots = num_slots;
+
+	// Put all strings into the new slots
+	for (size_t i = 0; i < old_num_slots; i++) {
+		if (old_slots[i])
+			*loc_stringpool_slot(pool, pool->data + old_slots[i] - 1) = old_slots[i];
 	}
 
-	return loc_stringpool_append(pool, string);
+	free(old_slots);
+
+	return 0;
+}
+
+/*
+	Adds a string, unless it is already in the pool, and returns its offset.
+
+	Only strings that have been added can be found, so that this only works for
+	pools that have been created with loc_stringpool_new().
+*/
+off_t loc_stringpool_add(struct loc_stringpool* pool, const char* string) {
+	int r;
+
+	if (!string)
+		return -EINVAL;
+
+	// Keep at least half of the slots free
+	if (pool->num_strings * 2 >= pool->num_slots) {
+		r = loc_stringpool_grow_slots(pool);
+		if (r)
+			return r;
+	}
+
+	size_t* slot = loc_stringpool_slot(pool, string);
+
+	// We have this one already
+	if (*slot) {
+		DEBUG(pool->ctx, "Found '%s' at position %zu\n", string, *slot - 1);
+		return *slot - 1;
+	}
+
+	off_t offset = loc_stringpool_append(pool, string);
+	if (offset < 0)
+		return offset;
+
+	*slot = offset + 1;
+	pool->num_strings++;
+
+	return offset;
 }
 
 void loc_stringpool_dump(struct loc_stringpool* pool) {

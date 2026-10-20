@@ -53,4 +53,19 @@ static inline void luaL_newlib(lua_State* L, const luaL_Reg* l) {
 
 #endif /* Lua < 5.2 */
 
+#include <stdint.h>
+
+/*
+	Pushes a whole number as an integer where Lua has 64 bit integers (5.3 and later).
+	Before, lua_Integer only has 32 bits on 32 bit systems, which AS numbers and times
+	do not fit into, but a lua_Number can hold them exactly.
+*/
+static inline void location_pushinteger(lua_State* L, int64_t n) {
+#if LUA_VERSION_NUM >= 503
+	lua_pushinteger(L, (lua_Integer)n);
+#else
+	lua_pushnumber(L, (lua_Number)n);
+#endif
+}
+
 #endif /* LUA_LOCATION_COMPAT_H */

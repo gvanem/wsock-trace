@@ -21,19 +21,18 @@
   #include <stdlib.h>
   #include <sys/types.h>
   #include <winsock2.h>
-  #include <ws2tcpip.h>
   #include <windns.h>
   #include <libloc/compat.h>
 
+  #if defined(LIBLOC_UNDEF_ERROR)
+    /*
+     * An enum-value in Windows. Used as a label in some .c-files.
+     */
+    #undef ERROR
+  #endif
 #else
   #include <arpa/inet.h>
   #include <netinet/in.h>
-#endif
-
-#if defined(LIBLOC_LUAJIT_HACKS)
-  #include <lua.h>
-  #include <lauxlib.h>
-  #include <libloc/luajit-hacks.h>
 #endif
 
 #include <stdarg.h>
@@ -59,7 +58,8 @@ typedef void (*loc_log_callback)(
 	va_list args);
 void loc_set_log_callback(struct loc_ctx* ctx, loc_log_callback callback, void* data);
 
-void loc_set_log_fn(struct loc_ctx* ctx,
+// This function has no effect, use loc_set_log_callback() instead
+void __attribute__((deprecated("use loc_set_log_callback()"))) loc_set_log_fn(struct loc_ctx* ctx,
 	void (*log_fn)(struct loc_ctx* ctx,
 	int priority, const char* file, int line, const char* fn,
 	const char* format, va_list args));

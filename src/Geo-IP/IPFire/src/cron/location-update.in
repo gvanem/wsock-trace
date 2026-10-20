@@ -17,5 +17,10 @@
 #                                                                             #
 ###############################################################################
 
+# If systemd is running, the timer is doing this
+if [ -d /run/systemd/system ]; then
+	exit 0
+fi
+
 # Call the location database updater
 exec @bindir@/location update

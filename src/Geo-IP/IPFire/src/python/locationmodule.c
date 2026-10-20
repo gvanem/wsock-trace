@@ -15,7 +15,9 @@
 */
 
 #include <Python.h>
+#include <errno.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include <libloc/format.h>
 #include <libloc/resolv.h>
@@ -43,6 +45,87 @@ static void location_free(void) {
 		loc_unref(loc_ctx);
 }
 
+PyObject* location_raise(int r) {
+	// The library returns negative error numbers
+	if (r < 0)
+		errno = -r;
+	else
+		errno = EIO;
+
+	return PyErr_SetFromErrno(PyExc_OSError);
+}
+
+PyObject* location_string(const char* s) {
+	if (!s)
+		Py_RETURN_NONE;
+
+	return PyUnicode_FromString(s);
+}
+
+int location_string_arg(PyObject* value, const char** s, int nullable) {
+	// The attribute is being deleted or set to None
+	if (!value || value == Py_None) {
+		if (!nullable) {
+			PyErr_SetString(PyExc_TypeError, "This attribute cannot be removed");
+			return -1;
+		}
+
+		*s = NULL;
+		return 0;
+	}
+
+	if (!PyUnicode_Check(value)) {
+		PyErr_Format(PyExc_TypeError, "Expected a string, got %s", Py_TYPE(value)->tp_name);
+		return -1;
+	}
+
+	*s = PyUnicode_AsUTF8(value);
+	if (!*s)
+		return -1;
+
+	return 0;
+}
+
+FILE* location_fopen(PyObject* object) {
+	FILE* f = NULL;
+
+	int fd = PyObject_AsFileDescriptor(object);
+	if (fd < 0)
+		return NULL;
+
+	// The file descriptor belongs to the file object and
+	// would be closed with the stream if we did not copy it.
+	fd = dup(fd);
+	if (fd < 0) {
+		PyErr_SetFromErrno(PyExc_OSError);
+		return NULL;
+	}
+
+	f = fdopen(fd, "r");
+	if (!f) {
+		PyErr_SetFromErrno(PyExc_OSError);
+		close(fd);
+	}
+
+	return f;
+}
+
+int location_parse_asn(PyObject* object, void* number) {
+	// AS numbers are unsigned and do not fit into an int
+	unsigned long n = PyLong_AsUnsignedLong(object);
+	if (n == (unsigned long)-1 && PyErr_Occurred())
+		return 0;
+
+	if (n > UINT32_MAX) {
+		PyErr_SetString(PyExc_OverflowError, "AS number is out of range");
+		return 0;
+	}
+
+	*(uint32_t*)number = n;
+
+	return 1;
+}
+
 static PyObject* set_log_level(PyObject* m, PyObject* args) {
 	int priority = LOG_INFO;
 
@@ -61,8 +144,12 @@ static PyObject* discover_latest_version(PyObject* m, PyObject* args) {
 		return NULL;
 
 	time_t t = 0;
+	int r;
 
-	int r = loc_discover_latest_version(loc_ctx, version, &t);
+	// Waiting for the DNS can take a while
+	Py_BEGIN_ALLOW_THREADS
+	r = loc_discover_latest_version(loc_ctx, version, &t);
+	Py_END_ALLOW_THREADS
 	if (r)
 		Py_RETURN_NONE;
 

@@ -33,7 +33,7 @@
 
 struct loc_as {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
 	uint32_t number;
 	char* name;
@@ -42,7 +42,7 @@ struct loc_as {
 LOC_EXPORT int loc_as_new(struct loc_ctx* ctx, struct loc_as** as, uint32_t number) {
 	struct loc_as* a = calloc(1, sizeof(*a));
 	if (!a)
-		return 1;
+		return -ENOMEM;
 
 	a->ctx = loc_ref(ctx);
 	a->refcount = 1;
@@ -57,7 +57,7 @@ LOC_EXPORT int loc_as_new(struct loc_ctx* ctx, struct loc_as** as, uint32_t numb
 }
 
 LOC_EXPORT struct loc_as* loc_as_ref(struct loc_as* as) {
-	as->refcount++;
+	loc_refcount_inc(&as->refcount);
 
 	return as;
 }
@@ -73,7 +73,7 @@ static void loc_as_free(struct loc_as* as) {
 }
 
 LOC_EXPORT struct loc_as* loc_as_unref(struct loc_as* as) {
-	if (--as->refcount > 0)
+	if (loc_refcount_dec(&as->refcount) > 0)
 		return NULL;
 
 	loc_as_free(as);
@@ -90,13 +90,19 @@ LOC_EXPORT const char* loc_as_get_name(struct loc_as* as) {
 }
 
 LOC_EXPORT int loc_as_set_name(struct loc_as* as, const char* name) {
+	char* n = NULL;
+
+	// Copy the name before we let go of the old one
+	if (name) {
+		n = strdup(name);
+		if (!n)
+			return -ENOMEM;
+	}
+
 	if (as->name)
 		free(as->name);
 
-	if (name)
-		as->name = strdup(name);
-	else
-		as->name = NULL;
+	as->name = n;
 
 	return 0;
 }
@@ -123,6 +129,8 @@ int loc_as_new_from_database_v1(struct loc_ctx* ctx, struct loc_stringpool* pool
 	r = loc_as_set_name(*as, name);
 	if (r) {
 		loc_as_unref(*as);
+		*as = NULL;
+
 		return r;
 	}
 
@@ -135,6 +143,9 @@ int loc_as_to_database_v1(struct loc_as* as, struct loc_stringpool* pool,
 
 	// Save the name string in the string pool
 	off_t name = loc_stringpool_add(pool, as->name ? as->name : "");
+	if (name < 0)
+		return name;
+
 	dbobj->name = htobe32(name);
 
 	return 0;
@@ -147,7 +158,7 @@ int loc_as_match_string(struct loc_as* as, const char* string) {
 
 	// Cannot match anything when name is not set
 	if (!as->name)
-		return 1;
+		return 0;
 
 	// Search if string is in name
 	if (strcasestr(as->name, string) != NULL)

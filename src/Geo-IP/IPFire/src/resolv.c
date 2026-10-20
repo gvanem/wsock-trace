@@ -14,6 +14,7 @@
 	Lesser General Public License for more details.
 */
 
+#include <errno.h>
 #include <string.h>
 #include <time.h>
 
@@ -40,7 +41,7 @@ static int parse_timestamp(const unsigned char* txt, time_t* t) {
     // Otherwise we reset t
     } else {
         *t = 0;
-        return -1;
+        return -EBADMSG;
     }
 
     return 0;
@@ -53,7 +54,7 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
     int r = res_init();
     if (r) {
         ERROR(ctx, "res_init() failed\n");
-        return r;
+        return -EIO;
     }
 
     // Make domain
@@ -67,9 +68,20 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
 
     // Send a query
     if ((len = res_query(domain, C_IN, T_TXT, answer, sizeof(answer))) < 0 || len > PACKETSZ) {
-        ERROR(ctx, "Could not query %s: \n", domain);
+        ERROR(ctx, "Could not query %s: %s\n", domain, hstrerror(h_errno));
 
-        return -1;
+        // Tell the caller whether it is worth trying again
+        switch (h_errno) {
+            case TRY_AGAIN:
+                return -EAGAIN;
+
+            case HOST_NOT_FOUND:
+            case NO_DATA:
+                return -ENOENT;
+
+            default:
+                return -EIO;
+        }
     }
 
     unsigned char* end = answer + len;
@@ -79,7 +91,7 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
     char host[128];
     if ((len = dn_expand(answer, end, payload, host, sizeof(host))) < 0) {
         ERROR(ctx, "dn_expand() failed\n");
-        return -1;
+        return -EBADMSG;
     }
 
     // Payload starts after hostname
@@ -87,14 +99,14 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
 
     if (payload > end - 4) {
         ERROR(ctx, "DNS reply too short\n");
-        return -1;
+        return -EBADMSG;
     }
 
     int type;
     GETSHORT(type, payload);
     if (type != T_TXT) {
         ERROR(ctx, "DNS reply of unexpected type: %d\n", type);
-        return -1;
+        return -EBADMSG;
     }
 
     // Skip class
@@ -108,14 +120,14 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
 
         if ((len = dn_expand(answer, end, payload, host, sizeof(host))) < 0) {
             ERROR(ctx, "dn_expand() failed\n");
-            return -1;
+            return -EBADMSG;
         }
 
         payload += len;
 
         if (payload > end - 10) {
             ERROR(ctx, "DNS reply too short\n");
-            return -1;
+            return -EBADMSG;
         }
 
         // Skip type, class, ttl
@@ -127,18 +139,18 @@ LOC_EXPORT int loc_discover_latest_version(struct loc_ctx* ctx,
         GETSHORT(size, payload);
         if (payload + size < answer || payload + size > end) {
             ERROR(ctx, "DNS RR overflow\n");
-            return -1;
+            return -EBADMSG;
         }
     } while (type == T_CNAME);
 
     if (type != T_TXT) {
         ERROR(ctx, "Not a TXT record\n");
-        return -1;
+        return -EBADMSG;
     }
 
     if (!size || (len = *payload) >= size || !len) {
         ERROR(ctx, "Broken TXT record (len = %d, size = %u)\n", len, size);
-        return -1;
+        return -EBADMSG;
     }
 
     // Get start of the string
@@ -183,7 +195,7 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
   DEBUG(ctx, "Querying %s, DnsQuery_A: data_rec %p: %ld\n", domain, data_rec, rc);
 
   if (rc != ERROR_SUCCESS || !data_rec)
-     return -1;
+     return -EIO;
 
   for (resource_rec = data_rec; resource_rec && !found; resource_rec = resource_rec->pNext)
   {
@@ -205,7 +217,7 @@ LOC_EXPORT int loc_discover_latest_version (struct loc_ctx* ctx,
   if (!found)
   {
     DEBUG(ctx, "No TXT record found\n");
-    return -1;
+    return -ENOENT;
   }
   DEBUG(ctx, "Resolved to: %s\n", answer);
   return parse_timestamp ((const unsigned char*)&answer, t);

@@ -59,8 +59,55 @@
   #define be64toh(x)  _byteswap_uint64 (x)
   #define htobe64(x)  _byteswap_uint64 (x)
 
+  #ifndef CLOCK_MONOTONIC
+  #define CLOCK_MONOTONIC 0
+  #endif
+
   int asprintf  (char **buf, const char *fmt, ...);
   int vasprintf (char **buf, const char *fmt, va_list args);
+
+  int  loc_clock_gettime (int clk_id, struct timespec *tp);
+  void loc_memory (const char *what, const char *path1, const char *path2);
+
+  #define clock_gettime(id, tp) loc_clock_gettime (id, tp)
+  #define memory(what, p1, p2)  loc_memory (what, p1, p2)
+
+  #if !defined(__clang__) /* Move to 'libloc/msvc-hacks.h'? */
+    #ifndef __attribute__
+    #define __attribute__(x)
+    #endif
+
+    /*
+     * Adapted from:
+     *   https://github.com/llvm-mirror/libcxx/blob/9dcbb46826fd4d29b1485f25e8986d36019a6dca/include/support/win32/support.h
+     *
+     * Returns the number of leading 0-bits in `value`, starting at the most significant bit position.
+     */
+    static inline uint32_t __builtin_clz(unsigned long value)
+    {
+      unsigned long ret = 0;
+      if (_BitScanReverse(&ret, value) == 0)
+         return (32);
+      return (uint32_t) (31 - ret);
+    }
+
+    /*
+     * Returns the number of trailing 0-bits in `value`, starting at the most significant bit position.
+     */
+    static inline uint32_t __builtin_ctz(unsigned long value)
+    {
+      unsigned long ret = 0;
+      if (_BitScanForward(&ret, value) == 0)
+         return (32);
+      return (uint32_t) ret;
+    }
+  #endif /* !__clang__ */
+
+  #if defined(LIBLOC_LUAJIT_HACKS)
+    #include <lua.h>
+    #include <lauxlib.h>
+    #include <libloc/luajit-hacks.h>
+  #endif
 
   #if defined(LIBLOC_PRIVATE)
     extern char  *strcasestr (const char *haystack, const char *needle);
@@ -75,13 +122,8 @@
       #define ssize_t INT_PTR
       #define _SSIZE_T_DEFINED 1
     #endif
-
-    #ifdef _WIN64
-      #define __WORDSIZE   64
-    #else
-      #define __WORDSIZE   32
-    #endif
   #endif    /* LIBLOC_PRIVATE */
+
 #endif      /* __APPLE__ */
 
 #ifndef LIBLOC_NETERR
@@ -98,6 +140,10 @@
 
 #ifndef reallocarray
 #define reallocarray(ptr, nmemb, size) realloc (ptr, (nmemb) * (size))
+#endif
+
+#ifdef _WIN32
+const char *handle_m_format (const char *fmt);
 #endif
 
 #endif  /* LIBLOC_COMPAT_H */

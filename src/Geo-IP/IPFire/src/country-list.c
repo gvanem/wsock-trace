@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <libloc/compat.h>
 #include <libloc/country.h>
@@ -24,13 +25,32 @@
 
 struct loc_country_list {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
 	struct loc_country** elements;
 	size_t elements_size;
 
 	size_t size;
+
+	// One bit for every country code that is in the list
+	unsigned char codes[(26 * 26 + 7) / 8];
 };
+
+static unsigned int loc_country_list_code_index(const char* code) {
+	return (code[0] - 'A') * 26 + (code[1] - 'A');
+}
+
+static void loc_country_list_set_code(struct loc_country_list* list, const char* code) {
+	unsigned int i = loc_country_list_code_index(code);
+
+	list->codes[i / 8] |= 1 << (i % 8);
+}
+
+static int loc_country_list_has_code(struct loc_country_list* list, const char* code) {
+	unsigned int i = loc_country_list_code_index(code);
+
+	return (list->codes[i / 8] >> (i % 8)) & 1;
+}
 
 static int loc_country_list_grow(struct loc_country_list* list) {
 	size_t size = list->elements_size * 2;
@@ -43,7 +63,7 @@ static int loc_country_list_grow(struct loc_country_list* list) {
 	struct loc_country** elements = reallocarray(list->elements,
 			list->elements_size + size, sizeof(*list->elements));
 	if (!elements)
-		return 1;
+		return -ENOMEM;
 
 	list->elements = elements;
 	list->elements_size += size;
@@ -67,7 +87,7 @@ LOC_EXPORT int loc_country_list_new(struct loc_ctx* ctx,
 }
 
 LOC_EXPORT struct loc_country_list* loc_country_list_ref(struct loc_country_list* list) {
-	list->refcount++;
+	loc_refcount_inc(&list->refcount);
 
 	return list;
 }
@@ -82,7 +102,7 @@ static void loc_country_list_free(struct loc_country_list* list) {
 }
 
 LOC_EXPORT struct loc_country_list* loc_country_list_unref(struct loc_country_list* list) {
-	if (--list->refcount > 0)
+	if (loc_refcount_dec(&list->refcount) > 0)
 		return list;
 
 	loc_country_list_free(list);
@@ -109,6 +129,8 @@ LOC_EXPORT void loc_country_list_clear(struct loc_country_list* list) {
 	list->elements_size = 0;
 
 	list->size = 0;
+
+	memset(list->codes, 0, sizeof(list->codes));
 }
 
 LOC_EXPORT struct loc_country* loc_country_list_get(struct loc_country_list* list, size_t index) {
@@ -135,36 +157,23 @@ LOC_EXPORT int loc_country_list_append(
 
 	list->elements[list->size++] = loc_country_ref(country);
 
+	loc_country_list_set_code(list, loc_country_get_code(country));
+
 	return 0;
 }
 
 LOC_EXPORT int loc_country_list_contains(
 		struct loc_country_list* list, struct loc_country* country) {
-	for (unsigned int i = 0; i < list->size; i++) {
-		if (loc_country_cmp(country, list->elements[i]) == 0)
-			return 1;
-	}
-
-	return 0;
+	return loc_country_list_has_code(list, loc_country_get_code(country));
 }
 
 LOC_EXPORT int loc_country_list_contains_code(
 		struct loc_country_list* list, const char* code) {
-	struct loc_country* country;
+	// Invalid country codes would never match
+	if (!loc_country_code_is_valid(code))
+		return 0;
 
-	int r = loc_country_new(list->ctx, &country, code);
-	if (r) {
-		// Ignore invalid country codes which would never match
-		if (errno == EINVAL)
-			return 0;
-
-		return r;
-	}
-
-	r = loc_country_list_contains(list, country);
-	loc_country_unref(country);
-
-	return r;
+	return loc_country_list_has_code(list, code);
 }
 
 static int __loc_country_cmp(const void* country1, const void* country2) {
@@ -172,6 +181,10 @@ static int __loc_country_cmp(const void* country1, const void* country2) {
 }
 
 LOC_EXPORT void loc_country_list_sort(struct loc_country_list* list) {
+	// There is nothing to sort in an empty list
+	if (!list->size)
+		return;
+
 	// Sort everything
 	qsort(list->elements, list->size, sizeof(*list->elements), __loc_country_cmp);
 }

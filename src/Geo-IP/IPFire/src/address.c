@@ -14,43 +14,36 @@
 	Lesser General Public License for more details.
 */
 
+#include <ctype.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 #include <libloc/libloc.h>
 #include <libloc/address.h>
+#include <libloc/compat.h>
 
-#define LOC_ADDRESS_BUFFERS				6
-#define LOC_ADDRESS_BUFFER_LENGTH		INET6_ADDRSTRLEN
+#ifdef _WIN32
+  #undef  errno
+  #define errno WSAGetLastError()
+#endif
 
-static char __loc_address_buffers[LOC_ADDRESS_BUFFERS][LOC_ADDRESS_BUFFER_LENGTH + 1];
-static int  __loc_address_buffer_idx = 0;
-
-static const char* __loc_address6_str(const struct in6_addr* address, char* buffer, size_t length) {
-	return inet_ntop(AF_INET6, address, buffer, length);
-}
-
-static const char* __loc_address4_str(const struct in6_addr* address, char* buffer, size_t length) {
-	struct in_addr address4 = {
-		.s_addr = IN6_DWORD(address, 3),
-	};
-
-	return inet_ntop(AF_INET, &address4, buffer, length);
-}
-
-const char* loc_address_str(const struct in6_addr* address) {
-	if (!address)
+const char* loc_address_format(const struct in6_addr* address, char* buffer, size_t length) {
+	if (!address || !buffer)
 		return NULL;
 
-	// Select buffer
-	char* buffer = __loc_address_buffers[__loc_address_buffer_idx++];
+	// IPv4 addresses are being formatted like IPv4 addresses
+	if (IN6_IS_ADDR_V4MAPPED(address)) {
+		struct in_addr address4 = {
+			.s_addr = IN6_DWORD(address, 3),
+		};
 
-	// Prevent index from overflow
-	__loc_address_buffer_idx %= LOC_ADDRESS_BUFFERS;
+		return inet_ntop(AF_INET, &address4, buffer, length);
+	}
 
-	if (IN6_IS_ADDR_V4MAPPED(address))
-		return __loc_address4_str(address, buffer, LOC_ADDRESS_BUFFER_LENGTH);
-	else
-		return __loc_address6_str(address, buffer, LOC_ADDRESS_BUFFER_LENGTH);
+	return inet_ntop(AF_INET6, address, buffer, length);
 }
 
 static void loc_address_from_address4(struct in6_addr* address,
@@ -62,18 +55,21 @@ static void loc_address_from_address4(struct in6_addr* address,
 }
 
 int loc_address_parse(struct in6_addr* address, unsigned int* prefix, const char* string) {
+	// The longest address, a slash, and a prefix of up to three digits
 	char buffer[INET6_ADDRSTRLEN + 4];
+	char* end = NULL;
 	int r;
 
-	if (!address || !string) {
-		errno = EINVAL;
-		return 1;
-	}
+	if (!address || !string)
+		return -EINVAL;
+
+	// Anything that is longer than our buffer cannot be valid
+	size_t length = strnlen(string, sizeof(buffer));
+	if (length >= sizeof(buffer))
+		return -EINVAL;
 
 	// Copy the string into the buffer
-	r = snprintf(buffer, sizeof(buffer) - 1, "%s", string);
-	if (r < 0)
-		return 1;
+	memcpy(buffer, string, length + 1);
 
 	// Find /
 	char* p = strchr(buffer, '/');
@@ -84,21 +80,23 @@ int loc_address_parse(struct in6_addr* address, unsigned int* prefix, const char
 
 	int family = AF_UNSPEC;
 
-	// Try parsing as an IPv6 address
-	r = inet_pton(AF_INET6, buffer, address);
-	switch (r) {
-		// This is not a valid IPv6 address
-		case 0:
-			break;
+	// Try parsing as an IPv6 address, which always has a colon
+	if (strchr(buffer, ':')) {
+		r = inet_pton(AF_INET6, buffer, address);
+		switch (r) {
+			// This is not a valid IPv6 address
+			case 0:
+				break;
 
-		// This is a valid IPv6 address
-		case 1:
-			family = AF_INET6;
-			break;
+			// This is a valid IPv6 address (or an IPv4 address that has been mapped)
+			case 1:
+				family = loc_address_family(address);
+				break;
 
-		// Unexpected error
-		default:
-			return 1;
+			// Unexpected error
+			default:
+				return -errno;
+		}
 	}
 
 	// Try parsing as an IPv4 address
@@ -121,36 +119,38 @@ int loc_address_parse(struct in6_addr* address, unsigned int* prefix, const char
 
 			// Unexpected error
 			default:
-				return 1;
+				return -errno;
 		}
 	}
 
 	// Invalid input
-	if (family == AF_UNSPEC) {
-		errno = EINVAL;
-		return 1;
+	if (family == AF_UNSPEC)
+		return -EINVAL;
+
+	// The longest prefix that an address of this family can have
+	const unsigned int max_prefix = loc_address_family_bit_length(family);
+
+	// If the string didn't contain a prefix, we set the maximum
+	unsigned long value = max_prefix;
+
+	// Parse the prefix, even if the caller does not want to know what it is
+	if (p) {
+		// The prefix must be a number and nothing else
+		if (!isdigit((unsigned char)*p))
+			return -EINVAL;
+
+		value = strtoul(p, &end, 10);
+		if (*end)
+			return -EINVAL;
+
+		// Check if prefix is within bounds
+		if (value > max_prefix)
+			return -EINVAL;
 	}
 
 	// Did the user request a prefix?
-	if (prefix) {
-		// Set the prefix to the default value
-		const unsigned int max_prefix = loc_address_family_bit_length(family);
-
-		// Parse the actual string
-		if (p) {
-			*prefix = strtol(p, NULL, 10);
-
-			// Check if prefix is within bounds
-			if (*prefix > max_prefix) {
-				errno = EINVAL;
-				return 1;
-			}
-
-		// If the string didn't contain a prefix, we set the maximum
-		} else {
-			*prefix = max_prefix;
-		}
-	}
+	if (prefix)
+		*prefix = value;
 
 	return 0;
 }

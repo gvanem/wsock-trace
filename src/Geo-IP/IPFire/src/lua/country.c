@@ -64,7 +64,7 @@ static int Country_new(lua_State* L) {
 	// Parse the string
 	r = loc_country_new(ctx, &country, code);
 	if (r)
-		return luaL_error(L, "Could not create country %s: %s\n", code, strerror(errno));
+		return luaL_error(L, "Could not create country %s: %s\n", code, strerror(-r));
 
 	// Return the country
 	r = create_country(L, country);

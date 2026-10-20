@@ -19,22 +19,22 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <libloc/libloc.h>
-#include <libloc/address.h>
 #include <libloc/compat.h>
 #include <libloc/private.h>
 
 #ifdef _WIN32
-#include <openssl/evp.h>
-#include <openssl/applink.c>
+  #include <stdbool.h>
+  #include <openssl/evp.h>
+  #include <openssl/applink.c>
 #endif
 
 struct loc_ctx {
-	int refcount;
+	loc_refcount_t refcount;
 
 	// Logging
 	struct loc_ctx_logging {
@@ -51,6 +51,10 @@ void loc_log(struct loc_ctx* ctx,
 		const char* format, ...) {
 	va_list args;
 
+#if defined(_WIN32) && 0
+	format = handle_m_format(format);
+#endif
+
 	va_start(args, format);
 	ctx->log.callback(ctx, ctx->log.data, priority, file, line, fn, format, args);
 	va_end(args);
@@ -64,6 +68,11 @@ static void log_stderr(struct loc_ctx* ctx, void* data,
 		int priority, const char* file, int line, const char* fn,
 		const char* format, va_list args) {
 	fprintf(stderr, "libloc: %s(): ", fn);
+
+#if defined(_WIN32) && 0
+	format = handle_m_format(format);
+#endif
+
 	vfprintf(stderr, format, args);
 }
 
@@ -72,7 +81,7 @@ static int log_priority(const char* priority) {
 
 	int prio = strtol(priority, &endptr, 10);
 
-	if (endptr[0] == '\0' || isspace((int)endptr[0]))
+	if (endptr[0] == '\0' || isspace(endptr[0]))
 		return prio;
 
 	if (strncmp(priority, "err", 3) == 0)
@@ -90,7 +99,7 @@ static int log_priority(const char* priority) {
 LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 	struct loc_ctx* c = calloc(1, sizeof(*c));
 	if (!c)
-		return 1;
+		return -ENOMEM;
 
 	c->refcount = 1;
 	c->log.callback = log_stderr;
@@ -98,13 +107,13 @@ LOC_EXPORT int loc_new(struct loc_ctx** ctx) {
 
 #ifdef _WIN32
 	// Start Winsock if not done
-	static int done = 0;
+	static bool done = false;
 	WSADATA wsa;
 
 	if (!done) {
 		WSAStartup(MAKEWORD(2,2), &wsa);
 		OpenSSL_add_all_algorithms();
-		done = 1;
+		done = true;
 		(void) wsa;
 	}
 
@@ -129,13 +138,13 @@ LOC_EXPORT struct loc_ctx* loc_ref(struct loc_ctx* ctx) {
 	if (!ctx)
 		return NULL;
 
-	ctx->refcount++;
+	loc_refcount_inc(&ctx->refcount);
 
 	return ctx;
 }
 
 LOC_EXPORT struct loc_ctx* loc_unref(struct loc_ctx* ctx) {
-	if (--ctx->refcount > 0)
+	if (loc_refcount_dec(&ctx->refcount) > 0)
 		return NULL;
 
 	INFO(ctx, "context %p released\n", ctx);

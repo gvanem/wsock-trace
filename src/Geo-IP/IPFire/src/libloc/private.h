@@ -19,13 +19,11 @@
 
 #ifdef LIBLOC_PRIVATE
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <syslog.h>
-#include <libloc/libloc.h>
 
-#if !defined(__GNUC__) && !defined(__clang__) && !defined(__attribute__)
-#define __attribute__(x)
-#endif
+#include <libloc/libloc.h>
 
 static inline void __attribute__((always_inline, format(printf, 2, 3)))
 loc_log_null(struct loc_ctx *ctx, const char *format, ...) {}
@@ -44,7 +42,12 @@ loc_log_null(struct loc_ctx *ctx, const char *format, ...) {}
 #ifdef ENABLE_DEBUG
 #  define DEBUG(ctx, ...) loc_log_cond(ctx, LOG_DEBUG, ## __VA_ARGS__)
 #else
-#  define DEBUG(ctx, ...) loc_log_null(ctx, ## __VA_ARGS__)
+// The arguments must not be evaluated, but the compiler should still check them
+#  define DEBUG(ctx, ...) \
+	do { \
+		if (0) \
+			loc_log_null(ctx, ## __VA_ARGS__); \
+	} while (0)
 #endif
 
 #define INFO(ctx, ...) loc_log_cond(ctx, LOG_INFO, ## __VA_ARGS__)
@@ -64,6 +67,31 @@ void loc_log(struct loc_ctx *ctx,
 	int priority, const char *file, int line, const char *fn,
 	const char *format, ...) __attribute__((format(printf, 6, 7)));
 
+/*
+	Reference Counting
+
+	The context and the database are being shared by everybody who uses them
+	and every object that we hand out holds a reference to the context. So that
+	they can be used from more than one thread, all counters are atomic.
+*/
+typedef atomic_int loc_refcount_t;
+
+// Takes another reference
+#define loc_refcount_inc(refcount) \
+	atomic_fetch_add_explicit(refcount, 1, memory_order_relaxed)
+
+// Drops a reference and returns how many are left
+#define loc_refcount_dec(refcount) \
+	(atomic_fetch_sub_explicit(refcount, 1, memory_order_acq_rel) - 1)
+
+// Macros to help the compiler with branch prediction
+#if defined(_MSC_VER) && !defined(__clang__)
+  #define likely(x)    x
+  #define unlikely(x)  x
+#else
+  #define likely(x)    __builtin_expect(!!(x), 1)
+  #define unlikely(x)  __builtin_expect(!!(x), 0)
+#endif
 
 static inline void hexdump(struct loc_ctx* ctx, const void* addr, size_t len) {
 	char buffer_hex[16 * 3 + 6];

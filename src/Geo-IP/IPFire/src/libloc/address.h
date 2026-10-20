@@ -21,50 +21,37 @@
 #error "Include <libloc/libloc.h> before me"
 #endif
 
+#include <errno.h>
+#include <libloc/compat.h>
+
 #if defined(_WIN32)
-#define IN6_DWORD(addr, idx)  *(u_long*) &addr->s6_words [2*(idx)]
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+
+  #define IN6_DWORD(addr, idx)  *(u_long*) &addr->s6_words [2*(idx)]
 #else
-#define IN6_DWORD(addr, idx)  addr->s6_addr32 [idx]
+  #include <arpa/inet.h>
+  #define IN6_DWORD(addr, idx)  addr->s6_addr32 [idx]
 #endif
 
 #ifdef LIBLOC_PRIVATE
-
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-
-#if defined(_MSC_VER) && !defined(__clang__)
-/*
- * Adapted from:
- *   https://github.com/llvm-mirror/libcxx/blob/9dcbb46826fd4d29b1485f25e8986d36019a6dca/include/support/win32/support.h
- *
- * Returns the number of leading 0-bits in `value`, starting at the most significant bit position.
- */
-static inline uint32_t __builtin_clz(unsigned long value)
-{
-	unsigned long ret = 0;
-	if (_BitScanReverse(&ret, value) == 0)
-	   return (32);
-	return (uint32_t) (31 - ret);
-}
-
-/*
- * Returns the number of trailing 0-bits in `value`, starting at the most significant bit position.
- */
-static inline uint32_t __builtin_ctz(unsigned long value)
-{
-	unsigned long ret = 0;
-	if (_BitScanForward(&ret, value) == 0)
-		return (32);
-	return (uint32_t) ret;
-}
-#endif
 
 /*
 	All of these functions are private and for internal use only
 */
 
-const char* loc_address_str(const struct in6_addr* address);
+// The length of the longest address that we support in bits
+#define LOC_ADDRESS_MAX_BITS		128
+
+// The size of a buffer that can hold any address as a string
+#define LOC_ADDRESS_STRING_LENGTH	INET6_ADDRSTRLEN
+
+/*
+	Formats the address into the buffer, which the caller has to bring. There
+	is no buffer of our own that we could return as it would be shared by
+	everybody who calls us.
+*/
+const char* loc_address_format(const struct in6_addr* address, char* buffer, size_t length);
 int loc_address_parse(struct in6_addr* address, unsigned int* prefix, const char* string);
 
 static inline int loc_address_family(const struct in6_addr* address) {
@@ -242,7 +229,7 @@ static inline int loc_address_reset(struct in6_addr* address, int family) {
 			return 0;
 	}
 
-	return -1;
+	return -EINVAL;
 }
 
 static inline int loc_address_reset_last(struct in6_addr* address, int family) {
@@ -259,7 +246,7 @@ static inline int loc_address_reset_last(struct in6_addr* address, int family) {
 			return 0;
 	}
 
-	return -1;
+	return -EINVAL;
 }
 
 static inline struct in6_addr loc_address_and(
@@ -300,10 +287,8 @@ static inline int loc_address_sub(struct in6_addr* result,
 	int family2 = loc_address_family(address2);
 
 	// Address family must match
-	if (family1 != family2) {
-		errno = EINVAL;
-		return 1;
-	}
+	if (family1 != family2)
+		return -EINVAL;
 
 	// Clear result
 	int r = loc_address_reset(result, family1);
@@ -369,7 +354,7 @@ static inline int loc_address_get_octet(const struct in6_addr* address, const un
 		return a4 >> ((3 - i) * 8) & 0xff;
 
 	} else {
-		if (i >= 32)
+		if (i >= 16)
 			return -ERANGE;
 
 		return address->s6_addr[i];

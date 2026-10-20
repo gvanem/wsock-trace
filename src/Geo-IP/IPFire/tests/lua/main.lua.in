@@ -89,6 +89,11 @@ function test_lookup()
 	luaunit.assertEquals(network1:get_country_code(), "DE")
 	luaunit.assertEquals(network1:get_asn(), 24679)
 
+	-- Numbers must not be formatted as floats
+	luaunit.assertEquals(tostring(network1:get_asn()), "24679")
+	luaunit.assertEquals(tostring(network1:get_family()), "2")
+	luaunit.assertNil(string.find(tostring(db:created_at()), ".", 1, true))
+
 	-- Lookup something else
 	network2 = db:lookup("8.8.8.8")
 	luaunit.assertIsTrue(network2:has_flag(location.NETWORK_FLAG_ANYCAST))
@@ -119,6 +124,12 @@ function test_as()
 	as = location.AS.new(12345)
 	luaunit.assertEquals(as:get_number(), 12345)
 	luaunit.assertNil(as:get_name())
+	luaunit.assertEquals(tostring(as), "AS12345")
+
+	-- AS numbers don't fit into a signed integer
+	as = location.AS.new(4294967295)
+	luaunit.assertEquals(tostring(as), "AS4294967295")
+	luaunit.assertEquals(tostring(as:get_number()), "4294967295")
 
 	-- Reset
 	as = nil

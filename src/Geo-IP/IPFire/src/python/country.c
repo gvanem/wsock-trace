@@ -52,8 +52,19 @@ static int Country_init(CountryObject* self, PyObject* args, PyObject* kwargs) {
 
 	// Create the country object
 	int r = loc_country_new(loc_ctx, &self->country, country_code);
-	if (r)
+	if (r) {
+		switch (r) {
+			case -EINVAL:
+				PyErr_Format(PyExc_ValueError, "Invalid country code: %s", country_code);
+				break;
+
+			default:
+				location_raise(r);
+				break;
+		}
+
 		return -1;
+	}
 
 	return 0;
 }
@@ -71,7 +82,7 @@ static PyObject* Country_repr(CountryObject* self) {
 static PyObject* Country_get_code(CountryObject* self) {
 	const char* code = loc_country_get_code(self->country);
 
-	return PyUnicode_FromString(code);
+	return location_string(code);
 }
 
 static PyObject* Country_str(CountryObject* self) {
@@ -85,16 +96,19 @@ static PyObject* Country_get_name(CountryObject* self) {
 	if (!name)
 		Py_RETURN_NONE;
 
-	return PyUnicode_FromString(name);
+	return location_string(name);
 }
 
 static int Country_set_name(CountryObject* self, PyObject* value) {
-	const char* name = PyUnicode_AsUTF8(value);
+	const char* name = NULL;
+
+	if (location_string_arg(value, &name, 1))
+		return -1;
 
 	int r = loc_country_set_name(self->country, name);
 	if (r) {
 		PyErr_Format(PyExc_ValueError, "Could not set name: %s", name);
-		return r;
+		return -1;
 	}
 
 	return 0;
@@ -106,16 +120,19 @@ static PyObject* Country_get_continent_code(CountryObject* self) {
 	if (!code)
 		Py_RETURN_NONE;
 
-	return PyUnicode_FromString(code);
+	return location_string(code);
 }
 
 static int Country_set_continent_code(CountryObject* self, PyObject* value) {
-	const char* code = PyUnicode_AsUTF8(value);
+	const char* code = NULL;
+
+	if (location_string_arg(value, &code, 0))
+		return -1;
 
 	int r = loc_country_set_continent_code(self->country, code);
 	if (r) {
 		PyErr_Format(PyExc_ValueError, "Could not set continent code: %s", code);
-		return r;
+		return -1;
 	}
 
 	return 0;

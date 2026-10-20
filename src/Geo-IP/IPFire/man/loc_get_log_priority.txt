@@ -5,11 +5,11 @@
 loc_get_log_priority - Fetches the log level of a libloc context
 
 == Synopsis
-[verse]
-
+----
 #include <libloc/libloc.h>
 
-int loc_get_log_priority(struct loc_ctx{empty}* ctx);
+int loc_get_log_priority(struct loc_ctx* ctx);
+----
 
 == Description
 

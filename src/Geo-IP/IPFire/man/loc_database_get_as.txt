@@ -5,12 +5,12 @@
 loc_database_get_as - Fetch an AS from the database
 
 == Synopsis
-[verse]
-
+----
 #include <libloc/database.h>
 
-int loc_database_get_as(struct loc_database{empty}* db, struct loc_as{empty}*{empty}* as,
+int loc_database_get_as(struct loc_database* db, struct loc_as** as,
 	uint32_t number);
+----
 
 == Description
 
@@ -19,8 +19,9 @@ and stores it in _as_.
 
 == Return Value
 
-On success, zero is returned. Otherwise non-zero is being returned and _errno_ is set
-accordingly.
+On success, zero is returned. If the Autonomous System is not in the database, 1 is
+returned and _as_ is set to NULL. On error, a negative error number (see errno(3)) is
+returned. _errno_ itself is not being set.
 
 == See Also
 

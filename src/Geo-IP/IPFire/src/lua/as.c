@@ -15,6 +15,8 @@
 */
 
 #include <errno.h>
+#include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -53,7 +55,15 @@ int create_as(lua_State* L, struct loc_as* as) {
 	return 1;
 }
 
+// lua_pushfstring() only knows signed integers, which AS numbers don't fit into
+static const char* format_number(char* buffer, size_t length, uint32_t number) {
+	snprintf(buffer, length, "%" PRIu32, number);
+
+	return buffer;
+}
+
 static int AS_new(lua_State* L) {
+	char buffer[16];
 	struct loc_as* as = NULL;
 	unsigned int n = 0;
 	int r;
@@ -64,7 +74,8 @@ static int AS_new(lua_State* L) {
 	// Create the AS
 	r = loc_as_new(ctx, &as, n);
 	if (r)
-		return luaL_error(L, "Could not create AS %u: %s\n", n, strerror(errno));
+		return luaL_error(L, "Could not create AS %s: %s\n",
+			format_number(buffer, sizeof(buffer), n), strerror(-r));
 
 	// Return the AS
 	r = create_as(L, as);
@@ -86,16 +97,18 @@ static int AS_gc(lua_State* L) {
 }
 
 static int AS_tostring(lua_State* L) {
+	char buffer[16];
+
 	AS* self = luaL_checkas(L, 1);
 
-	uint32_t number = loc_as_get_number(self->as);
+	const char* number = format_number(buffer, sizeof(buffer), loc_as_get_number(self->as));
 	const char* name = loc_as_get_name(self->as);
 
 	// Return string
 	if (name)
-		lua_pushfstring(L, "AS%d - %s", number, name);
+		lua_pushfstring(L, "AS%s - %s", number, name);
 	else
-		lua_pushfstring(L, "AS%d", number);
+		lua_pushfstring(L, "AS%s", number);
 
 	return 1;
 }
@@ -117,7 +130,7 @@ static int AS_get_number(lua_State* L) {
 	AS* self = luaL_checkas(L, 1);
 
 	// Return the number
-	lua_pushnumber(L, loc_as_get_number(self->as));
+	location_pushinteger(L, loc_as_get_number(self->as));
 
 	return 1;
 }

@@ -2,44 +2,174 @@
 
 == Name
 
-libloc - A tool to query the IPFire Location database
+libloc - A library to query the IPFire Location Database
 
 == Synopsis
-[verse]
-
+----
 #include <libloc/libloc.h>
 
-`pkg-config --cflags --libs libloc`
+pkg-config --cflags --libs libloc
+----
 
 == Description
 
 `libloc` is a lightweight library which can be used to query the IPFire
-Location database.
+Location Database.
 
-See
+The database knows for every IP address on the Internet which country it is in, which
+Autonomous System it belongs to, and whether it is special in any way, for example
+because it is an anycast address, or because it should be blocked. A new database is
+being published every day. It is being signed, so that nobody can change it on its way
+to the user.
 
-	* link:loc_new[3]
-	* link:loc_get_log_priority[3]
-	* link:loc_set_log_priority[3]
-	* link:loc_get_log_fn[3]
-	* link:loc_database_count_as[3]
-	* link:loc_database_get_as[3]
-	* link:loc_database_get_country[3]
-	* link:loc_database_lookup[3]
-	* link:loc_database_new[3]
+The database is one file, which is being mapped into memory. Looking up an address takes
+a few hundred nanoseconds, does not need any locks, and does not allocate any memory
+other than for the result. Any number of threads can use the same database at the same
+time, and a database that has been replaced by a newer one is being picked up without
+anybody having to wait for it.
 
-for more information about the functions available.
+There are bindings for Python (see link:python-location[3]), Perl and Lua (see
+link:lua-location[3]), and the location(1) command can look up addresses, and create
+rules for firewalls.
+
+== Quickstart
+
+Install the development files of libloc (_libloc-dev_ on Debian, _libloc-devel_ on
+Fedora), and a database, which is in _/var/lib/location/database.db_. It is being kept
+up to date by _location update_ (see location(1)), which the packages run once a day,
+with a systemd timer or a cron job.
+
+Every program creates one context with link:loc_new[3], and opens the database once,
+with loc_database_open() (see link:loc_database_new[3]). Both can then be used for as long as the program is
+running:
+
+----
+struct loc_database* db = NULL;
+struct loc_ctx* ctx = NULL;
+
+loc_new(&ctx);
+loc_database_open(ctx, &db, "/var/lib/location/database.db");
+----
+
+To look up an address, use link:loc_database_lookup[3]. It returns the network that the
+address is in, which knows the country, the Autonomous System, and any flags (see
+link:loc_network_get_asn[3]):
+
+----
+struct loc_network* network = NULL;
+
+loc_database_lookup_from_string(db, "81.3.27.38", &network);
+if (network) {
+	printf("%s\n", loc_network_get_country_code(network));
+	loc_network_unref(network);
+}
+----
+
+The names of countries and Autonomous Systems are in the database, too
+(see link:loc_database_get_country[3] and link:loc_database_get_as[3]).
+
+At the end, release the database and the context:
+
+----
+loc_database_unref(db);
+loc_unref(ctx);
+----
+
+Compile the program with:
+
+----
+cc -o program program.c $(pkg-config --cflags --libs libloc)
+----
+
+A complete example, which looks up the addresses that it is being given and prints
+everything that the database knows about them, is _examples/c/lookup.c_ in the source
+of libloc, which can be found at
+https://git.ipfire.org/?p=location/libloc.git;a=blob;f=examples/c/lookup.c.
+
+To walk through all networks of a country, for example to create rules for a firewall,
+use an enumerator (see link:loc_database_enumerator_new[3]).
+
+== Functions
+
+The context:
+
+	* link:loc_new[3] - Create a new context
+	* link:loc_get_log_priority[3], link:loc_set_log_priority[3] - Choose which messages are being logged
+	* link:loc_set_log_callback[3] - Send log messages to the application
+
+The database:
+
+	* link:loc_database_new[3] - Open a database
+	* link:loc_database_lookup[3] - Find the network of an IP address
+	* link:loc_database_get_as[3] - Fetch an Autonomous System
+	* link:loc_database_count_as[3] - Count the Autonomous Systems
+	* link:loc_database_get_country[3] - Fetch a country
+	* link:loc_database_enumerator_new[3] - Walk through all networks, Autonomous Systems or countries
+	* link:loc_database_reload[3] - Pick up a database that has been replaced
+	* link:loc_database_verify[3] - Check the signature of a database
+	* link:loc_discover_latest_version[3] - Find out whether there is a newer database
+
+Networks:
+
+	* link:loc_network_new[3] - Create networks and find out what they are
+	* link:loc_network_get_asn[3] - The country, the Autonomous System and the flags of a network
+	* link:loc_network_cmp[3] - Compare networks and take them apart
+	* link:loc_network_list_new[3] - A sorted list of networks
+
+Autonomous Systems and countries:
+
+	* link:loc_as_new[3] - Autonomous Systems
+	* link:loc_as_list_new[3] - A list of Autonomous Systems
+	* link:loc_country_new[3] - Countries
+	* link:loc_country_list_new[3] - A list of countries
+
+Creating databases:
+
+	* link:loc_writer_new[3] - Create a database
+
+Every function has a page of its own, under its name.
+
+== References
+
+All objects are reference counted. Functions that create an object, or that return one
+(apart from those that return a string), give the caller a reference, which has to be
+released with the matching _unref_ function when it is no longer needed. _ref_ functions
+take another reference, for example to keep an object in another part of the program.
+Objects that are being given to another object, for example a network that is being
+added to a list, are being referenced by it, so that the caller may release its own
+reference straight away.
+
+None of the _unref_ functions accept NULL.
+
+== Errors
+
+Functions that return an integer return zero on success, and a negative error number
+(see errno(3)) on error, for example _-ENOMEM_, unless their page says otherwise.
+_errno_ itself is not being set. Functions that return a pointer return NULL on error.
+
+== Threads
+
+The context and a database that has been opened can be used by any number of threads
+at the same time. Nothing in a database changes after it has been opened, and all
+reference counters are atomic.
+
+Everything else (for example networks, Autonomous Systems, countries and enumerators)
+belongs to whoever has asked for it. These objects may be passed on to another thread,
+but they must not be used by more than one thread at a time.
 
 == Copying
 
-Copyright (C) 2022 {author}. +
+Copyright (C) 2022 IPFire Development Team. +
 This library is free software; you can redistribute it and/or modify it under the terms
 of the GNU Lesser General Public License as published by the Free Software Foundation;
 either version 2.1 of the License, or (at your option) any later version.
 
+The IPFire Location Database is licensed under its own terms, which can be read from
+the database with link:loc_database_new[3].
+
 == See Also
 
-link:location[1]
+link:location[1], link:python-location[3], link:lua-location[3]
 
 == Bug Reports
 

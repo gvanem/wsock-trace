@@ -1,5 +1,4 @@
-#ifndef _WIN32_SYSLOG_H
-#define _WIN32_SYSLOG_H
+#pragma once
 
 /*
  * Minimal syslog.h for libloc on Windows.
@@ -13,4 +12,3 @@
 #define LOG_INFO    6   /* informational */
 #define LOG_DEBUG   7   /* debug-level messages */
 
-#endif

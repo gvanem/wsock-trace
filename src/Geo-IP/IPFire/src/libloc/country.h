@@ -19,7 +19,6 @@
 
 #include <libloc/libloc.h>
 #include <libloc/format.h>
-#include <libloc/stringpool.h>
 
 struct loc_country;
 int loc_country_new(struct loc_ctx* ctx, struct loc_country** country, const char* country_code);
@@ -40,6 +39,8 @@ int loc_country_code_is_valid(const char* cc);
 int loc_country_special_code_to_flag(const char* cc);
 
 #ifdef LIBLOC_PRIVATE
+
+#include <libloc/stringpool.h>
 
 #include <string.h>
 

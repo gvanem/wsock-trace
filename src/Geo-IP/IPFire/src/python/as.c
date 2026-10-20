@@ -47,13 +47,15 @@ static void AS_dealloc(ASObject* self) {
 static int AS_init(ASObject* self, PyObject* args, PyObject* kwargs) {
 	uint32_t number = 0;
 
-	if (!PyArg_ParseTuple(args, "i", &number))
+	if (!PyArg_ParseTuple(args, "O&", location_parse_asn, &number))
 		return -1;
 
 	// Create the AS object
 	int r = loc_as_new(loc_ctx, &self->as, number);
-	if (r)
+	if (r) {
+		location_raise(r);
 		return -1;
+	}
 
 	return 0;
 }
@@ -63,9 +65,9 @@ static PyObject* AS_repr(ASObject* self) {
 	const char* name = loc_as_get_name(self->as);
 
 	if (name)
-		return PyUnicode_FromFormat("<AS %d (%s)>", number, name);
+		return PyUnicode_FromFormat("<AS %u (%s)>", number, name);
 
-	return PyUnicode_FromFormat("<AS %d>", number);
+	return PyUnicode_FromFormat("<AS %u>", number);
 }
 
 static PyObject* AS_str(ASObject* self) {
@@ -73,30 +75,33 @@ static PyObject* AS_str(ASObject* self) {
 	const char* name = loc_as_get_name(self->as);
 
 	if (name)
-		return PyUnicode_FromFormat("AS%d - %s", number, name);
+		return PyUnicode_FromFormat("AS%u - %s", number, name);
 
-	return PyUnicode_FromFormat("AS%d", number);
+	return PyUnicode_FromFormat("AS%u", number);
 }
 
 static PyObject* AS_get_number(ASObject* self) {
 	uint32_t number = loc_as_get_number(self->as);
 
-	return PyLong_FromLong(number);
+	return PyLong_FromUnsignedLong(number);
 }
 
 static PyObject* AS_get_name(ASObject* self) {
 	const char* name = loc_as_get_name(self->as);
 
-	return PyUnicode_FromString(name);
+	return location_string(name);
 }
 
 static int AS_set_name(ASObject* self, PyObject* value) {
-	const char* name = PyUnicode_AsUTF8(value);
+	const char* name = NULL;
+
+	if (location_string_arg(value, &name, 1))
+		return -1;
 
 	int r = loc_as_set_name(self->as, name);
 	if (r) {
 		PyErr_Format(PyExc_ValueError, "Could not set name: %s", name);
-		return r;
+		return -1;
 	}
 
 	return 0;
@@ -134,9 +139,13 @@ static PyObject* AS_richcompare(ASObject* self, PyObject* other, int op) {
 }
 
 static Py_hash_t AS_hash(ASObject* self) {
-	uint32_t number = loc_as_get_number(self->as);
+	Py_hash_t hash = loc_as_get_number(self->as);
 
-	return number;
+	// -1 means that an error has occurred
+	if (hash == -1)
+		hash = -2;
+
+	return hash;
 }
 
 static struct PyGetSetDef AS_getsetters[] = {

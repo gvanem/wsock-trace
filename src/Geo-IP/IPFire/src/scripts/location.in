@@ -234,7 +234,7 @@ class CLI(object):
 		db = None
 		try:
 			db = location.Database(args.database)
-		except FileNotFoundError as e:
+		except (FileNotFoundError, OSError) as e:
 			# Allow continuing without a database
 			# But on Windows, the shared-mem area must be closed if we have a .db-file open.
 			if args.func == self.handle_update:
@@ -426,8 +426,7 @@ class CLI(object):
 				asn = int(asn)
 			except ValueError:
 				print(_("Invalid ASN: %s") % asn, file=sys.stderr)
-				ret = 1
-				continue
+				return 2
 
 			# Fetch AS from database
 			a = db.get_as(asn)
@@ -466,7 +465,7 @@ class CLI(object):
 				log.info(
 					_("The database has been updated recently"),
 				)
-				return 3
+				return 0
 
 		# Fetch the timestamp we need from DNS
 		t = location.discover_latest_version()
@@ -474,7 +473,7 @@ class CLI(object):
 		# Check the version of the local database
 		if db and t and db.created_at >= t:
 			log.info("Already on the latest version")
-			return
+			return 0
 
 		# Download the database into the TEMP directory
 		tmpdir = os.path.join (tempfile.gettempdir(), "libloc")
@@ -484,7 +483,7 @@ class CLI(object):
 		d = location.downloader.Downloader()
 
 		# Try downloading a new database
-		if 1:
+		if 0:
 		   t = d.download(public_key=ns.public_key, timestamp=t, tmpdir=tmpdir)
 		else:
 		  try:
@@ -497,7 +496,7 @@ class CLI(object):
 
 		# If we have not received a new file, there is nothing to do
 		if not t:
-			return 3
+			return 0
 
 		# Move temporary file to destination
 		log.debug("Copying database %s -> %s" % (t.name, ns.database))

@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include <libloc/libloc.h>
@@ -25,29 +26,52 @@
 
 struct loc_network_list {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
+	// The allocated space
+	struct loc_network** data;
+	size_t data_size;
+
+	// The networks start somewhere in the allocated space, so that we can
+	// remove the first one without moving all others
 	struct loc_network** elements;
-	size_t elements_size;
-
 	size_t size;
 };
 
+// How many elements can be added at the end
+static size_t loc_network_list_space(struct loc_network_list* list) {
+	return list->data_size - (list->elements - list->data) - list->size;
+}
+
+/*
+	Makes space for at least one more element at the end
+*/
 static int loc_network_list_grow(struct loc_network_list* list) {
-	size_t size = list->elements_size * 2;
+	const size_t head = list->elements - list->data;
+
+	// If at least half of the space is free at the start, move everything there
+	if (head && head >= list->data_size / 2) {
+		memmove(list->data, list->elements, sizeof(*list->elements) * list->size);
+		list->elements = list->data;
+
+		return 0;
+	}
+
+	size_t size = list->data_size * 2;
 	if (size < 1024)
 		size = 1024;
 
 	DEBUG(list->ctx, "Growing network list %p by %zu to %zu\n",
-		list, size, list->elements_size + size);
+		list, size, list->data_size + size);
 
-	struct loc_network** elements = reallocarray(list->elements,
-			list->elements_size + size, sizeof(*list->elements));
-	if (!elements)
-		return 1;
+	struct loc_network** data = reallocarray(list->data,
+			list->data_size + size, sizeof(*list->data));
+	if (!data)
+		return -ENOMEM;
 
-	list->elements = elements;
-	list->elements_size += size;
+	list->data = data;
+	list->data_size += size;
+	list->elements = data + head;
 
 	return 0;
 }
@@ -67,7 +91,7 @@ LOC_EXPORT int loc_network_list_new(struct loc_ctx* ctx,
 }
 
 LOC_EXPORT struct loc_network_list* loc_network_list_ref(struct loc_network_list* list) {
-	list->refcount++;
+	loc_refcount_inc(&list->refcount);
 
 	return list;
 }
@@ -83,7 +107,7 @@ static void loc_network_list_free(struct loc_network_list* list) {
 }
 
 LOC_EXPORT struct loc_network_list* loc_network_list_unref(struct loc_network_list* list) {
-	if (--list->refcount > 0)
+	if (loc_refcount_dec(&list->refcount) > 0)
 		return list;
 
 	loc_network_list_free(list);
@@ -99,16 +123,17 @@ LOC_EXPORT int loc_network_list_empty(struct loc_network_list* list) {
 }
 
 LOC_EXPORT void loc_network_list_clear(struct loc_network_list* list) {
-	if (!list->elements)
+	if (!list->data)
 		return;
 
 	for (unsigned int i = 0; i < list->size; i++)
 		loc_network_unref(list->elements[i]);
 
-	free(list->elements);
-	list->elements = NULL;
-	list->elements_size = 0;
+	free(list->data);
+	list->data = NULL;
+	list->data_size = 0;
 
+	list->elements = NULL;
 	list->size = 0;
 }
 
@@ -220,19 +245,27 @@ LOC_EXPORT int loc_network_list_push(struct loc_network_list* list, struct loc_n
 	DEBUG(list->ctx, "%p: Inserting network %p at index %jd\n",
 		list, network, (intmax_t)index);
 
-	// Check if we have space left
-	if (list->size >= list->elements_size) {
-		int r = loc_network_list_grow(list);
-		if (r)
-			return r;
+	// If there is space at the start and we are closer to it, we move all elements
+	// before the new one towards the start. Otherwise, we move all after it.
+	if (list->elements > list->data && (size_t)index < list->size / 2) {
+		list->elements--;
+		list->size++;
+
+		memmove(list->elements, list->elements + 1, sizeof(*list->elements) * index);
+
+	} else {
+		// Check if we have space left
+		if (!loc_network_list_space(list)) {
+			int r = loc_network_list_grow(list);
+			if (r)
+				return r;
+		}
+
+		memmove(list->elements + index + 1, list->elements + index,
+			sizeof(*list->elements) * (list->size - index));
+
+		list->size++;
 	}
-
-	// The list is now larger
-	list->size++;
-
-	// Move all elements out of the way
-	for (unsigned int i = list->size - 1; i > index; i--)
-		list->elements[i] = list->elements[i - 1];
 
 	// Add the new element at the right place
 	list->elements[index] = loc_network_ref(network);
@@ -263,13 +296,13 @@ LOC_EXPORT struct loc_network* loc_network_list_pop_first(struct loc_network_lis
 
 	struct loc_network* network = list->elements[0];
 
-	// Move all elements to the top of the stack
-	for (unsigned int i = 0; i < list->size - 1; i++) {
-		list->elements[i] = list->elements[i+1];
-	}
-
-	// The list is shorter now
+	// The list starts at the next element now
+	list->elements++;
 	--list->size;
+
+	// Start from the beginning again once the list is empty
+	if (!list->size)
+		list->elements = list->data;
 
 	DEBUG(list->ctx, "%p: Popping network %p from stack\n", list, network);
 
@@ -322,15 +355,19 @@ LOC_EXPORT int loc_network_list_merge(
 
 int loc_network_list_summarize(struct loc_ctx* ctx,
 		const struct in6_addr* first, const struct in6_addr* last, struct loc_network_list** list) {
-	int bits;
 	int r;
 
-	if (!list) {
-		errno = EINVAL;
-		return 1;
-	}
+	if (!list)
+		return -EINVAL;
 
-	DEBUG(ctx, "Summarizing %s - %s\n", loc_address_str(first), loc_address_str(last));
+#ifdef ENABLE_DEBUG
+	char buffer1[LOC_ADDRESS_STRING_LENGTH];
+	char buffer2[LOC_ADDRESS_STRING_LENGTH];
+
+	DEBUG(ctx, "Summarizing %s - %s\n",
+		loc_address_format(first, buffer1, sizeof(buffer1)),
+		loc_address_format(last, buffer2, sizeof(buffer2)));
+#endif
 
 	const int family1 = loc_address_family(first);
 	const int family2 = loc_address_family(last);
@@ -338,41 +375,44 @@ int loc_network_list_summarize(struct loc_ctx* ctx,
 	// Check if address families match
 	if (family1 != family2) {
 		ERROR(ctx, "Address families do not match\n");
-		errno = EINVAL;
-		return 1;
+		return -EINVAL;
 	}
 
 	// Check if the last address is larger than the first address
-	if (loc_address_cmp(first, last) >= 0) {
-		ERROR(ctx, "The first address must be smaller than the last address\n");
-		errno = EINVAL;
-		return 1;
+	if (loc_address_cmp(first, last) > 0) {
+		ERROR(ctx, "The first address must not be larger than the last address\n");
+		return -EINVAL;
 	}
 
 	struct loc_network* network = NULL;
 	struct in6_addr start = *first;
 
-	while (loc_address_cmp(&start, last) <= 0) {
-		// Count how many leading bits the IP addresses have in common
-		bits = loc_address_common_bits(&start, last);
-		if (bits < 0)
-			return bits;
+	// How long is an address of this family?
+	const unsigned int bit_length = loc_address_family_bit_length(family1);
 
-		// If the start and end address don't have any bits in common, we try
-		// to cut the subnet into halves and try again...
-		else if (bits == 0)
-			bits = 1;
+	// IPv4 addresses are mapped to the end of the IPv6 address space
+	const unsigned int offset = LOC_ADDRESS_MAX_BITS - bit_length;
+
+	while (loc_address_cmp(&start, last) <= 0) {
+		// The next network starts at the start address, so its prefix
+		// cannot be any shorter than there are bits set in that address.
+		unsigned int prefix = loc_address_bit_length(&start);
+
+		// Make the network smaller until it ends before (or at) the last address
+		for (; prefix < bit_length; prefix++) {
+			const struct in6_addr bitmask = loc_prefix_to_bitmask(offset + prefix);
+			const struct in6_addr end = loc_address_or(&start, &bitmask);
+
+			if (loc_address_cmp(&end, last) <= 0)
+				break;
+		}
 
 		// Create a network
-		r = loc_network_new(ctx, &network, &start, bits);
+		r = loc_network_new(ctx, &network, &start, prefix);
 		if (r)
 			return r;
 
-		DEBUG(ctx, "Found network %s, %s -> %s\n",
-			loc_network_str(network),
-			loc_address_str(loc_network_get_first_address(network)),
-			loc_address_str(loc_network_get_last_address(network))
-		);
+		DEBUG(ctx, "Found network %s\n", loc_network_str(network));
 
 		// Push network on the list
 		r = loc_network_list_push(*list, network);
@@ -383,6 +423,9 @@ int loc_network_list_summarize(struct loc_ctx* ctx,
 
 		// The next network starts right after this one
 		start = *loc_network_get_last_address(network);
+
+		// The list holds its own reference
+		loc_network_unref(network);
 
 		// If we have reached the end of possible IP addresses, we stop
 		if (loc_address_all_ones(&start))

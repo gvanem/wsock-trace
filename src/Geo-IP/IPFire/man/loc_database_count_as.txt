@@ -5,11 +5,11 @@
 loc_database_count_as - Return the number of ASes in the database
 
 == Synopsis
-[verse]
-
+----
 #include <libloc/database.h>
 
-size_t loc_database_count_as(struct loc_database{empty}* db);
+size_t loc_database_count_as(struct loc_database* db);
+----
 
 == Description
 

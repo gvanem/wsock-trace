@@ -5,11 +5,12 @@
 loc_database_get_country - Fetch country information from the database
 
 == Synopsis
-
+----
 #include <libloc/database.h>
 
-int loc_database_get_country(struct loc_database{empty}* db,
-	struct loc_country{empty}*{empty}* country, const char{empty}* code);
+int loc_database_get_country(struct loc_database* db,
+	struct loc_country** country, const char* code);
+----
 
 == Description
 
@@ -17,8 +18,10 @@ This function fetches information about the country with the matching _code_.
 
 == Return Value
 
-On success, zero is returned. Otherwise non-zero is being returned and _errno_ is set
-accordingly.
+On success, zero is returned. This includes that the country is not in the database, in
+which case _country_ is set to NULL. On error, a negative error number (see errno(3)) is
+returned, for example _-EINVAL_ if _code_ is not a valid country code. _errno_ itself
+is not being set.
 
 == See Also
 

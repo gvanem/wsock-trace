@@ -44,7 +44,6 @@ static Database* luaL_checkdatabase(lua_State* L, int i) {
 
 static int Database_open(lua_State* L) {
 	const char* path = NULL;
-	FILE* f = NULL;
 	int r;
 
 	// Fetch the path
@@ -57,20 +56,11 @@ static int Database_open(lua_State* L) {
 	// Set metatable
 	luaL_setmetatable(L, "location.Database");
 
-	// Open the database file
-	f = fopen(path, "r");
-	if (!f)
-		return luaL_error(L, "Could not open %s: %s\n", path, strerror(errno));
-
-	// Open the database
-	r = loc_database_new(ctx, &self->db, f);
-
-	// Close the file descriptor
-	fclose(f);
-
-	// Check for errors
+	// Open the database. It knows where its file is, and
+	// reads it again every once in a while if it has been replaced.
+	r = loc_database_open(ctx, &self->db, path);
 	if (r)
-		return luaL_error(L, "Could not open database %s: %s\n", path, strerror(errno));
+		return luaL_error(L, "Could not open database %s: %s\n", path, strerror(-r));
 
 	return 1;
 }
@@ -96,7 +86,7 @@ static int Database_created_at(lua_State* L) {
 	time_t created_at = loc_database_created_at(self->db);
 
 	// Push the time onto the stack
-	lua_pushnumber(L, created_at);
+	location_pushinteger(L, created_at);
 
 	return 1;
 }
@@ -190,7 +180,7 @@ static int Database_lookup(lua_State* L) {
 	// Perform lookup
 	r = loc_database_lookup_from_string(self->db, address, &network);
 	if (r)
-		return luaL_error(L, "Could not lookup address %s: %s\n", address, strerror(errno));
+		return luaL_error(L, "Could not lookup address %s: %s\n", address, strerror(-r));
 
 	// Nothing found
 	if (!network) {
@@ -262,7 +252,7 @@ static int DatabaseEnumerator_next_network(lua_State* L) {
 	// Fetch the next network
 	r = loc_database_enumerator_next_network(self->e, &network);
 	if (r)
-		return luaL_error(L, "Could not fetch network: %s\n", strerror(errno));
+		return luaL_error(L, "Could not fetch network: %s\n", strerror(-r));
 
 	// If we have received no network, we have reached the end
 	if (!network) {
@@ -285,12 +275,14 @@ static int Database_list_networks(lua_State* L) {
 
 	// Allocate a new enumerator
 	e = lua_newuserdata(L, sizeof(*e));
+	e->e = NULL;
+
 	luaL_setmetatable(L, "location.DatabaseEnumerator");
 
 	// Create a new enumerator
 	r = loc_database_enumerator_new(&e->e, self->db, LOC_DB_ENUMERATE_NETWORKS, 0);
 	if (r)
-		return luaL_error(L, "Could not create enumerator: %s\n", strerror(errno));
+		return luaL_error(L, "Could not create enumerator: %s\n", strerror(-r));
 
 	// Push the closure onto the stack
 	lua_pushcclosure(L, DatabaseEnumerator_next_network, 1);

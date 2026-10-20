@@ -20,7 +20,7 @@
 #include <libloc/as.h>
 #include <libloc/as-list.h>
 #include <libloc/database.h>
-#include <libloc/private.h>
+//#include <libloc/private.h>
 
 #include "locationmodule.h"
 #include "as.h"
@@ -46,7 +46,7 @@ static void Database_dealloc(DatabaseObject* self) {
 
 static int Database_init(DatabaseObject* self, PyObject* args, PyObject* kwargs) {
 	const char* path = NULL;
-	FILE* f = NULL;
+	int r;
 
 	// Parse arguments
 	if (!PyArg_ParseTuple(args, "s", &path))
@@ -54,33 +54,47 @@ static int Database_init(DatabaseObject* self, PyObject* args, PyObject* kwargs)
 
 	// Copy path
 	self->path = strdup(path);
-	if (!self->path)
-		goto ERROR;
+	if (!self->path) {
+		PyErr_NoMemory();
+		return -1;
+	}
 
-	// Open the file for reading
-	INFO(loc_ctx, "Opening database %s\n", self->path);
-	f = fopen(self->path, "rb");
-	if (!f)
-		goto ERROR;
+	// Open the database. It knows where its file is, and
+	// reads it again every once in a while if it has been replaced.
+	r = loc_database_open(loc_ctx, &self->db, self->path);
+	if (r) {
+		// The library returns negative error numbers
+		errno = -r;
 
-	// Load the database
-	int r = loc_database_new(loc_ctx, &self->db, f);
-	if (r)
-		goto ERROR;
+		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
+		return -1;
+	}
 
-	fclose(f);
 	return 0;
-
-ERROR:
-	if (f)
-		fclose(f);
-
-	PyErr_SetFromErrno(PyExc_OSError);
-	return -1;
 }
 
 static PyObject* Database_repr(DatabaseObject* self) {
 	return PyUnicode_FromFormat("<Database %s>", self->path);
+}
+
+static PyObject* Database_reload(DatabaseObject* self) {
+	int r;
+
+	// Reading a new database takes a moment, and other threads can use
+	// the database in the meantime
+	Py_BEGIN_ALLOW_THREADS
+	r = loc_database_reload(self->db);
+	Py_END_ALLOW_THREADS
+
+	// There was a new file
+	if (r == 0)
+		Py_RETURN_TRUE;
+
+	// Nothing has changed
+	else if (r > 0)
+		Py_RETURN_FALSE;
+
+	return location_raise(r);
 }
 
 static PyObject* Database_verify(DatabaseObject* self, PyObject* args) {
@@ -91,28 +105,30 @@ static PyObject* Database_verify(DatabaseObject* self, PyObject* args) {
 	if (!PyArg_ParseTuple(args, "O", &public_key))
 		return NULL;
 
-	// Convert into FILE*
-	int fd = PyObject_AsFileDescriptor(public_key);
-	if (fd < 0)
+	// Open the key
+	f = location_fopen(public_key);
+	if (!f)
 		return NULL;
 
-	// Re-open file descriptor
-	f = fdopen(fd, "rb");
-	if (!f) {
-		PyErr_SetFromErrno(PyExc_IOError);
-		return NULL;
-	}
+	int r;
 
-#ifdef _WIN32   // since we have a fake-OpenSSL
-	int r = 0;
-#else
-	int r = loc_database_verify(self->db, f);
-#endif
+	// Verifying reads the entire database, and other threads can use it in the meantime
+	Py_BEGIN_ALLOW_THREADS
 
+	r = loc_database_verify(self->db, f);
+	fclose(f);
+	Py_END_ALLOW_THREADS
+
+	// The signature is valid
 	if (r == 0)
 		Py_RETURN_TRUE;
 
-	Py_RETURN_FALSE;
+	// The signature is not valid, there is no signature, or the key is not a key
+	else if (r > 0 || r == -EINVAL)
+		Py_RETURN_FALSE;
+
+	// Anything else has gone wrong
+	return location_raise(r);
 }
 
 static PyObject* Database_get_description(DatabaseObject* self) {
@@ -120,7 +136,7 @@ static PyObject* Database_get_description(DatabaseObject* self) {
 	if (!description)
 		Py_RETURN_NONE;
 
-	return PyUnicode_FromString(description);
+	return location_string(description);
 }
 
 static PyObject* Database_get_vendor(DatabaseObject* self) {
@@ -128,7 +144,7 @@ static PyObject* Database_get_vendor(DatabaseObject* self) {
 	if (!vendor)
 		Py_RETURN_NONE;
 
-	return PyUnicode_FromString(vendor);
+	return location_string(vendor);
 }
 
 static PyObject* Database_get_license(DatabaseObject* self) {
@@ -136,20 +152,20 @@ static PyObject* Database_get_license(DatabaseObject* self) {
 	if (!license)
 		Py_RETURN_NONE;
 
-	return PyUnicode_FromString(license);
+	return location_string(license);
 }
 
 static PyObject* Database_get_created_at(DatabaseObject* self) {
 	time_t created_at = loc_database_created_at(self->db);
 
-	return PyLong_FromLong(created_at);
+	return PyLong_FromLongLong(created_at);
 }
 
 static PyObject* Database_get_as(DatabaseObject* self, PyObject* args) {
 	struct loc_as* as = NULL;
 	uint32_t number = 0;
 
-	if (!PyArg_ParseTuple(args, "i", &number))
+	if (!PyArg_ParseTuple(args, "O&", location_parse_asn, &number))
 		return NULL;
 
 	// Try to retrieve the AS
@@ -168,7 +184,7 @@ static PyObject* Database_get_as(DatabaseObject* self, PyObject* args) {
 	}
 
 	// Unexpected error
-	return NULL;
+	return location_raise(r);
 }
 
 static PyObject* Database_get_country(DatabaseObject* self, PyObject* args) {
@@ -181,13 +197,13 @@ static PyObject* Database_get_country(DatabaseObject* self, PyObject* args) {
 	// Fetch the country
 	int r = loc_database_get_country(self->db, &country, country_code);
 	if (r) {
-		switch (errno) {
-			case EINVAL:
+		switch (r) {
+			case -EINVAL:
 				PyErr_SetString(PyExc_ValueError, "Invalid country code");
 				break;
 
 			default:
-				PyErr_SetFromErrno(PyExc_OSError);
+				location_raise(r);
 				break;
 		}
 
@@ -216,13 +232,13 @@ static PyObject* Database_lookup(DatabaseObject* self, PyObject* args) {
 	r = loc_database_lookup_from_string(self->db, address, &network);
 	if (r) {
 		// Handle any errors
-		switch (errno) {
-			case EINVAL:
+		switch (r) {
+			case -EINVAL:
 				PyErr_Format(PyExc_ValueError, "Invalid IP address: %s", address);
 				break;
 
 			default:
-				PyErr_SetFromErrno(PyExc_OSError);
+				location_raise(r);
 				break;
 		}
 
@@ -255,7 +271,7 @@ static PyObject* Database_iterate_all(DatabaseObject* self,
 
 	int r = loc_database_enumerator_new(&enumerator, self->db, what, flags);
 	if (r) {
-		PyErr_SetFromErrno(PyExc_SystemError);
+		location_raise(r);
 		return NULL;
 	}
 
@@ -283,7 +299,7 @@ static PyObject* Database_search_as(DatabaseObject* self, PyObject* args) {
 
 	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_ASES, 0);
 	if (r) {
-		PyErr_SetFromErrno(PyExc_SystemError);
+		location_raise(r);
 		return NULL;
 	}
 
@@ -321,7 +337,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 	int r = loc_database_enumerator_new(&enumerator, self->db, LOC_DB_ENUMERATE_NETWORKS,
 		(flatten) ? LOC_DB_ENUMERATOR_FLAGS_FLATTEN : 0);
 	if (r) {
-		PyErr_SetFromErrno(PyExc_SystemError);
+		location_raise(r);
 		return NULL;
 	}
 
@@ -373,7 +389,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 
 		r = loc_database_enumerator_set_countries(enumerator, countries);
 		if (r) {
-			PyErr_SetFromErrno(PyExc_SystemError);
+			location_raise(r);
 
 			loc_country_list_unref(countries);
 			return NULL;
@@ -387,7 +403,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		struct loc_as_list* asns;
 		r = loc_as_list_new(loc_ctx, &asns);
 		if (r) {
-			PyErr_SetFromErrno(PyExc_OSError);
+			location_raise(r);
 			return NULL;
 		}
 
@@ -401,21 +417,25 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 				return NULL;
 			}
 
-			unsigned long number = PyLong_AsLong(item);
+			uint32_t number = 0;
 
-			struct loc_as* as;
+			if (!location_parse_asn(item, &number)) {
+				loc_as_list_unref(asns);
+				return NULL;
+			}
+
+			struct loc_as* as = NULL;
 			r = loc_as_new(loc_ctx, &as, number);
 			if (r) {
-				PyErr_SetFromErrno(PyExc_OSError);
+				location_raise(r);
 
 				loc_as_list_unref(asns);
-				loc_as_unref(as);
 				return NULL;
 			}
 
 			r = loc_as_list_append(asns, as);
 			if (r) {
-				PyErr_SetFromErrno(PyExc_OSError);
+				location_raise(r);
 
 				loc_as_list_unref(asns);
 				loc_as_unref(as);
@@ -427,7 +447,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 
 		r = loc_database_enumerator_set_asns(enumerator, asns);
 		if (r) {
-			PyErr_SetFromErrno(PyExc_OSError);
+			location_raise(r);
 
 			loc_as_list_unref(asns);
 			return NULL;
@@ -441,7 +461,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		r = loc_database_enumerator_set_flag(enumerator, flags);
 
 		if (r) {
-			PyErr_SetFromErrno(PyExc_OSError);
+			location_raise(r);
 			return NULL;
 		}
 	}
@@ -451,7 +471,7 @@ static PyObject* Database_search_networks(DatabaseObject* self, PyObject* args, 
 		r = loc_database_enumerator_set_family(enumerator, family);
 
 		if (r) {
-			PyErr_SetFromErrno(PyExc_OSError);
+			location_raise(r);
 			return NULL;
 		}
 	}
@@ -513,6 +533,12 @@ static struct PyMethodDef Database_methods[] = {
 		(PyCFunction)Database_search_networks,
 		METH_VARARGS|METH_KEYWORDS,
 		NULL,
+	},
+	{
+		"reload",
+		(PyCFunction)Database_reload,
+		METH_NOARGS,
+		"Reads the database again if its file has been replaced, and returns whether it has",
 	},
 	{
 		"verify",
@@ -615,7 +641,7 @@ static PyObject* DatabaseEnumerator_next(DatabaseEnumeratorObject* self) {
 	// Enumerate all networks
 	int r = loc_database_enumerator_next_network(self->enumerator, &network);
 	if (r) {
-		PyErr_SetFromErrno(PyExc_ValueError);
+		location_raise(r);
 		return NULL;
 	}
 
@@ -632,7 +658,7 @@ static PyObject* DatabaseEnumerator_next(DatabaseEnumeratorObject* self) {
 
 	r = loc_database_enumerator_next_as(self->enumerator, &as);
 	if (r) {
-		PyErr_SetFromErrno(PyExc_ValueError);
+		location_raise(r);
 		return NULL;
 	}
 
@@ -648,7 +674,7 @@ static PyObject* DatabaseEnumerator_next(DatabaseEnumeratorObject* self) {
 
 	r = loc_database_enumerator_next_country(self->enumerator, &country);
 	if (r) {
-		PyErr_SetFromErrno(PyExc_ValueError);
+		location_raise(r);
 		return NULL;
 	}
 

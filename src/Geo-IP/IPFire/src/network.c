@@ -34,7 +34,7 @@
 
 struct loc_network {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
 	int family;
 	struct in6_addr first_address;
@@ -46,25 +46,28 @@ struct loc_network {
 	enum loc_network_flags flags;
 
 	char string[INET6_ADDRSTRLEN + 4];
+
+	// The first and last address as strings (only if somebody asked for them)
+	char* first_address_string;
+	char* last_address_string;
 };
 
 LOC_EXPORT int loc_network_new(struct loc_ctx* ctx, struct loc_network** network,
 		struct in6_addr* address, unsigned int prefix) {
+	char buffer[LOC_ADDRESS_STRING_LENGTH];
 	struct loc_network* n = NULL;
-	char abuf[100];
-	DEBUG(ctx, "address: %s\n", inet_ntop(AF_INET6, address, abuf, sizeof(abuf)));
 
 	// Validate the prefix
 	if (!loc_address_valid_prefix(address, prefix)) {
-		ERROR(ctx, "Invalid prefix in %s: %u\n", loc_address_str(address), prefix);
-		errno = EINVAL;
-		return 1;
+		ERROR(ctx, "Invalid prefix in %s: %u\n",
+			loc_address_format(address, buffer, sizeof(buffer)), prefix);
+		return -EINVAL;
 	}
 
 	// Allocate a new network
 	n = calloc(1, sizeof(*n));
 	if (!n)
-		return 1;
+		return -ENOMEM;
 
 	n->ctx = loc_ref(ctx);
 	n->refcount = 1;
@@ -98,7 +101,7 @@ LOC_EXPORT int loc_network_new_from_string(struct loc_ctx* ctx,
 	// Parse the input
 	int r = loc_address_parse(&address, &prefix, string);
 	if (r) {
-		ERROR(ctx, "Could not parse network %s: %s\n", string, strerror(errno));
+		ERROR(ctx, "Could not parse network %s: %s\n", string, strerror(-r));
 		return r;
 	}
 
@@ -107,7 +110,7 @@ LOC_EXPORT int loc_network_new_from_string(struct loc_ctx* ctx,
 }
 
 LOC_EXPORT struct loc_network* loc_network_ref(struct loc_network* network) {
-	network->refcount++;
+	loc_refcount_inc(&network->refcount);
 
 	return network;
 }
@@ -115,22 +118,48 @@ LOC_EXPORT struct loc_network* loc_network_ref(struct loc_network* network) {
 static void loc_network_free(struct loc_network* network) {
 	DEBUG(network->ctx, "Releasing network at %p\n", network);
 
+	if (network->first_address_string)
+		free(network->first_address_string);
+	if (network->last_address_string)
+		free(network->last_address_string);
+
 	loc_unref(network->ctx);
 	free(network);
 }
 
 LOC_EXPORT struct loc_network* loc_network_unref(struct loc_network* network) {
-	if (--network->refcount > 0)
+	if (loc_refcount_dec(&network->refcount) > 0)
 		return network;
 
 	loc_network_free(network);
 	return NULL;
 }
 
+/*
+	Formats an address and stores the string with the network, so that it is
+	valid for as long as the network is and nobody has to free it.
+*/
+static const char* loc_network_format_address(struct loc_network* network,
+		char** string, const struct in6_addr* address) {
+	char buffer[LOC_ADDRESS_STRING_LENGTH];
+
+	// We only have to do this once
+	if (!*string) {
+		if (!loc_address_format(address, buffer, sizeof(buffer)))
+			return NULL;
+
+		*string = strdup(buffer);
+	}
+
+	return *string;
+}
+
 LOC_EXPORT const char* loc_network_str(struct loc_network* network) {
+	char buffer[LOC_ADDRESS_STRING_LENGTH];
+
 	if (!*network->string) {
 		// Format the address
-		const char* address = loc_address_str(&network->first_address);
+		const char* address = loc_address_format(&network->first_address, buffer, sizeof(buffer));
 		if (!address)
 			return NULL;
 
@@ -141,7 +170,7 @@ LOC_EXPORT const char* loc_network_str(struct loc_network* network) {
 		int r = snprintf(network->string, sizeof(network->string) - 1,
 			"%s/%u", address, prefix);
 		if (r < 0) {
-			ERROR(network->ctx, "Could not format network string: %s\n", strerror(EINVAL));
+			ERROR(network->ctx, "Could not format network string: %s\n", LIBLOC_NETERR());
 			*network->string = '\0';
 			return NULL;
 		}
@@ -175,7 +204,8 @@ LOC_EXPORT const struct in6_addr* loc_network_get_first_address(struct loc_netwo
 }
 
 LOC_EXPORT const char* loc_network_format_first_address(struct loc_network* network) {
-	return loc_address_str(&network->first_address);
+	return loc_network_format_address(network,
+		&network->first_address_string, &network->first_address);
 }
 
 LOC_EXPORT const struct in6_addr* loc_network_get_last_address(struct loc_network* network) {
@@ -183,7 +213,8 @@ LOC_EXPORT const struct in6_addr* loc_network_get_last_address(struct loc_networ
 }
 
 LOC_EXPORT const char* loc_network_format_last_address(struct loc_network* network) {
-	return loc_address_str(&network->last_address);
+	return loc_network_format_address(network,
+		&network->last_address_string, &network->last_address);
 }
 
 LOC_EXPORT int loc_network_matches_address(struct loc_network* network, const struct in6_addr* address) {
@@ -222,10 +253,12 @@ LOC_EXPORT int loc_network_set_country_code(struct loc_network* network, const c
 LOC_EXPORT int loc_network_matches_country_code(struct loc_network* network, const char* country_code) {
 	// Search for any special flags
 	const int flag = loc_country_special_code_to_flag(country_code);
+	if (flag < 0)
+		return flag;
 
 	// If we found a flag, we will return whether it is set or not
 	if (flag)
-		return loc_network_has_flag(network, flag);
+		return !!loc_network_has_flag(network, flag);
 
 	// Check country code
 	if (!loc_country_code_is_valid(country_code))
@@ -343,8 +376,7 @@ LOC_EXPORT int loc_network_subnets(struct loc_network* network,
 	// Check if the new prefix is valid
 	if (!loc_address_valid_prefix(&network->first_address, prefix)) {
 		ERROR(network->ctx, "Invalid prefix: %u\n", prefix);
-		errno = EINVAL;
-		return 1;
+		return -EINVAL;
 	}
 
 	// Create the first half of the network
@@ -358,8 +390,12 @@ LOC_EXPORT int loc_network_subnets(struct loc_network* network,
 
 	// Create the second half of the network
 	r = loc_network_new(network->ctx, subnet2, &first_address, prefix);
-	if (r)
+	if (r) {
+		loc_network_unref(*subnet1);
+		*subnet1 = NULL;
+
 		return r;
+	}
 
 	// Copy country code
 	const char* country_code = loc_network_get_country_code(network);
@@ -421,7 +457,7 @@ static int __loc_network_exclude(struct loc_network* network,
 
 	} else {
 		ERROR(network->ctx, "We should never get here\n");
-		r = 1;
+		r = -EINVAL;
 		goto ERROR;
 	}
 
@@ -474,7 +510,12 @@ LOC_EXPORT struct loc_network_list* loc_network_exclude(
 		return NULL;
 	}
 
-	r = __loc_network_exclude_to_list(self, other, list);
+	// If the networks do not overlap, nothing is being excluded
+	if (!loc_network_overlaps(self, other))
+		r = loc_network_list_push(list, self);
+	else
+		r = __loc_network_exclude_to_list(self, other, list);
+
 	if (r) {
 		loc_network_list_unref(list);
 
@@ -497,22 +538,12 @@ LOC_EXPORT struct loc_network_list* loc_network_exclude_list(
 	struct loc_network* subnet = NULL;
 	struct loc_network_list* subnets = NULL;
 
-	for (unsigned int i = 0; i < loc_network_list_size(list); i++) {
-		subnet = loc_network_list_get(list, i);
-
-		// Find all excluded networks
-		if (!loc_network_list_contains(to_check, subnet)) {
-			r = __loc_network_exclude_to_list(network, subnet, to_check);
-			if (r) {
-				loc_network_list_unref(to_check);
-				loc_network_unref(subnet);
-
-				return NULL;
-			}
-		}
-
-		// Cleanup
-		loc_network_unref(subnet);
+	// Start with the whole network, which is being broken down below wherever
+	// it overlaps with any of the networks on the list
+	r = loc_network_list_push(to_check, network);
+	if (r) {
+		loc_network_list_unref(to_check);
+		return NULL;
 	}
 
 	r = loc_network_list_new(network->ctx, &subnets);
@@ -669,7 +700,7 @@ int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** n
 
 	int r = loc_network_new(ctx, network, address, prefix);
 	if (r) {
-		ERROR(ctx, "Could not allocate a new network: %s\n", strerror(errno));
+		ERROR(ctx, "Could not allocate a new network: %s\n", strerror(-r));
 		return r;
 	}
 
@@ -679,7 +710,7 @@ int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** n
 	r = loc_network_set_country_code(*network, country_code);
 	if (r) {
 		ERROR(ctx, "Could not set country code: %s\n", country_code);
-		return r;
+		goto ERROR;
 	}
 
 	// Import ASN
@@ -687,7 +718,7 @@ int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** n
 	r = loc_network_set_asn(*network, asn);
 	if (r) {
 		ERROR(ctx, "Could not set ASN: %u\n", asn);
-		return r;
+		goto ERROR;
 	}
 
 	// Import flags
@@ -695,10 +726,16 @@ int loc_network_new_from_database_v1(struct loc_ctx* ctx, struct loc_network** n
 	r = loc_network_set_flag(*network, flags);
 	if (r) {
 		ERROR(ctx, "Could not set flags: %d\n", flags);
-		return r;
+		goto ERROR;
 	}
 
 	return 0;
+
+ERROR:
+	loc_network_unref(*network);
+	*network = NULL;
+
+	return r;
 }
 
 static char* loc_network_reverse_pointer6(struct loc_network* network, const char* suffix) {

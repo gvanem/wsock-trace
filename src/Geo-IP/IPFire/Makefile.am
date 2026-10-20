@@ -1,5 +1,6 @@
 EXTRA_DIST =
 CLEANFILES =
+noinst_PROGRAMS =
 INSTALL_DIRS =
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_MAKEFLAGS = --no-print-directory
@@ -23,15 +24,19 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = \
 	$(OUR_CFLAGS) \
+	$(ASAN_CFLAGS) \
+	$(COVERAGE_CFLAGS) \
 	-ffunction-sections \
 	-fdata-sections
 
 AM_LDFLAGS = \
-	$(OUR_LDFLAGS)
+	$(OUR_LDFLAGS) \
+	$(ASAN_LDFLAGS) \
+	$(COVERAGE_LDFLAGS)
 
-LIBLOC_CURRENT=1
-LIBLOC_REVISION=3
-LIBLOC_AGE=0
+LIBLOC_CURRENT=2
+LIBLOC_REVISION=0
+LIBLOC_AGE=1
 
 DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
@@ -85,6 +90,7 @@ po/POTFILES.in: Makefile
 
 EXTRA_DIST += \
 	README.md \
+	autogen.sh \
 	examples/private-key.pem \
 	examples/public-key.pem \
 	examples/python/create-database.py \
@@ -92,21 +98,24 @@ EXTRA_DIST += \
 
 pkginclude_HEADERS = \
 	src/libloc/libloc.h \
-	src/libloc/address.h \
 	src/libloc/as.h \
 	src/libloc/as-list.h \
-	src/libloc/compat.h \
 	src/libloc/country.h \
 	src/libloc/country-list.h \
 	src/libloc/database.h \
 	src/libloc/format.h \
 	src/libloc/network.h \
 	src/libloc/network-list.h \
-	src/libloc/network-tree.h \
-	src/libloc/private.h \
-	src/libloc/stringpool.h \
 	src/libloc/resolv.h \
 	src/libloc/writer.h
+
+# Headers that only declare what is private to the library
+noinst_HEADERS = \
+	src/libloc/address.h \
+	src/libloc/compat.h \
+	src/libloc/network-tree.h \
+	src/libloc/private.h \
+	src/libloc/stringpool.h
 
 lib_LTLIBRARIES = \
 	src/libloc.la
@@ -230,10 +239,10 @@ src_python__location_la_LIBADD = \
 # ------------------------------------------------------------------------------
 
 if ENABLE_LUA
-lua_LTLIBRARIES = \
+luaexec_LTLIBRARIES = \
 	src/lua/location.la
 
-luadir = $(LUA_INSTALL_CMOD)
+luaexecdir = $(LUA_INSTALL_CMOD)
 
 src_lua_location_la_SOURCES = \
 	src/lua/as.c \
@@ -287,7 +296,7 @@ CLEANFILES += \
 
 tests/lua/main.lua: tests/lua/main.lua.in Makefile
 	$(SED_PROCESS)
-	chmod o+x $@
+	chmod a+x $@
 
 # ------------------------------------------------------------------------------
 
@@ -295,7 +304,7 @@ tests/lua/main.lua: tests/lua/main.lua.in Makefile
 all-local: $(foreach binding,$(BINDINGS),build-$(binding))
 check-local: $(foreach binding,$(BINDINGS),check-$(binding))
 install-exec-local: $(foreach binding,$(BINDINGS),install-$(binding))
-clean-local: $(foreach binding,$(BINDINGS),clean-$(binding))
+clean-local: $(foreach binding,$(BINDINGS),clean-$(binding)) clean-local-fuzz clean-local-scan-build
 uninstall-local: $(foreach binding,$(BINDINGS),uninstall-$(binding))
 
 # Perl Bindings
@@ -325,7 +334,8 @@ build-perl: src/libloc.la
 
 .PHONY: check-perl
 check-perl: testdata.db build-perl
-	cd $(builddir)/src/perl && $(MAKE) LD_LIBRARY_PATH="$(abs_builddir)/src/.libs" test \
+	cd $(builddir)/src/perl && env $(BINDINGS_TEST_ENV) \
+		$(MAKE) LD_LIBRARY_PATH="$(abs_builddir)/src/.libs" test \
 		database="../../$<" keyfile="$(abs_srcdir)/examples/public-key.pem"
 
 .PHONY: install-perl
@@ -359,6 +369,29 @@ CLEANFILES += \
 
 # ------------------------------------------------------------------------------
 
+# Avoid installing .la files, as we do not use libltdl.
+install-exec-hook:
+	@for la in $(lib_LTLIBRARIES); do \
+	  rm -f "$(DESTDIR)$(libdir)/`basename $$la`"; \
+	done
+	@for la in $(pyexec_LTLIBRARIES); do \
+	  rm -f "$(DESTDIR)$(pyexecdir)/`basename $$la`"; \
+	done
+	@for la in $(luaexec_LTLIBRARIES); do \
+	  rm -f "$(DESTDIR)$(luaexecdir)/`basename $$la`"; \
+	done
+
+# libtool needs those files to find what it has installed, so that
+# we have to remove the libraries and modules ourselves.
+uninstall-hook:
+	rm -f "$(DESTDIR)$(libdir)"/libloc.so*
+	rm -f "$(DESTDIR)$(pyexecdir)/_location.so"
+if ENABLE_LUA
+	rm -f "$(DESTDIR)$(luaexecdir)/location.so"
+endif
+
+# ------------------------------------------------------------------------------
+
 # Use systemd timers if available
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = \
@@ -370,15 +403,16 @@ CLEANFILES += \
 
 INSTALL_DIRS += \
 	$(systemdsystemunitdir)
+endif
 
-# Otherwise fall back to cron
-else
+# The cron job is always being installed. It does nothing if systemd is
+# running, so that the database is also being updated on systems that have
+# the units, but that have been booted with something else.
 cron_daily_SCRIPTS = \
 	src/cron/location-update
 
 CLEANFILES += \
-	$(cron_daily_DATA)
-endif
+	$(cron_daily_SCRIPTS)
 
 EXTRA_DIST += \
 	src/cron/location-update.in \
@@ -400,6 +434,19 @@ update-database:
 
 # ------------------------------------------------------------------------------
 
+# The examples only use what the library exports, which is why they are being
+# built without LIBLOC_PRIVATE, and against the shared library only
+noinst_PROGRAMS += \
+	examples/c/lookup
+
+examples_c_lookup_SOURCES = \
+	examples/c/lookup.c
+
+examples_c_lookup_LDADD = \
+	src/libloc.la
+
+# ------------------------------------------------------------------------------
+
 TESTS_CFLAGS = \
 	$(AM_CFLAGS) \
 	-DLIBLOC_PRIVATE \
@@ -415,26 +462,46 @@ TESTS_ENVIRONMENT = \
 	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
 	TEST_DATA_DIR="$(abs_top_srcdir)/data" \
 	TEST_DATABASE="$(abs_top_srcdir)/data/database.db" \
-	TEST_SIGNING_KEY="$(abs_top_srcdir)/data/signing-key.pem"
+	TEST_SIGNING_KEY="$(abs_top_srcdir)/data/signing-key.pem" \
+	ABS_BUILDDIR="$(abs_builddir)" \
+	ABS_SRCDIR="$(abs_srcdir)"
+
+# Make the address sanitizer fail any test that leaks memory
+# and use libunwind for better stack traces
+TESTS_ENVIRONMENT += \
+	ASAN_OPTIONS=detect_leaks=1:fast_unwind_on_malloc=0
 
 TESTS = \
 	$(check_PROGRAMS) \
 	$(check_SCRIPTS) \
 	$(dist_check_SCRIPTS)
 
+# Run the tests of the bindings with whatever environment their interpreter needs
+TEST_EXTENSIONS = .py .lua
+
+PY_LOG_COMPILER = env $(BINDINGS_TEST_ENV) $(PYTHON)
+LUA_LOG_COMPILER = env $(BINDINGS_TEST_ENV)
+
 CLEANFILES += \
 	testdata.db
 
-testdata.db: examples/python/create-database.py
+testdata.db: examples/python/create-database.py src/python/_location.la
+	LD_LIBRARY_PATH="$(abs_builddir)/src/.libs" \
 	PYTHONPATH=$(abs_srcdir)/src/python:$(abs_builddir)/src/python/.libs \
 	ABS_SRCDIR="$(abs_srcdir)" \
-		$(PYTHON) $< $@
+		env $(BINDINGS_TEST_ENV) $(PYTHON) $< $@
 
 dist_check_SCRIPTS = \
+	tests/examples/lookup.sh \
+	tests/man/index.sh \
+	tests/python/as.py \
 	tests/python/country.py \
+	tests/python/network.py \
 	tests/python/networks-dedup.py \
 	tests/python/test-database.py \
-	tests/python/test-export.py
+	tests/python/test-downloader.py \
+	tests/python/test-export.py \
+	tests/python/test-gil.py
 
 if ENABLE_LUA_TESTS
 check_SCRIPTS += \
@@ -442,96 +509,279 @@ check_SCRIPTS += \
 endif
 
 check_PROGRAMS = \
-	src/test-libloc \
-	src/test-stringpool \
-	src/test-database \
-	src/test-as \
-	src/test-network \
-	src/test-network-list \
-	src/test-country \
-	src/test-signature \
-	src/test-address
+	tests/libloc/main \
+	tests/libloc/stringpool \
+	tests/libloc/database \
+	tests/libloc/enumerator \
+	tests/libloc/as \
+	tests/libloc/as-list \
+	tests/libloc/network \
+	tests/libloc/network-list \
+	tests/libloc/country \
+	tests/libloc/country-list \
+	tests/libloc/signature \
+	tests/libloc/address \
+	tests/libloc/threads \
+	tests/libloc/reload
 
-src_test_libloc_SOURCES = \
-	src/test-libloc.c
+tests_libloc_main_SOURCES = \
+	tests/libloc/main.c
 
-src_test_libloc_CFLAGS = \
+tests_libloc_main_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_libloc_LDADD = \
+tests_libloc_main_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_as_SOURCES = \
-	src/test-as.c
+tests_libloc_as_SOURCES = \
+	tests/libloc/as.c
 
-src_test_as_CFLAGS = \
+tests_libloc_as_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_as_LDADD = \
+tests_libloc_as_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_country_SOURCES = \
-	src/test-country.c
+tests_libloc_as_list_SOURCES = \
+	tests/libloc/as-list.c
 
-src_test_country_CFLAGS = \
+tests_libloc_as_list_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_country_LDADD = \
+tests_libloc_as_list_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_network_SOURCES = \
-	src/test-network.c
+tests_libloc_country_SOURCES = \
+	tests/libloc/country.c
 
-src_test_network_CFLAGS = \
+tests_libloc_country_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_network_LDADD = \
+tests_libloc_country_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_network_list_SOURCES = \
-	src/test-network-list.c
+tests_libloc_country_list_SOURCES = \
+	tests/libloc/country-list.c
 
-src_test_network_list_CFLAGS = \
+tests_libloc_country_list_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_network_list_LDADD = \
+tests_libloc_country_list_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_stringpool_SOURCES = \
-	src/test-stringpool.c
+tests_libloc_network_SOURCES = \
+	tests/libloc/network.c
 
-src_test_stringpool_CFLAGS = \
+tests_libloc_network_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_stringpool_LDADD = \
+tests_libloc_network_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_database_SOURCES = \
-	src/test-database.c
+tests_libloc_network_list_SOURCES = \
+	tests/libloc/network-list.c
 
-src_test_database_CFLAGS = \
+tests_libloc_network_list_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_database_LDADD = \
+tests_libloc_network_list_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_signature_SOURCES = \
-	src/test-signature.c
+tests_libloc_stringpool_SOURCES = \
+	tests/libloc/stringpool.c
 
-src_test_signature_CFLAGS = \
+tests_libloc_stringpool_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_signature_LDADD = \
+tests_libloc_stringpool_LDADD = \
 	$(TESTS_LDADD)
 
-src_test_address_SOURCES = \
-	src/test-address.c
+tests_libloc_database_SOURCES = \
+	tests/libloc/database.c
 
-src_test_address_CFLAGS = \
+tests_libloc_database_CFLAGS = \
 	$(TESTS_CFLAGS)
 
-src_test_address_LDADD = \
+tests_libloc_database_LDADD = \
 	$(TESTS_LDADD)
+
+tests_libloc_enumerator_SOURCES = \
+	tests/libloc/enumerator.c
+
+tests_libloc_enumerator_CFLAGS = \
+	$(TESTS_CFLAGS)
+
+tests_libloc_enumerator_LDADD = \
+	$(TESTS_LDADD)
+
+tests_libloc_signature_SOURCES = \
+	tests/libloc/signature.c
+
+tests_libloc_signature_CFLAGS = \
+	$(TESTS_CFLAGS)
+
+tests_libloc_signature_LDADD = \
+	$(TESTS_LDADD)
+
+tests_libloc_address_SOURCES = \
+	tests/libloc/address.c
+
+tests_libloc_address_CFLAGS = \
+	$(TESTS_CFLAGS)
+
+tests_libloc_address_LDADD = \
+	$(TESTS_LDADD)
+
+tests_libloc_reload_SOURCES = \
+	tests/libloc/reload.c
+
+tests_libloc_reload_CFLAGS = \
+	$(TESTS_CFLAGS) \
+	-pthread
+
+tests_libloc_reload_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	-pthread
+
+tests_libloc_reload_LDADD = \
+	$(TESTS_LDADD)
+
+tests_libloc_threads_SOURCES = \
+	tests/libloc/threads.c
+
+tests_libloc_threads_CFLAGS = \
+	$(TESTS_CFLAGS) \
+	-pthread
+
+tests_libloc_threads_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	-pthread
+
+tests_libloc_threads_LDADD = \
+	$(TESTS_LDADD)
+
+# ------------------------------------------------------------------------------
+
+# Fuzzers
+#
+# These are only built with --enable-fuzzing, which requires clang. Each of
+# them takes whatever the fuzzing engine comes up with and feeds it to the
+# code that parses data that we have not created ourselves.
+
+if ENABLE_FUZZING
+FUZZERS = \
+	tests/fuzz/address \
+	tests/fuzz/database
+
+noinst_PROGRAMS += \
+	$(FUZZERS)
+
+FUZZ_LINK_FLAGS = \
+	$(AM_LDFLAGS) \
+	-fsanitize=fuzzer
+
+tests_fuzz_address_SOURCES = \
+	tests/fuzz/address.c \
+	tests/fuzz/fuzz.h
+
+tests_fuzz_address_CFLAGS = \
+	$(TESTS_CFLAGS)
+
+tests_fuzz_address_LDFLAGS = \
+	$(FUZZ_LINK_FLAGS)
+
+tests_fuzz_address_LDADD = \
+	$(TESTS_LDADD)
+
+tests_fuzz_database_SOURCES = \
+	tests/fuzz/database.c \
+	tests/fuzz/fuzz.h
+
+tests_fuzz_database_CFLAGS = \
+	$(TESTS_CFLAGS)
+
+tests_fuzz_database_LDFLAGS = \
+	$(FUZZ_LINK_FLAGS)
+
+tests_fuzz_database_LDADD = \
+	$(TESTS_LDADD)
+endif
+
+EXTRA_DIST += \
+	tests/fuzz/address.c \
+	tests/fuzz/database.c \
+	tests/fuzz/fuzz.h \
+	tests/fuzz/corpus
+
+# For how long should each fuzzer be run? (in seconds)
+FUZZ_TIME = 60
+
+# Runs all fuzzers, one after the other. They start with the files that are
+# in tests/fuzz/corpus, and anything that makes them crash is stored in
+# tests/fuzz/crashes. The database fuzzer starts with the database that
+# the tests use, which we have to create first.
+.PHONY: fuzz
+fuzz: $(FUZZERS) testdata.db
+	@if [ -z "$(FUZZERS)" ]; then \
+		echo "The fuzzers have not been built. Run ./configure --enable-fuzzing" >&2; \
+		exit 1; \
+	fi
+	@$(MKDIR_P) tests/fuzz/work/database && cp testdata.db tests/fuzz/work/database/
+	@for fuzzer in $(FUZZERS); do \
+		name="$$(basename $${fuzzer})"; \
+		corpus="$(abs_top_srcdir)/tests/fuzz/corpus/$${name}"; \
+		test -d "$${corpus}" || corpus=""; \
+		$(MKDIR_P) "tests/fuzz/work/$${name}" "tests/fuzz/crashes/$${name}"; \
+		echo "Running $${fuzzer} for $(FUZZ_TIME)s..."; \
+		$(LIBTOOL) --mode=execute "$${fuzzer}" \
+			-max_total_time=$(FUZZ_TIME) \
+			-print_final_stats=1 \
+			-artifact_prefix="tests/fuzz/crashes/$${name}/" \
+			"tests/fuzz/work/$${name}" $${corpus} || exit $$?; \
+	done
+
+.PHONY: clean-local-fuzz
+clean-local-fuzz:
+	-rm -rf tests/fuzz/work tests/fuzz/crashes
+
+# ------------------------------------------------------------------------------
+
+# Runs all tests that are written in C in valgrind. Any invalid memory access
+# makes the test fail.
+
+VALGRIND = valgrind
+VALGRIND_FLAGS = \
+	--quiet \
+	--error-exitcode=99 \
+	--errors-for-leak-kinds=none
+
+.PHONY: check-valgrind
+# Valgrind refuses to start if the limit of open files is as high as it is
+# inside containers, which is why we try to lower it.
+check-valgrind: $(check_PROGRAMS)
+	ulimit -n 65536 2>/dev/null || :; \
+	$(MAKE) $(AM_MAKEFLAGS) check-TESTS \
+		TESTS="$(check_PROGRAMS)" \
+		LOG_COMPILER="$(LIBTOOL) --mode=execute $(VALGRIND) $(VALGRIND_FLAGS)"
+
+# ------------------------------------------------------------------------------
+
+# Runs everything through Clang's Static Analyzer and writes the report to
+# scan-build-output/. Since the analyzer hooks into the compiler, this has to
+# build everything from scratch.
+
+SCAN_BUILD = scan-build
+SCAN_BUILD_OUTPUT = $(abs_top_builddir)/scan-build-output
+
+.PHONY: scan-build
+scan-build:
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(SCAN_BUILD) -o $(SCAN_BUILD_OUTPUT) \
+		$(SHELL) -c '$(MAKE) $(AM_MAKEFLAGS) CC="$$CC" LIBTOOLFLAGS="--tag=CC" all'
+
+.PHONY: clean-local-scan-build
+clean-local-scan-build:
+	-rm -rf $(SCAN_BUILD_OUTPUT)
 
 # ------------------------------------------------------------------------------
 
@@ -541,18 +791,245 @@ MANPAGES = \
 
 MANPAGES_3 = \
 	man/libloc.3 \
+	man/loc_as_list_append.3 \
+	man/loc_as_list_new.3 \
+	man/loc_as_new.3 \
+	man/loc_country_code_is_valid.3 \
+	man/loc_country_list_append.3 \
+	man/loc_country_list_new.3 \
+	man/loc_country_new.3 \
 	man/loc_database_count_as.3 \
+	man/loc_database_enumerator_new.3 \
+	man/loc_database_enumerator_set_string.3 \
 	man/loc_database_get_as.3 \
 	man/loc_database_get_country.3 \
 	man/loc_database_lookup.3 \
 	man/loc_database_new.3 \
+	man/loc_database_reload.3 \
+	man/loc_database_verify.3 \
+	man/loc_discover_latest_version.3 \
 	man/loc_get_log_priority.3 \
+	man/loc_network_cmp.3 \
+	man/loc_network_get_asn.3 \
+	man/loc_network_get_first_address.3 \
+	man/loc_network_list_new.3 \
+	man/loc_network_list_push.3 \
+	man/loc_network_new.3 \
 	man/loc_new.3 \
+	man/loc_set_log_callback.3 \
 	man/loc_set_log_fn.3 \
-	man/loc_set_log_priority.3
+	man/loc_set_log_priority.3 \
+	man/loc_writer_new.3 \
+	man/loc_writer_set_vendor.3 \
+	man/lua-location.3 \
+	man/python-location.3
 
 MANPAGES_1 = \
-	man/location.1
+	man/location.1 \
+	man/location-importer.1
+
+# Pages that document more than one function are also being created under the
+# names of the other functions. Those don't have a source of their own.
+MANPAGES_3_ALIASES = \
+	man/loc_as_cmp.3 \
+	man/loc_as_get_name.3 \
+	man/loc_as_get_number.3 \
+	man/loc_as_list_clear.3 \
+	man/loc_as_list_contains.3 \
+	man/loc_as_list_contains_number.3 \
+	man/loc_as_list_empty.3 \
+	man/loc_as_list_get.3 \
+	man/loc_as_list_ref.3 \
+	man/loc_as_list_size.3 \
+	man/loc_as_list_sort.3 \
+	man/loc_as_list_unref.3 \
+	man/loc_as_ref.3 \
+	man/loc_as_set_name.3 \
+	man/loc_as_unref.3 \
+	man/loc_country_cmp.3 \
+	man/loc_country_get_code.3 \
+	man/loc_country_get_continent_code.3 \
+	man/loc_country_get_name.3 \
+	man/loc_country_list_clear.3 \
+	man/loc_country_list_contains.3 \
+	man/loc_country_list_contains_code.3 \
+	man/loc_country_list_empty.3 \
+	man/loc_country_list_get.3 \
+	man/loc_country_list_ref.3 \
+	man/loc_country_list_size.3 \
+	man/loc_country_list_sort.3 \
+	man/loc_country_list_unref.3 \
+	man/loc_country_ref.3 \
+	man/loc_country_set_continent_code.3 \
+	man/loc_country_set_name.3 \
+	man/loc_country_special_code_to_flag.3 \
+	man/loc_country_unref.3 \
+	man/loc_database_created_at.3 \
+	man/loc_database_enumerator_get_asns.3 \
+	man/loc_database_enumerator_get_countries.3 \
+	man/loc_database_enumerator_next_as.3 \
+	man/loc_database_enumerator_next_country.3 \
+	man/loc_database_enumerator_next_network.3 \
+	man/loc_database_enumerator_ref.3 \
+	man/loc_database_enumerator_set_asns.3 \
+	man/loc_database_enumerator_set_countries.3 \
+	man/loc_database_enumerator_set_family.3 \
+	man/loc_database_enumerator_set_flag.3 \
+	man/loc_database_enumerator_unref.3 \
+	man/loc_database_get_description.3 \
+	man/loc_database_get_license.3 \
+	man/loc_database_get_vendor.3 \
+	man/loc_database_lookup_from_string.3 \
+	man/loc_database_open.3 \
+	man/loc_database_ref.3 \
+	man/loc_database_set_reload_interval.3 \
+	man/loc_database_unref.3 \
+	man/loc_network_address_family.3 \
+	man/loc_network_exclude.3 \
+	man/loc_network_exclude_list.3 \
+	man/loc_network_format_first_address.3 \
+	man/loc_network_format_last_address.3 \
+	man/loc_network_get_country_code.3 \
+	man/loc_network_get_last_address.3 \
+	man/loc_network_has_flag.3 \
+	man/loc_network_is_subnet.3 \
+	man/loc_network_list_clear.3 \
+	man/loc_network_list_contains.3 \
+	man/loc_network_list_dump.3 \
+	man/loc_network_list_empty.3 \
+	man/loc_network_list_get.3 \
+	man/loc_network_list_merge.3 \
+	man/loc_network_list_pop.3 \
+	man/loc_network_list_pop_first.3 \
+	man/loc_network_list_ref.3 \
+	man/loc_network_list_size.3 \
+	man/loc_network_list_unref.3 \
+	man/loc_network_matches_address.3 \
+	man/loc_network_matches_country_code.3 \
+	man/loc_network_new_from_string.3 \
+	man/loc_network_overlaps.3 \
+	man/loc_network_prefix.3 \
+	man/loc_network_ref.3 \
+	man/loc_network_reverse_pointer.3 \
+	man/loc_network_set_asn.3 \
+	man/loc_network_set_country_code.3 \
+	man/loc_network_set_flag.3 \
+	man/loc_network_str.3 \
+	man/loc_network_subnets.3 \
+	man/loc_network_unref.3 \
+	man/loc_ref.3 \
+	man/loc_unref.3 \
+	man/loc_writer_add_as.3 \
+	man/loc_writer_add_country.3 \
+	man/loc_writer_add_network.3 \
+	man/loc_writer_get_description.3 \
+	man/loc_writer_get_license.3 \
+	man/loc_writer_get_vendor.3 \
+	man/loc_writer_ref.3 \
+	man/loc_writer_set_description.3 \
+	man/loc_writer_set_license.3 \
+	man/loc_writer_unref.3 \
+	man/loc_writer_write.3
+
+man/loc_as_cmp.3: man/loc_as_new.3
+man/loc_as_get_name.3: man/loc_as_new.3
+man/loc_as_get_number.3: man/loc_as_new.3
+man/loc_as_list_clear.3: man/loc_as_list_new.3
+man/loc_as_list_contains.3: man/loc_as_list_append.3
+man/loc_as_list_contains_number.3: man/loc_as_list_append.3
+man/loc_as_list_empty.3: man/loc_as_list_new.3
+man/loc_as_list_get.3: man/loc_as_list_new.3
+man/loc_as_list_ref.3: man/loc_as_list_new.3
+man/loc_as_list_size.3: man/loc_as_list_new.3
+man/loc_as_list_sort.3: man/loc_as_list_new.3
+man/loc_as_list_unref.3: man/loc_as_list_new.3
+man/loc_as_ref.3: man/loc_as_new.3
+man/loc_as_set_name.3: man/loc_as_new.3
+man/loc_as_unref.3: man/loc_as_new.3
+man/loc_country_cmp.3: man/loc_country_new.3
+man/loc_country_get_code.3: man/loc_country_new.3
+man/loc_country_get_continent_code.3: man/loc_country_new.3
+man/loc_country_get_name.3: man/loc_country_new.3
+man/loc_country_list_clear.3: man/loc_country_list_new.3
+man/loc_country_list_contains.3: man/loc_country_list_append.3
+man/loc_country_list_contains_code.3: man/loc_country_list_append.3
+man/loc_country_list_empty.3: man/loc_country_list_new.3
+man/loc_country_list_get.3: man/loc_country_list_new.3
+man/loc_country_list_ref.3: man/loc_country_list_new.3
+man/loc_country_list_size.3: man/loc_country_list_new.3
+man/loc_country_list_sort.3: man/loc_country_list_new.3
+man/loc_country_list_unref.3: man/loc_country_list_new.3
+man/loc_country_ref.3: man/loc_country_new.3
+man/loc_country_set_continent_code.3: man/loc_country_new.3
+man/loc_country_set_name.3: man/loc_country_new.3
+man/loc_country_special_code_to_flag.3: man/loc_country_code_is_valid.3
+man/loc_country_unref.3: man/loc_country_new.3
+man/loc_database_created_at.3: man/loc_database_new.3
+man/loc_database_enumerator_get_asns.3: man/loc_database_enumerator_set_string.3
+man/loc_database_enumerator_get_countries.3: man/loc_database_enumerator_set_string.3
+man/loc_database_enumerator_next_as.3: man/loc_database_enumerator_new.3
+man/loc_database_enumerator_next_country.3: man/loc_database_enumerator_new.3
+man/loc_database_enumerator_next_network.3: man/loc_database_enumerator_new.3
+man/loc_database_enumerator_ref.3: man/loc_database_enumerator_new.3
+man/loc_database_enumerator_set_asns.3: man/loc_database_enumerator_set_string.3
+man/loc_database_enumerator_set_countries.3: man/loc_database_enumerator_set_string.3
+man/loc_database_enumerator_set_family.3: man/loc_database_enumerator_set_string.3
+man/loc_database_enumerator_set_flag.3: man/loc_database_enumerator_set_string.3
+man/loc_database_enumerator_unref.3: man/loc_database_enumerator_new.3
+man/loc_database_get_description.3: man/loc_database_new.3
+man/loc_database_get_license.3: man/loc_database_new.3
+man/loc_database_get_vendor.3: man/loc_database_new.3
+man/loc_database_lookup_from_string.3: man/loc_database_lookup.3
+man/loc_database_open.3: man/loc_database_new.3
+man/loc_database_ref.3: man/loc_database_new.3
+man/loc_database_set_reload_interval.3: man/loc_database_reload.3
+man/loc_database_unref.3: man/loc_database_new.3
+man/loc_network_address_family.3: man/loc_network_new.3
+man/loc_network_exclude.3: man/loc_network_cmp.3
+man/loc_network_exclude_list.3: man/loc_network_cmp.3
+man/loc_network_format_first_address.3: man/loc_network_get_first_address.3
+man/loc_network_format_last_address.3: man/loc_network_get_first_address.3
+man/loc_network_get_country_code.3: man/loc_network_get_asn.3
+man/loc_network_get_last_address.3: man/loc_network_get_first_address.3
+man/loc_network_has_flag.3: man/loc_network_get_asn.3
+man/loc_network_is_subnet.3: man/loc_network_cmp.3
+man/loc_network_list_clear.3: man/loc_network_list_new.3
+man/loc_network_list_contains.3: man/loc_network_list_new.3
+man/loc_network_list_dump.3: man/loc_network_list_new.3
+man/loc_network_list_empty.3: man/loc_network_list_new.3
+man/loc_network_list_get.3: man/loc_network_list_new.3
+man/loc_network_list_merge.3: man/loc_network_list_push.3
+man/loc_network_list_pop.3: man/loc_network_list_push.3
+man/loc_network_list_pop_first.3: man/loc_network_list_push.3
+man/loc_network_list_ref.3: man/loc_network_list_new.3
+man/loc_network_list_size.3: man/loc_network_list_new.3
+man/loc_network_list_unref.3: man/loc_network_list_new.3
+man/loc_network_matches_address.3: man/loc_network_cmp.3
+man/loc_network_matches_country_code.3: man/loc_network_get_asn.3
+man/loc_network_new_from_string.3: man/loc_network_new.3
+man/loc_network_overlaps.3: man/loc_network_cmp.3
+man/loc_network_prefix.3: man/loc_network_new.3
+man/loc_network_ref.3: man/loc_network_new.3
+man/loc_network_reverse_pointer.3: man/loc_network_get_first_address.3
+man/loc_network_set_asn.3: man/loc_network_get_asn.3
+man/loc_network_set_country_code.3: man/loc_network_get_asn.3
+man/loc_network_set_flag.3: man/loc_network_get_asn.3
+man/loc_network_str.3: man/loc_network_new.3
+man/loc_network_subnets.3: man/loc_network_cmp.3
+man/loc_network_unref.3: man/loc_network_new.3
+man/loc_ref.3: man/loc_new.3
+man/loc_unref.3: man/loc_new.3
+man/loc_writer_add_as.3: man/loc_writer_new.3
+man/loc_writer_add_country.3: man/loc_writer_new.3
+man/loc_writer_add_network.3: man/loc_writer_new.3
+man/loc_writer_get_description.3: man/loc_writer_set_vendor.3
+man/loc_writer_get_license.3: man/loc_writer_set_vendor.3
+man/loc_writer_get_vendor.3: man/loc_writer_set_vendor.3
+man/loc_writer_ref.3: man/loc_writer_new.3
+man/loc_writer_set_description.3: man/loc_writer_set_vendor.3
+man/loc_writer_set_license.3: man/loc_writer_set_vendor.3
+man/loc_writer_unref.3: man/loc_writer_new.3
+man/loc_writer_write.3: man/loc_writer_new.3
 
 MANPAGES_TXT   = $(MANPAGES_TXT_3) $(MANPAGES_TXT_1)
 MANPAGES_TXT_3 = $(patsubst %.3,%.txt,$(MANPAGES_3))
@@ -560,21 +1037,28 @@ MANPAGES_TXT_1 = $(patsubst %.1,%.txt,$(MANPAGES_1))
 MANPAGES_HTML  = $(patsubst %.txt,%.html,$(MANPAGES_TXT))
 MANPAGES_XML   = $(patsubst %.txt,%.xml,$(MANPAGES_TXT))
 
+# The index of all pages, which only exists in HTML
+MANPAGES_INDEX = man/index.html
+
 .PHONY: man
-man: $(MANPAGES) $(MANPAGES_HTML)
+man: $(MANPAGES) $(MANPAGES_3_ALIASES) $(MANPAGES_HTML) $(MANPAGES_INDEX)
 
 if ENABLE_MAN_PAGES
 man_MANS = \
-	$(MANPAGES)
+	$(MANPAGES) \
+	$(MANPAGES_3_ALIASES)
 endif
 
 CLEANFILES += \
 	$(MANPAGES) \
+	$(MANPAGES_3_ALIASES) \
 	$(MANPAGES_HTML) \
+	$(MANPAGES_INDEX) \
 	$(MANPAGES_XML)
 
 EXTRA_DIST += \
 	man/asciidoc.conf \
+	man/index.txt \
 	$(MANPAGES_TXT)
 
 XSLTPROC_FLAGS = \
@@ -614,11 +1098,22 @@ man/%.html: man/%.txt man/asciidoc.conf
 		-b html5 -a icons -a theme=flask -o $@ $<
 
 .PHONY: upload-man
-upload-man: $(MANPAGES_HTML)
-	rsync -avHz --delete --progress $(MANPAGES_HTML) ms@fs01.haj.ipfire.org:/pub/man-pages/$(PACKAGE_NAME)/
+upload-man: $(MANPAGES_HTML) $(MANPAGES_INDEX)
+	rsync -avHz --delete --progress $(MANPAGES_HTML) $(MANPAGES_INDEX) ms@fs01.haj.ipfire.org:/pub/man-pages/$(PACKAGE_NAME)/
 
 EXTRA_DIST += \
 	tools/copy.py
+
+EXTRA_DIST += \
+	benchmarks/README.md \
+	benchmarks/lookup.c \
+	benchmarks/lookup.py
+
+EXTRA_DIST += \
+	contrib/archlinux/PKGBUILD \
+	contrib/archlinux/libloc-database.install \
+	contrib/rpm/build.sh \
+	contrib/rpm/libloc.spec
 
 EXTRA_DIST += \
 	debian/build.sh \
@@ -633,6 +1128,7 @@ EXTRA_DIST += \
 	debian/location.install \
 	debian/location.postinst \
 	debian/location.postrm \
+	debian/lua-location.install \
 	debian/python3-location.examples \
 	debian/python3-location.install \
 	debian/rules \
@@ -641,4 +1137,4 @@ EXTRA_DIST += \
 
 .PHONY: debian
 debian: dist
-	$(SHELL) debian/build.sh $(PACKAGE_NAME)-$(PACKAGE_VERSION) $(distdir).tar.xz
+	$(SHELL) debian/build.sh $(PACKAGE_NAME)-$(PACKAGE_VERSION) $(distdir).tar.gz

@@ -3,6 +3,7 @@
 """
 
 import asyncio
+import atexit
 import logging
 import psycopg
 import psycopg_pool
@@ -33,6 +34,9 @@ class Connection(object):
 			# Close connections after they have been idle for a few seconds
 			max_idle=5,
 		)
+
+		# Register to explicitly close the pool when the application shuts down
+		atexit.register(self.pool.close)
 
 	def __configure(self, conn):
 		"""

@@ -37,7 +37,7 @@ static const struct loc_special_country {
 
 struct loc_country {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
 	// Store the country code in a 3 byte buffer. Two bytes for the code, and NULL so
 	// that we can use strcmp() and return a pointer.
@@ -49,14 +49,12 @@ struct loc_country {
 
 LOC_EXPORT int loc_country_new(struct loc_ctx* ctx, struct loc_country** country, const char* country_code) {
 	// Check of the country code is valid
-	if (!loc_country_code_is_valid(country_code)) {
-		errno = EINVAL;
-		return 1;
-	}
+	if (!loc_country_code_is_valid(country_code))
+		return -EINVAL;
 
 	struct loc_country* c = calloc(1, sizeof(*c));
 	if (!c)
-		return 1;
+		return -ENOMEM;
 
 	c->ctx = loc_ref(ctx);
 	c->refcount = 1;
@@ -71,7 +69,7 @@ LOC_EXPORT int loc_country_new(struct loc_ctx* ctx, struct loc_country** country
 }
 
 LOC_EXPORT struct loc_country* loc_country_ref(struct loc_country* country) {
-	country->refcount++;
+	loc_refcount_inc(&country->refcount);
 
 	return country;
 }
@@ -87,7 +85,7 @@ static void loc_country_free(struct loc_country* country) {
 }
 
 LOC_EXPORT struct loc_country* loc_country_unref(struct loc_country* country) {
-	if (--country->refcount > 0)
+	if (loc_refcount_dec(&country->refcount) > 0)
 		return NULL;
 
 	loc_country_free(country);
@@ -107,10 +105,8 @@ LOC_EXPORT const char* loc_country_get_continent_code(struct loc_country* countr
 
 LOC_EXPORT int loc_country_set_continent_code(struct loc_country* country, const char* continent_code) {
 	// Check for valid input
-	if (!continent_code || strlen(continent_code) != 2) {
-		errno = EINVAL;
-		return 1;
-	}
+	if (!continent_code || strlen(continent_code) != 2)
+		return -EINVAL;
 
 	// Store the code
 	loc_country_code_copy(country->continent_code, continent_code);
@@ -123,16 +119,19 @@ LOC_EXPORT const char* loc_country_get_name(struct loc_country* country) {
 }
 
 LOC_EXPORT int loc_country_set_name(struct loc_country* country, const char* name) {
+	char* n = NULL;
+
+	// Copy the name before we let go of the old one
+	if (name) {
+		n = strdup(name);
+		if (!n)
+			return -ENOMEM;
+	}
+
 	if (country->name)
 		free(country->name);
 
-	if (name) {
-		country->name = strdup(name);
-
-		// Report error if we could not copy the string
-		if (!country->name)
-			return 1;
-	}
+	country->name = n;
 
 	return 0;
 }
@@ -169,6 +168,8 @@ int loc_country_new_from_database_v1(struct loc_ctx* ctx, struct loc_stringpool*
 
 FAIL:
 	loc_country_unref(*country);
+	*country = NULL;
+
 	return r;
 }
 
@@ -185,8 +186,11 @@ int loc_country_to_database_v1(struct loc_country* country,
 		loc_country_code_copy(dbobj->continent_code, country->continent_code);
 
 	// Save the name string in the string pool
-	if (country->name)
+	if (country->name) {
 		name = loc_stringpool_add(pool, country->name);
+		if (name < 0)
+			return name;
+	}
 
 	dbobj->name = htobe32(name);
 
@@ -218,10 +222,8 @@ LOC_EXPORT int loc_country_code_is_valid(const char* cc) {
 
 LOC_EXPORT int loc_country_special_code_to_flag(const char* cc) {
 	// Check if we got some input
-	if (!cc || !*cc) {
-		errno = EINVAL;
-		return -1;
-	}
+	if (!cc || !*cc)
+		return -EINVAL;
 
 	// Return flags for any known special country
 	for (const struct loc_special_country* country = loc_special_countries;

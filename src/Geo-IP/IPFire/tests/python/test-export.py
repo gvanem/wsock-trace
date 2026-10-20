@@ -18,7 +18,10 @@
 ###############################################################################
 
 import location
+import location.export
 import os
+import socket
+import tempfile
 import unittest
 
 TEST_DATA_DIR = os.environ["TEST_DATA_DIR"]
@@ -47,6 +50,35 @@ class Test(unittest.TestCase):
 				break
 
 			print(network)
+
+	def test_export_formats(self):
+		"""
+			Exports a country in all formats
+		"""
+		families = (socket.AF_INET, socket.AF_INET6)
+
+		for format, writer in location.export.formats.items():
+			with self.subTest(format=format):
+				with tempfile.TemporaryDirectory() as directory:
+					exporter = location.export.Exporter(self.db, writer)
+					exporter.export(directory, families, ["DE"], [])
+
+					# There must be one file for each family
+					self.assertEqual(len(os.listdir(directory)), len(families))
+
+	def test_export_xt_geoip(self):
+		"""
+			Checks that xt_geoip files have the first and last address of each network
+		"""
+		with tempfile.TemporaryDirectory() as directory:
+			exporter = location.export.Exporter(self.db, location.export.XTGeoIPOutputWriter)
+			exporter.export(directory, (socket.AF_INET, socket.AF_INET6), ["DE"], [])
+
+			for filename, length in (("DE.iv4", 4), ("DE.iv6", 16)):
+				size = os.path.getsize(os.path.join(directory, filename))
+
+				self.assertGreater(size, 0)
+				self.assertEqual(size % (2 * length), 0)
 
 
 if __name__ == "__main__":

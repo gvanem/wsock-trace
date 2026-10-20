@@ -2180,6 +2180,9 @@ class CLI(object):
 			# AWS IP Ranges
 			("AWS-IP-RANGES", self._import_aws_ip_ranges, "https://ip-ranges.amazonaws.com/ip-ranges.json"),
 
+			# OCI IP Ranges
+			("OCI-IP-RANGES", self._import_oci_ip_ranges, "https://docs.oracle.com/en-us/iaas/tools/public_ip_ranges.json"),
+
 			# Spamhaus DROP
 			("SPAMHAUS-DROP",   self._import_spamhaus_drop, "https://www.spamhaus.org/drop/drop.txt"),
 			("SPAMHAUS-DROPV6", self._import_spamhaus_drop, "https://www.spamhaus.org/drop/dropv6.txt"),
@@ -2358,6 +2361,134 @@ class CLI(object):
 				""", "%s" % network, name, cc, is_anycast,
 			)
 
+	async def _import_oci_ip_ranges(self, name, f):
+		# Parse the feed
+		feed = json.load(f)
+
+		# Set up a dictionary for mapping a region name to a country:
+		# https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+		oci_region_country_map = {
+			# Africa
+			"af-casablanca-1"   : "MA",
+			"af-johannesburg-1" : "ZA",
+
+			# Asia/Pacific
+			"ap-batam-1"        : "ID",
+			"ap-chuncheon-1"    : "KR",
+			"ap-delhi-1"        : "IN",
+			"ap-hyderabad-1"    : "IN",
+			"ap-kulai-1"        : "MY",
+			"ap-kulai-2"        : "MY",
+			"ap-melbourne-1"    : "AU",
+			"ap-mumbai-1"       : "IN",
+			"ap-osaka-1"        : "JP",
+			"ap-seoul-1"        : "KR",
+			"ap-singapore-1"    : "SG",
+			"ap-singapore-2"    : "SG",
+			"ap-sydney-1"       : "AU",
+			"ap-tokyo-1"        : "JP",
+
+			# Canada
+			"ca-montreal-1"     : "CA",
+			"ca-toronto-1"      : "CA",
+
+			# Europe
+			"eu-amsterdam-1"    : "NL",
+			"eu-dublin-3"       : "IE",
+			"eu-frankfurt-1"    : "DE",
+			"eu-jovanovac-1"    : "RS",
+			"eu-madrid-1"       : "ES",
+			"eu-madrid-3"       : "ES",
+			"eu-marseille-1"    : "FR",
+			"eu-milan-1"        : "IT",
+			"eu-paris-1"        : "FR",
+			"eu-stockholm-1"    : "SE",
+			"eu-turin-1"        : "IT",
+			"eu-zurich-1"       : "CH",
+			"uk-cardiff-1"      : "GB",
+			"uk-london-1"       : "GB",
+
+			# Middle East
+			"il-jerusalem-1"    : "IL",
+			"me-abudhabi-1"     : "AE",
+			"me-dubai-1"        : "AE",
+			"me-jeddah-1"       : "SA",
+			"me-riyadh-1"       : "SA",
+
+			# Mexico
+			"mx-monterrey-1"    : "MX",
+			"mx-queretaro-1"    : "MX",
+
+			# South America
+			"sa-bogota-1"       : "CO",
+			"sa-riodejaneiro-2" : "BR",
+			"sa-santiago-1"     : "CL",
+			"sa-saopaulo-1"     : "BR",
+			"sa-valparaiso-1"   : "CL",
+			"sa-vinhedo-1"      : "BR",
+		}
+
+		for item in feed.get("regions", []):
+			# Fetch the region
+			region = item.get("region", "")
+
+			# Set some defaults
+			cc = None
+			is_anycast = False
+
+			# Fetch the CC from the dictionary
+			try:
+				cc = oci_region_country_map[region]
+
+			# If we couldn't find anything, let's try something else...
+			except KeyError as e:
+				# Everything that starts with us- is probably in the United States
+				if region.startswith("us-"):
+					cc = "US"
+
+				# Everything that starts with uk- is probably in the United Kingdom
+				elif region.startswith("uk-"):
+					cc = "GB"
+
+				# Log a warning for anything else
+				else:
+					log.warning("%s: Could not determine country code for OCI region %s" \
+						% (name, region))
+					continue
+
+			for prefix in item.get("cidrs", []):
+				# Fetch network
+				network = prefix.get("cidr")
+
+				# Parse the network
+				try:
+					network = ipaddress.ip_network(network)
+				except ValueError as e:
+					log.warning("%s: Unable to parse prefix %s" % (name, network))
+					continue
+
+				# Sanitize parsed networks...
+				if not self._check_parsed_network(network):
+					continue
+
+				# Write to database
+				self.db.execute("""
+					INSERT INTO
+						network_feeds
+					(
+						network,
+						source,
+						country,
+						is_anycast
+					)
+					VALUES
+					(
+						%s, %s, %s, %s
+					)
+					ON CONFLICT (network, source) DO NOTHING
+					""", "%s" % network, name, cc, is_anycast,
+				)
+
 	async def _import_spamhaus_drop(self, name, f):
 		"""
 			Import Spamhaus DROP IP feeds
@@ -2407,7 +2538,14 @@ class CLI(object):
 				VALUES
 				(
 					%s, %s, %s
-				)""", "%s" % network, name, True,
+				)
+				ON CONFLICT
+				(
+					network, source
+				)
+				DO
+					NOTHING
+				""", "%s" % network, name, True,
 			)
 
 		# Raise an exception if we could not import anything
@@ -2460,7 +2598,14 @@ class CLI(object):
 				VALUES
 				(
 					%s, %s, %s
-				)""", "%s" % asn, name, True,
+				)
+				ON CONFLICT
+				(
+					number, source
+				)
+				DO
+					NOTHING
+				""", "%s" % asn, name, True,
 			)
 
 	@staticmethod

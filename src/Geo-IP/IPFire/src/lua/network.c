@@ -64,7 +64,7 @@ static int Network_new(lua_State* L) {
 	// Parse the string
 	r = loc_network_new_from_string(ctx, &network, n);
 	if (r)
-		return luaL_error(L, "Could not create network %s: %s\n", n, strerror(errno));
+		return luaL_error(L, "Could not create network %s: %s\n", n, strerror(-r));
 
 	// Return the network
 	r = create_network(L, network);
@@ -103,7 +103,7 @@ static int Network_get_asn(lua_State* L) {
 
 	// Push ASN
 	if (asn)
-		lua_pushnumber(L, asn);
+		location_pushinteger(L, asn);
 	else
 		lua_pushnil(L);
 
@@ -116,7 +116,7 @@ static int Network_get_family(lua_State* L) {
 	Network* self = luaL_checknetwork(L, 1);
 
 	// Push family
-	lua_pushnumber(L, loc_network_address_family(self->network));
+	location_pushinteger(L, loc_network_address_family(self->network));
 
 	return 1;
 }
@@ -164,7 +164,7 @@ static int Network_subnets(lua_State* L) {
 	r = loc_network_subnets(self->network, &subnet1, &subnet2);
 	if (r)
 		return luaL_error(L, "Could not create subnets of %s: %s\n",
-			loc_network_str(self->network), strerror(errno));
+			loc_network_str(self->network), strerror(-r));
 
 	// Create a new table
 	lua_createtable(L, 2, 0);

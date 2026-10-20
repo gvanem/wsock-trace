@@ -21,7 +21,6 @@
 
 #include <libloc/libloc.h>
 #include <libloc/format.h>
-#include <libloc/stringpool.h>
 
 struct loc_as;
 int loc_as_new(struct loc_ctx* ctx, struct loc_as** as, uint32_t number);
@@ -36,6 +35,8 @@ int loc_as_set_name(struct loc_as* as, const char* name);
 int loc_as_cmp(struct loc_as* as1, struct loc_as* as2);
 
 #ifdef LIBLOC_PRIVATE
+
+#include <libloc/stringpool.h>
 
 int loc_as_new_from_database_v1(struct loc_ctx* ctx, struct loc_stringpool* pool,
 		struct loc_as** as, const struct loc_database_as_v1* dbobj);

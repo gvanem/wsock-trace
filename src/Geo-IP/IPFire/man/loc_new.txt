@@ -2,29 +2,35 @@
 
 == Name
 
-loc_new - Create a new libloc context
+loc_new, loc_ref, loc_unref - Create a new libloc context
 
 == Synopsis
-[verse]
-
+----
 #include <libloc/libloc.h>
 
 struct loc_ctx;
 
-int loc_new(struct loc_ctx{empty}*{empty}* ctx);
+int loc_new(struct loc_ctx** ctx);
 
-struct loc_ctx{empty}* loc_ref(struct loc_ctx{empty}* ctx);
+struct loc_ctx* loc_ref(struct loc_ctx* ctx);
 
-struct loc_ctx{empty}* loc_unref(struct loc_ctx{empty}* ctx);
+struct loc_ctx* loc_unref(struct loc_ctx* ctx);
+----
 
 == Description
 
-Every operation in libloc requires to set up a context first.
+Every operation in libloc requires a context to be set up first.
 This is done by calling loc_new(3).
 
 Every time another part of your code is holding a reference to the context,
 you will need to call loc_ref() to increase the reference counter.
 If you no longer need the context, you will need to call loc_unref().
+
+== Return Value
+
+loc_new() returns zero on success. Otherwise a negative error number (see errno(3)) is
+returned, as it is by all functions of the library that return an integer to tell
+whether they were successful. _errno_ itself is not being set.
 
 == See Also
 

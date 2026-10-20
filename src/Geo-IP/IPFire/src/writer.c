@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/queue.h>
 #include <time.h>
 
 #ifdef HAVE_ENDIAN_H
@@ -32,8 +31,8 @@
 #include <openssl/pem.h>
 
 #include <libloc/libloc.h>
+#include <libloc/address.h>
 #include <libloc/as.h>
-#include <libloc/as-list.h>
 #include <libloc/compat.h>
 #include <libloc/country.h>
 #include <libloc/country-list.h>
@@ -46,7 +45,7 @@
 
 struct loc_writer {
 	struct loc_ctx* ctx;
-	int refcount;
+	loc_refcount_t refcount;
 
 	struct loc_stringpool* pool;
 	off_t vendor;
@@ -65,7 +64,11 @@ struct loc_writer {
 
 	struct loc_network_tree* networks;
 
-	struct loc_as_list* as_list;
+	// All ASes, sorted by their number
+	struct loc_as** ases;
+	size_t num_ases;
+	size_t ases_size;
+
 	struct loc_country_list* country_list;
 };
 
@@ -82,7 +85,7 @@ static int parse_private_key(struct loc_writer* writer, EVP_PKEY** private_key, 
 		char* error = ERR_error_string(ERR_get_error(), NULL);
 		ERROR(writer->ctx, "Could not parse private key: %s\n", error);
 
-		return -1;
+		return -EINVAL;
 	}
 
 	return 0;
@@ -92,7 +95,7 @@ LOC_EXPORT int loc_writer_new(struct loc_ctx* ctx, struct loc_writer** writer,
 		FILE* fkey1, FILE* fkey2) {
 	struct loc_writer* w = calloc(1, sizeof(*w));
 	if (!w)
-		return 1;
+		return -ENOMEM;
 
 	w->ctx = loc_ref(ctx);
 	w->refcount = 1;
@@ -105,20 +108,13 @@ LOC_EXPORT int loc_writer_new(struct loc_ctx* ctx, struct loc_writer** writer,
 
 	// Add an empty string to the stringpool
 	r = loc_stringpool_add(w->pool, "");
-	if (r) {
+	if (r < 0) {
 		loc_writer_unref(w);
 		return r;
 	}
 
 	// Initialize the network tree
 	r = loc_network_tree_new(ctx, &w->networks);
-	if (r) {
-		loc_writer_unref(w);
-		return r;
-	}
-
-	// Initialize AS list
-	r = loc_as_list_new(ctx, &w->as_list);
 	if (r) {
 		loc_writer_unref(w);
 		return r;
@@ -153,7 +149,7 @@ LOC_EXPORT int loc_writer_new(struct loc_ctx* ctx, struct loc_writer** writer,
 }
 
 LOC_EXPORT struct loc_writer* loc_writer_ref(struct loc_writer* writer) {
-	writer->refcount++;
+	loc_refcount_inc(&writer->refcount);
 
 	return writer;
 }
@@ -168,8 +164,12 @@ static void loc_writer_free(struct loc_writer* writer) {
 		EVP_PKEY_free(writer->private_key2);
 
 	// Unref all AS
-	if (writer->as_list)
-		loc_as_list_unref(writer->as_list);
+	if (writer->ases) {
+		for (size_t i = 0; i < writer->num_ases; i++)
+			loc_as_unref(writer->ases[i]);
+
+		free(writer->ases);
+	}
 
 	// Unref all countries
 	if (writer->country_list)
@@ -188,7 +188,7 @@ static void loc_writer_free(struct loc_writer* writer) {
 }
 
 LOC_EXPORT struct loc_writer* loc_writer_unref(struct loc_writer* writer) {
-	if (--writer->refcount > 0)
+	if (loc_refcount_dec(&writer->refcount) > 0)
 		return writer;
 
 	loc_writer_free(writer);
@@ -238,14 +238,78 @@ LOC_EXPORT int loc_writer_set_license(struct loc_writer* writer, const char* lic
 	return 0;
 }
 
+/*
+	Returns where the AS with number is, or where it would have to go
+*/
+static size_t loc_writer_find_as(struct loc_writer* writer, uint32_t number, int* found) {
+	size_t lo = 0;
+	size_t hi = writer->num_ases;
+
+	*found = 0;
+
+	while (lo < hi) {
+		size_t i = lo + (hi - lo) / 2;
+
+		const uint32_t n = loc_as_get_number(writer->ases[i]);
+
+		if (n < number) {
+			lo = i + 1;
+
+		} else if (n > number) {
+			hi = i;
+
+		} else {
+			*found = 1;
+			return i;
+		}
+	}
+
+	return lo;
+}
+
 LOC_EXPORT int loc_writer_add_as(struct loc_writer* writer, struct loc_as** as, uint32_t number) {
+	struct loc_as** ases = NULL;
+	int found = 0;
+	int r;
+
+	// Find where the AS goes
+	const size_t index = loc_writer_find_as(writer, number, &found);
+
+	// Return the AS if it has been added before
+	if (found) {
+		*as = loc_as_ref(writer->ases[index]);
+		return 0;
+	}
+
+	// Make space for more ASes
+	if (writer->num_ases >= writer->ases_size) {
+		size_t size = 1024;
+
+		if (writer->ases_size)
+			size = writer->ases_size * 2;
+
+		ases = reallocarray(writer->ases, size, sizeof(*writer->ases));
+		if (!ases)
+			return -errno;
+
+		writer->ases = ases;
+		writer->ases_size = size;
+	}
+
 	// Create a new AS object
-	int r = loc_as_new(writer->ctx, as, number);
+	r = loc_as_new(writer->ctx, as, number);
 	if (r)
 		return r;
 
-	// Append it to the list
-	return loc_as_list_append(writer->as_list, *as);
+	// Move all ASes with a larger number out of the way. The importer adds them in
+	// order, so that there usually is nothing to move.
+	memmove(writer->ases + index + 1, writer->ases + index,
+		sizeof(*writer->ases) * (writer->num_ases - index));
+
+	writer->ases[index] = loc_as_ref(*as);
+	writer->num_ases++;
+
+	return 0;
 }
 
 LOC_EXPORT int loc_writer_add_network(struct loc_writer* writer, struct loc_network** network, const char* string) {
@@ -257,17 +321,41 @@ LOC_EXPORT int loc_writer_add_network(struct loc_writer* writer, struct loc_netw
 		return r;
 
 	// Add it to the local tree
-	return loc_network_tree_add_network(writer->networks, *network);
+	r = loc_network_tree_add_network(writer->networks, *network);
+	if (r) {
+		loc_network_unref(*network);
+		*network = NULL;
+	}
+
+	return r;
 }
 
 LOC_EXPORT int loc_writer_add_country(struct loc_writer* writer, struct loc_country** country, const char* country_code) {
+	// Return the country if it has been added before
+	if (loc_country_code_is_valid(country_code)) {
+		for (size_t i = 0; i < loc_country_list_size(writer->country_list); i++) {
+			*country = loc_country_list_get(writer->country_list, i);
+
+			if (strcmp(loc_country_get_code(*country), country_code) == 0)
+				return 0;
+
+			loc_country_unref(*country);
+		}
+	}
+
 	// Allocate a new country
 	int r = loc_country_new(writer->ctx, country, country_code);
 	if (r)
 		return r;
 
 	// Append it to the list
-	return loc_country_list_append(writer->country_list, *country);
+	r = loc_country_list_append(writer->country_list, *country);
+	if (r) {
+		loc_country_unref(*country);
+		*country = NULL;
+	}
+
+	return r;
 }
 
 static void make_magic(struct loc_writer* writer, struct loc_database_magic* magic,
@@ -307,28 +395,20 @@ static int loc_database_write_as_section(struct loc_writer* writer,
 	DEBUG(writer->ctx, "AS section starts at %jd bytes\n", (intmax_t)*offset);
 	header->as_offset = htobe32(*offset);
 
-	// Sort the AS list first
-	loc_as_list_sort(writer->as_list);
-
-	const size_t as_count = loc_as_list_size(writer->as_list);
-
-	struct loc_database_as_v1 block;
+	struct loc_database_as_v1 block = {};
 	size_t block_length = 0;
+	int r;
 
-	for (unsigned int i = 0; i < as_count; i++) {
-		struct loc_as* as = loc_as_list_get(writer->as_list, i);
-		if (!as)
-			return 1;
-
+	// The ASes are sorted already
+	for (size_t i = 0; i < writer->num_ases; i++) {
 		// Convert AS into database format
-		loc_as_to_database_v1(as, writer->pool, &block);
+		r = loc_as_to_database_v1(writer->ases[i], writer->pool, &block);
+		if (r)
+			return r;
 
 		// Write to disk
 		*offset += fwrite(&block, 1, sizeof(block), f);
 		block_length += sizeof(block);
-
-		// Unref AS
-		loc_as_unref(as);
 	}
 
 	DEBUG(writer->ctx, "AS section has a length of %zu bytes\n", block_length);
@@ -339,53 +419,139 @@ static int loc_database_write_as_section(struct loc_writer* writer,
 	return 0;
 }
 
-struct node {
-	TAILQ_ENTRY(node) nodes;
+/*
+	The nodes of the tree are being written depth-first, so that a node is
+	followed by its first child, and that child by its own first child.
+	A lookup walks down the tree one bit at a time, and this way, it often
+	finds the next node in the same cache line, or in the next one.
 
+	The nodes that still have to be written are kept on a stack. Every level
+	of the tree leaves at most one of them waiting for the others, so that
+	the stack can never be deeper than the tree.
+*/
+struct node {
 	struct loc_network_tree_node* node;
 
-	// Indices of the child nodes
-	uint32_t index_zero;
-	uint32_t index_one;
+	// The index of the parent, and which of its children this node is
+	uint32_t parent;
+	int bit;
 };
 
-static struct node* make_node(struct loc_network_tree_node* node) {
-	struct node* n = malloc(sizeof(*n));
-	if (!n)
-		return NULL;
+#define NODE_STACK_SIZE (LOC_ADDRESS_MAX_BITS + 2)
 
-	n->node  = loc_network_tree_node_ref(node);
-	n->index_zero = n->index_one = 0;
+/*
+	Many networks have the same country, ASN and flags. The address and the
+	prefix are part of the tree, so that networks with the same data can all
+	point to the same object, which we find in a hash table.
+*/
+struct network_data {
+	struct loc_database_network_v1* objects;
+	size_t num_objects;
+	size_t objects_size;
 
-	return n;
-}
-
-static void free_node(struct node* node) {
-	loc_network_tree_node_unref(node->node);
-
-	free(node);
-}
-
-struct network {
-	TAILQ_ENTRY(network) networks;
-
-	struct loc_network* network;
+	// Slots hold the index of an object plus one, or zero if they are free
+	uint32_t* slots;
+	size_t num_slots;
 };
 
-static struct network* make_network(struct loc_network* network) {
-	struct network* n = malloc(sizeof(*n));
-	if (!n)
-		return NULL;
+static size_t network_data_hash(const struct loc_database_network_v1* object) {
+	const unsigned char* p = (const unsigned char*)object;
+	size_t hash = 2166136261u;
 
-	n->network = loc_network_ref(network);
+	// FNV-1a
+	for (size_t i = 0; i < sizeof(*object); i++) {
+		hash ^= p[i];
+		hash *= 16777619u;
+	}
 
-	return n;
+	return hash;
 }
 
-static void free_network(struct network* network) {
-	loc_network_unref(network->network);
+// Returns the slot that holds the object, or the free slot where it belongs
+static uint32_t* network_data_slot(struct network_data* data,
+		const struct loc_database_network_v1* object) {
+	size_t i = network_data_hash(object) & (data->num_slots - 1);
 
-	free(network);
+	for (;;) {
+		uint32_t* slot = &data->slots[i];
+
+		if (!*slot)
+			return slot;
+
+		if (memcmp(&data->objects[*slot - 1], object, sizeof(*object)) == 0)
+			return slot;
+
+		i = (i + 1) & (data->num_slots - 1);
+	}
+}
+
+static int network_data_grow(struct network_data* data) {
+	size_t num_slots = 1024;
+
+	if (data->num_slots)
+		num_slots = data->num_slots * 2;
+
+	uint32_t* slots = calloc(num_slots, sizeof(*slots));
+	if (!slots)
+		return -ENOMEM;
+
+	free(data->slots);
+
+	data->slots = slots;
+	data->num_slots = num_slots;
+
+	// Put all objects into the new slots
+	for (size_t i = 0; i < data->num_objects; i++)
+		*network_data_slot(data, &data->objects[i]) = i + 1;
+
+	return 0;
+}
+
+// Stores the index of an object with the same data in index, and adds it if there is none
+static int network_data_add(struct network_data* data,
+		const struct loc_database_network_v1* object, uint32_t* index) {
+	int r;
+
+	// Keep at least half of the slots free
+	if (data->num_objects * 2 >= data->num_slots) {
+		r = network_data_grow(data);
+		if (r)
+			return r;
+	}
+
+	uint32_t* slot = network_data_slot(data, object);
+
+	// We have this one already
+	if (*slot) {
+		*index = *slot - 1;
+		return 0;
+	}
+
+	if (data->num_objects == data->objects_size) {
+		size_t size = 1024;
+
+		if (data->objects_size)
+			size = data->objects_size * 2;
+
+		struct loc_database_network_v1* objects = reallocarray(data->objects,
+			size, sizeof(*objects));
+		if (!objects)
+			return -ENOMEM;
+
+		data->objects = objects;
+		data->objects_size = size;
+	}
+
+	memcpy(&data->objects[data->num_objects], object, sizeof(*object));
+	*index = data->num_objects++;
+	*slot = *index + 1;
+
+	return 0;
+}
+
+static void network_data_free(struct network_data* data) {
+	free(data->objects);
+	free(data->slots);
 }
 
 static int loc_database_write_networks(struct loc_writer* writer,
@@ -399,96 +565,126 @@ static int loc_database_write_networks(struct loc_writer* writer,
 	size_t network_tree_length = 0;
 	size_t network_data_length = 0;
 
-	struct node* node;
-	struct node* child_node;
-
-	uint32_t index = 0;
 	uint32_t network_index = 0;
 
-	struct loc_database_network_v1 db_network;
-	struct loc_database_network_node_v1 db_node;
+	struct loc_database_network_v1 db_network = {};
 
-	// Initialize queue for nodes
-	TAILQ_HEAD(node_t, node) nodes;
-	TAILQ_INIT(&nodes);
+	// The nodes that we have to write next
+	struct node nodes[NODE_STACK_SIZE];
+	unsigned int num_nodes = 0;
 
-	// Initialize queue for networks
-	TAILQ_HEAD(network_t, network) networks;
-	TAILQ_INIT(&networks);
+	// The nodes that we have written
+	struct loc_database_network_node_v1* tree = NULL;
+	size_t tree_length = 0;
+	size_t tree_size = 0;
+
+	// The data of all networks
+	struct network_data networks = {};
 
 	// Cleanup the tree before writing it
 	r = loc_network_tree_cleanup(writer->networks);
 	if (r)
 		return r;
 
-	// Add root
-	struct loc_network_tree_node* root = loc_network_tree_get_root(writer->networks);
-	node = make_node(root);
-	if (!node)
-		return 1;
+	// Start with the root
+	nodes[num_nodes++] = (struct node){
+		.node = loc_network_tree_get_root(writer->networks),
+		.bit  = -1,
+	};
 
-	TAILQ_INSERT_TAIL(&nodes, node, nodes);
+	// Take the last node from the stack until it is empty
+	while (num_nodes) {
+		struct node node = nodes[--num_nodes];
 
-	while (!TAILQ_EMPTY(&nodes)) {
-		// Pop first node in list
-		node = TAILQ_FIRST(&nodes);
-		TAILQ_REMOVE(&nodes, node, nodes);
+		DEBUG(writer->ctx, "Processing node %p\n", node.node);
 
-		DEBUG(writer->ctx, "Processing node %p\n", node);
+		// Make space for the node
+		if (tree_length == tree_size) {
+			size_t size = 1024;
 
-		// Get child nodes
-		struct loc_network_tree_node* node_zero = loc_network_tree_node_get(node->node, 0);
-		if (node_zero) {
-			node->index_zero = ++index;
+			if (tree_size)
+				size = tree_size * 2;
 
-			child_node = make_node(node_zero);
-			loc_network_tree_node_unref(node_zero);
-
-			TAILQ_INSERT_TAIL(&nodes, child_node, nodes);
-		}
-
-		struct loc_network_tree_node* node_one = loc_network_tree_node_get(node->node, 1);
-		if (node_one) {
-			node->index_one = ++index;
-
-			child_node = make_node(node_one);
-			loc_network_tree_node_unref(node_one);
-
-			TAILQ_INSERT_TAIL(&nodes, child_node, nodes);
-		}
-
-		// Prepare what we are writing to disk
-		db_node.zero = htobe32(node->index_zero);
-		db_node.one  = htobe32(node->index_one);
-
-		if (loc_network_tree_node_is_leaf(node->node)) {
-			struct loc_network* network = loc_network_tree_node_get_network(node->node);
-
-			// Append network to be written out later
-			struct network* nw = make_network(network);
-			if (!nw) {
-				free_node(node);
-				return 1;
+			struct loc_database_network_node_v1* t = reallocarray(tree, size, sizeof(*tree));
+			if (!t) {
+				loc_network_tree_node_unref(node.node);
+				r = -ENOMEM;
+				goto ERROR;
 			}
-			TAILQ_INSERT_TAIL(&networks, nw, networks);
 
-			db_node.network = htobe32(network_index++);
-			loc_network_unref(network);
-		} else {
-			db_node.network = htobe32(0xffffffff);
+			tree = t;
+			tree_size = size;
 		}
 
-		// Write the current node
-		DEBUG(writer->ctx, "Writing node %p (0 = %u, 1 = %u)\n",
-			node, node->index_zero, node->index_one);
+		const uint32_t index = tree_length++;
 
-		*offset += fwrite(&db_node, 1, sizeof(db_node), f);
-		network_tree_length += sizeof(db_node);
+		struct loc_database_network_node_v1* db_node = &tree[index];
 
-		free_node(node);
+		// The children will tell us where they are
+		db_node->zero = 0;
+		db_node->one  = 0;
+
+		// Tell the parent where we are
+		switch (node.bit) {
+			case 0:
+				tree[node.parent].zero = htobe32(index);
+				break;
+
+			case 1:
+				tree[node.parent].one = htobe32(index);
+				break;
+		}
+
+		if (loc_network_tree_node_is_leaf(node.node)) {
+			struct loc_network* network = loc_network_tree_node_get_network(node.node);
+
+			// The padding is being compared, too
+			memset(&db_network, 0, sizeof(db_network));
+
+			// Find the data of the network, or add it to be written out later
+			r = loc_network_to_database_v1(network, &db_network);
+			if (!r)
+				r = network_data_add(&networks, &db_network, &network_index);
+
+			loc_network_unref(network);
+
+			if (r) {
+				loc_network_tree_node_unref(node.node);
+				goto ERROR;
+			}
+
+			db_node->network = htobe32(network_index);
+		} else {
+			db_node->network = htobe32(0xffffffff);
+		}
+
+		// Put the second child on the stack first, so that the first one comes next
+		for (int bit = 1; bit >= 0; bit--) {
+			struct loc_network_tree_node* child = loc_network_tree_node_get(node.node, bit);
+			if (!child)
+				continue;
+
+			// This cannot happen with a tree that is not deeper than an address is long
+			if (num_nodes == NODE_STACK_SIZE) {
+				loc_network_tree_node_unref(child);
+				loc_network_tree_node_unref(node.node);
+				r = -EINVAL;
+				goto ERROR;
+			}
+
+			nodes[num_nodes++] = (struct node){
+				.node   = child,
+				.parent = index,
+				.bit    = bit,
+			};
 	}
 
-	loc_network_tree_node_unref(root);
+		loc_network_tree_node_unref(node.node);
+	}
+
+	// Write the tree
+	*offset += fwrite(tree, 1, sizeof(*tree) * tree_length, f);
+	network_tree_length += sizeof(*tree) * tree_length;
 
 	header->network_tree_length = htobe32(network_tree_length);
 
@@ -497,28 +693,29 @@ static int loc_database_write_networks(struct loc_writer* writer,
 	DEBUG(writer->ctx, "Networks data section starts at %jd bytes\n", (intmax_t)*offset);
 	header->network_data_offset = htobe32(*offset);
 
-	// We have now written the entire tree and have all networks
-	// in a queue in order as they are indexed
-	while (!TAILQ_EMPTY(&networks)) {
-		struct network* nw = TAILQ_FIRST(&networks);
-		TAILQ_REMOVE(&networks, nw, networks);
-
-		// Prepare what we are writing to disk
-		r = loc_network_to_database_v1(nw->network, &db_network);
-		if (r)
-			return r;
-
-		*offset += fwrite(&db_network, 1, sizeof(db_network), f);
-		network_data_length += sizeof(db_network);
-
-		free_network(nw);
+	// We have now written the entire tree and have the data of all networks
+	// in the order in which they are indexed
+	for (size_t i = 0; i < networks.num_objects; i++) {
+		*offset += fwrite(&networks.objects[i], 1, sizeof(*networks.objects), f);
+		network_data_length += sizeof(*networks.objects);
 	}
 
 	header->network_data_length = htobe32(network_data_length);
 
 	align_page_boundary(offset, f);
 
-	return 0;
+	// Success
+	r = 0;
+
+ERROR:
+	// Free everything that is left on the stack
+	while (num_nodes)
+		loc_network_tree_node_unref(nodes[--num_nodes].node);
+
+	network_data_free(&networks);
+	free(tree);
+
+	return r;
 }
 
 static int loc_database_write_countries(struct loc_writer* writer,
@@ -526,20 +723,33 @@ static int loc_database_write_countries(struct loc_writer* writer,
 	DEBUG(writer->ctx, "Countries section starts at %jd bytes\n", (intmax_t)*offset);
 	header->countries_offset = htobe32(*offset);
 
-	const size_t countries_count = loc_country_list_size(writer->country_list);
+	// Sort the countries first as we are going to search for them
+	loc_country_list_sort(writer->country_list);
 
-	struct loc_database_country_v1 block;
+	const size_t countries_count = loc_country_list_size(writer->country_list);
+	int r;
+
+	struct loc_database_country_v1 block = {};
 	size_t block_length = 0;
 
 	for (unsigned int i = 0; i < countries_count; i++) {
 		struct loc_country* country = loc_country_list_get(writer->country_list, i);
+		if (!country)
+			return -ENOENT;
 
 		// Convert country into database format
-		loc_country_to_database_v1(country, writer->pool, &block);
+		r = loc_country_to_database_v1(country, writer->pool, &block);
+		if (r) {
+			loc_country_unref(country);
+			return r;
+		}
 
 		// Write to disk
 		*offset += fwrite(&block, 1, sizeof(block), f);
 		block_length += sizeof(block);
+
+		// Unref country
+		loc_country_unref(country);
 	}
 
 	DEBUG(writer->ctx, "Countries section has a length of %zu bytes\n", block_length);
@@ -558,15 +768,23 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 	DEBUG(writer->ctx, "Creating signature...\n");
 
 	// Read file from the beginning
-	rewind(f);
+	int r = fseek(f, 0, SEEK_SET);
+	if (r) {
+		ERROR(writer->ctx, "Could not seek to the beginning of the database: %s\n", strerror(errno));
+		return -errno;
+	}
 
 	// Create a new context for signing
 	EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+	if (!mdctx)
+		return -ENOMEM;
 
-	// Initialise the context
-	int r = EVP_DigestSignInit(mdctx, NULL, NULL, NULL, private_key);
+	// Initialise the context. We sign using SHA-256, which is what the
+	// databases are being verified with.
+	r = EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, private_key);
 	if (r != 1) {
 		ERROR(writer->ctx, "%s\n", ERR_error_string(ERR_get_error(), NULL));
+		r = -EIO;
 		goto END;
 	}
 	(void) mdctx;
@@ -576,7 +794,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 	bytes_read = fread(&magic, 1, sizeof(magic), f);
 	if (bytes_read < sizeof(magic)) {
 		ERROR(writer->ctx, "Could not read header: %s\n", strerror(errno));
-		r = 1;
+		r = -EIO;
 		goto END;
 	}
 
@@ -586,6 +804,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 	r = EVP_DigestSignUpdate(mdctx, &magic, sizeof(magic));
 	if (r != 1) {
 		ERROR(writer->ctx, "%s\n", ERR_error_string(ERR_get_error(), NULL));
+		r = -EIO;
 		goto END;
 	}
 
@@ -595,11 +814,17 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 	r = EVP_DigestSignUpdate(mdctx, header, sizeof(*header));
 	if (r != 1) {
 		ERROR(writer->ctx, "%s\n", ERR_error_string(ERR_get_error(), NULL));
+		r = -EIO;
 		goto END;
 	}
 
 	// Skip header
-	fseek(f, sizeof(*header), SEEK_CUR);
+	r = fseek(f, sizeof(*header), SEEK_CUR);
+	if (r) {
+		ERROR(writer->ctx, "Could not skip the header: %s\n", strerror(errno));
+		r = -errno;
+		goto END;
+	}
 
 	// Walk through the file in chunks of 64kB
 	char buffer[64 * 1024];
@@ -608,7 +833,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 
 		if (ferror(f)) {
 			ERROR(writer->ctx, "Error reading from file: %s\n", strerror(errno));
-			r = 1;
+			r = -EIO;
 			goto END;
 		}
 
@@ -617,7 +842,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 		r = EVP_DigestSignUpdate(mdctx, buffer, bytes_read);
 		if (r != 1) {
 			ERROR(writer->ctx, "%s\n", ERR_error_string(ERR_get_error(), NULL));
-			r = -1;
+			r = -EIO;
 			goto END;
 		}
 	}
@@ -627,7 +852,7 @@ static int loc_writer_create_signature(struct loc_writer* writer,
 		(unsigned char*)signature, length);
 	if (r != 1) {
 		ERROR(writer->ctx, "%s\n", ERR_error_string(ERR_get_error(), NULL));
-		r = -1;
+		r = -EIO;
 		goto END;
 	}
 
@@ -657,16 +882,16 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 
 		default:
 			ERROR(writer->ctx, "Invalid database version: %u\n", version);
-			return -1;
+			return -ENOTSUP;
 	}
 
 	DEBUG(writer->ctx, "Writing database in version %u\n", version);
 
-	struct loc_database_magic magic;
+	struct loc_database_magic magic = {};
 	make_magic(writer, &magic, version);
 
 	// Make the header
-	struct loc_database_header_v1 header;
+	struct loc_database_header_v1 header = {};
 	header.vendor      = htobe32(writer->vendor);
 	header.description = htobe32(writer->description);
 	header.license     = htobe32(writer->license);
@@ -689,7 +914,7 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 	// Start writing at the beginning of the file
 	r = fseek(f, 0, SEEK_SET);
 	if (r)
-		return r;
+		return -errno;
 
 	// Write the magic
 	offset += fwrite(&magic, 1, sizeof(magic), f);
@@ -698,7 +923,7 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 	r = fseek(f, sizeof(header), SEEK_CUR);
 	if (r) {
 		DEBUG(writer->ctx, "Could not seek to position after header\n");
-		return r;
+		return -errno;
 	}
 	offset += sizeof(header);
 
@@ -767,21 +992,25 @@ LOC_EXPORT int loc_writer_write(struct loc_writer* writer, FILE* f, enum loc_dat
 	// Write the header
 	r = fseek(f, sizeof(magic), SEEK_SET);
 	if (r)
-		return r;
+		return -errno;
 
 	bytes_written = fwrite(&header, 1, sizeof(header), f);
 	if (bytes_written < sizeof(header)) {
 		ERROR(writer->ctx, "Could not write header: %s\n", strerror(errno));
-		return r;
+		return -EIO;
 	}
 
 	// Seek back to the end
 	r = fseek(f, 0, SEEK_END);
 	if (r)
-		return r;
+		return -errno;
 
-	// Flush everything
-	fflush(f);
+	// Flush everything and fail if anything could not be written
+	r = fflush(f);
+	if (r || ferror(f)) {
+		ERROR(writer->ctx, "Could not write the database: %s\n", strerror(errno));
+		return -EIO;
+	}
 
-	return r;
+	return 0;
 }

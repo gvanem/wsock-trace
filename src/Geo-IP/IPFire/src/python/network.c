@@ -20,14 +20,13 @@
 #include <limits.h>
 
 #include <libloc/libloc.h>
+#include <libloc/compat.h>
 #include <libloc/address.h>
 #include <libloc/network.h>
 #include <libloc/network-list.h>
 
 #include "locationmodule.h"
 #include "network.h"
-
-#undef ERROR
 
 static PyObject* PyList_FromNetworkList(struct loc_network_list* networks) {
 	PyObject* list = PyList_New(0);
@@ -93,6 +92,8 @@ static PyObject* Network_repr(NetworkObject* self) {
 
 static PyObject* Network_str(NetworkObject* self) {
 	const char* network = loc_network_str(self->network);
+	if (!network)
+		return PyErr_SetFromErrno(PyExc_OSError);
 
 	return PyUnicode_FromString(network);
 }
@@ -100,17 +101,22 @@ static PyObject* Network_str(NetworkObject* self) {
 static PyObject* Network_get_country_code(NetworkObject* self) {
 	const char* country_code = loc_network_get_country_code(self->network);
 
-	return PyUnicode_FromString(country_code);
+	return location_string(country_code);
 }
 
 static int Network_set_country_code(NetworkObject* self, PyObject* value) {
-	const char* country_code = PyUnicode_AsUTF8(value);
+	const char* country_code = NULL;
+
+	if (location_string_arg(value, &country_code, 1))
+		return -1;
 
 	int r = loc_network_set_country_code(self->network, country_code);
 	if (r) {
 		if (r == -EINVAL)
 			PyErr_Format(PyExc_ValueError,
 				"Invalid country code: %s", country_code);
+		else
+			location_raise(r);
 
 		return -1;
 	}
@@ -122,31 +128,50 @@ static PyObject* Network_get_asn(NetworkObject* self) {
 	uint32_t asn = loc_network_get_asn(self->network);
 
 	if (asn)
-		return PyLong_FromLong(asn);
+		return PyLong_FromUnsignedLong(asn);
 
 	Py_RETURN_NONE;
 }
 
 static int Network_set_asn(NetworkObject* self, PyObject* value) {
-	long int asn = PyLong_AsLong(value);
+	uint32_t asn = 0;
+	int r;
+
+	// None (or deleting the attribute) removes the ASN, which is what we return
+	// for networks that do not have one
+	if (!value || value == Py_None) {
+		r = loc_network_set_asn(self->network, 0);
+		if (r) {
+			location_raise(r);
+			return -1;
+		}
+
+		return 0;
+	}
 
 	// Check if the ASN is within the valid range
-	if (asn <= 0) {
-		PyErr_Format(PyExc_ValueError, "Invalid ASN %ld", asn);
+	if (!location_parse_asn(value, &asn)) {
+		// Everything that is out of range is an invalid value
+		if (PyErr_ExceptionMatches(PyExc_OverflowError)) {
+			PyErr_Clear();
+			PyErr_Format(PyExc_ValueError, "Invalid ASN %R", value);
+		}
+
 		return -1;
 	}
 
-#if (__WORDSIZE > 32)
-	// Check whether the input was longer than 32 bit
-	if (asn > UINT32_MAX) {
-		PyErr_Format(PyExc_ValueError, "Invalid ASN %ld", asn);
+	// AS0 is reserved and must not be used (RFC 7607). We use
+	// zero to say that a network does not have any AS number.
+	if (!asn) {
+		PyErr_Format(PyExc_ValueError, "Invalid ASN %R", value);
 		return -1;
 	}
-#endif
 
-	int r = loc_network_set_asn(self->network, asn);
-	if (r)
+	r = loc_network_set_asn(self->network, asn);
+	if (r) {
+		location_raise(r);
 		return -1;
+	}
 
 	return 0;
 }
@@ -171,10 +196,8 @@ static PyObject* Network_set_flag(NetworkObject* self, PyObject* args) {
 
 	int r = loc_network_set_flag(self->network, flag);
 
-	if (r) {
-		// What exception to throw here?
-		return NULL;
-	}
+	if (r)
+		return location_raise(r);
 
 	Py_RETURN_NONE;
 }
@@ -186,6 +209,8 @@ static PyObject* Network_exclude(NetworkObject* self, PyObject* args) {
 		return NULL;
 
 	struct loc_network_list* list = loc_network_exclude(self->network, other->network);
+	if (!list)
+		return PyErr_SetFromErrno(PyExc_OSError);
 
 	// Convert to Python objects
 	PyObject* obj = PyList_FromNetworkList(list);
@@ -214,6 +239,8 @@ static PyObject* Network_get_family(NetworkObject* self) {
 
 static PyObject* Network_get_first_address(NetworkObject* self) {
 	const char* address = loc_network_format_first_address(self->network);
+	if (!address)
+		return PyErr_SetFromErrno(PyExc_OSError);
 
 	return PyUnicode_FromString(address);
 }
@@ -240,6 +267,8 @@ static PyObject* Network_get__first_address(NetworkObject* self) {
 
 static PyObject* Network_get_last_address(NetworkObject* self) {
 	const char* address = loc_network_format_last_address(self->network);
+	if (!address)
+		return PyErr_SetFromErrno(PyExc_OSError);
 
 	return PyUnicode_FromString(address);
 }
@@ -317,8 +346,13 @@ static PyObject* Network_get_subnets(NetworkObject* self) {
 
 	// Make subnets
 	r = loc_network_subnets(self->network, &subnet1, &subnet2);
-	if (r < 0) {
-		PyErr_SetFromErrno(PyExc_OSError);
+	if (r) {
+		// A network that is a single address has no subnets
+		if (r == -EINVAL)
+			PyErr_SetString(PyExc_ValueError, "The network cannot be split any further");
+		else
+			location_raise(r);
+
 		goto ERROR;
 	}
 

@@ -2,35 +2,66 @@
 
 == Name
 
-loc_database_lookup - Lookup a network from the database
+loc_database_lookup, loc_database_lookup_from_string - Lookup a network from the database
 
 == Synopsis
-
+----
 #include <libloc/database.h>
 
-int loc_database_lookup(struct loc_database{empty}* db,
-	const struct in6_addr{empty}* address, struct loc_network{empty}*{empty}* network);
+int loc_database_lookup(struct loc_database* db,
+	const struct in6_addr* address, struct loc_network** network);
 
-int loc_database_lookup_from_string(struct loc_database{empty}* db,
-	const char{empty}* string, struct loc_network{empty}*{empty}* network);
+int loc_database_lookup_from_string(struct loc_database* db,
+	const char* string, struct loc_network** network);
+----
 
 == Description
 
-The lookup functions try finding a network in the database.
+The lookup functions find the network that an IP address belongs to. If the address is
+in more than one network, because a part of a network belongs to someone else, the
+smallest of them is being returned, which is the one that knows most about the address.
 
 _loc_database_lookup_ takes the IP address as _struct in6_addr_ format which can either
 be a regular IPv6 address or a mapped IPv4 address.
 
-_loc_database_lookup_string_ takes the IP address as string and will parse it automatically.
+_loc_database_lookup_from_string_ takes the IP address as string and will parse it automatically.
+
+The network tells which country the address is in, which Autonomous System announces
+it, and whether it is special in any way (see link:loc_network_get_asn[3]). The caller
+owns a reference to it and has to release it with loc_network_unref() (see
+link:loc_network_new[3]).
+
+Looking up an address does not allocate any memory, except for the network that is
+being returned, and when the database checks whether its file has been replaced (see
+link:loc_database_reload[3]). It is safe to do from as many threads at the same time as
+needed.
 
 == Return Value
 
-On success, zero is returned. Otherwise non-zero is being returned and _errno_ is set
-accordingly.
+On success, zero is returned. This includes that there is no network for the address
+in the database, in which case _network_ is set to NULL. On error, a negative error
+number (see errno(3)) is returned, for example _-EINVAL_ if _string_ is not an IP
+address. _errno_ itself is not being set.
+
+== Example
+
+----
+struct loc_network* network = NULL;
+
+int r = loc_database_lookup_from_string(db, "81.3.27.38", &network);
+if (r == 0 && network) {
+	printf("%s is in %s and announced by AS%u\n", loc_network_str(network),
+		loc_network_get_country_code(network), loc_network_get_asn(network));
+
+	loc_network_unref(network);
+}
+----
 
 == See Also
 
-link:libloc[3]
+link:libloc[3],
+link:loc_network_new[3],
+link:loc_network_get_asn[3]
 
 == Authors
 

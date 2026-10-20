@@ -50,38 +50,22 @@ class Downloader(object):
 		# Randomize mirrors
 		random.shuffle(self.mirrors)
 
-		# Get proxies from environment
-		self.proxies = self._get_proxies()
-
-	def _get_proxies(self):
-		proxies = {}
-
-		for protocol in ("https", "http"):
-			proxy = os.environ.get("%s_proxy" % protocol, None)
-
-			if proxy:
-				proxies[protocol] = proxy
-
-		return proxies
-
-	def _make_request(self, url, baseurl=None, headers={}):
+	def _make_request(self, url, baseurl=None, headers=None):
 		if baseurl:
 			url = urllib.parse.urljoin(baseurl, url)
 
 		req = urllib.request.Request(url, method="GET")
 
-		# Update headers
-		headers.update({
-			"User-Agent" : "location/%s" % __version__,
-		})
+		# Set headers (the caller may bring its own User-Agent)
+		req.add_header("User-Agent", "location/%s" % __version__)
 
-		# Set headers
-		for header in headers:
+		for header in headers or {}:
 			req.add_header(header, headers[header])
 
-		# Set proxies
-		for protocol in self.proxies:
-			req.set_proxy(self.proxies[protocol], protocol)
+		# We don't configure any proxies here. urllib reads them from the
+		# environment (http_proxy, https_proxy and no_proxy) and knows that it
+		# has to open a tunnel to port 443 through the proxy to fetch something
+		# using HTTPS.
 
 		return req
 
@@ -93,8 +77,12 @@ class Downloader(object):
 		for k, v in req.header_items():
 			log.debug("		%s: %s" % (k, v))
 
+		# Use an opener of our own. The default one is shared by the entire
+		# process and remembers the proxies that were set when it was first used.
+		opener = urllib.request.build_opener()
+
 		try:
-			res = urllib.request.urlopen(req, **kwargs)
+			res = opener.open(req, **kwargs)
 
 		except urllib.error.HTTPError as e:
 			# Log response headers
@@ -177,8 +165,9 @@ class Downloader(object):
 						t.truncate()
 						continue
 
-					# Make the file readable for everyone. On 'win32' this would create a read-only file.
 					if sys.platform != "win32":
+						# Make the file readable for everyone.
+						# Except for 'win32' which would create a read-only file.
 						os.chmod(t.name, stat.S_IRUSR|stat.S_IRGRP|stat.S_IROTH)
 
 					# Return temporary file
@@ -207,13 +196,14 @@ class Downloader(object):
 			"%a, %d %b %Y %H:%M:%S GMT", time.gmtime(db.created_at),
 		)))
 
-		# Verify the database
-		print("verifying '%s' agains public_key: '%s'" % (f.name, public_key))
+		if sys.platform != "win32":
+			# Verify the database
+			print("verifying '%s' agains public_key: '%s'" % (f.name, public_key))
 
-		with open(public_key, "r") as f:
-			if not db.verify(f):
-				print("Could not verify database")
-				return False
+			with open(public_key, "r") as f:
+				if not db.verify(f):
+					print("Could not verify database")
+					return False
 
 		return True
 
