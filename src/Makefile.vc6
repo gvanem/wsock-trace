@@ -35,7 +35,8 @@ LUAJIT_ROOT = LuaJIT
 #
 # Support for IPFire's 'libloc' library:
 #
-LIBLOC_ROOT = .\Geo-IP\IPFire\src
+LIBLOC_ROOT = ./Geo-IP/IPFire
+LIBLOC_SRC  = $(LIBLOC_ROOT)/src
 
 #
 # Execute "%VSINSTALLDIR%VC\vcvarsall.bat" x64 (with quotes) inside a MSVC
@@ -66,10 +67,10 @@ INSTALL_ROOT = $(VSINSTALLDIR)
 #  -MTd  - libc, threads, debug
 #
 CC      = cl.exe
-CFLAGS  = -nologo $(CFLAGS) -I. -I$(LIBLOC_ROOT) -W3 -Zi \
-          -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
+CFLAGS  = -nologo $(CFLAGS) -I. -I$(LIBLOC_SRC) \
+          -W3 -Zi -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600
 LDFLAGS = -nologo -debug -incremental:no -subsystem:console -verbose \
-          -machine:$(CPU) -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
+          -machine:$(CPU) -nodefaultlib:uuid.lib
 
 OBJ_DIR = MSVC_obj-$(CPU)
 
@@ -88,7 +89,7 @@ EX_LIBS    = $(LUAJIT_LIB)
 WSOCK_DEP  = $(LUAJIT_LIB)
 !endif
 
-EX_LIBS   = $(EX_LIBS)   libloc$(_D)-$(CPU).lib advapi32.lib dnsapi.lib ole32.lib winmm.lib
+EX_LIBS   = $(EX_LIBS)   libloc$(_D)-$(CPU).lib advapi32.lib dnsapi.lib ole32.lib psapi.lib winmm.lib
 WSOCK_DEP = $(WSOCK_DEP) libloc$(_D)-$(CPU).lib
 
 #
@@ -184,8 +185,7 @@ LIBLOC_OBJ = $(OBJ_DIR)\address.obj      \
              $(OBJ_DIR)\resolv.obj       \
              $(OBJ_DIR)\stringpool.obj   \
              $(OBJ_DIR)\writer.obj       \
-             $(OBJ_DIR)\win_str.obj      \
-             $(OBJ_DIR)\win_mmap.obj
+             $(OBJ_DIR)\win_misc.obj
 
 all: $(OBJ_DIR) compile_luajit_$(USE_LUAJIT) $(WSOCK_TRACE_DLL) $(WSOCK_TRACE_LIB) ws_tool.exe mhook-test.exe
 	@echo 'Welcome to Wsock_trace $(CPU) library and ws_tool.exe test-program.'
@@ -275,15 +275,15 @@ $(OBJ_DIR)\wsock_trace.res: wsock_trace.rc
 # The rule for '$(LIBLOC_OBJ)' files with the butt-ugly Nmake
 # syntax (no sane '%'-pattern rules in Nmake).
 #
-LIBLOC_CFLAGS = -DENABLE_DEBUG                                   \
-                -DUSE_WSOCK_TRACE                                \
-                -I$(LIBLOC_ROOT)/libloc/windows                  \
-                -I$(LIBLOC_ROOT)/fake-OpenSSL                    \
-                -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c \
-                -wd4018 -wd4100 -wd4101 -wd4115 -wd4146          \
+LIBLOC_CFLAGS = -DENABLE_DEBUG                                  \
+                -DUSE_WSOCK_TRACE                               \
+                -I$(LIBLOC_SRC)/libloc/windows                  \
+                -I$(LIBLOC_SRC)/fake-OpenSSL                    \
+                -FI$(LIBLOC_SRC)/fake-OpenSSL/openssl/applink.c \
+                -wd4018 -wd4100 -wd4101 -wd4115 -wd4146         \
                 -wd4152 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
 
-{$(LIBLOC_ROOT)}.c{$(OBJ_DIR)}.obj:
+{$(LIBLOC_SRC)}.c{$(OBJ_DIR)}.obj:
 	$(CC) -c $(CFLAGS) $(LIBLOC_CFLAGS) -Fo./$*.obj $<
 	@echo
 
@@ -334,16 +334,16 @@ common.h: wsock_defs.h
 $(OBJ_DIR)\asn.obj: asn.c common.h inet_addr.h common.h \
                     csv.h smartlist.h inet_util.h       \
                     inet_addr.h init.h iana.h asn.h     \
-                    $(LIBLOC_ROOT)\libloc\libloc.h      \
-                    $(LIBLOC_ROOT)\libloc\compat.h      \
-                    $(LIBLOC_ROOT)\libloc\database.h    \
-                    $(LIBLOC_ROOT)\libloc\network.h     \
-                    $(LIBLOC_ROOT)\libloc\format.h      \
-                    $(LIBLOC_ROOT)\libloc\as.h          \
-                    $(LIBLOC_ROOT)\libloc\stringpool.h  \
-                    $(LIBLOC_ROOT)\libloc\country.h     \
-                    $(LIBLOC_ROOT)\libloc\resolv.h      \
-                    $(LIBLOC_ROOT)\libloc\windows\syslog.h
+                    $(LIBLOC_SRC)/libloc/libloc.h       \
+                    $(LIBLOC_SRC)/libloc/compat.h       \
+                    $(LIBLOC_SRC)/libloc/database.h     \
+                    $(LIBLOC_SRC)/libloc\network.h      \
+                    $(LIBLOC_SRC)/libloc\format.h       \
+                    $(LIBLOC_SRC)/libloc\as.h           \
+                    $(LIBLOC_SRC)/libloc\stringpool.h   \
+                    $(LIBLOC_SRC)/libloc\country.h      \
+                    $(LIBLOC_SRC)/libloc\resolv.h       \
+                    $(LIBLOC_SRC)/libloc\windows\syslog.h
 
 $(OBJ_DIR)\common.obj:      common.c common.h smartlist.h init.h dump.h wsock_trace.rc
 $(OBJ_DIR)\cpu.obj:         cpu.c common.h init.h cpu.h

@@ -12,18 +12,24 @@ MAKEFLAGS   += --warn-undefined-variables
 #
 # Roots and options. Change to suite.
 #
-INSTALL_ROOT  := $(realpath $(VSINSTALLDIR))
-MSVC_ROOT     := $(realpath $(VCToolkitInstallDir))
-WX_ROOT       := $(realpath $(WXWIDGETS))
-CLANG32_ROOT  := $(realpath $(CLANG_32))
-CLANG64_ROOT  := $(realpath $(CLANG_64))
+INSTALL_ROOT   := $(realpath $(VSINSTALLDIR))
+MSVC_ROOT      := $(realpath $(VCToolkitInstallDir))
+WX_ROOT        := $(realpath $(WXWIDGETS))
+CLANG32_ROOT   := $(realpath $(CLANG_32))
+CLANG64_ROOT   := $(realpath $(CLANG_64))
 
-LIBLOC_ROOT   := $(TOP_DIR)/Geo-IP/IPFire/src
-LUAJIT_ROOT   := $(TOP_DIR)/LuaJIT
-LWIP_ROOT     ?= f:/MinGW32/src/inet/lwip
-MONGOOSE_ROOT ?= f:/MinGW32/src/inet/Web/Mongoose
-OPENSSL_ROOT  ?= f:/MinGW32/src/inet/Crypto/OpenSSL
-PCAP_ROOT     ?= f:/MinGW32/src/inet/libpcap
+MAXMINDDB_ROOT := $(TOP_DIR)/Geo-IP/GeoipMMDB
+LIBLOC_ROOT    := $(TOP_DIR)/Geo-IP/IPFire
+LUAJIT_ROOT    := $(TOP_DIR)/LuaJIT
+LWIP_ROOT      ?= f:/MinGW32/src/inet/lwip
+MONGOOSE_ROOT  ?= f:/MinGW32/src/inet/Web/Mongoose
+OPENSSL_ROOT   ?= f:/MinGW32/src/inet/Crypto/OpenSSL
+PCAP_ROOT      ?= f:/MinGW32/src/inet/libpcap
+
+#
+# Libloc src directory
+#
+LIBLOC_SRC = $(LIBLOC_ROOT)/src
 
 #
 # Set to nothing in './Makefile.Windows' if 'USE_LUAJIT=0'
@@ -41,20 +47,21 @@ USE_ASTYLE     ?= 1
 USE_PP_DEBUG   ?= 0
 USE_UBSAN      ?= 0
 USE_CRT_DEBUG  ?= 0
-USE_LUAJIT     ?= 0
+USE_LUAJIT     ?= 1
 USE_LWIP       ?= 0
 USE_MONGOOSE   ?= 0
 USE_MP_COMPILE ?= 1
+USE_PYTHON     ?= 1
 
 #
-# Option for 'Geo-IP/IPFire/src/Makefile.Windows':
+# Option for 'Geo-IP/IPFire/Makefile.Windows':
 #
 # Use this Winsock-trace library for '$(LIBLOC_DLL)'.
 #
 USE_WSOCK_TRACE ?= 1
 
 #
-# Option for 'Geo-IP/IPFire/src/Makefile.Windows':
+# Option for 'Geo-IP/IPFire/Makefile.Windows':
 #
 # Use OpenSSL?
 #
@@ -106,7 +113,7 @@ CFLAGS = -nologo -Zi -W3             \
          -D_CRT_SECURE_NO_WARNINGS   \
          -D_CRT_NONSTDC_NO_WARNINGS  \
          -D_CRT_OBSOLETE_NO_WARNINGS \
-         -D_WIN32_WINNT=0x0601       \
+         -D_WIN32_WINNT=0x0602       \
          -DWIN32_LEAN_AND_MEAN       \
          -D_WINSOCK_DEPRECATED_NO_WARNINGS
 
@@ -153,8 +160,9 @@ else ifeq ($(CC),clang-cl)
   #
   _CC = $(CLANG$(BITS)_ROOT)/bin/clang-cl.exe
 
-  CFLAGS += -fms-compatibility \
-            -ferror-limit=5    \
+  CFLAGS += -fms-compatibility     \
+            -ferror-limit=5        \
+            -fno-color-diagnostics \
             -Wno-unused-command-line-argument
 
 else ifeq ($(CC),icx)
@@ -198,7 +206,7 @@ LDFLAGS += -libpath:$(realpath $(WindowsSdkDir))/Lib/$(WindowsSdkVer)/um/$(CPU) 
 #
 # Ignore some .lib-files pulled in by default:
 #
-LDFLAGS += -nodefaultlib:oldnames.lib -nodefaultlib:uuid.lib
+LDFLAGS += -nodefaultlib:uuid.lib
 
 
 ifeq ($(CC),cl)
@@ -348,6 +356,7 @@ endef
 
 define generate_c
   $(call generate, $(1),//)
+  $(file >> $(1),$(2))
 endef
 
 define generate_py
@@ -387,7 +396,7 @@ define CPP_compile
 endef
 
 define RC_compile
-  rc $(RCFLAGS) -fo $(1) $(2)
+  rc $(RCFLAGS) -fo $(strip $(1) $(2))
   @echo
 endef
 
@@ -431,13 +440,8 @@ define C_preprocess
 endef
 
 define link_EXE
-  $(call green_msg, Linking $(BRIGHT_WHITE)$(strip $(1)))
-  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
-  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBRARIES_PY))
-  $(call create_resp_file, link.args, $(LDFLAGS) $(2))
-  link -out:$(strip $(1)) @link.args > link.tmp
+  $(call link_common, $(1), $(2))
   @rm -f $(1:.exe=.exp) $(1:.exe=.lib)
-  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
 #
@@ -447,32 +451,38 @@ endef
 #   arg3, $(3): The import library
 #
 define link_DLL
-  $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
-  $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBRARIES_PY))
-  $(call green_msg, Linking $(BRIGHT_WHITE)$(strip $(1)))
-  $(call create_resp_file, link.args, -dll $(LDFLAGS) -implib:$(strip $(3)) $(2))
-  link -out:$(strip $(1)) @link.args > link.tmp
+  $(call link_common, $(1), -dll -implib:$(strip $(3)) $(2))
   @rm -f $(3:.lib=.exp)
-  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
 endef
 
 #
 # .obj -> .pyd macro
 #   arg1, $(1): The .pyd file.
 #   arg2, $(2): The .obj file(s), extra options and libs.
+#   An import library is generated into '$(OBJ_DIR)/tmp.lib' since we do no need it.
 #
 define link_PYD
+  $(call link_common, $(1), -dll -implib:$(OBJ_DIR)/tmp.lib $(2))
+  @rm -f $(1:.pyd=.lib) $(1:.pyd=.exp)
+endef
+
+#
+# Common stuff for the above 'link_*' macros
+#
+IGNORE_LIBS =?
+
+define link_common
+  $(call green_msg, Linking $(BRIGHT_WHITE)$(strip $(1)))
   $(file  > $(OBJ_DIR)/check-for-unused-libs.py,if 1:)
   $(file >> $(OBJ_DIR)/check-for-unused-libs.py,$(CHECK_FOR_UNUSED_LIBRARIES_PY))
-  $(call green_msg, Linking $(BRIGHT_WHITE)$(strip $(1)))
-  $(call create_resp_file, link.args, $(LDFLAGS) -dll $(2))
+  $(call create_resp_file, link.args, $(LDFLAGS) $(2))
   link -out:$(strip $(1)) @link.args > link.tmp
-  @rm -f $(1:.pyd=.lib) $(1:.pyd=.exp)
-  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp
+  @$(PYTHON) $(OBJ_DIR)/check-for-unused-libs.py link.tmp $(IGNORE_LIBS)
 endef
 
 define create_static_lib
   $(call green_msg, Creating static library $(BRIGHT_WHITE)$(strip $(1)))
+  @rm -f $(1)
   lib -nologo -out:$(strip $(1)) -machine:$(CPU) $(2)
   @echo
 endef
@@ -557,12 +567,9 @@ define CHECK_FOR_UNUSED_LIBRARIES_PY
   #
   import os, sys
 
-  map_file    = sys.argv[1]
+  link_tmp    = sys.argv [1]
   ignore_libs = [ "oldnames.lib", "uuid.lib" ]
-
-  class State:
-    IDLE   = 0
-    UNUSED = 1
+  ignore_libs += map (str.lower, sys.argv[2:])
 
   class Colour:
     RED = WHITE = RESET = ""
@@ -579,30 +586,27 @@ define CHECK_FOR_UNUSED_LIBRARIES_PY
   def cprint (color, s):
     print ("%s%s%s" % (color, s, Colour.RESET))
 
-  def report (unused):
-    num = len(unused)
-    if num > 0:
-       cprint (Colour.RED, "%d unused librar%s in %s:" % (num, ["y", "ies"][num > 1], map_file))
-       for u in unused:
-           print ("  " + u)
-    cprint (Colour.WHITE, "Done.\n")
-
-  def process_map (state):
+  def process_map (found_unused):
     unused_libs = []
-    f = open (map_file, "rt")
+    f = open (link_tmp, "rt")
     lines = f.readlines()
     f.close()
     for l in lines:
       l = l.strip()
       if l == "Unused libraries:":
-         state = State.UNUSED
+         found_unused = True
          continue
-      if state == State.UNUSED:
+      if found_unused:
          if l == "":
             break
          if os.path.basename (l).lower() not in ignore_libs:
             unused_libs.append (l)
-    return unused_libs
+    return unused_libs, len(unused_libs)
 
-  report (process_map(State.IDLE))
+  unused, num = process_map (False)
+  if num > 0:
+     cprint (Colour.RED, "%d unused librar%s in %s:" % (num, ["y", "ies"][num > 1], link_tmp))
+     for u in unused:
+         print ("  " + u)
+  cprint (Colour.WHITE, "Done.\n")
 endef

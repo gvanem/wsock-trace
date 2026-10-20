@@ -1,7 +1,7 @@
 #
 # GNU Makefile for Wsock-trace (MSVC, clang-cl or Intel's ICX, 32 and 64-bit).
 #
-# By <gvanem@yahoo.no> 2018 - 2025.
+# By <gvanem@yahoo.no> 2018 - 2026.
 #
 TOP_DIR = .
 
@@ -15,21 +15,22 @@ WSOCK_LIB = wsock_trace$(_D)-$(CPU).lib
 
 TARGETS = $(WSOCK_DLL) $(WSOCK_LIB)
 
-CFLAGS += -Oy-               \
-          -I.                \
-          -I./mhook          \
-          -I$(LIBLOC_ROOT)   \
-          -DUSE_PythonHook=0 \
-          -DBUILD_DATE=\"$(TODAY)\"
+CFLAGS += -Oy-                      \
+          -DUSE_PythonHook=0        \
+          -DBUILD_DATE=\"$(TODAY)\" \
+          -I.                       \
+          -I./mhook                 \
+          -I$(LIBLOC_SRC)
 
 #
 # Extra CFLAGS for 'clang-cl' and 'icx':
 #
 ifneq ($(CC),cl)
-  CFLAGS += -Wno-pragma-pack     \
-            -Wno-missing-braces  \
-            -Wno-unused-function \
-            -Wno-invalid-source-encoding
+  CFLAGS += -Wno-pragma-pack            \
+            -Wno-missing-braces         \
+            -Wno-unused-function        \
+            -Wno-invalid-source-encoding \
+            -Wno-deprecated-declarations
 endif
 
 #
@@ -73,25 +74,27 @@ WS_TOOL_SRC = $(WSOCK_SRC) \
               vm_dump.c    \
               ws_tool.c
 
-LIBLOC_SRC = $(addprefix $(LIBLOC_ROOT)/, \
-               address.c                  \
-               as.c                       \
-               as-list.c                  \
-               country.c                  \
-               country-list.c             \
-               database.c                 \
-               libloc.c                   \
-               network.c                  \
-               network-list.c             \
-               resolv.c                   \
-               stringpool.c               \
-               writer.c                   \
-               win_str.c                  \
-               win_mmap.c)
-
 WSOCK_OBJ   = $(call c_to_obj, $(WSOCK_SRC),)
 WS_TOOL_OBJ = $(call c_to_obj, $(WS_TOOL_SRC),)
-LIBLOC_OBJ  = $(call c_to_obj, $(LIBLOC_SRC),)
+
+vpath %.c $(LIBLOC_SRC)
+
+LIBLOC_OBJ = $(addprefix $(OBJ_DIR)/, \
+               address.obj            \
+               as.obj                 \
+               as-list.obj            \
+               country.obj            \
+               country-list.obj       \
+               database.obj           \
+               libloc.obj             \
+               network.obj            \
+               network-list.obj       \
+               resolv.obj             \
+               stringpool.obj         \
+               writer.obj             \
+               win_misc.obj)
+
+LIBLOC_I = $(notdir $(LIBLOC_OBJ:.obj=.i))
 
 #
 # Extra C++ flags for '../misc-stuff/wx-stkwalk.cpp':
@@ -263,12 +266,16 @@ $(OBJ_DIR)/ip4-asn-test.h: ws_tool.exe $(THIS_FILE)
 	@echo
 
 $(OBJ_DIR)/csv-test-driver.c: $(THIS_FILE) | $(OBJ_DIR)
-	$(call generate_c, $@)
-	$(file >> $@, #define CSV_TEST)
-	$(file >> $@, #include "csv.c")
-	$(file >> $@, #include "getopt.c")
-	$(file >> $@, #include "smartlist.c")
-	$(file >> $@, #include "$(OBJ_DIR)/ip4-asn-test.h")
+	$(call generate_c, $@, $(CSV_TEST_DRIVER_C))
+
+define CSV_TEST_DRIVER_C
+
+  #define CSV_TEST
+  #include "csv.c"
+  #include "getopt.c"
+  #include "smartlist.c"
+  #include "$(OBJ_DIR)/ip4-asn-test.h"
+endef
 
 #
 # Make a .def file for x64/arm/arm64; remove the leading '_' and the '@x' suffixes.
@@ -327,7 +334,7 @@ $(WSOCK_DLL):                       \
 #   Check if it breaks an application too.
 #
 ifeq ($(CC)-$(USE_CRT_DEBUG),cl-0)
-  $(OBJ_DIR)/test.obj: EXTRA_CFLAGS = -Ox
+  $(OBJ_DIR)/test.obj test.i: EXTRA_CFLAGS = -Ox
 endif
 
 vg-test.exe: $(OBJ_DIR)/vg-test.obj $(WSOCK_LIB)
@@ -342,26 +349,33 @@ wx-stkwalk.exe: $(OBJ_DIR)/wx-stkwalk.obj
 $(OBJ_DIR)/wx-stkwalk.obj: ../misc-stuff/wx-stkwalk.cpp | $(CC).args $(OBJ_DIR)
 	$(call CPP_compile, $@, $(wxCFLAGS) $<)
 
-LIBLOC_CFLAGS = -I$(LIBLOC_ROOT)/fake-OpenSSL   \
-                -I$(LIBLOC_ROOT)/libloc/windows \
-                -DENABLE_DEBUG                  \
-                -DUSE_WSOCK_TRACE               \
-                -FI$(LIBLOC_ROOT)/fake-OpenSSL/openssl/applink.c
+LIBLOC_CFLAGS = -DENABLE_DEBUG                 \
+                -DUSE_WSOCK_TRACE              \
+                -I$(LIBLOC_SRC)/libloc/windows \
+                -I$(LIBLOC_SRC)/fake-OpenSSL   \
+                -FI$(LIBLOC_SRC)/fake-OpenSSL/openssl/applink.c
 
 MHOOK_CFLAGS = -DUSE_TRACE # -DDEBUG_DISASM -DUSE_DBG_TRACE -DUNICODE -D_UNICODE
 
-ifeq ($(CC),clang-cl)
-  LIBLOC_CFLAGS += -Wno-macro-redefined  \
-                   -Wno-shorten-64-to-32 \
-                   -Wno-unused-variable  \
+#
+# Extra clang-cl / icx warning-control for LIBLOC_SRC files.
+#
+ifneq ($(CC),cl)
+  LIBLOC_CFLAGS += -Wno-macro-redefined           \
+                   -Wno-shorten-64-to-32          \
+                   -Wno-unused-variable           \
+                   -Wno-unused-but-set-global     \
+                   -Wno-int-to-pointer-cast       \
+                   -Wno-void-pointer-to-int-cast  \
                    -Wno-conditional-uninitialized
 
   MHOOK_CFLAGS += -Wno-microsoft-anon-tag \
                   -Wno-enum-compare       \
                   -Wno-switch
 else
-  LIBLOC_CFLAGS += -wd4018 -wd4100 -wd4101 -wd4115 -wd4146 \
-                   -wd4152 -wd4189 -wd4201 -wd4244 -wd4267 -wd4702
+  LIBLOC_CFLAGS += -wd4018 -wd4100 -wd4101 -wd4115 -wd4133 \
+                   -wd4146 -wd4152 -wd4189 -wd4201 -wd4244 \
+                   -wd4267 -wd4311 -wd4312 -wd4702
 endif
 
 $(OBJ_DIR)/mhook-test.obj: mhook/mhook.c | $(CC).args $(OBJ_DIR)
@@ -374,13 +388,9 @@ ifeq ($(CC)-$(USE_MP_COMPILE),cl-1)
   $(WSOCK_OBJ): $(WSOCK_SRC) | $(CC).args $(OBJ_DIR)
 	$(call C_compile_MP, $(OBJ_DIR)\\, $(WSOCK_SRC), WSOCK_SRC)
 
-  $(LIBLOC_OBJ): $(LIBLOC_SRC) | $(CC).args $(OBJ_DIR)
-	$(call C_compile_MP, $(OBJ_DIR)\\, $(LIBLOC_CFLAGS) $(LIBLOC_SRC), LIBLOC_SRC)
-
-else
-  $(OBJ_DIR)/%.obj: $(LIBLOC_ROOT)/%.c | $(CC).args $(OBJ_DIR)
-	$(call C_compile, $@, $(LIBLOC_CFLAGS) $<)
 endif
+
+$(LIBLOC_OBJ) $(LIBLOC_I): EXTRA_CFLAGS = $(LIBLOC_CFLAGS)
 
 $(LIBLOC_LIB): $(LIBLOC_OBJ)
 	$(call create_static_lib, $@, $^)
@@ -397,9 +407,6 @@ clean:
 
 realclean vclean: clean
 	rm -f $(TARGETS) $(PROGRAMS) wx-stkwalk.{exe,pdb} mhook-test.{exe,pdb}
-
-%.i: $(LIBLOC_ROOT)/%.c $(OBJ_DIR)/cpp-filter.py $(CC).args FORCE
-	$(call C_preprocess, $@, $(LIBLOC_CFLAGS) $<)
 
 csv-test-driver.i: $(OBJ_DIR)/csv-test-driver.c $(OBJ_DIR)/ip4-asn-test.h $(OBJ_DIR)/cpp-filter.py $(CC).args FORCE
 	$(call C_preprocess, $@, $<)
@@ -422,21 +429,21 @@ endef
 #
 # The dependency section:
 #
-$(OBJ_DIR)/asn.obj: asn.c common.h wsock_defs.h csv.h     \
-                    smartlist.h inet_util.h inet_addr.h  \
-                    init.h iana.h asn.h                  \
-                    $(LIBLOC_ROOT)/libloc/libloc.h       \
-                    $(LIBLOC_ROOT)/libloc/compat.h       \
-                    $(LIBLOC_ROOT)/libloc/database.h     \
-                    $(LIBLOC_ROOT)/libloc/network.h      \
-                    $(LIBLOC_ROOT)/libloc/format.h       \
-                    $(LIBLOC_ROOT)/libloc/network-list.h \
-                    $(LIBLOC_ROOT)/libloc/as.h           \
-                    $(LIBLOC_ROOT)/libloc/stringpool.h   \
-                    $(LIBLOC_ROOT)/libloc/country.h      \
-                    $(LIBLOC_ROOT)/libloc/country-list.h \
-                    $(LIBLOC_ROOT)/libloc/resolv.h       \
-                    $(LIBLOC_ROOT)/libloc/windows/syslog.h
+$(OBJ_DIR)/asn.obj: asn.c common.h wsock_defs.h csv.h   \
+                    smartlist.h inet_util.h inet_addr.h \
+                    init.h iana.h asn.h                 \
+                    $(LIBLOC_SRC)/libloc/libloc.h       \
+                    $(LIBLOC_SRC)/libloc/compat.h       \
+                    $(LIBLOC_SRC)/libloc/database.h     \
+                    $(LIBLOC_SRC)/libloc/network.h      \
+                    $(LIBLOC_SRC)/libloc/format.h       \
+                    $(LIBLOC_SRC)/libloc/network-list.h \
+                    $(LIBLOC_SRC)/libloc/as.h           \
+                    $(LIBLOC_SRC)/libloc/stringpool.h   \
+                    $(LIBLOC_SRC)/libloc/country.h      \
+                    $(LIBLOC_SRC)/libloc/country-list.h \
+                    $(LIBLOC_SRC)/libloc/resolv.h       \
+                    $(LIBLOC_SRC)/libloc/windows/syslog.h
 
 $(OBJ_DIR)/ws_tool.obj: asn.c backtrace.c csv.c geoip.c iana.c firewall.c dnsbl.c idna.c test.c
 

@@ -88,7 +88,7 @@ $(GEOIP_STAT_LIB): $(GEOIP_OBJ) $(MMDB_OBJ) $(IPFIRE_OBJ) $(IP2LOCATION_OBJ)
 $(GEOIP_IMP_LIB): geoip-$(CPU).dll
 
 geoip-$(CPU).dll: $(OBJ_DIR)/geoip-$(CPU).def $(GEOIP_STAT_LIB)
-	$(call link_DLL, $@, -def:$^ dnsapi.lib oldnames.lib ws2_32.lib, $(GEOIP_IMP_LIB))
+	$(call link_DLL, $@, -def:$^ dnsapi.lib ws2_32.lib, $(GEOIP_IMP_LIB))
 
 $(MMDB_OBJ)              \
 $(OBJ_DIR)/getopt.obj    \
