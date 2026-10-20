@@ -1,0 +1,170 @@
+= libloc Manual Pages
+
+libloc is the library that reads, writes and verifies the IPFire Location Database. These
+are the manual pages of its programs and of its C API. Pages that document more than one
+function are listed with all of them; their man pages can be opened under any of those
+names.
+
+== Programs
+
+link:location[1]::
+	Look up addresses, export networks for firewalls, and keep the database up to date.
+
+link:location-importer[1]::
+	Build the database from the Regional Internet Registries and other sources.
+
+== Getting Started
+
+link:libloc[3]::
+	What the library does, a quickstart, and how references, errors and threads work.
+
+== Python and Lua
+
+link:python-location[3]::
+	The Python module: look up addresses, list networks, verify and write databases.
+
+link:lua-location[3]::
+	The Lua module: look up addresses, list networks, and verify databases.
+
+== Contexts and Logging
+
+link:loc_new[3]::
+	Create a new libloc context: _loc_new()_, _loc_ref()_, _loc_unref()_.
+
+link:loc_set_log_callback[3]::
+	Set a callback for log messages.
+
+link:loc_set_log_priority[3]::
+	Set the log level of a context.
+
+link:loc_get_log_priority[3]::
+	Fetch the log level of a context.
+
+link:loc_set_log_fn[3]::
+	Deprecated, and has no effect. Use _loc_set_log_callback()_ instead.
+
+== Databases
+
+link:loc_database_new[3]::
+	Open a database, and read what it says about itself: _loc_database_new()_,
+	_loc_database_open()_, _loc_database_ref()_, _loc_database_unref()_,
+	_loc_database_created_at()_, _loc_database_get_vendor()_,
+	_loc_database_get_description()_, _loc_database_get_license()_.
+
+link:loc_database_lookup[3]::
+	Look up the network of an address: _loc_database_lookup()_,
+	_loc_database_lookup_from_string()_.
+
+link:loc_database_get_as[3]::
+	Fetch an Autonomous System.
+
+link:loc_database_count_as[3]::
+	Return the number of Autonomous Systems.
+
+link:loc_database_get_country[3]::
+	Fetch a country.
+
+link:loc_database_verify[3]::
+	Check the signature of a database.
+
+link:loc_database_reload[3]::
+	Read the database again after it has been updated: _loc_database_reload()_,
+	_loc_database_set_reload_interval()_.
+
+link:loc_discover_latest_version[3]::
+	Find out in the DNS when the latest database has been published.
+
+== Walking Through a Database
+
+link:loc_database_enumerator_new[3]::
+	Walk through all networks, Autonomous Systems or countries:
+	_loc_database_enumerator_new()_, _loc_database_enumerator_ref()_,
+	_loc_database_enumerator_unref()_, _loc_database_enumerator_next_network()_,
+	_loc_database_enumerator_next_as()_, _loc_database_enumerator_next_country()_.
+
+link:loc_database_enumerator_set_string[3]::
+	Choose what an enumerator returns: _loc_database_enumerator_set_string()_,
+	_loc_database_enumerator_set_countries()_, _loc_database_enumerator_get_countries()_,
+	_loc_database_enumerator_set_asns()_, _loc_database_enumerator_get_asns()_,
+	_loc_database_enumerator_set_flag()_, _loc_database_enumerator_set_family()_.
+
+== Networks
+
+link:loc_network_new[3]::
+	Create networks: _loc_network_new()_, _loc_network_new_from_string()_,
+	_loc_network_ref()_, _loc_network_unref()_, _loc_network_str()_,
+	_loc_network_address_family()_, _loc_network_prefix()_.
+
+link:loc_network_get_first_address[3]::
+	The addresses of a network: _loc_network_get_first_address()_,
+	_loc_network_get_last_address()_, _loc_network_format_first_address()_,
+	_loc_network_format_last_address()_, _loc_network_reverse_pointer()_.
+
+link:loc_network_get_asn[3]::
+	What is known about a network: _loc_network_get_asn()_, _loc_network_set_asn()_,
+	_loc_network_get_country_code()_, _loc_network_set_country_code()_,
+	_loc_network_matches_country_code()_, _loc_network_has_flag()_,
+	_loc_network_set_flag()_.
+
+link:loc_network_cmp[3]::
+	Compare networks and take them apart: _loc_network_cmp()_,
+	_loc_network_matches_address()_, _loc_network_overlaps()_, _loc_network_is_subnet()_,
+	_loc_network_subnets()_, _loc_network_exclude()_, _loc_network_exclude_list()_.
+
+link:loc_network_list_new[3]::
+	A sorted list of networks: _loc_network_list_new()_, _loc_network_list_ref()_,
+	_loc_network_list_unref()_, _loc_network_list_size()_, _loc_network_list_empty()_,
+	_loc_network_list_clear()_, _loc_network_list_get()_, _loc_network_list_contains()_,
+	_loc_network_list_dump()_.
+
+link:loc_network_list_push[3]::
+	Add networks to a list and take them off again: _loc_network_list_push()_,
+	_loc_network_list_pop()_, _loc_network_list_pop_first()_, _loc_network_list_merge()_.
+
+== Autonomous Systems
+
+link:loc_as_new[3]::
+	Autonomous Systems: _loc_as_new()_, _loc_as_ref()_, _loc_as_unref()_,
+	_loc_as_get_number()_, _loc_as_get_name()_, _loc_as_set_name()_, _loc_as_cmp()_.
+
+link:loc_as_list_new[3]::
+	A list of Autonomous Systems: _loc_as_list_new()_, _loc_as_list_ref()_,
+	_loc_as_list_unref()_, _loc_as_list_size()_, _loc_as_list_empty()_,
+	_loc_as_list_clear()_, _loc_as_list_get()_, _loc_as_list_sort()_.
+
+link:loc_as_list_append[3]::
+	Add Autonomous Systems to a list, and find them on it: _loc_as_list_append()_,
+	_loc_as_list_contains()_, _loc_as_list_contains_number()_.
+
+== Countries
+
+link:loc_country_new[3]::
+	Countries: _loc_country_new()_, _loc_country_ref()_, _loc_country_unref()_,
+	_loc_country_get_code()_, _loc_country_get_name()_, _loc_country_set_name()_,
+	_loc_country_get_continent_code()_, _loc_country_set_continent_code()_,
+	_loc_country_cmp()_.
+
+link:loc_country_code_is_valid[3]::
+	Check country codes: _loc_country_code_is_valid()_,
+	_loc_country_special_code_to_flag()_.
+
+link:loc_country_list_new[3]::
+	A list of countries: _loc_country_list_new()_, _loc_country_list_ref()_,
+	_loc_country_list_unref()_, _loc_country_list_size()_, _loc_country_list_empty()_,
+	_loc_country_list_clear()_, _loc_country_list_get()_, _loc_country_list_sort()_.
+
+link:loc_country_list_append[3]::
+	Add countries to a list, and find them on it: _loc_country_list_append()_,
+	_loc_country_list_contains()_, _loc_country_list_contains_code()_.
+
+== Writing a Database
+
+link:loc_writer_new[3]::
+	Create a database: _loc_writer_new()_, _loc_writer_ref()_, _loc_writer_unref()_,
+	_loc_writer_add_as()_, _loc_writer_add_network()_, _loc_writer_add_country()_,
+	_loc_writer_write()_.
+
+link:loc_writer_set_vendor[3]::
+	Describe a database: _loc_writer_set_vendor()_, _loc_writer_get_vendor()_,
+	_loc_writer_set_description()_, _loc_writer_get_description()_,
+	_loc_writer_set_license()_, _loc_writer_get_license()_.

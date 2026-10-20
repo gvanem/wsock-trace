@@ -1,0 +1,152 @@
+= loc_database_enumerator_new(3)
+
+== Name
+
+loc_database_enumerator_new, loc_database_enumerator_ref, loc_database_enumerator_unref,
+loc_database_enumerator_next_network, loc_database_enumerator_next_as,
+loc_database_enumerator_next_country - Walk through everything that is in a database
+
+== Synopsis
+----
+#include <libloc/database.h>
+
+enum loc_database_enumerator_mode {
+	LOC_DB_ENUMERATE_NETWORKS  = 1,
+	LOC_DB_ENUMERATE_ASES      = 2,
+	LOC_DB_ENUMERATE_COUNTRIES = 3,
+	LOC_DB_ENUMERATE_BOGONS    = 4,
+};
+
+enum loc_database_enumerator_flags {
+	LOC_DB_ENUMERATOR_FLAGS_FLATTEN = (1 << 0),
+};
+
+struct loc_database_enumerator;
+
+int loc_database_enumerator_new(struct loc_database_enumerator** enumerator,
+	struct loc_database* db, enum loc_database_enumerator_mode mode, int flags);
+
+struct loc_database_enumerator* loc_database_enumerator_ref(
+	struct loc_database_enumerator* enumerator);
+
+struct loc_database_enumerator* loc_database_enumerator_unref(
+	struct loc_database_enumerator* enumerator);
+
+int loc_database_enumerator_next_network(struct loc_database_enumerator* enumerator,
+	struct loc_network** network);
+
+int loc_database_enumerator_next_as(struct loc_database_enumerator* enumerator,
+	struct loc_as** as);
+
+int loc_database_enumerator_next_country(struct loc_database_enumerator* enumerator,
+	struct loc_country** country);
+----
+
+== Description
+
+An enumerator returns the objects of a database one after the other. What it returns
+depends on the _mode_ that it has been created with:
+
+_LOC_DB_ENUMERATE_NETWORKS_::
+	All networks, in the order of their addresses. Fetch them with
+	loc_database_enumerator_next_network().
+
+_LOC_DB_ENUMERATE_ASES_::
+	All Autonomous Systems, by their number. Fetch them with
+	loc_database_enumerator_next_as().
+
+_LOC_DB_ENUMERATE_COUNTRIES_::
+	All countries, by their code. Fetch them with
+	loc_database_enumerator_next_country().
+
+_LOC_DB_ENUMERATE_BOGONS_::
+	All address space that is not assigned to any country, which is what should not
+	be seen on the Internet. Fetch it with loc_database_enumerator_next_network().
+
+The functions that fetch the objects of another mode return nothing.
+
+The database contains networks that are inside other networks, because a part of
+a network might belong to someone else. With the _LOC_DB_ENUMERATOR_FLAGS_FLATTEN_
+flag, the networks are being broken down so that none of them overlap, and that every
+address is in exactly one of the networks that are being returned. This is what a
+firewall usually wants.
+
+loc_database_enumerator_new() creates a new enumerator for the database _db_. The
+enumerator keeps the file that the database is using when it is being created, so that
+it returns everything exactly once, even if the database is being reloaded in the
+meantime (see link:loc_database_reload[3]).
+
+Without any filters, an enumerator returns everything. To only return some of the
+networks or Autonomous Systems, see link:loc_database_enumerator_set_string[3].
+
+Each call to loc_database_enumerator_next_network(), loc_database_enumerator_next_as()
+or loc_database_enumerator_next_country() stores the next object in its second
+argument. The caller owns a reference to it and has to release it. Once everything
+has been returned, the object is set to NULL.
+
+== Return Value
+
+loc_database_enumerator_new() returns zero on success, and a negative error number
+(see errno(3)) on error.
+
+The functions that fetch the next object return zero on success, which includes that
+there is nothing left. On error, a negative error number is returned, for example
+_-EFAULT_ if the database is damaged. _errno_ itself is not being set.
+
+loc_database_enumerator_ref() returns the enumerator. loc_database_enumerator_unref()
+returns NULL once the last reference has been released and the enumerator has been
+freed, or the enumerator otherwise.
+
+== Threads
+
+An enumerator must not be used by more than one thread at a time. Any number of
+threads may have enumerators of the same database.
+
+== Example
+
+Print all networks in Germany and in Austria:
+
+----
+struct loc_database_enumerator* e = NULL;
+struct loc_country_list* countries = NULL;
+struct loc_country* country = NULL;
+struct loc_network* network = NULL;
+
+loc_database_enumerator_new(&e, db, LOC_DB_ENUMERATE_NETWORKS,
+	LOC_DB_ENUMERATOR_FLAGS_FLATTEN);
+
+loc_country_list_new(ctx, &countries);
+
+loc_country_new(ctx, &country, "DE");
+loc_country_list_append(countries, country);
+loc_country_unref(country);
+
+loc_country_new(ctx, &country, "AT");
+loc_country_list_append(countries, country);
+loc_country_unref(country);
+
+loc_database_enumerator_set_countries(e, countries);
+loc_country_list_unref(countries);
+
+while (loc_database_enumerator_next_network(e, &network) == 0 && network) {
+	printf("%s\n", loc_network_str(network));
+	loc_network_unref(network);
+}
+
+loc_database_enumerator_unref(e);
+----
+
+Error checking has been left out for brevity.
+
+== See Also
+
+link:libloc[3],
+link:loc_database_new[3],
+link:loc_database_enumerator_set_string[3],
+link:loc_network_new[3],
+link:loc_as_list_new[3],
+link:loc_country_list_new[3]
+
+== Authors
+
+Michael Tremer

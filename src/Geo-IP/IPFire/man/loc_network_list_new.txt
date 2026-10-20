@@ -1,0 +1,79 @@
+= loc_network_list_new(3)
+
+== Name
+
+loc_network_list_new, loc_network_list_ref, loc_network_list_unref, loc_network_list_size,
+loc_network_list_empty, loc_network_list_clear, loc_network_list_get,
+loc_network_list_contains, loc_network_list_dump - A sorted list of networks
+
+== Synopsis
+----
+#include <libloc/network-list.h>
+
+struct loc_network_list;
+
+int loc_network_list_new(struct loc_ctx* ctx, struct loc_network_list** list);
+
+struct loc_network_list* loc_network_list_ref(struct loc_network_list* list);
+
+struct loc_network_list* loc_network_list_unref(struct loc_network_list* list);
+
+size_t loc_network_list_size(struct loc_network_list* list);
+
+int loc_network_list_empty(struct loc_network_list* list);
+
+void loc_network_list_clear(struct loc_network_list* list);
+
+struct loc_network* loc_network_list_get(struct loc_network_list* list,
+	size_t index);
+
+int loc_network_list_contains(struct loc_network_list* list,
+	struct loc_network* network);
+
+void loc_network_list_dump(struct loc_network_list* list);
+----
+
+== Description
+
+A network list holds networks in the order of link:loc_network_cmp[3], and every
+network only once.
+
+loc_network_list_new() creates a new, empty list.
+
+loc_network_list_size() returns how many networks are on the list, and
+loc_network_list_empty() returns whether there are none. loc_network_list_clear()
+removes all of them.
+
+loc_network_list_get() returns the network at _index_, starting from zero.
+
+Networks are being added with link:loc_network_list_push[3].
+
+loc_network_list_contains() checks whether _network_ is on the list.
+
+loc_network_list_dump() logs all networks on the list, at the priority _LOG_INFO_ (see
+link:loc_set_log_priority[3]). It is meant for debugging.
+
+== Return Value
+
+loc_network_list_new() returns zero on success, and a negative error number (see
+errno(3)) on error.
+
+loc_network_list_get() returns a reference to the network, which the caller has to
+release, or NULL if _index_ is not on the list.
+
+loc_network_list_empty() and loc_network_list_contains() return 1 if this is true, and
+zero otherwise.
+
+loc_network_list_ref() returns the list. loc_network_list_unref() returns NULL once the
+last reference has been released and the list has been freed, or the list otherwise.
+
+== See Also
+
+link:libloc[3],
+link:loc_network_list_push[3],
+link:loc_network_new[3],
+link:loc_network_cmp[3]
+
+== Authors
+
+Michael Tremer

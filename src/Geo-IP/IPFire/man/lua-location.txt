@@ -1,0 +1,172 @@
+= lua-location(3)
+
+== Name
+
+lua-location - Lua module to query the IPFire Location Database
+
+== Synopsis
+----
+location = require("location")
+
+db = location.Database.open(location.DATABASE_PATH)
+
+network = db:lookup("81.3.27.38")
+----
+
+== Description
+
+The _location_ module makes libloc available in Lua 5.1 to 5.4. It can look up addresses,
+fetch Autonomous Systems and countries, list all networks, and verify databases. Unlike
+the Python module (see link:python-location[3]), it cannot write databases.
+
+Functions that look something up return _nil_ if there is nothing. Anything that goes
+wrong raises an error with a message, which can be caught with _pcall()_.
+
+AS numbers, address families, flags and times are returned as integers in Lua 5.3 and
+later. Older versions of Lua only have one type for numbers.
+
+== Functions and Constants
+
+location.version()::
+	Returns the version of libloc.
+
+location.set_log_level(priority)::
+	Sets the priority of the messages that the library logs, as a syslog(3)
+	priority, for example 7 for _LOG_DEBUG_.
+
+location.set_log_callback(function)::
+	Calls _function(priority, message)_ for every message that the library logs,
+	instead of writing it to the console.
+
+location.DATABASE_PATH::
+	The path of the database of the system, usually _/var/lib/location/database.db_.
+
+location.NETWORK_FLAG_ANONYMOUS_PROXY, location.NETWORK_FLAG_SATELLITE_PROVIDER, location.NETWORK_FLAG_ANYCAST, location.NETWORK_FLAG_DROP::
+	The flags that a network can have.
+
+== Database
+
+location.Database.open(path)::
+	Opens the database at _path_. The database is mapped into memory, and is read
+	again automatically when its file has been replaced, so that it only needs to be
+	opened once.
+
+db:lookup(address)::
+	Returns the _Network_ that _address_ is in, or _nil_ if the database knows
+	nothing about it. _address_ is a string, for example _"81.3.27.38"_ or
+	_"2001:db8::1"_. Invalid addresses raise an error.
+
+db:get_as(number)::
+	Returns the _AS_ with that number, or _nil_.
+
+db:get_country(code)::
+	Returns the _Country_ with that code, or _nil_.
+
+db:list_networks()::
+	Returns an iterator over all networks, for use with _for ... in_.
+
+db:verify(path)::
+	Returns whether the database has been signed with the public key in the file
+	_path_.
+
+db:created_at()::
+	Returns when the database was created, as seconds since the epoch.
+
+db:get_vendor(), db:get_description(), db:get_license()::
+	Return who has created the database, what it is, and under which license it has
+	been published.
+
+== Network
+
+location.Network.new(network)::
+	Creates a network from a string, for example _"10.0.0.0/8"_.
+
+network:get_country_code(), network:get_asn()::
+	Return the country code and the AS number of the network, or _nil_.
+
+network:get_family()::
+	Returns the address family of the network, which is 2 for IPv4 (_AF_INET_), and
+	10 for IPv6 (_AF_INET6_) on Linux.
+
+network:has_flag(flag)::
+	Returns whether the network has _flag_.
+
+network:subnets()::
+	Returns a table with the two halves of the network.
+
+network:reverse_pointer(suffix)::
+	Returns the name of the network in the DNS, which ends in _suffix_, or in
+	_in-addr.arpa._ or _ip6.arpa._ if _suffix_ is omitted, for example
+	_"*.10.in-addr.arpa."_, or _nil_ if the prefix of the network is not a multiple
+	of 8 for IPv4, or of 4 for IPv6.
+
+_tostring()_ returns the network as a string.
+
+== AS
+
+location.AS.new(number)::
+	Creates an Autonomous System.
+
+as:get_number(), as:get_name()::
+	Return the AS number, and the name of the Autonomous System, or _nil_.
+
+_tostring()_ returns for example _"AS204867 - Lightning Wire Labs GmbH"_.
+
+== Country
+
+location.Country.new(code)::
+	Creates a country.
+
+country:get_code(), country:get_name(), country:get_continent_code()::
+	Return the country code, the name of the country, and the code of its continent,
+	or _nil_.
+
+Countries can be compared with _==_. _tostring()_ returns the code.
+
+== Examples
+
+Look up an address:
+
+----
+location = require("location")
+
+db = location.Database.open(location.DATABASE_PATH)
+
+network = db:lookup("81.3.27.38")
+if network then
+	print(tostring(network), network:get_country_code(), network:get_asn())
+end
+----
+
+Find out whether an address belongs to an anycast network:
+
+----
+network = db:lookup("8.8.8.8")
+if network and network:has_flag(location.NETWORK_FLAG_ANYCAST) then
+	print("anycast")
+end
+----
+
+Print the name of a country:
+
+----
+country = db:get_country("DE")
+print(country:get_name())
+----
+
+Count all networks:
+
+----
+n = 0
+for network in db:list_networks() do
+	n = n + 1
+end
+----
+
+== See Also
+
+link:libloc[3], link:python-location[3]
+
+== Authors
+
+Michael Tremer

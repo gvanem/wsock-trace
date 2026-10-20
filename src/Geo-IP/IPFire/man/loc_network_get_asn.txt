@@ -1,0 +1,108 @@
+= loc_network_get_asn(3)
+
+== Name
+
+loc_network_get_asn, loc_network_set_asn, loc_network_get_country_code,
+loc_network_set_country_code, loc_network_matches_country_code, loc_network_has_flag,
+loc_network_set_flag - What is known about a network
+
+== Synopsis
+----
+#include <libloc/network.h>
+
+enum loc_network_flags {
+	LOC_NETWORK_FLAG_ANONYMOUS_PROXY    = (1 << 0), // A1
+	LOC_NETWORK_FLAG_SATELLITE_PROVIDER = (1 << 1), // A2
+	LOC_NETWORK_FLAG_ANYCAST            = (1 << 2), // A3
+	LOC_NETWORK_FLAG_DROP               = (1 << 3), // XD
+};
+
+uint32_t loc_network_get_asn(struct loc_network* network);
+
+int loc_network_set_asn(struct loc_network* network, uint32_t asn);
+
+const char* loc_network_get_country_code(struct loc_network* network);
+
+int loc_network_set_country_code(struct loc_network* network,
+	const char* country_code);
+
+int loc_network_matches_country_code(struct loc_network* network,
+	const char* country_code);
+
+int loc_network_has_flag(struct loc_network* network, uint32_t flag);
+
+int loc_network_set_flag(struct loc_network* network, uint32_t flag);
+----
+
+== Description
+
+The database knows for each network which country it is in, which Autonomous System
+announces it, and whether it is special in any way.
+
+loc_network_get_asn() returns the number of the Autonomous System, or zero if there is
+none. More about the Autonomous System can be found with link:loc_database_get_as[3].
+loc_network_set_asn() sets it, and zero removes it.
+
+loc_network_get_country_code() returns the code of the country (ISO 3166-1 alpha-2),
+for example _DE_, or an empty string if the country is not known. More about the
+country can be found with link:loc_database_get_country[3].
+loc_network_set_country_code() sets it, and NULL or an empty string remove it.
+
+loc_network_has_flag() checks whether the network has any of the flags in _flag_.
+loc_network_set_flag() adds them. The flags are:
+
+_LOC_NETWORK_FLAG_ANONYMOUS_PROXY_::
+	The network hides where its users are, like a VPN or an open proxy.
+
+_LOC_NETWORK_FLAG_SATELLITE_PROVIDER_::
+	The network is used by a satellite provider, whose users can be anywhere.
+
+_LOC_NETWORK_FLAG_ANYCAST_::
+	The same network is being announced in many places, so that it cannot be said
+	where an address is.
+
+_LOC_NETWORK_FLAG_DROP_::
+	The network has been hijacked, or it is being used by spammers or other
+	criminals, for example because it is on the DROP lists of Spamhaus. It is a good
+	idea to drop anything coming from it.
+
+These have been given the codes _A1_, _A2_, _A3_ and _XD_, which are being used like
+country codes, for example by the location(1) command.
+
+loc_network_matches_country_code() checks whether the network is in the country with
+the code _country_code_. If _country_code_ is one of the codes above, it checks whether
+the network has that flag instead.
+
+== Return Value
+
+loc_network_set_country_code() returns zero on success, and _-EINVAL_ if _country_code_
+is not a valid country code (see link:loc_country_new[3]). loc_network_set_asn() and
+loc_network_set_flag() always return zero.
+
+loc_network_has_flag() returns a value that is not zero if the network has any of the
+flags.
+
+loc_network_matches_country_code() returns 1 if the network matches, zero if it does
+not, and _-EINVAL_ if _country_code_ is not a country code at all.
+
+== Example
+
+----
+const char* country_code = loc_network_get_country_code(network);
+
+if (loc_network_has_flag(network, LOC_NETWORK_FLAG_DROP))
+	printf("%s should be dropped\n", loc_network_str(network));
+
+else if (*country_code)
+	printf("%s is in %s\n", loc_network_str(network), country_code);
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_network_new[3],
+link:loc_database_lookup[3]
+
+== Authors
+
+Michael Tremer

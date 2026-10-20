@@ -1,0 +1,81 @@
+= loc_database_enumerator_set_string(3)
+
+== Name
+
+loc_database_enumerator_set_string, loc_database_enumerator_set_countries,
+loc_database_enumerator_get_countries, loc_database_enumerator_set_asns,
+loc_database_enumerator_get_asns, loc_database_enumerator_set_flag,
+loc_database_enumerator_set_family - Choose what an enumerator returns
+
+== Synopsis
+----
+#include <libloc/database.h>
+
+int loc_database_enumerator_set_string(
+	struct loc_database_enumerator* enumerator, const char* string);
+
+int loc_database_enumerator_set_countries(struct loc_database_enumerator* enumerator,
+	struct loc_country_list* countries);
+
+struct loc_country_list* loc_database_enumerator_get_countries(
+	struct loc_database_enumerator* enumerator);
+
+int loc_database_enumerator_set_asns(struct loc_database_enumerator* enumerator,
+	struct loc_as_list* asns);
+
+struct loc_as_list* loc_database_enumerator_get_asns(
+	struct loc_database_enumerator* enumerator);
+
+int loc_database_enumerator_set_flag(struct loc_database_enumerator* enumerator,
+	enum loc_network_flags flag);
+
+int loc_database_enumerator_set_family(
+	struct loc_database_enumerator* enumerator, int family);
+----
+
+== Description
+
+Without any filters, an enumerator returns everything (see
+link:loc_database_enumerator_new[3]). Filters that are being changed while an
+enumerator is in use only apply to the objects that it has not returned yet.
+
+loc_database_enumerator_set_string() only returns Autonomous Systems whose name
+contains _string_. Upper and lower case do not matter. Passing NULL removes the filter.
+
+loc_database_enumerator_set_countries() only returns networks that are in one of the
+countries in the list, and loc_database_enumerator_set_asns() only returns those that
+are announced by one of the Autonomous Systems in the list. The enumerator holds a
+reference to the list, so that the caller may let go of it. Passing NULL removes the
+filter. loc_database_enumerator_get_countries() and loc_database_enumerator_get_asns()
+return a new reference to the list that has been set, or NULL.
+
+loc_database_enumerator_set_flag() only returns networks which have _flag_ set (see
+link:loc_network_get_asn[3]). It may be called more than once to look for more than
+one flag.
+
+A network is being returned if it matches any of these filters. For example, setting a
+list of countries and _LOC_NETWORK_FLAG_ANYCAST_ returns all networks in those countries,
+and all anycast networks.
+
+loc_database_enumerator_set_family() only returns networks of the address family
+_family_, which is either _AF_INET_ or _AF_INET6_, or zero for both. Unlike the other
+filters, this one must always match.
+
+== Return Value
+
+The functions that set a filter return zero on success, and _-ENOMEM_ if
+loc_database_enumerator_set_string() could not copy the string.
+
+loc_database_enumerator_get_countries() and loc_database_enumerator_get_asns() return a
+reference to the list, which the caller has to release, or NULL if there is none.
+
+== See Also
+
+link:libloc[3],
+link:loc_database_enumerator_new[3],
+link:loc_as_list_new[3],
+link:loc_country_list_new[3]
+
+== Authors
+
+Michael Tremer

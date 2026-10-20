@@ -1,0 +1,83 @@
+= loc_as_new(3)
+
+== Name
+
+loc_as_new, loc_as_ref, loc_as_unref, loc_as_get_number, loc_as_get_name,
+loc_as_set_name, loc_as_cmp - Autonomous Systems
+
+== Synopsis
+----
+#include <libloc/as.h>
+
+struct loc_as;
+
+int loc_as_new(struct loc_ctx* ctx, struct loc_as** as, uint32_t number);
+
+struct loc_as* loc_as_ref(struct loc_as* as);
+
+struct loc_as* loc_as_unref(struct loc_as* as);
+
+uint32_t loc_as_get_number(struct loc_as* as);
+
+const char* loc_as_get_name(struct loc_as* as);
+
+int loc_as_set_name(struct loc_as* as, const char* name);
+
+int loc_as_cmp(struct loc_as* as1, struct loc_as* as2);
+----
+
+== Description
+
+An Autonomous System is a network on the Internet that is being run by one
+organisation, for example an Internet Service Provider, and which has a number of its
+own. Autonomous Systems are being returned by link:loc_database_get_as[3] and by
+enumerators.
+
+loc_as_new() creates a new Autonomous System with _number_.
+
+loc_as_get_number() returns the number, and loc_as_get_name() returns the name, or NULL
+if it is not known. The name remains valid until it is being changed, or until the
+Autonomous System is being freed.
+
+loc_as_set_name() sets the name, and NULL removes it.
+
+loc_as_cmp() compares two Autonomous Systems by their number.
+
+== Return Value
+
+loc_as_new() and loc_as_set_name() return zero on success, and a negative error number
+(see errno(3)) on error, for example _-ENOMEM_.
+
+loc_as_cmp() returns a negative number, zero, or a positive number if _as1_ has a smaller,
+the same, or a larger number than _as2_.
+
+loc_as_ref() returns the Autonomous System. loc_as_unref() returns NULL once the last
+reference has been released and it has been freed, or the Autonomous System otherwise.
+
+== Example
+
+----
+struct loc_as* as = NULL;
+
+int r = loc_database_get_as(db, &as, loc_network_get_asn(network));
+if (r == 0) {
+	const char* name = loc_as_get_name(as);
+
+	if (name)
+		printf("AS%u - %s\n", loc_as_get_number(as), name);
+	else
+		printf("AS%u\n", loc_as_get_number(as));
+
+	loc_as_unref(as);
+}
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_as_list_new[3],
+link:loc_database_get_as[3]
+
+== Authors
+
+Michael Tremer

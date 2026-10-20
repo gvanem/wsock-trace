@@ -1,0 +1,72 @@
+= loc_as_list_new(3)
+
+== Name
+
+loc_as_list_new, loc_as_list_ref, loc_as_list_unref, loc_as_list_size,
+loc_as_list_empty, loc_as_list_clear, loc_as_list_get, loc_as_list_sort
+- A list of Autonomous Systems
+
+== Synopsis
+----
+#include <libloc/as-list.h>
+
+struct loc_as_list;
+
+int loc_as_list_new(struct loc_ctx* ctx, struct loc_as_list** list);
+
+struct loc_as_list* loc_as_list_ref(struct loc_as_list* list);
+
+struct loc_as_list* loc_as_list_unref(struct loc_as_list* list);
+
+size_t loc_as_list_size(struct loc_as_list* list);
+
+int loc_as_list_empty(struct loc_as_list* list);
+
+void loc_as_list_clear(struct loc_as_list* list);
+
+struct loc_as* loc_as_list_get(struct loc_as_list* list, size_t index);
+
+void loc_as_list_sort(struct loc_as_list* list);
+----
+
+== Description
+
+An AS list holds Autonomous Systems in the order in which they have been added, and
+every Autonomous System only once. It is mainly used to tell an enumerator which
+networks to return (see link:loc_database_enumerator_new[3]).
+
+loc_as_list_new() creates a new, empty list.
+
+loc_as_list_size() returns how many Autonomous Systems are on the list, and
+loc_as_list_empty() returns whether there are none. loc_as_list_clear() removes all
+of them.
+
+loc_as_list_get() returns the Autonomous System at _index_, starting from zero.
+
+Autonomous Systems are being added with link:loc_as_list_append[3].
+
+loc_as_list_sort() sorts the list by number.
+
+== Return Value
+
+loc_as_list_new() returns zero on success, and a negative error number (see
+errno(3)) on error.
+
+loc_as_list_get() returns a reference to the Autonomous System, which the caller has to
+release, or NULL if _index_ is not on the list.
+
+loc_as_list_empty() returns 1 if the list is empty, and zero otherwise.
+
+loc_as_list_ref() returns the list. loc_as_list_unref() returns NULL once the last
+reference has been released and the list has been freed, or the list otherwise.
+
+== See Also
+
+link:libloc[3],
+link:loc_as_list_append[3],
+link:loc_as_new[3],
+link:loc_database_enumerator_new[3]
+
+== Authors
+
+Michael Tremer

@@ -1,0 +1,60 @@
+= loc_discover_latest_version(3)
+
+== Name
+
+loc_discover_latest_version - Find out when the latest database has been published
+
+== Synopsis
+----
+#include <libloc/database.h>
+#include <libloc/resolv.h>
+
+int loc_discover_latest_version(struct loc_ctx* ctx, unsigned int version,
+	time_t* t);
+----
+
+== Description
+
+A new IPFire Location Database is being published every day. Whenever that happens,
+the time it has been created is being published in the DNS, as a TXT record of
+_\_v1.\_db.location.ipfire.org_, where _1_ is the version of the format.
+
+loc_discover_latest_version() looks it up, and stores the time in _t_. If it is not
+newer than what link:loc_database_new[3] says the database has been created at, there
+is no need to download anything. This is how location(1) checks for updates, which
+saves downloading the database when nothing has changed.
+
+_version_ is the version of the database format, which is _LOC_DATABASE_VERSION_LATEST_
+for databases that have been created by this version of libloc.
+
+The lookup uses the resolver of the system (see resolver(3)). libloc does not check
+DNSSEC signatures itself, which is up to the resolver. The answer only tells whether it
+is worth downloading anything; a database that has been downloaded must still be
+checked with link:loc_database_verify[3].
+
+== Return Value
+
+Zero is returned on success. On error, a negative error number (see errno(3)) is
+returned: _-EAGAIN_ if the DNS could not be reached and it is worth trying again later,
+_-ENOENT_ if there is no such record, _-EBADMSG_ if the answer could not be understood,
+or _-EIO_ for any other problem. _errno_ itself is not being set.
+
+== Example
+
+----
+time_t t = 0;
+
+int r = loc_discover_latest_version(ctx, LOC_DATABASE_VERSION_LATEST, &t);
+if (r == 0 && t > loc_database_created_at(db))
+	printf("There is a new database\n");
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_database_new[3],
+location(1)
+
+== Authors
+
+Michael Tremer

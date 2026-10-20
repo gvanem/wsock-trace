@@ -1,0 +1,43 @@
+= loc_as_list_append(3)
+
+== Name
+
+loc_as_list_append, loc_as_list_contains, loc_as_list_contains_number
+- Add Autonomous Systems to a list, and find them on it
+
+== Synopsis
+----
+#include <libloc/as-list.h>
+
+int loc_as_list_append(struct loc_as_list* list, struct loc_as* as);
+
+int loc_as_list_contains(struct loc_as_list* list, struct loc_as* as);
+
+int loc_as_list_contains_number(struct loc_as_list* list, uint32_t number);
+----
+
+== Description
+
+loc_as_list_append() adds _as_ to the end of the list. Nothing happens if an Autonomous
+System with the same number is already on the list. The list holds a reference to it, so
+that the caller may let go of it.
+
+loc_as_list_contains() and loc_as_list_contains_number() check whether an Autonomous
+System with the same number is on the list.
+
+== Return Value
+
+loc_as_list_append() returns zero on success, and a negative error number (see
+errno(3)) on error.
+
+loc_as_list_contains() and loc_as_list_contains_number() return 1 if the Autonomous
+System is on the list, and zero otherwise.
+
+== See Also
+
+link:libloc[3],
+link:loc_as_list_new[3]
+
+== Authors
+
+Michael Tremer

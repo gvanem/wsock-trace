@@ -1,0 +1,100 @@
+= loc_network_cmp(3)
+
+== Name
+
+loc_network_cmp, loc_network_matches_address, loc_network_overlaps, loc_network_is_subnet,
+loc_network_subnets, loc_network_exclude, loc_network_exclude_list
+- Compare networks and take them apart
+
+== Synopsis
+----
+#include <libloc/network.h>
+
+int loc_network_cmp(struct loc_network* self, struct loc_network* other);
+
+int loc_network_matches_address(struct loc_network* network,
+	const struct in6_addr* address);
+
+int loc_network_overlaps(struct loc_network* self, struct loc_network* other);
+
+int loc_network_is_subnet(struct loc_network* self, struct loc_network* other);
+
+int loc_network_subnets(struct loc_network* network,
+	struct loc_network** subnet1, struct loc_network** subnet2);
+
+struct loc_network_list* loc_network_exclude(struct loc_network* self,
+	struct loc_network* other);
+
+struct loc_network_list* loc_network_exclude_list(struct loc_network* network,
+	struct loc_network_list* list);
+----
+
+== Description
+
+loc_network_cmp() compares two networks by their first address, and then by the length
+of their prefix, so that a network comes before its subnets. It can be used to sort
+networks.
+
+loc_network_matches_address() checks whether _address_ is in _network_. IPv4 addresses
+have to be IPv4-mapped (see link:loc_network_new[3]).
+
+loc_network_overlaps() checks whether the two networks have any addresses in common.
+
+loc_network_is_subnet() checks whether _other_ is inside _self_, which includes that
+both are the same network.
+
+loc_network_subnets() splits _network_ into its two halves, which are one bit longer.
+For example, _192.0.2.0/24_ becomes _192.0.2.0/25_ and _192.0.2.128/25_. Both have the
+same country, Autonomous System and flags as _network_.
+
+loc_network_exclude() returns the smallest list of networks which contain all addresses
+of _self_ except those that are in _other_. loc_network_exclude_list() does the same
+for all networks in _list_. If nothing overlaps, the result only contains the network
+itself. The networks in the result have the same country, Autonomous System and flags
+as the network that they have been taken from.
+
+== Return Value
+
+loc_network_cmp() returns a negative number, zero, or a positive number if _self_ is
+smaller than, the same as, or larger than _other_, just like strcmp(3).
+
+loc_network_matches_address(), loc_network_overlaps() and loc_network_is_subnet()
+return 1 if this is true, and zero otherwise.
+
+loc_network_subnets() returns zero on success, and a negative error number (see
+errno(3)) on error, for example _-EINVAL_ if _network_ cannot be split because it only
+has one address.
+
+loc_network_exclude() and loc_network_exclude_list() return a new list, which the caller
+has to release, or NULL if an error occurred.
+
+== Example
+
+Print all of _192.0.2.0/24_ except _192.0.2.64/26_:
+
+----
+struct loc_network_list* list = loc_network_exclude(network, other);
+
+if (list) {
+	for (size_t i = 0; i < loc_network_list_size(list); i++) {
+		struct loc_network* n = loc_network_list_get(list, i);
+
+		printf("%s\n", loc_network_str(n));
+		loc_network_unref(n);
+	}
+
+	loc_network_list_unref(list);
+}
+----
+
+This prints _192.0.2.0/26_ and _192.0.2.128/25_.
+
+== See Also
+
+link:libloc[3],
+link:loc_network_new[3],
+link:loc_network_list_new[3]
+
+== Authors
+
+Michael Tremer

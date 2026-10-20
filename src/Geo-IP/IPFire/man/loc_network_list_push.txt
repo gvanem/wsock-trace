@@ -1,0 +1,50 @@
+= loc_network_list_push(3)
+
+== Name
+
+loc_network_list_push, loc_network_list_pop, loc_network_list_pop_first,
+loc_network_list_merge - Add networks to a list and take them off again
+
+== Synopsis
+----
+#include <libloc/network-list.h>
+
+int loc_network_list_push(struct loc_network_list* list,
+	struct loc_network* network);
+
+struct loc_network* loc_network_list_pop(struct loc_network_list* list);
+
+struct loc_network* loc_network_list_pop_first(struct loc_network_list* list);
+
+int loc_network_list_merge(struct loc_network_list* self,
+	struct loc_network_list* other);
+----
+
+== Description
+
+loc_network_list_push() adds _network_ at the right place. Nothing happens if the same
+network is already on the list. The list holds a reference to it, so that the caller may
+let go of it.
+
+loc_network_list_pop() takes the last network off the list, and
+loc_network_list_pop_first() takes the first one off the list. Both are fast enough to
+use the list as a queue.
+
+loc_network_list_merge() adds all networks of _other_ to _self_.
+
+== Return Value
+
+loc_network_list_push() and loc_network_list_merge() return zero on success, and a
+negative error number (see errno(3)) on error.
+
+loc_network_list_pop() and loc_network_list_pop_first() return the network, whose
+reference now belongs to the caller, or NULL if the list is empty.
+
+== See Also
+
+link:libloc[3],
+link:loc_network_list_new[3]
+
+== Authors
+
+Michael Tremer

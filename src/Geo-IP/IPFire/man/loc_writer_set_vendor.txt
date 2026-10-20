@@ -1,0 +1,48 @@
+= loc_writer_set_vendor(3)
+
+== Name
+
+loc_writer_set_vendor, loc_writer_get_vendor, loc_writer_set_description,
+loc_writer_get_description, loc_writer_set_license, loc_writer_get_license
+- Describe a database
+
+== Synopsis
+----
+#include <libloc/writer.h>
+
+const char* loc_writer_get_vendor(struct loc_writer* writer);
+
+int loc_writer_set_vendor(struct loc_writer* writer, const char* vendor);
+
+const char* loc_writer_get_description(struct loc_writer* writer);
+
+int loc_writer_set_description(struct loc_writer* writer,
+	const char* description);
+
+const char* loc_writer_get_license(struct loc_writer* writer);
+
+int loc_writer_set_license(struct loc_writer* writer, const char* license);
+----
+
+== Description
+
+loc_writer_set_vendor(), loc_writer_set_description() and loc_writer_set_license() set
+who has created the database, what it is, and under which license it may be used. They
+can be read from the database with link:loc_database_new[3].
+
+The getters return what has been set, or an empty string if nothing has been set.
+
+== Return Value
+
+The setters return zero on success, and a negative error number (see errno(3)) on error,
+for example _-ENOMEM_.
+
+== See Also
+
+link:libloc[3],
+link:loc_writer_new[3],
+link:loc_database_new[3]
+
+== Authors
+
+Michael Tremer

@@ -1,0 +1,116 @@
+= location-importer(1)
+
+== NAME
+location-importer - Fill the location database with data
+
+== SYNOPSIS
+[verse]
+`location-importer write [--signing-key=FILE] [--backup-signing-key=FILE] [--vendor=VENDOR] [--description=DESCRIPTION] [--license=LICENSE] [--version=VERSION] FILE`
+`location-importer update-whois [SOURCE ...]`
+`location-importer update-announcements SERVER`
+`location-importer update-geofeeds`
+`location-importer update-feeds [FEED ...]`
+`location-importer update-overrides FILE ...`
+`location-importer import-countries FILE`
+
+== DESCRIPTION
+`location-importer` collects location data from various public sources
+(the WHOIS databases of the Regional Internet Registries, BGP announcements,
+geofeeds, and third-party feeds) and stores it in a PostgreSQL database.
+From there, it compiles a database file in libloc format which can be
+queried with location(1).
+
+== OPTIONS
+
+--database-host HOST::
+--database-name NAME::
+--database-username USERNAME::
+--database-password PASSWORD::
+	The connection parameters for the PostgreSQL database which stores any
+	intermediate data.
+	+
+	These options are required for every command.
+
+--quiet::
+	Enable quiet mode
+
+--debug::
+	Enable debugging mode
+
+== COMMANDS
+
+'write [--signing-key=FILE] [--backup-signing-key=FILE] [--vendor=VENDOR] [--description=DESCRIPTION] [--license=LICENSE] [--version=VERSION] FILE'::
+	This command compiles a database in libloc format out of the contents
+	of the PostgreSQL database and writes it to the given file.
+	+
+	The database can be signed with the key given with '--signing-key'.
+	A second key can be given with '--backup-signing-key' to allow rolling
+	over to it at a later point.
+	+
+	The '--vendor', '--description' and '--license' parameters set the
+	metadata of the database, and '--version' selects the database format
+	version.
+
+'update-whois [SOURCE ...]'::
+	This command downloads and imports WHOIS data from the Regional
+	Internet Registries (AFRINIC, APNIC, ARIN, JPNIC, LACNIC, RIPE).
+	+
+	If one or more SOURCE arguments are given, only these sources will be
+	updated.
+	+
+	Countries have to be imported with 'import-countries' before any WHOIS
+	data can be imported.
+
+'update-announcements SERVER'::
+	This command imports announced prefixes from a BGP route server.
+	+
+	SERVER is the path to the UNIX domain socket of a locally running Bird
+	instance.
+	+
+	Any unroutable address space (e.g. RFC 1918, loopback, or link-local
+	networks) is filtered out.
+
+'update-geofeeds'::
+	This command refreshes all geofeeds (RFC 8805) which are referenced in
+	the database.
+
+'update-feeds [FEED ...]'::
+	This command updates data from third-party feeds, currently the AWS and
+	OCI IP ranges as well as the Spamhaus DROP and ASN-DROP lists.
+	+
+	If one or more FEED arguments are given, only these feeds will be
+	updated.
+
+'update-overrides FILE ...'::
+	This command imports override files which manually correct or amend
+	network and Autonomous System data.
+	+
+	Any previously imported overrides will be replaced.
+
+'import-countries FILE'::
+	This command imports the list of countries from the given file which
+	contains one country per line consisting of the country code, the
+	continent code and the name.
+	+
+	Any previously imported countries will be replaced.
+
+'--help'::
+	Shows a short help text on using this program.
+
+'--version'::
+	Shows the program's version and exits.
+
+== EXIT CODES
+The 'location-importer' command will normally exit with code zero.
+If there has been a problem and the requested action could not be performed,
+the exit code is unequal to zero.
+
+== SEE ALSO
+link:location[1]
+
+== BUG REPORTS
+Please report all bugs to the bugtracker at https://bugzilla.ipfire.org/;
+refer to https://wiki.ipfire.org/devel/bugzilla for details.
+
+== AUTHORS
+Michael Tremer

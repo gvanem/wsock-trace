@@ -1,0 +1,284 @@
+= python-location(3)
+
+== Name
+
+python-location - Python module to query the IPFire Location Database
+
+== Synopsis
+----
+import location
+
+db = location.open()
+
+network = db.lookup("81.3.27.38")
+----
+
+== Description
+
+The _location_ module makes libloc available in Python. It can look up addresses, list
+networks, Autonomous Systems and countries, verify databases, and write new ones.
+
+It is the module that location(1) and location-importer(1) are written with. Its classes
+are written in C, and call libloc directly (see link:libloc[3]).
+
+All functions that look something up return _None_ if there is nothing. Invalid
+arguments raise _ValueError_ or _TypeError_, and anything else that goes wrong in the
+library raises _OSError_ with the error number that the library has returned.
+
+Importing the module adds two handlers to the _location_ logger of the _logging_ module:
+one that writes to the console, and one that writes to syslog.
+
+== Functions and Constants
+
+location.open(path=None)::
+	Opens the database at _path_, or the database of the system if _path_ is
+	omitted, and returns a _Database_.
+
+location.country_code_is_valid(code)::
+	Returns whether _code_ is a valid country code, which has two upper case letters,
+	and does not start with an X (see link:loc_country_code_is_valid[3]).
+
+location.discover_latest_version(version=DATABASE_VERSION_LATEST)::
+	Asks the DNS when the latest database was published, and returns the time as
+	seconds since the epoch, or _None_ if that could not be found out
+	(see link:loc_discover_latest_version[3]). Other threads can run while it is
+	waiting for the answer.
+
+location.set_log_level(priority)::
+	Sets the priority of the messages that the library logs, as a syslog(3)
+	priority, for example 7 for _LOG_DEBUG_.
+
+location.DATABASE_PATH::
+	The path of the database of the system, usually _/var/lib/location/database.db_.
+
+location.DATABASE_VERSION_LATEST::
+	The latest version of the database format.
+
+location.NETWORK_FLAG_ANONYMOUS_PROXY, location.NETWORK_FLAG_SATELLITE_PROVIDER, location.NETWORK_FLAG_ANYCAST, location.NETWORK_FLAG_DROP::
+	The flags that a network can have.
+
+location.\_\_version__::
+	The version of libloc.
+
+== Database
+
+location.Database(path)::
+	Opens the database at _path_. The database is mapped into memory, and is read
+	again automatically when its file has been replaced, so that it only needs to be
+	opened once. If it cannot be opened, _OSError_ is raised.
+
+lookup(address)::
+	Returns the _Network_ that _address_ is in, or _None_ if the database knows
+	nothing about it. _address_ is a string, for example _"81.3.27.38"_ or
+	_"2001:db8::1"_. Invalid addresses raise _ValueError_.
+
+get_as(number)::
+	Returns the _AS_ with that number, or _None_.
+
+get_country(code)::
+	Returns the _Country_ with that code, or _None_. Invalid codes raise _ValueError_.
+
+search_networks(country_codes=None, asns=None, flags=0, family=0, flatten=False)::
+	Returns an iterator over all networks that are in one of the countries in the
+	list _country_codes_, or belong to one of the AS numbers in the list _asns_, or
+	have one of the _flags_, or over all networks if none of them are given.
+	_family_ can be _socket.AF_INET_ or _socket.AF_INET6_ to only return networks of
+	that family. If _flatten_ is true, networks that are
+	inside other networks are being taken out of those, so that no two networks that
+	are being returned overlap.
+
+search_as(string)::
+	Returns an iterator over all Autonomous Systems whose names contain _string_,
+	ignoring case.
+
+list_bogons(family=0)::
+	Returns an iterator over all networks that should not be seen on the Internet,
+	because they are reserved, or have not been allocated to anybody.
+
+ases, countries, networks::
+	Iterators over all Autonomous Systems, countries, and networks.
+
+networks_flattened::
+	An iterator over all networks, of which none overlap.
+
+verify(key)::
+	Returns whether the database has been signed with the public _key_, which is an
+	open file. This is _False_ when there is no signature or when _key_ is not a key.
+	Verifying reads the entire database, and other threads can run in the meantime.
+
+reload()::
+	Reads the database again if its file has been replaced, and returns whether it
+	has. This happens automatically every once in a while (see
+	link:loc_database_reload[3]).
+
+created_at, vendor, description, license::
+	When the database was created, as seconds since the epoch, and who has created it,
+	what it is, and under which license it has been published.
+
+A _Database_ can be used by any number of threads at the same time.
+
+== Network
+
+location.Network(network)::
+	Creates a network from a string, for example _"10.0.0.0/8"_. Invalid networks
+	raise _ValueError_.
+
+country_code, asn::
+	The country code and the AS number of the network, or _None_. Both can be changed.
+
+family::
+	_socket.AF_INET_ or _socket.AF_INET6_.
+
+first_address, last_address::
+	The first and last address of the network as strings.
+
+has_flag(flag), set_flag(flag)::
+	Return whether the network has _flag_, and give it _flag_.
+
+is_subnet_of(other)::
+	Returns whether the network is inside the network _other_.
+
+subnets::
+	A tuple with the two halves of the network. Networks that only have one address
+	raise _ValueError_.
+
+exclude(other)::
+	Returns a list of the networks that are left of the network after _other_ has been
+	taken out of it.
+
+reverse_pointer(suffix=None)::
+	Returns the name of the network in the DNS, which ends in _suffix_, or in
+	_in-addr.arpa._ or _ip6.arpa._ if _suffix_ is omitted, for example _"*.10.in-addr.arpa."_,
+	or _None_ if the prefix of the network is not a multiple of 8 for IPv4, or of 4
+	for IPv6.
+
+Networks can be compared with _==_ and sorted. _str()_ returns the network as a string.
+
+== AS
+
+location.AS(number)::
+	Creates an Autonomous System.
+
+number::
+	The AS number.
+
+name::
+	The name of the Autonomous System, or _None_. It can be changed.
+
+ASes can be compared, sorted, and used in sets and as keys in dictionaries. _str()_
+returns for example _"AS204867 - Lightning Wire Labs GmbH"_.
+
+== Country
+
+location.Country(code)::
+	Creates a country. Invalid codes raise _ValueError_.
+
+code::
+	The country code.
+
+name, continent_code::
+	The name of the country, and the code of its continent, or _None_. Both can be
+	changed.
+
+Countries can be compared, sorted, and used in sets and as keys in dictionaries.
+_str()_ returns the code.
+
+== Writer
+
+location.Writer(private_key1=None, private_key2=None)::
+	Creates a new database, which is signed with up to two private keys, which are
+	open files (see link:loc_writer_new[3]).
+
+vendor, description, license::
+	Who has created the database, what it is, and under which license it is published.
+
+add_network(network)::
+	Adds a network, and returns it as a _Network_, whose country code, AS number and
+	flags can then be set. If the network has already been added, _IndexError_ is raised.
+
+add_as(number)::
+	Adds an Autonomous System, and returns it as an _AS_, whose name can then be set.
+
+add_country(code)::
+	Adds a country, and returns it as a _Country_, whose name and continent can then be
+	set.
+
+write(path, version=DATABASE_VERSION_LATEST)::
+	Writes the database to _path_. Other threads can run while the database is being
+	written. Until it has been written, the writer cannot be changed, and anything that
+	tries raises _RuntimeError_. The networks, Autonomous Systems and countries that
+	have been added to it must not be changed either.
+
+== Other Modules
+
+location.export::
+	Exports networks for ipset, nftables, and xt_geoip, which is what
+	_location export_ uses (see location(1)). _Exporter(db, writer)_ takes one of the
+	writers in _location.export.formats_, and its _export(directory, families,
+	countries, asns)_ writes one file for every country and AS number and family into
+	_directory_.
+
+location.downloader::
+	Downloads new databases, which is what _location update_ uses.
+	_Downloader().download(public_key, timestamp=None)_ downloads a database that is
+	newer than _timestamp_ from one of the mirrors, and verifies it with the public key
+	in the file _public_key_. It returns a temporary file, whose name is in _name_.
+
+== Examples
+
+Look up an address:
+
+----
+import location
+
+db = location.open()
+
+network = db.lookup("81.3.27.38")
+if network:
+	print(network, network.country_code, network.asn)
+----
+
+Print all networks in Germany that are not inside each other:
+
+----
+import socket
+
+for network in db.search_networks(country_codes=["DE"],
+		family=socket.AF_INET, flatten=True):
+	print(network)
+----
+
+Find out who an AS number belongs to:
+
+----
+print(db.get_as(204867))
+----
+
+Verify a database:
+
+----
+with open("/var/lib/location/signing-key.pem") as f:
+	if not db.verify(f):
+		raise RuntimeError("The database has not been signed by the vendor")
+----
+
+Write a new database:
+
+----
+writer = location.Writer()
+writer.vendor = "Example"
+
+network = writer.add_network("192.0.2.0/24")
+network.country_code = "DE"
+network.asn = 64512
+
+writer.write("example.db")
+----
+
+== See Also
+
+link:libloc[3], link:location[1]
+
+== Authors
+
+Michael Tremer

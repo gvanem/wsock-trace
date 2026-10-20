@@ -1,0 +1,47 @@
+= loc_country_list_append(3)
+
+== Name
+
+loc_country_list_append, loc_country_list_contains, loc_country_list_contains_code
+- Add countries to a list, and find them on it
+
+== Synopsis
+----
+#include <libloc/country-list.h>
+
+int loc_country_list_append(struct loc_country_list* list,
+	struct loc_country* country);
+
+int loc_country_list_contains(struct loc_country_list* list,
+	struct loc_country* country);
+
+int loc_country_list_contains_code(struct loc_country_list* list,
+	const char* code);
+----
+
+== Description
+
+loc_country_list_append() adds _country_ to the end of the list. Nothing happens if a
+country with the same code is already on the list. The list holds a reference to it, so
+that the caller may let go of it.
+
+loc_country_list_contains() and loc_country_list_contains_code() check whether a
+country with the same code is on the list.
+
+== Return Value
+
+loc_country_list_append() returns zero on success, and a negative error number (see
+errno(3)) on error.
+
+loc_country_list_contains() and loc_country_list_contains_code() return 1 if the country
+is on the list, and zero otherwise, which includes that _code_ is not a valid country
+code.
+
+== See Also
+
+link:libloc[3],
+link:loc_country_list_new[3]
+
+== Authors
+
+Michael Tremer

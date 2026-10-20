@@ -1,0 +1,120 @@
+= loc_writer_new(3)
+
+== Name
+
+loc_writer_new, loc_writer_ref, loc_writer_unref, loc_writer_add_as,
+loc_writer_add_network, loc_writer_add_country, loc_writer_write - Create a database
+
+== Synopsis
+----
+#include <libloc/writer.h>
+
+struct loc_writer;
+
+int loc_writer_new(struct loc_ctx* ctx, struct loc_writer** writer,
+	FILE* fkey1, FILE* fkey2);
+
+struct loc_writer* loc_writer_ref(struct loc_writer* writer);
+
+struct loc_writer* loc_writer_unref(struct loc_writer* writer);
+
+int loc_writer_add_as(struct loc_writer* writer, struct loc_as** as,
+	uint32_t number);
+
+int loc_writer_add_network(struct loc_writer* writer,
+	struct loc_network** network, const char* string);
+
+int loc_writer_add_country(struct loc_writer* writer,
+	struct loc_country** country, const char* country_code);
+
+int loc_writer_write(struct loc_writer* writer, FILE* f,
+	enum loc_database_version version);
+----
+
+== Description
+
+A writer creates a new database. This is what location-importer(1) uses to create the
+IPFire Location Database, but it can also be used to create a database with other data,
+for example for a private network.
+
+loc_writer_new() creates a new writer. _fkey1_ and _fkey2_ are files with private keys
+in PEM format, which are being used to sign the database. Either or both may be NULL,
+and a database without any keys is not being signed. The IPFire Location Database is
+being signed with ECDSA keys on the curve P-521.
+
+Who has created the database, what it is, and under which license it may be used is
+being set with link:loc_writer_set_vendor[3].
+
+loc_writer_add_as() adds a new Autonomous System with _number_, and
+loc_writer_add_country() adds a new country with _country_code_. If it has been added
+before, the one that has been added before is being returned.
+
+loc_writer_add_network() adds a new network, like _192.0.2.0/24_.
+
+The writer stores whatever has been added, and those functions return it, so that its
+details can be set, for example with link:loc_as_new[3] or
+link:loc_network_get_asn[3]. The caller has to release it afterwards.
+
+loc_writer_write() writes the database to _f_, which must be open for reading and
+writing, because the file is being read again to sign it. _version_ is the version of
+the format, and _LOC_DATABASE_VERSION_UNSET_ chooses the latest one. To keep the database
+small, networks that are inside another network with the same country, Autonomous
+System and flags are not being written, because looking up any of their addresses
+would find the same, and neighbouring networks with the same details are being merged
+into one.
+
+== Return Value
+
+All functions that return an integer return zero on success, and a negative error number
+(see errno(3)) on error.
+
+loc_writer_new() returns _-EINVAL_ if a private key could not be read.
+loc_writer_add_network() returns _-EINVAL_ if _string_ is not a network, and _-EBUSY_ if
+the network has already been added. loc_writer_add_country() returns _-EINVAL_ if
+_country_code_ is not valid. loc_writer_write() returns _-ENOTSUP_ if the version is not
+supported, and _-EIO_ if the database could not be written.
+
+loc_writer_ref() returns the writer. loc_writer_unref() returns NULL once the last
+reference has been released and the writer has been freed, or the writer otherwise.
+
+== Example
+
+----
+struct loc_writer* writer = NULL;
+struct loc_network* network = NULL;
+struct loc_as* as = NULL;
+
+loc_writer_new(ctx, &writer, NULL, NULL);
+
+loc_writer_set_vendor(writer, "Example Corp");
+loc_writer_set_license(writer, "CC0");
+
+loc_writer_add_as(writer, &as, 64496);
+loc_as_set_name(as, "Example Corp");
+loc_as_unref(as);
+
+loc_writer_add_network(writer, &network, "192.0.2.0/24");
+loc_network_set_country_code(network, "DE");
+loc_network_set_asn(network, 64496);
+loc_network_unref(network);
+
+FILE* f = fopen("example.db", "w+");
+loc_writer_write(writer, f, LOC_DATABASE_VERSION_UNSET);
+fclose(f);
+
+loc_writer_unref(writer);
+----
+
+Error checking has been left out for brevity.
+
+== See Also
+
+link:libloc[3],
+link:loc_writer_set_vendor[3],
+link:loc_database_new[3],
+link:loc_database_verify[3],
+location-importer(1)
+
+== Authors
+
+Michael Tremer

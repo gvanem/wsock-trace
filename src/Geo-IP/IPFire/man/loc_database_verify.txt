@@ -1,0 +1,60 @@
+= loc_database_verify(3)
+
+== Name
+
+loc_database_verify - Check the signature of a database
+
+== Synopsis
+----
+#include <libloc/database.h>
+
+int loc_database_verify(struct loc_database* db, FILE* f);
+----
+
+== Description
+
+Databases are being signed by whoever has created them, so that nobody can change
+their content on the way to the user.
+
+loc_database_verify() checks whether the database _db_ has been signed with the
+private key that belongs to the public key that can be read from _f_, in PEM format.
+A database can have up to two signatures, so that the signing key can be replaced
+while installations that only know the old key still accept new databases. One valid
+signature is enough.
+
+The public key of the IPFire Location Database is being installed with libloc,
+usually as _/var/lib/location/signing-key.pem_.
+
+Checking the signature means reading the entire database, which takes a moment. It
+should be done once, after a new database has been downloaded, and before the new file
+replaces the old one. Databases that are being reloaded are not being checked again
+(see link:loc_database_reload[3]).
+
+== Return Value
+
+Zero is returned if the database has a valid signature. 1 is returned if it does not,
+which includes that the database has not been signed at all. On error, a negative
+error number (see errno(3)) is returned, for example _-EINVAL_ if no public key could
+be read from _f_. _errno_ itself is not being set.
+
+== Example
+
+----
+FILE* f = fopen("/var/lib/location/signing-key.pem", "r");
+
+int r = loc_database_verify(db, f);
+fclose(f);
+
+if (r)
+	fprintf(stderr, "The database cannot be trusted\n");
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_database_new[3],
+link:loc_writer_new[3]
+
+== Authors
+
+Michael Tremer

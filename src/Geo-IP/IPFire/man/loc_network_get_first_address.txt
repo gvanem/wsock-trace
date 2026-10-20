@@ -1,0 +1,73 @@
+= loc_network_get_first_address(3)
+
+== Name
+
+loc_network_get_first_address, loc_network_get_last_address,
+loc_network_format_first_address, loc_network_format_last_address,
+loc_network_reverse_pointer - The addresses of a network
+
+== Synopsis
+----
+#include <libloc/network.h>
+
+const struct in6_addr* loc_network_get_first_address(struct loc_network* network);
+
+const struct in6_addr* loc_network_get_last_address(struct loc_network* network);
+
+const char* loc_network_format_first_address(struct loc_network* network);
+
+const char* loc_network_format_last_address(struct loc_network* network);
+
+char* loc_network_reverse_pointer(struct loc_network* network,
+	const char* suffix);
+----
+
+== Description
+
+loc_network_get_first_address() and loc_network_get_last_address() return the first
+and the last address in the network, and loc_network_format_first_address() and
+loc_network_format_last_address() return them as strings.
+
+loc_network_reverse_pointer() returns the name in the DNS that the reverse pointers of
+all addresses in the network are under, for example _*.2.0.192.in-addr.arpa._ for
+_192.0.2.0/24_. _suffix_ replaces _in-addr.arpa._ or _ip6.arpa._ if it is not NULL. The
+prefix has to end on an octet for IPv4 and on a nibble (four bits) for IPv6.
+
+IPv4 addresses are being returned as IPv4-mapped IPv6 addresses by
+loc_network_get_first_address() and loc_network_get_last_address() (see
+link:loc_network_new[3]), and as IPv4 addresses by all other functions.
+
+The strings and the addresses that are being returned belong to the network and remain
+valid for as long as the network does, except for the one that
+loc_network_reverse_pointer() returns, which has to be released with free(3).
+
+== Return Value
+
+loc_network_format_first_address() and loc_network_format_last_address() return NULL if
+the string could not be created.
+
+loc_network_reverse_pointer() returns NULL and sets _errno_ if the name could not be
+created, to _ENOTSUP_ if the prefix does not end on an octet or a nibble, or to
+_ENOMEM_.
+
+== Example
+
+----
+struct loc_network* network = NULL;
+
+if (loc_network_new_from_string(ctx, &network, "2001:db8::/32") == 0) {
+	printf("%s - %s\n", loc_network_format_first_address(network),
+		loc_network_format_last_address(network));
+
+	loc_network_unref(network);
+}
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_network_new[3]
+
+== Authors
+
+Michael Tremer

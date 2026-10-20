@@ -1,0 +1,72 @@
+= loc_database_reload(3)
+
+== Name
+
+loc_database_reload, loc_database_set_reload_interval - Read the database again after it has been updated
+
+== Synopsis
+----
+#include <libloc/database.h>
+
+int loc_database_reload(struct loc_database* db);
+
+int loc_database_set_reload_interval(struct loc_database* db, unsigned int interval);
+----
+
+== Description
+
+A database is being updated by replacing its file with a new one. A process that
+has opened the database keeps using the old file until it is told otherwise.
+
+loc_database_reload() checks whether the file at the path of the database is still
+the one that the database has been reading. If it is not, the new file is being read
+and used from then on.
+
+This only works for databases that have been opened with loc_database_open() (see
+link:loc_database_new[3]), because only those know where their file is.
+
+Those databases also do this on their own. Every five minutes, the first thread that
+uses the database after that time has passed checks whether there is a new file.
+All other threads carry on with the old file in the meantime and nobody has to wait.
+A database that is not being used does not check anything.
+
+loc_database_set_reload_interval() changes how often this happens. The _interval_ is
+in seconds, and zero turns it off, for those who would rather call
+loc_database_reload() themselves or who don't want the database to change.
+
+It is safe to call this function while other threads are using the database. Whoever
+is in the middle of looking something up finishes with the old file, which is being
+closed when the last one is done. An enumerator keeps the file that the database had
+when the enumerator has been created, so that it returns everything exactly once.
+Strings that have been returned by loc_database_get_vendor(),
+loc_database_get_description() and loc_database_get_license() remain valid until the
+database is being freed.
+
+The signature of the new file is not being verified. Whoever has installed it is
+expected to have done that. Files that are not regular files or that everybody is
+allowed to write to are being refused.
+
+The file of a database must never be changed in place. It has to be replaced, for
+example by writing the new database to a temporary file in the same directory and
+renaming that.
+
+== Return Value
+
+Zero is returned if there was a new file which is being used now, and 1 if the file
+has not changed.
+
+loc_database_set_reload_interval() returns zero on success.
+
+On error, a negative error number (see errno(3)) is returned and the database
+carries on with the file that it has: _-ENOTSUP_ if the database does not know where
+its file is, _-EPERM_ if the new file is writable by everyone, or whatever was the
+reason why the new file could not be opened or read.
+
+== See Also
+
+link:libloc[3],
+link:loc_database_new[3]
+
+== Authors
+
+Michael Tremer

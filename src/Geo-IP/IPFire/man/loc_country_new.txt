@@ -1,0 +1,84 @@
+= loc_country_new(3)
+
+== Name
+
+loc_country_new, loc_country_ref, loc_country_unref, loc_country_get_code,
+loc_country_get_name, loc_country_set_name, loc_country_get_continent_code,
+loc_country_set_continent_code, loc_country_cmp - Countries
+
+== Synopsis
+----
+#include <libloc/country.h>
+
+struct loc_country;
+
+int loc_country_new(struct loc_ctx* ctx, struct loc_country** country,
+	const char* country_code);
+
+struct loc_country* loc_country_ref(struct loc_country* country);
+
+struct loc_country* loc_country_unref(struct loc_country* country);
+
+const char* loc_country_get_code(struct loc_country* country);
+
+const char* loc_country_get_name(struct loc_country* country);
+
+int loc_country_set_name(struct loc_country* country, const char* name);
+
+const char* loc_country_get_continent_code(struct loc_country* country);
+
+int loc_country_set_continent_code(struct loc_country* country,
+	const char* continent_code);
+
+int loc_country_cmp(struct loc_country* country1, struct loc_country* country2);
+----
+
+== Description
+
+Countries are known by their code, which is the ISO 3166-1 alpha-2 code, for example
+_DE_ for Germany. The database knows the name of each country, and on which continent
+it is. Countries are being returned by link:loc_database_get_country[3] and by
+enumerators.
+
+loc_country_new() creates a new country with the code _country_code_.
+
+loc_country_get_code() returns the code. loc_country_get_name() returns the name, and
+loc_country_get_continent_code() returns the code of the continent, for example _EU_ for
+Europe. Both return NULL if they are not known.
+
+loc_country_set_name() sets the name, and NULL removes it. loc_country_set_continent_code()
+sets the code of the continent.
+
+The strings that are being returned remain valid until they are being changed, or until
+the country is being freed.
+
+loc_country_cmp() compares two countries by their code.
+
+Whether a string is a valid country code can be checked with
+link:loc_country_code_is_valid[3].
+
+== Return Value
+
+loc_country_new() returns zero on success, and a negative error number (see errno(3)) on
+error, for example _-EINVAL_ if _country_code_ is not valid.
+
+loc_country_set_name() returns zero on success, and _-ENOMEM_ if the name could not be
+copied. loc_country_set_continent_code() returns zero on success, and _-EINVAL_ if
+_continent_code_ does not have two characters.
+
+loc_country_cmp() returns a negative number, zero, or a positive number if the code of
+_country1_ comes before, is the same as, or comes after the code of _country2_.
+
+loc_country_ref() returns the country. loc_country_unref() returns NULL once the last
+reference has been released and the country has been freed, or the country otherwise.
+
+== See Also
+
+link:libloc[3],
+link:loc_country_code_is_valid[3],
+link:loc_country_list_new[3],
+link:loc_database_get_country[3]
+
+== Authors
+
+Michael Tremer

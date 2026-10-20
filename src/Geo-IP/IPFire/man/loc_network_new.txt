@@ -1,0 +1,94 @@
+= loc_network_new(3)
+
+== Name
+
+loc_network_new, loc_network_new_from_string, loc_network_ref, loc_network_unref,
+loc_network_str, loc_network_address_family, loc_network_prefix - Create networks
+
+== Synopsis
+----
+#include <libloc/network.h>
+
+struct loc_network;
+
+int loc_network_new(struct loc_ctx* ctx, struct loc_network** network,
+	struct in6_addr* first_address, unsigned int prefix);
+
+int loc_network_new_from_string(struct loc_ctx* ctx,
+	struct loc_network** network, const char* string);
+
+struct loc_network* loc_network_ref(struct loc_network* network);
+
+struct loc_network* loc_network_unref(struct loc_network* network);
+
+const char* loc_network_str(struct loc_network* network);
+
+int loc_network_address_family(struct loc_network* network);
+
+unsigned int loc_network_prefix(struct loc_network* network);
+----
+
+== Description
+
+A network is a range of IP addresses, like _192.0.2.0/24_ or _2001:db8::/32_. Networks
+are being returned by link:loc_database_lookup[3] and by enumerators, and they can be
+created by the caller to work with them.
+
+libloc stores all addresses as IPv6 addresses. IPv4 addresses are being stored as
+IPv4-mapped IPv6 addresses (_::ffff:192.0.2.0_), but the functions below return them
+as IPv4.
+
+loc_network_new() creates a network which starts at _first_address_ and has _prefix_
+bits. If _first_address_ is an IPv4-mapped address, _prefix_ is the length of the IPv4
+prefix (0 to 32). Any bits of _first_address_ after the prefix are being ignored.
+
+loc_network_new_from_string() creates a network from a string like _192.0.2.0/24_ or
+_2001:db8::/32_. A single address without a prefix is a network with only that
+address in it.
+
+loc_network_str() returns the network as a string, like _192.0.2.0/24_.
+
+loc_network_address_family() returns _AF_INET_ or _AF_INET6_.
+
+loc_network_prefix() returns the length of the prefix, which for IPv4 networks is
+between 0 and 32.
+
+The string that loc_network_str() returns belongs to the network and remains valid for
+as long as the network does. The addresses of a network are described in
+link:loc_network_get_first_address[3].
+
+== Return Value
+
+loc_network_new() and loc_network_new_from_string() return zero on success. On error,
+a negative error number (see errno(3)) is returned, for example _-EINVAL_ if the address
+or the prefix are not valid. _errno_ itself is not being set.
+
+loc_network_str() returns NULL if the string could not be created.
+
+loc_network_ref() returns the network. loc_network_unref() returns NULL once the last
+reference has been released and the network has been freed, or the network otherwise.
+
+== Example
+
+----
+struct loc_network* network = NULL;
+
+if (loc_network_new_from_string(ctx, &network, "2001:db8::/32") == 0) {
+	printf("%s has a prefix of %u bits\n", loc_network_str(network),
+		loc_network_prefix(network));
+
+	loc_network_unref(network);
+}
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_network_get_first_address[3],
+link:loc_network_get_asn[3],
+link:loc_network_cmp[3],
+link:loc_network_list_new[3]
+
+== Authors
+
+Michael Tremer

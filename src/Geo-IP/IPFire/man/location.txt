@@ -1,0 +1,185 @@
+= location(1)
+
+== NAME
+location - Query the location database
+
+== SYNOPSIS
+[verse]
+`location dump [OUTPUT]`
+`location export [--directory=DIR] [--format=FORMAT] [--family=ipv6|ipv4] [ASN|CC ...]`
+`location export-zone --output=FILE --origin=ORIGIN [--ttl=TTL] [--master=MASTER] [--zonemaster=EMAIL] [--nameserver=NS ...] TYPE`
+`location get-as ASN [ASN...]`
+`location list-bogons [--family=ipv6|ipv4] [--format=FORMAT]`
+`location list-countries [--show-name] [--show-continent]`
+`location list-networks-by-as [--family=ipv6|ipv4] [--format=FORMAT] ASN`
+`location list-networks-by-cc [--family=ipv6|ipv4] [--format=FORMAT] COUNTRY_CODE`
+`location list-networks-by-flags [--family=ipv6|ipv4] [--format=FORMAT] [--anonymous-proxy|--satellite-provider|--anycast|--drop]`
+`location lookup ADDRESS [ADDRESS...]`
+`location search-as STRING`
+`location update [--cron=daily|weekly|monthly]`
+`location verify`
+`location version`
+
+== DESCRIPTION
+`location` retrieves information from the location database.
+This data can be used to determine someone's location on the Internet
+and for building firewall rulesets to block access from certain ASes
+or countries.
+
+== OPTIONS
+
+--database FILE::
+-d FILE::
+	The path of the database which is being opened.
+	+
+	If this option is omitted, the system's database will be opened.
+
+--public-key FILE::
+-k FILE::
+	The path of the public key which is used to verify the database
+	(see 'verify' command).
+	+
+	If this option is omitted, the vendor's public key that is shipped
+	with libloc will be used.
+
+--quiet::
+	Enable quiet mode
+
+--debug::
+	Enable debugging mode
+
+== COMMANDS
+
+'dump [OUTPUT]'::
+	This command dumps the entire database as text, preceded by a header
+	with its metadata (creation time, vendor, license, and description).
+	+
+	The output is written to the given file, or to stdout if OUTPUT is
+	omitted.
+
+'export [--directory=DIR] [--format=FORMAT] [--family=ipv6|ipv4] [ASN|CC ...]'::
+	This command exports the whole database into the given directory.
+	+
+	The output can be filtered by only exporting a certain address family, or by passing
+	a list of country codes and/or ASNs. The default is to export all known countries.
+	+
+	The output format can be chosen with the '--format' parameter. For possible formats,
+	please see below.
+	+
+	If the '--directory' option is omitted, the output will be written to stdout which
+	is useful when you want to load any custom exports straight into nftables or ipset.
+
+'export-zone --output=FILE --origin=ORIGIN [--ttl=TTL] [--master=MASTER] [--zonemaster=EMAIL] [--nameserver=NS ...] TYPE'::
+	This command exports the database as a DNS zone file.
+	+
+	TYPE selects which data is being exported: 'asn' (AS names), 'cc'
+	(country codes of all networks), 'bogons', 'origin' (the AS of each
+	network), 'prefix', or 'everything'.
+	+
+	The zone is written to the file given with '--output' and rooted at
+	the origin given with '--origin'. Both options are required.
+	+
+	The '--ttl', '--master', and '--zonemaster' parameters set the TTL,
+	the zone master, and the email address of the zone's administrator,
+	respectively. Nameservers can be added to the zone by passing
+	'--nameserver' one or more times.
+
+'get-as ASN [ASN...]'::
+	This command returns the name of the owning organisation of the Autonomous
+	System.
+
+'list-countries [--show-name] [--show-continent]'::
+	Lists all countries known to the database.
+	+
+	With the optional parameters '--show-name' and '--show-continent', the name and
+	continent code will be printed, too.
+
+'list-networks-by-as [--family=[ipv6|ipv4]] [--format=FORMAT] ASN'::
+	Lists all networks which belong to this Autonomous System.
+	+
+	The '--family' parameter can be used to filter output to only IPv6 or
+	IPv4 addresses.
+	+
+	The '--format' parameter can change the output so that it can be
+	directly loaded into other software. For details see below.
+
+'list-networks-by-cc [--family=[ipv6|ipv4]] [--format=FORMAT] COUNTRY_CODE'::
+	Lists all networks that belong to a country.
+	+
+	The country has to be encoded in ISO 3166 Alpha-2 notation.
+	+
+	See above for usage of the '--family' and '--format' parameters.
+
+'list-networks-by-flags [--family=[ipv6|ipv4]] [--format=FORMAT] [--anonymous-proxy|--satellite-provider|--anycast|--drop]'::
+	Lists all networks that have a certain flag.
+	+
+	See above for usage of the '--family' and '--format' parameters.
+
+'list-bogons [--family=[ipv6|ipv4]] [--format=FORMAT]'::
+	Lists all bogons (i.e. networks that are unknown to the database).
+	+
+	See above for usage of the '--family' and '--format' parameters.
+
+'lookup ADDRESS [ADDRESS...]'::
+	This command returns the network the given IP address has been found in
+	as well as its Autonomous System if that information is available.
+
+'search-as STRING'::
+	Lists all Autonomous Systems which match the given string.
+	+
+	The search will be performed case-insensitively.
+
+'update'::
+	This command will try to update the local database.
+	+
+	It will terminate with a return code of zero if the database has been
+	successfully updated or if it was already the latest version. 1 on error
+	and 2 on invalid call.
+	+
+	The '--cron' option allows limiting updates to once a day ('daily'), once a week
+	('weekly'), or once a month ('monthly'). If the task is being called, but the
+	database has been updated recently, an update will be skipped.
+
+'verify'::
+	Verifies the downloaded database.
+
+'version'::
+	Shows the version information of the downloaded database.
+
+'--help'::
+	Shows a short help text on using this program.
+
+'--version'::
+	Shows the program's version and exits.
+
+== EXIT CODES
+The 'location' command will normally exit with code zero.
+If there has been a problem and the requested action could not be performed,
+the exit code is unequal to zero:
+
+	* '1': An error has occurred, or nothing has been found
+	* '2': The command has been called with invalid arguments
+
+== FORMATS
+Some commands allow specifying the output format. This is helpful if the exported
+data should be imported into a packet filter for example.
+The following formats are understood:
+
+	* 'list' (default): Just lists all networks, one per line
+	* 'ipset': For ipset
+	* 'nftables': For nftables
+	* 'xt_geoip': Returns a list of networks to be loaded into the
+	  xt_geoip kernel module
+
+== HOW IT WORKS
+The downloader checks a DNS record for the latest version of the database.
+It will then try to download a file with that version from a mirror server.
+If the downloaded file is outdated, the next mirror will be tried until we
+have found a file that is recent enough.
+
+== BUG REPORTS
+Please report all bugs to the bugtracker at https://bugzilla.ipfire.org/;
+refer to https://wiki.ipfire.org/devel/bugzilla for details.
+
+== AUTHORS
+Michael Tremer

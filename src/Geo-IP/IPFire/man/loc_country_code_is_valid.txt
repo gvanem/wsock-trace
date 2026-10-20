@@ -1,0 +1,57 @@
+= loc_country_code_is_valid(3)
+
+== Name
+
+loc_country_code_is_valid, loc_country_special_code_to_flag - Check country codes
+
+== Synopsis
+----
+#include <libloc/country.h>
+
+int loc_country_code_is_valid(const char* country_code);
+
+int loc_country_special_code_to_flag(const char* country_code);
+----
+
+== Description
+
+loc_country_code_is_valid() checks whether _country_code_ can be the code of a country:
+two upper case letters, which do not start with _X_, because those codes are reserved
+for private use.
+
+loc_country_special_code_to_flag() returns the flag for one of the special codes _A1_,
+_A2_, _A3_ and _XD_ (see link:loc_network_get_asn[3]), which are not countries.
+
+These are useful to check input before passing it to the functions that take a country
+code, for example link:loc_database_get_country[3] or
+link:loc_network_get_asn[3].
+
+== Return Value
+
+loc_country_code_is_valid() returns 1 if the code is valid, and zero otherwise.
+
+loc_country_special_code_to_flag() returns the flag, zero if _country_code_ is not a
+special code, or _-EINVAL_ if it is NULL or empty.
+
+== Example
+
+----
+if (loc_country_special_code_to_flag(code) > 0)
+	printf("%s is a flag\n", code);
+
+else if (loc_country_code_is_valid(code))
+	printf("%s is a country\n", code);
+
+else
+	printf("%s is not a country code\n", code);
+----
+
+== See Also
+
+link:libloc[3],
+link:loc_country_new[3],
+link:loc_network_get_asn[3]
+
+== Authors
+
+Michael Tremer

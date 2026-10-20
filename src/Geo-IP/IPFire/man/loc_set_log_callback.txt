@@ -1,0 +1,37 @@
+= loc_set_log_callback(3)
+
+== Name
+
+loc_set_log_callback - Set a callback for log messages
+
+== Synopsis
+----
+#include <libloc/libloc.h>
+
+typedef void (*loc_log_callback)(struct loc_ctx* ctx, void* data,
+	int priority, const char* file, int line, const char* fn,
+	const char* format, va_list args);
+
+void loc_set_log_callback(struct loc_ctx* ctx, loc_log_callback callback,
+	void* data);
+----
+
+== Description
+
+libloc can use the calling application's logging system by setting this callback.
+
+It will be called once for each log message according to the configured log
+priority (see link:loc_set_log_priority[3]).
+
+_data_ is an opaque pointer which is passed through to the callback on every
+invocation.
+
+This function replaces the deprecated link:loc_set_log_fn[3].
+
+== See Also
+
+link:libloc[3]
+
+== Authors
+
+Michael Tremer
