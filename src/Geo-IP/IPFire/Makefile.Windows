@@ -1,0 +1,632 @@
+#
+# GNU Makefile for libloc. Supporting MSVC or clang-cl only.
+#
+# By G. Vanem <gvanem@yahoo.no> 2020 - 2026.
+#
+# Ref: https://git.ipfire.org/pub/git/location/libloc.git
+#      https://location.ipfire.org/how-to-use
+#
+
+TOP_DIR = ../..
+
+include $(TOP_DIR)/Common.Windows
+
+#
+# From 'configure.ac' and 'AC_INIT()':
+#
+LIBLOC_MAJOR = 0
+LIBLOC_MINOR = 9
+LIBLOC_MICRO = 19
+VERSION      = $(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)
+
+#
+# Used in generated Python scripts.
+# This becomes the default database and .pem directory.
+#
+DATABASE_DIR = $(realpath .)
+ABS_SRCDIR   = $(realpath .)
+
+vpath %.c src
+
+LIBLOC_SRC = $(addprefix src/, \
+               address.c       \
+               as.c            \
+               as-list.c       \
+               country.c       \
+               country-list.c  \
+               database.c      \
+               libloc.c        \
+               network.c       \
+               network-list.c  \
+               network-tree.c  \
+               resolv.c        \
+               stringpool.c    \
+               writer.c        \
+               win_misc.c)
+
+TEST_SRC = $(addprefix tests/libloc/, \
+             address.c                \
+             as-list.c                \
+             as.c                     \
+             country-list.c           \
+             country.c                \
+             database.c               \
+             enumerator.c             \
+             main.c                   \
+             network-list.c           \
+             network.c                \
+             signature.c              \
+             stringpool.c             \
+             threads.c)
+
+#
+# Difficult to port to Windows
+#
+# TEST_SRC += tests/libloc/reload.c
+
+TEST_PROGS = $(addprefix bin/test-, \
+               $(notdir $(TEST_SRC:.c=.exe)))
+
+TEST_PROGS += bin/lookup.exe \
+              bin/benchmark.exe
+
+LIBLOC_DLL = bin/libloc-$(CPU).dll
+STATIC_LIB = lib/libloc-$(CPU).lib
+IMPORT_LIB = lib/libloc_imp-$(CPU).lib
+
+#
+# What to build:
+#
+TARGETS = $(STATIC_LIB)  \
+          $(IMPORT_LIB)  \
+          $(LIBLOC_DLL)  \
+          $(TEST_PROGS)
+
+ifeq ($(USE_ASAN),1)
+  CFLAGS  += -DUSE_ASAN -fsanitize=address
+  RCFLAGS += -DUSE_ASAN
+
+  #
+  # The default for 'x86 / Release' is 'clang_rt.asan_dynamic_runtime_thunk-i386.lib'
+  # (and clang_rt.asan_dbg_dynamic_runtime_thunk-i386.lib for 'x86 / Debug')
+  #
+  LDFLAGS += -inferasanlibs
+endif
+
+CFLAGS += -I.                            \
+          -I./src                        \
+          -I./src/libloc                 \
+          -I./src/libloc/windows         \
+          -DENABLE_DEBUG                 \
+          -DLIBLOC_PRIVATE               \
+          -DLIBLOC_UNDEF_ERROR           \
+          -DABS_SRCDIR=\"$(ABS_SRCDIR)\" \
+          -DLIBLOC_DEFAULT_DATABASE_PATH=ABS_SRCDIR
+
+RCFLAGS += -I./src
+
+ifeq ($(USE_OPENSSL),1)
+  CFLAGS     += -I$(OPENSSL_ROOT)/include
+  OPENSSL_LIB = $(OPENSSL_ROOT)/lib/libcrypto_imp-$(CPU).lib
+else
+  CFLAGS += -I../.. \
+            -I./src/fake-OpenSSL
+  OPENSSL_LIB =
+endif
+
+#
+# Warning control.
+#
+ifeq ($(CC),clang-cl)
+  CFLAGS += -Wno-unused-function             \
+            -Wno-unused-variable             \
+            -Wno-unused-parameter            \
+            -Wno-visibility                  \
+            -Wno-sign-compare                \
+            -Wno-missing-field-initializers  \
+            -Wno-incompatible-pointer-types  \
+            -Wno-cast-function-type-mismatch \
+            -Wno-void-pointer-to-int-cast    \
+            -Wno-int-to-pointer-cast         \
+            -Wno-single-bit-bitfield-constant-conversion
+
+else ifeq ($(CC),icx)
+  CFLAGS += -Wno-unused-parameter           \
+            -Wno-unused-variable            \
+            -Wno-visibility                 \
+            -Wno-sign-compare               \
+            -Wno-missing-field-initializers \
+            -Wno-void-pointer-to-int-cast   \
+            -Wno-cast-function-type-mismatch
+
+else
+  CFLAGS += -wd4018 -wd4024 -wd4047 -wd4100 -wd4101 -wd4115 \
+            -wd4133 -wd4146 -wd4152 -wd4189 -wd4201 -wd4244 \
+            -wd4267 -wd4311 -wd4312 -wd4701 -wd4702
+
+  #
+  # For warnings such as:
+  #   python/database.c(633): warning C4232: nonstandard extension used: 'tp_iter':
+  #   address of dllimport 'PyObject_SelfIter' is not static, identity not guaranteed
+  #
+  CFLAGS += -wd4232
+endif
+
+#
+# External lib(s) to use for '$(LIBLOC_DLL)'.
+#
+ifeq ($(USE_WSOCK_TRACE),1)
+  CFLAGS    += -DUSE_WSOCK_TRACE
+  LDFLAGS   += -nodefaultlib:ws2_32.lib
+  WS2_32_LIB = wsock_trace-$(CPU).lib
+else
+  WS2_32_LIB = ws2_32.lib
+endif
+
+LIBLOC_OBJ = $(call c_to_obj, $(LIBLOC_SRC),)
+
+PY_SRC = $(addprefix python/, \
+           as.c               \
+           country.c          \
+           database.c         \
+           locationmodule.c   \
+           network.c          \
+           writer.c)
+
+PY_OBJ = $(call c_to_obj, $(PY_SRC), py/)
+
+ifeq ($(USE_LUAJIT),1)
+  TARGETS += lua_install/location.dll \
+             lua_install/location-lua.lib  # No real need for this
+
+  CFLAGS += -I$(LUAJIT_ROOT)/src \
+            -DLUA_VERSION_RELEASE_NUM=502
+
+  LUA_SRC = $(addprefix src/lua/, \
+              as.c                \
+              country.c           \
+              database.c          \
+              location.c          \
+              network.c)
+
+  LUA_OBJ = $(call c_to_obj, $(LUA_SRC), lua/)
+
+  #
+  # Must compile '$(LIBLOC_SRC)' without OpenSSL support
+  #
+  LUA_OBJ += $(call c_to_obj, $(LIBLOC_SRC), libloc-lua/)
+else
+  LUA_SRC =
+endif
+
+ifeq ($(USE_PYTHON),1)
+  .PHONY: py3_module
+  TARGETS += py3_module
+endif
+
+GENERATED = src/libloc/version.h \
+            $(OBJ_DIR)/test-hacks.h
+
+all: $(GENERATED) $(TARGETS) epilogue
+
+epilogue:
+	$(call green_msg, \nWelcome to libloc library and test programs.)
+	$(call green_msg, You could do a $(BRIGHT_WHITE)make -f $(THIS_FILE) CC=$(CC) \
+	                  [ run_tests | run_benchmark_test | run_export_test | run_dedup_test | run_lua_test ] $(BRIGHT_GREEN)too.)
+
+.SECONDARY: $(OBJ_DIR)/test-address.obj      \
+            $(OBJ_DIR)/test-as.obj           \
+            $(OBJ_DIR)/test-country.obj      \
+            $(OBJ_DIR)/test-database.obj     \
+            $(OBJ_DIR)/test-libloc.obj       \
+            $(OBJ_DIR)/test-network.obj      \
+            $(OBJ_DIR)/test-network-list.obj \
+            $(OBJ_DIR)/test-stringpool.obj   \
+            $(OBJ_DIR)/test-signature.obj
+
+$(STATIC_LIB): $(LIBLOC_OBJ) | lib
+	$(call create_static_lib, $@, $(LIBLOC_OBJ))
+
+$(IMPORT_LIB): $(LIBLOC_DLL)
+
+$(LIBLOC_DLL): $(OBJ_DIR)/libloc.def $(LIBLOC_OBJ) $(OBJ_DIR)/libloc.res | bin lib
+	$(call link_DLL, $@, -def:$^ dnsapi.lib $(OPENSSL_LIB) $(WS2_32_LIB), \
+	                     $(IMPORT_LIB))
+
+src/libloc/version.h: $(THIS_FILE)
+	$(call generate_c, $@, $(VERSION_H))
+
+$(OBJ_DIR)/test-hacks.h: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_c, $@, $(TEST_HACKS_H))
+
+$(OBJ_DIR)/libloc.def: $(STATIC_LIB) $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate, $@, ;)
+	@echo -e 'LIBRARY $(notdir $(LIBLOC_DLL))\nEXPORTS'         >> $@
+	nm $< | grep ' T $(USCORE)loc_' | sed 's/^.* $(USCORE)/  /' >> $@
+	@echo
+
+$(OBJ_DIR)/libloc.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_rc, $@, "$(notdir $(LIBLOC_DLL))", "A library to determine the location of someone on the Internet")
+
+$(OBJ_DIR)/_location.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_rc, $@, "_location.pyd", "Python3 module for '$(notdir $(LIBLOC_DLL))'")
+
+$(OBJ_DIR)/location.rc: $(THIS_FILE) | $(OBJ_DIR)
+	$(call generate_rc, $@, "location.dll", "LuaJIT module for '$(notdir $(LIBLOC_DLL))'")
+
+ifeq ($(CC)-$(USE_MP_COMPILE),cl-1)
+  $(LIBLOC_OBJ): $(LIBLOC_SRC) | $(OBJ_DIR) $(CC).args $(GENERATED)
+	$(call C_compile_MP, $(OBJ_DIR)\\, $(LIBLOC_SRC), LIBLOC_SRC)
+endif
+
+#
+# Rules for 'TEST_PROGS':
+#
+$(OBJ_DIR)/example-lookup.obj: examples/c/lookup.c | $(CC).args $(OBJ_DIR)
+	$(call C_compile, $@, $<)
+
+$(OBJ_DIR)/benchmark-lookup.obj: benchmarks/lookup.c | $(CC).args $(OBJ_DIR)
+	$(call C_compile, $@, -FI./$(OBJ_DIR)/test-hacks.h -DNEED_MAXMINDDB $<)
+
+$(OBJ_DIR)/test-%.obj: tests/libloc/%.c | $(CC).args $(OBJ_DIR)/test-hacks.h
+	$(call C_compile, $@, -FI./$(OBJ_DIR)/test-hacks.h $<)
+
+#
+# We must use Python3.
+# Use the Python launcher to find the default version 3 Python.
+#
+# And with 'USE_CRT_DEBUG=1', use the debug-version of Python3.
+#
+PYTHON := py -3
+PY_ROOT = $(subst \,/,$(shell $(PYTHON) -c "import sys; print(sys.prefix)"))
+
+$(OBJ_DIR)/py/%.obj: src/python/%.c | $(OBJ_DIR)/py $(CC).args
+	$(call C_compile, $@, -I$(PY_ROOT)/include $<)
+
+py_%.i: src/python/%.c $(OBJ_DIR)/cpp-filter.py $(CC).args $(GENERATED) FORCE
+	$(call C_preprocess, $@, -I$(PY_ROOT)/include $<)
+
+#
+# LuaJIT stuff:
+#
+lua_install/location-lua.lib: lua_install/location.dll
+
+lua_install/location.dll: $(LUA_OBJ) $(OBJ_DIR)/location.res $(LUAJIT_LIB) | lua_install
+	$(call link_DLL, $@, -export:luaopen_location $^ dnsapi.lib \
+	                 $(OPENSSL_LIB) $(WS2_32_LIB), lua_install/location-lua.lib)
+
+$(OBJ_DIR)/lua/%.obj: src/lua/%.c | $(OBJ_DIR)/lua $(CC).args $(GENERATED)
+	$(call C_compile, $@, $<)
+
+$(OBJ_DIR)/libloc-lua/%.obj: %.c | $(OBJ_DIR)/libloc-lua $(CC).args $(GENERATED)
+	$(call C_compile, $@, $<)
+
+lua_%.i: %.c $(OBJ_DIR)/cpp-filter.py $(CC).args $(GENERATED) FORCE
+	$(call C_preprocess, $@, $<)
+
+lua_%.i: src/lua/%.c $(OBJ_DIR)/cpp-filter.py $(CC).args $(GENERATED) FORCE
+	$(call C_preprocess, $@, $<)
+
+run_lua_test: lua_module                    \
+              install_luaunit               \
+              $(LUAJIT_ROOT)/bin/luajit.exe \
+              lua_install/test.lua
+	$(call green_msg, Running $(BRIGHT_WHITE)$(LUAJIT_ROOT)/bin/luajit.exe lua_install/test.lua)
+	 export LOC_LOG=6                                         \
+	 export LUA_TRACE=0                                       \
+	 export LUA_CPATH=$(realpath lua_install)/?.dll           \
+	 export LUA_PATH=$(realpath lua_install)/luaunit/?.lua    \
+	 export TEST_DATABASE=$(realpath data/database.db)        \
+	 export TEST_SIGNING_KEY=$(realpath data/signing-key.pem) \
+	 export WSOCK_TRACE_LEVEL=0 ;                             \
+	$(LUAJIT_ROOT)/bin/luajit.exe lua_install/test.lua
+	@echo
+
+lua_install/test.lua: tests/lua/main.lua.in $(THIS_FILE)
+	$(call generate, $@, --)
+	$(file >> $@, -- Generated from $<)
+	sed -e 's|#!/usr/bin/lua@LUA_VERSION@||' \
+	    -e 's|.*db:verify.*|-- Not for Windows|' < $< >> $@
+	@echo
+
+lua_module: lua_install/location.dll
+	$(call copy_file, $(LUA_DLL_FILES), lua_install/)
+
+install_luaunit: lua_install/luaunit
+  ifeq ($(wildcard lua_install/luaunit/*),)
+	$(call green_msg, Cloning $(BRIGHT_WHITE)https://github.com/bluebird75/luaunit.git)
+	- git clone https://github.com/bluebird75/luaunit.git $<
+	@echo
+  else
+	$(call green_msg, Assuming $(BRIGHT_WHITE)https://github.com/bluebird75/luaunit.git $(BRIGHT_GREEN)was cloned OK)
+  endif
+
+lua_module: lua_install/location.dll lua_install
+
+$(LUAJIT_ROOT)/bin/luajit.exe $(LUAJIT_LIB):
+	$(MAKE) --directory $(LUAJIT_ROOT) --file $(THIS_FILE) CC=$(CC) all
+
+#
+# EXE rules:
+#
+vpath %.c $(MAXMINDDB_ROOT)
+
+bin/test-%.exe \
+bin/lookup.exe: IGNORE_LIBS = $(WS2_32_LIB)
+
+BENCHMARK_OBJ = $(addprefix $(OBJ_DIR)/, \
+                  benchmark-lookup.obj   \
+                  data-pool.obj          \
+                  maxminddb.obj)
+
+bin/benchmark.exe: $(BENCHMARK_OBJ) $(IMPORT_LIB) | bin
+	$(call link_EXE, $@, $^ $(WS2_32_LIB))
+
+bin/lookup.exe: $(OBJ_DIR)/example-lookup.obj $(IMPORT_LIB) | bin
+	$(call link_EXE, $@, $^ $(WS2_32_LIB))
+
+bin/test-%.exe: $(OBJ_DIR)/test-%.obj $(IMPORT_LIB) | bin
+	$(call link_EXE, $@, $^ $(WS2_32_LIB))
+
+TEST_EXE = $(filter bin/test-%.exe, $(TEST_PROGS))
+
+run_tests runtests: $(TEST_EXE)
+	export WSOCK_TRACE_LEVEL=0 ;                                      \
+	for p in $^ ; do                                                  \
+	    echo -e "\n$(BRIGHT_GREEN)Running $(BRIGHT_WHITE)$$p:\e[0m" ; \
+	    ./$$p ;                                                       \
+	    if [ $$? -ne 0 ] ; then                                       \
+	       echo -e "$(BRIGHT_RED)Failed!\e[0m" ;                      \
+	    else                                                          \
+	       echo -e "$(BRIGHT_GREEN)OKAY\e[0m"  ;                      \
+	  fi ;                                                            \
+	done
+
+DB_FILES ?= $(APPDATA)/IPFire-database.db        \
+            ../DB-IP/dbip-city-lite-2020-03.mmdb \
+            ../DB-IP/dbip-asn-lite-2020-10.mmdb
+
+run_benchmark_test: bin/benchmark.exe
+	$(call green_msg, Running $(BRIGHT_WHITE)$< libloc)
+	@$< $(DB_FILES) libloc
+	@echo
+	$(call green_msg, Running $(BRIGHT_WHITE)$< mmdb)
+	@$< $(DB_FILES) mmdb
+	@echo
+
+run_export_test: py3_module
+	export PYTHONPATH=$(realpath py3_install) ; \
+	export TEST_DATA_DIR=$(realpath data)     ; \
+	$(PYTHON) tests/python/test-export.py
+
+run_dedup_test: py3_module
+	export PYTHONPATH=$(realpath py3_install) ; \
+	$(PYTHON) tests/python/networks-dedup.py
+
+#
+# Rules for building the Python3 module.
+#
+# Note: there is no 'make install'. So manually copy from './py3_install'
+#       to where-ever you like.
+#
+PY_FILES = $(addprefix src/python/location/, \
+             database.py                     \
+             downloader.py                   \
+             export.py                       \
+             i18n.py                         \
+             logger.py                       \
+             __init__.py)
+
+PY_GEN_FILES = $(addprefix py3_install/, \
+                 _location.pyd           \
+                 location.py             \
+                 location-importer.py)
+
+$(PY_GEN_FILES): $(THIS_FILE)
+
+#
+# Needed by 'py3_install/_location.pyd'
+#
+PY_DLL_FILES = $(LIBLOC_DLL)
+
+#
+# Needed by 'lua_install/location.dll'
+#
+LUA_DLL_FILES = $(LIBLOC_DLL)
+
+#
+# These could be handy for debugging
+#
+PY_DLL_FILES  += bin/libloc-$(CPU).pdb
+LUA_DLL_FILES += bin/libloc-$(CPU).pdb
+
+py3_module: py3_install py3_install/location $(PY_GEN_FILES) $(LIBLOC_DLL)
+	$(call copy_file, $(PY_DLL_FILES), py3_install/)
+	$(call copy_file, $(PY_FILES),     py3_install/location/)
+
+#
+# For '-MDd', this should become '$(PY_ROOT)/libs/python3_d.lib'
+#
+PY_LIB = $(PY_ROOT)/libs/python3$(_D).lib
+
+py3_install/_location.pyd: $(PY_OBJ) $(IMPORT_LIB) $(OBJ_DIR)/_location.res | py3_install
+	$(call link_PYD, $@, -libpath:$(PY_ROOT)/libs $(PY_OBJ) $(IMPORT_LIB) \
+	                 $(OBJ_DIR)/_location.res $(PY_LIB))
+
+py3_install/location.py: src/scripts/location.in
+	$(call generate, $@, #)
+	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< >> $@
+	@echo
+
+py3_install/location-importer.py: src/scripts/location-importer.in
+	$(call generate, $@, #)
+	sed -e 's|@VERSION@|$(VERSION)|' -e 's|@databasedir@|$(DATABASE_DIR)|' < $< >> $@
+	@echo
+
+clean:
+	rm -f $(GENERATED) bin/test-*.exe.core link.tmp link.args \
+	      cl.args clang-cl.args icx.args man/location.1 man/location.html
+	rm -fr $(OBJ_DIR)
+	@echo
+
+vclean realclean: clean
+	rm -fr bin lib py3_install lua_install
+
+man_doc:  man/location.1
+html_doc: man/location.html
+
+man/location.xml: man/location.txt man/asciidoc.conf
+	asciidoc -f man/asciidoc.conf -d manpage -b docbook -o $@ $<
+
+XSLTPROC_FLAGS = --stringparam man.output.quietly 1          \
+                 --stringparam funcsynopsis.style ansi       \
+                 --stringparam man.th.extra1.suppress 1      \
+                 --stringparam man.authors.section.enabled 1 \
+                 --stringparam man.copyright.section.enabled 1
+
+# XSLTPROC_FLAGS += http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
+XSLTPROC_FLAGS += --nonet docbook.xsl
+
+man/location.1: man/location.xml
+	xsltproc.exe -o $@ $(XSLTPROC_FLAGS) $<
+
+man/location.html: man/location.txt man/asciidoc.conf
+	asciidoc.exe -f man/asciidoc.conf -b html5 -a icons -a theme=flask -o $@ $<
+
+#
+# Fixed dependency:
+#
+$(OBJ_DIR)/libloc.obj: src/fake-OpenSSL/openssl/applink.c
+
+#
+# Local GNU-make macro:
+#
+define generate_rc
+  $(call generate_c, $(1), )
+  $(file >> $(1), #define RC_FILENAME    $(2))
+  $(file >> $(1), #define RC_DESCRIPTION $(3))
+  $(file >> $(1), $(RC_COMMON))
+  @echo
+endef
+
+define RC_COMMON
+  #include <winver.h>
+  #include <libloc/version.h>
+
+  #define RC_VERSION  LIBLOC_MAJOR_VER, LIBLOC_MINOR_VER, LIBLOC_MICRO_VER, 0
+
+  #ifdef _DEBUG
+    #define RC_DBG_STRING  "$(CPU), debug"
+  #else
+    #define RC_DBG_STRING  "$(CPU), release"
+  #endif
+
+  #if defined(__clang__)
+    #define RC_COMPILER  "clang-cl"
+  #elif defined(__INTEL_LLVM_COMPILER)
+    #define RC_COMPILER  "icx"
+  #elif defined(_MSC_VER)
+    #define RC_COMPILER  "MSVC"
+  #else
+    #error "Unsupported compiler"
+  #endif
+
+  VS_VERSION_INFO VERSIONINFO
+    FILEVERSION    RC_VERSION
+    PRODUCTVERSION RC_VERSION
+    FILEFLAGSMASK  0x3fL
+    FILEOS         0x40004L
+    FILETYPE       0x2L
+    FILESUBTYPE    0x0L
+    FILEFLAGS      0x0L
+
+  BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+      BLOCK "040904b0"
+      BEGIN
+        VALUE "CompanyName",      "https://git.ipfire.org/pub/git/location/libloc.git"
+        VALUE "FileDescription",  RC_DESCRIPTION
+        VALUE "FileVersion",      PACKAGE_VERSION
+        VALUE "InternalName",     "libloc"
+        VALUE "LegalCopyright",   "CC BY-SA 4.0."
+        VALUE "LegalTrademarks",  "http://www.gnu.org/licenses/"
+        VALUE "OriginalFilename", RC_FILENAME
+        VALUE "ProductName",      RC_FILENAME
+        VALUE "ProductVersion",   PACKAGE_VERSION " (" RC_COMPILER ", " RC_DBG_STRING ")"
+        VALUE "PrivateBuild",     ""
+        VALUE "SpecialBuild",     ""
+        VALUE "Comments",         "Built at $(TODAY)"
+      END
+    END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+  END
+endef
+
+define TEST_HACKS_H
+
+  #include <libloc/libloc.h>
+  #include <libloc/version.h>
+  #include <libloc/compat.h>  /* clock_gettime() */
+
+  #if defined(NEED_MAXMINDDB)
+    #undef PACKAGE_VERSION
+    #undef ssize_t
+
+    #include "$(MAXMINDDB_ROOT)/maxminddb.h"
+  #endif
+
+  #if 0
+    extern int fake_main (int argc, char **argv);
+
+    int main (int argc, char **argv)
+    {
+      WSADATA wsa;
+      WSAStartup (MAKEWORD(2,2), &wsa);
+
+      return fake_main (argc, argv);
+    }
+    #define main(argc, argv) fake_main (argc, argv)
+  #endif
+
+//void loc_memory (const char* what, const char* path1, const char* path2);
+
+  /*
+   * For 'tests/libloc/main.c':
+   */
+  static __inline void setenv (const char *env, const char *val, int overwrite)
+  {
+    char buf [100];
+
+    snprintf (buf, sizeof(buf), "%s=%s", env, val);
+    _putenv (buf);
+    (void) overwrite;
+  }
+  #define unsetenv(e)  setenv (e, "", 0)
+  #define VERSION      PACKAGE_VERSION
+
+  /*
+   * For 'tests/libloc/reload.c':
+   */
+  #if 0
+    #define usleep(usec)  Sleep ((usec)/1000)
+    #define mkdtemp ??
+    #define mktemp  ??
+    #define rmdir   ??
+  #endif
+endef
+
+define VERSION_H
+
+  #pragma once
+  #define LIBLOC_MAJOR_VER  $(LIBLOC_MAJOR)
+  #define LIBLOC_MINOR_VER  $(LIBLOC_MINOR)
+  #define LIBLOC_MICRO_VER  $(LIBLOC_MICRO)
+  #define PACKAGE_VERSION  "$(LIBLOC_MAJOR).$(LIBLOC_MINOR).$(LIBLOC_MICRO)"
+endef
+
+
+
