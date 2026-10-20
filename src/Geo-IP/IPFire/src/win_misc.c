@@ -1,5 +1,11 @@
 /*
- * `strsep()`, `strcasestr()`, `timegm()`, `strptime()`, `asprintf()` for Windows.
+ * Various missing functions needed for libloc
+ * on Windows. MSVC and clang-cl only.
+ *
+ * Only 'loc_clock_gettime()' and 'loc_memory()' gets
+ * exported for use by 'bin/benchmark.exe'.
+ *
+ * The rest are for internal LIBLOC use.
  */
 #include <string.h>
 #include <ctype.h>
@@ -7,8 +13,158 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
+#include <assert.h>
+#include <intsafe.h>
+#include <sys/mman.h>
+#include <windows.h>
+#include <psapi.h>     /* GetProcessMemoryInfo() */
+
 #include <libloc/libloc.h>
 #include <libloc/private.h>
+
+#if 0
+  #define DWORD_HI(x)  ((uint64_t)(x) >> 32)
+  #define DWORD_LO(x)  ((x) & 0xffffffff)
+#else
+  #define DWORD_HI HIDWORD
+  #define DWORD_LO LODWORD
+#endif
+
+static SYSTEM_INFO si;
+
+/**
+ * A small array of 'mmap()' return values we need to remember
+ * until we call `munmap()` on the pointer.
+ */
+struct mmap_info {
+       void  *map;   /* the value from 'MapViewOfFile()' */
+       void  *rval;  /* the value we returned to caller of 'mmap()' */
+     };
+static struct mmap_info mmap_storage [10];
+
+static void *mmap_remember (void *map, uint64_t offset);
+static int   mmap_forget (void *map, struct mmap_info *info);
+
+void *mmap (void *address, size_t length, int protection, int flags, int fd, off_t offset)
+{
+  void     *map = NULL;
+  HANDLE    handle;
+  HANDLE    fd_h = INVALID_HANDLE_VALUE;
+  DWORD     access = 0;
+  uint64_t  pstart, psize, poffset;
+
+  (void) address;  /* unused args */
+  (void) flags;
+
+  if (fd > -1)
+     fd_h = (HANDLE) _get_osfhandle (fd);
+
+  if (si.dwAllocationGranularity == 0)
+     GetNativeSystemInfo (&si);
+
+  pstart  = (offset / si.dwAllocationGranularity) * si.dwAllocationGranularity;
+  poffset = offset - pstart;
+  psize   = poffset + length;
+
+  /**
+   * If `fd_h == INVALID_HANDLE_VALUE`, the `CreateFileMapping()` indicates that the
+   * file mapping object will be backed by the system's paging file, rather than
+   * an actual file on disk.
+   */
+
+  switch (protection)
+  {
+    case PROT_READ:
+         handle = CreateFileMapping (fd_h, 0, PAGE_READONLY, 0, 0, NULL);
+         access = FILE_MAP_READ;
+         break;
+    case PROT_WRITE:
+         handle = CreateFileMapping (fd_h, 0, PAGE_READWRITE, 0, 0, NULL);
+         access = FILE_MAP_WRITE;  /* Or FILE_MAP_COPY? */
+         break;
+    case PROT_READWRITE:
+         handle = CreateFileMapping (fd_h, 0, PAGE_READWRITE, 0, 0, NULL);
+         access = FILE_MAP_ALL_ACCESS;
+         break;
+    default:
+         handle = INVALID_HANDLE_VALUE;
+         break;
+  }
+
+  if (!handle || handle == INVALID_HANDLE_VALUE)
+     map = MAP_FAILED;
+  else
+  {
+    map = MapViewOfFile (handle, access, DWORD_HI(pstart), DWORD_LO(pstart), (SIZE_T)psize);
+    CloseHandle (handle);
+    if (!map)
+       map = MAP_FAILED;
+  }
+
+  SetLastError (0);   /* clear any possible error from above */
+  return mmap_remember (map, poffset);
+}
+
+int munmap (void *map, size_t length)
+{
+  struct mmap_info info;
+  int    rc = 0;
+
+  if (!mmap_forget(map, &info))
+  {
+    errno = EINVAL;
+    rc = -1;
+  }
+  else if (!UnmapViewOfFile(info.map))
+  {
+    errno = EFAULT;
+    SetLastError (0);
+    rc = -1;
+  }
+  return (rc);
+}
+
+static void *mmap_remember (void *map, uint64_t offset)
+{
+  size_t i;
+
+  if (map == MAP_FAILED)  /* never remember this */
+  {
+    errno = EFAULT;
+    goto fail;
+  }
+
+  for (i = 0; i < _countof(mmap_storage); i++)
+  {
+    if (!mmap_storage[i].map)   /* use this vacant slot */
+    {
+      mmap_storage [i].map  = map;
+      mmap_storage [i].rval = (char*)map + offset;
+      return (mmap_storage[i].rval);
+    }
+  }
+  errno = EAGAIN;
+
+fail:
+  return (MAP_FAILED); /* all buckets full */
+}
+
+static int mmap_forget (void *map, struct mmap_info *info)
+{
+  size_t i;
+
+  for (i = 0; i < _countof(mmap_storage); i++)
+  {
+    if (map == mmap_storage[i].rval)
+    {
+      *info = mmap_storage [i];
+      mmap_storage [i].map = NULL;   /* reuse this */
+      SetLastError (0);
+      return (1);
+    }
+  }
+  return (0);  /* not found! */
+}
 
 /**
  * Get next token from string `*stringp`, where tokens are possibly empty
@@ -101,7 +257,7 @@ time_t timegm (struct tm *tm)
   uli.LowPart  = ft.dwLowDateTime;
   uli.HighPart = ft.dwHighDateTime;
 
-  ret = (time_t) (uli.QuadPart/10000000);
+  ret = (time_t) (uli.QuadPart / 10000000);
   ret -= DELTA_EPOCH_SEC;   /* from Win epoch to Unix epoch */
   ret += _timezone;         /* Is this correct? (since strptime() ignores time-zone) */
   return (ret);
@@ -115,6 +271,44 @@ char *get_neterr (void)
   static char err_buf [30];
   strcpy (err_buf, "WSAE: ");
   return _itoa (WSAGetLastError(), err_buf + sizeof("WSAE: ")-1, 10);
+}
+
+int loc_clock_gettime (int clk_id, struct timespec *tp)
+{
+  uint64_t usec;
+  FILETIME ft;
+
+  assert (clk_id == CLOCK_MONOTONIC);
+
+  /* Needs '_WIN32_WINNT >= _WIN32_WINNT_WIN8' (0x0602)
+   */
+  GetSystemTimePreciseAsFileTime (&ft);
+
+  usec = ((uint64_t)ft.dwHighDateTime << 32) + ft.dwLowDateTime;
+  usec /= 10;                        /* from 100 nano-sec periods to usec */
+  usec -= DELTA_EPOCH_SEC * 100000;  /* from Win epoch to Unix epoch */
+
+  tp->tv_sec  = (long) (usec / 1000000L);
+  tp->tv_nsec = 1000 * (long) (usec % 1000000L);
+  return (0);
+}
+
+void loc_memory (const char* what, const char* path1, const char* path2)
+{
+  PROCESS_MEMORY_COUNTERS_EX pmc;
+  long rss;
+
+  if (!GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc)))
+  {
+    printf("Failed to retrieve memory info: %lu\n", GetLastError());
+    return;
+  }
+
+  rss = pmc.PeakWorkingSetSize + pmc.PrivateUsage + pmc.WorkingSetSize; // is this correct?
+  printf("%-44s %6.1f MiB of the database in memory\n", what, rss / 1024.0);
+
+  (void) path1;
+  (void) path2;
 }
 
 /*-
@@ -543,3 +737,36 @@ int asprintf (char **strp, const char *format, ...)
   va_end (args);
   return (ret);
 }
+
+#if 0
+/*
+ * Handle '%m' format to show 'strerror(errno)' or 'WSAGetLastError()' values.
+ * Called from 'loc_log() and 'log_stderr()' in 'libloc.c'.
+ */
+const char *handle_m_format (const char *fmt)
+{
+  static char buf [1000];
+  const char *m_fmt = strstr("%m", fmt);
+  char       *p = buf, *err;
+
+  if (!m_fmt || strlen(fmt) > sizeof(buf) - 50)
+     return (fmt);
+
+  err = strerror(errno);
+  if (!err || errno == 0)
+     err = get_neterr();
+  if (!err)
+     err = "No error?!";
+
+  memcpy(p, fmt, m_fmt - fmt);
+  p += m_fmt - fmt;
+
+  memcpy(p, err, strlen(err));
+  p += strlen(err);
+
+  memcpy(p, m_fmt + 2, strlen(m_fmt + 2));
+  p += strlen(m_fmt + 2);
+  *p = '\0';
+  return (buf);
+}
+#endif
